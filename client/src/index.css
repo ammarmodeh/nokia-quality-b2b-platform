@@ -1,0 +1,197 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,200;6..12,300;6..12,400;6..12,500;6..12,600;6..12,700;6..12,800;6..12,900;6..12,1000&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Monoton&family=Roboto+Slab:wght@100..900&display=swap');
+
+@import "tailwindcss";
+/** This @import word is used to import Tailwind CSS from the node_modules folder */
+
+* {
+  box-sizing: border-box;
+  font-family: "Nunito Sans", sans-serif;
+}
+
+html {
+  /* overflow: scroll; */
+  height: 100vh;
+  background-color: #121212;
+}
+
+.form-container {
+  box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+/* Custom Scrollbar Styles */
+/* Track */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background-color: #807c7c;
+  border-radius: 12px;
+  /* display: none; */
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background-color: #302f2f;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dots-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  margin-bottom: 5px;
+}
+
+.dot {
+  height: 12px;
+  width: 12px;
+  margin-right: 10px;
+  border-radius: 10px;
+  background-color: #fff;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.dot:last-child {
+  margin-right: 0;
+}
+
+.dot:nth-child(1) {
+  animation-delay: -0.3s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.1s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.1s;
+}
+
+
+/***************************************************/
+
+
+/* Scoped styles for the Quiz component */
+
+/* Wrapper for the whole quiz */
+.quiz-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f4f7fc;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  font-family: 'Arial', sans-serif;
+  background-color: #ffffff;
+  direction: rtl;
+  /* Set text direction to right-to-left */
+}
+
+/* Header styles */
+.quiz-container h2,
+.quiz-container h3 {
+  color: #333;
+  text-align: right;
+  /* Align text to the right for RTL */
+}
+
+/* Button styling */
+.quiz-container .quiz-btn {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.quiz-container .quiz-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Input field for the quiz code */
+.quiz-container input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+  text-align: right;
+  /* Align input text to the right */
+}
+
+.quiz-container input[type="text"]:focus {
+  outline: none;
+  border: 1px solid #ddd;
+  /* Optional: Keep the regular border to maintain a clean look */
+}
+
+/* Option container for each question */
+.quiz-container .quiz-option-container {
+  margin-bottom: 10px;
+  text-align: right;
+  /* Align options to the right for RTL */
+}
+
+.quiz-container .quiz-option-container input[type="radio"] {
+  margin-left: 10px;
+  /* Align radio button to the left */
+}
+
+.quiz-container .quiz-option-container label {
+  font-size: 16px;
+  cursor: pointer;
+  margin-right: 5px;
+  /* Adjust label position for RTL */
+}
+
+/* For displaying team info and loading state */
+.quiz-container p {
+  font-size: 18px;
+  text-align: right;
+  /* Align paragraph text to the right */
+}
+
+.quiz-container .quiz-btn {
+  display: block;
+  width: 100%;
+  font-size: 18px;
+  padding: 12px 20px;
+  margin-top: 20px;
+}
+
+
+/**************************************************************/
+
+.slick-slide {
+  padding: 0 8px;
+  /* Adjust padding as needed */
+}
+
+.slick-list {
+  margin: 0 -8px;
+  /* Adjust margin to offset the padding */
+}
+
+.slick-dots li button:before {
+  color: dimgray !important;
+  opacity: 1 !important;
+}
+
+.slick-dots li.slick-active button:before {
+  color: white !important;
+}
