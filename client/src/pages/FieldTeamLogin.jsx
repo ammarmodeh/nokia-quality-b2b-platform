@@ -9,7 +9,8 @@ import {
   Paper,
   Snackbar,
   CircularProgress,
-  Alert
+  Alert,
+  Divider
 } from '@mui/material';
 
 const FieldTeamLogin = () => {
@@ -103,13 +104,25 @@ const FieldTeamLogin = () => {
         backgroundColor: '#1e1e1e',
         border: '1px solid #333'
       }}>
-        <Typography variant="h4" component="h1" align="center" gutterBottom sx={{ color: '#ffffff' }}>
-          Field Team Login
+        <Typography variant="h4" component="div" align="center" gutterBottom sx={{ color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0 }}>
+          <img src="/images/nokia-new-logo-2023.svg" width={100} height={100} alt="Nokia Logo" />
+          <img src="/images/Orange-Logo.png" width={40} height={40} alt="Orange Logo" />
+        </Typography>
+        <Typography variant="p" component="div" align="center" gutterBottom sx={{ color: '#ffffff', fontSize: '10px' }}>
+          <span style={{ fontWeight: 'bold', color: '#ff9800' }}>OrangeJo</span>-<span style={{ fontWeight: 'bold', color: '#3ea6ff' }}>Nokia</span> FTTH Project
         </Typography>
 
-        <Typography variant="body1" align="center" sx={{ mb: 2, color: '#9e9e9e' }}>
-          Enter your Team ID and Quiz Code
-        </Typography>
+        <Divider sx={{ borderColor: '#333' }} />
+
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+          <Typography variant="h4" component="h1" align="center" gutterBottom sx={{ color: '#ffffff' }}>
+            Field Team Login
+          </Typography>
+
+          <Typography variant="body1" align="center" sx={{ color: '#9e9e9e' }}>
+            Enter your Team ID and Quiz Code
+          </Typography>
+        </Box>
 
         <Box component="form" onSubmit={handleSubmit}>
           <TextField
@@ -122,6 +135,7 @@ const FieldTeamLogin = () => {
             onChange={handleChange}
             disabled={loading}
             sx={textFieldStyles}
+            autoComplete="off"
           />
 
           <TextField
@@ -134,6 +148,7 @@ const FieldTeamLogin = () => {
             onChange={handleChange}
             disabled={loading}
             sx={textFieldStyles}
+            autoComplete="off"
           />
 
           <Button
