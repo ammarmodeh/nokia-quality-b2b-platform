@@ -1,8 +1,11 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
-import { addFieldTeam, getAllFieldTeams, deleteFieldTeam, updateFieldTeam, updateTeamScore, getFieldTeamByQuizCode, getTeamEvaluationHistory, suspendTeam, terminateTeam, reactivateTeam, onLeaveTeam, resignedTeam, addSession, updateSessionForTeam, deleteSessionForTeam, reportAbsence, getTeamViolations, toggleQuizPermission } from "../controllers/fieldTeamsControllers.js";
+import { addFieldTeam, getAllFieldTeams, deleteFieldTeam, updateFieldTeam, updateTeamScore, getFieldTeamByQuizCode, getTeamEvaluationHistory, suspendTeam, terminateTeam, reactivateTeam, onLeaveTeam, resignedTeam, addSession, updateSessionForTeam, deleteSessionForTeam, reportAbsence, getTeamViolations, toggleQuizPermission, validateTeam } from "../controllers/fieldTeamsControllers.js";
 
 const router = express.Router();
+
+// Get field team by ID and quiz code
+router.post('/validate-team', validateTeam);
 
 // Get All Field Teams
 router.get("/get-field-teams", protect, getAllFieldTeams);
@@ -37,7 +40,7 @@ router.delete("/delete-field-team/:id", protect, deleteFieldTeam);
 router.put("/update-field-team/:id", protect, updateFieldTeam);
 
 // Update team score
-router.post('/update-score', protect, updateTeamScore);
+router.post('/update-score', updateTeamScore);
 
 // Fetching evaluation history
 router.get('/get-evaluation-history/:teamId', protect, getTeamEvaluationHistory);

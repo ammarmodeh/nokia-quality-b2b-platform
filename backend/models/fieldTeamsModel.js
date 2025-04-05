@@ -135,10 +135,19 @@ const fieldTeamsSchema = new mongoose.Schema(
     canTakeQuiz: {
       type: Boolean,
       default: false, // Default to true so existing teams can take the quiz
-      required: true
+    },
+
+    role: {
+      type: String,
+      default: "fieldTeam",
+      enum: ["fieldTeam"], // Add other roles as needed
     },
   },
   { timestamps: true }
 );
+
+// Add indexes here, before creating the model
+fieldTeamsSchema.index({ quizCode: 1, canTakeQuiz: 1 }); // For quick validation checks
+fieldTeamsSchema.index({ isEvaluated: 1, lastEvaluationDate: 1 }); // For reporting
 
 export const FieldTeamsSchema = mongoose.model("FieldTeams", fieldTeamsSchema);

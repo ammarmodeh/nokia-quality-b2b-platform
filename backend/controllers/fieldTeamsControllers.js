@@ -2,6 +2,36 @@ import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
 import dotenv from "dotenv";
 dotenv.config();
 
+export const validateTeam = async (req, res) => {
+  const { teamId, quizCode } = req.body;
+  // console.log({ teamId, quizCode });
+  try {
+    const team = await FieldTeamsSchema.findOne({ _id: teamId, quizCode });
+    // console.log({ team });
+
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found or invalid quiz code' });
+    }
+
+    if (!team.canTakeQuiz) {
+      return res.status(403).json({ message: 'This team is not authorized to take the quiz' });
+    }
+
+    // Don't send sensitive information
+    res.json({
+      isValid: true,
+      team: {
+        _id: team._id,
+        teamName: team.teamName,
+        quizCode: team.quizCode,
+        canTakeQuiz: team.canTakeQuiz
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
 export const getAllFieldTeams = async (req, res) => {
   try {
     const users = await FieldTeamsSchema.find();
@@ -53,6 +83,7 @@ export const addFieldTeam = async (req, res) => {
       isActive: true, // Default active status
       isSuspended: false, // Default not suspended
       isTerminated: false, // Default not terminated
+      // role will be automatically set to 'fieldTeam' by the schema default
     });
 
     await newFieldTeam.save();
@@ -293,29 +324,62 @@ export const updateFieldTeam = async (req, res) => {
 
 // Update team score
 export const updateTeamScore = async (req, res) => {
-  const { quizCode, score } = req.body; // score will be in the "correctAnswers/totalQuestions percentage%" format
-  // console.log({ quizCode, score });
+  const { teamId, quizCode, score } = req.body;
+
+  // Validate input
+  if (!teamId || !quizCode || !score) {
+    return res.status(400).json({
+      message: 'Missing required fields: teamId, quizCode, or score'
+    });
+  }
 
   try {
-    const team = await FieldTeamsSchema.findOneAndUpdate(
-      { quizCode },
+    const currentDate = new Date();
+
+    // Verify team exists and quiz code matches
+    const team = await FieldTeamsSchema.findOne({
+      _id: teamId,
+      quizCode
+    });
+
+    if (!team) {
+      return res.status(404).json({
+        message: 'Team not found or quiz code mismatch'
+      });
+    }
+
+    // Update team score and state
+    const updatedTeam = await FieldTeamsSchema.findByIdAndUpdate(
+      teamId,
       {
+        $set: {
+          evaluationScore: score,
+          lastEvaluationDate: currentDate,
+          isEvaluated: true,
+          canTakeQuiz: false,
+          isActive: true // Ensure team is marked active
+        },
         $push: {
           evaluationHistory: {
-            score: score,
-            date: new Date(), // Date when the score was submitted
-          },
-        },
-        evaluationScore: score, // Optionally update the latest score
-        lastEvaluationDate: new Date(),
-        isEvaluated: true, // Marks the team as evaluated
+            score,
+            date: currentDate
+          }
+        }
       },
-      { new: true, upsert: true } // Returns the updated document
+      { new: true, runValidators: true }
     );
 
-    res.json(team);
+    res.json({
+      success: true,
+      team: updatedTeam,
+    });
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Score update error:', err);
+    res.status(500).json({
+      message: 'Failed to update score',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
