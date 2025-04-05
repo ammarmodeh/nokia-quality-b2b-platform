@@ -143,9 +143,9 @@ const Quiz = () => {
 
   return (
     <div className="p-4 bg-[#121212] min-h-screen" dir="rtl">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-[#3ea6ff]">فريق: {teamName}</h2>
-        <Timer timeLimit={300} onTimeUp={() => submitScore(score, quizState.userAnswers)} />
+      <div className="flex justify-between items-center mb-12">
+        <h2 className="text-xl font-bold text-[#3ea6ff]"> اسم الفريق: {teamName}</h2>
+        <Timer timeLimit={3000} onTimeUp={() => submitScore(score, quizState.userAnswers)} />
       </div>
 
       <div className="max-w-[1000px] mx-auto">
