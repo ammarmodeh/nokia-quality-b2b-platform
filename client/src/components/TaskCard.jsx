@@ -99,7 +99,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
   }, [users, creatorColor]);
 
   const handleAction = (action) => {
-    console.log({ action });
+    // console.log({ action });
     handleMenuClose();
     if (action === "edit") setEditDialogOpen(true);
     if (action === "delete") handleTaskDelete(task._id);
@@ -155,7 +155,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
         dateTime: subtask.dateTime || null, // Preserve dateTime if already set
       }));
 
-      console.log({ updatedSubtasks });
+      // console.log({ updatedSubtasks });
 
       // Send the updated subtasks to the backend
       const response = await api.put(

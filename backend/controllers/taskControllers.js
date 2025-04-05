@@ -567,7 +567,7 @@ export const restoreTask = async (req, res) => {
 
     // Find the task in the trash collection
     const taskInTrash = await TrashSchema.findById(id);
-    console.log({ taskInTrash });
+    // console.log({ taskInTrash });
     // return
     if (!taskInTrash) {
       return res.status(404).json({ message: "Task not found in trash" });

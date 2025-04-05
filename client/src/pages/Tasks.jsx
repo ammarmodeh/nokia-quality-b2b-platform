@@ -191,7 +191,7 @@ const Tasks = () => {
           const res = await api.delete(`/tasks/delete-task/${taskId}`, {
             headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
           });
-          console.log(res.data);
+          // console.log(res.data);
           setFilteredTasks((prevTasks) => prevTasks.filter((task) => task._id !== taskId));
         }
       } else {
@@ -221,7 +221,7 @@ const Tasks = () => {
           const res = await api.delete(`/tasks/delete-task/${taskId}`, {
             headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
           });
-          console.log(res.data);
+          // console.log(res.data);
           setFilteredTasks((prevTasks) => prevTasks.filter((task) => task._id !== taskId));
         }
       } else {

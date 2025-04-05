@@ -219,7 +219,7 @@ const TaskViewPage = () => {
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           });
-          console.log("Deleted task:", res.data);
+          // console.log("Deleted task:", res.data);
 
           navigate("/tasks");
         }

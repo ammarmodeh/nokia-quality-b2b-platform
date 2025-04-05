@@ -1,7 +1,7 @@
 import { useForm, Controller } from "react-hook-form";
 import api from "../api/api";
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from "@mui/material";
-import { format, isAfter, isBefore } from "date-fns";
+import { format, isAfter } from "date-fns";
 
 export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }) => {
   const { control, handleSubmit, reset, watch, formState: { errors } } = useForm();
@@ -18,7 +18,7 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
         suspensionEndDate: format(new Date(data.suspensionEndDate), "yyyy-MM-dd"), // Convert to ISO string
       };
 
-      console.log({ formattedData });
+      // console.log({ formattedData });
 
       const response = await api.post(`/field-teams/suspend-field-team/${teamId}`, formattedData, {
         headers: {

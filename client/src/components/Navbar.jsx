@@ -74,7 +74,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
       const response = await api.post("/customer-issues-notifications", formData, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
       });
-      console.log("Issue submitted successfully:", response.data);
+      // console.log("Issue submitted successfully:", response.data);
       alert("Issue submitted successfully!");
       // You might want to add a success notification here
     } catch (error) {

@@ -86,10 +86,10 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
         ? `${interviewDueDate.getFullYear()}-${String(interviewDueDate.getMonth() + 1).padStart(2, "0")}-${String(interviewDueDate.getDate()).padStart(2, "0")}`
         : "";
 
-      console.log("Formatted Interview Date:", formattedInterviewDate); // Debugging log
+      // console.log("Formatted Interview Date:", formattedInterviewDate); // Debugging log
 
       if (Array.isArray(task.assignedTo) && task.assignedTo.length > 0) {
-        console.log("task.assignedTo:", task.assignedTo);
+        // console.log("task.assignedTo:", task.assignedTo);
         setAssignedTo(task.assignedTo.map((assignedUser) => assignedUser._id || assignedUser));
       }
 
@@ -194,7 +194,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       const response = await api.put(`/tasks/update-task/${task._id}`, formData, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
-      console.log({ response });
+      // console.log({ response });
       // return
       if (response.status === 200) {
         alert("Task updated successfully!");

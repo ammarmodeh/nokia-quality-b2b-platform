@@ -39,7 +39,7 @@ const storeAcceptanceInDatabase = async (name, action, content, createdBy) => {
 export const addPolicy = async (req, res) => {
   const { action, password, name, content } = req.body;
   const userId = req.user.id;
-  console.log({ action, password, name, content, userId });
+  // console.log({ action, password, name, content, userId });
 
   const user = await UserSchema.findById(userId)
   // console.log({ user });
@@ -125,21 +125,21 @@ export const updatePolicy = async (req, res) => {
       updateFields.approvedAt = Date.now();
       updateFields.rejectedBy = null;
       updateFields.rejectedAt = null;
-      console.log(`Policy approved by manager: ${req.user.name}`);
+      // console.log(`Policy approved by manager: ${req.user.name}`);
     } else if (action === 'disagree') {
       // Set rejectedBy and rejectedAt if the action is 'disagree'
       updateFields.rejectedBy = manager._id;
       updateFields.rejectedAt = Date.now();
       updateFields.approvedBy = null;
       updateFields.approvedAt = null;
-      console.log(`Policy rejected by manager: ${req.user.name}`);
+      // console.log(`Policy rejected by manager: ${req.user.name}`);
     } else if (action === 'pending') {
       // Nullify both approved and rejected fields if the action is 'pending'
       updateFields.approvedBy = null;
       updateFields.approvedAt = null;
       updateFields.rejectedBy = null;
       updateFields.rejectedAt = null;
-      console.log(`Policy set to pending by manager: ${req.user.name}`);
+      // console.log(`Policy set to pending by manager: ${req.user.name}`);
     }
 
     // Add a log entry for the update

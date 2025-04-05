@@ -167,7 +167,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       validationStatus,
       validationCat
     };
-    console.log({ formData });
+    // console.log({ formData });
 
 
     if (formData.whomItMayConcern.length === 0 || formData.assignedTo.length === 0) {
@@ -185,7 +185,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
         },
       });
 
-      console.log({ response });
+      // console.log({ response });
 
       // return
 

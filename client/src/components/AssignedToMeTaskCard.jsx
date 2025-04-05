@@ -163,7 +163,7 @@ const AssignedToMeTaskCard = ({
       );
 
       if (response.status === 200) {
-        console.log("Subtasks reset successfully:", response.data);
+        // console.log("Subtasks reset successfully:", response.data);
         setUpdateSubtaskProgress(prev => !prev);
       } else {
         console.log("Failed to reset subtasks");
@@ -181,7 +181,7 @@ const AssignedToMeTaskCard = ({
         progress: note[index]?.trim() ? 25 : 0, // Set progress to 25 if note is not empty
       }));
 
-      console.log("Updated Subtasks:", updatedSubtasks);
+      // console.log("Updated Subtasks:", updatedSubtasks);
 
       const response = await api.put(
         `/tasks/update-subtask/${task._id}`,
@@ -194,7 +194,7 @@ const AssignedToMeTaskCard = ({
       );
 
       if (response.status === 200) {
-        console.log("Subtasks updated successfully:", response.data);
+        // console.log("Subtasks updated successfully:", response.data);
         setSubtasks(updatedSubtasks);
         const activeSteps = updatedSubtasks.filter((subtask) => subtask.note.trim() !== "").length;
         setActiveStep(activeSteps);

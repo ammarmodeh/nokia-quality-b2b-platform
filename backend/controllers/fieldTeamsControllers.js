@@ -446,7 +446,7 @@ export const addSession = async (req, res) => {
 export const updateSessionForTeam = async (req, res) => {
   try {
     const { teamId, sessionId } = req.params;
-    console.log({ teamId, sessionId });
+    // console.log({ teamId, sessionId });
     const { sessionDate, conductedBy, sessionTitle, outlines } = req.body;
 
     const team = await FieldTeamsSchema.findById(teamId);

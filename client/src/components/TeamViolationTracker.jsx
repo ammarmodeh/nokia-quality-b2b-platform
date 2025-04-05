@@ -130,7 +130,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   };
 
   const handleEditSession = async (updatedSession) => {
-    console.log("Editing session:", updatedSession); // Debug log
+    // console.log("Editing session:", updatedSession); // Debug log
 
     if (!updatedSession._id) {
       enqueueSnackbar("Session ID is missing - cannot update", { variant: "error" });
