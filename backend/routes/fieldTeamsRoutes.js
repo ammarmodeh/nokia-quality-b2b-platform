@@ -1,6 +1,6 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
-import { addFieldTeam, getAllFieldTeams, deleteFieldTeam, updateFieldTeam, updateTeamScore, getFieldTeamByQuizCode, getTeamEvaluationHistory, suspendTeam, terminateTeam, reactivateTeam, onLeaveTeam, resignedTeam, addSession, updateSessionForTeam, deleteSessionForTeam, reportAbsence, getTeamViolations } from "../controllers/fieldTeamsControllers.js";
+import { addFieldTeam, getAllFieldTeams, deleteFieldTeam, updateFieldTeam, updateTeamScore, getFieldTeamByQuizCode, getTeamEvaluationHistory, suspendTeam, terminateTeam, reactivateTeam, onLeaveTeam, resignedTeam, addSession, updateSessionForTeam, deleteSessionForTeam, reportAbsence, getTeamViolations, toggleQuizPermission } from "../controllers/fieldTeamsControllers.js";
 
 const router = express.Router();
 
@@ -52,6 +52,8 @@ router.put("/:teamId/update-session/:sessionId", protect, updateSessionForTeam);
 router.delete("/:teamId/delete-session/:sessionId", protect, deleteSessionForTeam);
 
 router.post("/:teamId/report-absence", protect, reportAbsence);
-router.get("/:teamId/violations", protect, getTeamViolations)
+router.get("/:teamId/violations", protect, getTeamViolations);
+
+router.put('/toggle-quiz-permission/:id', toggleQuizPermission);
 
 export default router;

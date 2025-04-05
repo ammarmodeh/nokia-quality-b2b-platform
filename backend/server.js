@@ -18,8 +18,8 @@ dotenv.config();
 
 const corsOptions = {
   origin: [
-    // "http://localhost:3000", // For local development
-    "https://nokia-jo-qos-platform.netlify.app" // For production on Netlify
+    "http://localhost:3000", // For local development
+    // "https://nokia-jo-qos-platform.netlify.app" // For production on Netlify
   ],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials: true, // Allow cookies to be sent with requests

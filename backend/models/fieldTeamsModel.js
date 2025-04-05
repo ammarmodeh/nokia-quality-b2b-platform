@@ -130,7 +130,13 @@ const fieldTeamsSchema = new mongoose.Schema(
     totalViolationPoints: {
       type: Number,
       default: 0
-    }
+    },
+
+    canTakeQuiz: {
+      type: Boolean,
+      default: false, // Default to true so existing teams can take the quiz
+      required: true
+    },
   },
   { timestamps: true }
 );

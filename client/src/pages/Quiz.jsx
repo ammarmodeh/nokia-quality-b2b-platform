@@ -101,6 +101,10 @@ const Quiz = () => {
     })
       .then((response) => {
         if (response.data) {
+          if (!response.data.canTakeQuiz) {
+            alert('This team is currently not allowed to take the quiz. Please contact admin.');
+            return;
+          }
           setTeamName(response.data.teamName);
           setIsCodeValid(true);
         } else {

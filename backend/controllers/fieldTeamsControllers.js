@@ -31,7 +31,7 @@ export const getFieldTeamByQuizCode = async (req, res) => {
 // Add New Field Team
 export const addFieldTeam = async (req, res) => {
   try {
-    const { teamName, teamCompany, contactNumber, fsmSerialNumber, laptopSerialNumber, isSuspended, suspensionDuration, suspensionReason, terminationReason, isActive } = req.body;
+    const { teamName, teamCompany, contactNumber, fsmSerialNumber, laptopSerialNumber } = req.body;
 
     // Generate a random 10-character alphanumeric quiz code
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -46,19 +46,17 @@ export const addFieldTeam = async (req, res) => {
       teamName,
       teamCompany,
       contactNumber,
-      fsmSerialNumber,
-      laptopSerialNumber,
+      fsmSerialNumber: fsmSerialNumber || 'N/A',
+      laptopSerialNumber: laptopSerialNumber || 'N/A',
       quizCode,
-      isSuspended,
-      suspensionDuration,
-      suspensionReason,
-      terminationReason,
-      isActive,
+      canTakeQuiz: false, // Default to false - requires admin approval
+      isActive: true, // Default active status
+      isSuspended: false, // Default not suspended
+      isTerminated: false, // Default not terminated
     });
 
     await newFieldTeam.save();
     res.status(201).json(newFieldTeam);
-
   } catch (error) {
     console.error("Error adding field team:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -555,5 +553,37 @@ export const getTeamViolations = async (req, res) => {
       message: "Failed to fetch violations",
       error: error.message
     });
+  }
+};
+
+export const toggleQuizPermission = async (req, res) => {
+  try {
+    const { canTakeQuiz } = req.body;
+    const teamId = req.params.id;
+
+    const updatedTeam = await FieldTeamsSchema.findByIdAndUpdate(
+      teamId,
+      {
+        $set: { canTakeQuiz },
+        $push: {
+          stateLogs: {
+            state: 'Quiz Permission Changed',
+            quizPermissionChanged: true,
+            newQuizPermission: canTakeQuiz,
+            changedAt: new Date()
+          }
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedTeam) {
+      return res.status(404).json({ error: "Team not found" });
+    }
+
+    res.status(200).json(updatedTeam);
+  } catch (error) {
+    console.error("Error updating quiz permission:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };

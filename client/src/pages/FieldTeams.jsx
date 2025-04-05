@@ -110,6 +110,29 @@ const FieldTeamForm = () => {
     setOpenEditDialog(true);
   }, []);
 
+  const handleToggleQuizPermission = useCallback(async (teamId, newStatus) => {
+    try {
+      const response = await api.put(
+        `/field-teams/toggle-quiz-permission/${teamId}`,
+        { canTakeQuiz: newStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        setUpdateState((prev) => !prev); // Refresh the teams list
+      } else {
+        alert('Failed to update quiz permission');
+      }
+    } catch (error) {
+      console.error('Error toggling quiz permission:', error);
+      alert('An error occurred while updating quiz permission');
+    }
+  }, []);
+
   // Handle delete click
   const handleDeleteClick = useCallback(async (teamId) => {
     if (!window.confirm('Are you sure you want to delete this team?')) return;
@@ -344,7 +367,7 @@ const FieldTeamForm = () => {
   // Columns for DataGrid
   const columns = useMemo(() => [
     { field: 'teamName', headerName: 'Team Name', flex: 1, headerClassName: 'dark-header', minWidth: 200 },
-    { field: 'teamCompany', headerName: 'Team Company', flex: 1, headerClassName: 'dark-header', minWidth: 200 },
+    { field: 'teamCompany', headerName: 'Team Company', flex: 1, headerClassName: 'dark-header', minWidth: 120 },
     { field: 'contactNumber', headerName: 'Contact Number', flex: 1, headerClassName: 'dark-header', minWidth: 200 },
     {
       field: 'fsmSerialNumber',
@@ -363,13 +386,22 @@ const FieldTeamForm = () => {
       minWidth: 200,
     },
     {
+      field: 'canTakeQuiz',
+      headerName: 'Quiz Allowed',
+      flex: 1,
+      headerClassName: 'dark-header',
+      type: 'boolean',
+      renderCell: (params) => params.value ? '✅ Yes' : '❌ No',
+      minWidth: 120,
+    },
+    {
       field: 'evaluationScore',
       headerName: 'Evaluation Score',
       flex: 1,
       headerClassName: 'dark-header',
       type: 'number',
-      valueFormatter: (params) => `${params || 0}`,
-      minWidth: 200,
+      valueFormatter: (params) => `${params || 'N/A'}`,
+      minWidth: 120,
     },
     {
       field: 'isEvaluated',
@@ -377,8 +409,8 @@ const FieldTeamForm = () => {
       flex: 1,
       headerClassName: 'dark-header',
       type: 'boolean',
-      renderCell: (params) => params.value ? '✅ Yes' : '❌ No',
-      minWidth: 200,
+      renderCell: (params) => params.value ? 'Yes' : 'No',
+      minWidth: 100,
     },
     {
       field: 'lastEvaluationDate',
@@ -403,14 +435,14 @@ const FieldTeamForm = () => {
           <FaEye />
         </Button>
       ),
-      minWidth: 200,
+      minWidth: 120,
     },
     {
       field: 'quizCode',
       headerName: 'Quiz Code',
       flex: 1,
       headerClassName: 'dark-header',
-      minWidth: 200,
+      minWidth: 130,
     },
     {
       field: 'actions',
@@ -479,9 +511,30 @@ const FieldTeamForm = () => {
           >
             Resigned
           </Button>
+          <Tooltip title={params.row.canTakeQuiz ? "Disallow Quiz" : "Allow Quiz"}>
+            <Button
+              variant="text"
+              color={params.row.canTakeQuiz ? "success" : "error"}
+              disabled={user.role !== 'Admin'}
+              onClick={() => handleToggleQuizPermission(params.row._id, !params.row.canTakeQuiz)}
+              sx={{
+                height: '20px',
+                py: 1,
+                px: 0,
+                fontSize: '12px',
+                minWidth: '100px',
+                backgroundColor: params.row.canTakeQuiz ? 'rgba(46, 125, 50, 0.1)' : 'rgba(211, 47, 47, 0.1)',
+                '&:hover': {
+                  backgroundColor: params.row.canTakeQuiz ? 'rgba(46, 125, 50, 0.2)' : 'rgba(211, 47, 47, 0.2)',
+                }
+              }}
+            >
+              {params.row.canTakeQuiz ? "Allowed" : "Disallowed"}
+            </Button>
+          </Tooltip>
         </Stack>
       ),
-      minWidth: 600,
+      minWidth: 700,
     },
     {
       field: 'isSuspended',
@@ -489,8 +542,8 @@ const FieldTeamForm = () => {
       flex: 1,
       headerClassName: 'dark-header',
       type: 'boolean',
-      renderCell: (params) => params.value ? '✅ Yes' : '❌ No',
-      minWidth: 200,
+      renderCell: (params) => params.value ? 'Yes' : 'No',
+      minWidth: 100,
     },
     {
       field: 'suspensionDuration',
@@ -520,7 +573,7 @@ const FieldTeamForm = () => {
       headerClassName: 'dark-header',
       type: 'boolean',
       renderCell: (params) => params.value ? '✅ Yes' : '❌ No',
-      minWidth: 200,
+      minWidth: 100,
     },
     {
       field: 'stateLogs',
@@ -533,9 +586,9 @@ const FieldTeamForm = () => {
         </Button>
 
       ),
-      minWidth: 200,
+      minWidth: 120,
     },
-  ], [handleDeleteClick, handleEditClick, handleOnLeaveClick, handleReactivateClick, handleResignedClick, handleSuspendClick, handleTerminateClick, handleViewHistoryClick, handleViewLogsClick, user.role]);
+  ], [handleDeleteClick, handleEditClick, handleOnLeaveClick, handleReactivateClick, handleResignedClick, handleSuspendClick, handleTerminateClick, handleToggleQuizPermission, handleViewHistoryClick, handleViewLogsClick, user.role]);
 
   return (
     <div className="max-w-[1000px] mx-auto">
