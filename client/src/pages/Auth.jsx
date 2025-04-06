@@ -42,10 +42,10 @@ const Auth = () => {
     trigger,
   } = useForm({ mode: 'onChange' });
 
-  const toggleForm = () => {
-    setIsLogin((prev) => !prev);
-    setStep(0);
-  };
+  // const toggleForm = () => {
+  //   setIsLogin((prev) => !prev);
+  //   setStep(0);
+  // };
 
   const nextStep = async () => {
     let isValid = false;
@@ -224,7 +224,7 @@ const Auth = () => {
                 {isLogin && (
                   <>
                     <TextField
-                      placeholder="email@example.com"
+                      // placeholder="email@example.com"
                       type="email"
                       label="Email Address"
                       variant="outlined"
@@ -266,7 +266,7 @@ const Auth = () => {
                     />
 
                     <TextField
-                      placeholder="••••••••"
+                      // placeholder="••••••••"
                       type={showPassword ? 'text' : 'password'}
                       label="Password"
                       variant="outlined"
@@ -318,10 +318,11 @@ const Auth = () => {
                 )}
 
                 {/* Registration form fields - step by step */}
-                {!isLogin && (
-                  <>
-                    {/* Step 0: Name and Email */}
-                    {step === 0 && (
+
+                {/* {!isLogin && ( */}
+                {/* <> */}
+                {/* Step 0: Name and Email */}
+                {/* {step === 0 && (
                       <>
                         <TextField
                           placeholder="John Doe"
@@ -407,10 +408,10 @@ const Auth = () => {
                           }}
                         />
                       </>
-                    )}
+                    )} */}
 
-                    {/* Step 1: Password */}
-                    {step === 1 && (
+                {/* Step 1: Password */}
+                {/* {step === 1 && (
                       <TextField
                         placeholder="••••••••"
                         type={showPassword ? 'text' : 'password'}
@@ -460,10 +461,10 @@ const Auth = () => {
                           },
                         }}
                       />
-                    )}
+                    )} */}
 
-                    {/* Step 2: Phone Number */}
-                    {step === 2 && (
+                {/* Step 2: Phone Number */}
+                {/* {step === 2 && (
                       <TextField
                         placeholder="+1234567890"
                         type="tel"
@@ -505,10 +506,10 @@ const Auth = () => {
                           },
                         }}
                       />
-                    )}
+                    )} */}
 
-                    {/* Step 3: Job Title */}
-                    {step === 3 && (
+                {/* Step 3: Job Title */}
+                {/* {step === 3 && (
                       <TextField
                         placeholder="Software Developer"
                         type="text"
@@ -550,9 +551,9 @@ const Auth = () => {
                           },
                         }}
                       />
-                    )}
-                  </>
-                )}
+                    )} */}
+                {/* </> */}
+                {/* )} */}
 
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   {!isLogin && step > 0 && (
@@ -603,7 +604,8 @@ const Auth = () => {
                         backgroundColor: '#4e73df',
                         '&:hover': {
                           backgroundColor: '#3b5ab5',
-                        }
+                        },
+                        mt: 2
                       }}
                     >
                       {isLogin ? 'Sign In' : 'Register'}
@@ -611,7 +613,7 @@ const Auth = () => {
                   )}
                 </Box>
 
-                <Divider sx={{ backgroundColor: '#333', my: 1 }} />
+                {/* <Divider sx={{ backgroundColor: '#333', my: 1 }} />
 
                 <Button
                   fullWidth
@@ -626,7 +628,7 @@ const Auth = () => {
                   }}
                 >
                   {isLogin ? 'Need an account? Register' : 'Already have an account? Sign In'}
-                </Button>
+                </Button> */}
               </Box>
             </Box>
           </Box>

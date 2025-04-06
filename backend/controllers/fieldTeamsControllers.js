@@ -629,14 +629,14 @@ export const toggleQuizPermission = async (req, res) => {
       teamId,
       {
         $set: { canTakeQuiz },
-        $push: {
-          stateLogs: {
-            state: 'Quiz Permission Changed',
-            quizPermissionChanged: true,
-            newQuizPermission: canTakeQuiz,
-            changedAt: new Date()
-          }
-        }
+        // $push: {
+        //   stateLogs: {
+        //     state: 'Quiz Permission Changed',
+        //     quizPermissionChanged: true,
+        //     newQuizPermission: canTakeQuiz,
+        //     changedAt: new Date()
+        //   }
+        // }
       },
       { new: true }
     );

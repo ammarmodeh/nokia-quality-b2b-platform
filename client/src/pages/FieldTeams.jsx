@@ -30,6 +30,7 @@ const FieldTeamForm = () => {
   const [openTerminateDialog, setOpenTerminateDialog] = useState(false);
   const [openReactivateDialog, setOpenReactivateDialog] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState(null);
+  // console.log({ selectedTeamId });
   const [updateTeamStatus, setUpdateTeamStatus] = useState(false);
   const [openLogsDialog, setOpenLogsDialog] = useState(false);
   const [selectedLogs, setSelectedLogs] = useState([]);
@@ -163,9 +164,9 @@ const FieldTeamForm = () => {
 
     const updatedData = {
       teamName: [data.firstName, data.secondName, data.thirdName, data.surname]
-        .filter(Boolean) // Remove empty strings
-        .join(' ') // Join with a single space
-        .trim(), // Trim any leading or trailing spaces
+        .filter(Boolean)
+        .join(' ')
+        .trim(),
       teamCompany: data.teamCompany,
       contactNumber: data.contactNumber,
       fsmSerialNumber: data.fsmSerialNumber || 'N/A',
@@ -182,22 +183,30 @@ const FieldTeamForm = () => {
 
       if (response.status === 200) {
         // Step 2: Update all Task documents with the matching teamId
-        const updateTasksResponse = await api.put(
-          `/tasks/update-tasks-by-team-id/${editTeam._id}`,
-          { teamName: updatedData.teamName },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-            },
-          }
-        );
+        try {
+          const updateTasksResponse = await api.put(
+            `/tasks/update-tasks-by-team-id/${editTeam._id}`,
+            { teamName: updatedData.teamName },
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+              },
+            }
+          );
 
-        if (updateTasksResponse.status === 200) {
-          alert('Team information and related tasks updated successfully!');
+          // This will now succeed even if no tasks were found
+          alert('Team information updated successfully!' +
+            (updateTasksResponse.data.updatedCount > 0
+              ? ` ${updateTasksResponse.data.updatedCount} related tasks were also updated.`
+              : ' No related tasks needed updating.')
+          );
+
           setUpdateState((prev) => !prev);
           setOpenEditDialog(false);
-        } else {
-          setErrorMessage('Failed to update related tasks.');
+        } catch (taskError) {
+          // This will only catch actual errors, not the "no tasks" case
+          console.error('Task update error:', taskError);
+          alert('Team information updated successfully, but there was an error updating related tasks.');
         }
       } else {
         setErrorMessage('There was an error updating the information.');
@@ -247,6 +256,7 @@ const FieldTeamForm = () => {
       });
       if (response.status === 200) {
         setEvaluationHistory(response.data);
+        setSelectedTeamId(teamId);
         setOpenHistoryDialog(true);
       } else {
         alert('Failed to fetch evaluation history');
@@ -758,16 +768,30 @@ const FieldTeamForm = () => {
         />
 
         {/* History Dialog */}
-        <Dialog open={openHistoryDialog} onClose={() => setOpenHistoryDialog(false)} sx={{ "& .MuiDialog-paper": { backgroundColor: '#1e1e1e', boxShadow: 'none' } }}>
-          <DialogTitle sx={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>Evaluation History</DialogTitle>
+        <Dialog
+          open={openHistoryDialog}
+          onClose={() => setOpenHistoryDialog(false)}
+          sx={{
+            "& .MuiDialog-paper": {
+              backgroundColor: '#1e1e1e',
+              boxShadow: 'none',
+              // minWidth: '600px', // Make the dialog wider
+              // maxWidth: '800px', // Set a maximum width
+              width: '90%' // Take up 80% of the screen width
+            }
+          }}
+        >
+          <DialogTitle sx={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>
+            Evaluation History - {teams.find(team => team._id === selectedTeamId)?.teamName || 'Team'}
+          </DialogTitle>
           <DialogContent sx={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>
             {evaluationHistory.length === 0 ? (
               <Typography>No evaluation history available</Typography>
             ) : (
-              <ul>
+              <ul style={{ paddingLeft: '20px' }}>
                 {evaluationHistory.map((evaluation, index) => (
-                  <li key={index}>
-                    <strong>Date:</strong> {new Date(evaluation.date).toLocaleDateString()} | <strong>Score:</strong> {evaluation.score}
+                  <li key={index} style={{ marginBottom: '10px' }}>
+                    <strong>Date:</strong> {new Date(evaluation.date).toLocaleString()} | <strong>Score:</strong> {evaluation.score}
                   </li>
                 ))}
               </ul>

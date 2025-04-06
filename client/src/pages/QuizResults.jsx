@@ -53,7 +53,18 @@ const QuizResults = () => {
   };
 
   const shareResults = (platform) => {
-    const message = `الفريق: ${teamName}\nنتيجتي في الاختبار: ${correctAnswers}/${totalQuestions} (${percentage}%).`;
+    let message = `نتيجة اختبار فريق ${teamName}:\n`;
+    message += `النتيجة النهائية: ${correctAnswers}/${totalQuestions} (${percentage}%)\n\n`;
+
+    // Add each question with user's answer only (without correct answer)
+    questions.forEach((question, index) => {
+      const userAnswer = userAnswers[index]?.selectedAnswer || 'لم يتم الإجابة';
+      const isCorrect = userAnswers[index]?.isCorrect ? '✅' : '❌';
+
+      message += `السؤال ${index + 1}: ${question.question}\n`;
+      message += `إجابتي: ${userAnswer} ${isCorrect}\n\n`;
+    });
+
     const links = {
       whatsapp: `https://wa.me/?text=${encodeURIComponent(message)}`,
       email: `https://mail.google.com/mail/?view=cm&fs=1&to=&su=نتيجة الاختبار&body=${encodeURIComponent(message)}`

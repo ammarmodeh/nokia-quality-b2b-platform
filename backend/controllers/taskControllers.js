@@ -747,11 +747,12 @@ export const updateTaskByTeamId = async (req, res) => {
       { $set: { teamName: teamName } }
     );
 
-    if (result.modifiedCount > 0) {
-      res.status(200).json({ message: 'Tasks updated successfully', updatedCount: result.modifiedCount });
-    } else {
-      res.status(404).json({ message: 'No tasks found with the specified teamId' });
-    }
+    // Always return success even if no tasks were modified
+    res.status(200).json({
+      message: 'Tasks update completed',
+      updatedCount: result.modifiedCount,
+      tasksFound: result.matchedCount
+    });
   } catch (error) {
     console.error('Error updating tasks:', error);
     res.status(500).json({ message: 'Internal server error' });
