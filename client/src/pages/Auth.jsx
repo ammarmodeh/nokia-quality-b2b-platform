@@ -79,6 +79,8 @@ const Auth = () => {
   };
 
   const showSnackbar = (message, severity = 'success') => {
+    console.log('Showing snackbar:', message, severity);
+    console.log('Current snackbar state before update:', snackbar); // Add this line
     setSnackbar({ open: true, message, severity });
   };
 
@@ -109,7 +111,24 @@ const Auth = () => {
         setIsLogin(true);
       }
     } catch (error) {
-      showSnackbar(error.response?.data?.message || 'An error occurred.', 'error');
+      console.error('Login error:', error);
+      console.log('Error response:', error.response); // Add this line
+      let errorMessage = 'An error occurred.';
+
+      if (error.response) {
+        console.log('Response data:', error.response.data); // Detailed logging
+        errorMessage = error.response.data?.message ||
+          error.response.data?.error ||
+          error.response.statusText;
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage = 'No response from server';
+      } else {
+        // Something happened in setting up the request
+        errorMessage = error.message;
+      }
+
+      showSnackbar(errorMessage, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -120,8 +139,8 @@ const Auth = () => {
       setIsLoading(true);
       setTimeout(() => {
         navigate('/dashboard', { state: { showSnackbar: true } });
-        setTimeout(() => setIsLoading(false), 500);
-      }, 1500);
+        setTimeout(() => setIsLoading(false), 100);
+      }, 500);
     }
   }, [user, navigate]);
 

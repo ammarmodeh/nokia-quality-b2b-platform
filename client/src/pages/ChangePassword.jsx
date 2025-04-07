@@ -40,7 +40,7 @@ const ChangePassword = () => {
 
         setTimeout(() => {
           dispatch(logout());
-        }, 1500);
+        }, 500);
       }
     } catch (error) {
       setSnackbarMessage(error.response?.data?.message || "An error occurred");

@@ -20,7 +20,7 @@ const Register = () => {
       await api.post("/users/register", data, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
-      navigate("/login"); // Redirect to login after successful registration
+      navigate("/auth"); // Redirect to login after successful registration
     } catch (error) {
       console.error("Registration failed:", error.response?.data?.message || error.message);
     }

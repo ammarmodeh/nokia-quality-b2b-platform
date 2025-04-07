@@ -9,9 +9,9 @@ dotenv.config();
 // Generate JWT Token
 const generateToken = (user) => {
   const accessToken = jwt.sign(
-    { id: user._id, role: user.role }, // Customize payload
-    process.env.JWT_SECRET, // Use the same secret to sign the token
-    { expiresIn: "7d" } // Access token expires in 1 hour
+    { id: user._id, role: user.role }, // Payload
+    process.env.JWT_SECRET, // Secret key
+    { expiresIn: "12h" } // Token expires in 12 hours
   );
 
   // const refreshToken = jwt.sign(
@@ -113,7 +113,7 @@ export const login = async (req, res) => {
     // Check if user exists
     if (!user) {
       console.log('User not found');
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "User not found" });
     }
 
     // Check if password matches
@@ -122,7 +122,7 @@ export const login = async (req, res) => {
 
     if (!isMatch) {
       console.log('Password does not match');
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid password" });
     }
 
     // Generate tokens
