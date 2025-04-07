@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { Box, Button, Typography, Alert } from '@mui/material';
+import { FaWhatsapp } from 'react-icons/fa'; // Import the WhatsApp icon
 
 const QuizResults = () => {
   const navigate = useNavigate();
@@ -12,13 +13,23 @@ const QuizResults = () => {
       navigate('/fieldteam-login', { replace: true });
     }
 
+    // Set timeout to navigate after 1 minute (60000 milliseconds)
+    const timeoutId = setTimeout(() => {
+      navigate('/fieldteam-login', { replace: true });
+    }, 180000);
+
     // Prevent going back
     const handleBackButton = () => {
       navigate('/fieldteam-login', { replace: true });
     };
 
     window.addEventListener('popstate', handleBackButton);
-    return () => window.removeEventListener('popstate', handleBackButton);
+
+    // Cleanup function
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('popstate', handleBackButton);
+    };
   }, [navigate, results]);
 
   const handleExit = () => {
@@ -41,36 +52,27 @@ const QuizResults = () => {
   const generateQRData = () => {
     const baseData = [
       `الفريق: ${teamName}`,
-      `النتيجة: ${correctAnswers}/${totalQuestions} (${percentage}%)`,
-      ...questions.map((q, index) => {
-        const isCorrect = userAnswers[index]?.isCorrect ? "✅" : "❌";
-        return `${index + 1} - ${isCorrect}`;
-      })
+      `النتيجة: ${correctAnswers}/${totalQuestions} (${percentage}%)`
     ].join("\n");
 
     const maxLength = 650;
     return baseData.length > maxLength ? baseData.substring(0, maxLength - 3) + "..." : baseData;
   };
 
-  const shareResults = (platform) => {
+  const shareResults = () => {
     let message = `نتيجة اختبار فريق ${teamName}:\n`;
     message += `النتيجة النهائية: ${correctAnswers}/${totalQuestions} (${percentage}%)\n\n`;
 
     // Add each question with user's answer only (without correct answer)
     questions.forEach((question, index) => {
       const userAnswer = userAnswers[index]?.selectedAnswer || 'لم يتم الإجابة';
-      const isCorrect = userAnswers[index]?.isCorrect ? '✅' : '❌';
 
       message += `السؤال ${index + 1}: ${question.question}\n`;
-      message += `إجابتي: ${userAnswer} ${isCorrect}\n\n`;
+      message += `إجابتي: ${userAnswer}\n\n`;
     });
 
-    const links = {
-      whatsapp: `https://wa.me/?text=${encodeURIComponent(message)}`,
-      email: `https://mail.google.com/mail/?view=cm&fs=1&to=&su=نتيجة الاختبار&body=${encodeURIComponent(message)}`
-    };
-
-    window.open(links[platform], '_blank');
+    const link = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(link, '_blank');
   };
 
   return (
@@ -129,29 +131,20 @@ const QuizResults = () => {
         }}>
           <Button
             variant="contained"
-            onClick={() => shareResults('whatsapp')}
+            onClick={shareResults}
             sx={{
               bgcolor: '#25D366',
               '&:hover': { bgcolor: '#128C7E' },
               minWidth: 140,
               py: 1,
-              fontSize: '0.875rem'
+              fontSize: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
             }}
           >
-            مشاركة عبر واتساب
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => shareResults('email')}
-            sx={{
-              bgcolor: '#EA4335',
-              '&:hover': { bgcolor: '#D33426' },
-              minWidth: 140,
-              py: 1,
-              fontSize: '0.875rem'
-            }}
-          >
-            مشاركة عبر البريد
+            <FaWhatsapp size={20} /> {/* Add the WhatsApp icon */}
+            <Typography>مشاركة النتيجة</Typography>
           </Button>
         </Box>
 
@@ -171,7 +164,7 @@ const QuizResults = () => {
         </Button>
 
         <Alert severity="info" sx={{ mt: 2, py: 0.5, fontSize: '0.875rem' }}>
-          يمكنك مشاركة نتائجك مع فريقك
+          يمكنك مشاركة الاسئلة مع الاجابات عبر الواتساب
         </Alert>
       </Box>
     </Box>

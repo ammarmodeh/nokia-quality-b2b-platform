@@ -42,11 +42,13 @@ import {
   MdStarOutline,
   MdFilterList
 } from 'react-icons/md';
+import { IoMdAdd } from "react-icons/io";
 import api from '../api/api';
 import EditTaskDialog from '../components/task/EditTaskDialog';
 import { TaskDetailsDialog } from '../components/TaskDetailsDialog';
 import { format, parseISO } from 'date-fns';
 import { utils, writeFile } from 'xlsx';
+import AddTask from '../components/task/AddTask';
 
 const AllTasksList = () => {
   const theme = useTheme();
@@ -66,6 +68,8 @@ const AllTasksList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all', 'neutrals', 'detractors'
+  const [openAddTask, setOpenAddTask] = useState(false);
+  const [updateRefetchTasks, setUpdateRefetchTasks] = useState(false);
 
   // Fetch all non-deleted tasks and sort by interview date
   const fetchTasks = async () => {
@@ -109,7 +113,7 @@ const AllTasksList = () => {
     if (user?._id) {
       fetchFavoriteTasks();
     }
-  }, [user?._id]);
+  }, [user?._id, updateRefetchTasks]);
 
   // Check if task is favorited and get its favorite ID
   const getFavoriteStatus = (taskId) => {
@@ -398,6 +402,29 @@ const AllTasksList = () => {
         >
           Export to Excel
         </Button>
+
+        {user && user.role === 'Admin' && (
+          <Button
+            variant="outlined"
+            onClick={() => setOpenAddTask(true)}
+            startIcon={<IoMdAdd />}
+            sx={{
+              borderColor: '#444',
+              color: '#4caf50',
+              '&:hover': {
+                backgroundColor: 'rgba(76, 175, 80, 0.08)',
+                borderColor: '#666',
+              },
+              textTransform: 'none',
+              borderRadius: '20px',
+              px: 3,
+              whiteSpace: 'nowrap',
+              width: isMobile ? '100%' : 'auto'
+            }}
+          >
+            Create Task
+          </Button>
+        )}
       </Box>
 
       {/* Tasks Table */}
@@ -689,6 +716,13 @@ const AllTasksList = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Add Task Dialog */}
+      <AddTask
+        open={openAddTask}
+        setOpen={setOpenAddTask}
+        setUpdateRefetchTasks={setUpdateRefetchTasks}
+      />
     </Box>
   );
 };

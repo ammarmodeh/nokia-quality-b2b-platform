@@ -81,7 +81,10 @@ const Quiz = () => {
         userAnswers: newUserAnswers
       }));
     } else {
-      submitScore(newScore, newUserAnswers);
+      const userConfirmed = window.confirm('هل أنت متأكد من إنهاء الاختبار؟');
+      if (userConfirmed) {
+        submitScore(newScore, newUserAnswers);
+      }
     }
   };
 
