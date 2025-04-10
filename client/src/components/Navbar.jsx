@@ -9,7 +9,7 @@ import { Box, Button, Divider, Menu, MenuItem, Stack, Typography, Drawer, IconBu
 import { DocsMenu } from "./DocsMenu";
 import { PoliciesMenu } from "./PoliciesMenu";
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { IoMdClose } from "react-icons/io";
+import { IoIosArrowDropleftCircle, IoIosCloseCircle, IoMdClose, IoMdCloseCircle } from "react-icons/io";
 import CustomerIssueDialog from "./CustomerIssueDialog";
 import { useSelector } from "react-redux";
 
@@ -150,14 +150,20 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
         {(!isMediumSize || showSearch) && (
           <div
             ref={searchBarRef}
-            className={`relative ${isMediumSize ? 'w-[180px]' : 'w-[300px]'
-              } flex items-center py-2 px-4 gap-2 rounded-full bg-[#121212] border border-[#444] focus-within:border-[#3ea6ff] transition-all`}
+            className={`relative ${isMediumSize ? (showSearch ? 'w-[165px]' : 'w-0') : 'w-[300px]'
+              } flex items-center py-2 px-2 gap-1 rounded-full bg-[#121212] border border-[#444] focus-within:border-[#3ea6ff] transition-[width] duration-300 ease-in-out overflow-hidden`}
+            style={{
+              transitionProperty: 'width, opacity',
+              transitionDuration: '300ms',
+              transitionTimingFunction: 'ease-in-out',
+              opacity: isMediumSize ? (showSearch ? 1 : 0) : 1
+            }}
           >
             <MdOutlineSearch className="text-gray-400 text-xl" />
             <input
               type="text"
               placeholder="Search by SLID..."
-              className="flex-1 outline-none bg-transparent placeholder:text-gray-700 text-gray-100 text-sm"
+              className="flex-1 w-full outline-none bg-transparent placeholder:text-gray-700 text-gray-100 text-xs"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -167,18 +173,20 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="text-gray-400 absolute right-4 hover:text-gray-200"
+                className="text-gray-400 absolute right-8 hover:text-gray-200"
               >
-                <MdClose className="text-xl" />
+                {/* <MdClose className="text-xl" /> */}
+                <IoMdCloseCircle className="text-xl" />
               </button>
             )}
             {/* Close search button in mobile view */}
             {isMediumSize && showSearch && (
               <button
                 onClick={toggleSearch}
-                className="text-gray-400 hover:text-gray-200"
+                className="text-gray-400 hover:text-gray-200 absolute right-2"
               >
-                <MdClose className="text-xl" />
+                {/* <MdClose className="text-xl" /> */}
+                <IoIosArrowDropleftCircle className="text-xl" />
               </button>
             )}
           </div>
@@ -188,7 +196,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
         {isMediumSize && !showSearch && (
           <button
             onClick={toggleSearch}
-            className="text-2xl text-gray-400 hover:text-gray-200"
+            className="text-2xl text-gray-400 hover:text-gray-200 transition-colors duration-300"
           >
             <MdOutlineSearch />
           </button>

@@ -13,7 +13,9 @@ import {
   DialogContent,
   DialogActions,
   Divider,
-  Chip
+  Chip,
+  useMediaQuery,
+  useTheme
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { useNavigate } from "react-router-dom";
@@ -54,6 +56,8 @@ const handleCopyTaskData = (taskData) => {
 
 const TaskTable = ({ tasks }) => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const [paginationModel, setPaginationModel] = useState({
     pageSize: 10,
     page: 0,
@@ -298,11 +302,12 @@ const TaskTable = ({ tasks }) => {
         onClose={handleClose}
         maxWidth="sm"
         fullWidth
+        fullScreen={fullScreen}
         sx={{
           "& .MuiDialog-paper": {
             backgroundColor: '#1e1e1e',
             boxShadow: 'none',
-            borderRadius: '8px',
+            borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
           }
         }}
       >

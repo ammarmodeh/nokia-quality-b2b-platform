@@ -7,11 +7,17 @@ import {
   Button,
   TextField,
   Box,
-  Typography
+  Typography,
+  useTheme,
+  useMediaQuery,
+  Divider
 } from '@mui/material';
 import { parseISO, isValid } from 'date-fns';
 
 const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+
   const [sessionDate, setSessionDate] = useState('');
   const [reason, setReason] = useState('');
   const [dateError, setDateError] = useState('');
@@ -56,11 +62,36 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={fullScreen}
+      sx={{
+        "& .MuiDialog-paper": {
+          backgroundColor: '#1e1e1e',
+          boxShadow: 'none',
+          borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
+        }
+      }}
+    >
+      <DialogTitle sx={{
+        backgroundColor: '#1e1e1e',
+        color: '#ffffff',
+        borderBottom: '1px solid #444',
+        padding: '16px 24px',
+      }}>
         Report Absence for {teamName}
       </DialogTitle>
-      <DialogContent>
+
+      <Divider sx={{ backgroundColor: '#444' }} />
+
+      <DialogContent sx={{
+        backgroundColor: '#1e1e1e',
+        color: '#ffffff',
+        padding: '20px 24px',
+      }}>
         <Box sx={{ mt: 2 }}>
           <Typography variant="body1" gutterBottom>
             Use this form to report when a team failed to attend a confirmed training session.
@@ -78,6 +109,23 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
             type="date"
             InputLabelProps={{
               shrink: true,
+              style: { color: dateError ? '#f44336' : '#aaaaaa' }
+            }}
+            sx={{
+              '& .MuiInputBase-root': {
+                color: '#ffffff',
+              },
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: dateError ? '#f44336' : '#444',
+                },
+                '&:hover fieldset': {
+                  borderColor: dateError ? '#f44336' : '#666',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: dateError ? '#f44336' : '#3ea6ff',
+                },
+              },
             }}
           />
 
@@ -90,17 +138,58 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Enter any details about why the team was absent..."
+            sx={{
+              '& .MuiInputBase-root': {
+                color: '#ffffff',
+              },
+              '& .MuiInputLabel-root': {
+                color: '#aaaaaa',
+              },
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: '#444',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#666',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#3ea6ff',
+                },
+              },
+            }}
           />
-
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+
+      <Divider sx={{ backgroundColor: '#444' }} />
+
+      <DialogActions sx={{
+        backgroundColor: '#1e1e1e',
+        borderTop: '1px solid #444',
+        padding: '12px 24px',
+      }}>
+        <Button
+          onClick={onClose}
+          sx={{
+            color: '#ffffff',
+            '&:hover': {
+              backgroundColor: '#2a2a2a',
+            }
+          }}
+        >
+          Cancel
+        </Button>
         <Button
           onClick={handleSubmit}
           color="error"
           variant="contained"
           disabled={!!dateError}
+          sx={{
+            backgroundColor: '#f44336',
+            '&:hover': {
+              backgroundColor: '#e57373',
+            }
+          }}
         >
           Report Absence
         </Button>

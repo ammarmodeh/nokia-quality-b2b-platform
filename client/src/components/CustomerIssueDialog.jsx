@@ -12,10 +12,14 @@ import {
   InputLabel,
   Box,
   Typography,
+  useTheme,
+  useMediaQuery
 } from "@mui/material";
 import { useSelector } from "react-redux";
 
 const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const user = useSelector((state) => state?.auth?.user);
   const isAdmin = user.role === "Admin";
 
@@ -167,11 +171,12 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
       onClose={onClose}
       maxWidth="sm"
       fullWidth
+      fullScreen={fullScreen}
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#1e1e1e',
           boxShadow: 'none',
-          borderRadius: '8px',
+          borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
         }
       }}
     >

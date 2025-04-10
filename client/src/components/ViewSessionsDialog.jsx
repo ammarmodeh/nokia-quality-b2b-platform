@@ -12,6 +12,8 @@ import {
   Divider,
   Box,
   Chip,
+  useTheme,
+  useMediaQuery
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -20,6 +22,8 @@ import { useState } from "react";
 import { useSelector } from "react-redux";
 
 const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSession }) => {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const user = useSelector((state) => state.auth.user);
   const [editSessionDialogOpen, setEditSessionDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
@@ -70,11 +74,12 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
         onClose={onClose}
         maxWidth="sm"
         fullWidth
+        fullScreen={fullScreen}
         sx={{
           "& .MuiDialog-paper": {
             backgroundColor: '#1e1e1e',
             boxShadow: 'none',
-            borderRadius: '8px',
+            borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
           }
         }}
       >

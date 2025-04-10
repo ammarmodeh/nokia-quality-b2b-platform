@@ -14,8 +14,12 @@ import {
 } from '@mui/material';
 import * as XLSX from 'xlsx';
 import { MdClose, MdFileDownload } from 'react-icons/md';
+import { useTheme, useMediaQuery } from '@mui/material';
 
 export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+
   const exportToExcel = () => {
     const data = tasks.map((task) => ({
       'Request Number': task.requestNumber,
@@ -33,7 +37,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       'Action taken by assigned user': task.subTasks.map((sub, index) => `Step ${index + 1}: ${sub.note}`).join('\n'),
       'Team Name': task.teamName,
       'Team Company': task.teamCompany,
-      'interviewDate': new Date(task.interviewDate).toLocaleString(),
+      'Interview Date': new Date(task.interviewDate).toLocaleString(),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -51,11 +55,12 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       onClose={onClose}
       maxWidth="md"
       fullWidth
+      fullScreen={fullScreen}
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#1e1e1e',
           boxShadow: 'none',
-          borderRadius: '8px',
+          borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
         }
       }}
     >

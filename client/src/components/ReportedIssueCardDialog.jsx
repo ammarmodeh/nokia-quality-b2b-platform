@@ -17,7 +17,9 @@ import {
   ListItemIcon,
   Avatar,
   IconButton,
-  Tooltip
+  Tooltip,
+  useMediaQuery,
+  useTheme
 } from "@mui/material";
 import {
   FaInfoCircle,
@@ -37,6 +39,8 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [detailView, setDetailView] = useState(false);
   const [copied, setCopied] = useState(false);
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
   if (!teamIssues || teamIssues.length === 0) return null;
 
@@ -118,13 +122,14 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="md"
       fullWidth
+      maxWidth="md"
+      fullScreen={fullScreen}
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#1e1e1e',
           boxShadow: 'none',
-          borderRadius: '8px',
+          borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
         }
       }}
     >

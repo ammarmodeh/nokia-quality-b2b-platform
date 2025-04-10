@@ -17,6 +17,8 @@ import {
   Paper,
   LinearProgress,
   Avatar,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { Edit, Visibility, Delete, ContentCopy, WhatsApp, Close, Search } from "@mui/icons-material";
 import api from "../api/api";
@@ -27,6 +29,8 @@ import moment from "moment";
 import { RiFileExcel2Fill } from "react-icons/ri";
 
 const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdateTasksList }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const currentUser = useSelector((state) => state?.auth?.user?._id);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -155,9 +159,6 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
       'Team Company': task.teamCompany,
       'Assigned To': task.assignedTo?.map ? task.assignedTo.map(item => item.name).join(', ') : 'N/A',
       'Assignee Feedback': task.subTasks?.map ? task.subTasks.map(sub => `${sub.title}: ${sub.note || 'No note'}`).join('; ') : 'N/A',
-      // 'Created By': task.createdBy?.name || 'N/A',
-      // 'Priority': task.priority,
-      // 'Status': task.status
     }));
 
     // Create a worksheet
@@ -189,7 +190,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
     navigator.clipboard.writeText(textToCopy)
       .then(() => alert('Task details copied to clipboard!'))
       .catch(err => {
-        // console.error('Failed to copy text: ', err)
+        console.error('Failed to copy text: ', err)
       });
   };
 
@@ -248,7 +249,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
         alert("Failed to add task to trash.");
       }
     } catch (error) {
-      // console.error("Error adding task to trash:", error);
+      console.error("Error adding task to trash:", error);
     }
   };
 
@@ -259,13 +260,22 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
 
   return (
     <>
-      {/* Main Dialog */}
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md"
+      {/* Main Dialog - Mobile Optimized */}
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullScreen={isMobile}
+        fullWidth
+        maxWidth="md"
         sx={{
           "& .MuiDialog-paper": {
             backgroundColor: "#131111",
             color: "white",
             boxShadow: "none",
+            [theme.breakpoints.down('sm')]: {
+              margin: 0,
+              borderRadius: 0,
+            },
           },
         }}
       >
@@ -274,12 +284,17 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
           color: "white",
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          py: isMobile ? 1 : 2,
+          px: isMobile ? 1 : 3,
         }}>
-          <span>{title}</span>
+          <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontWeight: 500 }}>
+            {title}
+          </Typography>
           <Tooltip title="Export to Excel">
             <IconButton
               onClick={exportToExcel}
+              size={isMobile ? "small" : "medium"}
               sx={{
                 color: '#4caf50',
                 '&:hover': {
@@ -287,28 +302,28 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                 }
               }}
             >
-              <RiFileExcel2Fill />
+              <RiFileExcel2Fill fontSize={isMobile ? "small" : "medium"} />
             </IconButton>
           </Tooltip>
         </DialogTitle>
+
         <DialogContent sx={{
           "&.MuiDialogContent-root": {
             padding: 0,
             display: "flex",
             flexDirection: "column",
-            height: "70vh" // Adjust this as needed
+            height: isMobile ? "calc(100vh - 112px)" : "70vh",
           }
         }}>
-          {/* Search Bar - Fixed position */}
+          {/* Search Bar - Mobile Optimized */}
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
               width: "100%",
-              py: 1,
-              px: 2,
+              py: isMobile ? 0.5 : 1,
+              px: isMobile ? 1 : 2,
               gap: 1,
-              borderRadius: "0px", // Changed from rounded to square
               backgroundColor: "#121212",
               borderBottom: "1px solid #444",
               "&:focus-within": {
@@ -320,12 +335,12 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
             }}
           >
             <Box sx={{ color: "#9e9e9e" }}>
-              <Search />
+              <Search fontSize={isMobile ? "small" : "medium"} />
             </Box>
             <TextField
               fullWidth
               variant="standard"
-              placeholder="Search by customer name or SLID"
+              placeholder="Search by name or SLID"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{
@@ -334,7 +349,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                   color: "#ffffff",
                 },
                 "& .MuiInputBase-input": {
-                  fontSize: "14px",
+                  fontSize: isMobile ? "13px" : "14px",
                   color: "#ffffff",
                   padding: 0,
                 },
@@ -357,92 +372,167 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                     onClick={handleClearSearch}
                     sx={{ color: "#9e9e9e", "&:hover": { color: "#ffffff" } }}
                   >
-                    <Close fontSize="small" />
+                    <Close fontSize={isMobile ? "small" : "medium"} />
                   </IconButton>
                 ),
               }}
             />
           </Box>
 
-          {/* Scrollable content */}
-          <Box sx={{ overflowY: "auto", flex: 1, padding: 2 }}>
-            <Stack spacing={2}>
+          {/* Scrollable content - Mobile Optimized */}
+          <Box sx={{
+            overflowY: "auto",
+            flex: 1,
+            padding: isMobile ? 1 : 2,
+            '&::-webkit-scrollbar': {
+              width: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#444',
+              borderRadius: '2px',
+            },
+          }}>
+            <Stack spacing={isMobile ? 1.5 : 2}>
               {filteredTasks.length > 0 ? (
                 filteredTasks.map((task, index) => (
-                  <div key={index}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography variant="h6">{task.customerName}</Typography>
-                      <Stack direction="row" spacing={1}>
-                        <Tooltip title="Copy Task Details">
-                          <IconButton onClick={() => handleCopy(task)} color="primary">
-                            <ContentCopy />
+                  <Paper
+                    key={index}
+                    elevation={0}
+                    sx={{
+                      p: isMobile ? 1 : 2,
+                      backgroundColor: '#1e1e1e',
+                      borderRadius: 1,
+                      border: '1px solid #333',
+                    }}
+                  >
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                      <Box>
+                        <Typography variant={isMobile ? "subtitle2" : "h6"} sx={{ fontWeight: 500, color: '#ffffff' }}>
+                          {task.customerName}
+                        </Typography>
+                        <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#aaa' }}>
+                          SLID: {task.slid}
+                        </Typography>
+                        <Typography variant={isMobile ? "caption" : "body2"} sx={{ display: 'block', mt: 0.5, color: '#aaa' }}>
+                          <Box component="span">Score:</Box> {task.evaluationScore}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                          <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#aaa' }}>
+                            <Box component="span">Assignee:</Box>
+                          </Typography>
+                          <Chip
+                            label={task.assignedTo[0].name}
+                            size="small"
+                            sx={{
+                              color: '#fff',
+                              backgroundColor: 'primary.main', // or any color you prefer
+                              fontSize: isMobile ? '0.75rem' : '0.8125rem'
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                      <Stack direction="row" spacing={isMobile ? 0.5 : 1}>
+                        <Tooltip title="Copy">
+                          <IconButton
+                            onClick={() => handleCopy(task)}
+                            size={isMobile ? "small" : "medium"}
+                            sx={{ color: '#3ea6ff' }}
+                          >
+                            <ContentCopy fontSize={isMobile ? "small" : "medium"} />
                           </IconButton>
                         </Tooltip>
 
-                        <Tooltip title="Share via WhatsApp">
-                          <IconButton onClick={() => handleWhatsAppShare(task)} color="success">
-                            <WhatsApp />
+                        <Tooltip title="WhatsApp">
+                          <IconButton
+                            onClick={() => handleWhatsAppShare(task)}
+                            size={isMobile ? "small" : "medium"}
+                            sx={{ color: '#25D366' }}
+                          >
+                            <WhatsApp fontSize={isMobile ? "small" : "medium"} />
                           </IconButton>
                         </Tooltip>
 
-                        <Tooltip title="View Task Details">
-                          <IconButton onClick={() => handleView(task)} color="primary">
-                            <Visibility />
+                        <Tooltip title="View">
+                          <IconButton
+                            onClick={() => handleView(task)}
+                            size={isMobile ? "small" : "medium"}
+                            sx={{ color: '#ffffff' }}
+                          >
+                            <Visibility fontSize={isMobile ? "small" : "medium"} />
                           </IconButton>
                         </Tooltip>
 
                         {currentUser === (task.createdBy._id || task.createdBy) && (
                           <>
-                            <Tooltip title="Edit Task">
-                              <IconButton onClick={() => handleEdit(task)} sx={{ color: 'beige' }}>
-                                <Edit />
+                            <Tooltip title="Edit">
+                              <IconButton
+                                onClick={() => handleEdit(task)}
+                                size={isMobile ? "small" : "medium"}
+                                sx={{ color: 'beige' }}
+                              >
+                                <Edit fontSize={isMobile ? "small" : "medium"} />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Delete Task">
-                              <IconButton onClick={() => handleTaskDelete(task._id)} color="error">
-                                <Delete />
+                            <Tooltip title="Delete">
+                              <IconButton
+                                onClick={() => handleTaskDelete(task._id)}
+                                size={isMobile ? "small" : "medium"}
+                                sx={{ color: '#f44336' }}
+                              >
+                                <Delete fontSize={isMobile ? "small" : "medium"} />
                               </IconButton>
                             </Tooltip>
                           </>
                         )}
                       </Stack>
                     </Stack>
-                    <Typography variant="body1">
-                      <strong>SLID:</strong> {task.slid}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>Customer Name:</strong> {task.customerName}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Customer Feedback:</strong> {task.customerFeedback || 'N/A'}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Evaluation Score:</strong> {task.evaluationScore}
-                    </Typography>
-                    <Divider sx={{ my: 2 }} />
-                  </div>
+                  </Paper>
                 ))
               ) : (
-                <Typography variant="body1" sx={{ textAlign: 'center', py: 3 }}>
-                  No tasks found matching your search criteria
+                <Typography variant="body2" sx={{ textAlign: 'center', py: 3, color: '#aaa' }}>
+                  No tasks found matching your search
                 </Typography>
               )}
             </Stack>
           </Box>
         </DialogContent>
+
+        {isMobile && (
+          <DialogActions sx={{
+            backgroundColor: '#1e1e1e',
+            borderTop: '1px solid #444',
+            px: 2,
+            py: 1,
+          }}>
+            <Button
+              onClick={onClose}
+              size="small"
+              sx={{
+                color: '#ffffff',
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                }
+              }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        )}
       </Dialog>
 
-      {/* Task Details View Dialog */}
+      {/* Task Details View Dialog - Mobile Optimized */}
       <Dialog
         open={viewDialogOpen}
         onClose={() => setViewDialogOpen(false)}
+        fullScreen={isMobile}
         fullWidth
         maxWidth="md"
         sx={{
           "& .MuiDialog-paper": {
             backgroundColor: '#1e1e1e',
             boxShadow: 'none',
-            borderRadius: '8px',
+            borderRadius: isMobile ? 0 : '8px',
           }
         }}
       >
@@ -450,18 +540,18 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
           backgroundColor: '#1e1e1e',
           color: '#ffffff',
           borderBottom: '1px solid #444',
-          padding: '16px 24px',
+          padding: isMobile ? '12px 16px' : '16px 24px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="h6" component="div">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontWeight: 500 }}>
               Task Details
             </Typography>
             {taskToView?.customerName && (
               <Typography
-                variant="subtitle1"
+                variant={isMobile ? "caption" : "subtitle1"}
                 sx={{
                   color: '#3ea6ff',
                   fontStyle: 'italic'
@@ -471,15 +561,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               </Typography>
             )}
           </Box>
-          <Box
-            sx={{
-              display: 'flex',
-              ml: 2
-            }}
-          >
-            <Tooltip title="Copy Task Details">
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Tooltip title="Copy">
               <IconButton
                 onClick={() => handleCopy(taskToView)}
+                size={isMobile ? "small" : "medium"}
                 sx={{
                   mr: 1,
                   color: '#ffffff',
@@ -488,11 +574,12 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                   }
                 }}
               >
-                <ContentCopy />
+                <ContentCopy fontSize={isMobile ? "small" : "medium"} />
               </IconButton>
             </Tooltip>
             <IconButton
               onClick={() => setViewDialogOpen(false)}
+              size={isMobile ? "small" : "medium"}
               sx={{
                 color: '#ffffff',
                 '&:hover': {
@@ -500,7 +587,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                 }
               }}
             >
-              <MdClose />
+              <MdClose fontSize={isMobile ? "18px" : "24px"} />
             </IconButton>
           </Box>
         </DialogTitle>
@@ -510,75 +597,98 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
         <DialogContent dividers sx={{
           backgroundColor: '#1e1e1e',
           color: '#ffffff',
-          padding: '20px 24px',
+          padding: isMobile ? '12px 16px' : '20px 24px',
+          '&::-webkit-scrollbar': {
+            width: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: '#444',
+            borderRadius: '2px',
+          },
         }}>
           {taskToView && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 2 : 3 }}>
               {/* Basic Information Section */}
               <Paper elevation={0} sx={{
-                p: 2,
+                p: isMobile ? 1.5 : 2,
                 backgroundColor: '#272727',
                 borderRadius: 2,
                 border: '1px solid #444'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
-                  Basic Information
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                  Basic Info
                 </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                  <DetailRow label="Request Number" value={taskToView.requestNumber} />
-                  <DetailRow label="SLID" value={taskToView.slid} />
-                  <DetailRow label="Customer Name" value={taskToView.customerName} />
-                  <DetailRow label="Contact Number" value={taskToView.contactNumber} />
-                  <DetailRow label="PIS Date" value={moment(taskToView.pisDate).format("YYYY-MM-DD")} />
-                  <DetailRow label="Tariff Name" value={taskToView.tarrifName} />
-                  <DetailRow label="Customer Type" value={taskToView.customerType} />
-                  <DetailRow label="Interview Date" value={moment(taskToView.interviewDate).format("YYYY-MM-DD")} />
+                <Box sx={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: isMobile ? 1.5 : 2
+                }}>
+                  <DetailRow label="Request Number" value={taskToView.requestNumber} isMobile={isMobile} />
+                  <DetailRow label="SLID" value={taskToView.slid} isMobile={isMobile} />
+                  <DetailRow label="Customer Name" value={taskToView.customerName} isMobile={isMobile} />
+                  <DetailRow label="Contact Number" value={taskToView.contactNumber} isMobile={isMobile} />
+                  <DetailRow label="PIS Date" value={moment(taskToView.pisDate).format("YYYY-MM-DD")} isMobile={isMobile} />
+                  <DetailRow label="Tariff Name" value={taskToView.tarrifName} isMobile={isMobile} />
+                  <DetailRow label="Customer Type" value={taskToView.customerType} isMobile={isMobile} />
+                  <DetailRow label="Interview Date" value={moment(taskToView.interviewDate).format("YYYY-MM-DD")} isMobile={isMobile} />
                 </Box>
               </Paper>
 
               {/* Location Information Section */}
               <Paper elevation={0} sx={{
-                p: 2,
+                p: isMobile ? 1.5 : 2,
                 backgroundColor: '#272727',
                 borderRadius: 2,
                 border: '1px solid #444'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
-                  Location Information
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                  Location
                 </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                  <DetailRow label="Governorate" value={taskToView.governorate} />
-                  <DetailRow label="District" value={taskToView.district} />
+                <Box sx={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: isMobile ? 1.5 : 2
+                }}>
+                  <DetailRow label="Governorate" value={taskToView.governorate} isMobile={isMobile} />
+                  <DetailRow label="District" value={taskToView.district} isMobile={isMobile} />
                 </Box>
               </Paper>
 
               {/* Team Information Section */}
               <Paper elevation={0} sx={{
-                p: 2,
+                p: isMobile ? 1.5 : 2,
                 backgroundColor: '#272727',
                 borderRadius: 2,
                 border: '1px solid #444'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
-                  Team Information
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                  Team Info
                 </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                  <DetailRow label="Team Name" value={taskToView.teamName} />
-                  <DetailRow label="Team Company" value={taskToView.teamCompany} />
+                <Box sx={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: isMobile ? 1.5 : 2
+                }}>
+                  <DetailRow label="Team Name" value={taskToView.teamName} isMobile={isMobile} />
+                  <DetailRow label="Team Company" value={taskToView.teamCompany} isMobile={isMobile} />
                 </Box>
               </Paper>
 
               {/* Evaluation Section */}
               <Paper elevation={0} sx={{
-                p: 2,
+                p: isMobile ? 1.5 : 2,
                 backgroundColor: '#272727',
                 borderRadius: 2,
                 border: '1px solid #444'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
                   Evaluation
                 </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <Box sx={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: isMobile ? 1.5 : 2
+                }}>
                   <DetailRow
                     label="Evaluation Score"
                     value={
@@ -587,6 +697,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                           label={`${taskToView.evaluationScore} (${taskToView.evaluationScore >= 9 ? 'Promoter' :
                             taskToView.evaluationScore >= 7 ? 'Neutral' : 'Detractor'
                             })`}
+                          size={isMobile ? "small" : "medium"}
                           sx={{
                             color: '#ffffff',
                             backgroundColor:
@@ -597,36 +708,37 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                         />
                       </Box>
                     }
+                    isMobile={isMobile}
                   />
-                  <DetailRow label="Customer Feedback" value={taskToView.customerFeedback} />
-                  <DetailRow label="Reason" value={taskToView.reason} />
+                  <DetailRow label="Customer Feedback" value={taskToView.customerFeedback} isMobile={isMobile} />
+                  <DetailRow label="Reason" value={taskToView.reason} isMobile={isMobile} />
                 </Box>
               </Paper>
 
               {/* Progress Section */}
               <Paper elevation={0} sx={{
-                p: 2,
+                p: isMobile ? 1.5 : 2,
                 backgroundColor: '#272727',
                 borderRadius: 2,
                 border: '1px solid #444'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
-                  Progress & Team Actions
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                  Progress
                 </Typography>
 
                 {/* Progress Bar with Assigned Team Members */}
-                <Box sx={{ mb: 3 }}>
+                <Box sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography sx={{ color: '#eff5ff' }}>
+                    <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#eff5ff' }}>
                       Progress: {Math.round((100 / taskToView.subTasks.length) * taskToView.subTasks.filter(t => t.note).length)}%
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
                       {taskToView.assignedTo?.map((user, index) => (
                         <Tooltip key={index} title={user.name}>
                           <Avatar sx={{
-                            width: 28,
-                            height: 28,
-                            fontSize: '0.8rem',
+                            width: isMobile ? 24 : 28,
+                            height: isMobile ? 24 : 28,
+                            fontSize: isMobile ? '0.7rem' : '0.8rem',
                             backgroundColor: '#3a4044',
                             border: '2px solid',
                             borderColor: taskToView.subTasks.some(t => t.completedBy?._id === user._id) ? '#4caf50' : '#f44336'
@@ -644,7 +756,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                     variant="determinate"
                     value={Math.round((100 / taskToView.subTasks.length) * taskToView.subTasks.filter(t => t.note).length)}
                     sx={{
-                      height: 10,
+                      height: isMobile ? 8 : 10,
                       borderRadius: 5,
                       '& .MuiLinearProgress-bar': {
                         borderRadius: 5,
@@ -656,7 +768,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
 
                 {/* Detailed Action Items */}
                 <Paper sx={{
-                  p: 2,
+                  p: isMobile ? 1 : 2,
                   backgroundColor: '#333',
                   border: '1px solid #444',
                   borderRadius: '8px'
@@ -665,32 +777,35 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                     <Box
                       key={index}
                       sx={{
-                        mb: index < taskToView.subTasks.length - 1 ? 3 : 0,
-                        pb: index < taskToView.subTasks.length - 1 ? 3 : 0,
+                        mb: index < taskToView.subTasks.length - 1 ? 2 : 0,
+                        pb: index < taskToView.subTasks.length - 1 ? 2 : 0,
                         borderBottom: index < taskToView.subTasks.length - 1 ? '1px solid #444' : 'none'
                       }}
                     >
                       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                        <Typography variant="h6" sx={{ color: '#eff5ff' }}>
+                        <Typography variant={isMobile ? "body2" : "h6"} sx={{ color: '#eff5ff', fontWeight: 500 }}>
                           {index + 1}. {subtask.title}
                         </Typography>
                         {subtask.completedBy && (
                           <Chip
-                            size="small"
+                            size={isMobile ? "small" : "medium"}
                             sx={{
                               backgroundColor: '#3a4044',
                               color: 'white',
                               '& .MuiChip-avatar': {
-                                width: 24,
-                                height: 24,
-                                fontSize: '0.75rem'
+                                width: isMobile ? 20 : 24,
+                                height: isMobile ? 20 : 24,
+                                fontSize: isMobile ? '0.65rem' : '0.75rem'
                               }
                             }}
                             avatar={
                               <Avatar sx={{
                                 backgroundColor: taskToView.assignedTo.some(u => u._id === subtask.completedBy._id)
                                   ? '#3ea6ff'
-                                  : '#f44336'
+                                  : '#f44336',
+                                width: isMobile ? 20 : 24,
+                                height: isMobile ? 20 : 24,
+                                fontSize: isMobile ? '0.65rem' : '0.75rem'
                               }}>
                                 {subtask.completedBy.name
                                   .split(' ')
@@ -698,19 +813,19 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                                   .join('')}
                               </Avatar>
                             }
-                            label={`Action by: ${subtask.completedBy.name}`}
+                            label={`${isMobile ? '' : 'Action by: '}${subtask.completedBy.name}`}
                           />
                         )}
                       </Stack>
 
                       <Box sx={{
                         backgroundColor: '#2a2a2a',
-                        p: 2,
+                        p: isMobile ? 1 : 2,
                         borderRadius: 1,
                         borderLeft: '3px solid',
                         borderColor: subtask.note ? '#3ea6ff' : 'transparent'
                       }}>
-                        <Typography variant="body1" sx={{
+                        <Typography variant={isMobile ? "caption" : "body1"} sx={{
                           direction: 'rtl',
                           textAlign: 'right',
                           color: '#eff5ff',
@@ -724,10 +839,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                         <Typography variant="caption" sx={{
                           color: 'gray',
                           display: 'block',
-                          mt: 1,
-                          textAlign: 'right'
+                          mt: 0.5,
+                          textAlign: 'right',
+                          fontSize: isMobile ? '0.65rem' : '0.75rem'
                         }}>
-                          Completed on: {subtask.dateTime}
+                          Completed: {subtask.dateTime}
                         </Typography>
                       )}
                     </Box>
@@ -743,10 +859,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
         <DialogActions sx={{
           backgroundColor: '#1e1e1e',
           borderTop: '1px solid #444',
-          padding: '12px 24px',
+          padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button
             onClick={() => setViewDialogOpen(false)}
+            size={isMobile ? "small" : "medium"}
             sx={{
               color: '#ffffff',
               '&:hover': {
@@ -767,6 +884,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
             setOpen={setEditDialogOpen}
             task={selectedTask}
             handleTaskUpdate={handleTaskUpdate}
+            isMobile={isMobile}
           />
         )
       }
@@ -774,10 +892,10 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
   );
 };
 
-const DetailRow = ({ label, value }) => (
+const DetailRow = ({ label, value, isMobile }) => (
   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
     <Typography
-      variant="body2"
+      variant={isMobile ? "caption" : "body2"}
       component="div"
       sx={{
         fontWeight: '500',
@@ -788,11 +906,12 @@ const DetailRow = ({ label, value }) => (
     </Typography>
     {typeof value === 'string' || typeof value === 'number' ? (
       <Typography
-        variant="body1"
+        variant={isMobile ? "body2" : "body1"}
         component="div"
         sx={{
           color: '#ffffff',
-          wordBreak: 'break-word'
+          wordBreak: 'break-word',
+          fontSize: isMobile ? '0.875rem' : '1rem'
         }}
       >
         {value || 'N/A'}

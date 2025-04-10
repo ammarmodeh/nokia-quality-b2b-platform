@@ -1,7 +1,7 @@
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { Card as MUICard, CardContent, Typography, Box, Stack, Chip, CircularProgress } from "@mui/material";
+import { Card as MUICard, CardContent, Typography, Box, Stack, Chip, CircularProgress, Tooltip } from "@mui/material";
 
 // Helper functions (unchanged)
 const groupTasksByWeek = (tasks) => {
@@ -192,16 +192,61 @@ const Card = ({ trend }) => {
             {getWeekDateRange(week)}
           </Typography>
         </Stack>
-        <Stack direction={'row'} gap={3}>
-          <Typography variant="body1" sx={{ color: "#9e9e9e", mb: 2, fontFamily: 'IBM Plex Mono', fontSize: '13px', fontWeight: 'bold' }}>
-            Total Tasks: {totalTasks}
-          </Typography>
-          <Typography variant="body1" sx={{ color: "#9e9e9e", mb: 2, fontFamily: 'IBM Plex Mono', fontSize: '13px', fontWeight: 'bold' }}>
-            Detractors: {categories.detractor}
-          </Typography>
-          <Typography variant="body1" sx={{ color: "#9e9e9e", mb: 2, fontFamily: 'IBM Plex Mono', fontSize: '13px', fontWeight: 'bold' }}>
-            Neutrals: {categories.neutral}
-          </Typography>
+
+        <Stack direction="row" gap={3} sx={{ overflow: 'hidden' }}>
+          <Tooltip title={`Total Tasks: ${totalTasks}`} arrow>
+            <Typography
+              variant="body1"
+              sx={{
+                color: "#9e9e9e",
+                mb: 2,
+                fontFamily: 'IBM Plex Mono',
+                fontSize: { xs: '11px', sm: '13px' },
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              Total Tasks: {totalTasks}
+            </Typography>
+          </Tooltip>
+
+          <Tooltip title={`Detractors: ${categories.detractor}`} arrow>
+            <Typography
+              variant="body1"
+              sx={{
+                color: "#9e9e9e",
+                mb: 2,
+                fontFamily: 'IBM Plex Mono',
+                fontSize: { xs: '11px', sm: '13px' },
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              Detractors: {categories.detractor}
+            </Typography>
+          </Tooltip>
+
+          <Tooltip title={`Neutrals: ${categories.neutral}`} arrow>
+            <Typography
+              variant="body1"
+              sx={{
+                color: "#9e9e9e",
+                mb: 2,
+                fontFamily: 'IBM Plex Mono',
+                fontSize: { xs: '11px', sm: '13px' },
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              Neutrals: {categories.neutral}
+            </Typography>
+          </Tooltip>
         </Stack>
 
         {/* Slider for reasons */}
@@ -254,6 +299,10 @@ const WeekSlider = ({ trends }) => {
     slidesToScroll: 1,
     rows: 1,
     focusOnSelect: true,
+    swipe: false,          // Disable swipe gestures
+    draggable: false,      // Disable dragging
+    // arrows: false,         // Hide default arrows since we're using custom ones
+    touchMove: false
   };
 
   if (!trends || trends.length === 0) {

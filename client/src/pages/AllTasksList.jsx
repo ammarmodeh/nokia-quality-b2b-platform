@@ -274,7 +274,7 @@ const AllTasksList = () => {
   }
 
   return (
-    <Box sx={{ p: isMobile ? 1 : 3 }}>
+    <Box sx={{ p: isMobile ? 0 : 3 }}>
       <Typography variant="h5" gutterBottom sx={{
         color: '#3ea6ff',
         fontWeight: 'bold',
@@ -332,14 +332,22 @@ const AllTasksList = () => {
               },
               '& input': {
                 color: '#ffffff',
+                overflow: 'hidden',        // Ensures text doesn't overflow visibly
+                textOverflow: 'ellipsis',  // Adds "..." when text overflows
+                whiteSpace: 'nowrap',      // Prevents text from wrapping
                 '&::placeholder': {
                   color: '#666',
                   opacity: 1,
+                  fontSize: '0.8rem',      // Smaller placeholder text
+                  overflow: 'hidden',      // Needed for ellipsis in placeholder
+                  textOverflow: 'ellipsis',// Ellipsis for placeholder
+                  whiteSpace: 'nowrap',    // Prevents wrapping
                 }
               },
             },
           }}
           sx={{
+            width: isMobile ? '100%' : 'auto',
             flex: 1,
             '& .MuiOutlinedInput-root': {
               '&:hover fieldset': {
@@ -352,7 +360,7 @@ const AllTasksList = () => {
           }}
         />
 
-        <FormControl size="small" sx={{ minWidth: 120 }}>
+        <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
           <InputLabel id="filter-select-label" sx={{ color: '#aaaaaa' }}>
             Filter
           </InputLabel>

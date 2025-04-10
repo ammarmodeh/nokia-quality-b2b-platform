@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { format, differenceInMinutes } from "date-fns";
 import {
   Paper, Typography, Avatar, Chip, CircularProgress, Stack, Box, Button,
-  Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress, Tooltip, IconButton
+  Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress, Tooltip, IconButton,
+  useMediaQuery, useTheme
 } from "@mui/material";
 import { useSelector } from "react-redux";
 import { FaEdit } from "react-icons/fa";
@@ -30,6 +31,8 @@ const fillTaskExceptCreatedFields = (task) => {
 };
 
 const TaskViewPage = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const user = useSelector((state) => state?.auth?.user);
   const { id } = useParams();
@@ -185,14 +188,10 @@ const TaskViewPage = () => {
   };
 
   const handleSaveAndNotify = async () => {
-    // Ensure task.subtasks and task.whomItMayConcern are defined
-    // console.log({ 'task.subtasks': task.subTasks, 'task.whomItMayConcern:': task.whomItMayConcern });
     if (!task.subTasks || !task.whomItMayConcern) {
-      // console.error("Task subtasks or whomItMayConcern is not defined.");
       return;
     }
 
-    // Combine assigned users and whom it may concern users, removing duplicates
     const allConcernedUsers = [
       ...new Set([
         ...task.assignedTo.map(user => typeof user === 'string' ? user : user._id),
@@ -200,10 +199,8 @@ const TaskViewPage = () => {
       ])
     ];
 
-    // Filter out the current user (they don't need to be notified of their own changes)
     const usersToNotifyIds = allConcernedUsers.filter(userId => userId !== user._id);
 
-    // Get the full user objects for these IDs
     const usersToNotifyObjects = assignedUsers.concat(whomItMayConcernUsers).filter(user =>
       usersToNotifyIds.includes(user._id)
     );
@@ -216,7 +213,6 @@ const TaskViewPage = () => {
     setConfirmDialogOpen(false);
 
     try {
-      // Map through subtasks and update the note and progress fields
       const updatedSubtasks = subtasks.map((subtask, index) => ({
         ...subtask,
         note: note[index] || "",
@@ -224,7 +220,6 @@ const TaskViewPage = () => {
         dateTime: subtask.dateTime || null,
       }));
 
-      // First, update the subtasks
       const updateResponse = await api.put(
         `/tasks/update-subtask/${task._id}`,
         updatedSubtasks,
@@ -238,7 +233,6 @@ const TaskViewPage = () => {
       if (updateResponse.status === 200) {
         setSubtasks(updatedSubtasks);
 
-        // Clear existing notifications
         await api.put(
           `/tasks/${task._id}/clear-notifications`,
           {},
@@ -249,14 +243,12 @@ const TaskViewPage = () => {
           }
         );
 
-        // Send new notifications to each user in usersToNotify
         await Promise.all(
           usersToNotify.map(user =>
             api.post(
               `/tasks/${task._id}/notifications`,
               {
                 recipient: user._id,
-                // The progress must be the total progress of subtasks elements
                 message: `Task ${task.slid} has been updated, and its progress is now at ${updatedSubtasks.reduce((total, subtask) => total + subtask.progress, 0)}%. Please review the changes.`,
               },
               {
@@ -360,7 +352,7 @@ const TaskViewPage = () => {
     <Box sx={{
       backgroundColor: '#1e1e1e',
       minHeight: '100vh',
-      p: 3,
+      p: isMobile ? 1 : 3,
       color: '#ffffff'
     }}>
       <Paper elevation={0} sx={{
@@ -372,19 +364,21 @@ const TaskViewPage = () => {
         {/* Header Section */}
         <Box sx={{
           display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
-          p: 2,
+          p: isMobile ? 1 : 2,
           borderBottom: '1px solid #444',
-          backgroundColor: '#272727'
+          backgroundColor: '#272727',
+          gap: isMobile ? 1 : 0
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Link to={from} style={{ textDecoration: 'none' }}>
-              <Button variant="outlined" sx={{ color: '#ffffff', borderColor: '#444' }}>
+              <Button variant="outlined" size={isMobile ? "small" : "medium"} sx={{ color: '#ffffff', borderColor: '#444' }}>
                 Back
               </Button>
             </Link>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'dodgerblue' }}>
+            <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontWeight: 'bold', color: 'dodgerblue' }}>
               Task Details
             </Typography>
           </Box>
@@ -392,7 +386,7 @@ const TaskViewPage = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Tooltip title="Copy Details">
               <IconButton onClick={handleCopyDetails} sx={{ color: '#ffffff' }}>
-                <MdContentCopy />
+                <MdContentCopy size={isMobile ? 18 : 24} />
               </IconButton>
             </Tooltip>
 
@@ -400,13 +394,13 @@ const TaskViewPage = () => {
               <>
                 <Tooltip title="Edit Task">
                   <IconButton onClick={() => handleEditTask(task)} sx={{ color: '#ffffff' }}>
-                    <FaEdit />
+                    <FaEdit size={isMobile ? 18 : 24} />
                   </IconButton>
                 </Tooltip>
 
                 <Tooltip title="Delete Task">
                   <IconButton onClick={() => handleTaskDelete(task._id)} sx={{ color: '#f44336' }}>
-                    <MdDeleteForever />
+                    <MdDeleteForever size={isMobile ? 18 : 24} />
                   </IconButton>
                 </Tooltip>
               </>
@@ -415,10 +409,10 @@ const TaskViewPage = () => {
         </Box>
 
         {/* Main Content */}
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: isMobile ? 1 : 3 }}>
           {/* Basic Information Section */}
           <Paper elevation={0} sx={{
-            p: 3,
+            p: isMobile ? 1.5 : 3,
             mb: 3,
             backgroundColor: '#272727',
             borderRadius: '8px',
@@ -428,26 +422,27 @@ const TaskViewPage = () => {
               Basic Information
             </Typography>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
-              <DetailRow label="Issue ID" value={task._id} />
-              <DetailRow label="Request Number" value={task.requestNumber} />
-              <DetailRow label="SLID" value={task.slid} />
-              <DetailRow label="Tarrif Name" value={task.tarrifName} />
+            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
+              <DetailRow label="Issue ID" value={task._id} isMobile={isMobile} />
+              <DetailRow label="Request Number" value={task.requestNumber} isMobile={isMobile} />
+              <DetailRow label="SLID" value={task.slid} isMobile={isMobile} />
+              <DetailRow label="Tarrif Name" value={task.tarrifName} isMobile={isMobile} />
               <DetailRow label="Evaluation Score" value={
                 <Chip
+                  size={isMobile ? "small" : "medium"}
                   label={task.evaluationScore}
                   sx={{
                     backgroundColor: task.evaluationScore <= 6 ? '#bf0c0c' : 'gray',
                     color: 'white'
                   }}
                 />
-              } />
+              } isMobile={isMobile} />
             </Box>
           </Paper>
 
           {/* Priority and Dates Section */}
           <Paper elevation={0} sx={{
-            p: 3,
+            p: isMobile ? 1.5 : 3,
             mb: 3,
             backgroundColor: '#272727',
             borderRadius: '8px',
@@ -457,21 +452,23 @@ const TaskViewPage = () => {
               Priority & Dates
             </Typography>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
               <DetailRow label="Priority" value={
                 <Chip
+                  size={isMobile ? "small" : "medium"}
                   label={task.priority}
                   color={priorityColors[task.priority] || "default"}
                 />
-              } />
-              <DetailRow label="Category" value={task.category} />
-              <DetailRow label="PIS Date" value={formattedPISDate} />
+              } isMobile={isMobile} />
+              <DetailRow label="Category" value={task.category} isMobile={isMobile} />
+              <DetailRow label="PIS Date" value={formattedPISDate} isMobile={isMobile} />
               <DetailRow label="Due Date" value={
-                <>
+                <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-end' : 'center' }}>
                   {formattedDate}
                   {remainingMinutes !== null && (
                     <Typography variant="caption" sx={{
-                      ml: 1,
+                      ml: isMobile ? 0 : 1,
+                      mt: isMobile ? 0.5 : 0,
                       color: remainingMinutes > 0 ? '#4caf50' : '#f44336'
                     }}>
                       ({remainingMinutes > 0 ?
@@ -479,14 +476,14 @@ const TaskViewPage = () => {
                         `${Math.floor(Math.abs(remainingMinutes) / 1440)} days, ${Math.floor((Math.abs(remainingMinutes) % 1440) / 60)} hours, ${Math.abs(remainingMinutes) % 60} minutes overdue`})
                     </Typography>
                   )}
-                </>
-              } />
+                </Box>
+              } isMobile={isMobile} />
             </Box>
           </Paper>
 
           {/* Customer Information Section */}
           <Paper elevation={0} sx={{
-            p: 3,
+            p: isMobile ? 1.5 : 3,
             mb: 3,
             backgroundColor: '#272727',
             borderRadius: '8px',
@@ -496,20 +493,20 @@ const TaskViewPage = () => {
               Customer Information
             </Typography>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
-              <DetailRow label="Customer Name" value={task.customerName || "N/A"} />
-              <DetailRow label="Contact Number" value={task.contactNumber || "N/A"} />
-              <DetailRow label="Customer Type" value={task.customerType || "N/A"} />
-              <DetailRow label="Customer Feedback" value={task.customerFeedback || "N/A"} />
+            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
+              <DetailRow label="Customer Name" value={task.customerName || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Contact Number" value={task.contactNumber || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Customer Type" value={task.customerType || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Customer Feedback" value={task.customerFeedback || "N/A"} isMobile={isMobile} />
               <DetailRow label="Interview Date" value={
                 task.interviewDate ? format(new Date(task.interviewDate), "MMMM dd, yyyy") : "N/A"
-              } />
+              } isMobile={isMobile} />
             </Box>
           </Paper>
 
           {/* Location and Team Information */}
           <Paper elevation={0} sx={{
-            p: 3,
+            p: isMobile ? 1.5 : 3,
             mb: 3,
             backgroundColor: '#272727',
             borderRadius: '8px',
@@ -519,17 +516,17 @@ const TaskViewPage = () => {
               Location & Team Information
             </Typography>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
-              <DetailRow label="Governorate" value={task.governorate || "N/A"} />
-              <DetailRow label="District" value={task.district || "N/A"} />
-              <DetailRow label="Team Name" value={task.teamName || "N/A"} />
-              <DetailRow label="Team Company" value={task.teamCompany || "N/A"} />
+            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
+              <DetailRow label="Governorate" value={task.governorate || "N/A"} isMobile={isMobile} />
+              <DetailRow label="District" value={task.district || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Team Name" value={task.teamName || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Team Company" value={task.teamCompany || "N/A"} isMobile={isMobile} />
             </Box>
           </Paper>
 
           {/* Task Details Section */}
           <Paper elevation={0} sx={{
-            p: 3,
+            p: isMobile ? 1.5 : 3,
             mb: 3,
             backgroundColor: '#272727',
             borderRadius: '8px',
@@ -539,17 +536,17 @@ const TaskViewPage = () => {
               Task Details
             </Typography>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
-              <DetailRow label="Reason" value={task.reason || "N/A"} />
-              <DetailRow label="Validation Category" value={task.validationCat || "N/A"} />
-              <DetailRow label="Validation Status" value={task.validationStatus || "N/A"} />
-              <DetailRow label="Responsibility" value={task.responsibility || "N/A"} />
+            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
+              <DetailRow label="Reason" value={task.reason || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Validation Category" value={task.validationCat || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Validation Status" value={task.validationStatus || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Responsibility" value={task.responsibility || "N/A"} isMobile={isMobile} />
             </Box>
           </Paper>
 
           {/* Assigned Users Section */}
           <Paper elevation={0} sx={{
-            p: 3,
+            p: isMobile ? 1.5 : 3,
             mb: 3,
             backgroundColor: '#272727',
             borderRadius: '8px',
@@ -564,9 +561,10 @@ const TaskViewPage = () => {
                 assignedUsers.map((user, index) => (
                   <Chip
                     key={index}
+                    size={isMobile ? "small" : "medium"}
                     sx={{ backgroundColor: "#3a4044", color: "white" }}
                     avatar={
-                      <Avatar>
+                      <Avatar sx={{ width: isMobile ? 24 : 32, height: isMobile ? 24 : 32 }}>
                         {user.name
                           ?.split(' ')
                           .map((part, index) => {
@@ -577,7 +575,7 @@ const TaskViewPage = () => {
                           .join('')}
                       </Avatar>
                     }
-                    label={user.name}
+                    label={isMobile ? user.name.split(' ')[0] : user.name}
                   />
                 ))
               ) : (
@@ -588,7 +586,7 @@ const TaskViewPage = () => {
 
           {/* Concerned Users Section */}
           <Paper elevation={0} sx={{
-            p: 3,
+            p: isMobile ? 1.5 : 3,
             mb: 3,
             backgroundColor: '#272727',
             borderRadius: '8px',
@@ -603,9 +601,10 @@ const TaskViewPage = () => {
                 whomItMayConcernUsers.map((user, index) => (
                   <Chip
                     key={index}
+                    size={isMobile ? "small" : "medium"}
                     sx={{ backgroundColor: "#3a4044", color: "white" }}
                     avatar={
-                      <Avatar>
+                      <Avatar sx={{ width: isMobile ? 24 : 32, height: isMobile ? 24 : 32 }}>
                         {user.name
                           ?.split(' ')
                           .map((part, index) => {
@@ -616,7 +615,7 @@ const TaskViewPage = () => {
                           .join('')}
                       </Avatar>
                     }
-                    label={user.name}
+                    label={isMobile ? user.name.split(' ')[0] : user.name}
                   />
                 ))
               ) : (
@@ -627,7 +626,7 @@ const TaskViewPage = () => {
 
           {/* Progress Section */}
           <Paper elevation={0} sx={{
-            p: 3,
+            p: isMobile ? 1.5 : 3,
             mb: 3,
             backgroundColor: '#272727',
             borderRadius: '8px',
@@ -652,10 +651,10 @@ const TaskViewPage = () => {
             }}>
               {subtasks.map((subtask, index) => (
                 <Box key={index} sx={{ mb: index < subtasks.length - 1 ? 3 : 0, pb: index < subtasks.length - 1 ? 3 : 0, borderBottom: index < subtasks.length - 1 ? '1px solid #444' : 'none' }}>
-                  <Typography variant="h6" sx={{ mb: 1, color: '#eff5ff' }}>
+                  <Typography variant={isMobile ? "body1" : "h6"} sx={{ mb: 1, color: '#eff5ff' }}>
                     {index + 1}. {subtask.title}
                   </Typography>
-                  <Typography variant="body1" sx={{ mb: 1, direction: 'rtl', textAlign: 'right', color: '#eff5ff' }}>
+                  <Typography variant="body2" sx={{ mb: 1, direction: 'rtl', textAlign: 'right', color: '#eff5ff' }}>
                     {subtask.note}
                   </Typography>
                   {subtask.dateTime && (
@@ -671,6 +670,7 @@ const TaskViewPage = () => {
               <Button
                 variant="contained"
                 onClick={handleNoteDialogOpen}
+                size={isMobile ? "small" : "medium"}
                 sx={{
                   mt: 2,
                   backgroundColor: '#3f51b5',
@@ -686,7 +686,7 @@ const TaskViewPage = () => {
 
           {/* Metadata Section */}
           <Paper elevation={0} sx={{
-            p: 3,
+            p: isMobile ? 1.5 : 3,
             backgroundColor: '#272727',
             borderRadius: '8px',
             border: '1px solid #444'
@@ -695,14 +695,16 @@ const TaskViewPage = () => {
               Metadata
             </Typography>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
               <DetailRow
                 label="Created by"
                 value={`${task.createdBy?.name} on ${new Date(task.createdAt).toLocaleString()}`}
+                isMobile={isMobile}
               />
               <DetailRow
                 label="Last updated"
                 value={new Date(task.updatedAt).toLocaleString()}
+                isMobile={isMobile}
               />
             </Box>
           </Paper>
@@ -713,13 +715,16 @@ const TaskViewPage = () => {
       <Dialog
         open={noteDialogOpen}
         onClose={handleNoteDialogClose}
+        fullScreen={isMobile}
         PaperProps={{
           sx: {
             backgroundColor: "#1e1e1e",
             color: "#ffffff",
-            borderRadius: "8px",
+            borderRadius: isMobile ? 0 : "8px",
             boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.5)",
-            border: '1px solid #444'
+            border: '1px solid #444',
+            width: isMobile ? '100%' : 'auto',
+            maxWidth: isMobile ? '100%' : 'md'
           },
         }}
       >
@@ -730,9 +735,9 @@ const TaskViewPage = () => {
           backgroundColor: '#272727',
           color: '#ffffff',
           borderBottom: '1px solid #444',
-          padding: '16px 24px',
+          padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
-          <Typography variant="h6" component="div">
+          <Typography variant={isMobile ? "subtitle1" : "h6"} component="div">
             Manage Subtasks
           </Typography>
           <IconButton
@@ -744,7 +749,7 @@ const TaskViewPage = () => {
               }
             }}
           >
-            <MdClose />
+            <MdClose size={isMobile ? 20 : 24} />
           </IconButton>
         </DialogTitle>
 
@@ -760,18 +765,20 @@ const TaskViewPage = () => {
           handleReset={handleReset}
           expandedNotes={expandedNotes}
           toggleNoteExpand={toggleNoteExpand}
+          isMobile={isMobile}
         />
 
         <DialogActions sx={{
           display: "flex",
           justifyContent: 'space-between',
           alignItems: 'center',
-          p: 2,
+          p: isMobile ? 1 : 2,
           backgroundColor: '#272727',
           borderTop: '1px solid #444'
         }}>
           <Button
             onClick={handleReset}
+            size={isMobile ? "small" : "medium"}
             sx={{
               color: '#f44336',
               '&:hover': {
@@ -784,6 +791,7 @@ const TaskViewPage = () => {
           <Box sx={{ display: "flex", gap: "8px" }}>
             <Button
               onClick={handleNoteDialogClose}
+              size={isMobile ? "small" : "medium"}
               sx={{
                 color: "#ffffff",
                 '&:hover': {
@@ -795,6 +803,7 @@ const TaskViewPage = () => {
             </Button>
             <Button
               onClick={handleSaveAndNotify}
+              size={isMobile ? "small" : "medium"}
               sx={{
                 backgroundColor: "#3f51b5",
                 color: "#ffffff",
@@ -813,16 +822,18 @@ const TaskViewPage = () => {
       <Dialog
         open={confirmDialogOpen}
         onClose={() => setConfirmDialogOpen(false)}
+        fullScreen={isMobile}
         PaperProps={{
           sx: {
             backgroundColor: "#121212",
             color: "#ffffff",
-            borderRadius: "8px",
+            borderRadius: isMobile ? 0 : "8px",
             boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.5)",
+            width: isMobile ? '100%' : 'auto'
           },
         }}
       >
-        <DialogTitle sx={{ color: "#ffffff", fontWeight: "600", fontSize: "1.25rem" }}>
+        <DialogTitle sx={{ color: "#ffffff", fontWeight: "600", fontSize: isMobile ? "1rem" : "1.25rem" }}>
           Confirm Save and Notify
         </DialogTitle>
         <DialogContent>
@@ -836,14 +847,14 @@ const TaskViewPage = () => {
                   <Avatar
                     src={user.avatar}
                     sx={{
-                      width: 32,
-                      height: 32,
+                      width: isMobile ? 28 : 32,
+                      height: isMobile ? 28 : 32,
                       bgcolor: '#8D6E63'
                     }}
                   >
                     {!user.avatar && user.name.slice(0, 2).toUpperCase()}
                   </Avatar>
-                  <Typography>{user.name}</Typography>
+                  <Typography variant={isMobile ? "body2" : "body1"}>{user.name}</Typography>
                 </Box>
               ))}
             </Stack>
@@ -852,6 +863,7 @@ const TaskViewPage = () => {
         <DialogActions>
           <Button
             onClick={() => setConfirmDialogOpen(false)}
+            size={isMobile ? "small" : "medium"}
             sx={{
               color: "#ffffff",
               "&:hover": { backgroundColor: "#333" },
@@ -863,6 +875,7 @@ const TaskViewPage = () => {
           </Button>
           <Button
             onClick={confirmSaveAndNotify}
+            size={isMobile ? "small" : "medium"}
             sx={{
               backgroundColor: "darkblue",
               color: "#ffffff",
@@ -882,11 +895,11 @@ const TaskViewPage = () => {
 };
 
 // Helper component for consistent detail rows
-const DetailRow = ({ label, value }) => (
-  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+const DetailRow = ({ label, value, isMobile }) => (
+  <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? 0.5 : 0 }}>
     <Typography
       component="div"
-      variant="subtitle1"
+      variant={isMobile ? "body2" : "subtitle1"}
       sx={{
         fontWeight: '500',
         color: '#aaaaaa'
@@ -896,14 +909,15 @@ const DetailRow = ({ label, value }) => (
     </Typography>
     <Box
       sx={{
-        maxWidth: '60%',
-        textAlign: 'right',
-        color: '#ffffff'
+        maxWidth: isMobile ? '100%' : '60%',
+        textAlign: isMobile ? 'left' : 'right',
+        color: '#ffffff',
+        wordBreak: 'break-word'
       }}
       component="div"
     >
       {typeof value === 'string' || typeof value === 'number' ? (
-        <Typography component="span">{value || 'N/A'}</Typography>
+        <Typography component="span" variant={isMobile ? "body2" : "body1"}>{value || 'N/A'}</Typography>
       ) : (
         value || 'N/A'
       )}

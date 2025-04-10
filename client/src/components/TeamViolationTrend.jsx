@@ -298,7 +298,11 @@ const WeekSlider = ({ trends }) => {
     slidesToShow: 1,
     focusOnSelect: true,
     rows: 1,
-    slidesToScroll: 1
+    slidesToScroll: 1,
+    swipe: false,          // Disable swipe gestures
+    draggable: false,      // Disable dragging
+    // arrows: false,         // Hide default arrows since we're using custom ones
+    touchMove: false
   };
 
   if (!trends || trends.length === 0) {

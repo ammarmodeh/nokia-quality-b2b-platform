@@ -98,7 +98,7 @@ const Dashboard = () => {
   if (tasksError || teamsError) return <div>Error fetching data</div>;
 
   return (
-    <div style={{ padding: "0px 20px", backgroundColor: "#121212", maxWidth: "1000px", margin: "0 auto", minHeight: "calc(100vh - 55px)", color: "#ffffff" }}>
+    <div style={{ padding: "0", backgroundColor: "#121212", maxWidth: "1000px", margin: "0 auto", minHeight: "calc(100vh - 55px)", color: "#ffffff" }}>
       {/* Welcome Snackbar */}
       <Snackbar open={snackbarOpen} autoHideDuration={5000} onClose={handleSnackbarClose}>
         <Alert onClose={handleSnackbarClose} severity="success" variant="filled">

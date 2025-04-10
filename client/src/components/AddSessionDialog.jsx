@@ -8,10 +8,15 @@ import {
   Button,
   Typography,
   Divider,
-  FormHelperText
+  FormHelperText,
+  useTheme,
+  useMediaQuery
 } from "@mui/material";
 
 const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+
   const [sessionDate, setSessionDate] = useState("");
   const [conductedBy, setConductedBy] = useState("");
   const [sessionTitle, setSessionTitle] = useState("");
@@ -65,11 +70,12 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
       onClose={onClose}
       maxWidth="sm"
       fullWidth
+      fullScreen={fullScreen}
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#1e1e1e',
           boxShadow: 'none',
-          borderRadius: '8px',
+          borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
         }
       }}
     >

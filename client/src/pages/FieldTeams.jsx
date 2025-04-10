@@ -602,7 +602,7 @@ const FieldTeamForm = () => {
 
   return (
     <div className="max-w-[1000px] mx-auto">
-      <Box sx={{ backgroundColor: '#121212', minHeight: '100vh', p: 3, color: '#ffffff' }}>
+      <Box sx={{ backgroundColor: '#121212', minHeight: '100vh', p: 1, color: '#ffffff' }}>
         {/* Add Team Form */}
         <AddTeamForm onSubmit={handleAddTeam} errorMessage={errorMessage} user={user} />
 

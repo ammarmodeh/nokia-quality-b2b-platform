@@ -514,7 +514,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
         </MUICard>
       ))}
 
-      {/* Task Status Dialog */}
+      {/* Task Status (Detractors Card) Dialog */}
       <TaskStatusDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}

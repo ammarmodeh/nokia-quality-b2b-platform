@@ -6,6 +6,8 @@ import { useSelector } from "react-redux";
 import api from "../api/api";
 import { format, differenceInMinutes } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import EditTaskDialog from "./task/EditTaskDialog";
 import { IoMdMagnet } from "react-icons/io";
 import { MdClose } from "react-icons/md";
@@ -28,6 +30,8 @@ const statusConfig = {
 const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, handleTaskDelete, handleFavoriteClick, handleTaskArchive }) => {
   const navigate = useNavigate();
   const user = useSelector((state) => state?.auth?.user);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [anchorEl, setAnchorEl] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [subtasks, setSubtasks] = useState(task.subtasks && task.subtasks.length > 0 ? task.subtasks : predefinedSubtasks);
@@ -312,7 +316,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
 
   return (
     <>
-      <Paper elevation={2} className="w-full p-5 rounded-lg border border-gray-400 hover:shadow-md transition-all duration-300" sx={{ backgroundColor: "#121111" }}>
+      <Paper elevation={2} className="w-full p-5 rounded-lg border border-gray-400 hover:shadow-md transition-all duration-300" sx={{ backgroundColor: "#121111", borderRadius: isMobile ? 0 : "8px" }}>
         <Stack spacing={2} sx={{ height: "100%", justifyContent: "space-between" }}>
           <Stack>
             <div className="flex justify-between items-center">
@@ -485,13 +489,16 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
       <Dialog
         open={noteDialogOpen}
         onClose={handleNoteDialogClose}
+        fullScreen={isMobile}
         PaperProps={{
           sx: {
             backgroundColor: "#1e1e1e",
             color: "#ffffff",
-            borderRadius: "8px",
+            borderRadius: isMobile ? 0 : "8px",
             boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.5)",
-            border: '1px solid #444'
+            border: '1px solid #444',
+            width: isMobile ? '100%' : 'auto',
+            maxWidth: isMobile ? '100%' : 'md'
           },
         }}
       >
