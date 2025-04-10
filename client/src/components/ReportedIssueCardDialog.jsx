@@ -40,7 +40,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
   const [detailView, setDetailView] = useState(false);
   const [copied, setCopied] = useState(false);
   const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   if (!teamIssues || teamIssues.length === 0) return null;
 
@@ -124,12 +124,12 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
       onClose={onClose}
       fullWidth
       maxWidth="md"
-      fullScreen={fullScreen}
+      fullScreen={isMobile}
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#1e1e1e',
           boxShadow: 'none',
-          borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
+          borderRadius: isMobile ? 0 : '8px',
         }
       }}
     >
@@ -142,11 +142,12 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
             backgroundColor: '#1e1e1e',
             color: '#ffffff',
             borderBottom: '1px solid #444',
-            padding: '16px 24px',
+            padding: isMobile ? '12px 16px' : '16px 24px',
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <IconButton
                 onClick={handleBackToList}
+                size={isMobile ? "small" : "medium"}
                 sx={{
                   mr: 1,
                   color: '#3ea6ff',
@@ -155,16 +156,18 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                   }
                 }}
               >
-                <FaArrowLeft />
+                <FaArrowLeft fontSize={isMobile ? "14px" : "16px"} />
               </IconButton>
-              <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FaInfoCircle color="#3ea6ff" /> Customer Issue Details
+              <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FaInfoCircle color="#3ea6ff" size={isMobile ? 16 : 20} />
+                <Box component="span">Customer Issue Details</Box>
               </Typography>
             </Box>
             <Box>
               <Tooltip title={copied ? "Copied!" : "Copy to clipboard"} arrow>
                 <IconButton
                   onClick={copyToClipboard}
+                  size={isMobile ? "small" : "medium"}
                   sx={{
                     color: '#3ea6ff',
                     '&:hover': {
@@ -173,12 +176,13 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                     mr: 1
                   }}
                 >
-                  <FaCopy />
+                  <FaCopy fontSize={isMobile ? "14px" : "16px"} />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Share via WhatsApp" arrow>
                 <IconButton
                   onClick={shareOnWhatsApp}
+                  size={isMobile ? "small" : "medium"}
                   sx={{
                     color: '#25D366',
                     '&:hover': {
@@ -186,7 +190,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                     }
                   }}
                 >
-                  <FaWhatsapp />
+                  <FaWhatsapp fontSize={isMobile ? "16px" : "18px"} />
                 </IconButton>
               </Tooltip>
             </Box>
@@ -195,30 +199,37 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
           <DialogContent dividers sx={{
             backgroundColor: '#1e1e1e',
             color: '#ffffff',
-            padding: '20px 24px',
+            padding: isMobile ? '12px 16px' : '20px 24px',
+            '&::-webkit-scrollbar': {
+              width: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#444',
+              borderRadius: '2px',
+            },
           }}>
-            <Stack spacing={3}>
+            <Stack spacing={isMobile ? 2 : 3}>
               {/* SLID */}
               <Box>
-                <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>SLID</Typography>
-                <Typography variant="body1" component="div" sx={{ color: '#ffffff' }}>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>SLID</Typography>
+                <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff' }}>
                   {selectedIssue.slid}
                 </Typography>
               </Box>
 
               {/* Dates */}
-              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', gap: isMobile ? 2 : 3, flexWrap: 'wrap' }}>
                 <Box>
-                  <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>PIS Date</Typography>
-                  <Typography variant="body1" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ffffff' }}>
-                    <FaCalendarAlt size={14} color="#3ea6ff" />
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>PIS Date</Typography>
+                  <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ffffff' }}>
+                    <FaCalendarAlt size={isMobile ? 12 : 14} color="#3ea6ff" />
                     {format(new Date(selectedIssue.pisDate), 'MMM dd, yyyy')}
                   </Typography>
                 </Box>
                 <Box>
-                  <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Report Date</Typography>
-                  <Typography variant="body1" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ffffff' }}>
-                    <FaCalendarAlt size={14} color="#3ea6ff" />
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Report Date</Typography>
+                  <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ffffff' }}>
+                    <FaCalendarAlt size={isMobile ? 12 : 14} color="#3ea6ff" />
                     {format(new Date(selectedIssue.date), 'MMM dd, yyyy')}
                   </Typography>
                 </Box>
@@ -227,41 +238,41 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
               <Divider sx={{ backgroundColor: '#444' }} />
 
               {/* Reporter Info */}
-              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', gap: isMobile ? 2 : 3, flexWrap: 'wrap' }}>
                 <Box>
-                  <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Reporter</Typography>
-                  <Typography variant="body1" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ffffff' }}>
-                    <FaUser size={14} color="#3ea6ff" /> {selectedIssue.reporter}
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Reporter</Typography>
+                  <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ffffff' }}>
+                    <FaUser size={isMobile ? 12 : 14} color="#3ea6ff" /> {selectedIssue.reporter}
                   </Typography>
                 </Box>
                 <Box>
-                  <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Contact Method</Typography>
-                  <Typography variant="body1" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ffffff' }}>
-                    <FaPhone size={14} color="#3ea6ff" /> {selectedIssue.contactMethod}
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Contact Method</Typography>
+                  <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ffffff' }}>
+                    <FaPhone size={isMobile ? 12 : 14} color="#3ea6ff" /> {selectedIssue.contactMethod}
                   </Typography>
                 </Box>
               </Box>
 
               {/* Team Info */}
               <Box>
-                <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>From Team</Typography>
-                <Typography variant="body1" component="div" sx={{ color: '#ffffff' }}>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>From Team</Typography>
+                <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff' }}>
                   {selectedIssue.from}
                 </Typography>
               </Box>
 
               <Box>
-                <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Assigned To</Typography>
-                <Typography variant="body1" component="div" sx={{ color: '#ffffff' }}>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Assigned To</Typography>
+                <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff' }}>
                   {selectedIssue.assignedTo}
                 </Typography>
               </Box>
 
               <Box>
-                <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Team/Company</Typography>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Team/Company</Typography>
                 <Chip
                   label={selectedIssue.teamCompany}
-                  size="small"
+                  size={isMobile ? "small" : "medium"}
                   sx={{
                     backgroundColor: '#333',
                     color: '#ffffff',
@@ -272,9 +283,10 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
               </Box>
 
               <Box>
-                <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Status</Typography>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Status</Typography>
                 <Chip
                   label={selectedIssue.solved === 'yes' ? 'Solved' : 'Unresolved'}
+                  size={isMobile ? "small" : "medium"}
                   sx={{
                     backgroundColor: selectedIssue.solved === 'yes' ? '#4caf50' : '#6a1b1b',
                     color: '#ffffff',
@@ -287,22 +299,22 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
 
               {/* Issue Details */}
               <Box>
-                <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Issue Category</Typography>
-                <Typography variant="body1" component="div" sx={{ color: '#ffffff' }}>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Issue Category</Typography>
+                <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff' }}>
                   {selectedIssue.issueCategory}
                 </Typography>
               </Box>
 
               {selectedIssue.reporterNote && (
                 <Box>
-                  <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Reporter Notes</Typography>
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Reporter Notes</Typography>
                   <Box sx={{
                     backgroundColor: '#272727',
-                    p: 2,
+                    p: isMobile ? 1.5 : 2,
                     borderRadius: 1,
                     border: '1px solid #444'
                   }}>
-                    <Typography variant="body1" component="div" sx={{ color: '#ffffff', whiteSpace: 'pre-line' }}>
+                    <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff', whiteSpace: 'pre-line' }}>
                       {selectedIssue.reporterNote}
                     </Typography>
                   </Box>
@@ -311,14 +323,14 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
 
               {selectedIssue.assignedNote && (
                 <Box>
-                  <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Assigned Notes</Typography>
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Assigned Notes</Typography>
                   <Box sx={{
                     backgroundColor: '#272727',
-                    p: 2,
+                    p: isMobile ? 1.5 : 2,
                     borderRadius: 1,
                     border: '1px solid #444'
                   }}>
-                    <Typography variant="body1" component="div" sx={{ color: '#ffffff', whiteSpace: 'pre-line' }}>
+                    <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff', whiteSpace: 'pre-line' }}>
                       {selectedIssue.assignedNote}
                     </Typography>
                   </Box>
@@ -327,14 +339,14 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
 
               {selectedIssue.resolutionDetails && (
                 <Box>
-                  <Typography variant="subtitle2" component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Resolution Details</Typography>
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#aaaaaa', mb: 0.5 }}>Resolution Details</Typography>
                   <Box sx={{
                     backgroundColor: '#272727',
-                    p: 2,
+                    p: isMobile ? 1.5 : 2,
                     borderRadius: 1,
                     border: '1px solid #444'
                   }}>
-                    <Typography variant="body1" component="div" sx={{ color: '#ffffff', whiteSpace: 'pre-line' }}>
+                    <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff', whiteSpace: 'pre-line' }}>
                       {selectedIssue.resolutionDetails}
                     </Typography>
                   </Box>
@@ -352,17 +364,18 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
             backgroundColor: '#1e1e1e',
             color: '#ffffff',
             borderBottom: '1px solid #444',
-            padding: '16px 24px',
+            padding: isMobile ? '12px 16px' : '16px 24px',
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <FaInfoCircle color="#3ea6ff" />
-              <Typography variant="h6" component="div" sx={{ ml: 1 }}>
+              <FaInfoCircle color="#3ea6ff" size={isMobile ? 16 : 20} />
+              <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ ml: 1, fontWeight: 500 }}>
                 {teamName} - All Issues ({teamIssues.length})
               </Typography>
             </Box>
             <Tooltip title="Export to Excel">
               <IconButton
                 onClick={exportToExcel}
+                size={isMobile ? "small" : "medium"}
                 sx={{
                   color: '#4caf50',
                   '&:hover': {
@@ -370,7 +383,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                   }
                 }}
               >
-                <RiFileExcel2Fill />
+                <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
               </IconButton>
             </Tooltip>
           </DialogTitle>
@@ -379,6 +392,13 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
             backgroundColor: '#1e1e1e',
             color: '#ffffff',
             padding: 0,
+            '&::-webkit-scrollbar': {
+              width: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#444',
+              borderRadius: '2px',
+            },
           }}>
             <List>
               {teamIssues.map((issue, index) => (
@@ -390,35 +410,39 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                       backgroundColor: '#2a2a2a',
                     },
                     borderBottom: '1px solid #444',
-                    padding: '16px 24px',
+                    padding: isMobile ? '12px 16px' : '16px 24px',
                     cursor: 'pointer'
                   }}
                 >
                   <ListItemIcon>
-                    <Avatar sx={{ bgcolor: '#3ea6ff' }}>
-                      <FaIdCard color="#ffffff" />
+                    <Avatar sx={{
+                      bgcolor: '#3ea6ff',
+                      width: isMobile ? 36 : 40,
+                      height: isMobile ? 36 : 40
+                    }}>
+                      <FaIdCard color="#ffffff" size={isMobile ? 16 : 18} />
                     </Avatar>
                   </ListItemIcon>
                   <ListItemText
                     primary={
-                      <Typography variant="body1" component="div" sx={{ color: '#ffffff' }}>
+                      <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff' }}>
                         {issue.slid}
                       </Typography>
                     }
                     secondaryTypographyProps={{ component: 'div' }}
                     secondary={
                       <Box component="div">
-                        <Typography variant="body2" component="div" sx={{ color: '#aaaaaa', mt: 0.5 }}>
+                        <Typography variant={isMobile ? "caption" : "body2"} component="div" sx={{ color: '#aaaaaa', mt: 0.5 }}>
                           Reporter: {issue.reporter}
                         </Typography>
-                        <Typography variant="body2" component="div" sx={{ color: '#aaaaaa' }}>
+                        <Typography variant={isMobile ? "caption" : "body2"} component="div" sx={{ color: '#aaaaaa' }}>
                           Date: {format(new Date(issue.date), 'MMM dd, yyyy')}
                         </Typography>
                         <Box component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Typography variant="body2" component="div" sx={{ color: '#aaaaaa' }}>Status:</Typography>
+                          <Typography variant={isMobile ? "caption" : "body2"} component="div" sx={{ color: '#aaaaaa' }}>Status:</Typography>
                           <Chip
                             label={issue.solved === 'yes' ? 'Solved' : 'Unresolved'}
-                            size="small"
+                            size={isMobile ? "small" : "medium"}
                             sx={{
                               backgroundColor: issue.solved === 'yes' ? '#4caf50' : '#6a1b1b',
                               color: '#ffffff',
@@ -429,7 +453,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                       </Box>
                     }
                   />
-                  <FaChevronRight color="#3ea6ff" />
+                  <FaChevronRight color="#3ea6ff" size={isMobile ? 14 : 16} />
                 </ListItem>
               ))}
             </List>
@@ -440,10 +464,11 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
       <DialogActions sx={{
         backgroundColor: '#1e1e1e',
         borderTop: '1px solid #444',
-        padding: '12px 24px',
+        padding: isMobile ? '8px 16px' : '12px 24px',
       }}>
         <Button
           onClick={onClose}
+          size={isMobile ? "small" : "medium"}
           sx={{
             color: '#ffffff',
             '&:hover': {

@@ -2,7 +2,40 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Box, TextField, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Divider, Tooltip, Typography, IconButton,
   useMediaQuery,
+  List,
+  ListItem,
+  ListItemText,
+  Chip,
 } from '@mui/material';
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  PauseCircleOutline as PauseCircleOutlineIcon,
+  Block as BlockIcon,
+  PlayCircleOutline as PlayCircleOutlineIcon,
+  BeachAccess as BeachAccessIcon,
+  ExitToApp as ExitToAppIcon,
+  CheckCircleOutline as CheckCircleOutlineIcon,
+  Cancel as CancelIcon,
+  AccessTime as AccessTimeIcon,
+  InfoOutlined as InfoOutlinedIcon,
+  WarningAmberOutlined as WarningAmberOutlinedIcon,
+  CancelOutlined as CancelOutlinedIcon,
+  History as HistoryIcon,
+  Groups as GroupsIcon,
+  Business as BusinessIcon,
+  Phone as PhoneIcon,
+  DeviceHub as DeviceHubIcon,
+  Laptop as LaptopIcon,
+  CheckCircle as CheckCircleIcon,
+  Assessment as AssessmentIcon,
+  TaskAlt as TaskAltIcon,
+  Pending as PendingIcon,
+  Event as EventIcon,
+  Quiz as QuizIcon,
+  Assignment as AssignmentIcon,
+  AssignmentTurnedIn as AssignmentTurnedInIcon,
+} from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
 import { useSelector } from 'react-redux';
@@ -45,7 +78,7 @@ const FieldTeamForm = () => {
     page: 0,
   });
 
-  const isMobileScreen = useMediaQuery('(max-width: 503px)');
+  const isMobile = useMediaQuery('(max-width: 503px)');
 
   const handleAddTeam = async (data) => {
     try {
@@ -376,15 +409,64 @@ const FieldTeamForm = () => {
 
   // Columns for DataGrid
   const columns = useMemo(() => [
-    { field: 'teamName', headerName: 'Team Name', flex: 1, headerClassName: 'dark-header', minWidth: 200 },
-    { field: 'teamCompany', headerName: 'Team Company', flex: 1, headerClassName: 'dark-header', minWidth: 120 },
-    { field: 'contactNumber', headerName: 'Contact Number', flex: 1, headerClassName: 'dark-header', minWidth: 200 },
+    {
+      field: 'teamName',
+      headerName: 'Team Name',
+      flex: 1,
+      headerClassName: 'dark-header',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <GroupsIcon fontSize="small" sx={{ mr: 1, color: '#3ea6ff' }} />
+          <Typography variant="body2">{params.value}</Typography>
+        </Box>
+      ),
+      minWidth: 200,
+    },
+    {
+      field: 'teamCompany',
+      headerName: 'Team Company',
+      flex: 1,
+      headerClassName: 'dark-header',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <BusinessIcon fontSize="small" sx={{ mr: 1, color: '#9c27b0' }} />
+          <Typography variant="body2">{params.value}</Typography>
+        </Box>
+      ),
+      minWidth: 120,
+    },
+    {
+      field: 'contactNumber',
+      headerName: 'Contact Number',
+      flex: 1,
+      headerClassName: 'dark-header',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <PhoneIcon fontSize="small" sx={{ mr: 1, color: '#4caf50' }} />
+          <Typography variant="body2">{params.value}</Typography>
+        </Box>
+      ),
+      minWidth: 200,
+    },
     {
       field: 'fsmSerialNumber',
       headerName: 'FSM Serial Number',
       flex: 1,
       headerClassName: 'dark-header',
-      renderCell: (params) => params.row.fsmSerialNumber || 'N/A',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <DeviceHubIcon fontSize="small" sx={{ mr: 1, color: '#ff9800' }} />
+          <Typography variant="body2">{params.row.fsmSerialNumber || 'N/A'}</Typography>
+        </Box>
+      ),
       minWidth: 200,
     },
     {
@@ -392,7 +474,14 @@ const FieldTeamForm = () => {
       headerName: 'Laptop Serial Number',
       flex: 1,
       headerClassName: 'dark-header',
-      renderCell: (params) => params.row.laptopSerialNumber || 'N/A',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <LaptopIcon fontSize="small" sx={{ mr: 1, color: '#607d8b' }} />
+          <Typography variant="body2">{params.row.laptopSerialNumber || 'N/A'}</Typography>
+        </Box>
+      ),
       minWidth: 200,
     },
     {
@@ -401,7 +490,26 @@ const FieldTeamForm = () => {
       flex: 1,
       headerClassName: 'dark-header',
       type: 'boolean',
-      renderCell: (params) => params.value ? '✅ Yes' : '❌ No',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%',
+          color: params.value ? '#4caf50' : '#f44336'
+        }}>
+          {params.value ? (
+            <>
+              <CheckCircleIcon fontSize="small" sx={{ mr: 0.5 }} />
+              <Typography variant="body2">Allowed</Typography>
+            </>
+          ) : (
+            <>
+              <CancelIcon fontSize="small" sx={{ mr: 0.5 }} />
+              <Typography variant="body2">Blocked</Typography>
+            </>
+          )}
+        </Box>
+      ),
       minWidth: 120,
     },
     {
@@ -410,7 +518,23 @@ const FieldTeamForm = () => {
       flex: 1,
       headerClassName: 'dark-header',
       type: 'number',
-      valueFormatter: (params) => `${params || 'N/A'}`,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const score = params.value;
+        let color = '#f44336'; // Red for low scores
+        if (score >= 7) color = '#ff9800'; // Orange for medium
+        if (score >= 9) color = '#4caf50'; // Green for high
+
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <AssessmentIcon fontSize="small" sx={{ mr: 1, color }} />
+            <Typography variant="body2" sx={{ color }}>
+              {score || 'N/A'}
+            </Typography>
+          </Box>
+        );
+      },
       minWidth: 120,
     },
     {
@@ -419,39 +543,114 @@ const FieldTeamForm = () => {
       flex: 1,
       headerClassName: 'dark-header',
       type: 'boolean',
-      renderCell: (params) => params.value ? 'Yes' : 'No',
-      minWidth: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          color: params.value ? '#4caf50' : '#f44336'
+        }}>
+          {params.value ? (
+            <>
+              <TaskAltIcon fontSize="small" sx={{ mr: 0.5 }} />
+              <Typography variant="body2">Completed</Typography>
+            </>
+          ) : (
+            <>
+              <PendingIcon fontSize="small" sx={{ mr: 0.5 }} />
+              <Typography variant="body2">Pending</Typography>
+            </>
+          )}
+        </Box>
+      ),
+      minWidth: 120,
     },
     {
       field: 'lastEvaluationDate',
-      headerName: 'Last Evaluation Date',
+      headerName: 'Last Evaluation',
       flex: 1,
       headerClassName: 'dark-header',
-      valueFormatter: (params) => params ? new Date(params).toLocaleDateString() : '',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <EventIcon fontSize="small" sx={{ mr: 1, color: '#2196f3' }} />
+          <Typography variant="body2">
+            {params.value ? new Date(params.value).toLocaleDateString() : 'Never'}
+          </Typography>
+        </Box>
+      ),
       minWidth: 200,
     },
     {
       field: 'viewHistory',
-      headerName: 'View History',
+      headerName: 'History',
       flex: 1,
+      align: 'center',
+      headerAlign: 'center',
       headerClassName: 'dark-header',
       renderCell: (params) => (
-        <Button
-          variant="text"
-          color="info"
-          onClick={() => handleViewHistoryClick(params.row._id)}
-          sx={{ height: '30px' }}
-        >
-          <FaEye />
-        </Button>
+        <Tooltip title="View evaluation history" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <IconButton
+            color="info"
+            onClick={() => handleViewHistoryClick(params.row._id)}
+            sx={{
+              '&:hover': { backgroundColor: 'rgba(2, 136, 209, 0.1)' },
+              color: '#0288d1'
+            }}
+          >
+            <HistoryIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       ),
-      minWidth: 120,
+      minWidth: 100,
     },
     {
       field: 'quizCode',
       headerName: 'Quiz Code',
       flex: 1,
+      align: 'center',
+      headerAlign: 'center',
       headerClassName: 'dark-header',
+      renderCell: (params) => {
+        const [copied, setCopied] = useState(false);
+
+        const handleCopy = () => {
+          if (params.value) {
+            navigator.clipboard.writeText(params.value);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }
+        };
+
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <Tooltip
+              title={copied ? "Copied!" : "Copy to clipboard"}
+              placement="top"
+            >
+              <IconButton
+                onClick={handleCopy}
+                size="small"
+                disabled={!params.value}
+                sx={{
+                  color: '#9c27b0',
+                  '&:hover': {
+                    backgroundColor: 'rgba(156, 39, 176, 0.1)'
+                  },
+                  mr: 1
+                }}
+              >
+                {copied ? <AssignmentTurnedInIcon fontSize="small" /> : <AssignmentIcon fontSize="small" />}
+              </IconButton>
+            </Tooltip>
+            <Typography variant="body2">
+              {params.value || 'N/A'}
+            </Typography>
+          </Box>
+        );
+      },
       minWidth: 130,
     },
     {
@@ -463,127 +662,248 @@ const FieldTeamForm = () => {
       headerAlign: 'center',
       renderCell: (params) => (
         <Stack direction="row" spacing={1} height="100%" justifyContent="center" alignItems="center">
-          <Button
-            variant="text"
-            color="primary"
-            disabled={user.role !== 'Admin'}
-            onClick={() => handleEditClick(params.row)}
-            sx={{ height: '20px', py: 1, px: 0, fontSize: '12px' }}
-          >
-            Edit
-          </Button>
-          <Button
-            variant="text"
-            color="error"
-            onClick={() => handleDeleteClick(params.row._id)}
-            disabled={user.role !== 'Admin'}
-            sx={{ height: '20px', py: 1, px: 0, fontSize: '12px' }}
-          >
-            Delete
-          </Button>
-          <Button
-            variant="text"
-            color="warning"
-            disabled={user.role !== 'Admin'}
-            onClick={() => handleSuspendClick(params.row._id)}
-          >
-            Suspend
-          </Button>
-          <Button
-            variant="text"
-            color="error"
-            disabled={user.role !== 'Admin'}
-            onClick={() => handleTerminateClick(params.row._id)}
-          >
-            Terminate
-          </Button>
-          <Button
-            variant="text"
-            color="success"
-            disabled={user.role !== 'Admin'}
-            onClick={() => handleReactivateClick(params.row._id)}
-          >
-            Reactivate
-          </Button>
-          <Button
-            variant="text"
-            color="info"
-            disabled={user.role !== 'Admin'}
-            onClick={() => handleOnLeaveClick(params.row._id)}
-          >
-            On Leave
-          </Button>
-          <Button
-            variant="text"
-            color="secondary"
-            disabled={user.role !== 'Admin'}
-            onClick={() => handleResignedClick(params.row._id)}
-          >
-            Resigned
-          </Button>
+          {/* Edit */}
+          <Tooltip title="Edit">
+            <IconButton
+              color="primary"
+              disabled={user.role !== 'Admin'}
+              onClick={() => handleEditClick(params.row)}
+              sx={{
+                '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' },
+                color: '#1976d2'
+              }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          {/* Delete */}
+          <Tooltip title="Delete">
+            <IconButton
+              color="error"
+              onClick={() => handleDeleteClick(params.row._id)}
+              disabled={user.role !== 'Admin'}
+              sx={{
+                '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.1)' },
+                color: '#d32f2f'
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          {/* Suspend */}
+          <Tooltip title="Suspend">
+            <IconButton
+              color="warning"
+              disabled={user.role !== 'Admin'}
+              onClick={() => handleSuspendClick(params.row._id)}
+              sx={{
+                '&:hover': { backgroundColor: 'rgba(237, 108, 2, 0.1)' },
+                color: '#ed6c02'
+              }}
+            >
+              <PauseCircleOutlineIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          {/* Terminate */}
+          <Tooltip title="Terminate">
+            <IconButton
+              color="error"
+              disabled={user.role !== 'Admin'}
+              onClick={() => handleTerminateClick(params.row._id)}
+              sx={{
+                '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.1)' },
+                color: '#d32f2f'
+              }}
+            >
+              <BlockIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          {/* Reactivate */}
+          <Tooltip title="Reactivate">
+            <IconButton
+              color="success"
+              disabled={user.role !== 'Admin'}
+              onClick={() => handleReactivateClick(params.row._id)}
+              sx={{
+                '&:hover': { backgroundColor: 'rgba(46, 125, 50, 0.1)' },
+                color: '#2e7d32'
+              }}
+            >
+              <PlayCircleOutlineIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          {/* On Leave */}
+          <Tooltip title="On Leave">
+            <IconButton
+              color="info"
+              disabled={user.role !== 'Admin'}
+              onClick={() => handleOnLeaveClick(params.row._id)}
+              sx={{
+                '&:hover': { backgroundColor: 'rgba(2, 136, 209, 0.1)' },
+                color: '#0288d1'
+              }}
+            >
+              <BeachAccessIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          {/* Resigned */}
+          <Tooltip title="Resigned">
+            <IconButton
+              color="secondary"
+              disabled={user.role !== 'Admin'}
+              onClick={() => handleResignedClick(params.row._id)}
+              sx={{
+                '&:hover': { backgroundColor: 'rgba(123, 31, 162, 0.1)' },
+                color: '#7b1fa2'
+              }}
+            >
+              <ExitToAppIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          {/* Quiz Permission Toggle */}
           <Tooltip title={params.row.canTakeQuiz ? "Disallow Quiz" : "Allow Quiz"}>
-            <Button
-              variant="text"
+            <IconButton
               color={params.row.canTakeQuiz ? "success" : "error"}
               disabled={user.role !== 'Admin'}
               onClick={() => handleToggleQuizPermission(params.row._id, !params.row.canTakeQuiz)}
               sx={{
-                height: '20px',
-                py: 1,
-                px: 0,
-                fontSize: '12px',
-                minWidth: '100px',
-                backgroundColor: params.row.canTakeQuiz ? 'rgba(46, 125, 50, 0.1)' : 'rgba(211, 47, 47, 0.1)',
                 '&:hover': {
-                  backgroundColor: params.row.canTakeQuiz ? 'rgba(46, 125, 50, 0.2)' : 'rgba(211, 47, 47, 0.2)',
-                }
+                  backgroundColor: params.row.canTakeQuiz
+                    ? 'rgba(46, 125, 50, 0.2)'
+                    : 'rgba(211, 47, 47, 0.2)',
+                },
+                backgroundColor: params.row.canTakeQuiz
+                  ? 'rgba(46, 125, 50, 0.1)'
+                  : 'rgba(211, 47, 47, 0.1)',
               }}
             >
-              {params.row.canTakeQuiz ? "Allowed" : "Disallowed"}
-            </Button>
+              {params.row.canTakeQuiz ? (
+                <CheckCircleOutlineIcon fontSize="small" />
+              ) : (
+                <CancelIcon fontSize="small" />
+              )}
+            </IconButton>
           </Tooltip>
         </Stack>
       ),
-      minWidth: 700,
+      minWidth: 400, // Reduced from 700 since icons take less space
     },
-    {
-      field: 'isSuspended',
-      headerName: 'Suspended',
-      flex: 1,
-      headerClassName: 'dark-header',
-      type: 'boolean',
-      renderCell: (params) => params.value ? 'Yes' : 'No',
-      minWidth: 100,
-    },
-    {
-      field: 'suspensionDuration',
-      headerName: 'Suspension Duration',
-      flex: 1,
-      headerClassName: 'dark-header',
-      minWidth: 200,
-    },
-    {
-      field: 'suspensionReason',
-      headerName: 'Suspension Reason',
-      flex: 1,
-      headerClassName: 'dark-header',
-      minWidth: 200,
-    },
-    {
-      field: 'terminationReason',
-      headerName: 'Termination Reason',
-      flex: 1,
-      headerClassName: 'dark-header',
-      minWidth: 200,
-    },
+
+    // {
+    //   field: 'isSuspended',
+    //   headerName: 'Suspended',
+    //   flex: 1,
+    //   headerClassName: 'dark-header',
+    //   type: 'boolean',
+    //   renderCell: (params) => (
+    //     <Box sx={{
+    //       display: 'flex',
+    //       alignItems: 'center',
+    //       color: params.value ? '#ed6c02' : '#2e7d32'
+    //     }}>
+    //       {params.value ? (
+    //         <>
+    //           <PauseCircleOutlineIcon fontSize="small" sx={{ mr: 0.5 }} />
+    //           <Typography variant="body2">Suspended</Typography>
+    //         </>
+    //       ) : (
+    //         <>
+    //           <CheckCircleOutlineIcon fontSize="small" sx={{ mr: 0.5 }} />
+    //           <Typography variant="body2">Active</Typography>
+    //         </>
+    //       )}
+    //     </Box>
+    //   ),
+    //   minWidth: 120,
+    // },
+    // {
+    //   field: 'suspensionDuration',
+    //   headerName: 'Suspension Duration',
+    //   flex: 1,
+    //   headerClassName: 'dark-header',
+    //   renderCell: (params) => (
+    //     params.row.isSuspended ? (
+    //       <Box sx={{ display: 'flex', alignItems: 'center' }}>
+    //         <AccessTimeIcon fontSize="small" sx={{ mr: 0.5, color: '#ed6c02' }} />
+    //         <Typography variant="body2">{params.value || 'N/A'}</Typography>
+    //       </Box>
+    //     ) : (
+    //       <Typography variant="body2" color="textSecondary">-</Typography>
+    //     )
+    //   ),
+    //   minWidth: 200,
+    // },
+    // {
+    //   field: 'suspensionReason',
+    //   headerName: 'Suspension Reason',
+    //   flex: 1,
+    //   headerClassName: 'dark-header',
+    //   renderCell: (params) => (
+    //     params.row.isSuspended ? (
+    //       <Box sx={{ display: 'flex', alignItems: 'center' }}>
+    //         <InfoOutlinedIcon fontSize="small" sx={{ mr: 0.5, color: '#ed6c02' }} />
+    //         <Typography variant="body2" noWrap>
+    //           {params.value || 'No reason provided'}
+    //         </Typography>
+    //       </Box>
+    //     ) : (
+    //       <Typography variant="body2" color="textSecondary">-</Typography>
+    //     )
+    //   ),
+    //   minWidth: 200,
+    // },
+    // {
+    //   field: 'terminationReason',
+    //   headerName: 'Termination Reason',
+    //   flex: 1,
+    //   headerClassName: 'dark-header',
+    //   renderCell: (params) => (
+    //     params.row.isTerminated ? (
+    //       <Box sx={{ display: 'flex', alignItems: 'center' }}>
+    //         <WarningAmberOutlinedIcon fontSize="small" sx={{ mr: 0.5, color: '#d32f2f' }} />
+    //         <Typography variant="body2" noWrap>
+    //           {params.value || 'No reason provided'}
+    //         </Typography>
+    //       </Box>
+    //     ) : (
+    //       <Typography variant="body2" color="textSecondary">-</Typography>
+    //     )
+    //   ),
+    //   minWidth: 200,
+    // },
     {
       field: 'isActive',
-      headerName: 'Active',
+      headerName: 'Team Status',
       flex: 1,
       headerClassName: 'dark-header',
       type: 'boolean',
-      renderCell: (params) => params.value ? '✅ Yes' : '❌ No',
-      minWidth: 100,
+      renderCell: (params) => (
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          color: params.value ? '#2e7d32' : '#d32f2f'
+        }}>
+          {params.value ? (
+            <>
+              <CheckCircleOutlineIcon fontSize="small" sx={{ mr: 0.5 }} />
+              <Typography variant="body2">Active</Typography>
+            </>
+          ) : (
+            <>
+              <CancelOutlinedIcon fontSize="small" sx={{ mr: 0.5 }} />
+              <Typography variant="body2">Inactive</Typography>
+            </>
+          )}
+        </Box>
+      ),
+      minWidth: 120,
     },
     {
       field: 'stateLogs',
@@ -591,18 +911,26 @@ const FieldTeamForm = () => {
       flex: 2,
       headerClassName: 'dark-header',
       renderCell: (params) => (
-        <Button variant="text" color="info" onClick={() => handleViewLogsClick(params.row._id)}>
-          View Logs
-        </Button>
-
+        <Tooltip title="View state change history">
+          <IconButton
+            color="info"
+            onClick={() => handleViewLogsClick(params.row._id)}
+            sx={{
+              '&:hover': { backgroundColor: 'rgba(2, 136, 209, 0.1)' },
+              color: '#0288d1'
+            }}
+          >
+            <HistoryIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       ),
-      minWidth: 120,
+      minWidth: 100,
     },
   ], [handleDeleteClick, handleEditClick, handleOnLeaveClick, handleReactivateClick, handleResignedClick, handleSuspendClick, handleTerminateClick, handleToggleQuizPermission, handleViewHistoryClick, handleViewLogsClick, user.role]);
 
   return (
     <div className="max-w-[1000px] mx-auto">
-      <Box sx={{ backgroundColor: '#121212', minHeight: '100vh', p: 1, color: '#ffffff' }}>
+      <Box sx={{ backgroundColor: '#121212', minHeight: '100vh', py: 3, color: '#ffffff' }}>
         {/* Add Team Form */}
         <AddTeamForm onSubmit={handleAddTeam} errorMessage={errorMessage} user={user} />
 
@@ -610,7 +938,7 @@ const FieldTeamForm = () => {
 
         {/* MUI Table */}
         <Box sx={{ mt: 4 }}>
-          <Stack direction="row" flexDirection={isMobileScreen ? 'column' : 'row'} justifyContent="space-between" gap={2} alignItems="center" sx={{ mb: 2 }}>
+          <Stack direction="row" flexDirection={isMobile ? 'column' : 'row'} justifyContent="space-between" gap={2} alignItems="center" sx={{ mb: 2 }}>
             <Box
               sx={{
                 display: 'flex',
@@ -717,9 +1045,17 @@ const FieldTeamForm = () => {
                 },
                 '& .MuiDataGrid-columnHeader': {
                   backgroundColor: '#333',
+                  "& .MuiDataGrid-columnHeaderTitleContainerContent": {
+                    "& span": {
+                      color: '#848484',
+                    }
+                  }
                 },
                 '& .MuiDataGrid-cell': {
                   borderBottom: '1px solid #444',
+                  "& span": {
+                    color: '#ffffff99',
+                  }
                 },
                 '& .MuiDataGrid-row': {
                   backgroundColor: '#272727',
@@ -767,80 +1103,23 @@ const FieldTeamForm = () => {
           errorMessage={errorMessage}
         />
 
-        {/* History Dialog */}
-        <Dialog
-          open={openHistoryDialog}
-          onClose={() => setOpenHistoryDialog(false)}
-          sx={{
-            "& .MuiDialog-paper": {
-              backgroundColor: '#1e1e1e',
-              boxShadow: 'none',
-              // minWidth: '600px', // Make the dialog wider
-              // maxWidth: '800px', // Set a maximum width
-              width: '90%' // Take up 80% of the screen width
-            }
-          }}
-        >
-          <DialogTitle sx={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>
-            Evaluation History - {teams.find(team => team._id === selectedTeamId)?.teamName || 'Team'}
-          </DialogTitle>
-          <DialogContent sx={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>
-            {evaluationHistory.length === 0 ? (
-              <Typography>No evaluation history available</Typography>
-            ) : (
-              <ul style={{ paddingLeft: '20px' }}>
-                {evaluationHistory.map((evaluation, index) => (
-                  <li key={index} style={{ marginBottom: '10px' }}>
-                    <strong>Date:</strong> {new Date(evaluation.date).toLocaleString()} | <strong>Score:</strong> {evaluation.score}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </DialogContent>
-          <DialogActions sx={{ backgroundColor: '#1e1e1e' }}>
-            <Button onClick={() => setOpenHistoryDialog(false)} sx={{ color: '#ffffff' }}>Close</Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Logs Dialog */}
-        <Dialog open={openLogsDialog} onClose={handleCloseLogsDialog} sx={{ "& .MuiDialog-paper": { backgroundColor: '#1e1e1e', boxShadow: 'none' } }}>
-          <DialogTitle sx={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>State Logs</DialogTitle>
-          <DialogContent sx={{ backgroundColor: '#1e1e1e', color: '#ffffff', minWidth: '300px', maxWidth: '600px' }}>
-            {selectedLogs.length === 0 ? (
-              <Typography>No logs available</Typography>
-            ) : (
-              <ul>
-                {selectedLogs.map((log, index) => (
-                  <li key={log._id.$oid || index}>
-                    <strong>State:</strong> {log.state} <br />
-                    <strong>Reason:</strong> {log.reason || 'N/A'} <br />
-                    <strong>Start Date:</strong> {log.startDate ? new Date(log.startDate).toLocaleString() : 'N/A'} <br />
-                    <strong>End Date:</strong> {log.endDate ? new Date(log.endDate).toLocaleString() : 'N/A'} <br />
-                    <strong>Changed At:</strong> {new Date(log.changedAt).toLocaleString()} <br />
-                    <strong>ID:</strong> {log._id} <br />
-                    <hr />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </DialogContent>
-          <DialogActions sx={{ backgroundColor: '#1e1e1e' }}>
-            <Button onClick={handleCloseLogsDialog} sx={{ color: '#ffffff' }}>Close</Button>
-          </DialogActions>
-        </Dialog>
-
+        {/* Suspend Team Dialog */}
         <SuspendTeamDialog
           open={openSuspendDialog}
           onClose={handleCloseDialogs}
           teamId={selectedTeamId}
           setUpdateTeamStatus={setUpdateTeamStatus}
         />
+
+        {/* Terminate Team Dialog */}
         <TerminateTeamDialog
           open={openTerminateDialog}
           onClose={handleCloseDialogs}
           teamId={selectedTeamId}
           setUpdateTeamStatus={setUpdateTeamStatus}
         />
+
+        {/* Reactivate Team Dialog */}
         <ReactivateTeamDialog
           open={openReactivateDialog}
           onClose={handleCloseDialogs}
@@ -848,10 +1127,252 @@ const FieldTeamForm = () => {
           setUpdateTeamStatus={setUpdateTeamStatus}
         />
 
+        {/* Evaluation History Dialog */}
+        <Dialog
+          open={openHistoryDialog}
+          onClose={() => setOpenHistoryDialog(false)}
+          fullScreen={isMobile}
+          fullWidth
+          maxWidth="md"
+          sx={{
+            "& .MuiDialog-paper": {
+              backgroundColor: '#1e1e1e',
+              boxShadow: 'none',
+              borderRadius: isMobile ? 0 : '8px',
+              border: isMobile ? 'none' : '1px solid #444',
+              margin: 0,
+              width: isMobile ? '100%' : '70%',
+              maxWidth: '100%'
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            backgroundColor: '#1e1e1e',
+            color: '#ffffff',
+            borderBottom: '1px solid #444',
+            padding: isMobile ? '12px 16px' : '16px 24px',
+            fontWeight: 500,
+            position: 'sticky',
+            top: 0,
+            zIndex: 1
+          }}>
+            Evaluation History - {teams.find(team => team._id === selectedTeamId)?.teamName || 'Team'}
+          </DialogTitle>
+          <DialogContent sx={{
+            backgroundColor: '#1e1e1e',
+            color: '#ffffff',
+            padding: isMobile ? '12px 16px' : '20px 24px',
+            '&::-webkit-scrollbar': {
+              width: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#444',
+              borderRadius: '2px',
+            },
+            "&.MuiDialogContent-root": {
+              paddingTop: 3,
+            }
+          }}>
+            {evaluationHistory.length === 0 ? (
+              <Typography variant="body1" sx={{ color: '#aaaaaa' }}>No evaluation history available</Typography>
+            ) : (
+              <List sx={{ width: '100%' }}>
+                {evaluationHistory.map((evaluation, index) => (
+                  <ListItem key={index} sx={{
+                    padding: isMobile ? '8px 0' : '12px 0',
+                    borderBottom: index < evaluationHistory.length - 1 ? '1px solid #444' : 'none'
+                  }}>
+                    <ListItemText
+                      primary={
+                        <Typography variant={isMobile ? "body2" : "body1"} sx={{ color: '#ffffff' }}>
+                          {new Date(evaluation.date).toLocaleString()}
+                        </Typography>
+                      }
+                      secondary={
+                        <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#aaaaaa', mt: 1 }}>
+                          Score: <Chip
+                            label={evaluation.score}
+                            size={isMobile ? "small" : "medium"}
+                            sx={{
+                              backgroundColor: evaluation.score >= 9 ? '#4caf50' :
+                                evaluation.score >= 7 ? '#9e9e9e' : '#f44336',
+                              color: '#ffffff',
+                              fontWeight: 'bold',
+                              ml: 1,
+                              fontSize: isMobile ? '0.75rem' : '0.875rem'
+                            }}
+                          />
+                        </Typography>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </DialogContent>
+          <DialogActions sx={{
+            backgroundColor: '#1e1e1e',
+            borderTop: '1px solid #444',
+            padding: isMobile ? '8px 16px' : '12px 24px',
+            position: 'sticky',
+            bottom: 0
+          }}>
+            <Button
+              onClick={() => setOpenHistoryDialog(false)}
+              size={isMobile ? "small" : "medium"}
+              sx={{
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                }
+              }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Logs Dialog */}
+        <Dialog
+          open={openLogsDialog}
+          onClose={handleCloseLogsDialog}
+          fullScreen={isMobile}
+          fullWidth
+          maxWidth="md"
+          sx={{
+            "& .MuiDialog-paper": {
+              backgroundColor: '#1e1e1e',
+              boxShadow: 'none',
+              borderRadius: isMobile ? 0 : '8px',
+              border: isMobile ? 'none' : '1px solid #444',
+              margin: 0,
+              width: isMobile ? '100%' : '70%',
+              maxWidth: '100%'
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            backgroundColor: '#1e1e1e',
+            color: '#ffffff',
+            borderBottom: '1px solid #444',
+            padding: isMobile ? '12px 16px' : '16px 24px',
+            fontWeight: 500,
+            position: 'sticky',
+            top: 0,
+            zIndex: 1
+          }}>
+            State Logs
+          </DialogTitle>
+          <DialogContent sx={{
+            backgroundColor: '#1e1e1e',
+            color: '#ffffff',
+            padding: isMobile ? '12px 16px' : '20px 24px',
+            '&::-webkit-scrollbar': {
+              width: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#444',
+              borderRadius: '2px',
+            },
+            "&.MuiDialogContent-root": {
+              paddingTop: 3,
+            }
+          }}>
+            {selectedLogs.length === 0 ? (
+              <Typography variant="body1" sx={{ color: '#aaaaaa' }}>No logs available</Typography>
+            ) : (
+              <List>
+                {selectedLogs.map((log, index) => (
+                  <Box key={log._id.$oid || index} sx={{ mb: isMobile ? 2 : 3 }}>
+                    <Box sx={{
+                      backgroundColor: '#272727',
+                      p: isMobile ? 1.5 : 2,
+                      borderRadius: '4px',
+                      borderLeft: '3px solid #3ea6ff'
+                    }}>
+                      <Typography variant={isMobile ? "body2" : "subtitle1"} sx={{ color: '#3ea6ff', mb: 1 }}>
+                        {log.state}
+                      </Typography>
+                      <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#ffffff', mb: 0.5 }}>
+                        <Box component="span" sx={{ color: '#aaaaaa' }}>Reason:</Box> {log.reason || 'N/A'}
+                      </Typography>
+                      <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#ffffff', mb: 0.5 }}>
+                        <Box component="span" sx={{ color: '#aaaaaa' }}>Start Date:</Box> {log.startDate ? new Date(log.startDate).toLocaleString() : 'N/A'}
+                      </Typography>
+                      <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#ffffff', mb: 0.5 }}>
+                        <Box component="span" sx={{ color: '#aaaaaa' }}>End Date:</Box> {log.endDate ? new Date(log.endDate).toLocaleString() : 'N/A'}
+                      </Typography>
+                      <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#ffffff' }}>
+                        <Box component="span" sx={{ color: '#aaaaaa' }}>Changed At:</Box> {new Date(log.changedAt).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    {index < selectedLogs.length - 1 && <Divider sx={{ mt: isMobile ? 1 : 2, backgroundColor: '#444' }} />}
+                  </Box>
+                ))}
+              </List>
+            )}
+          </DialogContent>
+          <DialogActions sx={{
+            backgroundColor: '#1e1e1e',
+            borderTop: '1px solid #444',
+            padding: isMobile ? '8px 16px' : '12px 24px',
+            position: 'sticky',
+            bottom: 0
+          }}>
+            <Button
+              onClick={handleCloseLogsDialog}
+              size={isMobile ? "small" : "medium"}
+              sx={{
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                }
+              }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* On Leave Dialog */}
-        <Dialog open={openOnLeaveDialog} onClose={() => setOpenOnLeaveDialog(false)}>
-          <DialogTitle>Mark Team as On Leave</DialogTitle>
-          <DialogContent>
+        <Dialog
+          open={openOnLeaveDialog}
+          onClose={() => setOpenOnLeaveDialog(false)}
+          fullScreen={isMobile}
+          fullWidth
+          maxWidth="sm"
+          sx={{
+            "& .MuiDialog-paper": {
+              backgroundColor: '#1e1e1e',
+              boxShadow: 'none',
+              borderRadius: isMobile ? 0 : '8px',
+              border: isMobile ? 'none' : '1px solid #444',
+              margin: 0,
+              width: isMobile ? '100%' : '70%',
+              maxWidth: '100%'
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            backgroundColor: '#1e1e1e',
+            color: '#ffffff',
+            borderBottom: '1px solid #444',
+            padding: isMobile ? '12px 16px' : '16px 24px',
+            fontWeight: 500,
+            position: 'sticky',
+            top: 0,
+            zIndex: 1
+          }}>
+            Mark Team as On Leave
+          </DialogTitle>
+          <DialogContent sx={{
+            backgroundColor: '#1e1e1e',
+            color: '#ffffff',
+            padding: isMobile ? '12px 16px' : '20px 24px',
+            "&.MuiDialogContent-root": {
+              paddingTop: 3,
+            }
+          }}>
             <TextField
               autoFocus
               margin="dense"
@@ -859,6 +1380,30 @@ const FieldTeamForm = () => {
               fullWidth
               value={leaveReason}
               onChange={(e) => setLeaveReason(e.target.value)}
+              sx={{
+                mb: 2,
+                '& .MuiInputBase-root': {
+                  color: '#ffffff',
+                },
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: '#444',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#3ea6ff',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#3ea6ff',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#aaaaaa',
+                  fontSize: isMobile ? '0.875rem' : '1rem'
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: '#3ea6ff',
+                },
+              }}
             />
             <TextField
               margin="dense"
@@ -869,6 +1414,30 @@ const FieldTeamForm = () => {
               onChange={(e) => setLeaveStartDate(e.target.value)}
               InputLabelProps={{
                 shrink: true,
+              }}
+              sx={{
+                mb: 2,
+                '& .MuiInputBase-root': {
+                  color: '#ffffff',
+                },
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: '#444',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#3ea6ff',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#3ea6ff',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#aaaaaa',
+                  fontSize: isMobile ? '0.875rem' : '1rem'
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: '#3ea6ff',
+                },
               }}
             />
             <TextField
@@ -881,22 +1450,104 @@ const FieldTeamForm = () => {
               InputLabelProps={{
                 shrink: true,
               }}
+              sx={{
+                '& .MuiInputBase-root': {
+                  color: '#ffffff',
+                },
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: '#444',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#3ea6ff',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#3ea6ff',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#aaaaaa',
+                  fontSize: isMobile ? '0.875rem' : '1rem'
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: '#3ea6ff',
+                },
+              }}
             />
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenOnLeaveDialog(false)} color="primary">
+          <DialogActions sx={{
+            backgroundColor: '#1e1e1e',
+            borderTop: '1px solid #444',
+            padding: isMobile ? '8px 16px' : '12px 24px',
+            position: 'sticky',
+            bottom: 0
+          }}>
+            <Button
+              onClick={() => setOpenOnLeaveDialog(false)}
+              size={isMobile ? "small" : "medium"}
+              sx={{
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                }
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleConfirmOnLeave} color="primary">
+            <Button
+              onClick={handleConfirmOnLeave}
+              size={isMobile ? "small" : "medium"}
+              sx={{
+                color: '#3ea6ff',
+                '&:hover': {
+                  backgroundColor: 'rgba(62, 166, 255, 0.1)',
+                }
+              }}
+            >
               Confirm
             </Button>
           </DialogActions>
         </Dialog>
 
         {/* Resigned Dialog */}
-        <Dialog open={openResignedDialog} onClose={() => setOpenResignedDialog(false)}>
-          <DialogTitle>Mark Team as Resigned</DialogTitle>
-          <DialogContent>
+        <Dialog
+          open={openResignedDialog}
+          onClose={() => setOpenResignedDialog(false)}
+          fullScreen={isMobile}
+          fullWidth
+          maxWidth="sm"
+          sx={{
+            "& .MuiDialog-paper": {
+              backgroundColor: '#1e1e1e',
+              boxShadow: 'none',
+              borderRadius: isMobile ? 0 : '8px',
+              border: isMobile ? 'none' : '1px solid #444',
+              margin: 0,
+              width: isMobile ? '100%' : '70%',
+              maxWidth: '100%'
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            backgroundColor: '#1e1e1e',
+            color: '#ffffff',
+            borderBottom: '1px solid #444',
+            padding: isMobile ? '12px 16px' : '16px 24px',
+            fontWeight: 500,
+            position: 'sticky',
+            top: 0,
+            zIndex: 1
+          }}>
+            Mark Team as Resigned
+          </DialogTitle>
+          <DialogContent sx={{
+            backgroundColor: '#1e1e1e',
+            color: '#ffffff',
+            padding: isMobile ? '12px 16px' : '20px 24px',
+            "&.MuiDialogContent-root": {
+              paddingTop: 3,
+            }
+          }}>
             <TextField
               autoFocus
               margin="dense"
@@ -904,13 +1555,60 @@ const FieldTeamForm = () => {
               fullWidth
               value={resignationReason}
               onChange={(e) => setResignationReason(e.target.value)}
+              sx={{
+                '& .MuiInputBase-root': {
+                  color: '#ffffff',
+                },
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: '#444',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#3ea6ff',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#3ea6ff',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#aaaaaa',
+                  fontSize: isMobile ? '0.875rem' : '1rem'
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: '#3ea6ff',
+                },
+              }}
             />
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenResignedDialog(false)} color="primary">
+          <DialogActions sx={{
+            backgroundColor: '#1e1e1e',
+            borderTop: '1px solid #444',
+            padding: isMobile ? '8px 16px' : '12px 24px',
+            position: 'sticky',
+            bottom: 0
+          }}>
+            <Button
+              onClick={() => setOpenResignedDialog(false)}
+              size={isMobile ? "small" : "medium"}
+              sx={{
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                }
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleConfirmResigned} color="primary">
+            <Button
+              onClick={handleConfirmResigned}
+              size={isMobile ? "small" : "medium"}
+              sx={{
+                color: '#3ea6ff',
+                '&:hover': {
+                  backgroundColor: 'rgba(62, 166, 255, 0.1)',
+                }
+              }}
+            >
               Confirm
             </Button>
           </DialogActions>

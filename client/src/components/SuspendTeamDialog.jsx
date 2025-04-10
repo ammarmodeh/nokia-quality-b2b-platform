@@ -1,24 +1,32 @@
 import { useForm, Controller } from "react-hook-form";
 import api from "../api/api";
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from "@mui/material";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  useMediaQuery,
+  useTheme
+} from "@mui/material";
 import { format, isAfter } from "date-fns";
 
 export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { control, handleSubmit, reset, watch, formState: { errors } } = useForm();
 
-  const startDate = watch("suspensionStartDate"); // Watch the start date for validation
-  const endDate = watch("suspensionEndDate"); // Watch the end date for validation
+  const startDate = watch("suspensionStartDate");
+  const endDate = watch("suspensionEndDate");
 
   const onSubmit = async (data) => {
     try {
-      // Format dates to ISO strings (e.g., "2023-10-15")
       const formattedData = {
         ...data,
-        suspensionStartDate: format(new Date(data.suspensionStartDate), "yyyy-MM-dd"), // Convert to ISO string
-        suspensionEndDate: format(new Date(data.suspensionEndDate), "yyyy-MM-dd"), // Convert to ISO string
+        suspensionStartDate: format(new Date(data.suspensionStartDate), "yyyy-MM-dd"),
+        suspensionEndDate: format(new Date(data.suspensionEndDate), "yyyy-MM-dd"),
       };
-
-      // console.log({ formattedData });
 
       const response = await api.post(`/field-teams/suspend-field-team/${teamId}`, formattedData, {
         headers: {
@@ -29,21 +37,61 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
       if (response.status === 200) {
         alert("Team suspended successfully!");
         onClose();
-        reset(); // Reset the form after successful submission
+        reset();
         setUpdateTeamStatus(prev => !prev);
       }
     } catch (error) {
-      // console.error("Error suspending team:", error);
       alert("Failed to suspend team.");
     }
   };
 
   return (
-    <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Suspend Team</DialogTitle>
-      <DialogContent>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullScreen={isMobile}
+      fullWidth
+      maxWidth="md"
+      sx={{
+        "& .MuiDialog-paper": {
+          backgroundColor: '#1e1e1e',
+          boxShadow: 'none',
+          borderRadius: isMobile ? 0 : '8px',
+          border: isMobile ? 'none' : '1px solid #444',
+          margin: 0,
+          width: isMobile ? '100%' : '70%',
+          maxWidth: '100%'
+        }
+      }}
+    >
+      <DialogTitle sx={{
+        backgroundColor: '#1e1e1e',
+        color: '#ffffff',
+        borderBottom: '1px solid #444',
+        padding: isMobile ? '12px 16px' : '16px 24px',
+        fontWeight: 500,
+        position: 'sticky',
+        top: 0,
+        zIndex: 1
+      }}>
+        Suspend Team
+      </DialogTitle>
+      <DialogContent sx={{
+        backgroundColor: '#1e1e1e',
+        color: '#ffffff',
+        padding: isMobile ? '12px 16px' : '20px 24px',
+        '&::-webkit-scrollbar': {
+          width: '4px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          backgroundColor: '#444',
+          borderRadius: '2px',
+        },
+        "&.MuiDialogContent-root": {
+          paddingTop: 3,
+        }
+      }}>
         <form onSubmit={handleSubmit(onSubmit)}>
-          {/* Start Date Picker */}
           <Controller
             name="suspensionStartDate"
             control={control}
@@ -60,13 +108,34 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
                 error={!!error}
                 helperText={error ? error.message : null}
                 inputProps={{
-                  max: endDate || format(new Date(), "yyyy-MM-dd"), // Prevent selecting a start date after the end date
+                  max: endDate || format(new Date(), "yyyy-MM-dd"),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#444',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#3ea6ff',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3ea6ff',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    color: '#ffffff',
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#aaaaaa',
+                  },
+                  '& .MuiFormHelperText-root': {
+                    color: '#f44336',
+                  },
                 }}
               />
             )}
           />
 
-          {/* End Date Picker */}
           <Controller
             name="suspensionEndDate"
             control={control}
@@ -87,13 +156,34 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
                 error={!!error}
                 helperText={error ? error.message : null}
                 inputProps={{
-                  min: startDate || format(new Date(), "yyyy-MM-dd"), // Prevent selecting an end date before the start date
+                  min: startDate || format(new Date(), "yyyy-MM-dd"),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#444',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#3ea6ff',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3ea6ff',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    color: '#ffffff',
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#aaaaaa',
+                  },
+                  '& .MuiFormHelperText-root': {
+                    color: '#f44336',
+                  },
                 }}
               />
             )}
           />
 
-          {/* Text Field for Suspension Reason */}
           <Controller
             name="suspensionReason"
             control={control}
@@ -107,18 +197,67 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
                 margin="normal"
                 error={!!error}
                 helperText={error ? error.message : null}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#444',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#3ea6ff',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3ea6ff',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    color: '#ffffff',
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#aaaaaa',
+                  },
+                  '& .MuiFormHelperText-root': {
+                    color: '#f44336',
+                  },
+                }}
               />
             )}
           />
-
-          <DialogActions>
-            <Button onClick={onClose}>Cancel</Button>
-            <Button type="submit" color="primary">
-              Suspend
-            </Button>
-          </DialogActions>
         </form>
       </DialogContent>
+      <DialogActions sx={{
+        backgroundColor: '#1e1e1e',
+        borderTop: '1px solid #444',
+        padding: isMobile ? '8px 16px' : '12px 24px',
+        position: 'sticky',
+        bottom: 0
+      }}>
+        <Button
+          onClick={onClose}
+          size={isMobile ? "small" : "medium"}
+          sx={{
+            color: '#ffffff',
+            '&:hover': {
+              backgroundColor: '#2a2a2a',
+            }
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit(onSubmit)}
+          variant="contained"
+          size={isMobile ? "small" : "medium"}
+          sx={{
+            backgroundColor: '#3ea6ff',
+            color: '#121212',
+            '&:hover': {
+              backgroundColor: '#1d4ed8'
+            }
+          }}
+        >
+          Suspend
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

@@ -10,6 +10,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { Typography, Collapse, IconButton, Paper } from '@mui/material';
 
 export const DataTable = ({ groupedData }) => {
+  console.log({ groupedData });
   const [expanded, setExpanded] = useState(false);
   const sortedWeeksDescending = Object.keys(groupedData).sort((a, b) => {
     const weekA = parseInt(a.split('-')[1], 10);

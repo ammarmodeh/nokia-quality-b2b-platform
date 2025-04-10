@@ -118,7 +118,7 @@ const Dashboard = () => {
 
       {/* Weekly Count of QoS-Related Detractor & Neutral Customers Section */}
       <Box sx={{ margin: "20px 0" }}>
-        <Typography sx={{ marginBottom: "20px", color: "#ffffff" }} variant="h5">
+        <Typography sx={{ marginBottom: isMediumScreen ? "4px" : "20px", color: "#ffffff", fontSize: isMediumScreen ? "16px" : "20px" }} variant="h5">
           Weekly Count of QoS-Related Detractor & Neutral Customers
         </Typography>
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>

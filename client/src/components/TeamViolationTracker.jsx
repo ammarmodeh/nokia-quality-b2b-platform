@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Box, Button, Paper, Stack, Typography } from "@mui/material";
+import { Box, Button, IconButton, Paper, Stack, Tooltip, Typography, useMediaQuery } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { TaskDetailsDialog } from './TaskDetailsDialog';
 import AddSessionDialog from "./AddSessionDialog";
@@ -9,6 +9,9 @@ import ViewSessionsDialog from "./ViewSessionsDialog";
 import * as XLSX from 'xlsx';
 import { useSelector } from "react-redux";
 import ReportAbsenceDialog from "./ResportAbsenseDialog";
+import { RiFileExcel2Fill } from "react-icons/ri";
+import { MdAdd, MdGroups, MdHistory, MdReport } from "react-icons/md";
+import { Assessment, Block, CheckCircle, Event, Grade, InfoOutlined, PauseCircleOutline, Pending, Warning } from "@mui/icons-material";
 
 const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const { enqueueSnackbar } = useSnackbar();
@@ -23,6 +26,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const [fieldTeams, setFieldTeams] = useState(initialFieldTeams);
   const [reportAbsenceDialogOpen, setReportAbsenceDialogOpen] = useState(false);
   const [selectedTeamForAbsence, setSelectedTeamForAbsence] = useState(null);
+  const isMobile = useMediaQuery('(max-width:503px)');
 
   // Keep selectedTeamSessions in sync with fieldTeams when dialog is open
   useEffect(() => {
@@ -34,7 +38,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     }
   }, [fieldTeams, viewSessionsDialogOpen, selectedTeamIdForSession]);
 
-  const handleExportToExcel = () => {
+  const exportToExcel = () => {
     const exportData = rows.map(row => {
       const team = fieldTeams.find(t => t._id === row.id);
       const sessionHistory = team?.sessionHistory || [];
@@ -569,8 +573,20 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       field: "teamName",
       headerName: "Team Name",
       width: 200,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <Button onClick={() => handleTeamNameClick(params.value)}>
+        <Button
+          onClick={() => handleTeamNameClick(params.value)}
+          sx={{
+            color: '#3ea6ff',
+            textTransform: 'none',
+            '&:hover': {
+              backgroundColor: 'rgba(62, 166, 255, 0.1)'
+            }
+          }}
+          startIcon={<MdGroups />}
+        >
           {params.value}
         </Button>
       ),
@@ -579,147 +595,240 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       field: "detractorCount",
       headerName: "Detractors",
       width: 100,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <span style={{ color: params.value > 0 ? '#cc1a1a' : 'inherit' }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: params.value > 0 ? '#f44336' : '#aaaaaa'
+        }}>
+          <Warning fontSize="small" sx={{ mr: 0.5 }} />
           {params.value}
-        </span>
+        </Box>
       )
     },
     {
       field: "neutralCount",
       headerName: "Neutrals",
       width: 100,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <span>
-          {params.value} <small>({Math.floor(params.value / 3)} eq.)</small>
-        </span>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: params.value > 0 ? '#ff9800' : '#aaaaaa'
+        }}>
+          <InfoOutlined fontSize="small" sx={{ mr: 0.5 }} />
+          {params.value}
+          <Typography variant="caption" sx={{ ml: 0.5 }}>
+            ({Math.floor(params.value / 3)} eq.)
+          </Typography>
+        </Box>
       )
     },
     {
       field: "equivalentDetractorCount",
       headerName: "Eq. Detractors",
       width: 120,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <span style={{
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           fontWeight: params.value >= 3 ? 'bold' : 'normal',
-          color: params.value >= 3 ? '#cc1a1a' :
-            params.value === 2 ? '#ffa500' : '#008000'
+          color: params.value >= 3 ? '#f44336' :
+            params.value === 2 ? '#ff9800' : '#4caf50'
         }}>
+          <Assessment fontSize="small" sx={{ mr: 0.5 }} />
           {params.value}
-        </span>
+        </Box>
       )
     },
     {
       field: "dateReachedLimit",
       headerName: "Limit Date",
       width: 120,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <span style={{
-          fontWeight: params.value ? 'bold' : 'normal',
-          // color: params.value ? '#cc1a1a' : 'inherit'
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: params.value ? '#f44336' : '#aaaaaa',
+          fontWeight: params.value ? 'bold' : 'normal'
         }}>
+          <Event fontSize="small" sx={{ mr: 0.5 }} />
           {params.value || '--'}
-        </span>
+        </Box>
       )
     },
     {
       field: "thresholdDescription",
       headerName: "How Reached",
       width: 200,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <span style={{ fontStyle: params.value === "Not reached" ? 'italic' : 'normal' }}>
+        <Typography
+          variant="body2"
+          sx={{
+            fontStyle: params.value === "Not reached" ? 'italic' : 'normal',
+            color: params.value === "Not reached" ? '#aaaaaa' : '#ffffff',
+            fontSize: '0.8rem', display: 'flex', alignItems: 'center', height: '100%'
+          }}
+        >
           {params.value}
-        </span>
+        </Typography>
       )
     },
     {
       field: "consequenceApplied",
       headerName: "Consequence",
       width: 200,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <span style={{
-          color: params.value.includes('suspension') ? '#cc1a1a' :
-            params.value.includes('warning') ? '#ffa500' : 'inherit',
+        <Box sx={{
+          color: params.value.includes('suspension') ? '#f44336' :
+            params.value.includes('warning') ? '#ff9800' : '#4caf50',
           fontWeight: 'bold',
-          fontSize: '1rem'
+          display: 'flex',
+          alignItems: 'center'
         }}>
+          {params.value.includes('suspension') ? <Block sx={{ mr: 0.5 }} /> :
+            params.value.includes('warning') ? <Warning sx={{ mr: 0.5 }} /> :
+              <CheckCircle sx={{ mr: 0.5 }} />}
           {params.value || '--'}
-        </span>
+        </Box>
       )
     },
     {
       field: "notes",
       headerName: "Notes",
       width: 250,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <span style={{ fontSize: '0.8rem' }}>
+        <Typography variant="body2" sx={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', height: '100%' }}>
           {params.value}
-        </span>
+        </Typography>
       )
     },
     {
       field: "validationStatus",
-      headerName: "Status",
+      headerName: "Team Status",
       width: 120,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <span style={{
-          color: params.value === 'Suspended' ? '#cc1a1a' :
-            params.value === 'Terminated' ? '#cc1a1a' :
-              params.value === 'Active' ? '#008000' : '#ffa500'
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: params.value === 'Suspended' ? '#f44336' :
+            params.value === 'Terminated' ? '#f44336' :
+              params.value === 'Active' ? '#4caf50' : '#ff9800',
+          fontSize: '0.8rem',
         }}>
+          {
+            params.value === 'Suspended' ? <PauseCircleOutline sx={{ mr: 0.5, fontSize: '1.1rem' }} /> :
+              params.value === 'Terminated' ? <Block sx={{ mr: 0.5, fontSize: '1.1rem' }} /> :
+                <CheckCircle sx={{ mr: 0.5, fontSize: '1.1rem' }} />
+          }
           {params.value}
-        </span>
+        </Box>
       )
     },
     {
       field: "isEvaluated",
       headerName: "Evaluated",
       width: 100,
+      align: 'center',
+      headerAlign: 'center',
       type: "boolean",
       renderCell: (params) => (
-        <span style={{ color: params.value ? '#008000' : '#ffa500' }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: params.value ? '#4caf50' : '#ff9800'
+        }}>
+          {params.value ? <CheckCircle sx={{ mr: 0.5, fontSize: '1.1rem' }} /> : <Pending sx={{ mr: 0.5, fontSize: '1.1rem' }} />}
           {params.value ? 'Yes' : 'No'}
-        </span>
+        </Box>
       )
     },
-    { field: "evaluationScore", headerName: "Evaluation Score", width: 150 },
+    {
+      field: "evaluationScore",
+      headerName: "Score",
+      width: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: params.value >= 9 ? '#4caf50' :
+            params.value >= 7 ? '#ff9800' : '#f44336'
+        }}>
+          <Grade sx={{ mr: 0.5, fontSize: '1.1rem' }} />
+          {params.value || 'N/A'}
+        </Box>
+      )
+    },
     {
       field: "violationStatus",
-      headerName: "Violation Status",
-      width: 150,
+      headerName: "Status",
+      width: 120,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => {
         const equivalentDetractorCount = params.row.equivalentDetractorCount;
-        if (equivalentDetractorCount >= 3) {
-          return <Box sx={{
-            backgroundColor: "#cc1a1a",
+        return (
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: equivalentDetractorCount >= 3 ? "#f44336" :
+              equivalentDetractorCount === 2 ? "#ff9800" : "#4caf50",
             color: "white",
-            padding: "5px",
+            padding: "4px 8px",
             borderRadius: "4px",
-            fontWeight: 'bold'
-          }}>VIOLATED</Box>;
-        } else if (equivalentDetractorCount === 2) {
-          return <Box sx={{
-            backgroundColor: "#ffa500",
-            color: "white",
-            padding: "5px",
-            borderRadius: "4px"
-          }}>WARNING</Box>;
-        } else {
-          return <Box sx={{
-            backgroundColor: "#008000",
-            color: "white",
-            padding: "5px",
-            borderRadius: "4px"
-          }}>OK</Box>;
-        }
+            fontWeight: 'bold',
+            fontSize: '0.8rem'
+          }}>
+            {equivalentDetractorCount >= 3 ? <Block sx={{ mr: 0.5, fontSize: '1.1rem' }} /> :
+              equivalentDetractorCount === 2 ? <Warning sx={{ mr: 0.5, fontSize: '1.1rem' }} /> :
+                <CheckCircle sx={{ mr: 0.5, fontSize: '1.1rem' }} />}
+            {equivalentDetractorCount >= 3 ? 'VIOLATED' :
+              equivalentDetractorCount === 2 ? 'WARNING' : 'OK'}
+          </Box>
+        );
       },
     },
     {
       field: "mostRecentSession",
       headerName: "Last Session",
       width: 120,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <Box sx={{ fontStyle: params.value === "No sessions" ? "italic" : "normal" }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontStyle: params.value === "No sessions" ? "italic" : "normal",
+          color: params.value === "No sessions" ? '#aaaaaa' : '#ffffff',
+          fontSize: '0.8rem'
+        }}>
+          <Event sx={{ mr: 0.5, fontSize: '1.1rem' }} />
           {params.value}
         </Box>
       ),
@@ -728,74 +837,63 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       field: "actions",
       headerName: "Actions",
       width: 250,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => {
         return (
-          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-            <Button
-              variant="contained"
-              disabled={user.role === "Admin" ? false : true}
-              sx={{
-                // backgroundColor: "#000023",
-                // color: "aliceblue",
-                // padding: "3px 10px",
-                // '&:hover': {
-                //   backgroundColor: "#000050"
-                // },
-                fontSize: '0.7rem',
-                padding: "3px 10px",
-                lineHeight: 1.2
-              }}
-              onClick={() => handleAddSessionClick(params.row.teamName, params.row.id)}
-            >
-              Add Session
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              disabled={user.role === "Admin" ? false : true}
-              sx={{
-                // padding: "3px 10px",
-                // '&:hover': {
-                //   backgroundColor: "#800000"
-                // },
-                padding: "3px 10px",
-                lineHeight: 1.2,
-                fontSize: '0.7rem'
-              }}
-              onClick={() => {
-                setSelectedTeamForAbsence(params.row.teamName);
-                setSelectedTeamIdForSession(params.row.id);
-                setReportAbsenceDialogOpen(true);
-              }}
-            >
-              Report Absence
-            </Button>
+          <Box sx={{
+            display: 'flex',
+            gap: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100%'
+          }}>
+            <Tooltip title="Add Session">
+              <IconButton
+                disabled={user.role !== "Admin"}
+                onClick={() => handleAddSessionClick(params.row.teamName, params.row.id)}
+                sx={{
+                  color: '#4caf50',
+                  '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' },
+                  '&.Mui-disabled': { color: '#666' }
+                }}
+              >
+                <MdAdd />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Report Absence">
+              <IconButton
+                disabled={user.role !== "Admin"}
+                onClick={() => {
+                  setSelectedTeamForAbsence(params.row.teamName);
+                  setSelectedTeamIdForSession(params.row.id);
+                  setReportAbsenceDialogOpen(true);
+                }}
+                sx={{
+                  color: '#f44336',
+                  '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' },
+                  '&.Mui-disabled': { color: '#666' }
+                }}
+              >
+                <MdReport />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="View Sessions">
+              <IconButton
+                onClick={() => handleViewSessionsClick(params.row.id)}
+                sx={{
+                  color: '#2196f3',
+                  '&:hover': { backgroundColor: 'rgba(33, 150, 243, 0.1)' }
+                }}
+              >
+                <MdHistory />
+              </IconButton>
+            </Tooltip>
           </Box>
         )
       },
-    },
-    {
-      field: "viewSessions",
-      headerName: "Sessions",
-      width: 120,
-      renderCell: (params) => (
-        <Button
-          variant="contained"
-          sx={{
-            // backgroundColor: "#00000075",
-            // color: "aliceblue",
-            padding: "3px 10px",
-            lineHeight: 1.2,
-            fontSize: '0.7rem',
-            // '&:hover': {
-            //   backgroundColor: "#000000"
-            // }
-          }}
-          onClick={() => handleViewSessionsClick(params.row.id)}
-        >
-          View
-        </Button>
-      ),
     },
   ];
 
@@ -847,20 +945,41 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
 
   return (
     <Box sx={{ marginBottom: "20px" }} >
-      <Stack direction={"row"} justifyContent={"space-between"} alignItems={"center"} sx={{ marginBottom: "10px" }}>
-        <Typography variant="h6" fontWeight="bold" sx={{ color: "#ffffff" }}>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{
+          marginBottom: "10px",
+          gap: 1,
+          flexWrap: "wrap",
+        }}
+      >
+        <Typography
+          variant="h6"
+          fontWeight="bold"
+          sx={{
+            color: "#ffffff",
+            fontSize: isMobile ? "0.9rem" : "1rem",
+          }}
+        >
           Team Violation Tracker
         </Typography>
-        <Button
-          variant="contained"
-          // color="success"
-          onClick={handleExportToExcel}
-          sx={{ backgroundColor: '#1D4ED8', py: 1, lineHeight: 1, fontSize: '0.8rem' }}
-        >
-          Export CSV
-        </Button>
+        <Tooltip title="Export to Excel">
+          <IconButton
+            onClick={exportToExcel}
+            size={isMobile ? "small" : "medium"}
+            sx={{
+              color: '#4caf50',
+              '&:hover': {
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+              }
+            }}
+          >
+            <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
+          </IconButton>
+        </Tooltip>
       </Stack>
-
       <Paper sx={{ height: 400, width: "100%", backgroundColor: "#272727" }}>
         <DataGrid
           rows={rows}

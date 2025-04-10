@@ -22,6 +22,9 @@ import { useNavigate } from "react-router-dom";
 import { getWeekNumberForTaksTable } from "../utils/helpers";
 import { useState } from "react";
 import { FaCopy, FaTimes } from "react-icons/fa";
+import { RiFileExcel2Fill } from "react-icons/ri";
+import { MdAssessment, MdBusiness, MdDateRange, MdGroups, MdRequestPage } from "react-icons/md";
+import { Assignment, AssignmentTurnedIn } from "@mui/icons-material";
 
 const handleCopyTaskData = (taskData) => {
   // Format the data for copying
@@ -64,6 +67,7 @@ const TaskTable = ({ tasks }) => {
   });
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const isMobile = useMediaQuery('(max-width:503px)');
 
   const handleClickOpen = (task) => {
     setSelectedTask(task);
@@ -105,82 +109,208 @@ const TaskTable = ({ tasks }) => {
       field: "slid",
       headerName: "SLID",
       minWidth: 150,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <div
-          style={{ cursor: "pointer", textDecoration: "underline" }}
+        <Button
           onClick={() => handleClickOpen(params.row)}
+          sx={{
+            color: '#3ea6ff',
+            textTransform: 'none',
+            '&:hover': {
+              backgroundColor: 'rgba(62, 166, 255, 0.1)'
+            }
+          }}
+        // startIcon={<MdRequestPage />}
         >
           {params.value}
-        </div>
+        </Button>
       ),
     },
     {
       field: "weekNumber",
-      headerName: "Wk",
-      flex: 0.5,
-      valueGetter: (params) => {
-        return params; // Corrected
-      },
+      headerName: "Week",
+      minWidth: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#333',
+            color: '#ffffff',
+            borderRadius: '50%',
+            width: 30,
+            height: 30
+          }}>
+            {params.value}
+          </Box>
+        </Box>
+      ),
     },
     {
       field: "evaluationScore",
-      headerName: "Evaluation Score",
-      flex: 2.5,
+      headerName: "Score",
+      minWidth: 150,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => {
         const score = params.value;
-        let color = "black";
-        let label = "Unknown";
+        let color = "#f44336";
+        let label = "Detractor";
 
-        if (score >= 1 && score <= 6) {
-          color = "red";
-          label = "Detractor";
-        } else if (score >= 7 && score <= 8) {
-          color = "gray";
+        if (score >= 7 && score <= 8) {
+          color = "#ff9800";
           label = "Neutral";
         } else if (score >= 9 && score <= 10) {
-          color = "green";
+          color = "#4caf50";
           label = "Promoter";
         }
 
-        return <span style={{ color, fontWeight: "bold" }}>{score} ({label})</span>;
+        return (
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color,
+            fontWeight: "bold"
+          }}>
+            <MdAssessment sx={{ mr: 1 }} />
+            {score} ({label})
+          </Box>
+        );
       },
     },
-    { field: "team", headerName: "Team Name", flex: 3, sortable: false },
-    { field: "company", headerName: "Team Farm", minWidth: 100, sortable: false },
+    {
+      field: "team",
+      headerName: "Team",
+      minWidth: 150,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* <MdGroups sx={{ mr: 1, color: '#9c27b0' }} /> */}
+          {params.value}
+        </Box>
+      )
+    },
+    {
+      field: "company",
+      headerName: "Company",
+      minWidth: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ mr: 1, color: '#fffff' }}>
+            <MdBusiness />
+          </Box>
+          {params.value}
+        </Box>
+      )
+    },
     {
       field: "pisDate",
       headerName: "PIS Date",
+      align: 'center',
+      headerAlign: 'center',
       minWidth: 150,
-      valueGetter: (params) => {
-        return moment(params).format("YYYY-MM-DD");
-      },
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Box sx={{ mr: 1, color: '#fffff' }}>
+            <MdDateRange />
+          </Box>
+          {moment(params.value).format("YYYY-MM-DD")}
+        </Box>
+      ),
     },
     {
       field: "status",
       headerName: "Status",
-      minWidth: 100,
+      minWidth: 120,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => (
-        <div
-          className="cursor-pointer text-blue-500 font-bold underline"
+        <Button
           onClick={() => navigate(`/tasks/view-task/${params.row.status}`)}
+          sx={{
+            color: '#3ea6ff',
+            textTransform: 'none',
+            '&:hover': {
+              backgroundColor: 'rgba(62, 166, 255, 0.1)'
+            },
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
         >
-          check status
-        </div>
+          View Status
+        </Button>
       ),
     },
     {
       field: "actions",
       headerName: "Actions",
       width: 100,
-      renderCell: (params) => (
-        <Typography
-          sx={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-        >
-          <IconButton>
-            <FaCopy size={20} style={{ cursor: "pointer", color: '#d6c0c0' }} onClick={() => handleCopyTaskData(params.row)} />
-          </IconButton>
-        </Typography>
-      ),
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const [copied, setCopied] = useState(false);
+
+        const handleCopyTaskData = () => {
+          const formattedData = `
+            Request Number: ${params.row.requestNumber}
+            SLID: ${params.row.slid}
+            Customer Name: ${params.row.customerName}
+            Contact Number: ${params.row.contactNumber}
+            PIS Date: ${moment(params.row.pisDate).format("YYYY-MM-DD")}
+            Governorate: ${params.row.governorate}
+            District: ${params.row.district}
+            Team Name: ${params.row.teamName}
+            Team Company: ${params.row.teamCompany}
+            Tariff Name: ${params.row.tarrifName}
+            Customer Type: ${params.row.customerType}
+            Customer Feedback: ${params.row.customerFeedback}
+            Reason: ${params.row.reason}
+            Evaluation Score: ${params.row.evaluationScore}
+            Interview Date: ${moment(params.row.interviewDate).format("YYYY-MM-DD")}
+          `.trim();
+
+          navigator.clipboard.writeText(formattedData);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        };
+
+        return (
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            width: '100%'
+          }}>
+            <Tooltip
+              title={copied ? "Copied!" : "Copy task data"}
+              placement="top"
+            >
+              <IconButton
+                onClick={handleCopyTaskData}
+                size="small"
+                sx={{
+                  color: '#9c27b0',
+                  '&:hover': {
+                    backgroundColor: 'rgba(156, 39, 176, 0.1)'
+                  }
+                }}
+              >
+                {copied ? <AssignmentTurnedIn fontSize="small" /> : <Assignment fontSize="small" />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        );
+      },
     },
   ];
 
@@ -211,21 +341,40 @@ const TaskTable = ({ tasks }) => {
 
   return (
     <Box sx={{ marginBottom: "20px" }}>
-      <Stack direction={"row"} justifyContent={"space-between"} alignItems={"center"} sx={{ marginBottom: "10px" }}>
-        <Typography variant="h6" fontWeight="bold" sx={{ color: "#ffffff" }}>
-          Tasks Overview
-        </Typography>
-        <Button
-          variant="contained"
-          sx={{ backgroundColor: '#1D4ED8', py: 1, lineHeight: 1, fontSize: '0.8rem' }}
-          color="primary"
-          onClick={() => {
-            const columnsWithoutStatus = taskColumns.filter(column => column.field !== "status");
-            exportToExcel(rows, columnsWithoutStatus);
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{
+          marginBottom: "10px",
+          gap: 1,
+          flexWrap: "wrap",
+        }}
+      >
+        <Typography
+          variant="h6"
+          fontWeight="bold"
+          sx={{
+            color: "#ffffff",
+            fontSize: isMobile ? "0.9rem" : "1rem",
           }}
         >
-          Export CSV
-        </Button>
+          Recent Violations Overview
+        </Typography>
+        <Tooltip title="Export to Excel">
+          <IconButton
+            onClick={exportToExcel}
+            size={isMobile ? "small" : "medium"}
+            sx={{
+              color: '#4caf50',
+              '&:hover': {
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+              }
+            }}
+          >
+            <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
+          </IconButton>
+        </Tooltip>
       </Stack>
       <Paper sx={{ height: 400, width: "100%", backgroundColor: "#272727" }}>
         <DataGrid

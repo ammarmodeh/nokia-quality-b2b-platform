@@ -218,39 +218,41 @@ const Chart = () => {
         sx={{ mb: 3 }}
         alignItems={isSmallScreen ? "stretch" : "flex-end"}
       >
-        <FormControl
-          variant="standard"
-          sx={{
-            minWidth: isSmallScreen ? '100%' : 150,
-          }}
-        >
-          <InputLabel sx={{ color: "#9e9e9e" }}>Filter by Score</InputLabel>
-          <Select
-            value={filter}
-            onChange={(e) => applyFilter(e.target.value)}
-            label="Filter by Score"
+        {!hideChart && (
+          <FormControl
+            variant="standard"
             sx={{
-              height: "100%",
-              color: "#ffffff",
-              "& .MuiSelect-icon": { color: "#9e9e9e" },
-              "&::before": { borderBottom: "1px solid #666" },
-              "&:hover:not(.Mui-disabled)::before": { borderBottom: "1px solid #3ea6ff" },
-              "&::after": { borderBottom: "1px solid #3ea6ff" },
-            }}
-            MenuProps={{
-              PaperProps: {
-                sx: {
-                  backgroundColor: "#333",
-                  color: "#ffffff",
-                },
-              },
+              minWidth: isSmallScreen ? '100%' : 150,
             }}
           >
-            <MenuItem value="All">All</MenuItem>
-            <MenuItem value="Detractor">Detractor</MenuItem>
-            <MenuItem value="NeutralPassive">Neutral/Passive</MenuItem>
-          </Select>
-        </FormControl>
+            <InputLabel sx={{ color: "#9e9e9e" }}>Filter by Score</InputLabel>
+            <Select
+              value={filter}
+              onChange={(e) => applyFilter(e.target.value)}
+              label="Filter by Score"
+              sx={{
+                height: "100%",
+                color: "#ffffff",
+                "& .MuiSelect-icon": { color: "#9e9e9e" },
+                "&::before": { borderBottom: "1px solid #666" },
+                "&:hover:not(.Mui-disabled)::before": { borderBottom: "1px solid #3ea6ff" },
+                "&::after": { borderBottom: "1px solid #3ea6ff" },
+              }}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    backgroundColor: "#333",
+                    color: "#ffffff",
+                  },
+                },
+              }}
+            >
+              <MenuItem value="All">All</MenuItem>
+              <MenuItem value="Detractor">Detractor</MenuItem>
+              <MenuItem value="NeutralPassive">Neutral/Passive</MenuItem>
+            </Select>
+          </FormControl>
+        )}
 
         <FormControl
           variant="standard"
@@ -308,7 +310,7 @@ const Chart = () => {
         </FormControl>
 
         <Stack
-          direction={isSmallScreen ? "column" : "row"}
+          direction={isSmallScreen ? "row" : "row"}
           spacing={1}
           sx={{
             width: isSmallScreen ? '100%' : 'auto',
@@ -316,11 +318,11 @@ const Chart = () => {
           }}
         >
           <Button
-            variant="text"
+            variant="outlined"
             size="medium"
             sx={{
               color: "#3ea6ff",
-              width: isSmallScreen ? '100%' : 'auto'
+              width: isSmallScreen ? '50%' : 'auto'
             }}
             onClick={handleReset}
           >
@@ -330,7 +332,7 @@ const Chart = () => {
           <Button
             variant="contained"
             size="medium"
-            sx={{ backgroundColor: '#1D4ED8', py: 1, lineHeight: 1, fontSize: '0.8rem' }}
+            sx={{ backgroundColor: '#1D4ED8', py: 1, lineHeight: 1, fontSize: '0.8rem', width: isSmallScreen ? '50%' : 'auto' }}
             onClick={exportChartData}
           >
             Export CSV
@@ -339,7 +341,7 @@ const Chart = () => {
       </Stack>
 
       {/* Chart and Table Section */}
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: isSmallScreen ? 8 : undefined }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: isSmallScreen ? 2 : undefined }}>
         {!hideChart && (
           <Box sx={{ width: '100%', minHeight: 400 }}>
             <ChartComponent chartData={chartData} />

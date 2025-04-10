@@ -10,6 +10,8 @@ import {
   Grid,
   Chip,
   IconButton,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { FileCopy as FileCopyIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
 import { MdOutlineSearch, MdClose } from "react-icons/md";
@@ -18,6 +20,8 @@ import { useSelector } from "react-redux";
 import VisibilityDialog from "../components/VisibilityDialog";
 
 const TeamPage = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [team, setTeam] = useState([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -101,173 +105,229 @@ const TeamPage = () => {
   // Close dialog
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    setSelectedMember(null); // Reset selectedMember when dialog is closed
+    setSelectedMember(null);
   };
 
   return (
-    <div className="max-w-[1000px] mx-auto">
-      <Container maxWidth="lg" sx={{ mt: 5, backgroundColor: "#121212", minHeight: "100vh", p: 3 }}>
-        <Typography variant="h4" fontWeight="bold" textAlign="center" mb={3} color="#ffffff">
-          Quality Members
-        </Typography>
+    <Container
+      maxWidth="lg"
+      sx={{
+        mt: isMobile ? 3 : 5,
+        // backgroundColor: '#1e1e1e',
+        minHeight: '100vh',
+        p: isMobile ? 2 : 3,
+        color: '#ffffff'
+      }}
+    >
+      <Typography
+        variant={isMobile ? "h5" : "h4"}
+        sx={{
+          fontWeight: 500,
+          textAlign: 'center',
+          mb: 3,
+          color: '#ffffff'
+        }}
+      >
+        Quality Members
+      </Typography>
 
-        {/* Search Bar */}
-        <Box
+      {/* Search Bar */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: '600px',
+          py: isMobile ? 0.5 : 1,
+          px: isMobile ? 1 : 2,
+          gap: 1,
+          borderRadius: '999px',
+          backgroundColor: '#1e1e1e',
+          border: '1px solid #444',
+          '&:focus-within': {
+            borderColor: '#3ea6ff',
+          },
+          margin: '0 auto 24px',
+        }}
+      >
+        <MdOutlineSearch style={{ color: '#9e9e9e', fontSize: isMobile ? '1rem' : '1.25rem' }} />
+        <TextField
+          fullWidth
+          variant="standard"
+          placeholder="Search team members..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           sx={{
-            display: "flex",
-            alignItems: "center",
-            width: "100%",
-            maxWidth: "600px",
-            py: 1,
-            px: 2,
-            gap: 1,
-            borderRadius: "999px",
-            backgroundColor: "#121212",
-            border: "1px solid #444",
-            "&:focus-within": {
-              borderColor: "#3ea6ff",
+            '& .MuiInputBase-root': {
+              backgroundColor: 'transparent',
+              color: '#ffffff',
             },
-            margin: "0 auto 24px",
+            '& .MuiInputBase-input': {
+              fontSize: isMobile ? '0.875rem' : '1rem',
+              color: '#ffffff',
+              padding: 0,
+            },
+            '& .MuiInput-root:before': {
+              borderBottom: 'none',
+            },
+            '& .MuiInput-root:after': {
+              borderBottom: 'none',
+            },
+            '& .MuiInput-root:hover:not(.Mui-disabled):before': {
+              borderBottom: 'none',
+            },
           }}
-        >
-          <MdOutlineSearch className="text-gray-400 text-xl" />
-          <TextField
-            fullWidth
-            variant="standard"
-            placeholder="Search team members..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            sx={{
-              "& .MuiInputBase-root": {
-                backgroundColor: "transparent",
-                color: "#ffffff",
-              },
-              "& .MuiInputBase-input": {
-                fontSize: "14px",
-                color: "#ffffff",
-                padding: 0,
-              },
-              "& .MuiInput-root:before": {
-                borderBottom: "none",
-              },
-              "& .MuiInput-root:after": {
-                borderBottom: "none",
-              },
-              "& .MuiInput-root:hover:not(.Mui-disabled):before": {
-                borderBottom: "none",
-              },
-            }}
-            InputProps={{
-              disableUnderline: true,
-              style: { color: "#ffffff" },
-              endAdornment: search && (
-                <IconButton
-                  size="small"
-                  onClick={handleClearSearch}
-                  sx={{ color: "#9e9e9e", "&:hover": { color: "#ffffff" } }}
-                >
-                  <MdClose className="text-xl" />
-                </IconButton>
-              ),
-            }}
-          />
-        </Box>
+          InputProps={{
+            disableUnderline: true,
+            style: { color: '#ffffff' },
+            endAdornment: search && (
+              <IconButton
+                size="small"
+                onClick={handleClearSearch}
+                sx={{ color: '#9e9e9e', '&:hover': { color: '#ffffff' } }}
+              >
+                <MdClose style={{ fontSize: isMobile ? '1rem' : '1.25rem' }} />
+              </IconButton>
+            ),
+          }}
+        />
+      </Box>
 
-        {/* Team Members Grid */}
-        <Box sx={{ flexGrow: 1 }}>
-          <Grid container spacing={3}>
-            {filteredTeam.map((member) => (
-              <Grid item xs={12} sm={6} md={4} lg={4} key={member._id}>
-                <Box sx={{ position: "relative" }}>
-                  <Card
+      {/* Team Members Grid */}
+      <Box sx={{ flexGrow: 1 }}>
+        <Grid container spacing={isMobile ? 2 : 3}>
+          {filteredTeam.map((member) => (
+            <Grid item xs={12} sm={6} md={4} lg={4} key={member._id}>
+              <Box sx={{ position: 'relative' }}>
+                <Card
+                  sx={{
+                    textAlign: 'center',
+                    p: isMobile ? 1.5 : 2,
+                    transition: '0.3s',
+                    '&:hover': { boxShadow: 6 },
+                    backgroundColor: '#272727',
+                    border: '1px solid #444',
+                    height: '100%',
+                  }}
+                >
+                  {/* Set Visibility Icon Button */}
+                  {member._id === currentUserId && (
+                    <IconButton
+                      onClick={() => handleOpenDialog(member)}
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        color: '#3ea6ff',
+                        '&:hover': { backgroundColor: 'rgba(62, 166, 255, 0.1)' },
+                      }}
+                    >
+                      <VisibilityIcon sx={{ color: '#777777', fontSize: isMobile ? '1rem' : '1.25rem' }} />
+                    </IconButton>
+                  )}
+
+                  {/* Avatar */}
+                  <Avatar
+                    src={member.avatar}
+                    alt={member.name}
                     sx={{
-                      textAlign: "center",
-                      p: 2,
-                      transition: "0.3s",
-                      "&:hover": { boxShadow: 6 },
-                      backgroundColor: "#1e1e1e",
+                      width: isMobile ? 64 : 80,
+                      height: isMobile ? 64 : 80,
+                      margin: 'auto',
+                      border: '2px solid #3ea6ff'
                     }}
-                  >
-                    {/* Set Visibility Icon Button */}
-                    {member._id === currentUserId && (
-                      <IconButton
-                        onClick={() => handleOpenDialog(member)}
+                  />
+
+                  {/* Card Content */}
+                  <CardContent sx={{ p: isMobile ? '8px 0 0 0' : '16px 0 0 0' }}>
+                    <Typography
+                      variant={isMobile ? "subtitle1" : "h6"}
+                      sx={{
+                        fontWeight: 500,
+                        color: '#ffffff',
+                        mb: 1
+                      }}
+                    >
+                      {member.name}
+                    </Typography>
+
+                    <Box sx={{ my: 1 }}>
+                      <Chip
+                        label={`${member.title}`}
+                        size={isMobile ? "small" : "medium"}
                         sx={{
-                          position: "absolute",
-                          top: 8,
-                          right: 8,
-                          color: "#3ea6ff",
-                          "&:hover": { backgroundColor: "rgba(62, 166, 255, 0.1)" },
+                          color: '#ffffff',
+                          fontWeight: 500,
+                          backgroundColor: '#333',
+                          border: '1px solid #3ea6ff'
+                        }}
+                      />
+                    </Box>
+
+                    <Typography
+                      variant={isMobile ? "caption" : "body2"}
+                      sx={{
+                        color: '#3ea6ff',
+                        display: 'block',
+                        mb: 1
+                      }}
+                    >
+                      {member.department}
+                    </Typography>
+
+                    <Typography
+                      variant={isMobile ? "caption" : "body2"}
+                      sx={{
+                        color: '#aaaaaa',
+                        display: 'block',
+                        mt: 1
+                      }}
+                    >
+                      Phone: {isVisible(member, currentUserId) ? member.phoneNumber : '****'}
+                    </Typography>
+
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mt: 1
+                    }}>
+                      <Typography
+                        variant={isMobile ? "caption" : "body2"}
+                        sx={{
+                          color: '#aaaaaa',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '160px',
                         }}
                       >
-                        <VisibilityIcon sx={{ color: "#777777" }} />
-                      </IconButton>
-                    )}
-
-                    {/* Avatar */}
-                    <Avatar
-                      src={member.avatar}
-                      alt={member.name}
-                      sx={{ width: 80, height: 80, margin: "auto" }}
-                    />
-
-                    {/* Card Content */}
-                    <CardContent>
-                      <Typography variant="h6" fontWeight="bold" color="#ffffff">
-                        {member.name}
+                        Email: {isVisible(member, currentUserId) ? member.email : '****'}
                       </Typography>
-
-                      <Box sx={{ my: 1 }}>
-                        <Chip
-                          label={`${member.title}`}
-                          size="medium"
+                      {isVisible(member, currentUserId) && (
+                        <IconButton
+                          onClick={() => handleCopyEmail(member.email)}
                           sx={{
-                            color: "#ffffff",
-                            fontWeight: "bold",
-                            backgroundColor: "#333333",
+                            ml: 0.5,
+                            p: 0.5,
+                            color: '#aaaaaa',
+                            '&:hover': {
+                              color: '#3ea6ff'
+                            }
                           }}
-                        />
-                      </Box>
-
-                      <Typography variant="body2" color="#90caf9">
-                        {member.department}
-                      </Typography>
-
-                      <Typography variant="body2" color="#b3b3b3" mt={1}>
-                        Phone: {isVisible(member, currentUserId) ? member.phoneNumber : "****"}
-                      </Typography>
-
-                      <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
-                        <Typography
-                          variant="body2"
-                          color="#b3b3b3"
-                          sx={{
-                            display: "block",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            maxWidth: "200px",
-                          }}
+                          size={isMobile ? "small" : "medium"}
                         >
-                          Email: {isVisible(member, currentUserId) ? member.email : "****"}
-                        </Typography>
-                        {isVisible(member, currentUserId) && (
-                          <IconButton
-                            onClick={() => handleCopyEmail(member.email)}
-                            sx={{ ml: 1, fontSize: 18, padding: 0, color: "#b3b3b3" }}
-                          >
-                            <FileCopyIcon fontSize="inherit" />
-                          </IconButton>
-                        )}
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      </Container>
+                          <FileCopyIcon fontSize={isMobile ? "small" : "medium"} />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
 
       {/* Visibility Dialog */}
       {selectedMember && (
@@ -280,7 +340,7 @@ const TeamPage = () => {
           handleVisibilityChange={handleVisibilityChange}
         />
       )}
-    </div>
+    </Container>
   );
 };
 

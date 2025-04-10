@@ -1,7 +1,8 @@
-import { Paper, Stack, Typography, Button, Tooltip, useMediaQuery } from "@mui/material";
+import { Paper, Stack, Typography, Button, Tooltip, useMediaQuery, IconButton } from "@mui/material";
 import { DataGrid } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
 import { getKnowledgeGapReasons } from "../utils/helpers";
+import { RiFileExcel2Fill } from "react-icons/ri";
 
 export const KnowledgeGapReasonsTable = ({ tasks }) => {
   const isMobile = useMediaQuery('(max-width:503px)');
@@ -60,26 +61,38 @@ export const KnowledgeGapReasonsTable = ({ tasks }) => {
   return (
     <Stack justifyContent={"center"} sx={{ width: "100%" }}>
       <Stack
-        direction={isMobile ? "column" : "row"}
-        justifyContent={"space-between"}
-        alignItems={isMobile ? "flex-start" : "center"}
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
         sx={{
           marginBottom: "10px",
-          gap: isMobile ? 1 : 0
+          gap: 1,
+          flexWrap: "wrap",
         }}
       >
-        <Typography variant="h6" fontWeight="bold" sx={{ color: "#ffffff", fontSize: "1rem" }}>
+        <Typography
+          variant="h6"
+          fontWeight="bold"
+          sx={{
+            color: "#ffffff",
+            fontSize: isMobile ? "0.9rem" : "1rem",
+          }}
+        >
           Knowledge Gap Reasons
         </Typography>
-        <Tooltip title="Export to Excel Sheet">
-          <Button
-            variant="contained"
-            size={isMobile ? "small" : "medium"}
-            sx={{ backgroundColor: '#1D4ED8', py: 1, lineHeight: 1, fontSize: '0.8rem' }}
+        <Tooltip title="Export to Excel">
+          <IconButton
             onClick={exportToExcel}
+            size={isMobile ? "small" : "medium"}
+            sx={{
+              color: '#4caf50',
+              '&:hover': {
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+              }
+            }}
           >
-            Export CSV
-          </Button>
+            <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
+          </IconButton>
         </Tooltip>
       </Stack>
       <Paper sx={{
