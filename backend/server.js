@@ -19,7 +19,7 @@ dotenv.config();
 const corsOptions = {
   origin: [
     // "http://localhost:3000", // For local development
-    // "https://nokia-jo-qos-platform.netlify.app", // For production on Netlify
+    "https://nokia-jo-qos-platform.netlify.app", // For production on Netlify
     "https://nokia-quality-b2b-platform-bfrq-kuo8m1lfn.vercel.app",
   ],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
