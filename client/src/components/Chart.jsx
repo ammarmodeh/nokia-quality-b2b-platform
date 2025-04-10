@@ -29,7 +29,7 @@ const fetchData = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error("Error fetching data:", error);
+    // console.error("Error fetching data:", error);
     return [];
   }
 };
@@ -122,7 +122,7 @@ const Chart = () => {
         setGroupedData(grouped);
         setChartData(prepareChartData(grouped, defaultWeeks));
       } catch (error) {
-        console.log(error);
+        // console.log(error);
         setError("Failed to fetch data. Please try again later.");
       } finally {
         // setLoading(false);

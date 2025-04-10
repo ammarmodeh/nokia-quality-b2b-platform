@@ -69,7 +69,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
         // console.log({ data });
         setUsers(data);
       } catch (err) {
-        console.log(err);
+        // console.log(err);
         setError("Failed to load users");
       } finally {
         setLoading(false);
@@ -91,7 +91,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
           setFieldTeams(data);
         }
       } catch (error) {
-        console.log(error);
+        // console.log(error);
       }
     }
 
@@ -194,7 +194,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
         setUpdateRefetchTasks(prev => !prev);
       }
     } catch (error) {
-      console.log('Error while adding task:', error.response.data.error);
+      // console.log('Error while adding task:', error.response.data.error);
     }
   };
 

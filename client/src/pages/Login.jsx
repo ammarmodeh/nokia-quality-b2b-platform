@@ -36,7 +36,7 @@ const Login = () => {
 
       navigate("/dashboard"); // Redirect after successful login
     } catch (error) {
-      console.error("Login failed:", error.response?.data?.message || error.message);
+      // console.error("Login failed:", error.response?.data?.message || error.message);
     }
   };
 

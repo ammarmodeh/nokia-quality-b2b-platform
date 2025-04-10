@@ -16,7 +16,7 @@ export const ReactivateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatu
         setUpdateTeamStatus(prev => !prev);
       }
     } catch (error) {
-      console.error("Error reactivating team:", error);
+      // console.error("Error reactivating team:", error);
       alert("Failed to reactivate team.");
     }
   };

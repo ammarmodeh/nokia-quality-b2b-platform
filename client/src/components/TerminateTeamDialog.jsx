@@ -19,7 +19,7 @@ export const TerminateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus
         setUpdateTeamStatus(prev => !prev);
       }
     } catch (error) {
-      console.error("Error terminating team:", error);
+      // console.error("Error terminating team:", error);
       alert("Failed to terminate team.");
     }
   };

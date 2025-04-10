@@ -89,7 +89,7 @@ export const addFieldTeam = async (req, res) => {
     await newFieldTeam.save();
     res.status(201).json(newFieldTeam);
   } catch (error) {
-    console.error("Error adding field team:", error);
+    // console.error("Error adding field team:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -375,7 +375,7 @@ export const updateTeamScore = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Score update error:', err);
+    // console.error('Score update error:', err);
     res.status(500).json({
       message: 'Failed to update score',
       error: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -392,7 +392,7 @@ export const getTeamEvaluationHistory = async (req, res) => {
     }
     return res.json(team.evaluationHistory); // assuming 'evaluations' is an array of history data
   } catch (error) {
-    console.error('Error fetching evaluation history:', error);
+    // console.error('Error fetching evaluation history:', error);
     res.status(500).send('Server error');
   }
 }
@@ -433,7 +433,7 @@ export const addSession = async (req, res) => {
       updatedViolationPoints: team.totalViolationPoints
     });
   } catch (error) {
-    console.error("Error adding session:", error);
+    // console.error("Error adding session:", error);
     res.status(500).json({
       success: false,
       message: "Error adding session",
@@ -571,7 +571,7 @@ export const reportAbsence = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error reporting absence:", error);
+    // console.error("Error reporting absence:", error);
     res.status(500).json({
       success: false,
       message: "Failed to report absence",
@@ -611,7 +611,7 @@ export const getTeamViolations = async (req, res) => {
       teamName: team.teamName
     });
   } catch (error) {
-    console.error("Error fetching violations:", error);
+    // console.error("Error fetching violations:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch violations",
@@ -647,7 +647,7 @@ export const toggleQuizPermission = async (req, res) => {
 
     res.status(200).json(updatedTeam);
   } catch (error) {
-    console.error("Error updating quiz permission:", error);
+    // console.error("Error updating quiz permission:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

@@ -172,7 +172,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
         setCustomerIssues(response.data.data || []);
         setError(null);
       } catch (err) {
-        console.error('Error fetching customer issues:', err);
+        // console.error('Error fetching customer issues:', err);
         setError('Failed to load customer issues');
         setCustomerIssues([]);
       } finally {
@@ -193,7 +193,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
       setCustomerIssues(response.data.data || []);
       setError(null);
     } catch (err) {
-      console.error('Error refreshing customer issues:', err);
+      // console.error('Error refreshing customer issues:', err);
       setError('Failed to refresh customer issues');
     } finally {
       setLoading(false);

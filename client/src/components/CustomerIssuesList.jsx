@@ -173,7 +173,7 @@ const CustomerIssuesList = () => {
       setFilteredIssues([response.data.data, ...filteredIssues]);
       setOpenAddDialog(false);
     } catch (error) {
-      console.error('Error creating issue:', error);
+      // console.error('Error creating issue:', error);
       alert('Failed to create issue. Please try again.');
     }
   };
@@ -199,7 +199,7 @@ const CustomerIssuesList = () => {
       ));
       setOpenEditDialog(false);
     } catch (error) {
-      console.error('Error updating issue:', error);
+      // console.error('Error updating issue:', error);
       alert('Failed to update issue. Please try again.');
     }
   };
@@ -217,7 +217,7 @@ const CustomerIssuesList = () => {
       setFilteredIssues(filteredIssues.filter(issue => issue._id !== currentIssue._id));
       setOpenDeleteDialog(false);
     } catch (error) {
-      console.error('Error deleting issue:', error);
+      // console.error('Error deleting issue:', error);
       alert('Failed to delete issue. Please try again.');
     }
   };

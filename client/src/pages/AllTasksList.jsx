@@ -88,7 +88,7 @@ const AllTasksList = () => {
       setTasks(sortedTasks);
       setError(null);
     } catch (err) {
-      console.error("Error fetching tasks:", err);
+      // console.error("Error fetching tasks:", err);
       setError("Failed to load tasks. Please try again.");
       setTasks([]);
     } finally {
@@ -104,7 +104,7 @@ const AllTasksList = () => {
       });
       setFavoriteTasks(response.data.favourites || []);
     } catch (err) {
-      console.error("Error fetching favorite tasks:", err);
+      // console.error("Error fetching favorite tasks:", err);
     }
   };
 
@@ -146,7 +146,7 @@ const AllTasksList = () => {
         setFavoriteTasks([...favoriteTasks, response.data]);
       }
     } catch (error) {
-      console.error("Error updating favorite status:", error);
+      // console.error("Error updating favorite status:", error);
       alert("Failed to update favorites. Please try again.");
     }
   };
@@ -185,22 +185,46 @@ const AllTasksList = () => {
   // Handle task deletion
   const handleDeleteTask = async () => {
     try {
-      await api.post("/trash/add-trash", taskToDelete, {
+      // First, get the complete task data
+      const { data: taskData } = await api.get(`/tasks/get-task/${taskToDelete._id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
 
-      await api.delete(`/tasks/delete-task/${taskToDelete._id}`, {
+      if (!taskData) {
+        throw new Error("Task not found");
+      }
+
+      // Move to trash with additional metadata
+      const trashResponse = await api.post('/trash/add-trash', {
+        ...taskData, // Spread all task fields
+        deletedBy: user._id,
+        deletionReason: 'Deleted by user',
+        deletedAt: new Date()
+      }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
 
-      setTasks(tasks.filter(task => task._id !== taskToDelete._id));
-      setDeleteDialogOpen(false);
-      setTaskToDelete(null);
+      if (trashResponse.status === 201) {
+        // Only delete from main collection if trash operation succeeded
+        await api.delete(`/tasks/delete-task/${taskToDelete._id}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        });
+
+        // Update UI state
+        setTasks(tasks.filter(task => task._id !== taskToDelete._id));
+        setDeleteDialogOpen(false);
+        setTaskToDelete(null);
+
+        alert("Task moved to trash successfully");
+      } else {
+        throw new Error("Failed to move task to trash");
+      }
     } catch (err) {
-      console.error("Error deleting task:", err);
+      // console.error("Error deleting task:", err);
       setError("Failed to delete task. Please try again.");
     }
   };
+
 
   // Export to Excel function
   const exportToExcel = () => {

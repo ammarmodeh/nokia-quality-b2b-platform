@@ -1,7 +1,5 @@
-import { ArchiveSchema } from "../models/archiveModel.js";
 import { FavouriteSchema } from "../models/favouriteModel.js";
 import { TaskSchema } from "../models/taskModel.js";
-import { TrashSchema } from "../models/trashModel.js";
 
 export const addTask = async (req, res) => {
   try {
@@ -10,13 +8,6 @@ export const addTask = async (req, res) => {
       category, tarrifName, teamName, teamId, customerFeedback, customerType,
       teamCompany, evaluationScore, pisDate, validationStatus, responsibility, validationCat,
     } = req.body;
-
-    // console.log({ date });
-    // const taskDate = new Date(date);
-    // console.log({ taskDate });
-    // if (isNaN(taskDate.getTime())) {
-    //   return res.status(400).json({ error: "Invalid date format" });
-    // }
 
     const predefinedSubtasks = [
       { title: "Receive the task", progress: 0, note: "" },
@@ -41,7 +32,6 @@ export const addTask = async (req, res) => {
       date,
       priority,
       validationStatus,
-      // status,
       assignedTo,
       whomItMayConcern,
       category,
@@ -52,10 +42,10 @@ export const addTask = async (req, res) => {
       createdBy: req.user._id,
       subTasks: predefinedSubtasks,
       responsibility,
-      validationCat
+      validationCat,
+      // readByWhenClosed: []
     });
 
-    // Log task creation
     task.taskLogs.push({
       action: "created",
       user: req.user._id,
@@ -74,24 +64,21 @@ export const updateTask = async (req, res) => {
   const id = req.params.id;
 
   try {
-    // 1. Find the original task
     const task = await TaskSchema.findById(id);
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // 2. Store original values before any updates
     const originalValues = {
       slid: task.slid,
       readBy: [...(task.readBy || [])],
-      // Clone other important fields if needed
+      // readByWhenClosed: [...(task.readByWhenClosed || [])],
       ...Object.keys(updatedData).reduce((acc, key) => {
         if (task[key] !== undefined) acc[key] = task[key];
         return acc;
       }, {})
     };
 
-    // 3. Track changes and update fields
     let changes = [];
     for (let key in updatedData) {
       if (key !== "readBy" && task[key] !== undefined) {
@@ -104,10 +91,9 @@ export const updateTask = async (req, res) => {
       }
     }
 
-    // 4. Handle readBy updates
     task.readBy = [...new Set([...originalValues.readBy, ...(updatedData.readBy || [])])];
+    // task.readByWhenClosed = [...new Set([...originalValues.readByWhenClosed, ...(updatedData.readByWhenClosed || [])])];
 
-    // 5. Prepare update log
     const updateLog = {
       action: "updated",
       user: req.user._id,
@@ -121,7 +107,6 @@ export const updateTask = async (req, res) => {
       task.taskLogs.push(updateLog);
     }
 
-    // 6. Prepare complete update operation for both collections
     const updateOperation = {
       $set: {},
       $addToSet: { readBy: { $each: originalValues.readBy } },
@@ -133,17 +118,15 @@ export const updateTask = async (req, res) => {
       }
     };
 
-    // 7. Include ALL fields that should be synchronized
     const syncFields = [
       'slid', 'pisDate', 'contactNumber', 'requestNumber', 'governorate',
       'district', 'teamName', 'teamCompany', 'date', 'tarrifName',
       'customerType', 'customerFeedback', 'customerName', 'reason',
       'interviewDate', 'priority', 'status', 'assignedTo', 'whomItMayConcern',
       'category', 'validationStatus', 'validationCat', 'responsibility',
-      'subTasks', 'evaluationScore', 'isDeleted'
+      'subTasks', 'evaluationScore', 'isDeleted',
     ];
 
-    // Add fields to update operation from either updatedData or task
     syncFields.forEach(field => {
       if (updatedData[field] !== undefined) {
         updateOperation.$set[field] = updatedData[field];
@@ -152,14 +135,9 @@ export const updateTask = async (req, res) => {
       }
     });
 
-    // 8. Update Favourites collection FIRST (using original SLID)
     if (originalValues.slid) {
-      // Find all favourites with original slid
       const favourites = await FavouriteSchema.find({ slid: originalValues.slid });
-
-      // Update each favourite individually
       for (const favourite of favourites) {
-        // Apply all field updates
         for (const field of syncFields) {
           if (updatedData[field] !== undefined) {
             favourite[field] = updatedData[field];
@@ -167,17 +145,12 @@ export const updateTask = async (req, res) => {
             favourite[field] = task[field];
           }
         }
-
-        // Handle special fields
         favourite.readBy = [...new Set([...favourite.readBy, ...originalValues.readBy])];
         favourite.taskLogs = [...(favourite.taskLogs || []), updateLog];
-
-        // Save the updated favourite
         await favourite.save();
       }
     }
 
-    // 9. Update other Tasks in Task collection (using original SLID)
     if (originalValues.slid) {
       await TaskSchema.updateMany(
         {
@@ -190,9 +163,7 @@ export const updateTask = async (req, res) => {
       );
     }
 
-    // 10. Finally save the main task (which may have new values)
     const updatedTask = await task.save();
-
     res.status(200).json(updatedTask);
 
   } catch (error) {
@@ -222,17 +193,18 @@ export const updateSubtask = async (req, res) => {
     const taskId = req.params.id;
     const newSubtasks = req.body;
 
-    // 1. Find and update the main task
     const task = await TaskSchema.findById(taskId);
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // 2. Track changes in subtasks
     const changes = [];
     const oldSubtasks = task.subTasks || [];
 
-    // Compare old and new subtasks
+    // Check if this is a reset operation (all subtasks progress set to 0)
+    const isResetOperation = newSubtasks.every(sub => sub.progress === 0) &&
+      !oldSubtasks.every(sub => sub.progress === 0);
+
     newSubtasks.forEach((newSub, index) => {
       const oldSub = oldSubtasks[index];
       if (oldSub) {
@@ -245,10 +217,14 @@ export const updateSubtask = async (req, res) => {
       }
     });
 
-    // 3. Update the task's subtasks
     task.subTasks = newSubtasks;
 
-    // 4. Add update log if there are changes
+    // If this is a reset operation, clear all notifications
+    if (isResetOperation) {
+      task.notifications = [];
+      changes.push("All notifications cleared due to subtasks reset");
+    }
+
     if (changes.length > 0) {
       const updateLog = {
         action: "updated",
@@ -259,9 +235,12 @@ export const updateSubtask = async (req, res) => {
       task.taskLogs.push(updateLog);
     }
 
-    // 5. Prepare update operation for both collections
     const updateOperation = {
-      $set: { subTasks: newSubtasks }
+      $set: {
+        subTasks: newSubtasks,
+        // Add notifications to the update operation if it's a reset
+        ...(isResetOperation && { notifications: [] })
+      }
     };
 
     if (changes.length > 0) {
@@ -278,18 +257,12 @@ export const updateSubtask = async (req, res) => {
       };
     }
 
-    // 6. Update all related documents
     await Promise.all([
-      // Update the main task
       task.save(),
-
-      // Update other tasks with the same slid
       task.slid && TaskSchema.updateMany(
         { slid: task.slid, _id: { $ne: task._id } },
         updateOperation
       ),
-
-      // Update favourites with the same slid
       task.slid && FavouriteSchema.updateMany(
         { slid: task.slid },
         updateOperation
@@ -307,10 +280,9 @@ export const updateSubtask = async (req, res) => {
   }
 };
 
-// Get All tasks without pagination
 export const getAllTasks = async (req, res) => {
   try {
-    const tasks = await TaskSchema.find({ isDeleted: false }) // Filtering only non-deleted tasks
+    const tasks = await TaskSchema.find({ isDeleted: false })
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email")
 
@@ -323,7 +295,7 @@ export const getAllTasks = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-// Get tasks with pagination
+
 export const getTasks = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -333,7 +305,7 @@ export const getTasks = async (req, res) => {
     const skip = (page - 1) * limit;
 
     if (skip >= totalTasks) {
-      return res.json([]); // Return an empty array instead of 204
+      return res.json([]);
     }
 
     const tasks = await TaskSchema.find({ isDeleted: false })
@@ -349,7 +321,6 @@ export const getTasks = async (req, res) => {
   }
 };
 
-// Get detractors w/o pagination
 export const getDetractorTasks = async (req, res) => {
   try {
     const detractorTasks = await TaskSchema.find({
@@ -358,11 +329,11 @@ export const getDetractorTasks = async (req, res) => {
 
     res.status(200).json(detractorTasks);
   } catch (error) {
-    console.error("Error fetching detractor tasks:", error);
+    // console.error("Error fetching detractor tasks:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-// Get detractors with pagination
+
 export const getDetractorTasksPaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -372,7 +343,7 @@ export const getDetractorTasksPaginated = async (req, res) => {
     const skip = (page - 1) * limit;
 
     if (skip >= totalTasks) {
-      return res.json([]); // Return an empty array instead of 204
+      return res.json([]);
     }
 
     const detractorTasks = await TaskSchema.find({ evaluationScore: { $gte: 1, $lte: 6 } })
@@ -396,11 +367,11 @@ export const getNeutralTasks = async (req, res) => {
 
     res.status(200).json(detractorTasks);
   } catch (error) {
-    console.error("Error fetching detractor tasks:", error);
+    // console.error("Error fetching detractor tasks:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-// Get neutral tasks with pagination:
+
 export const getNeutralTasksPaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -410,7 +381,7 @@ export const getNeutralTasksPaginated = async (req, res) => {
     const skip = (page - 1) * limit;
 
     if (skip >= totalTasks) {
-      return res.json([]); // Return an empty array instead of 204
+      return res.json([]);
     }
 
     const tasks = await TaskSchema.find({ evaluationScore: { $gte: 7, $lte: 8 } })
@@ -426,10 +397,9 @@ export const getNeutralTasksPaginated = async (req, res) => {
   }
 };
 
-
 export const getTasksAssignedToMe = async (req, res) => {
   try {
-    const currentUserId = req.user._id; // Assuming the current user's ID is available in `req.user`
+    const currentUserId = req.user._id;
     const tasks = await TaskSchema.find({ assignedTo: currentUserId })
       .sort({ createdAt: -1 })
       .populate("assignedTo", "name email")
@@ -440,7 +410,7 @@ export const getTasksAssignedToMe = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-// Get tasks assigned to me with pagination
+
 export const getTasksAssignedToMePaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -450,7 +420,7 @@ export const getTasksAssignedToMePaginated = async (req, res) => {
     const skip = (page - 1) * limit;
 
     if (skip >= totalTasks) {
-      return res.json([]); // Return an empty array instead of 204
+      return res.json([]);
     }
 
     const tasks = await TaskSchema.find({ assignedTo: req.user._id })
@@ -466,7 +436,6 @@ export const getTasksAssignedToMePaginated = async (req, res) => {
   }
 };
 
-
 export const getDetractorTasksAssignedToMe = async (req, res) => {
   try {
     const detractorTasks = await TaskSchema.find({
@@ -476,10 +445,11 @@ export const getDetractorTasksAssignedToMe = async (req, res) => {
 
     res.status(200).json(detractorTasks);
   } catch (error) {
-    console.error("Error fetching detractor tasks:", error);
+    // console.error("Error fetching detractor tasks:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
+
 export const getDetractorTasksAssignedToMePaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -489,7 +459,7 @@ export const getDetractorTasksAssignedToMePaginated = async (req, res) => {
     const skip = (page - 1) * limit;
 
     if (skip >= totalTasks) {
-      return res.json([]); // Return an empty array instead of 204
+      return res.json([]);
     }
 
     const tasks = await TaskSchema.find({ evaluationScore: { $gte: 1, $lte: 6 }, assignedTo: req.user._id })
@@ -505,7 +475,6 @@ export const getDetractorTasksAssignedToMePaginated = async (req, res) => {
   }
 }
 
-
 export const getNeutralTasksAssignedToMe = async (req, res) => {
   try {
     const neutralTasks = await TaskSchema.find({
@@ -515,10 +484,11 @@ export const getNeutralTasksAssignedToMe = async (req, res) => {
 
     res.status(200).json(neutralTasks);
   } catch (error) {
-    console.error("Error fetching neutral tasks:", error);
+    // console.error("Error fetching neutral tasks:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
+
 export const getNeutralTasksAssignedToMePaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -528,7 +498,7 @@ export const getNeutralTasksAssignedToMePaginated = async (req, res) => {
     const skip = (page - 1) * limit;
 
     if (skip >= totalTasks) {
-      return res.json([]); // Return an empty array instead of 204
+      return res.json([]);
     }
 
     const tasks = await TaskSchema.find({ evaluationScore: { $gte: 7, $lte: 8 }, assignedTo: req.user._id })
@@ -544,8 +514,6 @@ export const getNeutralTasksAssignedToMePaginated = async (req, res) => {
   }
 }
 
-
-// Get deleted tasks
 export const getDeletedTasks = async (req, res) => {
   try {
     const deletedTasks = await TaskSchema.find({ isDeleted: true });
@@ -560,23 +528,17 @@ export const getDeletedTasks = async (req, res) => {
   }
 };
 
-// Restore a task from trash to tasks collection
 export const restoreTask = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find the task in the trash collection
     const taskInTrash = await TrashSchema.findById(id);
-    // console.log({ taskInTrash });
-    // return
     if (!taskInTrash) {
       return res.status(404).json({ message: "Task not found in trash" });
     }
 
-    // Add the task back to the tasks collection
     const restoredTask = await TaskSchema.create(taskInTrash.toObject());
 
-    // Delete the task from the trash collection
     await TrashSchema.findByIdAndDelete(id);
 
     res.status(200).json({ message: "Task restored successfully", restoredTask });
@@ -585,21 +547,17 @@ export const restoreTask = async (req, res) => {
   }
 };
 
-// Restore a task from archive to tasks collection
 export const restoreTaskFromArchive = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find the task in the archive collection
     const taskInArchive = await ArchiveSchema.findById(id);
     if (!taskInArchive) {
       return res.status(404).json({ message: "Task not found in archive" });
     }
 
-    // Add the task back to the tasks collection
     const restoredTask = await TaskSchema.create(taskInArchive.toObject());
 
-    // Delete the task from the archive collection
     await ArchiveSchema.findByIdAndDelete(id);
 
     res.status(200).json({ message: "Task restored successfully", restoredTask });
@@ -611,8 +569,7 @@ export const restoreTaskFromArchive = async (req, res) => {
 export const searchTasks = async (req, res) => {
   const { query } = req.query;
   try {
-    const tasks = await TaskSchema.find({ slid: { $regex: query, $options: 'i' } }); // Case-insensitive search
-    // console.log({ tasks });
+    const tasks = await TaskSchema.find({ slid: { $regex: query, $options: 'i' } });
     res.json(tasks);
   } catch (error) {
     res.status(500).send("Error fetching tasks");
@@ -624,7 +581,6 @@ export const deleteTask = async (req, res) => {
     const task = await TaskSchema.findById(req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // Log task deletion in a separate collection (if needed)
     const taskLog = {
       action: "deleted",
       user: req.user._id,
@@ -632,13 +588,12 @@ export const deleteTask = async (req, res) => {
       timestamp: new Date(),
     };
 
-    // Optional: Save logs before deletion (if logging is required)
     await TaskSchema.updateOne(
       { _id: req.params.id },
       { $push: { taskLogs: taskLog } }
     );
 
-    await TaskSchema.deleteOne({ _id: req.params.id }); // Proper deletion
+    await TaskSchema.deleteOne({ _id: req.params.id });
 
     res.status(200).json({ status: 204, message: "Task deleted successfully!" });
   } catch (error) {
@@ -646,7 +601,6 @@ export const deleteTask = async (req, res) => {
   }
 };
 
-// Soft Delete Task
 export const softDeleteTask = async (req, res) => {
   try {
     const task = await TaskSchema.findById(req.params.id);
@@ -655,7 +609,6 @@ export const softDeleteTask = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // Log task deletion in a separate collection (if needed)
     const taskLog = {
       action: "deleted",
       user: req.user._id,
@@ -667,7 +620,6 @@ export const softDeleteTask = async (req, res) => {
       { _id: req.params.id },
       { $set: { isDeleted: true } }
     );
-    // console.log({ updatedTask });
 
     res.status(200).json({ status: 204, message: "Task deleted successfully!", updatedTask });
   } catch (error) {
@@ -680,16 +632,13 @@ export const viewTask = async (req, res) => {
     const { id: taskId } = req.params;
     const userId = req.user._id;
 
-    // Find the task without updating the `lastUpdated` field
     const task = await TaskSchema.findById(taskId)
       .populate("createdBy", "name")
       .populate("taskLogs.user", "name");
 
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // Check if the user has already read the task
     if (!task.readBy.includes(userId)) {
-      // Add the user to the `readBy` array and log the "read" action
       task.readBy.push(userId);
       task.taskLogs.push({
         action: "read",
@@ -697,8 +646,7 @@ export const viewTask = async (req, res) => {
         description: `Task viewed by user ${req.user.name}`,
       });
 
-      // Save the task without updating the `lastUpdated` field
-      await task.save({ timestamps: false }); // Disable timestamps for this save
+      await task.save({ timestamps: false });
     }
 
     res.status(200).json(task);
@@ -706,7 +654,6 @@ export const viewTask = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 export const notifications = async (req, res) => {
   const userId = req.user._id;
@@ -721,40 +668,138 @@ export const notifications = async (req, res) => {
   }
 };
 
-
 export const unreadCount = async (req, res) => {
   try {
-    // Retrieve all distinct users who have marked any task as read
     const usersWhoReadTasks = await TaskSchema.distinct('readBy');
-    // console.log({ usersWhoReadTasks });
-
-    // Send back the list of users who have read at least one task
     res.status(200).json(usersWhoReadTasks);
   } catch (error) {
     res.status(500).json({ error: 'Error fetching users who have read tasks' });
   }
 };
 
-// Update Task by team id
 export const updateTaskByTeamId = async (req, res) => {
   const { teamId } = req.params;
   const { teamName } = req.body;
 
   try {
-    // Update all tasks with the matching teamId
     const result = await TaskSchema.updateMany(
       { teamId: teamId },
       { $set: { teamName: teamName } }
     );
 
-    // Always return success even if no tasks were modified
     res.status(200).json({
       message: 'Tasks update completed',
       updatedCount: result.modifiedCount,
       tasksFound: result.matchedCount
     });
   } catch (error) {
-    console.error('Error updating tasks:', error);
+    // console.error('Error updating tasks:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 }
+
+export const getUnreadNotificationsCount = async (req, res) => {
+  try {
+    const count = await TaskSchema.countDocuments({
+      'notifications.recipient': req.user._id,
+      'notifications.read': false
+    });
+    res.status(200).json({ count });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getNotifications = async (req, res) => {
+  try {
+    const tasksWithNotifications = await TaskSchema.find({
+      'notifications.recipient': req.user._id
+    })
+      .select('slid notifications')
+      .populate('notifications.recipient', 'name');
+
+    const notifications = tasksWithNotifications.flatMap(task =>
+      task.notifications
+        .filter(notification => notification.recipient._id.equals(req.user._id))
+        .map(notification => ({
+          ...notification.toObject(),
+          taskSlid: task.slid,
+          taskId: task._id
+        }))
+    );
+
+    res.status(200).json(notifications);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const markNotificationAsRead = async (req, res) => {
+  try {
+    const { taskId, notificationId } = req.params;
+
+    const updatedTask = await TaskSchema.findOneAndUpdate(
+      {
+        _id: taskId,
+        'notifications._id': notificationId,
+        'notifications.recipient': req.user._id
+      },
+      { $set: { 'notifications.$.read': true } },
+      { new: true }
+    );
+
+    if (!updatedTask) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    res.status(200).json({ message: "Notification marked as read" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+export const createNotification = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { recipient, message } = req.body;
+
+    const task = await TaskSchema.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    const notification = {
+      recipient,
+      message,
+      read: false,
+      createdAt: new Date()
+    };
+
+    task.notifications.push(notification);
+    await task.save();
+
+    res.status(201).json(notification);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const clearNotifications = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+
+    const task = await TaskSchema.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    // Clear the notifications array
+    task.notifications = [];
+    await task.save();
+
+    res.status(200).json({ message: "Notifications cleared successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

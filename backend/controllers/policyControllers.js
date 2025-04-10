@@ -46,13 +46,13 @@ export const addPolicy = async (req, res) => {
 
 
   if (!user) {
-    console.log(`User not found with ID: ${userId}`);
+    // console.log(`User not found with ID: ${userId}`);
     return res.status(404).json({ success: false, message: 'User not found' });
   }
 
   const isValidPassword = await validatePassword(password, user.password);
   if (!isValidPassword) {
-    console.log(`Invalid password provided by user: ${userId}`);
+    // console.log(`Invalid password provided by user: ${userId}`);
     return res.status(401).json({ success: false, message: 'Invalid password' });
   }
 
@@ -85,7 +85,7 @@ export const updatePolicy = async (req, res) => {
 
   // Validate required fields
   if (!name || !content || !action || !password) {
-    console.log('Missing required fields in update request');
+    // console.log('Missing required fields in update request');
     return res.status(400).json({ success: false, message: 'Missing required fields' });
   }
 
@@ -93,20 +93,20 @@ export const updatePolicy = async (req, res) => {
     // Fetch the manager's details from the database
     const manager = await UserSchema.findById(req.user.id); // Assuming `req.user` is set by the `protect` middleware
     if (!manager) {
-      console.log(`Manager not found with ID: ${req.user.id}`);
+      // console.log(`Manager not found with ID: ${req.user.id}`);
       return res.status(404).json({ success: false, message: 'Manager not found' });
     }
 
     // Check if the user is a manager
     if (!manager.isManager) {
-      console.log(`User is not a manager: ${req.user.id}`);
+      // console.log(`User is not a manager: ${req.user.id}`);
       return res.status(403).json({ success: false, message: 'Not authorized, only managers can perform this action' });
     }
 
     // Validate the password
     const isValidPassword = await validatePassword(password, manager.password);
     if (!isValidPassword) {
-      console.log(`Invalid password provided by manager: ${req.user.id}`);
+      // console.log(`Invalid password provided by manager: ${req.user.id}`);
       return res.status(401).json({ success: false, message: 'Invalid password' });
     }
 
@@ -157,7 +157,7 @@ export const updatePolicy = async (req, res) => {
     );
 
     if (!updatedPolicy) {
-      console.log(`Policy not found with ID: ${id}`);
+      // console.log(`Policy not found with ID: ${id}`);
       return res.status(404).json({ success: false, message: 'Policy not found' });
     }
 

@@ -1,39 +1,67 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import {
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
+  IconButton,
+  Tooltip,
+  TablePagination,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Button
+} from "@mui/material";
 import { FaUndoAlt } from 'react-icons/fa';
-import { MdDelete } from 'react-icons/md';
+import { MdDelete, MdRefresh } from 'react-icons/md';
 import api from '../api/api';
-import { Button } from '@mui/material';
 import { useSelector } from 'react-redux';
-import { MoonLoader } from 'react-spinners'; // Import MoonLoader
+import moment from 'moment';
 
 const Trash = () => {
   const user = useSelector((state) => state?.auth?.user);
   const [trashes, setTrashes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [currentTask, setCurrentTask] = useState(null);
 
-  // Fetch trashes
-  useEffect(() => {
-    const fetchTrashes = async () => {
-      try {
-        const response = await api.get('/trash/get-all-trashes', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-        });
-        const { data } = response;
-        if (Array.isArray(data)) {
-          setTrashes(data);
-        } else {
-          setError('Invalid data format received from the server.');
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  // Define fetchTrashes outside of useEffect
+  const fetchTrashes = useCallback(async () => {
+    try {
+      const response = await api.get('/trash', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      });
+
+      // console.log('Server Response:', response.data); // Log the response data
+
+      if (Array.isArray(response.data)) {
+        setTrashes(response.data);
+      } else if (response.data && Array.isArray(response.data.data)) {
+        setTrashes(response.data.data);
+      } else {
+        setError('Invalid data format received from the server.');
       }
-    };
-
-    fetchTrashes();
+    } catch (err) {
+      setError(err.message || 'Failed to fetch trash items');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Fetch trashes on component mount
+  useEffect(() => {
+    fetchTrashes();
+  }, [fetchTrashes]);
 
   // Restore task from trash
   const restoreTask = useCallback(async (taskId) => {
@@ -41,15 +69,13 @@ const Trash = () => {
     if (!isConfirmed) return;
 
     try {
-      const restoreResponse = await api.post(`/tasks/${taskId}/restore`, {}, {
+      await api.post(`/trash/${taskId}/restore`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
-      if (restoreResponse.status === 200) {
-        setTrashes((prevTrashes) => prevTrashes.filter((trash) => trash._id !== taskId));
-        alert('Task restored successfully! Check the tasks page.');
-      }
+      setTrashes((prevTrashes) => prevTrashes.filter((trash) => trash._id !== taskId));
+      alert('Task restored successfully! Check the tasks page.');
     } catch (error) {
-      alert('Failed to restore task: ' + error.message);
+      alert('Failed to restore task: ' + (error.response?.data?.message || error.message));
     }
   }, []);
 
@@ -59,106 +85,226 @@ const Trash = () => {
     if (!isConfirmed) return;
 
     try {
-      await api.delete(`/trash/delete-permanently/${taskId}`, {
+      await api.delete(`/trash/${taskId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
       setTrashes((prevTrashes) => prevTrashes.filter((trash) => trash._id !== taskId));
       alert('Task deleted permanently!');
     } catch (error) {
-      alert('Failed to permanently delete task: ' + error.message);
+      alert('Failed to permanently delete task: ' + (error.response?.data?.message || error.message));
     }
   }, []);
 
-  // Filter trashes to show only those created by the logged-in user
-  const myTrashes = useMemo(() => {
-    return trashes.filter((trash) => trash.createdBy === user._id);
-  }, [trashes, user._id]);
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setCurrentTask(null);
+  };
 
-  // Loading state with MoonLoader
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Format date
+  const formatDate = (dateString) => {
+    return dateString ? moment(dateString).format('YYYY-MM-DD HH:mm') : 'N/A';
+  };
+
+  // Loading state
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <MoonLoader color="#3ea6ff" size={50} /> {/* MoonLoader with blue color */}
-      </div>
+      <Box display="flex" justifyContent="center" p={4}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <p className="text-red-500">Error: {error}</p>
-      </div>
+      <Box p={4}>
+        <Typography color="error">{error}</Typography>
+        <Button
+          onClick={fetchTrashes}
+          variant="contained"
+          startIcon={<MdRefresh />}
+          sx={{ mt: 2 }}
+        >
+          Retry
+        </Button>
+      </Box>
     );
   }
 
-  // No trashes found
-  if (myTrashes.length === 0) {
-    return (
-      <div className="max-w-[1000px] mx-auto text-white">
-        No trashes found for your account.
-      </div>
-    );
-  }
+  // Filter trashes to show only those created by the logged-in user
+  const myTrashes = trashes.filter((trash) =>
+    trash.createdBy?._id === user._id ||
+    (typeof trash.createdBy === 'string' && trash.createdBy === user._id)
+  );
 
   return (
-    <div className="p-4 bg-[#121212] min-h-screen max-w-[1000px] mx-auto">
-      <h2 className="text-xl font-bold mb-4 text-white">Trash</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {myTrashes.map((trash) => (
-          <div
-            key={trash._id}
-            className="rounded-lg p-4 shadow-md bg-[#1e1e1e] text-white"
-          >
-            <h3 className="text-lg font-semibold">
-              {trash.slid} - {trash.customerName}
-            </h3>
-            <p>
-              <strong className="text-gray-400">Priority:</strong>{' '}
-              <span className="text-white">{trash.priority}</span>
-            </p>
-            <p>
-              <strong className="text-gray-400">Category:</strong>{' '}
-              <span className="text-white">{trash.category}</span>
-            </p>
-            <p>
-              <strong className="text-gray-400">Reason:</strong>{' '}
-              <span className="text-white">{trash.reason}</span>
-            </p>
-            <p>
-              <strong className="text-gray-400">Status:</strong>{' '}
-              <span className="text-white">{trash.status}</span>
-            </p>
-            <p>
-              <strong className="text-gray-400">Validation Status:</strong>{' '}
-              <span className="text-white">{trash.validationStatus}</span>
-            </p>
-            <p>
-              <strong className="text-gray-400">Responsibility:</strong>{' '}
-              <span className="text-white">{trash.responsibility}</span>
-            </p>
-            <div className="flex align-center mt-2">
-              <Button
-                onClick={() => restoreTask(trash._id)}
-                variant="text"
-                title="Restore Task"
-                sx={{ color: '#3ea6ff' }} // Blue color for the button
-              >
-                <FaUndoAlt size={20} className="w-full" />
-              </Button>
-              <Button
-                onClick={() => deleteTaskPermanently(trash._id)}
-                variant="text"
-                title="Permanent Delete"
-                sx={{ color: '#ff1744' }} // Red color for the button
-              >
-                <MdDelete size={24} className="w-full" />
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h5" gutterBottom sx={{
+        color: '#3ea6ff',
+        fontWeight: 'bold',
+        mb: 2
+      }}>
+        Trash
+      </Typography>
+
+      {/* Trash Table */}
+      <TableContainer component={Paper} sx={{
+        mt: 2,
+        backgroundColor: '#1e1e1e',
+        border: '1px solid #444',
+        "& .MuiTableHead-root": {
+          backgroundColor: "#333",
+          "& .MuiTableCell-root": {
+            color: "#9e9e9e",
+            fontWeight: "bold",
+            borderBottom: "1px solid #444",
+          }
+        },
+        "& .MuiTableBody-root": {
+          "& .MuiTableCell-root": {
+            borderBottom: "1px solid #444",
+            color: "#ffffff",
+          },
+          "& .MuiTableRow-root": {
+            backgroundColor: "#272727",
+            "&:hover": {
+              backgroundColor: "#333",
+            },
+          }
+        },
+      }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>SLID</TableCell>
+              <TableCell>Customer Name</TableCell>
+              <TableCell>Customer Feedback</TableCell>
+              <TableCell>Deleted By</TableCell>
+              <TableCell>Deleted At</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {myTrashes.length > 0 ? (
+              myTrashes
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((trash) => (
+                  <TableRow key={trash._id}>
+                    <TableCell>{trash.slid || "-"}</TableCell>
+                    <TableCell>
+                      <Typography fontWeight={500}>
+                        {trash.customerName || "-"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      {trash.customerFeedback ? (
+                        <Typography
+                          sx={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
+                          {trash.customerFeedback}
+                        </Typography>
+                      ) : "-"}
+                    </TableCell>
+                    <TableCell>{trash.deletedBy?.name || "-"}</TableCell>
+                    <TableCell>{formatDate(trash.deletedAt)}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: "flex", gap: 1 }}>
+                        <Tooltip title="Restore">
+                          <IconButton
+                            size="small"
+                            color="info"
+                            onClick={() => restoreTask(trash._id)}
+                            sx={{ color: '#3ea6ff' }}
+                          >
+                            <FaUndoAlt />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Permanently">
+                          <IconButton
+                            size="small"
+                            color="secondary"
+                            onClick={() => deleteTaskPermanently(trash._id)}
+                            sx={{ color: '#ff4081' }}
+                          >
+                            <MdDelete />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#ffffff' }}>
+                  No trash items found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Pagination */}
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        mt: 2,
+        '& .MuiTablePagination-root': {
+          color: '#ffffff',
+        }
+      }}>
+        <TablePagination
+          rowsPerPageOptions={[10, 25, 50]}
+          component="div"
+          count={myTrashes.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+      </Box>
+
+      {/* Context Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        sx={{
+          "& .MuiPaper-root": {
+            backgroundColor: '#1e1e1e',
+            color: '#ffffff',
+          }
+        }}
+      >
+        <MenuItem onClick={() => currentTask && restoreTask(currentTask._id)}>
+          <ListItemIcon>
+            <FaUndoAlt fontSize="small" style={{ color: '#3ea6ff' }} />
+          </ListItemIcon>
+          <ListItemText>Restore</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => currentTask && deleteTaskPermanently(currentTask._id)}>
+          <ListItemIcon>
+            <MdDelete fontSize="small" style={{ color: '#f44336' }} />
+          </ListItemIcon>
+          <ListItemText>Delete Permanently</ListItemText>
+        </MenuItem>
+      </Menu>
+    </Box>
   );
 };
 

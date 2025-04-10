@@ -28,6 +28,11 @@ import {
   getNeutralTasksAssignedToMe,
   getNeutralTasksAssignedToMePaginated,
   updateTaskByTeamId,
+  getNotifications,
+  getUnreadNotificationsCount,
+  markNotificationAsRead,
+  createNotification,
+  clearNotifications,
 } from "../controllers/taskControllers.js";
 
 const router = express.Router();
@@ -99,5 +104,12 @@ router.get("/unread-count", protect, unreadCount);
 
 // Update task by team id
 router.put('/update-tasks-by-team-id/:teamId', protect, updateTaskByTeamId);
+
+router.get("/notifications", protect, getNotifications);
+router.get("/notifications/unread-count", protect, getUnreadNotificationsCount);
+router.put("/:taskId/notifications/:notificationId/read", protect, markNotificationAsRead);
+router.post("/:taskId/notifications", protect, createNotification);
+router.put("/:taskId/clear-notifications", protect, clearNotifications);
+
 
 export default router;

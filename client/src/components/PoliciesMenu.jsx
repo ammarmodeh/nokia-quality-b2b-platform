@@ -171,7 +171,7 @@ export const PoliciesMenu = () => {
           setPassword(manager.password);
         }
       } catch (error) {
-        console.error("Failed to fetch manager password:", error);
+        // console.error("Failed to fetch manager password:", error);
       }
     };
 
@@ -193,7 +193,7 @@ export const PoliciesMenu = () => {
       });
       setAddedPolicies(response.data.policies);
     } catch (error) {
-      console.error("Error fetching policies:", error);
+      // console.error("Error fetching policies:", error);
       setSnackbarMessage("Failed to fetch policies.");
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
@@ -265,7 +265,7 @@ export const PoliciesMenu = () => {
         setSnackbarOpen(true);
       }
     } catch (error) {
-      console.error("Error saving policy:", error);
+      // console.error("Error saving policy:", error);
       setSnackbarMessage("Failed to save policy. Please try again.");
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
@@ -304,7 +304,7 @@ export const PoliciesMenu = () => {
         setSnackbarOpen(true);
       }
     } catch (error) {
-      console.error("Error deleting policy:", error);
+      // console.error("Error deleting policy:", error);
       setSnackbarMessage("Failed to delete policy. Please try again.");
       setSnackbarSeverity("error");
       setSnackbarOpen(true);

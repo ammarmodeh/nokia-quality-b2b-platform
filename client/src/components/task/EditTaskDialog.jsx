@@ -58,7 +58,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
         // console.log("Fetched users:", data); // Debugging: Log fetched users
         setUsers(data);
       } catch (err) {
-        console.error("Error fetching users:", err); // Debugging: Log error
+        // console.error("Error fetching users:", err); // Debugging: Log error
         setError("Failed to load users");
       } finally {
         setLoading(false);
@@ -155,7 +155,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
           setFieldTeams(data);
         }
       } catch (error) {
-        console.log("Error fetching field teams:", error); // Debugging: Log error
+        // console.log("Error fetching field teams:", error); // Debugging: Log error
       }
     }
 
@@ -202,7 +202,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
         setOpen(false);
       }
     } catch (error) {
-      console.error("Error updating task:", error.response.data.error);
+      // console.error("Error updating task:", error.response.data.error);
     }
   };
 

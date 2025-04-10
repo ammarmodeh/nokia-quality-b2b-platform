@@ -73,7 +73,7 @@ const FieldTeamForm = () => {
         setErrorMessage('There was an error submitting the information.');
       }
     } catch (error) {
-      console.error('Error:', error);
+      // console.error('Error:', error);
       setErrorMessage('There was an error submitting the information.');
     }
   };
@@ -95,10 +95,10 @@ const FieldTeamForm = () => {
             isEvaluated: team.isEvaluated || false,
           })));
         } else {
-          console.error('Failed to fetch teams');
+          // console.error('Failed to fetch teams');
         }
       } catch (error) {
-        console.error('Error fetching teams:', error);
+        // console.error('Error fetching teams:', error);
       }
     };
 
@@ -129,7 +129,7 @@ const FieldTeamForm = () => {
         alert('Failed to update quiz permission');
       }
     } catch (error) {
-      console.error('Error toggling quiz permission:', error);
+      // console.error('Error toggling quiz permission:', error);
       alert('An error occurred while updating quiz permission');
     }
   }, []);
@@ -152,7 +152,7 @@ const FieldTeamForm = () => {
         alert('Failed to delete the team.');
       }
     } catch (error) {
-      console.error('Error deleting team:', error);
+      // console.error('Error deleting team:', error);
       alert('An error occurred while deleting the team.');
     }
   }, []);
@@ -205,14 +205,14 @@ const FieldTeamForm = () => {
           setOpenEditDialog(false);
         } catch (taskError) {
           // This will only catch actual errors, not the "no tasks" case
-          console.error('Task update error:', taskError);
+          // console.error('Task update error:', taskError);
           alert('Team information updated successfully, but there was an error updating related tasks.');
         }
       } else {
         setErrorMessage('There was an error updating the information.');
       }
     } catch (error) {
-      console.error('Error:', error);
+      // console.error('Error:', error);
       setErrorMessage('There was an error updating the information.');
     } finally {
       setLoading(false);
@@ -262,7 +262,7 @@ const FieldTeamForm = () => {
         alert('Failed to fetch evaluation history');
       }
     } catch (error) {
-      console.error('Error fetching evaluation history:', error);
+      // console.error('Error fetching evaluation history:', error);
       alert('Error fetching evaluation history');
     }
   }, []);
@@ -314,7 +314,7 @@ const FieldTeamForm = () => {
         alert('Failed to mark team as on leave.');
       }
     } catch (error) {
-      console.error('Error marking team as on leave:', error);
+      // console.error('Error marking team as on leave:', error);
       alert('An error occurred while marking the team as on leave.');
     }
   }, [leaveReason, leaveStartDate, leaveEndDate, selectedTeamId]);
@@ -337,7 +337,7 @@ const FieldTeamForm = () => {
         alert('Failed to mark team as resigned.');
       }
     } catch (error) {
-      console.error('Error marking team as resigned:', error);
+      // console.error('Error marking team as resigned:', error);
       alert('An error occurred while marking the team as resigned.');
     }
   }, [resignationReason, selectedTeamId]);

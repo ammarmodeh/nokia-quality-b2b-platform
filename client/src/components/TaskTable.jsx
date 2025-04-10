@@ -47,7 +47,7 @@ const handleCopyTaskData = (taskData) => {
       alert("Task data copied to clipboard!");
     })
     .catch((err) => {
-      console.error("Failed to copy: ", err);
+      // console.error("Failed to copy: ", err);
       alert("Failed to copy data to clipboard");
     });
 };
@@ -86,7 +86,7 @@ const TaskTable = ({ tasks }) => {
   const filteredTasks = tasks.filter(task => {
     const interviewDate = new Date(task.interviewDate);
     if (isNaN(interviewDate)) {
-      console.error("Invalid interviewDate for task:", task);
+      // console.error("Invalid interviewDate for task:", task);
       return false;
     }
 

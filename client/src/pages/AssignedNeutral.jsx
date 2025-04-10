@@ -41,7 +41,7 @@ const AssignedNeutral = () => {
         });
         setUsers(data);
       } catch (error) {
-        console.error("Error fetching users:", error);
+        // console.error("Error fetching users:", error);
       }
     };
     fetchUsers();
@@ -56,7 +56,7 @@ const AssignedNeutral = () => {
         const filteredTasks = data.filter((task) => task.assignedTo[0] === user);
         setAllTasks(filteredTasks);
       } catch (error) {
-        console.error("Error fetching all tasks:", error);
+        // console.error("Error fetching all tasks:", error);
       }
     };
     fetchAllTasks();
@@ -65,15 +65,10 @@ const AssignedNeutral = () => {
   const TASKS_PER_PAGE = 5;
 
   const fetchTasks = async ({ pageParam = 1 }) => {
-    try {
-      const { data } = await api.get(`/tasks/get-paginated-neutral-assigned-tasks?page=${pageParam}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-      });
-      return data;
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-      throw error;
-    }
+    const { data } = await api.get(`/tasks/get-paginated-neutral-assigned-tasks?page=${pageParam}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+    });
+    return data;
   };
 
   const { data, status, error, fetchNextPage, isFetchingNextPage, hasNextPage } = useInfiniteQuery({
@@ -198,7 +193,7 @@ const AssignedNeutral = () => {
         alert("Failed to add task to trash.");
       }
     } catch (error) {
-      console.error("Error Adding task to trash:", error);
+      // console.error("Error Adding task to trash:", error);
     }
   };
 
@@ -228,7 +223,7 @@ const AssignedNeutral = () => {
         alert("Failed to add task to archive.");
       }
     } catch (error) {
-      console.error("Error Adding task to archive:", error);
+      // console.error("Error Adding task to archive:", error);
     }
   };
 
@@ -250,7 +245,7 @@ const AssignedNeutral = () => {
       if (error.response && error.response.data && error.response.data.isAlreadyFavorited) {
         alert("This task is already in your favorites list!");
       } else {
-        console.error("Error updating favorite status:", error);
+        // console.error("Error updating favorite status:", error);
         alert("Failed to add to favorites. Please try again.");
       }
     }

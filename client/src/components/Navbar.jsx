@@ -78,7 +78,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
       alert("Issue submitted successfully!");
       // You might want to add a success notification here
     } catch (error) {
-      console.error("Error submitting issue:", error);
+      // console.error("Error submitting issue:", error);
       // You might want to add an error notification here
     }
   };
@@ -97,7 +97,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
       });
       setSearchResults(response.data.filter((task) => !task.isDeleted));
     } catch (error) {
-      console.error("Error searching tasks:", error);
+      // console.error("Error searching tasks:", error);
     } finally {
       setLoading(false);
     }

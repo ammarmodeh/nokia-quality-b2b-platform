@@ -171,7 +171,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
 
       enqueueSnackbar("Session updated successfully!", { variant: "success" });
     } catch (error) {
-      console.error("Update error:", error);
+      // console.error("Update error:", error);
       enqueueSnackbar(error.response?.data?.message || "Update failed", { variant: "error" });
     }
   };
@@ -216,7 +216,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         { variant: "success" }
       );
     } catch (error) {
-      console.error("Delete error:", error);
+      // console.error("Delete error:", error);
       enqueueSnackbar(
         error.response?.data?.message || "Deletion failed",
         { variant: "error" }
@@ -340,7 +340,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       enqueueSnackbar("Session added successfully!", { variant: "success" });
       setAddSessionDialogOpen(false);
     } catch (error) {
-      console.error("Error saving session:", error);
+      // console.error("Error saving session:", error);
       enqueueSnackbar(
         error.response?.data?.message ||
         error.message ||
@@ -387,7 +387,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     const rowsData = Object.keys(violationData).map((teamName) => {
       const team = fieldTeams.find((t) => t.teamName === teamName);
       if (!team) {
-        console.warn(`Team not found: ${teamName}`);
+        // console.warn(`Team not found: ${teamName}`);
         return null;
       }
 
@@ -800,7 +800,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   ];
 
   const handleReportAbsence = async (absenceData) => {
-    console.log({ absenceData });
+    // console.log({ absenceData });
     try {
       const response = await api.post(
         `/field-teams/${selectedTeamIdForSession}/report-absence`,
@@ -833,7 +833,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       });
       setReportAbsenceDialogOpen(false);
     } catch (error) {
-      console.error("Error reporting absence:", error);
+      // console.error("Error reporting absence:", error);
       enqueueSnackbar(error.response?.data?.message || "Failed to report absence. Please try again.", {
         variant: "error"
       });

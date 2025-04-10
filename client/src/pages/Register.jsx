@@ -22,7 +22,7 @@ const Register = () => {
       });
       navigate("/auth"); // Redirect to login after successful registration
     } catch (error) {
-      console.error("Registration failed:", error.response?.data?.message || error.message);
+      // console.error("Registration failed:", error.response?.data?.message || error.message);
     }
   };
 

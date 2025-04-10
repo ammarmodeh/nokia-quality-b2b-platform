@@ -3,14 +3,14 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { format, differenceInMinutes } from "date-fns";
 import {
   Paper, Typography, Avatar, Chip, CircularProgress, Stack, Box, Button,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, LinearProgress,
-  Stepper, Step, StepLabel, StepContent, Tooltip, IconButton
+  Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress, Tooltip, IconButton
 } from "@mui/material";
 import { useSelector } from "react-redux";
-import { FaEdit, FaEye } from "react-icons/fa";
+import { FaEdit } from "react-icons/fa";
 import { MdClose, MdDeleteForever, MdContentCopy } from "react-icons/md";
 import api from "../api/api";
 import EditTaskDialog from "../components/task/EditTaskDialog";
+import SubtaskManager from "../components/SubtaskManager";
 
 const priorityColors = {
   High: "error",
@@ -26,7 +26,6 @@ const predefinedSubtasks = [
 ];
 
 const fillTaskExceptCreatedFields = (task) => {
-  // const { createdBy, ...rest } = task;
   return task;
 };
 
@@ -43,10 +42,11 @@ const TaskViewPage = () => {
   const [note, setNote] = useState([]);
   const [activeStep, setActiveStep] = useState(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [usersToNotify, setUsersToNotify] = useState([]);
   const location = useLocation();
   const from = location.state?.from || "/dashboard";
-  const [rows, setRows] = useState(1);
-  const [cols, setCols] = useState(20);
+  const [expandedNotes, setExpandedNotes] = useState({});
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -63,7 +63,7 @@ const TaskViewPage = () => {
         setActiveStep(activeSteps);
         setNote(subtasks.map((subtask) => subtask.note));
       } catch (error) {
-        console.error("Error fetching task details:", error);
+        // console.error("Error fetching task details:", error);
       } finally {
         setLoading(false);
       }
@@ -88,7 +88,7 @@ const TaskViewPage = () => {
         );
         setAssignedUsers(data);
       } catch (error) {
-        console.error("Error fetching assigned users:", error);
+        // console.error("Error fetching assigned users:", error);
       }
     };
 
@@ -107,7 +107,7 @@ const TaskViewPage = () => {
         );
         setWhomItMayConcernUsers(data);
       } catch (error) {
-        console.error("Error fetching whom it may concern users:", error);
+        // console.error("Error fetching whom it may concern users:", error);
       }
     };
 
@@ -176,17 +176,110 @@ const TaskViewPage = () => {
       if (response.status === 200) {
         setSubtasks(updatedSubtasks);
       } else {
-        console.log("Failed to update subtasks");
+        // console.log("Failed to update subtasks");
       }
     } catch (error) {
-      console.error("Error updating subtasks:", error);
+      // console.error("Error updating subtasks:", error);
     }
     handleNoteDialogClose();
   };
 
+  const handleSaveAndNotify = async () => {
+    // Ensure task.subtasks and task.whomItMayConcern are defined
+    // console.log({ 'task.subtasks': task.subTasks, 'task.whomItMayConcern:': task.whomItMayConcern });
+    if (!task.subTasks || !task.whomItMayConcern) {
+      // console.error("Task subtasks or whomItMayConcern is not defined.");
+      return;
+    }
+
+    // Combine assigned users and whom it may concern users, removing duplicates
+    const allConcernedUsers = [
+      ...new Set([
+        ...task.assignedTo.map(user => typeof user === 'string' ? user : user._id),
+        ...task.whomItMayConcern.map(user => typeof user === 'string' ? user : user._id)
+      ])
+    ];
+
+    // Filter out the current user (they don't need to be notified of their own changes)
+    const usersToNotifyIds = allConcernedUsers.filter(userId => userId !== user._id);
+
+    // Get the full user objects for these IDs
+    const usersToNotifyObjects = assignedUsers.concat(whomItMayConcernUsers).filter(user =>
+      usersToNotifyIds.includes(user._id)
+    );
+
+    setUsersToNotify(usersToNotifyObjects);
+    setConfirmDialogOpen(true);
+  };
+
+  const confirmSaveAndNotify = async () => {
+    setConfirmDialogOpen(false);
+
+    try {
+      // Map through subtasks and update the note and progress fields
+      const updatedSubtasks = subtasks.map((subtask, index) => ({
+        ...subtask,
+        note: note[index] || "",
+        progress: note[index]?.trim() ? 25 : 0,
+        dateTime: subtask.dateTime || null,
+      }));
+
+      // First, update the subtasks
+      const updateResponse = await api.put(
+        `/tasks/update-subtask/${task._id}`,
+        updatedSubtasks,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (updateResponse.status === 200) {
+        setSubtasks(updatedSubtasks);
+
+        // Clear existing notifications
+        await api.put(
+          `/tasks/${task._id}/clear-notifications`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        // Send new notifications to each user in usersToNotify
+        await Promise.all(
+          usersToNotify.map(user =>
+            api.post(
+              `/tasks/${task._id}/notifications`,
+              {
+                recipient: user._id,
+                // The progress must be the total progress of subtasks elements
+                message: `Task ${task.slid} has been updated, and its progress is now at ${updatedSubtasks.reduce((total, subtask) => total + subtask.progress, 0)}%. Please review the changes.`,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                },
+              }
+            )
+          )
+        );
+      } else {
+        // console.log("Failed to update subtasks");
+      }
+    } catch (error) {
+      // console.error("Error in handleSaveAndNotify:", error);
+    } finally {
+      handleNoteDialogClose();
+    }
+  };
+
   const handleEditTask = (updatedTask) => {
     if (!updatedTask) {
-      console.error("Updated task is undefined");
+      // console.error("Updated task is undefined");
       return;
     }
     const filledTask = fillTaskExceptCreatedFields(updatedTask);
@@ -219,29 +312,13 @@ const TaskViewPage = () => {
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           });
-          // console.log("Deleted task:", res.data);
-
           navigate("/tasks");
         }
       } else {
         alert("Failed to add task to trash.");
       }
     } catch (error) {
-      console.error("Error Adding task to trash:", error);
-    }
-  };
-
-  const handleExpand = () => {
-    setRows((prev) => prev + 1);
-    setCols((prev) => prev + 10);
-  };
-
-  const handleShrink = () => {
-    if (rows > 1) {
-      setRows((prev) => prev - 1);
-    }
-    if (cols > 20) {
-      setCols((prev) => prev - 10);
+      // console.error("Error Adding task to trash:", error);
     }
   };
 
@@ -267,6 +344,13 @@ const TaskViewPage = () => {
     navigator.clipboard.writeText(detailsText)
       .then(() => alert('Task details copied to clipboard!'))
       .catch(() => alert('Failed to copy details'));
+  };
+
+  const toggleNoteExpand = (index) => {
+    setExpandedNotes(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
   };
 
   if (loading) return <CircularProgress />;
@@ -664,171 +748,20 @@ const TaskViewPage = () => {
           </IconButton>
         </DialogTitle>
 
-        <DialogContent dividers sx={{
-          backgroundColor: '#1e1e1e',
-          color: '#ffffff',
-          padding: '20px 24px',
-        }}>
-          <Box sx={{ maxWidth: 400 }}>
-            <Stepper activeStep={activeStep} orientation="vertical">
-              {subtasks.map((subtask, index) => (
-                <Step key={index}>
-                  <StepLabel
-                    optional={
-                      index === subtasks.length - 1 ? (
-                        <Typography variant="caption" sx={{ color: "#b3b3b3" }}>
-                          Last step
-                        </Typography>
-                      ) : null
-                    }
-                    sx={{
-                      color: "#ffffff",
-                      "& .MuiStepIcon-root": { color: "#3f51b5" },
-                      "& .MuiStepIcon-completed": { color: "#4caf50" },
-                    }}
-                  >
-                    <Stack direction={"row"} alignItems={"center"} gap={4} justifyContent={"space-between"}>
-                      <Typography variant="caption" sx={{ color: "#ffffff" }}>
-                        {subtask.title}
-                      </Typography>
-                      <Tooltip title={<span style={{ direction: 'rtl', textAlign: 'right', display: 'block', fontSize: '15px' }}>{subtask.note}</span>}
-                        placement="bottom-end"
-                      >
-                        <FaEye color="#3ea6ff" cursor="pointer" size={20} />
-                      </Tooltip>
-                    </Stack>
-                    {subtask.dateTime && (
-                      <Typography variant="caption" sx={{ color: "#b3b3b3", display: "block" }}>
-                        Completed on: {subtask.dateTime}
-                      </Typography>
-                    )}
-                  </StepLabel>
-                  <StepContent>
-                    <Typography sx={{ mb: 1, color: "#ffffff" }}>{subtask.note}</Typography>
-                    <TextField
-                      margin="dense"
-                      label="Note"
-                      type="text"
-                      fullWidth
-                      multiline
-                      rows={rows}
-                      value={note[index] || ""}
-                      onChange={(e) => {
-                        const newNote = [...note];
-                        newNote[index] = e.target.value;
-                        setNote(newNote);
-                      }}
-                      sx={{
-                        color: "#ffffff",
-                        "& .MuiInputBase-input": { color: "#ffffff" },
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": { borderColor: "#555" },
-                          "&:hover fieldset": { borderColor: "#3ea6ff" },
-                          "&.Mui-focused fieldset": { borderColor: "#3ea6ff" },
-                        },
-                        backgroundColor: '#272727',
-                        borderRadius: '4px'
-                      }}
-                      InputLabelProps={{
-                        sx: { color: "#b3b3b3" },
-                      }}
-                      InputProps={{
-                        sx: { color: "#ffffff" },
-                      }}
-                    />
-                    <Box sx={{ mt: 1 }}>
-                      <Button
-                        onClick={handleExpand}
-                        sx={{
-                          mr: 1,
-                          color: '#3ea6ff',
-                          '&:hover': {
-                            backgroundColor: 'rgba(62, 166, 255, 0.1)',
-                          }
-                        }}
-                      >
-                        Expand
-                      </Button>
-                      <Button
-                        onClick={handleShrink}
-                        disabled={rows <= 1 && cols <= 20}
-                        sx={{
-                          color: '#3ea6ff',
-                          '&:hover': {
-                            backgroundColor: 'rgba(62, 166, 255, 0.1)',
-                          }
-                        }}
-                      >
-                        Shrink
-                      </Button>
-                    </Box>
-                    <Box sx={{ mb: 2 }}>
-                      <Button
-                        variant="contained"
-                        onClick={handleNext}
-                        sx={{
-                          mt: 1,
-                          mr: 1,
-                          backgroundColor: "#3f51b5",
-                          color: "#ffffff",
-                          '&:hover': {
-                            backgroundColor: "#303f9f",
-                          }
-                        }}
-                      >
-                        {index === subtasks.length - 1 ? "Finish" : "Continue"}
-                      </Button>
-                      {index !== 0 && (
-                        <Button
-                          disabled={index === 0}
-                          onClick={handleBack}
-                          sx={{
-                            mt: 1,
-                            mr: 1,
-                            color: "#ffffff",
-                            '&:hover': {
-                              backgroundColor: "#2a2a2a",
-                            }
-                          }}
-                        >
-                          Back
-                        </Button>
-                      )}
-                    </Box>
-                  </StepContent>
-                </Step>
-              ))}
-            </Stepper>
-            {activeStep === subtasks.length && (
-              <Paper
-                square
-                elevation={0}
-                sx={{
-                  p: 3,
-                  backgroundColor: "#272727",
-                  color: "#ffffff",
-                  borderRadius: "8px",
-                  border: '1px solid #444'
-                }}
-              >
-                <Typography>All steps completed - you&apos;re finished</Typography>
-                <Button
-                  onClick={handleReset}
-                  sx={{
-                    mt: 1,
-                    mr: 1,
-                    color: "#ffffff",
-                    '&:hover': {
-                      backgroundColor: "#2a2a2a",
-                    }
-                  }}
-                >
-                  Reset
-                </Button>
-              </Paper>
-            )}
-          </Box>
-        </DialogContent>
+        <SubtaskManager
+          subtasks={subtasks}
+          note={note}
+          setNote={setNote}
+          activeStep={activeStep}
+          setActiveStep={setActiveStep}
+          handleNext={handleNext}
+          handleBack={handleBack}
+          handleSaveNote={handleSaveNote}
+          handleReset={handleReset}
+          expandedNotes={expandedNotes}
+          toggleNoteExpand={toggleNoteExpand}
+        />
+
         <DialogActions sx={{
           display: "flex",
           justifyContent: 'space-between',
@@ -861,7 +794,7 @@ const TaskViewPage = () => {
               Cancel
             </Button>
             <Button
-              onClick={handleSaveNote}
+              onClick={handleSaveAndNotify}
               sx={{
                 backgroundColor: "#3f51b5",
                 color: "#ffffff",
@@ -870,9 +803,76 @@ const TaskViewPage = () => {
                 }
               }}
             >
-              Save
+              Save & Notify
             </Button>
           </Box>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={() => setConfirmDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            backgroundColor: "#121212",
+            color: "#ffffff",
+            borderRadius: "8px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.5)",
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "#ffffff", fontWeight: "600", fontSize: "1.25rem" }}>
+          Confirm Save and Notify
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            Are you sure you want to save the changes and notify the following users?
+          </Typography>
+          <Box sx={{ maxHeight: '200px', overflow: 'auto', p: 1 }}>
+            <Stack spacing={1}>
+              {usersToNotify.map(user => (
+                <Box key={user._id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Avatar
+                    src={user.avatar}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      bgcolor: '#8D6E63'
+                    }}
+                  >
+                    {!user.avatar && user.name.slice(0, 2).toUpperCase()}
+                  </Avatar>
+                  <Typography>{user.name}</Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDialogOpen(false)}
+            sx={{
+              color: "#ffffff",
+              "&:hover": { backgroundColor: "#333" },
+              "&:focus": { outline: "none" },
+              transition: "background-color 0.2s ease",
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmSaveAndNotify}
+            sx={{
+              backgroundColor: "darkblue",
+              color: "#ffffff",
+              "&:hover": { backgroundColor: "darkblue" },
+              "&:focus": { outline: "none" },
+              transition: "background-color 0.2s ease",
+            }}
+          >
+            Confirm
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -885,7 +885,7 @@ const TaskViewPage = () => {
 const DetailRow = ({ label, value }) => (
   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
     <Typography
-      component="div"  // Change from default 'p' to 'div'
+      component="div"
       variant="subtitle1"
       sx={{
         fontWeight: '500',

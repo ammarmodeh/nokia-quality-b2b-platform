@@ -1,20 +1,15 @@
 import { useEffect, useState } from "react";
-import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Chip, Tooltip, Paper, Stack, Button, LinearProgress, TextField, Dialog, DialogTitle, DialogContent, DialogActions, AvatarGroup, Avatar } from "@mui/material";
-import { MoreVert as MoreVertIcon, Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
-import { HourglassEmpty, PlayCircle, CheckCircle, Cancel } from "@mui/icons-material"; // Status Icons
-import EditTaskDialog from "./task/EditTaskDialog";
-import { format, differenceInMinutes } from "date-fns";
-import { useNavigate } from "react-router-dom";
-import Box from '@mui/material/Box';
-import Stepper from '@mui/material/Stepper';
-import Step from '@mui/material/Step';
-import StepLabel from '@mui/material/StepLabel';
-import StepContent from '@mui/material/StepContent';
-import Typography from '@mui/material/Typography';
-import { FaEye, FaRegCopy, FaStar } from "react-icons/fa";
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Menu, MenuItem, ListItemIcon, ListItemText, IconButton, Tooltip, Paper, Stack, AvatarGroup, Avatar, Typography, LinearProgress, Box, Chip } from "@mui/material";
+import { MoreVert as MoreVertIcon, Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, HourglassEmpty, PlayCircle, CheckCircle, Cancel } from "@mui/icons-material";
+import { FaRegCopy, FaStar } from "react-icons/fa";
 import { useSelector } from "react-redux";
 import api from "../api/api";
-import { MdManageAccounts } from "react-icons/md";
+import { format, differenceInMinutes } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import EditTaskDialog from "./task/EditTaskDialog";
+import { IoMdMagnet } from "react-icons/io";
+import { MdClose } from "react-icons/md";
+import SubtaskManager from "./SubtaskManager";
 
 const predefinedSubtasks = [
   { title: "Receive the task", progress: 0, note: "", dateTime: null },
@@ -35,22 +30,35 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
   const user = useSelector((state) => state?.auth?.user);
   const [anchorEl, setAnchorEl] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [subtasks, setSubtasks] = useState(
-    task.subtasks && task.subtasks.length > 0 ? task.subtasks : predefinedSubtasks
-  );
+  const [subtasks, setSubtasks] = useState(task.subtasks && task.subtasks.length > 0 ? task.subtasks : predefinedSubtasks);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [note, setNote] = useState([]);
   const [activeStep, setActiveStep] = useState(0);
   const [cancelState, setCancelState] = useState(false);
-  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
-  const handleMenuClose = () => setAnchorEl(null);
-  const assignedUsers = users.filter(user => task.assignedTo.some(assignedUser => assignedUser._id === user._id || assignedUser === user._id));
-  const creator = users.find(user => user._id === task.createdBy._id || user._id === task.createdBy) || {};
+  const [expandedNotes, setExpandedNotes] = useState({});
   const [creatorColor, setCreatorColor] = useState([]);
+  const [usersToNotify, setUsersToNotify] = useState([]);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const formattedDate = task?.date ? format(new Date(task.date), "MMM dd, yyyy HH:mm") : "No Date";
   const remainingMinutes = task?.date ? differenceInMinutes(new Date(task.date), new Date()) : null;
 
-  // Copy task details to clipboard
+  // Ensure task.subtasks and task.whomItMayConcern are initialized
+  task.subtasks = task.subtasks || [];
+  task.whomItMayConcern = task.whomItMayConcern || [];
+
+  const assignedUsers = users.filter(user => task.assignedTo.some(assignedUser => assignedUser._id === user._id || assignedUser === user._id));
+  const creator = users.find(user => user._id === task.createdBy._id || user._id === task.createdBy) || {};
+
+  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
+
+  const toggleNoteExpand = (index) => {
+    setExpandedNotes(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
   const copyToClipboard = () => {
     const formattedMessage = `
       **SLID**: ${task.slid}
@@ -69,7 +77,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
     navigator.clipboard.writeText(formattedMessage).then(() => {
       alert('Task details copied to clipboard!');
     }).catch(err => {
-      console.error('Failed to copy: ', err);
+      // console.error('Failed to copy: ', err);
     });
   };
 
@@ -86,7 +94,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
         setActiveStep(activeSteps);
         setNote(response.data.subTasks.map((subtask) => subtask.note));
       } catch (error) {
-        console.error("Error fetching subtasks:", error);
+        // console.error("Error fetching subtasks:", error);
       }
     };
     fetchSubtasks();
@@ -99,17 +107,16 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
   }, [users, creatorColor]);
 
   const handleAction = (action) => {
-    // console.log({ action });
     handleMenuClose();
     if (action === "edit") setEditDialogOpen(true);
     if (action === "delete") handleTaskDelete(task._id);
-    if (action === "favourite") handleFavoriteClick(task);
+    if (action === "favorite") handleFavoriteClick(task);
     if (action === "view") navigate(`/tasks/view-task/${task._id}`, { state: { from: location.pathname } });
     if (action === "archive") handleTaskArchive(task._id);
   };
 
   const handleNoteDialogOpen = () => {
-    setNote(subtasks.map((subtask2) => subtask2.note || ""));
+    setNote(subtasks.map((subtask) => subtask.note || ""));
     setNoteDialogOpen(true);
   };
 
@@ -118,44 +125,53 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
     setCancelState(prevState => !prevState);
   };
 
-  const handleNext = () => {
-    if (activeStep < subtasks.length - 1) {
-      const updatedSubtasks = [...subtasks];
-      updatedSubtasks[activeStep].dateTime = new Date().toLocaleString(); // Capture current date and time
-      setSubtasks(updatedSubtasks);
-      setActiveStep((prev) => prev + 1);
-    } else {
-      // When "Finish" is clicked, set the current date and time for the last subtask
-      const updatedSubtasks = [...subtasks];
-      updatedSubtasks[activeStep].dateTime = new Date().toLocaleString(); // Capture current date and time
-      setSubtasks(updatedSubtasks);
-      setActiveStep((prev) => prev + 1);
-    }
-  };
-
   const handleBack = () => {
     setActiveStep((prev) => prev - 1);
   };
 
-  const handleReset = () => {
-    const confirmation = confirm("Are you sure you want to reset the subTasks and notes?")
-    if (!confirmation) return
-    setNote([]); // Reset notes
-    setActiveStep(0); // Reset active step
-    setSubtasks(predefinedSubtasks); // Reset subtasks to initial state with dateTime cleared
+  const handleReset = async () => {
+    const confirmation = confirm("Are you sure you want to reset the subTasks and notes?");
+    if (!confirmation) return;
+
+    // Reset notes, active step, and clear dateTime for all subtasks
+    setNote([]);
+    setActiveStep(0);
+    setSubtasks(predefinedSubtasks.map(subtask => ({
+      ...subtask,
+      dateTime: null  // Clear the completion date
+    })));
+
+    try {
+      // Clear notifications by calling the new API endpoint
+      const response = await api.put(
+        `/tasks/${task._id}/clear-notifications`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        // console.log("Notifications cleared successfully");
+      } else {
+        // console.error("Failed to clear notifications");
+      }
+    } catch (error) {
+      // console.error("Error clearing notifications:", error);
+    }
   };
 
   const handleSaveNote = async () => {
     try {
       // Map through subtasks and update the note and progress fields
       const updatedSubtasks = subtasks.map((subtask, index) => ({
-        ...subtask, // Preserve all existing fields except dateTime
-        note: note[index] || "", // Update the note field
-        progress: note[index]?.trim() ? 25 : 0, // Update the progress field
-        dateTime: subtask.dateTime || null, // Preserve dateTime if already set
+        ...subtask,
+        note: note[index] || "",
+        progress: note[index]?.trim() ? 25 : 0,
+        dateTime: subtask.dateTime || null,
       }));
-
-      // console.log({ updatedSubtasks });
 
       // Send the updated subtasks to the backend
       const response = await api.put(
@@ -173,12 +189,125 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
         setSubtasks(updatedSubtasks);
         setUpdateStateDuringSave(prev => !prev); // Trigger state update
       } else {
-        console.log("Failed to update subtasks");
+        // console.log("Failed to update subtasks");
       }
     } catch (error) {
-      console.error("Error updating subtasks:", error);
+      // console.error("Error updating subtasks:", error);
     }
-    handleNoteDialogClose(); // Close the dialog after saving
+  };
+
+  const handleSaveAndNotify = async () => {
+    // Ensure task.subtasks and task.whomItMayConcern are defined
+    if (!task.subtasks || !task.whomItMayConcern) {
+      // console.error("Task subtasks or whomItMayConcern is not defined.");
+      return;
+    }
+
+    // Combine assigned users and whom it may concern users, removing duplicates
+    const allConcernedUsers = [
+      ...new Set([
+        ...task.assignedTo.map(user => typeof user === 'string' ? user : user._id),
+        ...task.whomItMayConcern.map(user => typeof user === 'string' ? user : user._id)
+      ])
+    ];
+
+    // Filter out the current user (they don't need to be notified of their own changes)
+    const usersToNotifyIds = allConcernedUsers.filter(userId => userId !== user._id);
+
+    // Get the full user objects for these IDs
+    const usersToNotifyObjects = users.filter(user =>
+      usersToNotifyIds.includes(user._id)
+    );
+
+    setUsersToNotify(usersToNotifyObjects);
+    setConfirmDialogOpen(true);
+  };
+
+  const confirmSaveAndNotify = async () => {
+    setConfirmDialogOpen(false);
+
+    try {
+      // Map through subtasks and update the note and progress fields
+      const updatedSubtasks = subtasks.map((subtask, index) => ({
+        ...subtask,
+        note: note[index] || "",
+        progress: note[index]?.trim() ? 25 : 0,
+        dateTime: subtask.dateTime || null,
+      }));
+
+      // First, update the subtasks
+      const updateResponse = await api.put(
+        `/tasks/update-subtask/${task._id}`,
+        updatedSubtasks,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (updateResponse.status === 200) {
+        setSubtasks(updatedSubtasks);
+        setUpdateStateDuringSave(prev => !prev);
+
+        // Clear existing notifications
+        await api.put(
+          `/tasks/${task._id}/clear-notifications`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        // Send new notifications to each user in usersToNotify
+        await Promise.all(
+          usersToNotify.map(user =>
+            api.post(
+              `/tasks/${task._id}/notifications`,
+              {
+                recipient: user._id,
+                // The progress must be the total progress of subtasks elements
+                message: `Task ${task.slid} has been updated, and its progress is now at ${updatedSubtasks.reduce((total, subtask) => total + subtask.progress, 0)}%. Please review the changes.`,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                },
+              }
+            )
+          )
+        );
+      } else {
+        // console.log("Failed to update subtasks");
+      }
+    } catch (error) {
+      // console.error("Error in handleSaveAndNotify:", error);
+    } finally {
+      handleNoteDialogClose();
+    }
+  };
+
+  const handleNext = () => {
+    if (activeStep < subtasks.length - 1) {
+      const updatedSubtasks = [...subtasks];
+      updatedSubtasks[activeStep].dateTime = new Date().toLocaleString(); // Capture current date and time
+      setSubtasks(updatedSubtasks);
+      setActiveStep((prev) => prev + 1);
+
+      // Save progress without notifying and keep the dialog open
+      handleSaveNote();
+    } else {
+      // When "Finish" is clicked, set the current date and time for the last subtask
+      const updatedSubtasks = [...subtasks];
+      updatedSubtasks[activeStep].dateTime = new Date().toLocaleString(); // Capture current date and time
+      setSubtasks(updatedSubtasks);
+      setActiveStep((prev) => prev + 1);
+
+      // Save progress without notifying and keep the dialog open
+      handleSaveNote();
+    }
   };
 
   return (
@@ -197,7 +326,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                 }}
               />
 
-              <Stack direction="row" >
+              <Stack direction="row">
                 <Tooltip title="Copy Task Details">
                   <IconButton onClick={copyToClipboard} sx={{ color: "#ffffff" }}>
                     <FaRegCopy />
@@ -232,13 +361,13 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                     <ListItemIcon><VisibilityIcon fontSize="small" sx={{ color: "#ffffff" }} /></ListItemIcon>
                     <ListItemText>View</ListItemText>
                   </MenuItem>
-                  <MenuItem onClick={() => handleAction("favourite")}>
+                  <MenuItem onClick={() => handleAction("favorite")}>
                     <ListItemIcon><FaStar size={16} color="#ffffff" /></ListItemIcon>
-                    <ListItemText>Add to favourite</ListItemText>
+                    <ListItemText>Add to favorite</ListItemText>
                   </MenuItem>
                   {user.role === "Admin" && (
                     <MenuItem onClick={() => handleAction("archive")}>
-                      <ListItemIcon><MdManageAccounts size={16} color="#ffffff" /></ListItemIcon>
+                      <ListItemIcon><IoMdMagnet size={16} color="#ffffff" /></ListItemIcon>
                       <ListItemText>Archive</ListItemText>
                     </MenuItem>
                   )}
@@ -259,9 +388,9 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                     <ListItemIcon><VisibilityIcon fontSize="small" sx={{ color: "#ffffff" }} /></ListItemIcon>
                     <ListItemText>View</ListItemText>
                   </MenuItem>
-                  <MenuItem onClick={() => handleAction("favourite")}>
+                  <MenuItem onClick={() => handleAction("favorite")}>
                     <ListItemIcon><FaStar size={16} color="#ffffff" /></ListItemIcon>
-                    <ListItemText>Add to favourite</ListItemText>
+                    <ListItemText>Add to favorite</ListItemText>
                   </MenuItem>
                 </Menu>
               )}
@@ -276,7 +405,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
               <p>
                 <span className="font-medium text-[#bdb5b5]">Due Date: &#160;</span>
                 {formattedDate}
-                {!activeStep === subtasks.length && remainingMinutes !== null && (
+                {activeStep !== subtasks.length && remainingMinutes !== null && (
                   <span className={`ml-2 ${remainingMinutes > 0 ? "text-green-600" : "text-red-600"}`}>
                     {remainingMinutes > 0
                       ? `${Math.floor(remainingMinutes / 1440)} days, ${Math.floor((remainingMinutes % 1440) / 60)} hours, ${remainingMinutes % 60} minutes left`
@@ -285,7 +414,6 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                   </span>
                 )}
               </p>
-              {/* <p><span className="font-medium text-[#bdb5b5]">Category:</span> {task?.category}</p> */}
             </div>
 
             <div className="mt-3 flex items-center justify-start gap-4">
@@ -314,21 +442,23 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
             </div>
 
           </Stack>
-          <Stack >
+          <Stack>
             <div className="mt-3 text-xs text-gray-400">
               <div>
                 <p className="text-sm text-[#bdb5b5] font-medium">Progress: ({(100 / subtasks.length) * activeStep}%)</p>
                 <LinearProgress variant="determinate" value={(100 / subtasks.length) * activeStep} sx={{ backgroundColor: "#333", "& .MuiLinearProgress-bar": { backgroundColor: "#3ea6ff" } }} />
                 {user && (user._id === task.assignedTo[0]._id || user._id === task.assignedTo[0]) && (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleNoteDialogOpen}
-                    sx={{ mt: 2, backgroundColor: "#01013d", }}
-                  >
-                    <MdManageAccounts size={20} className="mr-2" />
-                    Manage Subtasks
-                  </Button>
+                  <>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleNoteDialogOpen}
+                      sx={{ mt: 2, backgroundColor: "#01013d" }}
+                    >
+                      <IoMdMagnet size={20} className="mr-2" />
+                      Manage Subtasks
+                    </Button>
+                  </>
                 )}
               </div>
               <div className="flex items-center gap-2 mt-4">
@@ -338,7 +468,8 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                     fontSize: "12px",
                     width: 28,  // Set the desired width
                     height: 28  // Set the desired height
-                  }}>
+                  }}
+                >
                   {creator.name?.slice(0, 2).toUpperCase()}
                 </Avatar>
                 <p><span className="font-medium text-[#bdb5b5]">Created By:</span> {creator.name || "Unknown"}</p>
@@ -350,165 +481,74 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
 
       <EditTaskDialog open={editDialogOpen} setOpen={setEditDialogOpen} task={task} handleTaskUpdate={handleTaskUpdate} />
 
+      {/* Subtasks Dialog */}
       <Dialog
         open={noteDialogOpen}
         onClose={handleNoteDialogClose}
         PaperProps={{
           sx: {
-            backgroundColor: "#121212", // Darker background for better contrast
-            color: "#ffffff", // White text
-            borderRadius: "8px", // Rounded corners
-            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.5)", // Subtle shadow
+            backgroundColor: "#1e1e1e",
+            color: "#ffffff",
+            borderRadius: "8px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.5)",
+            border: '1px solid #444'
           },
         }}
       >
-        <DialogTitle sx={{ color: "#ffffff", fontWeight: "600", fontSize: "1.25rem" }}>
-          Manage Subtasks
+        <DialogTitle sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: '#272727',
+          color: '#ffffff',
+          borderBottom: '1px solid #444',
+          padding: '16px 24px',
+        }}>
+          <Typography variant="h6" component="div">
+            Manage Subtasks
+          </Typography>
+          <IconButton
+            onClick={handleNoteDialogClose}
+            sx={{
+              color: '#ffffff',
+              '&:hover': {
+                backgroundColor: '#2a2a2a',
+              }
+            }}
+          >
+            <MdClose />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ maxWidth: 400 }}>
-            <Stepper activeStep={activeStep} orientation="vertical">
-              {subtasks.map((subtask, index) => (
-                <Step key={index}>
-                  <StepLabel
-                    optional={
-                      index === subtasks.length - 1 ? (
-                        <Typography variant="caption" sx={{ color: "#b3b3b3" }}>
-                          Last step
-                        </Typography>
-                      ) : null
-                    }
-                    sx={{
-                      color: "#ffffff", // White text
-                      "& .MuiStepIcon-root": { color: "darkblue" }, // Blue step icons
-                      "& .MuiStepIcon-completed": { color: "#4caf50" }, // Green for completed steps
-                    }}
-                  >
-                    <Stack direction={"row"} alignItems={"center"} gap={4} justifyContent={"space-between"}>
-                      <Typography variant="caption" sx={{ color: "#ffffff" }}>
-                        {subtask.title}
-                      </Typography>
-                      <Tooltip title={<span style={{ direction: 'rtl', textAlign: 'right', display: 'block', fontSize: '15px' }}>{subtask.note}</span>}
-                        placement="bottom-end"
-                      >
-                        <FaEye color="#3ea6ff" cursor="pointer" size={20} />
-                      </Tooltip>
-                    </Stack>
-                    {subtask.dateTime && (
-                      <Typography variant="caption" sx={{ color: "#b3b3b3", display: "block" }}>
-                        Completed on: {subtask.dateTime}
-                      </Typography>
-                    )}
-                  </StepLabel>
-                  <StepContent>
-                    <Typography sx={{ mb: 1, color: "#ffffff" }}>{subtask.note}</Typography>
-                    <TextField
-                      margin="dense"
-                      label="Note"
-                      type="text"
-                      fullWidth
-                      value={note[index] || ""}
-                      onChange={(e) => {
-                        const newNote = [...note];
-                        newNote[index] = e.target.value;
-                        setNote(newNote);
-                      }}
-                      sx={{
-                        color: "#ffffff", // White text for input
-                        "& .MuiInputBase-input": { color: "#ffffff" }, // White text for input
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": { borderColor: "#555" }, // Border color
-                          "&:hover fieldset": { borderColor: "#3ea6ff" }, // Hover border color
-                          "&.Mui-focused fieldset": { borderColor: "#3ea6ff" }, // Focus border color
-                        },
-                      }}
-                      InputLabelProps={{
-                        sx: { color: "#b3b3b3" }, // Light gray for label
-                      }}
-                      InputProps={{
-                        sx: { color: "#ffffff" }, // White text for input
-                      }}
-                    />
-                    <Box sx={{ mb: 2 }}>
-                      <Button
-                        variant="contained"
-                        onClick={handleNext}
-                        sx={{
-                          mt: 1,
-                          mr: 1,
-                          backgroundColor: "darkblue", // Blue background
-                          color: "#ffffff", // White text
-                          "&:hover": { backgroundColor: "darkblue" }, // Darker blue on hover
-                          "&:focus": { outline: "none" }, // Remove focus outline
-                          transition: "background-color 0.2s ease", // Smooth transition
-                        }}
-                      >
-                        {index === subtasks.length - 1 ? "Finish" : "Continue"}
-                      </Button>
-                      {index !== 0 && (
-                        <Button
-                          disabled={index === 0}
-                          onClick={handleBack}
-                          sx={{
-                            mt: 1,
-                            mr: 1,
-                            color: "#ffffff", // White text
-                            "&:hover": { backgroundColor: "#333" }, // Dark background on hover
-                            "&:focus": { outline: "none" }, // Remove focus outline
-                            transition: "background-color 0.2s ease", // Smooth transition
-                          }}
-                        >
-                          Back
-                        </Button>
-                      )}
-                    </Box>
-                  </StepContent>
-                </Step>
-              ))}
-            </Stepper>
-            {activeStep === subtasks.length && (
-              <Paper
-                square
-                elevation={0}
-                sx={{
-                  p: 3,
-                  backgroundColor: "#1e1e1e", // Dark background
-                  color: "#ffffff", // White text
-                  borderRadius: "8px", // Rounded corners
-                  boxShadow: "0px 2px 10px rgba(0, 0, 0, 0.3)", // Subtle shadow
-                }}
-              >
-                <Typography>All steps completed - you&apos;re finished</Typography>
-                <Button
-                  onClick={handleReset}
-                  sx={{
-                    mt: 1,
-                    mr: 1,
-                    color: "#ffffff", // White text
-                    "&:hover": { backgroundColor: "#333" }, // Dark background on hover
-                    "&:focus": { outline: "none" }, // Remove focus outline
-                    transition: "background-color 0.2s ease", // Smooth transition
-                  }}
-                >
-                  Reset
-                </Button>
-              </Paper>
-            )}
-          </Box>
-        </DialogContent>
+
+        <SubtaskManager
+          subtasks={subtasks}
+          note={note}
+          setNote={setNote}
+          activeStep={activeStep}
+          setActiveStep={setActiveStep}
+          handleNext={handleNext}
+          handleBack={handleBack}
+          handleSaveNote={handleSaveNote}
+          handleReset={handleReset}
+          expandedNotes={expandedNotes}
+          toggleNoteExpand={toggleNoteExpand}
+        />
+
         <DialogActions sx={{
           display: "flex",
           justifyContent: 'space-between',
           alignItems: 'center',
-          mt: 2
+          p: 2,
+          backgroundColor: '#272727',
+          borderTop: '1px solid #444'
         }}>
           <Button
             onClick={handleReset}
             sx={{
-              color: "brown",
-              "&:hover": { backgroundColor: "#333" },
-              "&:focus": { outline: "none" },
-              transition: "background-color 0.2s ease",
+              color: '#f44336',
+              '&:hover': {
+                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+              }
             }}
           >
             Reset
@@ -518,25 +558,93 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
               onClick={handleNoteDialogClose}
               sx={{
                 color: "#ffffff",
-                "&:hover": { backgroundColor: "#333" },
-                "&:focus": { outline: "none" },
-                transition: "background-color 0.2s ease",
+                '&:hover': {
+                  backgroundColor: "#2a2a2a",
+                }
               }}
             >
               Cancel
             </Button>
             <Button
-              onClick={handleSaveNote}
+              onClick={handleSaveAndNotify}
               sx={{
+                backgroundColor: "#3f51b5",
                 color: "#ffffff",
-                "&:hover": { backgroundColor: "#333" },
-                "&:focus": { outline: "none" },
-                transition: "background-color 0.2s ease",
+                '&:hover': {
+                  backgroundColor: "#303f9f",
+                }
               }}
             >
-              Save
+              Save & Notify
             </Button>
           </Box>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={() => setConfirmDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            backgroundColor: "#121212",
+            color: "#ffffff",
+            borderRadius: "8px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.5)",
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "#ffffff", fontWeight: "600", fontSize: "1.25rem" }}>
+          Confirm Save and Notify
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            Are you sure you want to save the changes and notify the following users?
+          </Typography>
+          <Box sx={{ maxHeight: '200px', overflow: 'auto', p: 1 }}>
+            <Stack spacing={1}>
+              {usersToNotify.map(user => (
+                <Box key={user._id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Avatar
+                    src={user.avatar}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      bgcolor: creatorColor.find(c => c.id === user._id)?.color || '#8D6E63'
+                    }}
+                  >
+                    {!user.avatar && user.name.slice(0, 2).toUpperCase()}
+                  </Avatar>
+                  <Typography>{user.name}</Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDialogOpen(false)}
+            sx={{
+              color: "#ffffff",
+              "&:hover": { backgroundColor: "#333" },
+              "&:focus": { outline: "none" },
+              transition: "background-color 0.2s ease",
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmSaveAndNotify}
+            sx={{
+              backgroundColor: "darkblue",
+              color: "#ffffff",
+              "&:hover": { backgroundColor: "darkblue" },
+              "&:focus": { outline: "none" },
+              transition: "background-color 0.2s ease",
+            }}
+          >
+            Confirm
+          </Button>
         </DialogActions>
       </Dialog>
     </>

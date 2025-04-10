@@ -1,42 +1,312 @@
 import { TrashSchema } from "../models/trashModel.js";
+import { TaskSchema } from "../models/taskModel.js";
+import mongoose from "mongoose";
 
-
-// Get all trashes
-export const getAllTrashes = async (req, res) => {
+// Add task to trash
+export const addToTrash = async (req, res) => {
   try {
-    const trashes = await TrashSchema.find();
-    res.status(200).json(trashes);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-}
+    const {
+      slid,
+      pisDate,
+      contactNumber,
+      requestNumber,
+      governorate,
+      district,
+      teamName,
+      teamId,
+      teamCompany,
+      date,
+      tarrifName,
+      customerType,
+      customerFeedback,
+      customerName,
+      reason,
+      interviewDate,
+      priority,
+      status,
+      assignedTo,
+      whomItMayConcern,
+      createdBy,
+      category,
+      validationStatus,
+      validationCat,
+      responsibility,
+      readBy,
+      taskLogs,
+      subTasks,
+      evaluationScore,
+      // readByWhenClosed,
+      notifications,
+      deletedBy,
+      deletionReason
+    } = req.body;
 
-// Add trash
-export const addTrash = async (req, res) => {
-  const data = req.body
-  // console.log({ data });
-  // return
+    if (!slid || !deletedBy) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: slid and deletedBy"
+      });
+    }
+
+    const trashItem = new TrashSchema({
+      slid,
+      pisDate,
+      contactNumber,
+      requestNumber,
+      governorate,
+      district,
+      teamName,
+      teamId,
+      teamCompany,
+      date,
+      tarrifName,
+      customerType,
+      customerFeedback,
+      customerName,
+      reason,
+      interviewDate,
+      priority,
+      status,
+      assignedTo,
+      whomItMayConcern,
+      createdBy,
+      category,
+      validationStatus,
+      validationCat,
+      responsibility,
+      readBy,
+      taskLogs,
+      subTasks,
+      evaluationScore,
+      // readByWhenClosed,
+      notifications,
+      deletedBy,
+      deletionReason: deletionReason || "No reason provided",
+    });
+
+    await trashItem.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Task moved to trash successfully",
+      data: trashItem
+    });
+  } catch (error) {
+    // console.error("Error adding to trash:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to move task to trash",
+      error: error.message
+    });
+  }
+};
+
+// Get paginated trash items
+export const getTrashItems = async (req, res) => {
   try {
-    const trash = await TrashSchema.create(data);
-    res.status(200).json(trash);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-}
+    const trashes = await TrashSchema.find()
+      .populate('deletedBy', 'name email')
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 }); // Sort by newest first
 
-// Delete a task permanently from trash collection
-export const deleteTaskPermanently = async (req, res) => {
+    // console.log('Trash Items:', trashes); // Log the trash items
+
+    res.status(200).json({
+      success: true,
+      data: trashes // Return all items directly
+    });
+  } catch (error) {
+    // console.error("Error getting trash items:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve trash items",
+      error: error.message
+    });
+  }
+};
+
+
+// Permanently delete single item
+export const deletePermanently = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { id } = req.params;
 
-    // Delete the task from the trash collection
-    const deletedTask = await TrashSchema.findByIdAndDelete(id);
-    if (!deletedTask) {
-      return res.status(404).json({ message: "Task not found in trash" });
+    const trashItem = await TrashSchema.findById(id).session(session);
+    if (!trashItem) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "Trash item not found"
+      });
     }
 
-    res.status(200).json({ message: "Task deleted permanently", deletedTask });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    await TrashSchema.findByIdAndDelete(id).session(session);
+    await session.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      message: "Permanently deleted from trash",
+      data: {
+        id: trashItem._id,
+        slid: trashItem.slid
+      }
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    // console.error("Error deleting permanently:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete permanently",
+      error: error.message
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
+// Empty entire trash
+export const emptyTrash = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const result = await TrashSchema.deleteMany({}).session(session);
+    await session.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      message: "Trash emptied successfully",
+      data: {
+        deletedCount: result.deletedCount
+      }
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    // console.error("Error emptying trash:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to empty trash",
+      error: error.message
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
+// Restore task from trash
+export const restoreFromTrash = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { id } = req.params;
+
+    // 1. Get item from trash
+    const trashItem = await TrashSchema.findById(id).session(session);
+    if (!trashItem) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "Trash item not found"
+      });
+    }
+
+    // 2. Create new task from trash data
+    const {
+      slid,
+      pisDate,
+      contactNumber,
+      requestNumber,
+      governorate,
+      district,
+      teamName,
+      teamId,
+      teamCompany,
+      date,
+      tarrifName,
+      customerType,
+      customerFeedback,
+      customerName,
+      reason,
+      interviewDate,
+      priority,
+      status,
+      assignedTo,
+      whomItMayConcern,
+      createdBy,
+      category,
+      validationStatus,
+      validationCat,
+      responsibility,
+      readBy,
+      taskLogs,
+      subTasks,
+      evaluationScore,
+      // readByWhenClosed,
+      notifications
+    } = trashItem;
+
+    const newTask = new TaskSchema({
+      slid,
+      pisDate,
+      contactNumber,
+      requestNumber,
+      governorate,
+      district,
+      teamName,
+      teamId,
+      teamCompany,
+      date,
+      tarrifName,
+      customerType,
+      customerFeedback,
+      customerName,
+      reason,
+      interviewDate,
+      priority,
+      status,
+      assignedTo,
+      whomItMayConcern,
+      createdBy,
+      category,
+      validationStatus,
+      validationCat,
+      responsibility,
+      readBy,
+      taskLogs,
+      subTasks,
+      evaluationScore,
+      // readByWhenClosed,
+      notifications,
+      isDeleted: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    await newTask.save({ session });
+
+    // 3. Remove from trash
+    await TrashSchema.findByIdAndDelete(id).session(session);
+
+    await session.commitTransaction();
+
+    res.status(201).json({
+      success: true,
+      message: "Task restored successfully",
+      data: newTask
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    // console.error("Error restoring from trash:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to restore from trash",
+      error: error.message
+    });
+  } finally {
+    session.endSession();
   }
 };

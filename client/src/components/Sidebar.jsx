@@ -13,7 +13,6 @@ import { Link, useLocation } from "react-router-dom";
 import { setIsSidebarOpen } from "../redux/slices/authSlice";
 import clsx from "clsx";
 import { Stack, Accordion, AccordionSummary, AccordionDetails, useMediaQuery } from "@mui/material";
-import { RiAdminLine } from "react-icons/ri";
 import { ExpandMore } from "@mui/icons-material";
 import { useEffect, useState } from "react";
 
@@ -124,7 +123,6 @@ const SidebarLinks = () => {
 
 // NavLink Component
 const NavLink = ({ el, onClick, isCollapsed }) => {
-  const user = useSelector((state) => state?.auth?.user);
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
   const isMobileOrMediumScreen = useMediaQuery('(max-width:1024px)');
@@ -234,27 +232,20 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
         </Accordion>
       ) : (
         <Link
-          to={el.label === "Quiz" && user.role !== "Admin" ? "#" : `/${el.link}`}
-          onClick={(e) => {
-            if (el.label === "Quiz" && user.role !== "Admin") {
-              e.preventDefault();
-            } else {
-              onClick?.(e);
-            }
-          }}
+          to={`/${el.link}`} // Changed from conditional to direct link
+          onClick={onClick}
           className={clsx(
             "w-full flex gap-2 px-3 py-2 rounded-md items-center text-base transition-colors duration-200",
             location.pathname === `/${el.link}`
               ? "text-[#3ea6ff] font-bold bg-[#333]"
               : "text-gray-300 hover:bg-[#333]",
             isCollapsed && !isMobileOrMediumScreen ? "justify-center" : "",
-            el.label === "Quiz" && user.role !== "Admin" ? "cursor-not-allowed opacity-50" : "cursor-pointer"
           )}
         >
           {el.icon}
           {(!isCollapsed || isMobileOrMediumScreen) && (
-            <div className={`w-full ${el.label === "Quiz" && "flex items-center justify-between"}`}>
-              {el.label} {el.label === "Quiz" && <RiAdminLine />}
+            <div className="w-full">
+              {el.label}
             </div>
           )}
         </Link>

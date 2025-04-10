@@ -3,38 +3,31 @@ import mongoose from "mongoose";
 const taskSchema = new mongoose.Schema(
   {
     slid: { type: String, required: [true, "SLID is required"], trim: true, unique: true },
-
     pisDate: {
       type: Date,
-      required: [true, "PIS Date is required"], // Ensure it's required
+      required: [true, "PIS Date is required"],
     },
-
     contactNumber: {
       type: Number,
       required: [true, "Contact number is required"],
     },
-
     requestNumber: {
       type: Number,
       required: [true, "Request number is required"],
     },
-
     governorate: {
       type: String,
       required: [true, "Governorate is required"],
     },
-
     district: {
       type: String,
       required: [true, "District is required"],
     },
-
     teamName: {
       type: String,
       required: [true, "Team name is required"],
       trim: true,
     },
-
     teamId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "FieldTeams",
@@ -46,32 +39,22 @@ const taskSchema = new mongoose.Schema(
         message: "Invalid team ID",
       },
     },
-
     teamCompany: {
       type: String,
       required: [true, "Team company is required"],
     },
-
     date: {
       type: Date,
-      // required: [true, "Date is required"],
     },
-
     tarrifName: { type: String, trim: true, required: [true, "Tarrif Name is required"] },
-
     customerType: { type: String, trim: true, required: [true, "Customer Type is required"] },
-
     customerFeedback: { type: String, trim: true, required: [true, "Customer feedback is required"] },
-
     customerName: { type: String, trim: true, required: [true, "Customer name is required"] },
-
     reason: { type: String, trim: true, required: [true, "Reason is required"] },
-
     interviewDate: {
       type: Date,
-      required: [true, "Interview Date is required"], // Ensure it's required
+      required: [true, "Interview Date is required"],
     },
-
     priority: {
       type: String,
       enum: {
@@ -80,7 +63,6 @@ const taskSchema = new mongoose.Schema(
       },
       default: "Normal",
     },
-
     status: {
       type: String,
       enum: {
@@ -89,7 +71,6 @@ const taskSchema = new mongoose.Schema(
       },
       default: "Todo",
     },
-
     assignedTo: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -104,7 +85,6 @@ const taskSchema = new mongoose.Schema(
         },
       },
     ],
-
     whomItMayConcern: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -119,7 +99,6 @@ const taskSchema = new mongoose.Schema(
         },
       },
     ],
-
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -131,7 +110,6 @@ const taskSchema = new mongoose.Schema(
         message: "Invalid createdBy user ID",
       },
     },
-
     category: {
       type: String,
       enum: {
@@ -150,7 +128,6 @@ const taskSchema = new mongoose.Schema(
       },
       required: [true, "Category is required"],
     },
-
     validationStatus: {
       type: String,
       enum: {
@@ -158,24 +135,20 @@ const taskSchema = new mongoose.Schema(
         message: "Validation status must be either Pending, Approved, or Rejected",
       },
     },
-
     validationCat: {
       type: String,
       required: [true, "Validation category is required"],
     },
-
     responsibility: {
       type: String,
       required: [true, "Responsibility is required"],
     },
-
     readBy: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User", // Users who have read this task
+        ref: "User",
       },
     ],
-
     taskLogs: [
       {
         action: {
@@ -192,10 +165,9 @@ const taskSchema = new mongoose.Schema(
           type: Date,
           default: Date.now,
         },
-        description: String, // Optional additional info about the action
+        description: String,
       },
     ],
-
     subTasks: [
       {
         title: { type: String, },
@@ -204,18 +176,22 @@ const taskSchema = new mongoose.Schema(
         dateTime: { type: String, },
       }
     ],
-
     isDeleted: {
       type: Boolean,
       default: false,
     },
-
     evaluationScore: {
       type: Number,
       default: 1,
       required: [true, "Evaluation score is required"],
     },
-
+    // readByWhenClosed: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    notifications: [{
+      recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      message: { type: String, required: true },
+      read: { type: Boolean, default: false },
+      createdAt: { type: Date, default: Date.now }
+    }],
   }, { timestamps: true }
 );
 

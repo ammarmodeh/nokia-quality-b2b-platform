@@ -79,8 +79,8 @@ const Auth = () => {
   };
 
   const showSnackbar = (message, severity = 'success') => {
-    console.log('Showing snackbar:', message, severity);
-    console.log('Current snackbar state before update:', snackbar); // Add this line
+    // console.log('Showing snackbar:', message, severity);
+    // console.log('Current snackbar state before update:', snackbar); // Add this line
     setSnackbar({ open: true, message, severity });
   };
 
@@ -111,12 +111,12 @@ const Auth = () => {
         setIsLogin(true);
       }
     } catch (error) {
-      console.error('Login error:', error);
-      console.log('Error response:', error.response); // Add this line
+      // console.error('Login error:', error);
+      // console.log('Error response:', error.response); // Add this line
       let errorMessage = 'An error occurred.';
 
       if (error.response) {
-        console.log('Response data:', error.response.data); // Detailed logging
+        // console.log('Response data:', error.response.data); // Detailed logging
         errorMessage = error.response.data?.message ||
           error.response.data?.error ||
           error.response.statusText;

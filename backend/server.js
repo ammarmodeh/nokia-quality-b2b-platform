@@ -35,9 +35,9 @@ app.use(cookieParser());
 
 connectDB();
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
+// app.get("/", (req, res) => {
+//   res.send("Hello World!");
+// });
 
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
@@ -53,4 +53,5 @@ app.use("/api/policies", policyRoutes);
 // const PORT = process.env.PORT || 5001;
 // app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
+// This export is used to export the app object, which is the main entry point for your Express application.
 export default app;

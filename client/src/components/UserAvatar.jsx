@@ -154,7 +154,7 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
       reset();
       setTimeout(() => setSubmitSuccess(false), 3000);
     } catch (error) {
-      console.error("Failed to submit suggestion:", error);
+      // console.error("Failed to submit suggestion:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -318,7 +318,7 @@ const UserAvatar = () => {
       dispatch(logout());
       navigate("/auth");
     } catch (error) {
-      console.error("Logout failed:", error);
+      // console.error("Logout failed:", error);
     } finally {
       setIsLoggingOut(false);
     }
@@ -346,7 +346,7 @@ const UserAvatar = () => {
         alert("Account ID copied to clipboard!");
       })
       .catch((err) => {
-        console.error("Failed to copy: ", err);
+        // console.error("Failed to copy: ", err);
       });
   };
 

@@ -112,7 +112,7 @@ export const login = async (req, res) => {
 
     // Check if user exists
     if (!user) {
-      console.log('User not found');
+      // console.log('User not found');
       return res.status(401).json({ message: "User not found" });
     }
 
@@ -121,7 +121,7 @@ export const login = async (req, res) => {
     // console.log({ isMatch });
 
     if (!isMatch) {
-      console.log('Password does not match');
+      // console.log('Password does not match');
       return res.status(401).json({ message: "Invalid password" });
     }
 
@@ -142,7 +142,7 @@ export const login = async (req, res) => {
       user,
     });
   } catch (error) {
-    console.error('Error during login:', error);
+    // console.error('Error during login:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -284,7 +284,7 @@ export const updateVisibility = async (req, res) => {
   // console.log("Logged-in User ID - userId:", userId);
 
   if (memberId !== userId) {
-    console.log("Unauthorized access attempt: memberId does not match userId");
+    // console.log("Unauthorized access attempt: memberId does not match userId");
     return res.status(403).json({ message: "You can only update your own visibility settings." });
   }
 
@@ -301,7 +301,7 @@ export const updateVisibility = async (req, res) => {
 
     res.status(200).json(user);
   } catch (error) {
-    console.error("Error updating visibility:", error);
+    // console.error("Error updating visibility:", error);
     res.status(500).json({ error: error.message });
   }
 };

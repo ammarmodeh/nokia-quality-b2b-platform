@@ -19,6 +19,7 @@ const TABS = [
 
 const Tasks = () => {
   const user = useSelector((state) => state?.auth?.user);
+  // console.log({ user });
   const [users, setUsers] = useState([]);
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(false);
@@ -29,6 +30,11 @@ const Tasks = () => {
   const [allTasks, setAllTasks] = useState([]);
   const searchInputRef = useRef(null);
   const { ref, inView } = useInView();
+  const [trashActionState, setTrashActionState] = useState({
+    loading: false,
+    error: null,
+    success: false
+  });
 
   // Media queries for responsive design
   const isSmallScreen = useMediaQuery('(max-width:600px)');
@@ -42,7 +48,7 @@ const Tasks = () => {
         });
         setUsers(data);
       } catch (error) {
-        console.error("Error fetching users:", error);
+        // console.error("Error fetching users:", error);
       }
     };
     fetchUsers();
@@ -56,7 +62,7 @@ const Tasks = () => {
         });
         setAllTasks(data);
       } catch (error) {
-        console.error("Error fetching all tasks:", error);
+        // console.error("Error fetching all tasks:", error);
       }
     };
     fetchAllTasks();
@@ -71,7 +77,7 @@ const Tasks = () => {
       });
       return data;
     } catch (error) {
-      console.error("Error fetching tasks:", error);
+      // console.error("Error fetching tasks:", error);
       throw error;
     }
   };
@@ -173,62 +179,96 @@ const Tasks = () => {
   };
 
   const handleTaskDelete = async (taskId) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this task?");
+    const confirmDelete = window.confirm("Are you sure you want to move this task to trash?");
     if (!confirmDelete) return;
+    setTrashActionState({ loading: true, error: null, success: false });
 
     try {
-      const { data } = await api.get(`/tasks/get-task/${taskId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      // First get the complete task data
+      const { data: taskData } = await api.get(`/tasks/get-task/${taskId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
       });
 
-      if (data) {
-        const response = await api.post(`/trash/add-trash`, data, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      if (!taskData) {
+        throw new Error("Task not found");
+      }
+
+      // Move to trash with additional metadata
+      const trashResponse = await api.post('/trash/add-trash', {
+        ...taskData, // Spread all task fields
+        deletedBy: user._id,
+        deletionReason: 'Deleted by user',
+        deletedAt: new Date()
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+      });
+
+      if (trashResponse.status === 201) {
+        // Only delete from main collection if trash operation succeeded
+        await api.delete(`/tasks/delete-task/${taskId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
         });
 
-        if (response.status === 200) {
-          alert("Task added to trash successfully! You can check the trash page.");
-          const res = await api.delete(`/tasks/delete-task/${taskId}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-          });
-          // console.log(res.data);
-          setFilteredTasks((prevTasks) => prevTasks.filter((task) => task._id !== taskId));
-        }
+        // Update UI state
+        setFilteredTasks(prev => prev.filter(task => task._id !== taskId));
+        setAllTasks(prev => prev.filter(task => task._id !== taskId));
+
+        alert("Task moved to trash successfully");
       } else {
-        alert("Failed to add task to trash.");
+        throw new Error("Failed to move task to trash");
       }
+      setTrashActionState({ loading: false, error: null, success: true });
     } catch (error) {
-      console.error("Error Adding task to trash:", error);
+      // console.error("Error in handleTaskDelete:", error);
+      alert(`Error: ${error.message}`);
+      setTrashActionState({ loading: false, error: error.message, success: false });
     }
   };
 
+
   const handleTaskArchive = async (taskId) => {
-    const confirmDelete = window.confirm("Are you sure you want to archive this task?");
-    if (!confirmDelete) return;
+    const confirmArchive = window.confirm("Are you sure you want to archive this task?");
+    if (!confirmArchive) return;
+    setTrashActionState({ loading: true, error: null, success: false });
 
     try {
-      const { data } = await api.get(`/tasks/get-task/${taskId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      const { data: taskData } = await api.get(`/tasks/get-task/${taskId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
       });
 
-      if (data) {
-        const response = await api.post(`/archive/add-archive`, data, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      if (!taskData) {
+        throw new Error("Task not found");
+      }
+
+      // Archive the task
+      const archiveResponse = await api.post('/archive/add-archive', {
+        taskData,
+        archivedBy: user._id,
+        archivedAt: new Date(),
+        archiveReason: 'Archived by admin'
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+      });
+
+      if (archiveResponse.status === 201) {
+        // Delete from main collection
+        await api.delete(`/tasks/delete-task/${taskId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
         });
 
-        if (response.status === 200) {
-          alert("Task added to archive successfully! You can check the archive page.");
-          const res = await api.delete(`/tasks/delete-task/${taskId}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-          });
-          // console.log(res.data);
-          setFilteredTasks((prevTasks) => prevTasks.filter((task) => task._id !== taskId));
-        }
+        // Update UI state
+        setFilteredTasks(prev => prev.filter(task => task._id !== taskId));
+        setAllTasks(prev => prev.filter(task => task._id !== taskId));
+
+        alert("Task archived successfully");
       } else {
-        alert("Failed to add task to archive.");
+        throw new Error("Failed to archive task");
       }
+      setTrashActionState({ loading: false, error: null, success: true });
     } catch (error) {
-      console.error("Error Adding task to archive:", error);
+      // console.error("Error in handleTaskArchive:", error);
+      alert(`Error: ${error.message}`);
+      setTrashActionState({ loading: false, error: error.message, success: false });
     }
   };
 
@@ -250,7 +290,7 @@ const Tasks = () => {
       if (error.response && error.response.data && error.response.data.isAlreadyFavorited) {
         alert("This task is already in your favorites list!");
       } else {
-        console.error("Error updating favorite status:", error);
+        // console.error("Error updating favorite status:", error);
         alert("Failed to add to favorites. Please try again.");
       }
     }
@@ -513,9 +553,10 @@ const Tasks = () => {
                     users={users}
                     handleTaskUpdate={handleTaskUpdate}
                     handleTaskDelete={handleTaskDelete}
-                    handleFavoriteClick={handleFavoriteClick}
                     handleTaskArchive={handleTaskArchive}
+                    handleFavoriteClick={handleFavoriteClick}
                     setUpdateStateDuringSave={setUpdateStateDuringSave}
+                    trashActionState={trashActionState}
                   />
                 ))}
               </Box>

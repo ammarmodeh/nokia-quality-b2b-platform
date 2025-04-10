@@ -1,15 +1,20 @@
 import express from 'express';
-import { addTrash, getAllTrashes, deleteTaskPermanently } from '../controllers/trashControllers.js';
+import { addToTrash, deletePermanently, emptyTrash, getTrashItems, restoreFromTrash } from '../controllers/trashControllers.js';
+
 
 const router = express.Router();
 
-// Get All trashes
-router.get('/get-all-trashes', getAllTrashes);
+router.route('/')
+  .get(getTrashItems) // Get all trash items
+  .delete(emptyTrash); // Empty entire trash
 
-// Fetch all quiz questions
-router.post('/add-trash', addTrash);
+router.route('/add-trash')
+  .post(addToTrash); // Add task to trash without authentication
 
-// Delete a task from trash (permanently)
-router.delete('/delete-permanently/:id', deleteTaskPermanently);
+router.route('/:id')
+  .delete(deletePermanently); // Delete single item
+
+router.route('/:id/restore')
+  .post(restoreFromTrash);   // Restore single item
 
 export default router;

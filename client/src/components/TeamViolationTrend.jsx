@@ -8,7 +8,7 @@ const groupTasksByWeek = (tasks) => {
 
   tasks.forEach((task) => {
     if (!task.interviewDate) {
-      console.warn("Task missing interviewDate:", task);
+      // console.warn("Task missing interviewDate:", task);
       return; // Skip tasks without interviewDate
     }
 
@@ -45,7 +45,7 @@ const countViolationsPerTeam = (groupedTasks, currentWeek) => {
 
       tasks.forEach((task) => {
         if (!task.teamName) {
-          console.warn("Task missing team:", task);
+          // console.warn("Task missing team:", task);
           return; // Skip tasks without team
         }
 

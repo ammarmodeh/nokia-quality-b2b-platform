@@ -49,7 +49,7 @@ const Favourite = () => {
       });
       setFavourites(response.data.favourites || []);
     } catch (err) {
-      console.error("Error fetching favorites:", err);
+      // console.error("Error fetching favorites:", err);
       setError("Failed to load favorites. Please try again.");
     } finally {
       setLoading(false);
@@ -80,7 +80,7 @@ const Favourite = () => {
       setFavourites(favourites.filter(fav => fav._id !== currentTask._id));
       alert("Removed from favorites successfully!");
     } catch (err) {
-      console.error("Error deleting favorite:", err);
+      // console.error("Error deleting favorite:", err);
       alert("Failed to remove from favorites. Please try again.");
     } finally {
       handleMenuClose();

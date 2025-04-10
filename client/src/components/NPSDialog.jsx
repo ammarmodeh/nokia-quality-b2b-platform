@@ -48,10 +48,10 @@ export default function NPSDialog({ open, handleClose, name }) {
           if (data.success) {
             setAgreementStatus(data.agreementStatus); // Set the agreement status
           } else {
-            console.error('Failed to fetch agreement status:', data.message);
+            // console.error('Failed to fetch agreement status:', data.message);
           }
         } catch (error) {
-          console.error('Error fetching agreement status:', error);
+          // console.error('Error fetching agreement status:', error);
         }
       };
       fetchAgreementStatus();
@@ -92,7 +92,7 @@ export default function NPSDialog({ open, handleClose, name }) {
         alert('Invalid password or failed to store action.');
       }
     } catch (error) {
-      console.error('Error:', error);
+      // console.error('Error:', error);
       alert(error.response.data.message || 'An error occurred while processing your request.');
     }
   };

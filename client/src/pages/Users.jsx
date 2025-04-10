@@ -33,7 +33,7 @@ const TeamPage = () => {
         });
         setTeam(data);
       } catch (error) {
-        console.error("Error fetching team members:", error);
+        // console.error("Error fetching team members:", error);
       }
     };
 
@@ -54,7 +54,7 @@ const TeamPage = () => {
         alert("Email copied to clipboard!");
       })
       .catch((error) => {
-        console.error("Failed to copy email:", error);
+        // console.error("Failed to copy email:", error);
       });
   }, []);
 
@@ -82,7 +82,7 @@ const TeamPage = () => {
         prevMember?._id === memberId ? { ...prevMember, visibleTo } : prevMember
       );
     } catch (error) {
-      console.error("Error updating visibility:", error);
+      // console.error("Error updating visibility:", error);
     }
   }, []);
 

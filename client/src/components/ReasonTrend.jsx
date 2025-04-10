@@ -9,7 +9,7 @@ const groupTasksByWeek = (tasks) => {
 
   tasks.forEach((task) => {
     if (!task.interviewDate) {
-      console.warn("Task missing interviewDate:", task);
+      // console.warn("Task missing interviewDate:", task);
       return; // Skip tasks without interviewDate
     }
 
@@ -43,7 +43,7 @@ const countReasonsAndCategories = (tasks) => {
 
   tasks.forEach((task) => {
     if (!task.reason) {
-      console.warn("Task missing reason:", task);
+      // console.warn("Task missing reason:", task);
       return; // Skip tasks without reason
     }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Menu, MenuItem, Button, Typography, Box, Badge, Stack } from "@mui/material";
+import { Menu, MenuItem, Button, Typography, Box, Badge, Stack, Divider, Chip, Avatar } from "@mui/material";
 import { BiSolidMessageRounded } from "react-icons/bi";
 import { IoMdDocument, IoMdNotificationsOutline } from "react-icons/io";
 import { IoMdClose } from "react-icons/io";
@@ -10,8 +10,10 @@ import api from "../api/api";
 
 const NOTIFICATION_ICONS = {
   task: <IoMdNotificationsOutline className="h-5 w-5" />,
+  'task-update': <IoMdNotificationsOutline className="h-5 w-5" />,
+  'task-closed': <IoMdNotificationsOutline className="h-5 w-5" />,
   suggestion: <BiSolidMessageRounded className="h-5 w-5" />,
-  policy: <IoMdDocument className="h-5 w-5" />, // Add a document icon for policies
+  policy: <IoMdDocument className="h-5 w-5" />,
 };
 
 const NotificationPanel = () => {
@@ -22,19 +24,19 @@ const NotificationPanel = () => {
   const open = Boolean(anchorEl);
   const navigate = useNavigate();
 
+  const getInitials = (name = '') => {
+    const names = name.split(' ');
+    return names.map(n => n[0]).join('').toUpperCase();
+  };
+
   const markPolicyAsRead = async (policyId) => {
     try {
       const response = await api.patch(`/policies/${policyId}/mark-read`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
-
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Failed to mark as read');
-      }
-      return true;
+      return response.data.success;
     } catch (error) {
-      console.error('Mark policy as read failed:', error);
-      // Optionally show error to user
+      // console.error('Mark policy as read failed:', error);
       return false;
     }
   };
@@ -51,14 +53,23 @@ const NotificationPanel = () => {
           }
         }
       );
-
-      if (!response.data.success) {
-        console.error("Failed to mark response as read:", response.data.error);
-        return false;
-      }
-      return true;
+      return response.data.success;
     } catch (error) {
-      console.error("Error marking response as read:", error);
+      // console.error("Error marking response as read:", error);
+      return false;
+    }
+  };
+
+  const markTaskNotificationAsRead = async (taskId, notificationId) => {
+    try {
+      const response = await api.put(
+        `/tasks/${taskId}/notifications/${notificationId}/read`,
+        {},
+        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
+      );
+      return response.status === 200;
+    } catch (error) {
+      // console.error("Error marking task notification as read:", error);
       return false;
     }
   };
@@ -81,7 +92,7 @@ const NotificationPanel = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
     } catch (error) {
-      console.error("Error marking suggestion as read:", error);
+      // console.error("Error marking suggestion as read:", error);
     }
   };
 
@@ -93,44 +104,38 @@ const NotificationPanel = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
     } catch (error) {
-      console.error("Error marking response as read:", error);
+      // console.error("Error marking response as read:", error);
     }
   };
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        // Fetch tasks assigned to me
-        const tasksResponse = await api.get("/tasks/get-all-tasks", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-        });
-
-        // Fetch user suggestions (only for regular users)
-        const suggestionsResponse = user.role === "Member"
-          ? await api.get("/suggestions/user", {
+        const [tasksResponse, suggestionsResponse, adminSuggestionsResponse, policiesResponse] = await Promise.all([
+          api.get("/tasks/get-all-tasks", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          }),
+          user.role === "Member" ? api.get("/suggestions/user", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          }) : { data: { data: [] } },
+          user.role === "Admin" ? api.get("/suggestions", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          }) : { data: { data: [] } },
+          api.get("/policies/notifications", {
             headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
           })
-          : { data: { data: [] } };
-
-        // Fetch admin suggestions (only for admin)
-        const adminSuggestionsResponse = user.role === "Admin"
-          ? await api.get("/suggestions", {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-          })
-          : { data: { data: [] } };
-
-        // Fetch policy notifications
-        const policiesResponse = await api.get("/policies/notifications", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-        });
-        // console.log({ policiesResponse });
+        ]);
 
         // Process tasks
         let taskNotifications = [];
         if (Array.isArray(tasksResponse.data)) {
+          // 1. Assigned tasks (for users in assignedTo array)
           const myAssignedTasks = tasksResponse.data.filter((task) =>
-            task.assignedTo.some((assignedUser) => assignedUser._id === user._id)
+            task.assignedTo.some((assignedUser) =>
+              String(assignedUser._id || assignedUser) === String(user._id)
+            )
           );
+
           taskNotifications = myAssignedTasks
             .filter((task) => !task.readBy.includes(user._id))
             .map((task) => ({
@@ -139,6 +144,62 @@ const NotificationPanel = () => {
               createdAt: task.createdAt,
               isRead: task.readBy.includes(user._id)
             }));
+
+          // 2. Task updates (for users in whomItMayConcern array)
+          const taskUpdateNotifications = tasksResponse.data
+            .filter(task =>
+              task.whomItMayConcern &&
+              task.whomItMayConcern.some(userRef =>
+                String(userRef._id || userRef) === String(user._id)
+              )
+            )
+            .flatMap(task =>
+              (task.notifications || [])
+                .filter(notif =>
+                  String(notif.recipient?._id || notif.recipient) === String(user._id) &&
+                  !notif.read &&
+                  notif.type !== 'task-closed'
+                )
+                .map(notif => ({
+                  ...task,
+                  type: 'task-update',
+                  notificationId: notif._id,
+                  createdAt: notif.createdAt,
+                  isRead: notif.read,
+                  message: notif.message,
+                  recipientId: notif.recipient?._id || notif.recipient
+                }))
+            );
+
+          // 3. Closed task notifications
+          const closedTaskNotifications = tasksResponse.data
+            .filter(task =>
+              task.notifications &&
+              task.notifications.some(notif =>
+                String(notif.recipient?._id || notif.recipient) === String(user._id) &&
+                notif.type === 'task-closed' &&
+                !notif.read
+              )
+            )
+            .flatMap(task =>
+              task.notifications
+                .filter(notif =>
+                  String(notif.recipient?._id || notif.recipient) === String(user._id) &&
+                  notif.type === 'task-closed' &&
+                  !notif.read
+                )
+                .map(notif => ({
+                  ...task,
+                  type: 'task-closed',
+                  notificationId: notif._id,
+                  createdAt: notif.createdAt,
+                  isRead: notif.read,
+                  message: notif.message,
+                  recipientId: notif.recipient?._id || notif.recipient
+                }))
+            );
+
+          taskNotifications = [...taskNotifications, ...taskUpdateNotifications, ...closedTaskNotifications];
         }
 
         // Process policy notifications
@@ -147,14 +208,12 @@ const NotificationPanel = () => {
           policyNotifications = policiesResponse.data.data
             .flatMap(policy => {
               if (!policy.createdBy) return [];
-
               const createdById = policy.createdBy._id || policy.createdBy;
               const isAdmin = user.role === "Admin";
               const isManager = user.isManager;
 
               if (!isAdmin && !isManager) return [];
 
-              // For admins: process all unread manager updates
               if (isAdmin && createdById === user._id) {
                 return (policy.logs || [])
                   .filter(log => {
@@ -179,9 +238,7 @@ const NotificationPanel = () => {
                       }
                     }
                   }));
-              }
-              // For managers: process unread policy creations
-              else if (isManager && createdById !== user._id) {
+              } else if (isManager && createdById !== user._id) {
                 const hasReadPolicy = (policy.readBy || []).includes(user._id);
                 return (policy.logs || [])
                   .filter(log => {
@@ -211,13 +268,13 @@ const NotificationPanel = () => {
             .filter(Boolean);
         }
 
-        // Process user suggestions (create separate notifications for each unread response)
+        // Process suggestions
         let suggestionNotifications = [];
-        if (Array.isArray(suggestionsResponse.data.data)) {
+        if (Array.isArray(suggestionsResponse.data?.data)) {
           suggestionNotifications = suggestionsResponse.data.data
             .filter(suggestion => suggestion.responseLog?.length > 0)
-            .flatMap(suggestion => {
-              return suggestion.responseLog
+            .flatMap(suggestion =>
+              suggestion.responseLog
                 .filter(response => !response.readBy?.includes(user._id))
                 .map(response => ({
                   ...suggestion,
@@ -227,24 +284,19 @@ const NotificationPanel = () => {
                   createdAt: response.respondedAt,
                   isRead: false,
                   lastResponse: response
-                }));
-            });
+                }))
+            );
         }
 
-        // Process admin suggestions (only unread ones)
-        if (Array.isArray(adminSuggestionsResponse.data.data)) {
+        if (Array.isArray(adminSuggestionsResponse.data?.data)) {
           const adminSuggestions = adminSuggestionsResponse.data.data
-            .filter(suggestion => {
-              if (!suggestion.readBy) return true;
-              return !suggestion.readBy.includes(user._id);
-            })
+            .filter(suggestion => !suggestion.readBy?.includes(user._id))
             .map(suggestion => ({
               ...suggestion,
               type: 'suggestion-admin',
               createdAt: suggestion.createdAt,
-              isRead: suggestion.readBy?.includes(user._id) || false
+              isRead: false
             }));
-
           suggestionNotifications = [...suggestionNotifications, ...adminSuggestions];
         }
 
@@ -255,12 +307,10 @@ const NotificationPanel = () => {
           ...policyNotifications
         ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        // After processing all notifications
-        const unread = allNotifications.filter(n => !n.isRead).length;
-        setUnreadCount(unread);
+        setUnreadCount(allNotifications.filter(n => !n.isRead).length);
         setNotifications(allNotifications);
       } catch (error) {
-        console.error("Error fetching notifications:", error);
+        // console.error("Error fetching notifications:", error);
       }
     };
 
@@ -277,79 +327,101 @@ const NotificationPanel = () => {
         const response = await api.get(`/tasks/view-task/${notification._id}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         });
-
         if (response.status === 200) {
           navigate(`/tasks/view-task/${notification._id}`);
           removeNotification(notification._id);
-          setUnreadCount((prevCount) => Math.max(prevCount - 1, 0));
+          setUnreadCount(prev => Math.max(prev - 1, 0));
         }
-      } else if (notification.type === 'suggestion-response') {
+      }
+      else if (notification.type === 'task-update') {
+        const success = await markTaskNotificationAsRead(notification._id, notification.notificationId);
+        if (success) {
+          navigate(`/tasks/view-task/${notification._id}`);
+          removeNotification(notification._id);
+          setUnreadCount(prev => Math.max(prev - 1, 0));
+        }
+      }
+      else if (notification.type === 'task-closed') {
+        const success = await markTaskNotificationAsRead(notification._id, notification.notificationId);
+        if (success) {
+          navigate(`/tasks/view-task/${notification._id}`);
+          removeNotification(notification._id);
+          setUnreadCount(prev => Math.max(prev - 1, 0));
+        }
+      }
+      else if (notification.type === 'suggestion-response') {
         const suggestionId = notification._id.split('-')[0];
-
         if (user.role === "Member") {
           await markResponseAsRead(suggestionId, notification.responseId);
         } else {
           await markSuggestionAsRead(suggestionId);
         }
-
         navigate(user.role === "Admin" ? "/admin/suggestions" : "/my-suggestions");
         removeNotification(notification._id);
-        setUnreadCount((prevCount) => Math.max(prevCount - 1, 0));
+        setUnreadCount(prev => Math.max(prev - 1, 0));
       }
       else if (notification.type === 'suggestion-admin') {
         await markSuggestionAsRead(notification._id);
         navigate('/admin/suggestions');
         removeNotification(notification._id);
-        setUnreadCount((prevCount) => Math.max(prevCount - 1, 0));
+        setUnreadCount(prev => Math.max(prev - 1, 0));
       }
-      else if (notification.type.includes('policy')) {
-        const policyId = notification._id.split('-')[0];
-        let success = false;
-
-        if (notification.type === 'policy-response') {
-          // Admin viewing manager's response
-          success = await markPolicyResponseAsRead(policyId, notification.logId);
-          navigate('/policies'); // Ensure navigation happens
-        } else if (notification.type === 'policy-admin') {
-          // Manager viewing admin's creation
-          success = await markPolicyAsRead(policyId);
-          navigate('/policies'); // Ensure navigation happens
-        }
-
+      else if (notification.type === 'policy-response') {
+        const success = await markPolicyResponseAsRead(notification._id.split('-')[0], notification.logId);
         if (success) {
+          navigate('/policies');
           removeNotification(notification._id);
           setUnreadCount(prev => Math.max(prev - 1, 0));
         }
       }
       else if (notification.type === 'policy-admin') {
-        const policyId = notification._id.split('-')[0];
-
-        if (user.isManager) {
-          await markPolicyAsRead(policyId);
+        const success = await markPolicyAsRead(notification._id.split('-')[0]);
+        if (success) {
+          navigate("/policies");
+          removeNotification(notification._id);
+          setUnreadCount(prev => Math.max(prev - 1, 0));
         }
-
-        navigate("/policies");
-        removeNotification(notification._id);
-        setUnreadCount((prevCount) => Math.max(prevCount - 1, 0));
       }
     } catch (error) {
-      console.error("Error handling notification:", error);
+      // console.error("Error handling notification:", error);
     }
   };
 
   const getNotificationContent = (notification) => {
+    // console.log({ notification });
     switch (notification.type) {
       case 'task':
         return {
           title: notification.slid || 'New Task Assigned',
-          description: `Task assigned by ${notification.createdBy?.name || 'a manager'}`,
-          meta: (
-            <>
-              <span style={{ color: "#FF9900" }}>Priority:</span> {notification.priority} |{" "}
-              <span style={{ color: "#006CE0" }}>Status:</span> {notification.status}
-            </>
-          ),
-          icon: NOTIFICATION_ICONS["task"]
+          description: `You have been assigned a new task`,
+          actionUser: notification.createdBy,
+          actionText: 'Assigned to you',
+          icon: NOTIFICATION_ICONS["task"],
+          date: notification.createdAt,
+          assignedUsers: notification.assignedTo
+        };
+      case 'task-update':
+        {
+          const assignedUser = notification.assignedTo?.[0] || notification.updatedBy || "Unknown";
+          return {
+            title: `Task Updated: ${notification.slid}`,
+            description: notification.message || `Task has been updated`,
+            actionUser: assignedUser,
+            actionText: 'Updated by',
+            icon: NOTIFICATION_ICONS["task-update"],
+            date: notification.updatedAt || notification.createdAt,
+            assignedUsers: notification.assignedTo
+          };
+        }
+      case 'task-closed':
+        return {
+          title: `Task Closed: ${notification.slid}`,
+          description: notification.message || `Task has been closed`,
+          actionUser: notification.closedBy || notification.createdBy,
+          actionText: 'closed',
+          icon: NOTIFICATION_ICONS["task-closed"],
+          date: notification.closedAt || notification.updatedAt || notification.createdAt,
+          assignedUsers: notification.assignedTo
         };
       case 'suggestion-response':
         return {
@@ -370,14 +442,31 @@ const NotificationPanel = () => {
           title: `Manager responded to your policy: ${notification.name}`,
           description: notification.lastAction?.details || 'New response to your policy',
           meta: `Action: ${notification.lastAction?.action || notification.action}`,
-          icon: NOTIFICATION_ICONS["policy"]
+          actionUser: notification.lastAction?.performedBy || "Manager",
+          actionText: 'Responded by',
+          icon: NOTIFICATION_ICONS["policy"],
+          date: notification.lastAction?.performedAt || notification.lastUpdate || notification.createdAt,
+          policyDetails: {
+            createdBy: notification.createdBy,
+            category: notification.category,
+            lastUpdated: notification.lastUpdate
+          }
         };
       case 'policy-admin':
         return {
           title: `New policy ${notification.lastAction?.action === 'create' ? 'created' : 'updated'}`,
           description: notification.name,
-          meta: `Action: ${notification.lastAction?.action}`,
-          icon: NOTIFICATION_ICONS["policy"]
+          meta: `Category: ${notification.category}`,
+          actionUser: notification.createdBy || "Admin",
+          actionText: notification.lastAction?.action === 'create' ? 'Created by' : 'Updated by',
+          icon: NOTIFICATION_ICONS["policy"],
+          date: notification.lastAction?.performedAt || notification.createdAt,
+          policyDetails: {
+            createdBy: notification.createdBy,
+            category: notification.category,
+            status: notification.status,
+            effectiveDate: notification.effectiveDate
+          }
         };
       default:
         return {
@@ -387,6 +476,100 @@ const NotificationPanel = () => {
           icon: NOTIFICATION_ICONS["task"]
         };
     }
+  };
+
+  const renderUserAvatar = (userData, isUnread, size = 24) => {
+    // console.log({ userData });
+    const user = userData || { name: 'User' };
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Avatar
+          sx={{
+            width: size,
+            height: size,
+            fontSize: size * 0.5,
+            backgroundColor: isUnread ? '#FF4757' : '#555'
+          }}
+        >
+          {getInitials(user.name)}
+        </Avatar>
+        <Typography variant="caption" sx={{
+          color: isUnread ? '#FFA07A' : '#9e9e9e',
+          fontWeight: isUnread ? 500 : 400
+        }}>
+          {user.name}
+        </Typography>
+      </Box>
+    );
+  };
+
+  const renderDateInfo = (date, isUnread) => {
+    const formattedDate = moment(date).format('MMM D, h:mm A');
+    const timeAgo = moment(date).fromNow();
+
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Chip
+          label={formattedDate}
+          size="small"
+          sx={{
+            backgroundColor: isUnread ? 'rgba(255, 71, 87, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+            color: isUnread ? '#FFA07A' : '#9e9e9e',
+            fontSize: '0.65rem',
+            height: '20px',
+            '& .MuiChip-label': {
+              padding: '0 6px'
+            }
+          }}
+        />
+        <Typography
+          variant="caption"
+          sx={{
+            color: isUnread ? '#FFA07A' : '#777',
+            fontSize: '0.65rem',
+            fontStyle: 'italic'
+          }}
+        >
+          ({timeAgo})
+        </Typography>
+      </Box>
+    );
+  };
+
+  const renderUserChip = (userData, isUnread, size = 24) => {
+    // console.log({ userData });
+    const user = userData || { name: 'User' };
+    return (
+      <Chip
+        // avatar={
+        //   <Avatar
+        //     sx={{
+        //       width: size,
+        //       height: size,
+        //       fontSize: size * 0.5,
+        //       backgroundColor: isUnread ? '#FF4757' : '#555'
+        //     }}
+        //   >
+        //     {getInitials(user.name)}
+        //   </Avatar>
+        // }
+        label={user.name}
+        size="small"
+        sx={{
+          // backgroundColor: isUnread ? 'rgba(255, 71, 87, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+          backgroundColor: "transparent",
+          color: isUnread ? '#FFA07A' : '#9e9e9e',
+          "&.MuiChip-root": {
+            "& span": {
+              paddingLeft: '0'
+            }
+          }
+          // height: '28px',
+          // mr: 1,
+          // mb: 1
+        }}
+      />
+    );
   };
 
   return (
@@ -419,11 +602,17 @@ const NotificationPanel = () => {
               minWidth: "16px",
               height: "16px",
               fontSize: "10px",
-              padding: "4px"
+              padding: "4px",
+              fontWeight: 'bold',
+              backgroundColor: '#FF4757',
+              color: 'white'
             }
           }}
         >
-          <IoMdNotificationsOutline color="antiquewhite" size={28} />
+          <IoMdNotificationsOutline
+            color={unreadCount > 0 ? "#00efff" : "antiquewhite"}
+            size={28}
+          />
         </Badge>
       </Button>
 
@@ -442,14 +631,16 @@ const NotificationPanel = () => {
         }}
         PaperProps={{
           sx: {
-            backgroundColor: "#272727",
-            color: "#ffffff",
-            width: "400px",
-            borderRadius: "8px",
-            border: "1px solid #444",
-            maxHeight: "500px",
+            backgroundColor: "#1E1E1E",
+            color: "#E0E0E0",
+            width: "420px",
+            borderRadius: "12px",
+            border: "1px solid #383838",
+            maxHeight: "80vh", // Changed to viewport height percentage
             display: "flex",
             flexDirection: "column",
+            overflow: "hidden",
+            boxShadow: '0px 10px 30px rgba(0, 0, 0, 0.5)',
           },
         }}
       >
@@ -460,89 +651,217 @@ const NotificationPanel = () => {
           sx={{
             px: 3,
             py: 2,
-            backgroundColor: "#333",
-            borderBottom: "1px solid #444",
+            backgroundColor: "#252525",
+            borderBottom: "1px solid #383838",
+            flexShrink: 0,
           }}
         >
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: "bold",
-              color: "#ffffff",
-            }}
-          >
-            Notifications
+          <Typography variant="h6" sx={{
+            fontWeight: "bold",
+            color: "#FFFFFF",
+            fontSize: '1.1rem'
+          }}>
+            Notifications {unreadCount > 0 && `(${unreadCount} new)`}
           </Typography>
           <Button
             onClick={handleClose}
-            sx={{ color: "#9e9e9e", "&:hover": { color: "#ffffff" } }}
+            sx={{
+              color: "#9e9e9e",
+              minWidth: 'auto',
+              padding: '4px',
+              "&:hover": {
+                color: "#ffffff",
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                borderRadius: '50%'
+              }
+            }}
           >
-            <IoMdClose size={25} />
+            <IoMdClose size={20} />
           </Button>
         </Stack>
 
-        <Box sx={{ flex: 1, overflowY: "auto", maxHeight: "350px" }}>
+        {/* Notification List Container */}
+        <Box sx={{
+          flex: 1,
+          overflowY: "auto", // Enable vertical scrolling
+          maxHeight: "calc(80vh - 64px)", // Subtract header height
+          "&::-webkit-scrollbar": {
+            width: "6px",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "#555",
+            borderRadius: "3px",
+          },
+          "&::-webkit-scrollbar-track": {
+            backgroundColor: "transparent",
+          }
+        }}>
           {memoizedNotifications.length === 0 ? (
-            <MenuItem
-              sx={{
-                py: 2,
-                px: 3,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              py: 4,
+              px: 2,
+              textAlign: 'center'
+            }}>
+              <IoMdNotificationsOutline size={48} color="#555" />
+              <Typography variant="body1" sx={{
                 color: "#9e9e9e",
-              }}
-            >
-              <Typography variant="body1">No notifications</Typography>
-            </MenuItem>
+                mt: 2,
+                fontSize: '0.95rem'
+              }}>
+                No notifications to display
+              </Typography>
+              <Typography variant="body2" sx={{
+                color: "#666",
+                mt: 1,
+                fontSize: '0.85rem'
+              }}>
+                When you get notifications, they&apos;ll appear here
+              </Typography>
+            </Box>
           ) : (
-            memoizedNotifications.map((notification) => {
+            memoizedNotifications.map((notification, index) => {
               const content = getNotificationContent(notification);
+              const isUnread = !notification.isRead;
+
               return (
-                <MenuItem
-                  key={notification._id}
-                  onClick={() => {
-                    handleViewNotification(notification);
-                    handleClose();
-                  }}
-                  sx={{
-                    py: 2,
-                    px: 3,
-                    "&:hover": { backgroundColor: "#333" },
-                  }}
-                >
-                  <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                    <Box
-                      sx={{
+                <Box key={notification._id}>
+                  <MenuItem
+                    onClick={() => {
+                      handleViewNotification(notification);
+                      handleClose();
+                    }}
+                    sx={{
+                      py: 2,
+                      px: 3,
+                      whiteSpace: 'normal', // Allow text to wrap
+                      alignItems: 'flex-start',
+                      "&:hover": {
+                        backgroundColor: isUnread ? '#00000042' : 'rgba(255, 255, 255, 0.08)',
+                      },
+                      backgroundColor: isUnread ? '#00000082' : 'transparent',
+                      borderLeft: isUnread ? '3px solid #FF4757' : '3px solid transparent',
+                      transition: 'all 0.2s ease',
+                      display: "flex",
+                      maxWidth: '100%',
+                      position: 'relative',
+                      '&:before': isUnread ? {
+                        content: '""',
+                        position: 'absolute',
+                        top: '50%',
+                        left: 8,
+                        transform: 'translateY(-50%)',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: '#FF4757',
+                        animation: 'pulse 1.5s infinite',
+                      } : {}
+                    }}
+                  >
+                    <Box sx={{
+                      display: "flex",
+                      gap: 2,
+                      alignItems: "flex-start",
+                      width: '100%',
+                      maxWidth: '100%',
+                    }}>
+                      <Box sx={{
                         width: "40px",
                         height: "40px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "#9e9e9e",
-                      }}
-                    >
-                      {content.icon}
+                        color: isUnread ? "#FF4757" : "#9e9e9e",
+                        backgroundColor: isUnread ? 'rgba(255, 71, 87, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        flexShrink: 0,
+                        transition: 'all 0.2s ease',
+                      }}>
+                        {content.icon}
+                      </Box>
+
+                      <Box sx={{
+                        flex: 1,
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        width: '100%',
+                      }}>
+                        <Box sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          gap: 1,
+                          width: '100%'
+                        }}>
+                          {renderDateInfo(content.date, isUnread)}
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              fontWeight: isUnread ? "600" : "500",
+                              color: isUnread ? "#2ab4e3" : "#E0E0E0",
+                              display: 'block',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {content.title}
+                          </Typography>
+                        </Box>
+
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            width: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            mt: 0.5,
+                            color: isUnread ? "#D0D0D0" : "#9e9e9e",
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          {content.description}
+                        </Typography>
+
+                        {/* Action by user */}
+                        {content.actionUser && (
+                          // console.log({ content }),
+                          <Box sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
+                            <Typography variant="caption" sx={{
+                              color: isUnread ? '#f39875' : '#9e9e9e',
+                              mr: 1
+                            }}>
+                              {content.actionText} By:
+                            </Typography>
+                            {renderUserChip(content.actionUser, isUnread)}
+                          </Box>
+                        )}
+
+                        <Box sx={{ mt: 1 }}>
+                          {content.assignedBy && renderUserAvatar(content.assignedBy)}
+                          {content.updatedBy && renderUserAvatar(content.updatedBy)}
+                          {content.closedBy && renderUserAvatar(content.closedBy)}
+                          {content.respondedBy && renderUserAvatar(content.respondedBy)}
+                          {content.suggestedBy && renderUserAvatar(content.suggestedBy)}
+                          {content.createdBy && renderUserAvatar(content.createdBy)}
+                        </Box>
+                      </Box>
                     </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="body1" sx={{ fontWeight: "bold", color: "#ffffff" }}>
-                        {content.title}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
-                        {content.description}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
-                        {moment(notification.createdAt).fromNow()}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
-                        {content.meta}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
-                        {notification.isRead ? "✅ Read" : "📩 Unread"}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </MenuItem>
+                  </MenuItem>
+                  {index < memoizedNotifications.length - 1 && (
+                    <Divider sx={{
+                      borderColor: '#383838',
+                      mx: 3,
+                      my: 0,
+                    }} />
+                  )}
+                </Box>
               );
             })
           )}

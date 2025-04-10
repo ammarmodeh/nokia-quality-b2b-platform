@@ -82,7 +82,7 @@ const AssignedToMeTaskCard = ({
     navigator.clipboard.writeText(formattedMessage).then(() => {
       alert('Task details copied to clipboard!');
     }).catch(err => {
-      console.error('Failed to copy: ', err);
+      // console.error('Failed to copy: ', err);
     });
   };
 
@@ -99,7 +99,7 @@ const AssignedToMeTaskCard = ({
         setActiveStep(activeSteps);
         setNote(response.data.subTasks.map((subtask) => subtask.note));
       } catch (error) {
-        console.error("Error fetching subtasks:", error);
+        // console.error("Error fetching subtasks:", error);
       }
     };
     fetchSubtasks();
@@ -166,10 +166,10 @@ const AssignedToMeTaskCard = ({
         // console.log("Subtasks reset successfully:", response.data);
         setUpdateSubtaskProgress(prev => !prev);
       } else {
-        console.log("Failed to reset subtasks");
+        // console.log("Failed to reset subtasks");
       }
     } catch (error) {
-      console.error("Error resetting subtasks:", error);
+      // console.error("Error resetting subtasks:", error);
     }
   };
 
@@ -200,10 +200,10 @@ const AssignedToMeTaskCard = ({
         setActiveStep(activeSteps);
         setUpdateSubtaskProgress(prev => !prev);
       } else {
-        console.log("Failed to update subtasks");
+        // console.log("Failed to update subtasks");
       }
     } catch (error) {
-      console.error("Error updating subtasks:", error);
+      // console.error("Error updating subtasks:", error);
     }
     handleNoteDialogClose();
   };

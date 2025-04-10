@@ -188,7 +188,9 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
 
     navigator.clipboard.writeText(textToCopy)
       .then(() => alert('Task details copied to clipboard!'))
-      .catch(err => console.error('Failed to copy text: ', err));
+      .catch(err => {
+        // console.error('Failed to copy text: ', err)
+      });
   };
 
   // Handle WhatsApp share button click
@@ -246,7 +248,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
         alert("Failed to add task to trash.");
       }
     } catch (error) {
-      console.error("Error adding task to trash:", error);
+      // console.error("Error adding task to trash:", error);
     }
   };
 

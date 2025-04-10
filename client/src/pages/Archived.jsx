@@ -75,7 +75,16 @@ const Archived = () => {
     if (!isConfirmed) return;
 
     try {
-      const restoreResponse = await api.post(`/tasks/${taskId}/restoreFromArchive`);
+      const restoreResponse = await api.post(
+        `/archive/${taskId}/restore`,
+        {}, // empty body
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`
+          }
+        }
+      );
+
       if (restoreResponse.status === 200) {
         setArchives((prevArchives) => prevArchives.filter((archive) => archive._id !== taskId));
         alert('Task restored successfully! Check the tasks page.');
@@ -85,9 +94,13 @@ const Archived = () => {
     }
   }, []);
 
-  // Filter archives to show only those created by the logged-in user
+  // Filter archives to show only those created by or assigned to the logged-in user
   const myArchives = useMemo(() => {
-    return archives.filter((archive) => archive.assignedTo[0] === user._id);
+    return archives.filter((archive) =>
+      archive.assignedTo.includes(user._id) ||
+      archive.createdBy === user._id ||
+      archive.whomItMayConcern.includes(user._id)
+    );
   }, [archives, user._id]);
 
   // Filter tasks based on search term
@@ -96,7 +109,10 @@ const Archived = () => {
       archive.slid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       archive.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       archive.contactNumber?.toString().includes(searchTerm) ||
-      archive.customerFeedback?.toLowerCase().includes(searchTerm.toLowerCase())
+      archive.customerFeedback?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      archive.requestNumber?.toString().includes(searchTerm) ||
+      archive.teamName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      archive.category?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
 
@@ -159,7 +175,7 @@ const Archived = () => {
         <TextField
           variant="outlined"
           size="small"
-          placeholder="Search by SLID, Name, Contact, or Feedback..."
+          placeholder="Search by SLID, Name, Contact, Request #, Team, Category or Feedback..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           fullWidth
@@ -197,13 +213,13 @@ const Archived = () => {
                   opacity: 1,
                 },
                 '&:-webkit-autofill': {
-                  '-webkit-box-shadow': '0 0 0 100px #272727 inset !important',
-                  '-webkit-text-fill-color': '#ffffff !important',
+                  WebkitBoxShadow: '0 0 0 100px #272727 inset !important',
+                  WebkitTextFillColor: '#ffffff !important',
                 },
               },
               '& input:-webkit-autofill': {
-                '-webkit-box-shadow': '0 0 0 100px #272727 inset !important',
-                '-webkit-text-fill-color': '#ffffff !important',
+                WebkitBoxShadow: '0 0 0 100px #272727 inset !important',
+                WebkitTextFillColor: '#ffffff !important',
               },
             },
           }}
@@ -218,8 +234,8 @@ const Archived = () => {
             },
             '& .MuiInputBase-input': {
               '&:-webkit-autofill': {
-                '-webkit-box-shadow': '0 0 0 100px #272727 inset !important',
-                '-webkit-text-fill-color': '#ffffff !important',
+                WebkitBoxShadow: '0 0 0 100px #272727 inset !important',
+                WebkitTextFillColor: '#ffffff !important',
               },
             },
           }}
@@ -267,8 +283,11 @@ const Archived = () => {
               <TableCell>SLID</TableCell>
               <TableCell>Customer Name</TableCell>
               <TableCell>Contact</TableCell>
-              <TableCell>Customer Feedback</TableCell>
-              <TableCell>Evaluation Score</TableCell>
+              <TableCell>Request #</TableCell>
+              <TableCell>Team</TableCell>
+              <TableCell>Category</TableCell>
+              <TableCell>Feedback</TableCell>
+              <TableCell>Score</TableCell>
               <TableCell>Interview Date</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
@@ -286,6 +305,9 @@ const Archived = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>{archive.contactNumber || "-"}</TableCell>
+                    <TableCell>{archive.requestNumber || "-"}</TableCell>
+                    <TableCell>{archive.teamName || "-"}</TableCell>
+                    <TableCell>{archive.category || "-"}</TableCell>
                     <TableCell>
                       {archive.customerFeedback ? (
                         <Typography
@@ -347,7 +369,7 @@ const Archived = () => {
                 ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{
+                <TableCell colSpan={10} align="center" sx={{
                   py: 4,
                   color: '#ffffff',
                   fontStyle: 'italic'

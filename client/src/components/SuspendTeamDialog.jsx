@@ -33,7 +33,7 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
         setUpdateTeamStatus(prev => !prev);
       }
     } catch (error) {
-      console.error("Error suspending team:", error);
+      // console.error("Error suspending team:", error);
       alert("Failed to suspend team.");
     }
   };

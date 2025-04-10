@@ -231,7 +231,7 @@ const PoliciesList = () => {
       else setOpenAddDialog(false);
 
     } catch (error) {
-      console.error('Error saving policy:', error);
+      // console.error('Error saving policy:', error);
       setSnackbarMessage(error.response?.data?.message || 'Failed to save policy');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
@@ -251,7 +251,7 @@ const PoliciesList = () => {
       setSnackbarOpen(true);
       setOpenDeleteDialog(false);
     } catch (error) {
-      console.error('Error deleting policy:', error);
+      // console.error('Error deleting policy:', error);
       setSnackbarMessage(error.response?.data?.message || 'Failed to delete policy');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
