@@ -364,7 +364,6 @@ const TaskViewPage = () => {
         {/* Header Section */}
         <Box sx={{
           display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
           p: isMobile ? 1 : 2,
@@ -372,16 +371,14 @@ const TaskViewPage = () => {
           backgroundColor: '#272727',
           gap: isMobile ? 1 : 0
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Link to={from} style={{ textDecoration: 'none' }}>
-              <Button variant="outlined" size={isMobile ? "small" : "medium"} sx={{ color: '#ffffff', borderColor: '#444' }}>
-                Back
-              </Button>
-            </Link>
-            <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontWeight: 'bold', color: 'dodgerblue' }}>
+          <Link to={from} style={{ textDecoration: 'none' }}>
+            <Button variant="outlined" size={isMobile ? "small" : "medium"} sx={{ color: '#ffffff', borderColor: '#444' }}>
+              Back
+            </Button>
+          </Link>
+          {/* <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontWeight: 'bold', color: 'dodgerblue' }}>
               Task Details
-            </Typography>
-          </Box>
+            </Typography> */}
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Tooltip title="Copy Details">

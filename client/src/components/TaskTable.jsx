@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { useNavigate } from "react-router-dom";
-import { getWeekNumberForTaksTable } from "../utils/helpers";
+import { getWeekNumberForTaksTable, newFormatDate } from "../utils/helpers";
 import { useState } from "react";
 import { FaCopy, FaTimes } from "react-icons/fa";
 import { RiFileExcel2Fill } from "react-icons/ri";
@@ -33,7 +33,7 @@ const handleCopyTaskData = (taskData) => {
     SLID: ${taskData.slid}
     Customer Name: ${taskData.customerName}
     Contact Number: ${taskData.contactNumber}
-    PIS Date: ${moment(taskData.pisDate).format("YYYY-MM-DD")}
+    PIS Date: ${new Date(taskData.pisDate).toLocaleDateString()}
     Governorate: ${taskData.governorate}
     District: ${taskData.district}
     Team Name: ${taskData.teamName}
@@ -43,7 +43,7 @@ const handleCopyTaskData = (taskData) => {
     Customer Feedback: ${taskData.customerFeedback}
     Reason: ${taskData.reason}
     Evaluation Score: ${taskData.evaluationScore}
-    Interview Date: ${moment(taskData.interviewDate).format("YYYY-MM-DD")}
+    Interview Date: ${new Date(taskData.interviewDate).toLocaleDateString()}
   `.trim();
 
   // Copy to clipboard
@@ -177,7 +177,7 @@ const TaskTable = ({ tasks }) => {
             color,
             fontWeight: "bold"
           }}>
-            <MdAssessment sx={{ mr: 1 }} />
+            {/* <MdAssessment sx={{ mr: 1 }} /> */}
             {score} ({label})
           </Box>
         );
@@ -203,10 +203,10 @@ const TaskTable = ({ tasks }) => {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Box sx={{ mr: 1, color: '#fffff' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* <Box sx={{ mr: 1, color: '#fffff' }}>
             <MdBusiness />
-          </Box>
+          </Box> */}
           {params.value}
         </Box>
       )
@@ -219,10 +219,10 @@ const TaskTable = ({ tasks }) => {
       minWidth: 150,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Box sx={{ mr: 1, color: '#fffff' }}>
+          {/* <Box sx={{ mr: 1, color: '#fffff' }}>
             <MdDateRange />
-          </Box>
-          {moment(params.value).format("YYYY-MM-DD")}
+          </Box> */}
+          {newFormatDate(params.value)}
         </Box>
       ),
     },

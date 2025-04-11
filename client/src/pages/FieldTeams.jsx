@@ -39,7 +39,7 @@ import {
 import { DataGrid } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
 import { useSelector } from 'react-redux';
-import { FaEye } from 'react-icons/fa';
+import { FaEye, FaSignOutAlt } from 'react-icons/fa';
 import { MdClose, MdOutlineSearch } from 'react-icons/md';
 import { SuspendTeamDialog } from '../components/SuspendTeamDialog';
 import { TerminateTeamDialog } from '../components/TerminateTeamDialog';
@@ -47,6 +47,8 @@ import { ReactivateTeamDialog } from '../components/ReactivateTeamDialog';
 import EditTeamDialog from '../components/EditTeamDialog';
 import AddTeamForm from '../components/AddTeamForm';
 import api from '../api/api';
+import CopyMUICell from '../components/CopyMUICell';
+import { RiFileExcel2Fill } from 'react-icons/ri';
 
 const FieldTeamForm = () => {
   const user = useSelector((state) => state?.auth?.user);
@@ -406,6 +408,7 @@ const FieldTeamForm = () => {
       team.teamName && team.teamName.toLowerCase().includes(searchText.toLowerCase())
     );
   }, [teams, searchText]);
+  // console.log({ filteredTeams });
 
   // Columns for DataGrid
   const columns = useMemo(() => [
@@ -418,7 +421,7 @@ const FieldTeamForm = () => {
       headerAlign: 'center',
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          <GroupsIcon fontSize="small" sx={{ mr: 1, color: '#3ea6ff' }} />
+          {/* <GroupsIcon fontSize="small" sx={{ mr: 1, color: '#3ea6ff' }} /> */}
           <Typography variant="body2">{params.value}</Typography>
         </Box>
       ),
@@ -433,7 +436,7 @@ const FieldTeamForm = () => {
       headerAlign: 'center',
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          <BusinessIcon fontSize="small" sx={{ mr: 1, color: '#9c27b0' }} />
+          {/* <BusinessIcon fontSize="small" sx={{ mr: 1, color: '#9c27b0' }} /> */}
           <Typography variant="body2">{params.value}</Typography>
         </Box>
       ),
@@ -485,6 +488,99 @@ const FieldTeamForm = () => {
       minWidth: 200,
     },
     {
+      field: 'evaluationScore',
+      headerName: 'Evaluation Score',
+      flex: 1,
+      headerClassName: 'dark-header',
+      type: 'number',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const score = params.value;
+        let color = '#f44336'; // Red for low scores
+        if (score >= 7) color = '#ff9800'; // Orange for medium
+        if (score >= 9) color = '#4caf50'; // Green for high
+
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            {/* <AssessmentIcon fontSize="small" sx={{ mr: 1, color }} /> */}
+            <Typography variant="body2" sx={{ color }}>
+              {score || 'N/A'}
+            </Typography>
+          </Box>
+        );
+      },
+      minWidth: 120,
+    },
+    {
+      field: 'isEvaluated',
+      headerName: 'Evaluated',
+      flex: 1,
+      headerClassName: 'dark-header',
+      type: 'boolean',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          color: params.value ? '#4caf50' : '#FF9800'
+        }}>
+          {params.value ? (
+            <>
+              <TaskAltIcon fontSize="small" sx={{ mr: 0.5 }} />
+              <Typography variant="body2">Completed</Typography>
+            </>
+          ) : (
+            <>
+              <PendingIcon fontSize="small" sx={{ mr: 0.5 }} />
+              <Typography variant="body2">Pending</Typography>
+            </>
+          )}
+        </Box>
+      ),
+      minWidth: 120,
+    },
+    {
+      field: 'lastEvaluationDate',
+      headerName: 'Last Evaluation',
+      minWidth: 100,
+      headerClassName: 'dark-header',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          {/* <EventIcon fontSize="small" sx={{ mr: 1, color: '#2196f3' }} /> */}
+          <Typography variant="body2">
+            {params.value ? new Date(params.value).toLocaleDateString() : 'Never'}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      field: 'viewHistory',
+      headerName: 'Team EvaluationHistory',
+      flex: 1,
+      align: 'center',
+      headerAlign: 'center',
+      headerClassName: 'dark-header',
+      renderCell: (params) => (
+        <Tooltip title="View evaluation history" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <IconButton
+            color="info"
+            onClick={() => handleViewHistoryClick(params.row._id)}
+            sx={{
+              '&:hover': { backgroundColor: 'rgba(2, 136, 209, 0.1)' },
+              color: '#0288d1'
+            }}
+          >
+            <HistoryIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      ),
+      minWidth: 100,
+    },
+    {
       field: 'canTakeQuiz',
       headerName: 'Quiz Allowed',
       flex: 1,
@@ -512,289 +608,187 @@ const FieldTeamForm = () => {
       ),
       minWidth: 120,
     },
-    {
-      field: 'evaluationScore',
-      headerName: 'Evaluation Score',
-      flex: 1,
-      headerClassName: 'dark-header',
-      type: 'number',
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => {
-        const score = params.value;
-        let color = '#f44336'; // Red for low scores
-        if (score >= 7) color = '#ff9800'; // Orange for medium
-        if (score >= 9) color = '#4caf50'; // Green for high
+    ...(user.role === 'Admin'
+      ? [
+        {
+          field: '_id',
+          headerName: 'Team ID',
+          minWidth: 230,
+          align: 'center',
+          headerAlign: 'center',
+          headerClassName: 'dark-header',
+          renderCell: (params) => <CopyMUICell value={params.value} />,
+        },
+        {
+          field: 'quizCode',
+          headerName: 'Quiz Code',
+          flex: 1,
+          align: 'center',
+          headerAlign: 'center',
+          headerClassName: 'dark-header',
+          minWidth: 140,
+          renderCell: (params) => <CopyMUICell value={params.value} />,
+        },
+        {
+          field: 'actions',
+          headerName: 'Actions',
+          flex: 2,
+          headerClassName: 'dark-header',
+          align: 'center',
+          headerAlign: 'center',
+          renderCell: (params) => (
+            <Stack direction="row" spacing={1} height="100%" justifyContent="center" alignItems="center">
+              {/* Edit */}
+              <Tooltip title="Edit">
+                <span>
+                  <IconButton
+                    color="primary"
+                    disabled={user.role !== 'Admin'}
+                    onClick={() => handleEditClick(params.row)}
+                    sx={{
+                      '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' },
+                      color: '#1976d2'
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
 
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <AssessmentIcon fontSize="small" sx={{ mr: 1, color }} />
-            <Typography variant="body2" sx={{ color }}>
-              {score || 'N/A'}
-            </Typography>
-          </Box>
-        );
-      },
-      minWidth: 120,
-    },
-    {
-      field: 'isEvaluated',
-      headerName: 'Evaluated',
-      flex: 1,
-      headerClassName: 'dark-header',
-      type: 'boolean',
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => (
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          color: params.value ? '#4caf50' : '#f44336'
-        }}>
-          {params.value ? (
-            <>
-              <TaskAltIcon fontSize="small" sx={{ mr: 0.5 }} />
-              <Typography variant="body2">Completed</Typography>
-            </>
-          ) : (
-            <>
-              <PendingIcon fontSize="small" sx={{ mr: 0.5 }} />
-              <Typography variant="body2">Pending</Typography>
-            </>
-          )}
-        </Box>
-      ),
-      minWidth: 120,
-    },
-    {
-      field: 'lastEvaluationDate',
-      headerName: 'Last Evaluation',
-      flex: 1,
-      headerClassName: 'dark-header',
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          <EventIcon fontSize="small" sx={{ mr: 1, color: '#2196f3' }} />
-          <Typography variant="body2">
-            {params.value ? new Date(params.value).toLocaleDateString() : 'Never'}
-          </Typography>
-        </Box>
-      ),
-      minWidth: 200,
-    },
-    {
-      field: 'viewHistory',
-      headerName: 'History',
-      flex: 1,
-      align: 'center',
-      headerAlign: 'center',
-      headerClassName: 'dark-header',
-      renderCell: (params) => (
-        <Tooltip title="View evaluation history" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          <IconButton
-            color="info"
-            onClick={() => handleViewHistoryClick(params.row._id)}
-            sx={{
-              '&:hover': { backgroundColor: 'rgba(2, 136, 209, 0.1)' },
-              color: '#0288d1'
-            }}
-          >
-            <HistoryIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      ),
-      minWidth: 100,
-    },
-    {
-      field: 'quizCode',
-      headerName: 'Quiz Code',
-      flex: 1,
-      align: 'center',
-      headerAlign: 'center',
-      headerClassName: 'dark-header',
-      renderCell: (params) => {
-        const [copied, setCopied] = useState(false);
+              {/* Delete */}
+              <span>
+                <Tooltip title="Delete">
+                  <IconButton
+                    color="error"
+                    onClick={() => handleDeleteClick(params.row._id)}
+                    disabled={user.role !== 'Admin'}
+                    sx={{
+                      '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.1)' },
+                      color: '#d32f2f'
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </span>
 
-        const handleCopy = () => {
-          if (params.value) {
-            navigator.clipboard.writeText(params.value);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-          }
-        };
+              {/* Suspend */}
+              <span>
+                <Tooltip title="Suspend">
+                  <IconButton
+                    color="warning"
+                    disabled={user.role !== 'Admin'}
+                    onClick={() => handleSuspendClick(params.row._id)}
+                    sx={{
+                      '&:hover': { backgroundColor: 'rgba(237, 108, 2, 0.1)' },
+                      color: '#ed6c02'
+                    }}
+                  >
+                    <PauseCircleOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </span>
 
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <Tooltip
-              title={copied ? "Copied!" : "Copy to clipboard"}
-              placement="top"
-            >
-              <IconButton
-                onClick={handleCopy}
-                size="small"
-                disabled={!params.value}
-                sx={{
-                  color: '#9c27b0',
-                  '&:hover': {
-                    backgroundColor: 'rgba(156, 39, 176, 0.1)'
-                  },
-                  mr: 1
-                }}
-              >
-                {copied ? <AssignmentTurnedInIcon fontSize="small" /> : <AssignmentIcon fontSize="small" />}
-              </IconButton>
-            </Tooltip>
-            <Typography variant="body2">
-              {params.value || 'N/A'}
-            </Typography>
-          </Box>
-        );
-      },
-      minWidth: 130,
-    },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      flex: 2,
-      headerClassName: 'dark-header',
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1} height="100%" justifyContent="center" alignItems="center">
-          {/* Edit */}
-          <Tooltip title="Edit">
-            <IconButton
-              color="primary"
-              disabled={user.role !== 'Admin'}
-              onClick={() => handleEditClick(params.row)}
-              sx={{
-                '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)' },
-                color: '#1976d2'
-              }}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+              {/* Terminate */}
+              <span>
+                <Tooltip title="Terminate">
+                  <IconButton
+                    color="error"
+                    disabled={user.role !== 'Admin'}
+                    onClick={() => handleTerminateClick(params.row._id)}
+                    sx={{
+                      '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.1)' },
+                      color: '#d32f2f'
+                    }}
+                  >
+                    <BlockIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </span>
 
-          {/* Delete */}
-          <Tooltip title="Delete">
-            <IconButton
-              color="error"
-              onClick={() => handleDeleteClick(params.row._id)}
-              disabled={user.role !== 'Admin'}
-              sx={{
-                '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.1)' },
-                color: '#d32f2f'
-              }}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+              {/* Reactivate */}
+              <span>
+                <Tooltip title="Reactivate">
+                  <IconButton
+                    color="success"
+                    disabled={user.role !== 'Admin'}
+                    onClick={() => handleReactivateClick(params.row._id)}
+                    sx={{
+                      '&:hover': { backgroundColor: 'rgba(46, 125, 50, 0.1)' },
+                      color: '#2e7d32'
+                    }}
+                  >
+                    <PlayCircleOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </span>
 
-          {/* Suspend */}
-          <Tooltip title="Suspend">
-            <IconButton
-              color="warning"
-              disabled={user.role !== 'Admin'}
-              onClick={() => handleSuspendClick(params.row._id)}
-              sx={{
-                '&:hover': { backgroundColor: 'rgba(237, 108, 2, 0.1)' },
-                color: '#ed6c02'
-              }}
-            >
-              <PauseCircleOutlineIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+              {/* On Leave */}
+              <span>
+                <Tooltip title="On Leave">
+                  <IconButton
+                    color="info"
+                    disabled={user.role !== 'Admin'}
+                    onClick={() => handleOnLeaveClick(params.row._id)}
+                    sx={{
+                      '&:hover': { backgroundColor: 'rgba(2, 136, 209, 0.1)' },
+                      color: '#0288d1'
+                    }}
+                  >
+                    <BeachAccessIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </span>
 
-          {/* Terminate */}
-          <Tooltip title="Terminate">
-            <IconButton
-              color="error"
-              disabled={user.role !== 'Admin'}
-              onClick={() => handleTerminateClick(params.row._id)}
-              sx={{
-                '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.1)' },
-                color: '#d32f2f'
-              }}
-            >
-              <BlockIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+              {/* Resigned */}
+              <span>
+                <Tooltip title="Resigned">
+                  <IconButton
+                    color="secondary"
+                    disabled={user.role !== 'Admin'}
+                    onClick={() => handleResignedClick(params.row._id)}
+                    sx={{
+                      '&:hover': { backgroundColor: 'rgba(123, 31, 162, 0.1)' },
+                      color: '#7b1fa2'
+                    }}
+                  >
+                    <FaSignOutAlt fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </span>
 
-          {/* Reactivate */}
-          <Tooltip title="Reactivate">
-            <IconButton
-              color="success"
-              disabled={user.role !== 'Admin'}
-              onClick={() => handleReactivateClick(params.row._id)}
-              sx={{
-                '&:hover': { backgroundColor: 'rgba(46, 125, 50, 0.1)' },
-                color: '#2e7d32'
-              }}
-            >
-              <PlayCircleOutlineIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          {/* On Leave */}
-          <Tooltip title="On Leave">
-            <IconButton
-              color="info"
-              disabled={user.role !== 'Admin'}
-              onClick={() => handleOnLeaveClick(params.row._id)}
-              sx={{
-                '&:hover': { backgroundColor: 'rgba(2, 136, 209, 0.1)' },
-                color: '#0288d1'
-              }}
-            >
-              <BeachAccessIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          {/* Resigned */}
-          <Tooltip title="Resigned">
-            <IconButton
-              color="secondary"
-              disabled={user.role !== 'Admin'}
-              onClick={() => handleResignedClick(params.row._id)}
-              sx={{
-                '&:hover': { backgroundColor: 'rgba(123, 31, 162, 0.1)' },
-                color: '#7b1fa2'
-              }}
-            >
-              <ExitToAppIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          {/* Quiz Permission Toggle */}
-          <Tooltip title={params.row.canTakeQuiz ? "Disallow Quiz" : "Allow Quiz"}>
-            <IconButton
-              color={params.row.canTakeQuiz ? "success" : "error"}
-              disabled={user.role !== 'Admin'}
-              onClick={() => handleToggleQuizPermission(params.row._id, !params.row.canTakeQuiz)}
-              sx={{
-                '&:hover': {
-                  backgroundColor: params.row.canTakeQuiz
-                    ? 'rgba(46, 125, 50, 0.2)'
-                    : 'rgba(211, 47, 47, 0.2)',
-                },
-                backgroundColor: params.row.canTakeQuiz
-                  ? 'rgba(46, 125, 50, 0.1)'
-                  : 'rgba(211, 47, 47, 0.1)',
-              }}
-            >
-              {params.row.canTakeQuiz ? (
-                <CheckCircleOutlineIcon fontSize="small" />
-              ) : (
-                <CancelIcon fontSize="small" />
-              )}
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      ),
-      minWidth: 400, // Reduced from 700 since icons take less space
-    },
+              {/* Quiz Permission Toggle */}
+              <span>
+                <Tooltip title={params.row.canTakeQuiz ? "Disallow Quiz" : "Allow Quiz"}>
+                  <IconButton
+                    color={params.row.canTakeQuiz ? "success" : "error"}
+                    disabled={user.role !== 'Admin'}
+                    onClick={() => handleToggleQuizPermission(params.row._id, !params.row.canTakeQuiz)}
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: params.row.canTakeQuiz
+                          ? 'rgba(46, 125, 50, 0.2)'
+                          : 'rgba(211, 47, 47, 0.2)',
+                      },
+                      backgroundColor: params.row.canTakeQuiz
+                        ? 'rgba(46, 125, 50, 0.1)'
+                        : 'rgba(211, 47, 47, 0.1)',
+                    }}
+                  >
+                    {params.row.canTakeQuiz ? (
+                      <CheckCircleOutlineIcon fontSize="small" />
+                    ) : (
+                      <CancelIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </span>
+            </Stack>
+          ),
+          minWidth: 400, // Reduced from 700 since icons take less space
+        },
+      ]
+      : []),
 
     // {
     //   field: 'isSuspended',
@@ -938,7 +932,7 @@ const FieldTeamForm = () => {
 
         {/* MUI Table */}
         <Box sx={{ mt: 4 }}>
-          <Stack direction="row" flexDirection={isMobile ? 'column' : 'row'} justifyContent="space-between" gap={2} alignItems="center" sx={{ mb: 2 }}>
+          <Stack direction="row" flexDirection={'row'} justifyContent="space-between" gap={2} alignItems="center" sx={{ mb: 2 }}>
             <Box
               sx={{
                 display: 'flex',
@@ -998,14 +992,19 @@ const FieldTeamForm = () => {
                 }}
               />
             </Box>
-            <Tooltip title="Export to Excel Sheet">
-              <Button
-                variant="contained"
+            <Tooltip title="Export to Excel">
+              <IconButton
                 onClick={handleExportToExcel}
-                sx={{ backgroundColor: '#3ea6ff', color: '#121212', padding: '0px 20px', alignSelf: 'end', '&:hover': { backgroundColor: '#1d4ed8' } }}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  color: '#4caf50',
+                  '&:hover': {
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                  }
+                }}
               >
-                Export CSV
-              </Button>
+                <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
+              </IconButton>
             </Tooltip>
           </Stack>
           <Box
@@ -1028,6 +1027,7 @@ const FieldTeamForm = () => {
               onPaginationModelChange={setPaginationModel}
               checkboxSelection
               disableRowSelectionOnClick
+              // disableVirtualization
               sx={{
                 flex: 1,
                 width: '100%',

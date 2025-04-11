@@ -14,6 +14,25 @@ export const formatDate = (date) => {
   return formattedDate;
 };
 
+export const newFormatDate = (date) => {
+  // Handle null/undefined/empty cases first
+  if (!date) return 'N/A';
+
+  const parsedDate = new Date(date);
+
+  // Check if the date is valid
+  if (isNaN(parsedDate.getTime())) return 'N/A';
+
+  const options = { day: '2-digit', month: 'short', year: 'numeric' };
+  try {
+    const parts = parsedDate.toLocaleDateString('en-GB', options).split(' ');
+    return `${parts[0]} ${parts[1]}, ${parts[2]}`;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'N/A';
+  }
+}
+
 export function dateFormatter(dateString) {
   const inputDate = new Date(dateString);
 
@@ -302,10 +321,6 @@ export const getDesiredWeeks = (data, range) => {
     return desiredWeeks.includes(`Wk-${weekNumber}`);
   });
 };
-
-
-
-
 
 export const getActivationTeamValidationData = (tasks) => {
   const validationCounts = {};

@@ -12,6 +12,7 @@ import ReportAbsenceDialog from "./ResportAbsenseDialog";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { MdAdd, MdGroups, MdHistory, MdReport } from "react-icons/md";
 import { Assessment, Block, CheckCircle, Event, Grade, InfoOutlined, PauseCircleOutline, Pending, Warning } from "@mui/icons-material";
+import { newFormatDate } from "../utils/helpers";
 
 const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const { enqueueSnackbar } = useSnackbar();
@@ -589,7 +590,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
               backgroundColor: 'rgba(62, 166, 255, 0.1)'
             }
           }}
-          startIcon={<MdGroups />}
+        // startIcon={<MdGroups />}
         >
           {params.value}
         </Button>
@@ -608,7 +609,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           justifyContent: 'center',
           color: params.value > 0 ? '#f44336' : '#aaaaaa'
         }}>
-          <Warning fontSize="small" sx={{ mr: 0.5 }} />
+          {/* <Warning fontSize="small" sx={{ mr: 0.5 }} /> */}
           {params.value}
         </Box>
       )
@@ -626,7 +627,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           justifyContent: 'center',
           color: params.value > 0 ? '#ff9800' : '#aaaaaa'
         }}>
-          <InfoOutlined fontSize="small" sx={{ mr: 0.5 }} />
+          {/* <InfoOutlined fontSize="small" sx={{ mr: 0.5 }} /> */}
           {params.value}
           <Typography variant="caption" sx={{ ml: 0.5 }}>
             ({Math.floor(params.value / 3)} eq.)
@@ -649,7 +650,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           color: params.value >= 3 ? '#f44336' :
             params.value === 2 ? '#ff9800' : '#4caf50'
         }}>
-          <Assessment fontSize="small" sx={{ mr: 0.5 }} />
+          {/* <Assessment fontSize="small" sx={{ mr: 0.5 }} /> */}
           {params.value}
         </Box>
       )
@@ -660,18 +661,37 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       width: 120,
       align: 'center',
       headerAlign: 'center',
-      renderCell: (params) => (
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: params.value ? '#f44336' : '#aaaaaa',
-          fontWeight: params.value ? 'bold' : 'normal'
-        }}>
-          <Event fontSize="small" sx={{ mr: 0.5 }} />
-          {params.value || '--'}
-        </Box>
-      )
+      renderCell: (params) => {
+        if (!params.value) {
+          return (
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#aaaaaa',
+              fontStyle: 'italic'
+            }}>
+              --
+            </Box>
+          );
+        }
+
+        // Check if the date is valid
+        const date = new Date(params.value);
+        const isValidDate = !isNaN(date.getTime());
+
+        return (
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: isValidDate ? '#f44336' : '#aaaaaa',
+            fontWeight: isValidDate ? 'bold' : 'normal'
+          }}>
+            {isValidDate ? newFormatDate(params.value) : 'Invalid date'}
+          </Box>
+        );
+      }
     },
     {
       field: "thresholdDescription",
@@ -832,8 +852,9 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           color: params.value === "No sessions" ? '#aaaaaa' : '#ffffff',
           fontSize: '0.8rem'
         }}>
-          <Event sx={{ mr: 0.5, fontSize: '1.1rem' }} />
-          {params.value}
+          {/* <Event sx={{ mr: 0.5, fontSize: '1.1rem' }} /> */}
+          {/* I want to add if condition for invalid date or undefined */}
+          {params.value === "No sessions" ? params.value : newFormatDate(params.value)}
         </Box>
       ),
     },
