@@ -1,8 +1,9 @@
-import { Paper, Stack, Typography, Button, useMediaQuery, IconButton, Tooltip } from "@mui/material";
+import { Paper, Stack, Typography, useMediaQuery, IconButton, Tooltip } from "@mui/material";
 import { DataGrid } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
 import { getActivationTeamValidationData } from "../utils/helpers";
 import { RiFileExcel2Fill } from "react-icons/ri";
+import { useState } from "react";
 
 const prepareValidationTableData = (validationPercentages) => {
   return validationPercentages.map((item, index) => ({
@@ -17,6 +18,10 @@ export const ActivationTeamRespTable = ({ tasks }) => {
   const isMobile = useMediaQuery('(max-width:503px)');
   const validationPercentages = getActivationTeamValidationData(tasks);
   const rows = prepareValidationTableData(validationPercentages);
+  const [paginationModel, setPaginationModel] = useState({
+    pageSize: 10,
+    page: 0,
+  });
 
   // Calculate the net total of all counts
   const netTotal = rows.reduce((sum, row) => sum + row.count, 0);
@@ -109,7 +114,9 @@ export const ActivationTeamRespTable = ({ tasks }) => {
         <DataGrid
           rows={rows}
           columns={columns}
-          pageSize={10}
+          pageSizeOptions={[5, 10, 25]}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
           disableColumnResize
           disableVirtualization={true}
           sx={{

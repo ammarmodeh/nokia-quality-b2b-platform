@@ -1,5 +1,6 @@
 import { Paper, Stack, Typography, Button, useMediaQuery, IconButton, Tooltip } from "@mui/material";
 import { DataGrid } from '@mui/x-data-grid';
+import { useState } from "react";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import * as XLSX from 'xlsx';
 
@@ -38,6 +39,10 @@ const getCompanyViolations = (tasks) => {
 
 export const CompanyViolationTable = ({ tasks }) => {
   const isMobile = useMediaQuery('(max-width:503px)');
+  const [paginationModel, setPaginationModel] = useState({
+    pageSize: 10,
+    page: 0,
+  });
 
   // Get the total violations for each company
   const companyViolations = getCompanyViolations(tasks);
@@ -147,6 +152,9 @@ export const CompanyViolationTable = ({ tasks }) => {
           columns={columns}
           disableVirtualization={true}
           disableColumnResize
+          pageSizeOptions={[5, 10, 25]}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
           sx={{
             border: 0,
             color: "#ffffff",

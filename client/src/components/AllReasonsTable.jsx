@@ -1,11 +1,16 @@
-import { Paper, Stack, Typography, Button, useMediaQuery, Tooltip, IconButton } from "@mui/material";
+import { Paper, Stack, Typography, useMediaQuery, Tooltip, IconButton } from "@mui/material";
 import { DataGrid } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
 import { getReasonViolations } from "../utils/helpers";
 import { RiFileExcel2Fill } from "react-icons/ri";
+import { useState } from "react";
 
 export const AllReasonsTable = ({ tasks }) => {
   const isMobile = useMediaQuery('(max-width:503px)');
+  const [paginationModel, setPaginationModel] = useState({
+    pageSize: 10,
+    page: 0,
+  });
 
   // Get the total violations for each reason
   const reasonViolations = getReasonViolations(tasks);
@@ -115,6 +120,9 @@ export const AllReasonsTable = ({ tasks }) => {
           columns={columns}
           disableVirtualization={true}
           disableColumnResize
+          pageSizeOptions={[5, 10, 25]}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
           sx={{
             border: 0,
             color: "#ffffff",

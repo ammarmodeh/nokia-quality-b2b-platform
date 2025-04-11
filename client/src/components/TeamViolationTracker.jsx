@@ -27,6 +27,10 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const [reportAbsenceDialogOpen, setReportAbsenceDialogOpen] = useState(false);
   const [selectedTeamForAbsence, setSelectedTeamForAbsence] = useState(null);
   const isMobile = useMediaQuery('(max-width:503px)');
+  const [paginationModel, setPaginationModel] = useState({
+    pageSize: 10,
+    page: 0,
+  });
 
   // Keep selectedTeamSessions in sync with fieldTeams when dialog is open
   useEffect(() => {
@@ -984,8 +988,9 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         <DataGrid
           rows={rows}
           columns={columns}
-          pageSize={5}
-          rowsPerPageOptions={[5]}
+          pageSizeOptions={[5, 10, 25]}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
           disableSelectionOnClick
           sx={{
             flex: 1,

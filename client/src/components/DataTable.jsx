@@ -10,7 +10,11 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { Typography, Collapse, IconButton, Paper } from '@mui/material';
 
 export const DataTable = ({ groupedData }) => {
-  console.log({ groupedData });
+  const [paginationModel, setPaginationModel] = useState({
+    pageSize: 10,
+    page: 0,
+  });
+  // console.log({ groupedData });
   const [expanded, setExpanded] = useState(false);
   const sortedWeeksDescending = Object.keys(groupedData).sort((a, b) => {
     const weekA = parseInt(a.split('-')[1], 10);
@@ -158,10 +162,11 @@ export const DataTable = ({ groupedData }) => {
           rows={rows}
           columns={columns}
           getRowHeight={() => 30}
-          pageSize={25}
+          pageSizeOptions={[5, 10, 25]}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
           disableColumnResize
           disableVirtualization={true}
-          pageSizeOptions={[5, 10, 25]}
           sx={{
             border: 0,
             color: '#ffffff',

@@ -1,12 +1,17 @@
-import { Paper, Stack, Typography, Button, Tooltip, useMediaQuery, IconButton } from "@mui/material";
+import { Paper, Stack, Typography, Tooltip, useMediaQuery, IconButton } from "@mui/material";
 import { DataGrid } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
 import { getKnowledgeGapReasons } from "../utils/helpers";
 import { RiFileExcel2Fill } from "react-icons/ri";
+import { useState } from "react";
 
 export const KnowledgeGapReasonsTable = ({ tasks }) => {
   const isMobile = useMediaQuery('(max-width:503px)');
   const knowledgeGapReasons = getKnowledgeGapReasons(tasks);
+  const [paginationModel, setPaginationModel] = useState({
+    pageSize: 10,
+    page: 0,
+  });
 
   const rows = knowledgeGapReasons.map((item, index) => ({
     id: index + 1,
@@ -104,9 +109,10 @@ export const KnowledgeGapReasonsTable = ({ tasks }) => {
         <DataGrid
           rows={rows}
           columns={columns}
-          pageSize={10}
           disableColumnResize
           pageSizeOptions={[5, 10, 25]}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
           disableVirtualization={true}
           sx={{
             border: 0,

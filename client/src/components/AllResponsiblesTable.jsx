@@ -1,5 +1,6 @@
-import { Paper, Stack, Typography, Button, useMediaQuery, Tooltip, IconButton } from "@mui/material";
+import { Paper, Stack, Typography, useMediaQuery, Tooltip, IconButton } from "@mui/material";
 import { DataGrid } from '@mui/x-data-grid';
+import { useState } from "react";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import * as XLSX from 'xlsx';
 
@@ -34,6 +35,10 @@ export const AllResponsiblesTable = ({ tasks }) => {
   const isMobile = useMediaQuery('(max-width:503px)');
   const responsibilityViolations = getResponsibilityViolations(tasks);
   const sortedResponsibilityViolations = responsibilityViolations.sort((a, b) => b.total - a.total);
+  const [paginationModel, setPaginationModel] = useState({
+    pageSize: 10,
+    page: 0,
+  });
 
   const rows = sortedResponsibilityViolations.map((violation, index) => ({
     id: index + 1,
@@ -133,6 +138,9 @@ export const AllResponsiblesTable = ({ tasks }) => {
           columns={columns}
           disableVirtualization={true}
           disableColumnResize
+          pageSizeOptions={[5, 10, 25]}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
           sx={{
             border: 0,
             color: "#ffffff",
