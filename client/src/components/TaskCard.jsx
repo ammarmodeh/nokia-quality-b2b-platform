@@ -12,6 +12,7 @@ import EditTaskDialog from "./task/EditTaskDialog";
 import { IoMdMagnet } from "react-icons/io";
 import { MdClose } from "react-icons/md";
 import SubtaskManager from "./SubtaskManager";
+import { RiProgress4Fill } from "react-icons/ri";
 
 const predefinedSubtasks = [
   { title: "Receive the task", progress: 0, note: "", dateTime: null },
@@ -459,7 +460,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                       onClick={handleNoteDialogOpen}
                       sx={{ mt: 2, backgroundColor: "#01013d" }}
                     >
-                      <IoMdMagnet size={20} className="mr-2" />
+                      <RiProgress4Fill size={20} className="mr-2" />
                       Manage Subtasks
                     </Button>
                   </>
