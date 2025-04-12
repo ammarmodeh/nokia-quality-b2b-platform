@@ -155,7 +155,15 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
               {/* Subtasks section */}
               <Box sx={{ mt: 3 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#3ea6ff', mb: 1 }}>
-                  Action Taken by Assigned User
+                  Action Taken by:
+                  <Chip
+                    label={task.assignedTo[0].name}
+                    sx={{
+                      color: '#ffffff',
+                      ml: 1,
+                      backgroundColor: '#9696963d'
+                    }}
+                  />
                 </Typography>
                 <Box sx={{
                   backgroundColor: '#333',

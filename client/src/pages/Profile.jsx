@@ -42,6 +42,8 @@ const Profile = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [loading, setLoading] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [editMode, setEditMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [tempPassword, setTempPassword] = useState("");
@@ -74,7 +76,6 @@ const Profile = () => {
   const toggleEditMode = () => {
     setEditMode(!editMode);
     if (!editMode) {
-      // When entering edit mode, save current values
       reset({
         name: user.name,
         email: user.email,
@@ -82,6 +83,7 @@ const Profile = () => {
         title: user.title
       });
     }
+    setTempPassword("");
   };
 
   const cancelEdit = () => {
@@ -96,20 +98,66 @@ const Profile = () => {
   };
 
   const submitHandler = async (data) => {
+    if (!tempPassword) {
+      setSnackbarMessage("Please enter your password to confirm changes");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await api.put("/users/profile", data, {
+      const requestData = {
+        ...data,
+        password: tempPassword
+      };
+
+      const response = await api.put("/users/profile", requestData, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
 
       const updatedUser = response.data;
+
+      console.log({ updatedUser });
+
+      // Only perform these actions if the profile is successfully updated
       dispatch(updateUser(updatedUser));
 
+      setSnackbarMessage("Profile updated successfully! You will be logged out shortly.");
+      setSnackbarSeverity("success");
       setOpenSnackbar(true);
       setEditMode(false);
       setTempPassword("");
 
+      setTimeout(() => {
+        dispatch(logout());
+        navigate('/auth');
+      }, 1500);
+
     } catch (error) {
+      let errorMessage = "Failed to update profile";
+
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        if (error.response.status === 401) {
+          errorMessage = "Invalid password. Please try again.";
+        } else if (error.response.status === 400) {
+          errorMessage = error.response.data.message || "Validation error";
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage = "No response from server. Please try again later.";
+      } else {
+        // Something happened in setting up the request
+        errorMessage = error.message || "Request setup failed";
+      }
+
+      console.error("Error updating profile:", errorMessage);
+
+      setSnackbarMessage(errorMessage);
+      setSnackbarSeverity("error");
       setOpenSnackbar(true);
     } finally {
       setLoading(false);
@@ -127,7 +175,6 @@ const Profile = () => {
     navigate(-1);
   };
 
-  // Style constants
   const textFieldStyles = {
     '& .MuiInputBase-root': {
       color: '#ffffff',
@@ -402,6 +449,7 @@ const Profile = () => {
                 fullWidth
                 value={tempPassword}
                 onChange={(e) => setTempPassword(e.target.value)}
+                required
                 sx={textFieldStyles}
                 size={isMobile ? 'small' : 'medium'}
                 InputProps={{
@@ -423,7 +471,7 @@ const Profile = () => {
                     </InputAdornment>
                   )
                 }}
-                helperText="Enter your password to save changes"
+                helperText="Enter your current password to save changes"
               />
             )}
           </Box>
@@ -441,18 +489,18 @@ const Profile = () => {
       >
         <Alert
           onClose={handleCloseSnackbar}
-          severity="success"
+          severity={snackbarSeverity}
           variant="filled"
           sx={{
             width: '100%',
-            backgroundColor: '#1976d2',
+            backgroundColor: snackbarSeverity === 'error' ? '#d32f2f' : '#1976d2',
             color: '#ffffff',
             '& .MuiAlert-icon': {
               color: '#ffffff'
             }
           }}
         >
-          Profile updated successfully!
+          {snackbarMessage}
         </Alert>
       </Snackbar>
     </Box>

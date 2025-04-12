@@ -133,14 +133,14 @@ const ChangePassword = () => {
     }
   };
 
-  const cancelButtonStyles = {
-    color: '#ffffff',
-    backgroundColor: '#555',
-    fontWeight: 'bold',
-    '&:hover': {
-      backgroundColor: '#666',
-    }
-  };
+  // const cancelButtonStyles = {
+  //   color: '#ffffff',
+  //   backgroundColor: '#555',
+  //   fontWeight: 'bold',
+  //   '&:hover': {
+  //     backgroundColor: '#666',
+  //   }
+  // };
 
   return (
     <Box

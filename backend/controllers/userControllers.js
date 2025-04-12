@@ -218,12 +218,31 @@ export const getAllUnhashedUsers = async (req, res) => {
 
 // Update User Profile
 export const updateUserProfile = async (req, res) => {
-  const { name, email, phoneNumber, title } = req.body;
-  const userId = req.user._id; // Assuming you have user ID in req.user after authentication
+  try {
+    const { name, email, phoneNumber, title, password } = req.body;
+    const userId = req.user._id;
 
-  const user = await UserSchema.findById(userId);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-  if (user) {
+    const user = await UserSchema.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify password if provided
+    if (password) {
+      const isMatch = await user.matchPassword(password);
+      if (!isMatch) {
+        return res.status(401).json({ message: "Invalid password" });
+      }
+    } else {
+      return res.status(400).json({ message: "Password is required for updates" });
+    }
+
+    // Update user fields
     user.name = name || user.name;
     user.email = email || user.email;
     user.phoneNumber = phoneNumber || user.phoneNumber;
@@ -238,11 +257,15 @@ export const updateUserProfile = async (req, res) => {
       phoneNumber: updatedUser.phoneNumber,
       title: updatedUser.title,
     });
-  } else {
-    res.status(404);
-    throw new Error("User not found");
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({
+      message: "Server error occurred while updating profile",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
+
 
 
 export const changePassword = async (req, res) => {

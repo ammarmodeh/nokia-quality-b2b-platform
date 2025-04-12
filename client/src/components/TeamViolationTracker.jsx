@@ -11,7 +11,7 @@ import { useSelector } from "react-redux";
 import ReportAbsenceDialog from "./ResportAbsenseDialog";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { MdAdd, MdGroups, MdHistory, MdReport } from "react-icons/md";
-import { Assessment, Block, CheckCircle, Event, Grade, InfoOutlined, PauseCircleOutline, Pending, Warning } from "@mui/icons-material";
+import { Assessment, BeachAccess, Block, CheckCircle, Event, ExitToApp, Grade, InfoOutlined, PauseCircleOutline, Pending, Warning } from "@mui/icons-material";
 import { newFormatDate } from "../utils/helpers";
 
 const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
@@ -66,7 +66,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         'How Threshold Was Reached': row.thresholdDescription,
         'Consequence Applied': row.consequenceApplied,
         'Notes/Comments': row.notes,
-        'Status': row.validationStatus,
+        'Team Status': row.validationStatus,
         'Evaluated': row.isEvaluated ? 'Yes' : 'No',
         'Evaluation Score': row.evaluationScore || 'N/A',
         'Violation Status': row.equivalentDetractorCount >= 3 ? 'Violated' :
@@ -506,20 +506,28 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         }
       }
 
-      // Determine consequences
-      let consequence = "";
-      let notes = "";
+      // Determine team status
       let validationStatus = "Active";
+      let notes = "";
+      let consequence = "";
 
-      if (team?.isSuspended) {
-        validationStatus = "Suspended";
-        notes = `Suspended until ${team.suspensionEndDate || "N/A"}. Reason: ${team.suspensionReason || "N/A"}`;
-      } else if (team?.isTerminated) {
+      if (team?.isTerminated) {
         validationStatus = "Terminated";
         notes = `Terminated. Reason: ${team.terminationReason || "N/A"}`;
+      } else if (team?.isSuspended) {
+        validationStatus = "Suspended";
+        notes = `Suspended until ${team.suspensionEndDate || "N/A"}. Reason: ${team.suspensionReason || "N/A"}`;
+      } else if (team?.isResigned) {
+        validationStatus = "Resigned";
+        notes = `Resigned. Reason: ${team.resignationReason || "N/A"}`;
+      } else if (team?.isOnLeave) {
+        validationStatus = "On Leave";
+        notes = "Team is currently on leave";
       } else {
+        // Only check violations if the team is ACTIVE (not suspended, terminated, resigned, or on leave)
         validationStatus = "Active";
 
+        // Determine consequences based on violations
         if (currentEquivalent >= 3) {
           consequence = "Immediate suspension pending review";
           notes = `Violation limit reached (${currentEquivalent} equivalent detractors). ${thresholdDescription}`;
@@ -758,13 +766,17 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           justifyContent: 'center',
           color: params.value === 'Suspended' ? '#f44336' :
             params.value === 'Terminated' ? '#f44336' :
-              params.value === 'Active' ? '#4caf50' : '#ff9800',
+              params.value === 'Resigned' ? '#9c27b0' : // Purple for resigned
+                params.value === 'On Leave' ? '#2196f3' : // Blue for on leave
+                  params.value === 'Active' ? '#4caf50' : '#ff9800',
           fontSize: '0.8rem',
         }}>
           {
             params.value === 'Suspended' ? <PauseCircleOutline sx={{ mr: 0.5, fontSize: '1.1rem' }} /> :
               params.value === 'Terminated' ? <Block sx={{ mr: 0.5, fontSize: '1.1rem' }} /> :
-                <CheckCircle sx={{ mr: 0.5, fontSize: '1.1rem' }} />
+                params.value === 'Resigned' ? <ExitToApp sx={{ mr: 0.5, fontSize: '1.1rem' }} /> : // Icon for resigned
+                  params.value === 'On Leave' ? <BeachAccess sx={{ mr: 0.5, fontSize: '1.1rem' }} /> : // Icon for on leave
+                    <CheckCircle sx={{ mr: 0.5, fontSize: '1.1rem' }} />
           }
           {params.value}
         </Box>

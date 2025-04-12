@@ -30,10 +30,11 @@ api.interceptors.response.use(
     // Check for 401 and specific conditions
     if (error.response?.status === 401) {
       const isLoginRequest = originalRequest.url.includes('/login');
+      const isProfileUpdateRequest = originalRequest.url.includes('/users/profile');
       const hasToken = localStorage.getItem("accessToken");
 
       // Only handle token expiration cases (has token but request failed)
-      if (!isLoginRequest && hasToken && !originalRequest._retry) {
+      if (!isLoginRequest && !isProfileUpdateRequest && hasToken && !originalRequest._retry) {
         originalRequest._retry = true;
         store.dispatch(logout());
         window.location.href = "/auth";
