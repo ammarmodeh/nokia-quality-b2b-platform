@@ -39,7 +39,6 @@ import {
   Tooltip
 } from "@mui/material";
 import {
-  FaInfoCircle,
   FaLightbulb,
   FaChevronRight,
   FaArrowLeft,
@@ -622,7 +621,7 @@ const UserAvatar = () => {
             width: "30px",
             height: "30px",
             borderRadius: "50%",
-            backgroundColor: '#8d6e63',
+            backgroundColor: '#795548',
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

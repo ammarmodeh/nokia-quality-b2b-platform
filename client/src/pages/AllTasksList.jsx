@@ -198,7 +198,6 @@ const AllTasksList = () => {
       const trashResponse = await api.post('/trash/add-trash', {
         ...taskData, // Spread all task fields
         deletedBy: user._id,
-        deletionReason: 'Deleted by user',
         deletedAt: new Date()
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
@@ -222,6 +221,7 @@ const AllTasksList = () => {
     } catch (err) {
       // console.error("Error deleting task:", err);
       setError("Failed to delete task. Please try again.");
+      console.log('error message:', err);
     }
   };
 
@@ -537,7 +537,10 @@ const AllTasksList = () => {
                               WebkitLineClamp: 2,
                               WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
-                              textOverflow: 'ellipsis'
+                              textOverflow: 'ellipsis',
+                              // I want to make the text from tight to left
+                              textAlign: 'right',
+                              direction: 'rtl',
                             }}
                           >
                             {task.customerFeedback}
@@ -691,39 +694,72 @@ const AllTasksList = () => {
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
         fullScreen={isMobile}
         sx={{
           "& .MuiDialog-paper": {
             backgroundColor: '#1e1e1e',
-            color: '#ffffff',
+            boxShadow: 'none',
+            borderRadius: isMobile ? 0 : '8px',
           }
         }}
       >
         <DialogTitle sx={{
+          display: 'flex',
+          alignItems: 'center',
           backgroundColor: '#1e1e1e',
           color: '#ffffff',
           borderBottom: '1px solid #444',
-          padding: '16px 24px',
+          padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
-          Confirm Deletion
+          <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontWeight: 500 }}>
+            Confirm Deletion
+          </Typography>
         </DialogTitle>
+
         <Divider sx={{ backgroundColor: '#444' }} />
-        <DialogContent sx={{ backgroundColor: '#1e1e1e', padding: '20px 24px' }}>
-          <Typography>
+
+        <DialogContent sx={{
+          backgroundColor: '#1e1e1e',
+          padding: isMobile ? '16px' : '20px 24px',
+          '&::-webkit-scrollbar': {
+            width: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: '#444',
+            borderRadius: '2px',
+          },
+        }}>
+          <Typography variant={isMobile ? "body2" : "body1"} sx={{ color: '#ffffff' }}>
             Are you sure you want to delete task {taskToDelete?.slid}?
           </Typography>
-          <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+          <Typography
+            variant={isMobile ? "caption" : "body2"}
+            color="error"
+            sx={{
+              mt: 2,
+              display: 'inline-block',
+              padding: '8px 12px',
+              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+              borderRadius: '4px',
+              borderLeft: '3px solid #f44336'
+            }}
+          >
             This action will move the task to trash and cannot be undone.
           </Typography>
         </DialogContent>
+
         <Divider sx={{ backgroundColor: '#444' }} />
+
         <DialogActions sx={{
           backgroundColor: '#1e1e1e',
           borderTop: '1px solid #444',
-          padding: '12px 24px',
+          padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button
             onClick={() => setDeleteDialogOpen(false)}
+            size={isMobile ? "small" : "medium"}
             sx={{
               color: '#ffffff',
               '&:hover': {
@@ -737,6 +773,7 @@ const AllTasksList = () => {
             onClick={handleDeleteTask}
             variant="contained"
             color="error"
+            size={isMobile ? "small" : "medium"}
             sx={{
               backgroundColor: '#f44336',
               '&:hover': {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Box, Button, IconButton, Paper, Stack, Tooltip, Typography, useMediaQuery } from "@mui/material";
+import { Box, Button, IconButton, InputAdornment, Paper, Stack, TextField, Tooltip, Typography, useMediaQuery } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { TaskDetailsDialog } from './TaskDetailsDialog';
 import AddSessionDialog from "./AddSessionDialog";
@@ -10,8 +10,8 @@ import * as XLSX from 'xlsx';
 import { useSelector } from "react-redux";
 import ReportAbsenceDialog from "./ResportAbsenseDialog";
 import { RiFileExcel2Fill } from "react-icons/ri";
-import { MdAdd, MdGroups, MdHistory, MdReport } from "react-icons/md";
-import { Assessment, BeachAccess, Block, CheckCircle, Event, ExitToApp, Grade, InfoOutlined, PauseCircleOutline, Pending, Warning } from "@mui/icons-material";
+import { MdAdd, MdHistory, MdReport, MdSearch } from "react-icons/md";
+import { BeachAccess, Block, CheckCircle, ExitToApp, Grade, PauseCircleOutline, Pending, Warning } from "@mui/icons-material";
 import { newFormatDate } from "../utils/helpers";
 
 const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
@@ -27,6 +27,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const [fieldTeams, setFieldTeams] = useState(initialFieldTeams);
   const [reportAbsenceDialogOpen, setReportAbsenceDialogOpen] = useState(false);
   const [selectedTeamForAbsence, setSelectedTeamForAbsence] = useState(null);
+  const [searchText, setSearchText] = useState('');
   const isMobile = useMediaQuery('(max-width:503px)');
   const [paginationModel, setPaginationModel] = useState({
     pageSize: 10,
@@ -980,12 +981,47 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     return tasks.filter((task) => task.teamName === selectedTeam);
   }, [selectedTeam, tasks]);
 
+  // Filter rows based on search text
+  const filteredRows = useMemo(() => {
+    if (!searchText) return rows;
+
+    const searchLower = searchText.toLowerCase();
+
+    return rows.filter(row => {
+      return Object.keys(row).some(key => {
+        const value = row[key];
+        if (value === null || value === undefined) return false;
+
+        // Handle different data types
+        if (typeof value === 'string') {
+          return value.toLowerCase().includes(searchLower);
+        }
+        if (typeof value === 'number') {
+          return value.toString().includes(searchText);
+        }
+        if (typeof value === 'boolean') {
+          return (value ? 'yes' : 'no').includes(searchLower);
+        }
+        return false;
+      });
+    });
+  }, [rows, searchText]);
+
+  useEffect(() => {
+    if (viewSessionsDialogOpen && selectedTeamIdForSession) {
+      const team = fieldTeams.find(t => t._id === selectedTeamIdForSession);
+      if (team) {
+        setSelectedTeamSessions(team.sessionHistory || []);
+      }
+    }
+  }, [fieldTeams, viewSessionsDialogOpen, selectedTeamIdForSession]);
+
   return (
     <Box sx={{ marginBottom: "20px" }} >
       <Stack
-        direction="row"
+        direction={"column"}
         justifyContent="space-between"
-        alignItems="center"
+        // alignItems={isMobile ? "flex-start" : "center"}
         sx={{
           marginBottom: "10px",
           gap: 1,
@@ -1002,24 +1038,67 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         >
           Team Violation Tracker
         </Typography>
-        <Tooltip title="Export to Excel">
-          <IconButton
-            onClick={exportToExcel}
-            size={isMobile ? "small" : "medium"}
+
+        <Stack direction="row" gap={2} alignItems="center" justifyContent={'space-between'} sx={{ width: "100%" }}>
+          <TextField
+            variant="outlined"
+            size="small"
+
+            placeholder="Search teams, violations, status..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
             sx={{
-              color: '#4caf50',
-              '&:hover': {
-                backgroundColor: 'rgba(76, 175, 80, 0.1)',
-              }
+              backgroundColor: '#333',
+              borderRadius: '4px',
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: '#444',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#555',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#3ea6ff',
+                },
+              },
+              '& .MuiInputBase-input': {
+                color: '#fff',
+                fontSize: '0.875rem',
+                padding: '8.5px 14px',
+              },
+              // minWidth: isMobile ? '100%' : '300px',
+              flexGrow: 1
             }}
-          >
-            <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
-          </IconButton>
-        </Tooltip>
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <MdSearch style={{ color: '#9e9e9e' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <Tooltip title="Export to Excel">
+            <IconButton
+              onClick={exportToExcel}
+              size={isMobile ? "small" : "medium"}
+              sx={{
+                color: '#4caf50',
+                '&:hover': {
+                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                }
+              }}
+            >
+              <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+
+
       </Stack>
       <Paper sx={{ height: 400, width: "100%", backgroundColor: "#272727" }}>
         <DataGrid
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           pageSizeOptions={[5, 10, 25]}
           paginationModel={paginationModel}
@@ -1081,6 +1160,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           }}
         />
       </Paper>
+
       <TaskDetailsDialog
         open={open}
         onClose={handleClose}

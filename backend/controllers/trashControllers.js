@@ -38,7 +38,7 @@ export const addToTrash = async (req, res) => {
       // readByWhenClosed,
       notifications,
       deletedBy,
-      deletionReason
+
     } = req.body;
 
     if (!slid || !deletedBy) {
@@ -81,7 +81,6 @@ export const addToTrash = async (req, res) => {
       // readByWhenClosed,
       notifications,
       deletedBy,
-      deletionReason: deletionReason || "No reason provided",
     });
 
     await trashItem.save();

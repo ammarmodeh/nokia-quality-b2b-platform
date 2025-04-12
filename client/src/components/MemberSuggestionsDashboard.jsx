@@ -174,83 +174,84 @@ const MemberSuggestionsDashboard = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {suggestions.map((suggestion) => (
-              <TableRow key={suggestion._id}>
-                <TableCell>{suggestion.title}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={suggestion.category}
-                    size="small"
-                    sx={{
-                      backgroundColor: '#3a3a3a',
-                      color: '#ffffff',
-                      textTransform: 'capitalize'
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={statusOptions[suggestion.status]?.label || suggestion.status}
-                    color={statusOptions[suggestion.status]?.color || 'default'}
-                    size="small"
-                    sx={{
-                      color: '#ffffff',
-                      '&.MuiChip-colorWarning': {
-                        backgroundColor: '#ff9800',
-                      },
-                      '&.MuiChip-colorInfo': {
-                        backgroundColor: '#2196f3',
-                      },
-                      '&.MuiChip-colorSuccess': {
-                        backgroundColor: '#4caf50',
-                      },
-                      '&.MuiChip-colorError': {
-                        backgroundColor: '#f44336',
-                      }
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  {format(new Date(suggestion.createdAt), 'PP')}
-                </TableCell>
-                <TableCell>
-                  {suggestion.lastRespondedAt ?
-                    format(new Date(suggestion.lastRespondedAt), 'PPpp') :
-                    'No response yet'}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => fetchResponseLog(suggestion._id)}
-                    sx={{
-                      color: '#aaaaaa',
-                      borderColor: '#444',
-                      '&:hover': {
-                        backgroundColor: 'rgba(170, 170, 170, 0.08)',
-                        borderColor: '#666',
-                      },
-                      fontSize: isMobile ? '0.75rem' : '0.875rem',
-                      padding: isMobile ? '4px 8px' : '6px 16px'
-                    }}
-                  >
-                    View Responses
-                  </Button>
+            {suggestions.length > 0 ? (
+              suggestions.map((suggestion) => (
+                <TableRow key={suggestion._id}>
+                  <TableCell>{suggestion.title}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={suggestion.category}
+                      size="small"
+                      sx={{
+                        backgroundColor: '#3a3a3a',
+                        color: '#ffffff',
+                        textTransform: 'capitalize'
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={statusOptions[suggestion.status]?.label || suggestion.status}
+                      color={statusOptions[suggestion.status]?.color || 'default'}
+                      size="small"
+                      sx={{
+                        color: '#ffffff',
+                        '&.MuiChip-colorWarning': {
+                          backgroundColor: '#ff9800',
+                        },
+                        '&.MuiChip-colorInfo': {
+                          backgroundColor: '#2196f3',
+                        },
+                        '&.MuiChip-colorSuccess': {
+                          backgroundColor: '#4caf50',
+                        },
+                        '&.MuiChip-colorError': {
+                          backgroundColor: '#f44336',
+                        }
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {format(new Date(suggestion.createdAt), 'PP')}
+                  </TableCell>
+                  <TableCell>
+                    {suggestion.lastRespondedAt ?
+                      format(new Date(suggestion.lastRespondedAt), 'PPpp') :
+                      'No response yet'}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => fetchResponseLog(suggestion._id)}
+                      sx={{
+                        color: '#aaaaaa',
+                        borderColor: '#444',
+                        '&:hover': {
+                          backgroundColor: 'rgba(170, 170, 170, 0.08)',
+                          borderColor: '#666',
+                        },
+                        fontSize: isMobile ? '0.75rem' : '0.875rem',
+                        padding: isMobile ? '4px 8px' : '6px 16px'
+                      }}
+                    >
+                      View Responses
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                  <Typography variant="body1" sx={{ color: '#ffffff' }}>
+                    You haven&apos;t submitted any suggestions yet
+                  </Typography>
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </TableContainer>
-
-      {/* Empty State */}
-      {suggestions.length === 0 && !loading && (
-        <Box textAlign="center" py={4} sx={{ color: '#ffffff' }}>
-          <Typography variant="body1">
-            You haven&apos;t submitted any suggestions yet
-          </Typography>
-        </Box>
-      )}
 
       {/* Response History Dialog */}
       <Dialog

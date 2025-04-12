@@ -247,7 +247,7 @@ const DetailRow = ({ label, value }) => (
       component="div"
       sx={{
         fontWeight: '500',
-        color: '#aaaaaa'
+        color: '#aaaaaa',
       }}
     >
       {label}
@@ -258,7 +258,9 @@ const DetailRow = ({ label, value }) => (
         component="div"
         sx={{
           color: '#ffffff',
-          wordBreak: 'break-word'
+          wordBreak: 'break-word',
+          textAlign: label === "Customer Feedback" ? "right" : "left",
+          direction: label === "Customer Feedback" ? "rtl" : "ltr"
         }}
       >
         {value || 'N/A'}

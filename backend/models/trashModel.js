@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const trashSchema = new mongoose.Schema(
   {
     // Copy all fields from TaskSchema
-    slid: { type: String, required: [true, "SLID is required"], trim: true, unique: true },
+    slid: { type: String, required: [true, "SLID is required"], trim: true },
     pisDate: { type: Date, required: [true, "PIS Date is required"] },
     contactNumber: { type: Number, required: [true, "Contact number is required"] },
     requestNumber: { type: Number, required: [true, "Request number is required"] },
@@ -160,7 +160,6 @@ const trashSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    deletionReason: { type: String },
   },
   { timestamps: true }
 );
