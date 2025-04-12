@@ -7,6 +7,7 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import api from "../api/api";
+import { useTheme } from "@mui/material/styles";
 
 const NOTIFICATION_ICONS = {
   task: <IoMdNotificationsOutline className="h-5 w-5" />,
@@ -17,6 +18,7 @@ const NOTIFICATION_ICONS = {
 };
 
 const NotificationPanel = () => {
+  const theme = useTheme();
   const user = useSelector((state) => state?.auth?.user);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -36,7 +38,6 @@ const NotificationPanel = () => {
       });
       return response.data.success;
     } catch (error) {
-      // console.error('Mark policy as read failed:', error);
       return false;
     }
   };
@@ -55,7 +56,6 @@ const NotificationPanel = () => {
       );
       return response.data.success;
     } catch (error) {
-      // console.error("Error marking response as read:", error);
       return false;
     }
   };
@@ -69,7 +69,6 @@ const NotificationPanel = () => {
       );
       return response.status === 200;
     } catch (error) {
-      // console.error("Error marking task notification as read:", error);
       return false;
     }
   };
@@ -89,7 +88,7 @@ const NotificationPanel = () => {
   const markSuggestionAsRead = async (suggestionId) => {
     try {
       await api.patch(`/suggestions/${suggestionId}/mark-read`, null, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
     } catch (error) {
       // console.error("Error marking suggestion as read:", error);
@@ -101,7 +100,7 @@ const NotificationPanel = () => {
       await api.patch(`/suggestions/${suggestionId}/mark-response-read`, {
         responseId
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
     } catch (error) {
       // console.error("Error marking response as read:", error);
@@ -113,23 +112,22 @@ const NotificationPanel = () => {
       try {
         const [tasksResponse, suggestionsResponse, adminSuggestionsResponse, policiesResponse] = await Promise.all([
           api.get("/tasks/get-all-tasks", {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
           }),
           user.role === "Member" ? api.get("/suggestions/user", {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
           }) : { data: { data: [] } },
           user.role === "Admin" ? api.get("/suggestions", {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
           }) : { data: { data: [] } },
           api.get("/policies/notifications", {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
           })
         ]);
 
         // Process tasks
         let taskNotifications = [];
         if (Array.isArray(tasksResponse.data)) {
-          // 1. Assigned tasks (for users in assignedTo array)
           const myAssignedTasks = tasksResponse.data.filter((task) =>
             task.assignedTo.some((assignedUser) =>
               String(assignedUser._id || assignedUser) === String(user._id)
@@ -145,7 +143,6 @@ const NotificationPanel = () => {
               isRead: task.readBy.includes(user._id)
             }));
 
-          // 2. Task updates (for users in whomItMayConcern array)
           const taskUpdateNotifications = tasksResponse.data
             .filter(task =>
               task.whomItMayConcern &&
@@ -171,7 +168,6 @@ const NotificationPanel = () => {
                 }))
             );
 
-          // 3. Closed task notifications
           const closedTaskNotifications = tasksResponse.data
             .filter(task =>
               task.notifications &&
@@ -388,14 +384,13 @@ const NotificationPanel = () => {
   };
 
   const getNotificationContent = (notification) => {
-    // console.log({ notification });
     switch (notification.type) {
       case 'task':
         return {
           title: notification.slid || 'New Task Assigned',
           description: `You have been assigned a new task`,
           actionUser: notification.createdBy,
-          actionText: 'Assigned to you',
+          actionText: 'Assigned to you By',
           icon: NOTIFICATION_ICONS["task"],
           date: notification.createdAt,
           assignedUsers: notification.assignedTo
@@ -479,22 +474,21 @@ const NotificationPanel = () => {
   };
 
   const renderUserAvatar = (userData, isUnread, size = 24) => {
-    // console.log({ userData });
     const user = userData || { name: 'User' };
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Avatar
+        {/* <Avatar
           sx={{
             width: size,
             height: size,
             fontSize: size * 0.5,
-            backgroundColor: isUnread ? '#FF4757' : '#555'
+            backgroundColor: isUnread ? theme.palette.error.main : theme.palette.grey[700]
           }}
         >
           {getInitials(user.name)}
-        </Avatar>
+        </Avatar> */}
         <Typography variant="caption" sx={{
-          color: isUnread ? '#FFA07A' : '#9e9e9e',
+          color: isUnread ? '#c2c2c2' : theme.palette.text.secondary,
           fontWeight: isUnread ? 500 : 400
         }}>
           {user.name}
@@ -508,13 +502,13 @@ const NotificationPanel = () => {
     const timeAgo = moment(date).fromNow();
 
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
         <Chip
           label={formattedDate}
           size="small"
           sx={{
-            backgroundColor: isUnread ? 'rgba(255, 71, 87, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-            color: isUnread ? '#FFA07A' : '#9e9e9e',
+            backgroundColor: isUnread ? theme.palette.error.dark + '30' : theme.palette.grey[800] + '30',
+            color: isUnread ? theme.palette.error.light : theme.palette.text.secondary,
             fontSize: '0.65rem',
             height: '20px',
             '& .MuiChip-label': {
@@ -525,7 +519,7 @@ const NotificationPanel = () => {
         <Typography
           variant="caption"
           sx={{
-            color: isUnread ? '#FFA07A' : '#777',
+            color: isUnread ? theme.palette.error.light : theme.palette.grey[500],
             fontSize: '0.65rem',
             fontStyle: 'italic'
           }}
@@ -536,40 +530,47 @@ const NotificationPanel = () => {
     );
   };
 
-  const renderUserChip = (userData, isUnread, size = 24) => {
-    // console.log({ userData });
-    const user = userData || { name: 'User' };
-    return (
-      <Chip
-        // avatar={
-        //   <Avatar
-        //     sx={{
-        //       width: size,
-        //       height: size,
-        //       fontSize: size * 0.5,
-        //       backgroundColor: isUnread ? '#FF4757' : '#555'
-        //     }}
-        //   >
-        //     {getInitials(user.name)}
-        //   </Avatar>
-        // }
-        label={user.name}
-        size="small"
-        sx={{
-          // backgroundColor: isUnread ? 'rgba(255, 71, 87, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-          backgroundColor: "transparent",
-          color: isUnread ? '#FFA07A' : '#9e9e9e',
-          "&.MuiChip-root": {
-            "& span": {
-              paddingLeft: '0'
-            }
-          }
-          // height: '28px',
-          // mr: 1,
-          // mb: 1
-        }}
-      />
-    );
+  // const renderUserChip = (userData, isUnread, size = 24) => {
+  //   const user = userData || { name: 'User' };
+  //   return (
+  //     <Chip
+  //       label={user.name}
+  //       size="small"
+  //       sx={{
+  //         backgroundColor: "transparent",
+  //         color: isUnread ? theme.palette.error.light : theme.palette.text.secondary,
+  //         "&.MuiChip-root": {
+  //           "& span": {
+  //             paddingLeft: '0'
+  //           }
+  //         }
+  //       }}
+  //     />
+  //   );
+  // };
+
+  const menuStyles = {
+    '& .MuiPaper-root': {
+      backgroundColor: '#121212',
+      color: '#A1A1A1',
+      width: '420px',
+      borderRadius: '12px',
+      border: `1px solid #4f4f4f`,
+      padding: '8px 0',
+      maxHeight: '80vh',
+      overflow: 'hidden',
+      // boxShadow: theme.shadows[24],
+    },
+    '& .MuiMenuItem-root': {
+      padding: '12px 16px',
+      borderRadius: '8px',
+      m: '4px',
+      fontSize: '14px',
+      '&:hover': {
+        backgroundColor: '#FFFFFF0F',
+        color: '#ffffff',
+      },
+    },
   };
 
   return (
@@ -578,7 +579,7 @@ const NotificationPanel = () => {
         onClick={handleClick}
         disableRipple
         sx={{
-          height: '55px',
+          height: "55px",
           minWidth: 0,
           padding: 0,
           display: "flex",
@@ -610,7 +611,7 @@ const NotificationPanel = () => {
           }}
         >
           <IoMdNotificationsOutline
-            color={unreadCount > 0 ? "#00efff" : "antiquewhite"}
+            color={unreadCount > 0 ? "#00efff" : "#A1A1A1"}
             size={28}
           />
         </Badge>
@@ -629,20 +630,7 @@ const NotificationPanel = () => {
           vertical: "top",
           horizontal: "right",
         }}
-        PaperProps={{
-          sx: {
-            backgroundColor: "#1E1E1E",
-            color: "#E0E0E0",
-            width: "420px",
-            borderRadius: "12px",
-            border: "1px solid #383838",
-            maxHeight: "80vh", // Changed to viewport height percentage
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            boxShadow: '0px 10px 30px rgba(0, 0, 0, 0.5)',
-          },
-        }}
+        sx={menuStyles}
       >
         <Stack
           direction="row"
@@ -650,28 +638,28 @@ const NotificationPanel = () => {
           justifyContent="space-between"
           sx={{
             px: 3,
-            py: 2,
-            backgroundColor: "#252525",
-            borderBottom: "1px solid #383838",
-            flexShrink: 0,
+            py: 1,
+            borderBottom: `1px solid #FFFFFF24`,
+            backgroundColor: '#121212'
           }}
         >
-          <Typography variant="h6" sx={{
-            fontWeight: "bold",
-            color: "#FFFFFF",
-            fontSize: '1.1rem'
-          }}>
-            Notifications {unreadCount > 0 && `(${unreadCount} new)`}
-          </Typography>
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#ffffff', fontSize: '24px' }}>
+              Notifications
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#A1A1A1', mt: 0.5 }}>
+              {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+            </Typography>
+          </Box>
           <Button
             onClick={handleClose}
             sx={{
-              color: "#9e9e9e",
+              color: "#A1A1A1",
               minWidth: 'auto',
               padding: '4px',
               "&:hover": {
                 color: "#ffffff",
-                backgroundColor: 'rgba(255,255,255,0.1)',
+                backgroundColor: '#FFFFFF0F',
                 borderRadius: '50%'
               }
             }}
@@ -683,8 +671,8 @@ const NotificationPanel = () => {
         {/* Notification List Container */}
         <Box sx={{
           flex: 1,
-          overflowY: "auto", // Enable vertical scrolling
-          maxHeight: "calc(80vh - 64px)", // Subtract header height
+          overflowY: "auto",
+          maxHeight: "calc(80vh - 104px)",
           "&::-webkit-scrollbar": {
             width: "6px",
           },
@@ -708,7 +696,7 @@ const NotificationPanel = () => {
             }}>
               <IoMdNotificationsOutline size={48} color="#555" />
               <Typography variant="body1" sx={{
-                color: "#9e9e9e",
+                color: "#A1A1A1",
                 mt: 2,
                 fontSize: '0.95rem'
               }}>
@@ -737,16 +725,14 @@ const NotificationPanel = () => {
                     sx={{
                       py: 2,
                       px: 3,
-                      whiteSpace: 'normal', // Allow text to wrap
+                      whiteSpace: 'normal',
                       alignItems: 'flex-start',
                       "&:hover": {
-                        backgroundColor: isUnread ? '#00000042' : 'rgba(255, 255, 255, 0.08)',
+                        backgroundColor: isUnread ? '#00000042' : '#FFFFFF0F',
                       },
-                      backgroundColor: isUnread ? '#00000082' : 'transparent',
-                      borderLeft: isUnread ? '3px solid #FF4757' : '3px solid transparent',
+                      backgroundColor: isUnread ? '#121212' : 'transparent',
+                      borderLeft: isUnread ? '3px solid #666061' : '3px solid transparent',
                       transition: 'all 0.2s ease',
-                      display: "flex",
-                      maxWidth: '100%',
                       position: 'relative',
                       '&:before': isUnread ? {
                         content: '""',
@@ -757,7 +743,7 @@ const NotificationPanel = () => {
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        backgroundColor: '#FF4757',
+                        backgroundColor: '#ffffff',
                         animation: 'pulse 1.5s infinite',
                       } : {}
                     }}
@@ -767,7 +753,6 @@ const NotificationPanel = () => {
                       gap: 2,
                       alignItems: "flex-start",
                       width: '100%',
-                      maxWidth: '100%',
                     }}>
                       <Box sx={{
                         width: "40px",
@@ -775,11 +760,10 @@ const NotificationPanel = () => {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: isUnread ? "#FF4757" : "#9e9e9e",
-                        backgroundColor: isUnread ? 'rgba(255, 71, 87, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                        color: isUnread ? "#ffffff" : "#A1A1A1",
+                        backgroundColor: isUnread ? '#5e5c5c33' : 'rgba(255, 255, 255, 0.1)',
                         borderRadius: '8px',
                         flexShrink: 0,
-                        transition: 'all 0.2s ease',
                       }}>
                         {content.icon}
                       </Box>
@@ -787,27 +771,15 @@ const NotificationPanel = () => {
                       <Box sx={{
                         flex: 1,
                         minWidth: 0,
-                        overflow: 'hidden',
-                        width: '100%',
                       }}>
-                        <Box sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          flexDirection: 'column',
-                          alignItems: 'flex-start',
-                          gap: 1,
-                          width: '100%'
-                        }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           {renderDateInfo(content.date, isUnread)}
                           <Typography
                             variant="body1"
                             sx={{
                               fontWeight: isUnread ? "600" : "500",
-                              color: isUnread ? "#2ab4e3" : "#E0E0E0",
-                              display: 'block',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
+                              color: isUnread ? "#ffffff" : "#E0E0E0",
+                              mb: 0.5
                             }}
                           >
                             {content.title}
@@ -817,40 +789,22 @@ const NotificationPanel = () => {
                         <Typography
                           variant="body2"
                           sx={{
-                            width: '100%',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            mt: 0.5,
-                            color: isUnread ? "#D0D0D0" : "#9e9e9e",
-                            fontSize: '0.875rem',
+                            color: isUnread ? "#D0D0D0" : "#A1A1A1",
+                            fontSize: '12px',
+                            mb: 1
                           }}
                         >
                           {content.description}
                         </Typography>
 
-                        {/* Action by user */}
                         {content.actionUser && (
-                          // console.log({ content }),
-                          <Box sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
-                            <Typography variant="caption" sx={{
-                              color: isUnread ? '#f39875' : '#9e9e9e',
-                              mr: 1
-                            }}>
-                              {content.actionText} By:
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="caption" sx={{ color: '#777' }}>
+                              {content.actionText}:
                             </Typography>
-                            {renderUserChip(content.actionUser, isUnread)}
+                            {renderUserAvatar(content.actionUser, isUnread)}
                           </Box>
                         )}
-
-                        <Box sx={{ mt: 1 }}>
-                          {content.assignedBy && renderUserAvatar(content.assignedBy)}
-                          {content.updatedBy && renderUserAvatar(content.updatedBy)}
-                          {content.closedBy && renderUserAvatar(content.closedBy)}
-                          {content.respondedBy && renderUserAvatar(content.respondedBy)}
-                          {content.suggestedBy && renderUserAvatar(content.suggestedBy)}
-                          {content.createdBy && renderUserAvatar(content.createdBy)}
-                        </Box>
                       </Box>
                     </Box>
                   </MenuItem>

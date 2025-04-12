@@ -74,7 +74,7 @@ const AdminSuggestionsDashboard = () => {
           Authorization: `Bearer ${token}`
         }
       });
-      fetchSuggestions(); // Refresh the list after deletion
+      fetchSuggestions();
       showSnackbar('Suggestion deleted successfully', 'success');
     } catch (err) {
       showSnackbar(err.response?.data?.error || 'Failed to delete suggestion', 'error');
@@ -224,7 +224,6 @@ const AdminSuggestionsDashboard = () => {
           border: '1px solid #444',
           width: '100%',
         }}>
-
           <Stack
             direction={isMobile ? 'column' : 'row'}
             spacing={1}
@@ -314,7 +313,6 @@ const AdminSuggestionsDashboard = () => {
               <MenuItem value="feature" sx={{ color: '#ffffff' }}>Feature Request</MenuItem>
               <MenuItem value="other" sx={{ color: '#ffffff' }}>Other</MenuItem>
             </Select>
-
           </Stack>
           <Button
             variant="contained"
@@ -399,125 +397,124 @@ const AdminSuggestionsDashboard = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {suggestions.map((suggestion) => (
-              <TableRow key={suggestion._id}>
-                <TableCell>{suggestion.title}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={suggestion.category}
-                    size="small"
-                    sx={{
-                      backgroundColor: '#3a3a3a',
-                      color: '#ffffff',
-                      textTransform: 'capitalize'
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={statusOptions.find(s => s.value === suggestion.status)?.label || suggestion.status}
-                    color={statusOptions.find(s => s.value === suggestion.status)?.color || 'default'}
-                    size="small"
-                    sx={{
-                      color: '#ffffff',
-                      '&.MuiChip-colorWarning': {
-                        backgroundColor: '#ff9800',
-                      },
-                      '&.MuiChip-colorInfo': {
-                        backgroundColor: '#2196f3',
-                      },
-                      '&.MuiChip-colorSuccess': {
-                        backgroundColor: '#4caf50',
-                      },
-                      '&.MuiChip-colorError': {
-                        backgroundColor: '#f44336',
-                      }
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  {suggestion.user?.name || 'Unknown'}
-                </TableCell>
-                <TableCell>
-                  {format(new Date(suggestion.createdAt), 'PP')}
-                </TableCell>
-                <TableCell>
-                  {suggestion.lastRespondedAt ?
-                    format(new Date(suggestion.lastRespondedAt), 'PPpp') :
-                    'No responses yet'}
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                      variant="outlined"
+            {suggestions.length > 0 ? (
+              suggestions.map((suggestion) => (
+                <TableRow key={suggestion._id}>
+                  <TableCell>{suggestion.title}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={suggestion.category}
                       size="small"
-                      onClick={() => openResponseDialog(suggestion)}
                       sx={{
-                        color: '#3ea6ff',
-                        borderColor: '#3ea6ff',
-                        '&:hover': {
-                          backgroundColor: 'rgba(62, 166, 255, 0.08)',
+                        backgroundColor: '#3a3a3a',
+                        color: '#ffffff',
+                        textTransform: 'capitalize'
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={statusOptions.find(s => s.value === suggestion.status)?.label || suggestion.status}
+                      color={statusOptions.find(s => s.value === suggestion.status)?.color || 'default'}
+                      size="small"
+                      sx={{
+                        color: '#ffffff',
+                        '&.MuiChip-colorWarning': {
+                          backgroundColor: '#ff9800',
+                        },
+                        '&.MuiChip-colorInfo': {
+                          backgroundColor: '#2196f3',
+                        },
+                        '&.MuiChip-colorSuccess': {
+                          backgroundColor: '#4caf50',
+                        },
+                        '&.MuiChip-colorError': {
+                          backgroundColor: '#f44336',
+                        }
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {suggestion.user?.name || 'Unknown'}
+                  </TableCell>
+                  <TableCell>
+                    {format(new Date(suggestion.createdAt), 'PP')}
+                  </TableCell>
+                  <TableCell>
+                    {suggestion.lastRespondedAt ?
+                      format(new Date(suggestion.lastRespondedAt), 'PPpp') :
+                      'No responses yet'}
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => openResponseDialog(suggestion)}
+                        sx={{
+                          color: '#3ea6ff',
                           borderColor: '#3ea6ff',
-                        },
-                        fontSize: isMobile ? '0.75rem' : '0.875rem',
-                        padding: isMobile ? '4px 8px' : '6px 16px'
-                      }}
-                    >
-                      Respond
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => fetchResponseLog(suggestion._id)}
-                      sx={{
-                        color: '#aaaaaa',
-                        borderColor: '#444',
-                        '&:hover': {
-                          backgroundColor: 'rgba(170, 170, 170, 0.08)',
-                          borderColor: '#666',
-                        },
-                        fontSize: isMobile ? '0.75rem' : '0.875rem',
-                        padding: isMobile ? '4px 8px' : '6px 16px'
-                      }}
-                    >
-                      History
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => {
-                        setSuggestionToDelete(suggestion._id);
-                        setDeleteDialogOpen(true);
-                      }}
-                      sx={{
-                        color: '#f44336',
-                        borderColor: '#f44336',
-                        '&:hover': {
-                          backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(62, 166, 255, 0.08)',
+                            borderColor: '#3ea6ff',
+                          },
+                          fontSize: isMobile ? '0.75rem' : '0.875rem',
+                          padding: isMobile ? '4px 8px' : '6px 16px'
+                        }}
+                      >
+                        Respond
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => fetchResponseLog(suggestion._id)}
+                        sx={{
+                          color: '#aaaaaa',
+                          borderColor: '#444',
+                          '&:hover': {
+                            backgroundColor: 'rgba(170, 170, 170, 0.08)',
+                            borderColor: '#666',
+                          },
+                          fontSize: isMobile ? '0.75rem' : '0.875rem',
+                          padding: isMobile ? '4px 8px' : '6px 16px'
+                        }}
+                      >
+                        History
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => {
+                          setSuggestionToDelete(suggestion._id);
+                          setDeleteDialogOpen(true);
+                        }}
+                        sx={{
+                          color: '#f44336',
                           borderColor: '#f44336',
-                        },
-                        fontSize: isMobile ? '0.75rem' : '0.875rem',
-                        padding: isMobile ? '4px 8px' : '6px 16px'
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </Box>
+                          '&:hover': {
+                            backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                            borderColor: '#f44336',
+                          },
+                          fontSize: isMobile ? '0.75rem' : '0.875rem',
+                          padding: isMobile ? '4px 8px' : '6px 16px'
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={tableColumns.length} align="center" sx={{ py: 4, color: '#ffffff' }}>
+                  No suggestions found matching your filters
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </TableContainer>
-
-      {/* Empty State */}
-      {suggestions.length === 0 && !loading && (
-        <Box textAlign="center" py={4} sx={{ color: '#ffffff' }}>
-          <Typography variant="body1">
-            No suggestions found matching your filters
-          </Typography>
-        </Box>
-      )}
 
       {/* Response Dialog */}
       <Dialog

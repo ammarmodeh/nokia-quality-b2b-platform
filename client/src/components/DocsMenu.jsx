@@ -1,20 +1,22 @@
-import { Box, Stack, Tooltip, Typography, MenuItem } from '@mui/material';
+import { Box, Stack, Tooltip, Typography, MenuItem, Menu, Divider } from '@mui/material';
 import DownloadDialog from './DownloadDialog';
 import { useState } from 'react';
+import { FaFileAlt, FaDownload } from 'react-icons/fa';
 
-const MenuHeader = ({ title }) => (
+const MenuHeader = ({ title, icon }) => (
   <Stack
     direction="row"
     alignItems="center"
-    justifyContent="space-between"
+    spacing={1}
     sx={{
       px: 3,
-      py: 2,
-      backgroundColor: "darkslategrey",
+      py: 1.5,
+      backgroundColor: "#1e1e1e",
       borderBottom: "1px solid #444",
     }}
   >
-    <Typography variant="h6" sx={{ fontWeight: "bold", color: "#ffffff" }}>
+    {icon}
+    <Typography variant="subtitle2" sx={{ fontWeight: "600", color: "#ffffff" }}>
       {title}
     </Typography>
   </Stack>
@@ -26,33 +28,49 @@ const MenuLink = ({ title, tooltipTitle, onClick }) => (
     sx={{
       py: 1.5,
       px: 3,
-      "&:hover": { backgroundColor: "#333", color: "#3ea6ff" },
+      borderRadius: '8px',
+      m: 1,
+      "&:hover": {
+        backgroundColor: "#FFFFFF0F",
+        color: "#3ea6ff",
+      },
     }}
   >
-    <Tooltip title={tooltipTitle}>
-      <Typography
-        variant="body2"
-        sx={{
-          maxWidth: 200,
-          overflow: "hidden",
-          whiteSpace: "nowrap",
-          textOverflow: "ellipsis",
-          display: "block",
-        }}
-      >
-        {title}
-      </Typography>
+    <Tooltip title={tooltipTitle} arrow>
+      <Stack direction="row" alignItems="center" spacing={2}>
+        <FaFileAlt style={{
+          color: "#3ea6ff",
+          fontSize: 16,
+          flexShrink: 0
+        }} />
+        <Typography
+          variant="body2"
+          sx={{
+            maxWidth: 200,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+            display: "block",
+            color: "inherit"
+          }}
+        >
+          {title}
+        </Typography>
+      </Stack>
     </Tooltip>
   </MenuItem>
 );
 
-export const DocsMenu = () => {
+export const DocsMenu = ({ anchorEl, open, onClose, isDrawer = false }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleMenuItemClick = (fileUrl) => {
     setSelectedFile(fileUrl);
     setIsDialogOpen(true);
+    if (isDrawer) {
+      onClose?.(); // Close the drawer if this is a drawer context
+    }
   };
 
   const handleDownload = () => {
@@ -109,31 +127,24 @@ export const DocsMenu = () => {
     { title: "Site Inspection Checklist 2024", href: "https://drive.google.com/uc?export=download&id=1Y7H0XFl4nkRCiucOO874fx6Ot4JVgn11" },
   ];
 
-  return (
-    <>
-      {/* <Menu
-        id="docs-menu"
-        onClose={handleCloseDocsMenu}
-        anchorOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
-        PaperProps={{
-          sx: {
-            backgroundColor: "#272727",
-            color: "#ffffff",
-            width: "300px",
-            borderRadius: "8px",
-            border: "1px solid #444",
-          },
-        }}
-      > */}
-      <MenuHeader title="Shared with Field Teams" />
-      <Box sx={{ flex: 1, overflowY: "auto", maxHeight: "200px" }}>
+  const menuContent = (
+    <div>
+      <MenuHeader
+        title="Shared with Field Teams"
+        icon={<FaFileAlt style={{ color: "#3ea6ff", fontSize: 16 }} />}
+      />
+      <Box sx={{
+        flex: 1,
+        overflowY: "auto",
+        maxHeight: "300px",
+        '&::-webkit-scrollbar': {
+          width: '6px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          backgroundColor: '#444',
+          borderRadius: '3px',
+        },
+      }}>
         {shredWithFieldTeams.map((item, index) => (
           <MenuLink
             key={index}
@@ -144,8 +155,24 @@ export const DocsMenu = () => {
         ))}
       </Box>
 
-      <MenuHeader title="QoS-Related" />
-      <Box sx={{ flex: 1, overflowY: "auto", maxHeight: "200px" }}>
+      <Divider sx={{ mt: 1, backgroundColor: "#444" }} />
+
+      <MenuHeader
+        title="QoS-Related"
+        icon={<FaFileAlt style={{ color: "#3ea6ff", fontSize: 16 }} />}
+      />
+      <Box sx={{
+        flex: 1,
+        overflowY: "auto",
+        maxHeight: "300px",
+        '&::-webkit-scrollbar': {
+          width: '6px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          backgroundColor: '#444',
+          borderRadius: '3px',
+        },
+      }}>
         {qosRelatedDocs.map((item, index) => (
           <MenuLink
             key={index}
@@ -155,13 +182,69 @@ export const DocsMenu = () => {
           />
         ))}
       </Box>
-      {/* </Menu> */}
+    </div>
+  );
+
+  if (isDrawer) {
+    return (
+      <div>
+        {menuContent}
+        <DownloadDialog
+          open={isDialogOpen}
+          onClose={() => setIsDialogOpen(false)}
+          onPasscodeValid={handleDownload}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <Menu
+        id="docs-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={onClose}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+        sx={{
+          '& .MuiPaper-root': {
+            backgroundColor: '#121212',
+            color: '#A1A1A1',
+            width: '300px',
+            borderRadius: '12px',
+            border: '1px solid #444',
+            padding: '0',
+            maxHeight: 'calc(100vh - 100px)',
+            overflow: 'hidden',
+          },
+          '& .MuiMenuItem-root': {
+            padding: '8px 4px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            m: 1,
+            '&:hover': {
+              backgroundColor: '#FFFFFF0F',
+              color: '#ffffff',
+            },
+          },
+        }}
+      >
+        {menuContent}
+      </Menu>
 
       <DownloadDialog
         open={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         onPasscodeValid={handleDownload}
       />
-    </>
+    </div>
   );
 }
+

@@ -12,8 +12,10 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { IoIosArrowDropleftCircle, IoIosCloseCircle, IoMdClose, IoMdCloseCircle } from "react-icons/io";
 import CustomerIssueDialog from "./CustomerIssueDialog";
 import { useSelector } from "react-redux";
+import { useTheme } from "@mui/material/styles";
 
 const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
+  const theme = useTheme();
   const user = useSelector((state) => state?.auth?.user);
   const navigate = useNavigate();
   const isMediumSize = useMediaQuery('(max-width:800px)');
@@ -26,7 +28,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
   const searchBarRef = useRef(null);
   const [cinDialogOpen, setCinDialogOpen] = useState(false);
 
-  // Mobile menu state (for Docs/Policies)
+  // Mobile menu state
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
   const openMobileMenu = Boolean(mobileMenuAnchor);
 
@@ -39,6 +41,28 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
   const openDocsMenu = Boolean(DocsMenuAnchorEl);
   const [policiesMenuAnchorEl, setPoliciesMenuAnchorEl] = useState(null);
   const openPolicyMenu = Boolean(policiesMenuAnchorEl);
+
+  const menuStyles = {
+    '& .MuiPaper-root': {
+      backgroundColor: '#121212',
+      color: '#A1A1A1',
+      borderRadius: '12px',
+      border: `1px solid #4f4f4f`,
+      padding: '8px 0',
+      overflow: 'hidden',
+      // boxShadow: theme.shadows[24],
+    },
+    '& .MuiMenuItem-root': {
+      padding: '8px 16px',
+      borderRadius: '8px',
+      m: '4px',
+      fontSize: '14px',
+      '&:hover': {
+        backgroundColor: '#FFFFFF0F',
+        color: '#ffffff',
+      },
+    },
+  };
 
   const handleClickOpenDocsMenu = (event) => {
     if (isMediumSize) {
@@ -59,12 +83,15 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
   const handleCloseDocsMenu = () => {
     setDocsMenuAnchorEl(null);
   };
+
   const handleClosePoliciesMenu = () => {
     setPoliciesMenuAnchorEl(null);
   };
+
   const handleMobileMenuOpen = (event) => {
     setMobileMenuAnchor(event.currentTarget);
   };
+
   const handleMobileMenuClose = () => {
     setMobileMenuAnchor(null);
   };
@@ -74,16 +101,12 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
       const response = await api.post("/customer-issues-notifications", formData, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
       });
-      // console.log("Issue submitted successfully:", response.data);
       alert("Issue submitted successfully!");
-      // You might want to add a success notification here
     } catch (error) {
-      // console.error("Error submitting issue:", error);
-      // You might want to add an error notification here
+      console.error("Error submitting issue:", error);
     }
   };
 
-  // Search functionality
   const fetchTasks = useCallback(async (query) => {
     if (!query) {
       setSearchResults([]);
@@ -97,7 +120,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
       });
       setSearchResults(response.data.filter((task) => !task.isDeleted));
     } catch (error) {
-      // console.error("Error searching tasks:", error);
+      console.error("Error searching tasks:", error);
     } finally {
       setLoading(false);
     }
@@ -133,9 +156,9 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
             color: 'white',
             '&:hover': {
               color: 'grey.200',
-              backgroundColor: 'transparent' // Optional: remove hover background
+              backgroundColor: 'transparent'
             },
-            fontSize: '24px' // Adjust size as needed
+            fontSize: '24px'
           }}
           size="small"
         >
@@ -175,17 +198,14 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 onClick={() => setSearchQuery("")}
                 className="text-gray-400 absolute right-8 hover:text-gray-200"
               >
-                {/* <MdClose className="text-xl" /> */}
                 <IoMdCloseCircle className="text-xl" />
               </button>
             )}
-            {/* Close search button in mobile view */}
             {isMediumSize && showSearch && (
               <button
                 onClick={toggleSearch}
                 className="text-gray-400 hover:text-gray-200 absolute right-2"
               >
-                {/* <MdClose className="text-xl" /> */}
                 <IoIosArrowDropleftCircle className="text-xl" />
               </button>
             )}
@@ -217,10 +237,10 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: 'gray.400',
+                color: '#A1A1A1',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: 'white'
+                  color: '#ffffff'
                 },
               }}
             >
@@ -231,26 +251,13 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               anchorEl={mobileMenuAnchor}
               open={openMobileMenu}
               onClose={handleMobileMenuClose}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "right",
-              }}
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
+              sx={menuStyles}
               PaperProps={{
                 sx: {
-                  backgroundColor: "#272727",
-                  color: "#ffffff",
-                  width: "280px",
-                  borderRadius: "8px",
-                  border: "1px solid #444",
-                  maxHeight: "500px",
-                },
+                  width: '280px',
+                }
               }}
             >
-              {/* Menu Header */}
               <Stack
                 direction="row"
                 alignItems="center"
@@ -262,19 +269,13 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                   borderBottom: "1px solid #444",
                 }}
               >
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: "bold",
-                    color: "#ffffff",
-                  }}
-                >
+                <Typography variant="h6" sx={{ fontWeight: "bold", color: "#ffffff" }}>
                   Menu
                 </Typography>
                 <Button
                   onClick={handleMobileMenuClose}
                   sx={{
-                    color: "#9e9e9e",
+                    color: "#A1A1A1",
                     minWidth: 0,
                     "&:hover": { color: "#ffffff" }
                   }}
@@ -283,17 +284,11 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 </Button>
               </Stack>
 
-              {/* Menu Items */}
               <Box sx={{ py: 1 }}>
                 <MenuItem
                   onClick={() => {
                     handleClickOpenDocsMenu(null);
                     handleMobileMenuClose();
-                  }}
-                  sx={{
-                    py: 1.5,
-                    px: 3,
-                    "&:hover": { backgroundColor: "#333" },
                   }}
                 >
                   <Typography variant="body1">Docs</Typography>
@@ -302,11 +297,6 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                   onClick={() => {
                     handleClickOpenPoliciesMenu(null);
                     handleMobileMenuClose();
-                  }}
-                  sx={{
-                    py: 1.5,
-                    px: 3,
-                    "&:hover": { backgroundColor: "#333" },
                   }}
                 >
                   <Typography variant="body1">Policies</Typography>
@@ -317,9 +307,6 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                     handleMobileMenuClose();
                   }}
                   sx={{
-                    py: 1.5,
-                    px: 3,
-                    "&:hover": { backgroundColor: "#333" },
                     cursor: user?.role === "Admin" ? "pointer" : "not-allowed",
                   }}
                 >
@@ -329,11 +316,6 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                   component={Link}
                   to="/customer-issues"
                   onClick={handleMobileMenuClose}
-                  sx={{
-                    py: 1.5,
-                    px: 3,
-                    "&:hover": { backgroundColor: "#333" },
-                  }}
                 >
                   <Typography variant="body1">Issues List</Typography>
                 </MenuItem>
@@ -356,72 +338,20 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: 'gray.400',
+                color: '#A1A1A1',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: 'white'
+                  color: '#ffffff'
                 },
               }}
             >
               Docs
             </Button>
-            <Menu
-              id="docs-menu"
+            <DocsMenu
               anchorEl={DocsMenuAnchorEl}
               open={openDocsMenu}
               onClose={handleCloseDocsMenu}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "right",
-              }}
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              PaperProps={{
-                sx: {
-                  backgroundColor: "#272727",
-                  color: "#ffffff",
-                  width: "300px",
-                  borderRadius: "8px",
-                  border: "1px solid #444",
-                  maxHeight: "500px",
-                  display: "flex",
-                  flexDirection: "column",
-                },
-              }}
-            >
-              <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                sx={{
-                  px: 3,
-                  py: 2,
-                  backgroundColor: "#333",
-                  borderBottom: "1px solid #444",
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: "bold",
-                    color: "#ffffff",
-                  }}
-                >
-                  Documentation
-                </Typography>
-                <Button
-                  onClick={handleCloseDocsMenu}
-                  sx={{ color: "#9e9e9e", "&:hover": { color: "#ffffff" } }}
-                >
-                  <IoMdClose size={25} />
-                </Button>
-              </Stack>
-              <DocsMenu
-                handleCloseDocsMenu={handleCloseDocsMenu}
-              />
-            </Menu>
+            />
 
             <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#483c3c" }} orientation="vertical" />
 
@@ -436,10 +366,10 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: 'gray.400',
+                color: '#A1A1A1',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: 'white'
+                  color: '#ffffff'
                 },
               }}
             >
@@ -458,49 +388,14 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 vertical: "top",
                 horizontal: "right",
               }}
+              sx={menuStyles}
               PaperProps={{
                 sx: {
-                  backgroundColor: "#272727",
-                  color: "#ffffff",
-                  width: "400px",
-                  borderRadius: "8px",
-                  border: "1px solid #444",
-                  maxHeight: "500px",
-                  display: "flex",
-                  flexDirection: "column",
-                },
+                  width: '300px',
+                }
               }}
             >
-              <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                sx={{
-                  px: 3,
-                  py: 2,
-                  backgroundColor: "#333",
-                  borderBottom: "1px solid #444",
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: "bold",
-                    color: "#ffffff",
-                  }}
-                >
-                  Policies
-                </Typography>
-                <Button
-                  onClick={handleClosePoliciesMenu}
-                  sx={{ color: "#9e9e9e", "&:hover": { color: "#ffffff" } }}
-                >
-                  <IoMdClose size={25} />
-                </Button>
-              </Stack>
-              <PoliciesMenu
-                handleClosePoliciesMenu={handleClosePoliciesMenu}
-              />
+              <PoliciesMenu handleClosePoliciesMenu={handleClosePoliciesMenu} />
             </Menu>
 
             <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#483c3c" }} orientation="vertical" />
@@ -519,15 +414,11 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: user?.role === 'Admin' ? 'pointer' : 'not-allowed',
-                color: user?.role === 'Admin' ? 'gray.400' : 'gray.600',
+                color: user?.role === 'Admin' ? '#A1A1A1' : '#666',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: user?.role === 'Admin' ? 'white' : 'gray.600'
+                  color: user?.role === 'Admin' ? '#ffffff' : '#666'
                 },
-                "&.Mui-disabled": {
-                  color: 'gray.600',
-                  opacity: 0.7
-                }
               }}
             >
               Report Issue
@@ -546,10 +437,10 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: 'gray.400',
+                color: '#A1A1A1',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: 'white'
+                  color: '#ffffff'
                 },
               }}
             >
@@ -576,31 +467,28 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               width: { xs: '100%', sm: '400px' },
               backgroundColor: '#1e1e1e',
               color: '#ffffff',
-              boxShadow: '0 0 20px rgba(0,0,0,0.5)',
             }
           }}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {/* Drawer Header */}
             <Box sx={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               p: 2,
-              backgroundColor: '#272727',
+              backgroundColor: '#1e1e1e',
               borderBottom: '1px solid #444'
             }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                 Documentation
               </Typography>
-              <IconButton onClick={() => setDocsDrawerOpen(false)} sx={{ color: '#9e9e9e' }}>
+              <IconButton onClick={() => setDocsDrawerOpen(false)} sx={{ color: '#A1A1A1' }}>
                 <MdClose size={24} />
               </IconButton>
             </Box>
 
-            {/* Drawer Content */}
             <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-              <DocsMenu />
+              <DocsMenu isDrawer />
             </Box>
           </Box>
         </Drawer>
@@ -615,29 +503,27 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               width: { xs: '100%', sm: '450px' },
               backgroundColor: '#1e1e1e',
               color: '#ffffff',
-              boxShadow: '0 0 20px rgba(0,0,0,0.5)',
+              // boxShadow: '0 0 20px rgba(0,0,0,0.5)',
             }
           }}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {/* Drawer Header */}
             <Box sx={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               p: 2,
-              backgroundColor: '#272727',
+              backgroundColor: '#1e1e1e',
               borderBottom: '1px solid #444'
             }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                 Policies
               </Typography>
-              <IconButton onClick={() => setPoliciesDrawerOpen(false)} sx={{ color: '#9e9e9e' }}>
+              <IconButton onClick={() => setPoliciesDrawerOpen(false)} sx={{ color: '#A1A1A1' }}>
                 <MdClose size={24} />
               </IconButton>
             </Box>
 
-            {/* Drawer Content */}
             <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
               <PoliciesMenu />
             </Box>

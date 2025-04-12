@@ -1,27 +1,56 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import { logout, updateUser } from "../redux/slices/authSlice";
-import Textbox from "../components/Textbox";
-import Button from "../components/Button";
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button as MuiButton,
+  Snackbar,
+  Alert,
+  Divider,
+  Avatar,
+  IconButton,
+  InputAdornment,
+  useMediaQuery,
+  useTheme
+} from "@mui/material";
+import {
+  Edit as EditIcon,
+  Save as SaveIcon,
+  ArrowBack as ArrowBackIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  Work as WorkIcon,
+  Person as PersonIcon,
+  CheckCircle as CheckCircleIcon,
+  Close as CloseIcon
+} from "@mui/icons-material";
 import { HashLoader } from "react-spinners";
-import { useNavigate } from "react-router-dom";
+import { getInitials } from "../utils/helpers";
 
 const Profile = () => {
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [loading, setLoading] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [tempPassword, setTempPassword] = useState("");
 
   const {
     register,
     handleSubmit,
-    setValue,
-    formState: { errors },
+    reset,
+    formState: { errors, isDirty },
   } = useForm({
     defaultValues: {
       name: user?.name || "",
@@ -33,12 +62,38 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      setValue("name", user.name);
-      setValue("email", user.email);
-      setValue("phoneNumber", user.phoneNumber);
-      setValue("title", user.title);
+      reset({
+        name: user.name,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        title: user.title
+      });
     }
-  }, [user, setValue]);
+  }, [user, reset]);
+
+  const toggleEditMode = () => {
+    setEditMode(!editMode);
+    if (!editMode) {
+      // When entering edit mode, save current values
+      reset({
+        name: user.name,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        title: user.title
+      });
+    }
+  };
+
+  const cancelEdit = () => {
+    reset({
+      name: user.name,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      title: user.title
+    });
+    setEditMode(false);
+    setTempPassword("");
+  };
 
   const submitHandler = async (data) => {
     setLoading(true);
@@ -50,21 +105,13 @@ const Profile = () => {
       const updatedUser = response.data;
       dispatch(updateUser(updatedUser));
 
-      // Show success message briefly before logging out
       setOpenSnackbar(true);
-
-      // Wait for 2 seconds to show the success message, then log out
-      setTimeout(() => {
-        setLoading(false);
-        // Perform logout
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("userInfo");
-        dispatch(logout());
-        navigate("/auth");
-      }, 2000);
+      setEditMode(false);
+      setTempPassword("");
 
     } catch (error) {
-      // console.error("Profile update failed:", error.response?.data?.message || error.message);
+      setOpenSnackbar(true);
+    } finally {
       setLoading(false);
     }
   };
@@ -76,69 +123,339 @@ const Profile = () => {
     setOpenSnackbar(false);
   };
 
+  const handleBackClick = () => {
+    navigate(-1);
+  };
+
+  // Style constants
+  const textFieldStyles = {
+    '& .MuiInputBase-root': {
+      color: '#ffffff',
+    },
+    '& .MuiInputLabel-root': {
+      color: '#aaaaaa',
+    },
+    '& .MuiOutlinedInput-root': {
+      '& fieldset': {
+        borderColor: editMode ? '#444' : 'transparent',
+      },
+      '&:hover fieldset': {
+        borderColor: editMode ? '#666' : 'transparent',
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: '#1976d2',
+      },
+      backgroundColor: editMode ? '#252525' : 'transparent',
+      borderRadius: '4px',
+    },
+    '& .MuiFormHelperText-root': {
+      color: '#aaaaaa',
+    },
+    '& .Mui-disabled': {
+      WebkitTextFillColor: '#ffffff !important',
+    }
+  };
+
+  const buttonStyles = {
+    backgroundColor: '#1976d2',
+    color: '#ffffff',
+    fontWeight: 'bold',
+    '&:hover': {
+      backgroundColor: '#1565c0',
+    },
+    '&:disabled': {
+      backgroundColor: '#555',
+      color: '#999'
+    }
+  };
+
+  const cancelButtonStyles = {
+    color: '#ffffff',
+    backgroundColor: '#555',
+    fontWeight: 'bold',
+    '&:hover': {
+      backgroundColor: '#666',
+    },
+    "& span": {
+      mr: 0
+    }
+  };
+
   return (
-    <div className="w-full max-w-md mx-auto mt-10 p-6 bg-[#25242478] rounded-lg shadow-md relative">
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        backgroundColor: 'transparent',
+        p: isMobile ? 0 : 2
+      }}
+    >
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#25242478] bg-opacity-90 z-50">
-          <HashLoader color="#1e3a8a" size={80} />
-        </div>
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 1300
+          }}
+        >
+          <HashLoader color="#1976d2" size={80} />
+        </Box>
       )}
-      <h2 className="text-2xl font-bold mb-6 text-center text-white">Edit Profile</h2>
-      <form onSubmit={handleSubmit(submitHandler)} className="flex flex-col gap-y-5">
-        <Textbox
-          placeholder="Your Name"
-          type="text"
-          name="name"
-          label="Name"
-          className="w-full rounded-lg bg-dimgray text-white border-gray-400 focus:border-darkblue focus:ring-darkblue"
-          register={register("name", { required: "Name is required!" })}
-          error={errors.name ? errors.name.message : ""}
-        />
-        <Textbox
-          placeholder="email@example.com"
-          type="email"
-          name="email"
-          label="Email Address"
-          className="w-full rounded-lg bg-dimgray text-white border-gray-400 focus:border-darkblue focus:ring-darkblue"
-          register={register("email", { required: "Email Address is required!" })}
-          error={errors.email ? errors.email.message : ""}
-        />
-        <Textbox
-          placeholder="Your Phone Number"
-          type="text"
-          name="phoneNumber"
-          label="Phone Number"
-          className="w-full rounded-lg bg-dimgray text-white border-gray-400 focus:border-darkblue focus:ring-darkblue"
-          register={register("phoneNumber", { required: "Phone Number is required!" })}
-          error={errors.phoneNumber ? errors.phoneNumber.message : ""}
-        />
-        <Textbox
-          placeholder="Your Job Title"
-          type="text"
-          name="title"
-          label="Job Title"
-          className="w-full rounded-lg bg-dimgray text-white border-gray-400 focus:border-darkblue focus:ring-darkblue"
-          register={register("title", { required: "Job Title is required!" })}
-          error={errors.title ? errors.title.message : ""}
-        />
-        <Button
-          type="submit"
-          label={loading ? "Updating..." : "Update Profile"}
-          className="w-full h-10 bg-blue-900 text-white rounded-lg cursor-pointer hover:bg-blue-800 transition-colors"
-          disabled={loading}
-        />
-      </form>
-      <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+
+      <Box
+        sx={{
+          width: '100%',
+          height: isMobile ? '100vh' : 'auto',
+          maxWidth: isMobile ? '100%' : '600px',
+          backgroundColor: '#1e1e1e',
+          borderRadius: isMobile ? 0 : '8px',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+          border: isMobile ? 'none' : '1px solid #333',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <Box sx={{
+          p: isMobile ? '16px' : '24px',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <MuiButton
+              startIcon={<ArrowBackIcon />}
+              onClick={handleBackClick}
+              sx={{ color: '#ffffff' }}
+            >
+              {isMobile ? '' : 'Back'}
+            </MuiButton>
+
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {editMode ? (
+                <>
+                  <MuiButton
+                    startIcon={<CloseIcon />}
+                    onClick={cancelEdit}
+                    sx={cancelButtonStyles}
+                    size={isMobile ? 'small' : 'medium'}
+                  >
+                    {isMobile ? '' : 'Cancel'}
+                  </MuiButton>
+                  <MuiButton
+                    startIcon={<SaveIcon />}
+                    onClick={handleSubmit(submitHandler)}
+                    disabled={!isDirty || loading}
+                    sx={buttonStyles}
+                    size={isMobile ? 'small' : 'medium'}
+                  >
+                    {isMobile ? 'Save' : 'Save Changes'}
+                  </MuiButton>
+                </>
+              ) : (
+                <MuiButton
+                  startIcon={<EditIcon />}
+                  onClick={toggleEditMode}
+                  sx={buttonStyles}
+                  size={isMobile ? 'small' : 'medium'}
+                >
+                  {isMobile ? 'Edit' : 'Edit Profile'}
+                </MuiButton>
+              )}
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
+            <Avatar
+              sx={{
+                width: isMobile ? 80 : 100,
+                height: isMobile ? 80 : 100,
+                fontSize: isMobile ? 32 : 40,
+                backgroundColor: '#1976d2',
+                mb: 2
+              }}
+            >
+              {getInitials(user?.name)}
+            </Avatar>
+            <Typography variant={isMobile ? 'h6' : 'h5'} component="h1" sx={{ color: '#ffffff', fontWeight: 'bold' }}>
+              {user?.name}
+            </Typography>
+            <Typography variant={isMobile ? 'body2' : 'body1'} sx={{ color: '#aaaaaa' }}>
+              {user?.title}
+            </Typography>
+          </Box>
+
+          <Divider sx={{ borderColor: '#333', mb: 3 }} />
+
+          <Box
+            component="form"
+            onSubmit={handleSubmit(submitHandler)}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 3,
+              flex: 1
+            }}
+          >
+            <TextField
+              label="Full Name"
+              variant="outlined"
+              fullWidth
+              disabled={!editMode}
+              {...register("name", { required: "Name is required" })}
+              error={!!errors.name}
+              helperText={errors.name?.message}
+              sx={textFieldStyles}
+              size={isMobile ? 'small' : 'medium'}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start" sx={{ color: '#666' }}>
+                    <PersonIcon fontSize={isMobile ? 'small' : 'medium'} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <TextField
+              label="Email Address"
+              variant="outlined"
+              fullWidth
+              disabled={!editMode}
+              {...register("email", {
+                required: "Email is required",
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: "Invalid email address"
+                }
+              })}
+              error={!!errors.email}
+              helperText={errors.email?.message}
+              sx={textFieldStyles}
+              size={isMobile ? 'small' : 'medium'}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start" sx={{ color: '#666' }}>
+                    <EmailIcon fontSize={isMobile ? 'small' : 'medium'} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <TextField
+              label="Phone Number"
+              variant="outlined"
+              fullWidth
+              disabled={!editMode}
+              {...register("phoneNumber", {
+                required: "Phone number is required",
+                pattern: {
+                  value: /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/,
+                  message: "Invalid phone number"
+                }
+              })}
+              error={!!errors.phoneNumber}
+              helperText={errors.phoneNumber?.message}
+              sx={textFieldStyles}
+              size={isMobile ? 'small' : 'medium'}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start" sx={{ color: '#666' }}>
+                    <PhoneIcon fontSize={isMobile ? 'small' : 'medium'} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <TextField
+              label="Job Title"
+              variant="outlined"
+              fullWidth
+              disabled={!editMode}
+              {...register("title", { required: "Job title is required" })}
+              error={!!errors.title}
+              helperText={errors.title?.message}
+              sx={textFieldStyles}
+              size={isMobile ? 'small' : 'medium'}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start" sx={{ color: '#666' }}>
+                    <WorkIcon fontSize={isMobile ? 'small' : 'medium'} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            {editMode && (
+              <TextField
+                label="Confirm Password"
+                type={showPassword ? 'text' : 'password'}
+                variant="outlined"
+                fullWidth
+                value={tempPassword}
+                onChange={(e) => setTempPassword(e.target.value)}
+                sx={textFieldStyles}
+                size={isMobile ? 'small' : 'medium'}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start" sx={{ color: '#666' }}>
+                      <CheckCircleIcon fontSize={isMobile ? 'small' : 'medium'} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        sx={{ color: '#666' }}
+                        size={isMobile ? 'small' : 'medium'}
+                      >
+                        {showPassword ? <VisibilityOffIcon fontSize={isMobile ? 'small' : 'medium'} /> : <VisibilityIcon fontSize={isMobile ? 'small' : 'medium'} />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+                helperText="Enter your password to save changes"
+              />
+            )}
+          </Box>
+        </Box>
+      </Box>
+
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          bottom: { xs: 70, sm: 24 }
+        }}
+      >
         <Alert
           onClose={handleCloseSnackbar}
           severity="success"
           variant="filled"
-          sx={{ width: '100%', backgroundColor: '#1e3a8a', color: '#ffffff' }}
+          sx={{
+            width: '100%',
+            backgroundColor: '#1976d2',
+            color: '#ffffff',
+            '& .MuiAlert-icon': {
+              color: '#ffffff'
+            }
+          }}
         >
           Profile updated successfully!
         </Alert>
       </Snackbar>
-    </div>
+    </Box>
   );
 };
 
