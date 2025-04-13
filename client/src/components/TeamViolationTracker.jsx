@@ -461,14 +461,18 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       }
 
       // Get counts for last 3 months
-      const recentDetractors = violations.filter(
-        (v) => v.score >= 1 && v.score <= 6 && new Date(v.date) >= threeMonthsAgo
-      ).length;
-      const recentNeutrals = violations.filter(
-        (v) => v.score >= 7 && v.score <= 8 && new Date(v.date) >= threeMonthsAgo
-      ).length;
+      // const total = violations.filter(
+      //   (v) => v.score >= 1 && v.score <= 6 && new Date(v.date) >= threeMonthsAgo
+      // ).length;
+      const totalDetractors = violationData[teamName].detractor;
 
-      const currentEquivalent = recentDetractors + Math.floor(recentNeutrals / 3);
+      // const recentNeutrals = violations.filter(
+      //   (v) => v.score >= 7 && v.score <= 8 && new Date(v.date) >= threeMonthsAgo
+      // ).length;
+      const totalNeutrals = violationData[teamName].neutral;
+
+      // const currentEquivalent = total + Math.floor(recentNeutrals / 3);
+      const currentEquivalent = totalDetractors + Math.floor(totalNeutrals / 3);
 
       // Determine how the threshold was reached (if applicable)
       let thresholdDescription = "Not reached";
@@ -556,8 +560,8 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       return {
         id: team._id,
         teamName,
-        detractorCount: recentDetractors,
-        neutralCount: recentNeutrals,
+        detractorCount: totalDetractors,
+        neutralCount: totalNeutrals,
         equivalentDetractorCount: currentEquivalent,
         totalViolations: violations.length,
         dateReachedLimit: dateReachedLimit
