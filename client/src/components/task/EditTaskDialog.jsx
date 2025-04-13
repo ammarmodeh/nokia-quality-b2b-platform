@@ -12,7 +12,7 @@ const DEPARTMENT = ["Quality", "Production"];
 const CATEGORIES = [
   "Orange HC detractor", "Orange Closure", "Orange Joint", "Nokia MS detractor", "Nokia FAT", "Nokia Closure", "TRC", "TCRM", "Others"
 ];
-const TEAMCOMPANY = ['Barium 1', 'Barium 2', 'Barium 3', 'Barium 4', 'Aldar 2', 'Orange Team', 'غير معروف']
+const TEAMCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'Al-Dar 2', 'Orange Team', 'غير معروف']
 const EVALUATIONSCORE = [1, 2, 3, 4, 5, 6, 7, 8]
 const JORDANGOVERNORATES = ["عمَان", "الزرقاء", "إربد", "العقبة", "المفرق", "مادبا", "البلقاء", "جرش", "معان", "الكرك", "عجلون", "الطفيلة"]
 const CUSTOMERTYPE = ["CBU", "EBU"]

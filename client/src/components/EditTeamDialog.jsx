@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { AccountCircle, Phone } from '@mui/icons-material';
 
-const FIELDTEAMSCOMPANY = ['Barium 1', 'Barium 2', 'Barium 3', 'Aldar 2'];
+const FIELDTEAMSCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'Al-Dar 2', 'Orange Team', 'Others'];
 
 const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
   const theme = useTheme();

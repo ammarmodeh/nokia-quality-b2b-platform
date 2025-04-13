@@ -25,7 +25,7 @@ import api from '../../api/api';
 // const LISTS = ['Todo', 'In Progress', 'Closed'];
 const PRIORIRY = ['High', 'Medium', 'Normal', 'Low'];
 const CATEGORIES = ['Orange HC detractor', 'Orange Closure', 'Orange Joint', 'Nokia MS detractor', 'Nokia FAT', 'Nokia Closure', 'TRC', 'TCRM', 'Others'];
-const TEAMCOMPANY = ['Barium 1', 'Barium 2', 'Barium 3', 'Barium 4', 'Aldar 2', 'Orange Team', 'غير معروف']
+const TEAMCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'Al-Dar 2', 'Orange Team', 'غير معروف']
 const EVALUATIONSCORE = [1, 2, 3, 4, 5, 6, 7, 8]
 const JORDANGOVERNORATES = ["عمَان", "الزرقاء", "إربد", "العقبة", "المفرق", "مادبا", "البلقاء", "جرش", "معان", "الكرك", "عجلون", "الطفيلة"]
 const CUSTOMERTYPE = ["CBU", "EBU"]
@@ -113,7 +113,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   // const [status, setStatus] = useState(task?.status?.toUpperCase() || LISTS[0]);
   const [priority, setPriority] = useState(task?.priority?.toUpperCase() || PRIORIRY[0]);
   const [category, setCategory] = useState(CATEGORIES[0] || 'Others');
-  const [teamCompany, setTeamCompany] = useState(TEAMCOMPANY[0] || 'Barium 1');
+  const [teamCompany, setTeamCompany] = useState(TEAMCOMPANY[0] || 'INH-1');
   const [evaluationScore, setEvaluationScore] = useState(EVALUATIONSCORE[0] || 1);
   const [governorate, setGovernorate] = useState(JORDANGOVERNORATES[0]);
   const [customerType, setCustomerType] = useState(CUSTOMERTYPE[0]);

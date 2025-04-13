@@ -3,7 +3,7 @@ import { CustomerIssueSchema } from "../models/customerIssueModel.js";
 // Create a new customer issue
 export const createIssue = async (req, res) => {
   try {
-    const validTeams = ['Barium 1', 'Barium 2', 'Barium 3', 'Barium 4', 'Al-Dar 2', 'Orange Team', 'Others'];
+    const validTeams = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'Al-Dar 2', 'Orange Team', 'Others'];
 
     if (!req.body.teamCompany || !validTeams.includes(req.body.teamCompany)) {
       return res.status(400).json({
@@ -100,7 +100,7 @@ export const getIssueById = async (req, res) => {
 export const updateIssue = async (req, res) => {
   try {
     if (req.body.teamCompany) {
-      const validTeams = ['Barium 1', 'Barium 2', 'Barium 3', 'Barium 4', 'Al-Dar 2', 'Orange Team', 'Others'];
+      const validTeams = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'Al-Dar 2', 'Orange Team', 'Others'];
       if (!validTeams.includes(req.body.teamCompany)) {
         return res.status(400).json({
           success: false,

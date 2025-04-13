@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { AccountCircle, Phone, Add } from '@mui/icons-material';
 
-const FIELDTEAMSCOMPANY = ['Barium 1', 'Barium 2', 'Barium 3', 'Barium 4', 'Orange Team', 'Aldar 2'];
+const FIELDTEAMSCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'Al-Dar 2', 'Orange Team'];
 
 const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
   const { register, handleSubmit, reset } = useForm();

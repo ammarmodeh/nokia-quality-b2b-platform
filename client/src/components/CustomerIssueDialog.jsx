@@ -53,10 +53,10 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
   ];
 
   const companyTeams = [
-    "Barium 1",
-    "Barium 2",
-    "Barium 3",
-    "Barium 4",
+    "INH-1",
+    "INH-2",
+    "INH-3",
+    "INH-4",
     "Al-Dar 2",
     "Orange Team",
     "Others"
