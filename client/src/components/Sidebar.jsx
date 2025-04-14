@@ -109,13 +109,13 @@ const SidebarLinks = () => {
           link: "archived",
           icon: <BiArchive />,
         },
+        {
+          label: "Trash",
+          link: "trashed",
+          icon: <FaTrashAlt />,
+        },
       ]
       : []),
-    {
-      label: "Trash",
-      link: "trashed",
-      icon: <FaTrashAlt />,
-    },
   ];
 
   return links;
