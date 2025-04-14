@@ -98,7 +98,7 @@ const SidebarLinks = () => {
       icon: <FaUsers />,
     },
     {
-      label: "Quiz",
+      label: "Perf Assessment",
       link: "quiz",
       icon: <FaQuestionCircle />,
     },
