@@ -1,10 +1,11 @@
 import {
+  MdAssessment,
   MdDashboard,
   MdLightbulb,
   MdOutlinePolicy,
   MdSettings,
 } from "react-icons/md";
-import { FaTrashAlt, FaUsers, FaCalendar, FaQuestionCircle, FaStar, FaRegLightbulb, FaThList } from "react-icons/fa";
+import { FaTrashAlt, FaUsers, FaCalendar, FaStar, FaRegLightbulb, FaThList } from "react-icons/fa";
 import { RiTeamFill } from "react-icons/ri";
 import { MdTask } from "react-icons/md";
 import { BiArchive } from "react-icons/bi";
@@ -54,24 +55,29 @@ const SidebarLinks = () => {
       link: "audit/tasks",
       icon: <FaThList />,
     },
+    // ...(condition ? array : [])
+    // This is a common pattern used in JavaScript to conditionally include elements in an array without adding null or undefined.
+    // The parentheses () in this context are used only for grouping—they help JavaScript understand that you're spreading the result of the entire ternary expression, not just part of it.
+    ...(user?.title === "Field Technical Support - QoS" ? [
+      {
+        label: "Assigned To Me",
+        icon: <MdTask size={20} />,
+        subpaths: [
+          { label: "All Tasks", link: "assigned-to-me" },
+          { label: "Detractor", link: "assigned-to-me/detractor" },
+          { label: "Neutrals", link: "assigned-to-me/neutrals" },
+        ],
+      }
+    ] : []),
     // {
-    //   label: "All Tasks",
-    //   icon: <FaTasks />,
+    //   label: "Assigned To Me",
+    //   icon: <MdTask size={20} />,
     //   subpaths: [
-    //     { label: "All Tasks", link: "tasks" },
-    //     { label: "Detractors", link: "tasks/detractor" },
-    //     { label: "Neutrals", link: "tasks/neutrals" },
+    //     { label: "All Tasks", link: "assigned-to-me" },
+    //     { label: "Detractor", link: "assigned-to-me/detractor" },
+    //     { label: "Neutrals", link: "assigned-to-me/neutrals" },
     //   ],
     // },
-    {
-      label: "Assigned To Me",
-      icon: <MdTask size={20} />,
-      subpaths: [
-        { label: "All Tasks", link: "assigned-to-me" },
-        { label: "Detractor", link: "assigned-to-me/detractor" },
-        { label: "Neutrals", link: "assigned-to-me/neutrals" },
-      ],
-    },
     {
       label: "Benchmark Tables",
       link: "benchmark-tables",
@@ -100,7 +106,7 @@ const SidebarLinks = () => {
     {
       label: "Perf Assessment",
       link: "quiz",
-      icon: <FaQuestionCircle />,
+      icon: <MdAssessment />,
     },
     ...(user?.role === "Admin"
       ? [
