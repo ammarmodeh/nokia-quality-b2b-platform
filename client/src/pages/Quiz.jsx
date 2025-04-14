@@ -52,7 +52,6 @@ const Quiz = () => {
     api.get('/quiz/questions')
       .then(response => setQuizState(prev => ({ ...prev, questions: response.data })))
       .catch(err => {
-        // console.error('Error fetching questions:', err);
         setQuizState(prev => ({ ...prev, error: 'فشل تحميل الأسئلة. يرجى المحاولة مرة أخرى.' }));
       });
   }, [state]);
@@ -76,7 +75,7 @@ const Quiz = () => {
       setQuizState(prev => ({
         ...prev,
         currentQuestion: prev.currentQuestion + 1,
-        selectedOption: '',
+        selectedOption: newUserAnswers[prev.currentQuestion + 1]?.selectedAnswer || '',
         score: newScore,
         userAnswers: newUserAnswers
       }));
@@ -182,7 +181,7 @@ const Quiz = () => {
               setQuizState(prev => ({
                 ...prev,
                 currentQuestion: prev.currentQuestion - 1,
-                selectedOption: prev.userAnswers[prev.currentQuestion - 1]?.selectedOption || ''
+                selectedOption: prev.userAnswers[prev.currentQuestion - 1]?.selectedAnswer || ''
               }));
             }}
             disabled={currentQuestion === 0}
