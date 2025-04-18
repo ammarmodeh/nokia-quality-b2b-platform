@@ -20,7 +20,7 @@ const customerIssueSchema = new mongoose.Schema({
   teamCompany: {
     type: String,
     required: true,
-    enum: ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'Al-Dar 2', 'Orange Team', 'Others']
+    enum: ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team', 'Others']
   },
   date: { type: Date, default: Date.now },
   solved: {

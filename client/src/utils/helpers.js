@@ -194,6 +194,33 @@ export const getReasonViolations = (tasks) => {
   }));
 };
 
+export const getReasonViolations2 = (tasks) => {
+  const reasonMap = {};
+
+  tasks.forEach(task => {
+    const reason = task.reason || 'Unspecified';
+
+    if (!reasonMap[reason]) {
+      reasonMap[reason] = {
+        total: 0,
+        tasks: []
+      };
+    }
+
+    reasonMap[reason].total++;
+    reasonMap[reason].tasks.push(task);
+  });
+
+  const totalT = Object.values(reasonMap).reduce((sum, { total }) => sum + total, 0);
+
+  return Object.entries(reasonMap).map(([reason, { total, tasks }]) => ({
+    reason,
+    total,
+    tasks,
+    percentage: totalT > 0 ? ((total / totalT) * 100).toFixed(2) + "%" : 0
+  }));
+};
+
 
 export const getWeekNumber = (date) => {
   const d = new Date(date);
@@ -349,6 +376,41 @@ export const getActivationTeamValidationData = (tasks) => {
   return validationPercentages;
 };
 
+export const getActivationTeamValidationData2 = (tasks) => {
+  const reasonMap = {};
+
+  // First filter tasks by Activation Team responsibility
+  const activationTeamTasks = tasks.filter(task =>
+    task.responsibility === 'Activation Team'
+  );
+
+  // Group filtered tasks by reason
+  activationTeamTasks.forEach(task => {
+    const reason = task.reason || 'Unspecified Reason';
+
+    if (!reasonMap[reason]) {
+      reasonMap[reason] = {
+        count: 0,
+        tasks: []
+      };
+    }
+
+    reasonMap[reason].count++;
+    reasonMap[reason].tasks.push(task);
+  });
+
+  // Calculate total count from filtered tasks only
+  const total = activationTeamTasks.length;
+
+  // Convert to array with percentages
+  return Object.entries(reasonMap).map(([reason, { count, tasks }]) => ({
+    reason,  // Now using reason instead of validationCat
+    count,
+    tasks,
+    percentage: total > 0 ? ((count / total) * 100).toFixed(2) : 0
+  }));
+};
+
 export const getKnowledgeGapReasons = (tasks) => {
   const knowledgeGapReasons = [];
 
@@ -366,6 +428,42 @@ export const getKnowledgeGapReasons = (tasks) => {
         existingReason.count += 1; // Increment count if reason already exists
       } else {
         knowledgeGapReasons.push({ reason, count: 1 }); // Add new reason with count 1
+      }
+    }
+  });
+
+  // Calculate total count of "Knowledge Gap" tasks
+  const totalKnowledgeGapTasks = knowledgeGapReasons.reduce((total, item) => total + item.count, 0);
+
+  // Add percentage to each reason
+  knowledgeGapReasons.forEach((item) => {
+    item.percentage = ((item.count / totalKnowledgeGapTasks) * 100).toFixed(2) + "%";
+  });
+
+  // Sort reasons by count in descending order
+  knowledgeGapReasons.sort((a, b) => b.count - a.count);
+
+  return knowledgeGapReasons;
+};
+
+export const getKnowledgeGapReasons2 = (tasks) => {
+  const knowledgeGapReasons = [];
+
+  // Filter tasks with "Knowledge Gap" and calculate count and percentage
+  tasks.forEach((task) => {
+    if (
+      task.responsibility &&
+      task.responsibility.includes("Activation Team") &&
+      task.validationCat === "Knowledge Gap"
+    ) {
+      const reason = task.reason || "No reason provided"; // Default to "No reason provided" if reason is not provided
+      const existingReason = knowledgeGapReasons.find((item) => item.reason === reason);
+
+      if (existingReason) {
+        existingReason.count += 1; // Increment count if reason already exists
+        existingReason.tasks.push(task); // Add task to the existing reason
+      } else {
+        knowledgeGapReasons.push({ reason, count: 1, tasks: [task] }); // Add new reason with count 1 and task
       }
     }
   });
@@ -418,6 +516,43 @@ export const getCustomerEducationReasons = (tasks) => {
 
   return customerEducationReasons;
 };
+
+export const getCustomerEducationReasons2 = (tasks) => {
+  const customerEducationReasons = [];
+
+  // Filter tasks with "Customer Education" and calculate count and percentage
+  tasks.forEach((task) => {
+    if (
+      task.responsibility &&
+      task.responsibility.includes("Activation Team") &&
+      task.validationCat === "Customer Education"
+    ) {
+      const reason = task.reason || "No reason provided"; // Default to "No reason provided" if reason is not provided
+      const existingReason = customerEducationReasons.find((item) => item.reason === reason);
+
+      if (existingReason) {
+        existingReason.count += 1; // Increment count if reason already exists
+        existingReason.tasks.push(task); // Add task to the existing reason
+      } else {
+        customerEducationReasons.push({ reason, count: 1, tasks: [task] }); // Add new reason with count 1 and task
+      }
+    }
+  });
+
+  // Calculate total count of "Customer Education" tasks
+  const totalCustomerEducationTasks = customerEducationReasons.reduce((total, item) => total + item.count, 0);
+
+  // Add percentage to each reason
+  customerEducationReasons.forEach((item) => {
+    item.percentage = ((item.count / totalCustomerEducationTasks) * 100).toFixed(2) + "%";
+  });
+
+  // Sort reasons by count in descending order
+  customerEducationReasons.sort((a, b) => b.count - a.count);
+
+  return customerEducationReasons;
+};
+
 
 export const getCompanyViolations = (tasks) => {
   const companyViolations = {};

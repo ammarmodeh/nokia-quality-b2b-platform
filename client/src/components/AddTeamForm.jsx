@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { AccountCircle, Phone, Add } from '@mui/icons-material';
 
-const FIELDTEAMSCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'Al-Dar 2', 'Orange Team'];
+const FIELDTEAMSCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team'];
 
 const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
   const { register, handleSubmit, reset } = useForm();
@@ -55,7 +55,7 @@ const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)}>
-      <Typography variant="h4" fontWeight="bold" textAlign="center" mb={5} color="darkgray">
+      <Typography variant="h4" fontWeight="bold" textAlign="center" mb={5} color="#3ea6ff">
         Add Field Team Information
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: isMobileScreen ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 3 }}>

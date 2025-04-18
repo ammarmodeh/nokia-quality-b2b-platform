@@ -4,10 +4,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import RemoveIcon from '@mui/icons-material/Remove';
-import InfoIcon from '@mui/icons-material/Info';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import { Typography, Collapse, IconButton, Paper } from '@mui/material';
+import { Paper } from '@mui/material';
 
 export const DataTable = ({ groupedData }) => {
   const [paginationModel, setPaginationModel] = useState({
@@ -15,7 +12,6 @@ export const DataTable = ({ groupedData }) => {
     page: 0,
   });
   // console.log({ groupedData });
-  const [expanded, setExpanded] = useState(false);
   const sortedWeeksDescending = Object.keys(groupedData).sort((a, b) => {
     const weekA = parseInt(a.split('-')[1], 10);
     const weekB = parseInt(b.split('-')[1], 10);
@@ -107,7 +103,7 @@ export const DataTable = ({ groupedData }) => {
 
   return (
     <div style={{ width: '100%' }}>
-      <div style={{
+      {/* <div style={{
         backgroundColor: '#333',
         padding: '10px',
         borderRadius: '4px',
@@ -149,7 +145,7 @@ export const DataTable = ({ groupedData }) => {
             Note: Some samples may be excluded due to unrelated issues.<br />
           </Typography>
         </Collapse>
-      </div>
+      </div> */}
 
       <Paper sx={{
         height: 240,

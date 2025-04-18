@@ -23,7 +23,6 @@ import { getWeekNumberForTaksTable, newFormatDate } from "../utils/helpers";
 import { useState } from "react";
 import { FaCopy, FaTimes } from "react-icons/fa";
 import { RiFileExcel2Fill } from "react-icons/ri";
-import { MdAssessment, MdBusiness, MdDateRange, MdGroups, MdRequestPage } from "react-icons/md";
 import { Assignment, AssignmentTurnedIn } from "@mui/icons-material";
 
 const handleCopyTaskData = (taskData) => {
@@ -114,6 +113,9 @@ const TaskTable = ({ tasks }) => {
       renderCell: (params) => (
         <Button
           onClick={() => handleClickOpen(params.row)}
+          disableRipple
+          disableTouchRipple
+          disableFocusRipple
           sx={{
             color: '#3ea6ff',
             textTransform: 'none',
@@ -254,6 +256,7 @@ const TaskTable = ({ tasks }) => {
       field: "actions",
       headerName: "Actions",
       width: 100,
+      flex: 1,
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => {
@@ -355,7 +358,7 @@ const TaskTable = ({ tasks }) => {
           variant="h6"
           fontWeight="bold"
           sx={{
-            color: "#ffffff",
+            color: "#c2c2c2",
             fontSize: isMobile ? "0.9rem" : "1rem",
           }}
         >

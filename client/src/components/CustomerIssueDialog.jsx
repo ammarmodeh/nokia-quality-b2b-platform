@@ -57,6 +57,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
     "INH-2",
     "INH-3",
     "INH-4",
+    'INH-5',
+    'INH-6',
     "Al-Dar 2",
     "Orange Team",
     "Others"

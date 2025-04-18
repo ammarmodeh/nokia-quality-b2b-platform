@@ -716,140 +716,142 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               </Paper>
 
               {/* Progress Section */}
-              <Paper elevation={0} sx={{
-                p: isMobile ? 1.5 : 2,
-                backgroundColor: '#272727',
-                borderRadius: 2,
-                border: '1px solid #444'
-              }}>
-                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
-                  Progress
-                </Typography>
-
-                {/* Progress Bar with Assigned Team Members */}
-                <Box sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#eff5ff' }}>
-                      Progress: {Math.round((100 / taskToView.subTasks.length) * taskToView.subTasks.filter(t => t.note).length)}%
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
-                      {taskToView.assignedTo?.map((user, index) => (
-                        <Tooltip key={index} title={user.name}>
-                          <Avatar sx={{
-                            width: isMobile ? 24 : 28,
-                            height: isMobile ? 24 : 28,
-                            fontSize: isMobile ? '0.7rem' : '0.8rem',
-                            backgroundColor: '#3a4044',
-                            border: '2px solid',
-                            borderColor: taskToView.subTasks.some(t => t.completedBy?._id === user._id) ? '#4caf50' : '#f44336'
-                          }}>
-                            {user.name
-                              .split(' ')
-                              .map((part, i) => i < 2 ? part.charAt(0) : '')
-                              .join('')}
-                          </Avatar>
-                        </Tooltip>
-                      ))}
-                    </Box>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={Math.round((100 / taskToView.subTasks.length) * taskToView.subTasks.filter(t => t.note).length)}
-                    sx={{
-                      height: isMobile ? 8 : 10,
-                      borderRadius: 5,
-                      '& .MuiLinearProgress-bar': {
-                        borderRadius: 5,
-                        backgroundColor: '#3ea6ff'
-                      }
-                    }}
-                  />
-                </Box>
-
-                {/* Detailed Action Items */}
-                <Paper sx={{
-                  p: isMobile ? 1 : 2,
-                  backgroundColor: '#333',
-                  border: '1px solid #444',
-                  borderRadius: '8px'
+              {taskToView.subTasks[0].note && (
+                <Paper elevation={0} sx={{
+                  p: isMobile ? 1.5 : 2,
+                  backgroundColor: '#272727',
+                  borderRadius: 2,
+                  border: '1px solid #444'
                 }}>
-                  {taskToView.subTasks.map((subtask, index) => (
-                    <Box
-                      key={index}
-                      sx={{
-                        mb: index < taskToView.subTasks.length - 1 ? 2 : 0,
-                        pb: index < taskToView.subTasks.length - 1 ? 2 : 0,
-                        borderBottom: index < taskToView.subTasks.length - 1 ? '1px solid #444' : 'none'
-                      }}
-                    >
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                        <Typography variant={isMobile ? "body2" : "h6"} sx={{ color: '#eff5ff', fontWeight: 500 }}>
-                          {index + 1}. {subtask.title}
-                        </Typography>
-                        {subtask.completedBy && (
-                          <Chip
-                            size={isMobile ? "small" : "medium"}
-                            sx={{
+                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                    Progress
+                  </Typography>
+
+                  {/* Progress Bar with Assigned Team Members */}
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#eff5ff' }}>
+                        Progress: {Math.round((100 / taskToView.subTasks.length) * taskToView.subTasks.filter(t => t.note).length)}%
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        {taskToView.assignedTo?.map((user, index) => (
+                          <Tooltip key={index} title={user.name}>
+                            <Avatar sx={{
+                              width: isMobile ? 24 : 28,
+                              height: isMobile ? 24 : 28,
+                              fontSize: isMobile ? '0.7rem' : '0.8rem',
                               backgroundColor: '#3a4044',
-                              color: 'white',
-                              '& .MuiChip-avatar': {
-                                width: isMobile ? 20 : 24,
-                                height: isMobile ? 20 : 24,
-                                fontSize: isMobile ? '0.65rem' : '0.75rem'
-                              }
-                            }}
-                            avatar={
-                              <Avatar sx={{
-                                backgroundColor: taskToView.assignedTo.some(u => u._id === subtask.completedBy._id)
-                                  ? '#3ea6ff'
-                                  : '#f44336',
-                                width: isMobile ? 20 : 24,
-                                height: isMobile ? 20 : 24,
-                                fontSize: isMobile ? '0.65rem' : '0.75rem'
-                              }}>
-                                {subtask.completedBy.name
-                                  .split(' ')
-                                  .map((part, i) => i < 2 ? part.charAt(0) : '')
-                                  .join('')}
-                              </Avatar>
-                            }
-                            label={`${isMobile ? '' : 'Action by: '}${subtask.completedBy.name}`}
-                          />
-                        )}
-                      </Stack>
-
-                      <Box sx={{
-                        backgroundColor: '#2a2a2a',
-                        p: isMobile ? 1 : 2,
-                        borderRadius: 1,
-                        borderLeft: '3px solid',
-                        borderColor: subtask.note ? '#3ea6ff' : 'transparent'
-                      }}>
-                        <Typography variant={isMobile ? "caption" : "body1"} sx={{
-                          direction: 'rtl',
-                          textAlign: 'right',
-                          color: '#eff5ff',
-                          fontStyle: subtask.note ? 'normal' : 'italic'
-                        }}>
-                          {subtask.note || 'No action taken yet'}
-                        </Typography>
+                              border: '2px solid',
+                              borderColor: taskToView.subTasks.some(t => t.completedBy?._id === user._id) ? '#4caf50' : '#f44336'
+                            }}>
+                              {user.name
+                                .split(' ')
+                                .map((part, i) => i < 2 ? part.charAt(0) : '')
+                                .join('')}
+                            </Avatar>
+                          </Tooltip>
+                        ))}
                       </Box>
-
-                      {subtask.dateTime && (
-                        <Typography variant="caption" sx={{
-                          color: 'gray',
-                          display: 'block',
-                          mt: 0.5,
-                          textAlign: 'right',
-                          fontSize: isMobile ? '0.65rem' : '0.75rem'
-                        }}>
-                          Completed: {subtask.dateTime}
-                        </Typography>
-                      )}
                     </Box>
-                  ))}
+                    <LinearProgress
+                      variant="determinate"
+                      value={Math.round((100 / taskToView.subTasks.length) * taskToView.subTasks.filter(t => t.note).length)}
+                      sx={{
+                        height: isMobile ? 8 : 10,
+                        borderRadius: 5,
+                        '& .MuiLinearProgress-bar': {
+                          borderRadius: 5,
+                          backgroundColor: '#3ea6ff'
+                        }
+                      }}
+                    />
+                  </Box>
+
+                  {/* Detailed Action Items */}
+                  <Paper sx={{
+                    p: isMobile ? 1 : 2,
+                    backgroundColor: '#333',
+                    border: '1px solid #444',
+                    borderRadius: '8px'
+                  }}>
+                    {taskToView.subTasks.map((subtask, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          mb: index < taskToView.subTasks.length - 1 ? 2 : 0,
+                          pb: index < taskToView.subTasks.length - 1 ? 2 : 0,
+                          borderBottom: index < taskToView.subTasks.length - 1 ? '1px solid #444' : 'none'
+                        }}
+                      >
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                          <Typography variant={isMobile ? "body2" : "h6"} sx={{ color: '#eff5ff', fontWeight: 500 }}>
+                            {index + 1}. {subtask.title}
+                          </Typography>
+                          {subtask.completedBy && (
+                            <Chip
+                              size={isMobile ? "small" : "medium"}
+                              sx={{
+                                backgroundColor: '#3a4044',
+                                color: 'white',
+                                '& .MuiChip-avatar': {
+                                  width: isMobile ? 20 : 24,
+                                  height: isMobile ? 20 : 24,
+                                  fontSize: isMobile ? '0.65rem' : '0.75rem'
+                                }
+                              }}
+                              avatar={
+                                <Avatar sx={{
+                                  backgroundColor: taskToView.assignedTo.some(u => u._id === subtask.completedBy._id)
+                                    ? '#3ea6ff'
+                                    : '#f44336',
+                                  width: isMobile ? 20 : 24,
+                                  height: isMobile ? 20 : 24,
+                                  fontSize: isMobile ? '0.65rem' : '0.75rem'
+                                }}>
+                                  {subtask.completedBy.name
+                                    .split(' ')
+                                    .map((part, i) => i < 2 ? part.charAt(0) : '')
+                                    .join('')}
+                                </Avatar>
+                              }
+                              label={`${isMobile ? '' : 'Action by: '}${subtask.completedBy.name}`}
+                            />
+                          )}
+                        </Stack>
+
+                        <Box sx={{
+                          backgroundColor: '#2a2a2a',
+                          p: isMobile ? 1 : 2,
+                          borderRadius: 1,
+                          borderLeft: '3px solid',
+                          borderColor: subtask.note ? '#3ea6ff' : 'transparent'
+                        }}>
+                          <Typography variant={isMobile ? "caption" : "body1"} sx={{
+                            direction: 'rtl',
+                            textAlign: 'right',
+                            color: '#eff5ff',
+                            fontStyle: subtask.note ? 'normal' : 'italic'
+                          }}>
+                            {subtask.note || 'No action taken yet'}
+                          </Typography>
+                        </Box>
+
+                        {subtask.dateTime && (
+                          <Typography variant="caption" sx={{
+                            color: 'gray',
+                            display: 'block',
+                            mt: 0.5,
+                            textAlign: 'right',
+                            fontSize: isMobile ? '0.65rem' : '0.75rem'
+                          }}>
+                            Completed: {subtask.dateTime}
+                          </Typography>
+                        )}
+                      </Box>
+                    ))}
+                  </Paper>
                 </Paper>
-              </Paper>
+              )}
             </Box>
           )}
         </DialogContent>
@@ -911,7 +913,9 @@ const DetailRow = ({ label, value, isMobile }) => (
         sx={{
           color: '#ffffff',
           wordBreak: 'break-word',
-          fontSize: isMobile ? '0.875rem' : '1rem'
+          fontSize: isMobile ? '0.875rem' : '1rem',
+          textAlign: label === "Customer Feedback" ? "right" : "left",
+          direction: label === "Customer Feedback" ? "rtl" : "ltr"
         }}
       >
         {value || 'N/A'}

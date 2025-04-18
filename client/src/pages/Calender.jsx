@@ -73,7 +73,7 @@ const CalendarPage = () => {
 
   return (
     <ThemeProvider theme={darkTheme}>
-      <div className="p-4 max-w-[1000px] mx-auto" style={{ backgroundColor: darkTheme.palette.background.default, color: darkTheme.palette.text.primary }}>
+      <div className="p-4 max-w-[1100px] mx-auto" style={{ backgroundColor: darkTheme.palette.background.default, color: "#3ea6ff" }}>
         <Typography variant="h4" gutterBottom>
           Yearly Calendar with Custom Weeks
         </Typography>
@@ -108,7 +108,7 @@ const CalendarPage = () => {
                 p: 2,
                 borderRadius: "8px",
                 backgroundColor: week.isCurrentWeek
-                  ? "darkblue"
+                  ? "#3232b66e"
                   : week.isSpent
                     ? "background.paper"
                     : "background.default",

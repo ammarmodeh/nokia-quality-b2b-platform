@@ -12,14 +12,14 @@ const DEPARTMENT = ["Quality", "Production"];
 const CATEGORIES = [
   "Orange HC detractor", "Orange Closure", "Orange Joint", "Nokia MS detractor", "Nokia FAT", "Nokia Closure", "TRC", "TCRM", "Others"
 ];
-const TEAMCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'Al-Dar 2', 'Orange Team', 'غير معروف']
+const TEAMCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team', 'غير معروف']
 const EVALUATIONSCORE = [1, 2, 3, 4, 5, 6, 7, 8]
 const JORDANGOVERNORATES = ["عمَان", "الزرقاء", "إربد", "العقبة", "المفرق", "مادبا", "البلقاء", "جرش", "معان", "الكرك", "عجلون", "الطفيلة"]
 const CUSTOMERTYPE = ["CBU", "EBU"]
 const VALIDATIONSTATUS = ["Validated", "Not validated"]
-const VALIDATIONCATEGORY = ["Knowledge Gap", "Customer Education", "Subjective Evaluation / Personal Preference", "Lack of Technical Expertise",
+const VALIDATIONCATEGORY = ["Knowledge Gap", "Customer Education", "Customer’s Own Criteria", "Lack of Technical Expertise",
   "Poor Time Management", "Technical Limitations", "Execution Delay", "Processing Delay", "External Factors", "Bad Team Behavior",
-  "Device limitations", "Misuse of Service", "Customer-Declined Solution / Unrealistic Expectation", "Others", "VOIP", "Can't Detected"]
+  "Device limitations", "Misuse of Service", "Customer-Declined Solution / Unrealistic Expectation", "Others", "VOIP", "Can't Determine"]
 
 const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const user = useSelector((state) => state?.auth?.user);

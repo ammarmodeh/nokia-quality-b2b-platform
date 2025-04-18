@@ -97,14 +97,14 @@ const BenchmarkTables = () => {
     <div style={{
       padding: "0px 20px",
       backgroundColor: "#121212",
-      maxWidth: "1000px",
+      maxWidth: "1100px",
       margin: "0 auto",
       minHeight: "calc(100vh - 55px)",
-      color: "#ffffff"
+      color: "#3ea6ff"
     }}>
       {/* Reason Trends */}
       <Stack sx={{ margin: "20px 0" }}>
-        <Typography sx={{ padding: "16px 0", color: "#ffffff" }} variant="h5">
+        <Typography sx={{ padding: "16px 0", }} variant="h5">
           Reason Table
         </Typography>
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
@@ -114,7 +114,7 @@ const BenchmarkTables = () => {
 
       {/* Team Violation Trends */}
       <Box sx={{ margin: "20px 0" }}>
-        <Typography sx={{ padding: "16px 0", color: "#ffffff" }} variant="h5">
+        <Typography sx={{ padding: "16px 0", }} variant="h5">
           Team Violations Table
         </Typography>
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>

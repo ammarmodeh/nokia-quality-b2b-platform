@@ -47,22 +47,52 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const exportToExcel = () => {
     const exportData = rows.map(row => {
       const team = fieldTeams.find(t => t._id === row.id);
-      const sessionHistory = team?.sessionHistory || [];
+      // const sessionHistory = team?.sessionHistory || [];
+      // const trainingSessions = team?.trainingSessions || [];
+      const allSessions = team?.sessionHistory || [];
 
       // Format session history with clear separation
-      const formattedSessions = sessionHistory.length > 0
-        ? sessionHistory.map((session, index) =>
-          `${index + 1}. ${new Date(session.sessionDate).toLocaleDateString()} - ${session.status}${session.notes ? ` (${session.notes})` : ''
-          }`
-        ).join('\n\n')  // Double line breaks for better separation
-        : 'No sessions recorded';
+      // const formattedSessions = sessionHistory.length > 0
+      //   ? sessionHistory.map((session, index) =>
+      //     `${index + 1}. ${new Date(session.sessionDate).toLocaleDateString()} - ${session.status}${session.notes ? ` (${session.notes})` : ''
+      //     }`
+      //   ).join('\n\n')  // Double line breaks for better separation
+      //   : 'No sessions recorded';
+
+      // Format training sessions
+      // const formattedTrainingSessions = trainingSessions.length > 0
+      //   ? trainingSessions.map((session, index) =>
+      //     `${index + 1}. ${new Date(session.date).toLocaleDateString()} - ${session.type}${session.notes ? ` (${session.notes})` : ''}`
+      //   ).join('\n\n')
+      //   : 'No training sessions';
+
+      // Format completed sessions
+      const completedSessions = allSessions
+        .filter(session => session.status === "Completed")
+        .map((session, index) =>
+          `${index + 1}. ${new Date(session.sessionDate).toLocaleDateString()} - ${session.sessionTitle || 'Training'}${session.notes ? ` (${session.notes})` : ''}`
+        );
+
+      // Format missed/canceled sessions
+      const missedCanceledSessions = allSessions
+        .filter(session => session.status === "Missed" || session.status === "Cancelled")
+        .map((session, index) =>
+          `${index + 1}. ${new Date(session.sessionDate).toLocaleDateString()} - ${session.status}${session.reason ? ` (Reason: ${session.reason})` : ''}`
+        );
 
       return {
         'Team Name': row.teamName,
+        'Team Company': row.teamCompany || 'N/A',
+        'Trained': row.hasTraining ? 'Yes' : 'No',
+        // 'Training Sessions': formattedTrainingSessions,
+        'Last Completed Session': row.mostRecentCompletedSession,
+        'Last Missed/Canceled Session': row.mostRecentMissedCanceledSession,
+        'Completed Sessions': completedSessions.length > 0 ? completedSessions.join('\n\n') : 'None',
+        'Missed/Canceled Sessions': missedCanceledSessions.length > 0 ? missedCanceledSessions.join('\n\n') : 'None',
         'Detractor Violations (1-6)': row.detractorCount,
         'Neutral Violations (7-8)': row.neutralCount,
-        'Equivalent Detractors': row.equivalentDetractorCount,
         'Total Violations': row.totalViolations,
+        // 'Equivalent Detractors': row.equivalentDetractorCount,
         'Date Reached Violation Limit': row.dateReachedLimit || 'N/A',
         'How Threshold Was Reached': row.thresholdDescription,
         'Consequence Applied': row.consequenceApplied,
@@ -72,8 +102,8 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         'Evaluation Score': row.evaluationScore || 'N/A',
         'Violation Status': row.equivalentDetractorCount >= 3 ? 'Violated' :
           row.equivalentDetractorCount === 2 ? 'Warning' : 'OK',
-        'Most Recent Session': row.mostRecentSession,
-        'Session History': formattedSessions,
+        // 'Most Recent Session': row.mostRecentSession,
+        // 'Session History': formattedSessions,
         'Exported Date': new Date().toLocaleDateString()
       };
     });
@@ -84,6 +114,9 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     // Set optimal column widths
     worksheet['!cols'] = [
       { wch: 25 },  // Team Name
+      { wch: 25 },  // Team Company
+      { wch: 12 },  // Has Training
+      { wch: 30 },  // Training Sessions
       { wch: 12 },  // Detractor Violations
       { wch: 12 },  // Neutral Violations
       { wch: 12 },  // Equivalent Detractors
@@ -118,7 +151,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
 
       // Style session history cells for better readability
       for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-        const sessionCell = XLSX.utils.encode_cell({ r: R, c: 14 }); // Session History column
+        const sessionCell = XLSX.utils.encode_cell({ r: R, c: 17 }); // Session History column
         if (worksheet[sessionCell]) {
           worksheet[sessionCell].s = {
             alignment: {
@@ -394,17 +427,28 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     const sixMonthsAgo = new Date(today);
     sixMonthsAgo.setMonth(today.getMonth() - 6);
 
-    const rowsData = Object.keys(violationData).map((teamName) => {
-      const team = fieldTeams.find((t) => t.teamName === teamName);
-      if (!team) {
-        // console.warn(`Team not found: ${teamName}`);
-        return null;
-      }
-
-      const violations = violationData[teamName].violations;
+    const rowsData = fieldTeams.map((team) => {
+      const teamName = team.teamName;
+      const teamViolations = violationData[teamName] || { detractor: 0, neutral: 0, violations: [] };
+      const violations = teamViolations.violations;
       const sortedViolations = [...violations].sort((a, b) =>
         new Date(a.date) - new Date(b.date)
       );
+
+      // Calculate violation counts
+      const detractorCount = teamViolations.detractor;
+      const neutralCount = teamViolations.neutral;
+      const totalViolations = detractorCount + neutralCount; // New simple sum
+
+      const hasTraining = team?.sessionHistory?.some(
+        session => session.status === "Completed"
+      );
+
+      // Filter sessions by status
+      const completedSessions = team?.sessionHistory?.filter(session => session.status === "Completed") || [];
+      const missedOrCanceledSessions = team?.sessionHistory?.filter(session =>
+        session.status === "Missed" || session.status === "Cancelled"
+      ) || [];
 
       // Track violation threshold (3 equivalent detractors)
       let dateReachedLimit = null;
@@ -460,18 +504,8 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         }
       }
 
-      // Get counts for last 3 months
-      // const total = violations.filter(
-      //   (v) => v.score >= 1 && v.score <= 6 && new Date(v.date) >= threeMonthsAgo
-      // ).length;
-      const totalDetractors = violationData[teamName].detractor;
-
-      // const recentNeutrals = violations.filter(
-      //   (v) => v.score >= 7 && v.score <= 8 && new Date(v.date) >= threeMonthsAgo
-      // ).length;
-      const totalNeutrals = violationData[teamName].neutral;
-
-      // const currentEquivalent = total + Math.floor(recentNeutrals / 3);
+      const totalDetractors = teamViolations.detractor;
+      const totalNeutrals = teamViolations.neutral;
       const currentEquivalent = totalDetractors + Math.floor(totalNeutrals / 3);
 
       // Determine how the threshold was reached (if applicable)
@@ -547,11 +581,23 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         }
       }
 
-      const mostRecentSession = team?.sessionHistory?.length > 0
+      // Get most recent completed session
+      const mostRecentCompletedSession = completedSessions.length > 0
         ? new Date(
           Math.max(
-            ...team.sessionHistory
-              .map((session) => new Date(session?.sessionDate))
+            ...completedSessions
+              .map((session) => new Date(session.sessionDate))
+              .filter((date) => !isNaN(date))
+          )
+        )
+        : null;
+
+      // Get most recent missed/canceled session
+      const mostRecentMissedCanceledSession = missedOrCanceledSessions.length > 0
+        ? new Date(
+          Math.max(
+            ...missedOrCanceledSessions
+              .map((session) => new Date(session.sessionDate))
               .filter((date) => !isNaN(date))
           )
         )
@@ -560,10 +606,13 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       return {
         id: team._id,
         teamName,
+        teamCompany: team.teamCompany || 'N/A',
+        hasTraining,
         detractorCount: totalDetractors,
         neutralCount: totalNeutrals,
+        totalViolations, // Add the new simple sum
         equivalentDetractorCount: currentEquivalent,
-        totalViolations: violations.length,
+        // totalViolations: violations.length,
         dateReachedLimit: dateReachedLimit
           ? new Date(dateReachedLimit).toLocaleDateString()
           : currentEquivalent >= 3 ? "Threshold not recorded" : null,
@@ -573,16 +622,21 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         validationStatus,
         isEvaluated: team.isEvaluated,
         evaluationScore: team.evaluationScore || 'N/A',
-        mostRecentSession: mostRecentSession ? mostRecentSession.toLocaleDateString() : "No sessions",
+        mostRecentCompletedSession: mostRecentCompletedSession
+          ? mostRecentCompletedSession.toLocaleDateString()
+          : "No completed sessions",
+        mostRecentMissedCanceledSession: mostRecentMissedCanceledSession
+          ? mostRecentMissedCanceledSession.toLocaleDateString()
+          : "No missed/canceled sessions",
       };
-    }).filter(Boolean);
+    });
 
     return rowsData.sort((a, b) => {
-      // Sort by equivalent detractors (descending), then by whether limit was reached
-      if (b.equivalentDetractorCount !== a.equivalentDetractorCount) {
-        return b.equivalentDetractorCount - a.equivalentDetractorCount;
+      // Sort by total violations (descending), then by equivalent detractors (descending)
+      if (b.totalViolations !== a.totalViolations) {
+        return b.totalViolations - a.totalViolations;
       }
-      return (b.dateReachedLimit ? 1 : 0) - (a.dateReachedLimit ? 1 : 0);
+      return b.equivalentDetractorCount - a.equivalentDetractorCount;
     });
   }, [violationData, fieldTeams]);
 
@@ -596,6 +650,9 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       renderCell: (params) => (
         <Button
           onClick={() => handleTeamNameClick(params.value)}
+          disableRipple
+          disableTouchRipple
+          disableFocusRipple
           sx={{
             color: '#3ea6ff',
             textTransform: 'none',
@@ -603,11 +660,22 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
               backgroundColor: 'rgba(62, 166, 255, 0.1)'
             }
           }}
-        // startIcon={<MdGroups />}
         >
           {params.value}
         </Button>
       ),
+    },
+    {
+      field: "teamCompany",
+      headerName: "Group",
+      width: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          {params.value}
+        </Typography>
+      )
     },
     {
       field: "detractorCount",
@@ -622,7 +690,6 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           justifyContent: 'center',
           color: params.value > 0 ? '#f44336' : '#aaaaaa'
         }}>
-          {/* <Warning fontSize="small" sx={{ mr: 0.5 }} /> */}
           {params.value}
         </Box>
       )
@@ -640,17 +707,13 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           justifyContent: 'center',
           color: params.value > 0 ? '#ff9800' : '#aaaaaa'
         }}>
-          {/* <InfoOutlined fontSize="small" sx={{ mr: 0.5 }} /> */}
           {params.value}
-          <Typography variant="caption" sx={{ ml: 0.5 }}>
-            ({Math.floor(params.value / 3)} eq.)
-          </Typography>
         </Box>
       )
     },
     {
-      field: "equivalentDetractorCount",
-      headerName: "Eq. Detractors",
+      field: "totalViolations",
+      headerName: "Total Violations",
       width: 120,
       align: 'center',
       headerAlign: 'center',
@@ -659,15 +722,36 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontWeight: params.value >= 3 ? 'bold' : 'normal',
-          color: params.value >= 3 ? '#f44336' :
-            params.value === 2 ? '#ff9800' : '#4caf50'
+          fontWeight: 'bold',
+          color: params.value > 0 ? '#f44336' : '#aaaaaa',
+          backgroundColor: '#383838',
+          // borderRadius: '4px',
+          padding: '4px 8px'
         }}>
-          {/* <Assessment fontSize="small" sx={{ mr: 0.5 }} /> */}
           {params.value}
         </Box>
       )
     },
+    // {
+    //   field: "equivalentDetractorCount",
+    //   headerName: "Eq. Detractors",
+    //   width: 120,
+    //   align: 'center',
+    //   headerAlign: 'center',
+    //   renderCell: (params) => (
+    //     <Box sx={{
+    //       display: 'flex',
+    //       alignItems: 'center',
+    //       justifyContent: 'center',
+    //       fontWeight: params.value >= 3 ? 'bold' : 'normal',
+    //       color: params.value >= 3 ? '#f44336' :
+    //         params.value === 2 ? '#ff9800' : '#4caf50'
+    //     }}>
+    //       {/* <Assessment fontSize="small" sx={{ mr: 0.5 }} /> */}
+    //       {params.value}
+    //     </Box>
+    //   )
+    // },
     {
       field: "dateReachedLimit",
       headerName: "Limit Date",
@@ -855,9 +939,27 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       },
     },
     {
-      field: "mostRecentSession",
-      headerName: "Last Session",
-      width: 120,
+      field: "hasTraining",
+      headerName: "Trained",
+      width: 100,
+      align: 'center',
+      headerAlign: 'center',
+      type: "boolean",
+      renderCell: (params) => (
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: params.value ? '#4caf50' : '#f44336'
+        }}>
+          {params.value ? 'Yes' : 'No'}
+        </Box>
+      )
+    },
+    {
+      field: "mostRecentCompletedSession",
+      headerName: "Last Completed",
+      width: 140,
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => (
@@ -865,13 +967,31 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontStyle: params.value === "No sessions" ? "italic" : "normal",
-          color: params.value === "No sessions" ? '#aaaaaa' : '#ffffff',
+          fontStyle: params.value === "No completed sessions" ? "italic" : "normal",
+          color: params.value === "No completed sessions" ? '#aaaaaa' : '#4caf50',
           fontSize: '0.8rem'
         }}>
-          {/* <Event sx={{ mr: 0.5, fontSize: '1.1rem' }} /> */}
-          {/* I want to add if condition for invalid date or undefined */}
-          {params.value === "No sessions" ? params.value : newFormatDate(params.value)}
+          {params.value}
+        </Box>
+      ),
+    },
+    {
+      field: "mostRecentMissedCanceledSession",
+      headerName: "Last Missed/Canceled",
+      width: 160,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontStyle: params.value === "No missed/canceled sessions" ? "italic" : "normal",
+          color: params.value === "No missed/canceled sessions" ? '#aaaaaa' :
+            params.value.includes("Missed") ? '#f44336' : '#ff9800',
+          fontSize: '0.8rem'
+        }}>
+          {params.value}
         </Box>
       ),
     },
@@ -1036,7 +1156,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           variant="h6"
           fontWeight="bold"
           sx={{
-            color: "#ffffff",
+            color: "#c2c2c2",
             fontSize: isMobile ? "0.9rem" : "1rem",
           }}
         >
@@ -1097,9 +1217,8 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
             </IconButton>
           </Tooltip>
         </Stack>
-
-
       </Stack>
+
       <Paper sx={{ height: 400, width: "100%", backgroundColor: "#272727" }}>
         <DataGrid
           rows={filteredRows}

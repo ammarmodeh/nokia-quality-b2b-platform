@@ -321,12 +321,11 @@ const TaskViewPage = () => {
       SLID: ${task.slid}
       Tarrif Name: ${task.tarrifName}
       Evaluation Score: ${task.evaluationScore}
-      Priority: ${task.priority}
-      Category: ${task.category}
       PIS Date: ${formattedPISDate}
       Due Date: ${formattedDate}
       Customer Name: ${task.customerName || "N/A"}
       Contact Number: ${task.contactNumber || "N/A"}
+      Contact Feedback: ${task.customerFeedback || "N/A"}
       Customer Type: ${task.customerType || "N/A"}
       Governorate: ${task.governorate || "N/A"}
       District: ${task.district || "N/A"}

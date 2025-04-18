@@ -1,33 +1,113 @@
-import { Paper, Stack, Typography, useMediaQuery, Tooltip, IconButton } from "@mui/material";
+import {
+  Paper,
+  Stack,
+  Typography,
+  Button,
+  useMediaQuery,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider,
+  Box,
+  Chip,
+  useTheme
+} from "@mui/material";
 import { DataGrid } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
-import { getCustomerEducationReasons } from "../utils/helpers";
+import { getCustomerEducationReasons2 } from "../utils/helpers";
 import { RiFileExcel2Fill } from "react-icons/ri";
+import { MdClose, MdFileDownload } from "react-icons/md";
 import { useState } from "react";
 
-export const CustomerEducationReasonsTable = ({ tasks }) => {
+const DetailRow = ({ label, value }) => (
+  <Box sx={{ display: 'flex', flexDirection: 'column', mb: 2 }}>
+    <Typography
+      variant="body2"
+      component="div"
+      sx={{
+        fontWeight: '500',
+        color: '#aaaaaa',
+      }}
+    >
+      {label}
+    </Typography>
+    {typeof value === 'string' || typeof value === 'number' ? (
+      <Typography
+        variant="body1"
+        component="div"
+        sx={{
+          color: '#ffffff',
+          wordBreak: 'break-word',
+          textAlign: label === "Customer Feedback" ? "right" : "left",
+          direction: label === "Customer Feedback" ? "rtl" : "ltr"
+        }}
+      >
+        {value || 'N/A'}
+      </Typography>
+    ) : (
+      <Box sx={{ display: 'inline-block', mt: 0.5 }}>
+        {value}
+      </Box>
+    )}
+  </Box>
+);
+
+export const CustomerEducationReasonsTable = ({ tasks = [] }) => {
+  const theme = useTheme();
   const isMobile = useMediaQuery('(max-width:503px)');
-  const customerEducationReasons = getCustomerEducationReasons(tasks);
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const [paginationModel, setPaginationModel] = useState({
     pageSize: 10,
     page: 0,
   });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedReason, setSelectedReason] = useState(null);
+  const [reasonTasks, setReasonTasks] = useState([]);
+
+  const customerEducationReasons = getCustomerEducationReasons2(tasks);
 
   const rows = customerEducationReasons.map((item, index) => ({
     id: index + 1,
     reason: item.reason,
     count: item.count,
     percentage: item.percentage,
+    tasks: item.tasks // Include tasks in the row data
   }));
 
   const netTotal = rows.reduce((sum, row) => sum + row.count, 0);
+
+  const handleReasonClick = (reason, tasks) => {
+    setSelectedReason(reason);
+    setReasonTasks(tasks);
+    setDialogOpen(true);
+  };
 
   const columns = [
     {
       field: "reason",
       headerName: "Reason",
       flex: 2,
-      minWidth: isMobile ? 150 : undefined
+      minWidth: isMobile ? 150 : undefined,
+      renderCell: (params) => (
+        <Button
+          onClick={() => handleReasonClick(params.value, params.row.tasks)}
+          sx={{
+            textTransform: 'none',
+            color: '#ffffff',
+            padding: 0,
+            minWidth: 0,
+            '&:hover': {
+              textDecoration: 'underline',
+              backgroundColor: 'transparent'
+            }
+          }}
+        >
+          {params.value}
+        </Button>
+      )
     },
     {
       field: "count",
@@ -63,6 +143,35 @@ export const CustomerEducationReasonsTable = ({ tasks }) => {
     XLSX.writeFile(workbook, "Customer_Education_Reasons.xlsx");
   };
 
+  const exportReasonTasksToExcel = () => {
+    const data = reasonTasks.map((task) => ({
+      'Request Number': task.requestNumber,
+      'SLID': task.slid,
+      'PIS Date': task.pisDate ? new Date(task.pisDate).toLocaleString() : 'N/A',
+      'Evaluation Score': task.evaluationScore,
+      'Customer Name': task.customerName,
+      'Contact Number': task.contactNumber,
+      'Tariff Name': task.tarrifName,
+      'Customer Feedback': task.customerFeedback,
+      'Reason': task.reason,
+      'Customer Type': task.customerType,
+      'Governorate': task.governorate,
+      'District': task.district,
+      'Action taken by assigned user': task.subTasks?.map((sub, index) => `Step ${index + 1}: ${sub.note}`).join('\n') || 'N/A',
+      'Team Name': task.teamName,
+      'Team Company': task.teamCompany,
+      'Interview Date': task.interviewDate ? new Date(task.interviewDate).toLocaleString() : 'N/A',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const colWidths = Object.keys(data[0]).map((key) => ({ wch: key.length + 5 }));
+    worksheet['!cols'] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Tasks');
+    XLSX.writeFile(workbook, `${selectedReason}_Tasks.xlsx`);
+  };
+
   return (
     <Stack justifyContent={"center"} sx={{ width: "100%" }}>
       <Stack
@@ -77,13 +186,13 @@ export const CustomerEducationReasonsTable = ({ tasks }) => {
       >
         <Typography
           variant="h6"
-          fontWeight="bold"
+          // fontWeight="bold"
           sx={{
-            color: "#ffffff",
+            color: "#c2c2c2",
             fontSize: isMobile ? "0.9rem" : "1rem",
           }}
         >
-          Customer Education Reasons
+          Customer Education Issues ( <span style={{ color: "#03a9f4" }}>{netTotal}</span> )
         </Typography>
         <Tooltip title="Export to Excel">
           <IconButton
@@ -100,7 +209,6 @@ export const CustomerEducationReasonsTable = ({ tasks }) => {
           </IconButton>
         </Tooltip>
       </Stack>
-
       <Paper sx={{
         height: 370,
         width: "100%",
@@ -168,9 +276,185 @@ export const CustomerEducationReasonsTable = ({ tasks }) => {
           }}
         />
       </Paper>
-      <Typography variant="body1" fontWeight="bold" sx={{ marginTop: "10px", color: "#ffffff" }}>
-        Total Count: {netTotal}
-      </Typography>
+
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        fullScreen={fullScreen}
+        sx={{
+          "& .MuiDialog-paper": {
+            backgroundColor: '#1e1e1e',
+            boxShadow: 'none',
+            borderRadius: fullScreen ? '0px' : '8px',
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: '#1e1e1e',
+          color: '#ffffff',
+          borderBottom: '1px solid #444',
+          padding: '16px 24px',
+        }}>
+          <Typography variant="h6" component="div">
+            All Tasks for Reason: {selectedReason}
+          </Typography>
+          <IconButton
+            onClick={() => setDialogOpen(false)}
+            sx={{
+              color: '#ffffff',
+              '&:hover': {
+                backgroundColor: '#2a2a2a',
+              }
+            }}
+          >
+            <MdClose />
+          </IconButton>
+        </DialogTitle>
+
+        <Divider sx={{ backgroundColor: '#444' }} />
+
+        <DialogContent dividers sx={{
+          backgroundColor: '#1e1e1e',
+          color: '#ffffff',
+          padding: '20px 24px',
+        }}>
+          <Stack spacing={3}>
+            {reasonTasks.map((task, index) => (
+              <Paper
+                key={index}
+                elevation={0}
+                sx={{
+                  p: 3,
+                  backgroundColor: '#272727',
+                  borderRadius: 2,
+                  border: '1px solid #444'
+                }}
+              >
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
+                  Task {index + 1}
+                </Typography>
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                  <Box>
+                    <DetailRow label="Request Number" value={task.requestNumber} />
+                    <DetailRow label="SLID" value={task.slid} />
+                    <DetailRow label="PIS Date" value={task.pisDate ? new Date(task.pisDate).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'numeric',
+                      day: 'numeric'
+                    }) : 'N/A'} />
+                    <DetailRow
+                      label="Evaluation Score"
+                      value={
+                        <Chip
+                          label={task.evaluationScore}
+                          sx={{
+                            color: '#ffffff',
+                            backgroundColor:
+                              task.evaluationScore >= 9 ? '#4caf50' :
+                                task.evaluationScore >= 7 ? '#9e9e9e' : '#f44336',
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      }
+                    />
+                    <DetailRow label="Customer Name" value={task.customerName} />
+                    <DetailRow label="Contact Number" value={task.contactNumber} />
+                  </Box>
+
+                  <Box>
+                    <DetailRow label="Tariff Name" value={task.tarrifName} />
+                    <DetailRow label="Customer Feedback" value={task.customerFeedback} />
+                    <DetailRow label="Reason" value={task.reason} />
+                    <DetailRow label="Customer Type" value={task.customerType} />
+                    <DetailRow label="Governorate" value={task.governorate} />
+                    <DetailRow label="District" value={task.district} />
+                  </Box>
+                </Box>
+
+                {task.subTasks && task.subTasks.length > 0 && (
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#3ea6ff', mb: 1 }}>
+                      Subtasks
+                    </Typography>
+                    <Box sx={{
+                      backgroundColor: '#333',
+                      p: 2,
+                      borderRadius: 1,
+                      border: '1px solid #444'
+                    }}>
+                      {task.subTasks.map((sub, index) => (
+                        <Box key={index} sx={{ mb: 1 }}>
+                          <Typography variant="body2" sx={{ color: '#ffffff' }}>
+                            <strong>Step {index + 1}:</strong> {sub.title} {sub.note && `- ${sub.note}`}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  mt: 3,
+                  pt: 2,
+                  borderTop: '1px solid #444',
+                  flexWrap: 'wrap',
+                  gap: 2
+                }}>
+                  <DetailRow label="Team Name" value={task.teamName} />
+                  <DetailRow label="Team Company" value={task.teamCompany} />
+                  <DetailRow label="Interview Date" value={task.interviewDate ? new Date(task.interviewDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric'
+                  }) : 'N/A'} />
+                </Box>
+              </Paper>
+            ))}
+          </Stack>
+        </DialogContent>
+
+        <Divider sx={{ backgroundColor: '#444' }} />
+
+        <DialogActions sx={{
+          backgroundColor: '#1e1e1e',
+          borderTop: '1px solid #444',
+          padding: '12px 24px',
+        }}>
+          <Button
+            onClick={exportReasonTasksToExcel}
+            variant="contained"
+            startIcon={<MdFileDownload />}
+            sx={{
+              backgroundColor: '#1d4ed8',
+              color: '#ffffff',
+              '&:hover': {
+                backgroundColor: '#1e40af',
+              }
+            }}
+          >
+            Export to Excel
+          </Button>
+          <Button
+            onClick={() => setDialogOpen(false)}
+            sx={{
+              color: '#ffffff',
+              '&:hover': {
+                backgroundColor: '#2a2a2a',
+              }
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 };

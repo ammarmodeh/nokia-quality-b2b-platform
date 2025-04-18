@@ -138,7 +138,7 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
       }}
     >
       {detailView ? (
-        <>
+        <div>
           <DialogTitle sx={{
             display: 'flex',
             alignItems: 'center',
@@ -296,9 +296,9 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
               Close
             </Button>
           </DialogActions>
-        </>
+        </div>
       ) : (
-        <>
+        <div>
           <DialogTitle sx={{
             display: 'flex',
             alignItems: 'center',
@@ -450,7 +450,7 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
             padding: isMobile ? '8px 16px' : '12px 24px',
           }}>
             {!submitSuccess ? (
-              <>
+              <div>
                 <Button
                   onClick={onClose}
                   size={isMobile ? "small" : "medium"}
@@ -483,7 +483,7 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
                 >
                   {isSubmitting ? 'Submitting...' : 'Submit'}
                 </Button>
-              </>
+              </div>
             ) : (
               <Button
                 onClick={onClose}
@@ -500,7 +500,7 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
               </Button>
             )}
           </DialogActions>
-        </>
+        </div>
       )}
     </Dialog>
   );
@@ -582,7 +582,7 @@ const UserAvatar = () => {
   const accountId = user._id;
 
   return (
-    <>
+    <div>
       {isLoggingOut && (
         <Box sx={{
           position: 'fixed',
@@ -684,7 +684,7 @@ const UserAvatar = () => {
         </MenuItem>
 
         {user.role === "Member" && (
-          <>
+          <div>
             <Divider sx={{
               my: 1,
               backgroundColor: '#FFFFFF24'
@@ -695,7 +695,7 @@ const UserAvatar = () => {
                 <Typography variant="body2" sx={{ ml: 1 }}>Feedback</Typography>
               </Box>
             </MenuItem>
-          </>
+          </div>
         )}
 
         <Divider sx={{
@@ -716,7 +716,7 @@ const UserAvatar = () => {
         onClose={() => setSuggestionDialogOpen(false)}
         userId={accountId}
       />
-    </>
+    </div>
   );
 };
 

@@ -13,7 +13,9 @@ import {
   Box,
   Chip,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -27,12 +29,19 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
   const user = useSelector((state) => state.auth.user);
   const [editSessionDialogOpen, setEditSessionDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
+
+  // Filter sessions by status
+  const completedSessions = sessions.filter(session => session.status === "Completed");
+  const missedOrCanceledSessions = sessions.filter(session =>
+    session.status === "Missed" || session.status === "Cancelled"
+  );
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
 
   const handleEditClick = (session) => {
-    // Only allow editing for completed sessions
-    if (session.status !== "Completed") {
-      return;
-    }
     setSelectedSession(session);
     setEditSessionDialogOpen(true);
   };
@@ -67,6 +76,131 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
     }
   };
 
+  const renderSessionList = (sessionList) => {
+    return (
+      <List sx={{ padding: 0 }}>
+        {sessionList.length === 0 ? (
+          <Typography variant="body1" color="#aaaaaa" sx={{ p: 2 }}>
+            No sessions found in this category.
+          </Typography>
+        ) : (
+          sessionList.map((session, index) => (
+            <div key={session._id || index}>
+              <ListItem sx={{
+                padding: '12px',
+                alignItems: 'flex-start',
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                }
+              }}>
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography color="#ffffff" fontWeight="500">
+                        {session.sessionTitle || (session.status === "Completed" ? "Training Session" : session.status)}
+                      </Typography>
+                      <Chip
+                        label={new Date(session.sessionDate).toLocaleDateString()}
+                        size="small"
+                        sx={{
+                          backgroundColor: '#3a3a3a',
+                          color: '#ffffff',
+                          fontSize: '0.7rem'
+                        }}
+                      />
+                      <Chip
+                        label={session.status}
+                        size="small"
+                        color={getStatusColor(session.status)}
+                        sx={{ fontSize: '0.7rem' }}
+                      />
+                      {session.violationPoints > 0 && (
+                        <Chip
+                          label={`${session.violationPoints} pts`}
+                          size="small"
+                          color="error"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      )}
+                    </Box>
+                  }
+                  secondaryTypographyProps={{ component: 'div' }}
+                  secondary={
+                    <Box component="div">
+                      {session.conductedBy && (
+                        <Typography
+                          component="div"
+                          variant="body2"
+                          color="#aaaaaa"
+                          sx={{ mt: 1 }}
+                        >
+                          <strong>Conducted by:</strong> {session.conductedBy}
+                        </Typography>
+                      )}
+                      {session.outlines && (
+                        <Typography
+                          component="div"
+                          variant="body2"
+                          color="#aaaaaa"
+                          sx={{ mt: 1 }}
+                        >
+                          <strong>Outlines:</strong> {session.outlines}
+                        </Typography>
+                      )}
+                      {session.notes && (
+                        <Typography
+                          component="div"
+                          variant="body2"
+                          color="#aaaaaa"
+                          sx={{ mt: 1 }}
+                        >
+                          <strong>Notes:</strong> {session.notes}
+                        </Typography>
+                      )}
+                      {session.reason && (
+                        <Typography
+                          component="div"
+                          variant="body2"
+                          color="#aaaaaa"
+                          sx={{ mt: 1, fontStyle: 'italic' }}
+                        >
+                          <strong>Reason:</strong> {session.reason}
+                        </Typography>
+                      )}
+                    </Box>
+                  }
+                />
+                {user && user.role === "Admin" && (
+                  <Box sx={{ display: 'flex' }}>
+                    {session.status === "Completed" && (
+                      <IconButton
+                        onClick={() => handleEditClick(session)}
+                        sx={{ color: '#1976d2' }}
+                        size="small"
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                    <IconButton
+                      onClick={() => handleDeleteClick(session)}
+                      sx={{ color: '#f44336' }}
+                      size="small"
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )}
+              </ListItem>
+              {index < sessionList.length - 1 && (
+                <Divider sx={{ backgroundColor: '#444' }} />
+              )}
+            </div>
+          ))
+        )}
+      </List>
+    );
+  };
+
   return (
     <>
       <Dialog
@@ -79,7 +213,7 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
           "& .MuiDialog-paper": {
             backgroundColor: '#1e1e1e',
             boxShadow: 'none',
-            borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
+            borderRadius: fullScreen ? '0px' : '8px',
           }
         }}
       >
@@ -91,126 +225,56 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
         }}>
           Training Session History
           <Typography variant="body2" color="#aaaaaa">
-            {sessions.length} session(s) recorded
+            {completedSessions.length} completed session(s) | {missedOrCanceledSessions.length} missed/canceled
           </Typography>
         </DialogTitle>
 
         <Divider sx={{ backgroundColor: '#444' }} />
 
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', backgroundColor: '#1e1e1e' }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            sx={{
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#3ea6ff',
+              },
+            }}
+          >
+            <Tab
+              label={`Completed (${completedSessions.length})`}
+              sx={{
+                color: activeTab === 0 ? '#3ea6ff' : '#aaaaaa',
+                textTransform: 'none',
+                minWidth: 'unset',
+                padding: '12px 16px',
+              }}
+            />
+            <Tab
+              label={`Missed/Canceled (${missedOrCanceledSessions.length})`}
+              sx={{
+                color: activeTab === 1 ? '#3ea6ff' : '#aaaaaa',
+                textTransform: 'none',
+                minWidth: 'unset',
+                padding: '12px 16px',
+              }}
+            />
+          </Tabs>
+        </Box>
+
         <DialogContent sx={{
           backgroundColor: '#1e1e1e',
           color: '#ffffff',
           '&.MuiDialogContent-root': {
-            padding: '20px 24px',
+            padding: '0',
           },
+          height: fullScreen ? 'calc(100vh - 180px)' : '400px',
+          overflow: 'auto',
         }}>
-          {sessions.length === 0 ? (
-            <Typography variant="body1" color="#aaaaaa">
-              No training sessions found.
-            </Typography>
+          {activeTab === 0 ? (
+            renderSessionList(completedSessions)
           ) : (
-            <List sx={{ padding: 0 }}>
-              {sessions.map((session, index) => (
-                <div key={session._id || index}>
-                  <ListItem sx={{
-                    padding: '12px 0',
-                    alignItems: 'flex-start',
-                    '&:hover': {
-                      backgroundColor: '#2a2a2a',
-                    }
-                  }}>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography color="#ffffff" fontWeight="500">
-                            {session.sessionTitle || "Training Session"}
-                          </Typography>
-                          <Chip
-                            label={new Date(session.sessionDate).toLocaleDateString()}
-                            size="small"
-                            sx={{
-                              backgroundColor: '#3a3a3a',
-                              color: '#ffffff',
-                              fontSize: '0.7rem'
-                            }}
-                          />
-                          <Chip
-                            label={session.status}
-                            size="small"
-                            color={getStatusColor(session.status)}
-                            sx={{ fontSize: '0.7rem' }}
-                          />
-                          {session.violationPoints > 0 && (
-                            <Chip
-                              label={`${session.violationPoints} pts`}
-                              size="small"
-                              color="error"
-                              sx={{ fontSize: '0.7rem' }}
-                            />
-                          )}
-                        </Box>
-                      }
-                      secondaryTypographyProps={{ component: 'div' }}
-                      secondary={
-                        <Box component="div">
-                          <Typography
-                            component="div"
-                            variant="body2"
-                            color="#aaaaaa"
-                            sx={{ mt: 1 }}
-                          >
-                            <strong>Conducted by:</strong> {session.conductedBy}
-                          </Typography>
-                          {session.outlines && (
-                            <Typography
-                              component="div"
-                              variant="body2"
-                              color="#aaaaaa"
-                              sx={{ mt: 1 }}
-                            >
-                              <strong>Training Outlines:</strong> {session.outlines}
-                            </Typography>
-                          )}
-                          {session.reason && (
-                            <Typography
-                              component="div"
-                              variant="body2"
-                              color="#aaaaaa"
-                              sx={{ mt: 1, fontStyle: 'italic' }}
-                            >
-                              <strong>Reason:</strong> {session.reason}
-                            </Typography>
-                          )}
-                        </Box>
-                      }
-                    />
-                    {user && user.role === "Admin" && (
-                      <Box sx={{ display: 'flex' }}>
-                        {session.status === "Completed" && (
-                          <IconButton
-                            onClick={() => handleEditClick(session)}
-                            sx={{ color: '#1976d2' }}
-                            size="small"
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        )}
-                        <IconButton
-                          onClick={() => handleDeleteClick(session)}
-                          sx={{ color: '#f44336' }}
-                          size="small"
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    )}
-                  </ListItem>
-                  {index < sessions.length - 1 && (
-                    <Divider sx={{ backgroundColor: '#444' }} />
-                  )}
-                </div>
-              ))}
-            </List>
+            renderSessionList(missedOrCanceledSessions)
           )}
         </DialogContent>
 

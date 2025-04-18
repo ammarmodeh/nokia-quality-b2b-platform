@@ -125,7 +125,7 @@ const TeamPage = () => {
           fontWeight: 500,
           textAlign: 'center',
           mb: 3,
-          color: '#ffffff'
+          color: '#3ea6ff'
         }}
       >
         Quality Members

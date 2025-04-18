@@ -1,12 +1,14 @@
 @import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,200;6..12,300;6..12,400;6..12,500;6..12,600;6..12,700;6..12,800;6..12,900;6..12,1000&display=swap");
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Monoton&family=Roboto+Slab:wght@100..900&display=swap');
+/* @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Monoton&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Roboto+Slab:wght@100..900&display=swap'); */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Monoton&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Roboto+Slab:wght@100..900&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
 
 @import "tailwindcss";
 /** This @import word is used to import Tailwind CSS from the node_modules folder */
 
 * {
   box-sizing: border-box;
-  font-family: "Nunito Sans", sans-serif;
+  font-family: "Rubik", sans-serif !important;
 }
 
 html {
@@ -24,19 +26,28 @@ html {
 /* Custom Scrollbar Styles */
 /* Track */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 5px;
+  /* Width of vertical scrollbar */
+  height: 5px;
+  /* Height of horizontal scrollbar */
+}
+
+/* Horizontal scrollbar */
+::-webkit-scrollbar:horizontal {
+  height: 5px;
+  /* Explicitly set height for horizontal scrollbar */
 }
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  background-color: #807c7c;
-  border-radius: 12px;
-  /* display: none; */
+  background-color: #626262;
+  border-radius: 3px;
+  /* display: noe; */
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #302f2f;
+  background-color: #797979;
 }
 
 /* Track */

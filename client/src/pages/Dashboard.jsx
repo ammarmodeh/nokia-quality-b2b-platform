@@ -12,6 +12,9 @@ import { AllReasonsTable } from "../components/AllReasonsTable";
 import { AllResponsiblesTable } from "../components/AllResponsiblesTable";
 import { KnowledgeGapReasonsTable } from "../components/KnowledgeGapReasonsTable";
 import { CustomerEducationReasonsTable } from "../components/CustomerEducationReasonsTable";
+import IssueCategoriesDialog from "../components/IssueCategoriesDialog";
+import ReasonCategoriesDialog from "../components/ReasonCategoriesDialog";
+import ResponsibilityCategoriesDialog from "../components/ResponsibilityCategoriesDialog";
 
 // Lazy load components
 const Chart = lazy(() => import("../components/Chart"));
@@ -98,7 +101,7 @@ const Dashboard = () => {
   if (tasksError || teamsError) return <div>Error fetching data</div>;
 
   return (
-    <div style={{ padding: "0", backgroundColor: "#121212", maxWidth: "1000px", margin: "0 auto", minHeight: "calc(100vh - 55px)", color: "#ffffff" }}>
+    <div style={{ padding: "0", backgroundColor: "#121212", maxWidth: "1100px", margin: "0 auto", minHeight: "calc(100vh - 55px)", color: "#ffffff" }}>
       {/* Welcome Snackbar */}
       <Snackbar open={snackbarOpen} autoHideDuration={5000} onClose={handleSnackbarClose}>
         <Alert onClose={handleSnackbarClose} severity="success" variant="filled">
@@ -118,7 +121,7 @@ const Dashboard = () => {
 
       {/* Weekly Count of QoS-Related Detractor & Neutral Customers Section */}
       <Box sx={{ margin: "20px 0" }}>
-        <Typography sx={{ marginBottom: isMediumScreen ? "4px" : "20px", color: "#ffffff", fontSize: isMediumScreen ? "16px" : "20px" }} variant="h5">
+        <Typography sx={{ marginBottom: isMediumScreen ? "4px" : "20px", color: "#767676", fontSize: isMediumScreen ? "12px" : "15px" }} variant="h5">
           Weekly Count of QoS-Related Detractor & Neutral Customers
         </Typography>
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
@@ -152,24 +155,117 @@ const Dashboard = () => {
             alignItems="stretch"
           >
             <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
-              <AllReasonsTable tasks={tasks} />
+              <Stack
+                backgroundColor="#1a1a1aa3"
+                padding={2}
+                borderRadius={4}
+                direction={'column'}
+              >
+                <AllReasonsTable tasks={tasks} />
+                <Box sx={{
+                  backgroundColor: '#1e1e1e',
+                  p: 2,
+                  borderRadius: '8px',
+                  border: '1px solid #444',
+                  mt: 2
+                }}>
+                  <Typography variant="body2" sx={{
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}>
+                    How we categorize feedback reasons
+                    <ReasonCategoriesDialog />
+                  </Typography>
+                  <Typography variant="caption" sx={{
+                    color: '#aaaaaa',
+                    display: 'block',
+                    mt: 1
+                  }}>
+                    Click the info icon to understand our reason categorization methodology.
+                  </Typography>
+                </Box>
+              </Stack>
             </Box>
             <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
-              <AllResponsiblesTable tasks={tasks} />
+              <Stack
+                backgroundColor="#1a1a1aa3"
+                padding={2}
+                borderRadius={4}
+                direction={'column'}
+              >
+                <AllResponsiblesTable tasks={tasks} />
+                <Box sx={{
+                  backgroundColor: '#1e1e1e',
+                  p: 2,
+                  borderRadius: '8px',
+                  border: '1px solid #444',
+                  mt: 2
+                }}>
+                  <Typography variant="body2" sx={{
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}>
+                    How we assign responsibility for issues
+                    <ResponsibilityCategoriesDialog />
+                  </Typography>
+                  <Typography variant="caption" sx={{
+                    color: '#aaaaaa',
+                    display: 'block',
+                    mt: 1
+                  }}>
+                    Click the info icon to understand our responsibility assignment methodology.
+                  </Typography>
+                </Box>
+              </Stack>
             </Box>
           </Stack>
 
           {/* Row 3 */}
           <Stack
-            direction={isMediumScreen ? "column" : "row"}
-            spacing={2}
-            alignItems="stretch"
+            backgroundColor="#1a1a1aa3"
+            padding={2}
+            borderRadius={4}
+            direction={'column'}
           >
-            <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
-              <KnowledgeGapReasonsTable tasks={tasks} />
-            </Box>
-            <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
-              <CustomerEducationReasonsTable tasks={tasks} />
+            <Stack
+              direction={isMediumScreen ? "column" : "row"}
+              spacing={2}
+              alignItems="stretch"
+            >
+              <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
+                <KnowledgeGapReasonsTable tasks={tasks} />
+              </Box>
+              <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
+                <CustomerEducationReasonsTable tasks={tasks} />
+              </Box>
+            </Stack>
+            <Box sx={{
+              backgroundColor: '#1e1e1e',
+              p: 2,
+              borderRadius: '8px',
+              border: '1px solid #444',
+              mt: 2
+            }}>
+              <Typography variant="body2" sx={{
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                How we categorize issues
+                <IssueCategoriesDialog />
+              </Typography>
+              <Typography variant="caption" sx={{
+                color: '#aaaaaa',
+                display: 'block',
+                mt: 1
+              }}>
+                Click the info icon to understand our categorization methodology for customer education vs. technical skills issues.
+              </Typography>
             </Box>
           </Stack>
         </Stack>
