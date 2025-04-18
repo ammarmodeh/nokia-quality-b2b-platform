@@ -100,7 +100,7 @@ const ResponsibilityCategoriesDialog = () => {
 
           {/* Activation Team */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="🔧 Activation Team" sx={{
+            <Chip label="Activation Team" sx={{
               backgroundColor: '#3ea6ff',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -126,7 +126,7 @@ const ResponsibilityCategoriesDialog = () => {
 
           {/* Cabling Team */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="🔌 Cabling Team" sx={{
+            <Chip label="Cabling Team" sx={{
               backgroundColor: '#4caf50',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -152,7 +152,7 @@ const ResponsibilityCategoriesDialog = () => {
 
           {/* Customer */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="👤 Customer" sx={{
+            <Chip label="Customer" sx={{
               backgroundColor: '#ff9800',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -178,7 +178,7 @@ const ResponsibilityCategoriesDialog = () => {
 
           {/* Can't Determine */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="❓ Can't Determine" sx={{
+            <Chip label="Can't Determine" sx={{
               backgroundColor: '#607d8b',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -211,7 +211,7 @@ const ResponsibilityCategoriesDialog = () => {
 
           {/* Others */}
           <Box sx={{ mb: 2 }}>
-            <Chip label="📦 Others" sx={{
+            <Chip label="Others" sx={{
               backgroundColor: '#9c27b0',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',

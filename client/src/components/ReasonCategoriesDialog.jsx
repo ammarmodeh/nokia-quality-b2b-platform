@@ -96,7 +96,7 @@ const ReasonCategoriesDialog = () => {
 
           {/* Speed */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="🚀 Speed" sx={{
+            <Chip label="Speed" sx={{
               backgroundColor: '#3ea6ff',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -111,7 +111,7 @@ const ReasonCategoriesDialog = () => {
 
           {/* Disconnection */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="🔌 Disconnection" sx={{
+            <Chip label="Disconnection" sx={{
               backgroundColor: '#f44336',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -126,7 +126,7 @@ const ReasonCategoriesDialog = () => {
 
           {/* WiFi Coverage */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="📶 WiFi Coverage" sx={{
+            <Chip label="WiFi Coverage" sx={{
               backgroundColor: '#4caf50',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -141,7 +141,7 @@ const ReasonCategoriesDialog = () => {
 
           {/* Positive Feedback */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="👍 Positive Feedback" sx={{
+            <Chip label="Positive Feedback" sx={{
               backgroundColor: '#673ab7',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -156,7 +156,7 @@ const ReasonCategoriesDialog = () => {
 
           {/* Trial Phase */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="🔄 Trial Phase" sx={{
+            <Chip label="Trial Phase" sx={{
               backgroundColor: '#ff9800',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -171,7 +171,7 @@ const ReasonCategoriesDialog = () => {
 
           {/* Slow Internet Performance */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="🐢 Slow Internet Performance" sx={{
+            <Chip label="Slow Internet Performance" sx={{
               backgroundColor: '#009688',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -186,7 +186,7 @@ const ReasonCategoriesDialog = () => {
 
           {/* Silent Response */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="🤐 Silent Response" sx={{
+            <Chip label="Silent Response" sx={{
               backgroundColor: '#607d8b',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -201,7 +201,7 @@ const ReasonCategoriesDialog = () => {
 
           {/* Can't Determine */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="❓ Can't Determine" sx={{
+            <Chip label="Can't Determine" sx={{
               backgroundColor: '#795548',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -216,7 +216,7 @@ const ReasonCategoriesDialog = () => {
 
           {/* Performance Inconsistency */}
           <Box sx={{ mb: 3 }}>
-            <Chip label="📊 Performance Inconsistency" sx={{
+            <Chip label="Performance Inconsistency" sx={{
               backgroundColor: '#e91e63',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',

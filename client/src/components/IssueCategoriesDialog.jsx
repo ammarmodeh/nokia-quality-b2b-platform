@@ -101,7 +101,7 @@ const IssueCategoriesDialog = () => {
           {/* Customer Education */}
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Chip label="1️⃣ Customer Education" sx={{
+              <Chip label="Customer Education" sx={{
                 backgroundColor: '#3ea6ff',
                 color: '#ffffff',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -168,7 +168,7 @@ const IssueCategoriesDialog = () => {
           {/* Lack of Technical Expertise */}
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Chip label="2️⃣ Lack of Technical Expertise" sx={{
+              <Chip label="Lack of Technical Expertise" sx={{
                 backgroundColor: '#f44336',
                 color: '#ffffff',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -226,7 +226,7 @@ const IssueCategoriesDialog = () => {
           {/* Knowledge Gap */}
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Chip label="3️⃣ Knowledge Gap" sx={{
+              <Chip label="Knowledge Gap" sx={{
                 backgroundColor: '#ff9800',
                 color: '#ffffff',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
@@ -286,7 +286,7 @@ const IssueCategoriesDialog = () => {
           {/* Bad Team Behavior */}
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Chip label="4️⃣ Bad Team Behavior" sx={{
+              <Chip label="Bad Team Behavior" sx={{
                 backgroundColor: '#9c27b0',
                 color: '#ffffff',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
