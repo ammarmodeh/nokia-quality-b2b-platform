@@ -20,10 +20,11 @@ import {
 import { DataGrid } from "@mui/x-data-grid";
 import { useNavigate } from "react-router-dom";
 import { getWeekNumberForTaksTable, newFormatDate } from "../utils/helpers";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaCopy, FaTimes } from "react-icons/fa";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { Assignment, AssignmentTurnedIn } from "@mui/icons-material";
+import api from "../api/api";
 
 const handleCopyTaskData = (taskData) => {
   // Format the data for copying
@@ -65,11 +66,43 @@ const TaskTable = ({ tasks }) => {
     page: 0,
   });
   const [openDialog, setOpenDialog] = useState(false);
+  const [teamsData, setTeamsData] = useState([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
   const isMobile = useMediaQuery('(max-width:503px)');
 
+  // Fetch teams data when component mounts
+  useEffect(() => {
+    const fetchTeamsData = async () => {
+      try {
+        const response = await api.get('/field-teams/get-field-teams', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        });
+        setTeamsData(response.data);
+        setLoadingTeams(false);
+      } catch (error) {
+        console.error("Failed to fetch teams data:", error);
+        setLoadingTeams(false);
+      }
+    };
+
+    fetchTeamsData();
+  }, []);
+
+  // Helper function to get team data by ID
+  const getTeamData = (teamId) => {
+    if (!teamsData || !teamId) return null;
+    return teamsData.find(team => team._id === teamId);
+  };
+
   const handleClickOpen = (task) => {
-    setSelectedTask(task);
+    const teamData = getTeamData(task.teamId);
+    setSelectedTask({
+      ...task,
+      teamData
+    });
     setOpenDialog(true);
   };
 
@@ -188,7 +221,7 @@ const TaskTable = ({ tasks }) => {
     {
       field: "team",
       headerName: "Team",
-      minWidth: 150,
+      minWidth: 200,
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => (
@@ -229,6 +262,96 @@ const TaskTable = ({ tasks }) => {
       ),
     },
     {
+      field: "isActive",
+      headerName: "Team Status",
+      minWidth: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const teamData = getTeamData(params.row.teamId);
+        return (
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: teamData?.isActive ? '#4caf50' : '#f44336',
+            fontWeight: 'bold'
+          }}>
+            {teamData ? (teamData.isActive ? 'Yes' : 'No') : 'N/A'}
+          </Box>
+        );
+      },
+    },
+    {
+      field: "lastSession",
+      headerName: "Last Session",
+      minWidth: 150,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const teamData = getTeamData(params.row.teamId);
+        const lastSession = teamData?.sessionHistory?.[0];
+        return (
+          <Tooltip
+            title={lastSession ? `${lastSession.sessionTitle} (${moment(lastSession.sessionDate).format('YYYY-MM-DD')})` : 'No sessions'}
+            placement="top"
+          >
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: lastSession ? '#3ea6ff' : '#9e9e9e',
+              fontStyle: lastSession ? 'normal' : 'italic'
+            }}>
+              {lastSession ? moment(lastSession.sessionDate).format('MMM D') : 'No sessions'}
+            </Box>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      field: "isEvaluated",
+      headerName: "Evaluated",
+      minWidth: 120,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const teamData = getTeamData(params.row.teamId);
+        return (
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: teamData?.isEvaluated ? '#4caf50' : '#f44336',
+            fontWeight: 'bold'
+          }}>
+            {teamData ? (teamData.isEvaluated ? 'Yes' : 'No') : 'N/A'}
+          </Box>
+        );
+      },
+    },
+    {
+      field: "teamEvaluationScore",
+      headerName: "Team Score",
+      minWidth: 150,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const teamData = getTeamData(params.row.teamId);
+        return (
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffffff',
+            fontWeight: 'bold'
+          }}>
+            {teamData?.evaluationScore || 'N/A'}
+          </Box>
+        );
+      },
+    },
+    {
       field: "status",
       headerName: "Status",
       minWidth: 120,
@@ -256,7 +379,7 @@ const TaskTable = ({ tasks }) => {
       field: "actions",
       headerName: "Actions",
       width: 100,
-      flex: 1,
+      // flex: 1,
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => {
@@ -327,6 +450,7 @@ const TaskTable = ({ tasks }) => {
     company: task.teamCompany,
     pisDate: task.pisDate,
     status: task._id,
+    teamId: task.teamId?.$oid || task.teamId, // Handle both formats
     // Add all the fields needed for copying
     contactNumber: task.contactNumber,
     requestNumber: task.requestNumber,
@@ -569,6 +693,62 @@ const TaskTable = ({ tasks }) => {
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                   <DetailRow label="Team Name" value={selectedTask.teamName} />
                   <DetailRow label="Team Company" value={selectedTask.teamCompany} />
+                </Box>
+              </Paper>
+
+              {/* Team Status Section */}
+              <Paper elevation={0} sx={{
+                p: 2,
+                backgroundColor: '#272727',
+                borderRadius: 2,
+                border: '1px solid #444'
+              }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
+                  Team Status
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <DetailRow
+                    label="Active Status"
+                    value={
+                      <Chip
+                        label={selectedTask.teamData?.isActive ? 'Active' : 'Inactive'}
+                        sx={{
+                          color: '#ffffff',
+                          backgroundColor: selectedTask.teamData?.isActive ? '#4caf50' : '#f44336',
+                          fontWeight: 'bold'
+                        }}
+                      />
+                    }
+                  />
+                  <DetailRow
+                    label="Evaluation Status"
+                    value={
+                      <Chip
+                        label={selectedTask.teamData?.isEvaluated ? 'Evaluated' : 'Not Evaluated'}
+                        sx={{
+                          color: '#ffffff',
+                          backgroundColor: selectedTask.teamData?.isEvaluated ? '#4caf50' : '#f44336',
+                          fontWeight: 'bold'
+                        }}
+                      />
+                    }
+                  />
+                  <DetailRow label="Team Evaluation Score" value={selectedTask.teamData?.evaluationScore || 'N/A'} />
+                  {selectedTask.teamData?.sessionHistory?.[0] && (
+                    <DetailRow
+                      label="Last Session"
+                      value={
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="body1" sx={{ color: '#ffffff' }}>
+                            {selectedTask.teamData.sessionHistory[0].sessionTitle}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#aaaaaa' }}>
+                            {moment(selectedTask.teamData.sessionHistory[0].sessionDate).format('YYYY-MM-DD')}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  )}
                 </Box>
               </Paper>
 

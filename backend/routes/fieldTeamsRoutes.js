@@ -7,6 +7,9 @@ const router = express.Router();
 // Get field team by ID and quiz code
 router.post('/validate-team', validateTeam);
 
+// Get field team by ID
+// router.get("/get-field-team/:id", protect, getFieldTeamById);
+
 // Get All Field Teams
 router.get("/get-field-teams", protect, getAllFieldTeams);
 

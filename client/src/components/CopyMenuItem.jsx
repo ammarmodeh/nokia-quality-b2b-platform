@@ -17,7 +17,7 @@ const CopyMenuItem = ({ accountId }) => {
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
           <Typography variant="body2" sx={{ ml: 1 }}>Account ID</Typography>
           <Typography variant="caption" sx={{
-            color: '#1d1dff',
+            color: '#ffffff',
             lineHeight: 1.2,
             ml: 1
           }}>

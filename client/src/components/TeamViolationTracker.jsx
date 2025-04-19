@@ -11,8 +11,9 @@ import { useSelector } from "react-redux";
 import ReportAbsenceDialog from "./ResportAbsenseDialog";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { MdAdd, MdHistory, MdReport, MdSearch } from "react-icons/md";
-import { BeachAccess, Block, CheckCircle, ExitToApp, Grade, PauseCircleOutline, Pending, Warning } from "@mui/icons-material";
+import { BeachAccess, Block, CheckCircle, ExitToApp, Grade, Info, PauseCircleOutline, Pending, Warning } from "@mui/icons-material";
 import { newFormatDate } from "../utils/helpers";
+import ViolationEvaluationDialog from "./ViolationEvaluationDialog";
 
 const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const { enqueueSnackbar } = useSnackbar();
@@ -33,6 +34,10 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     pageSize: 10,
     page: 0,
   });
+  const [violationDialogOpen, setViolationDialogOpen] = useState(false);
+  // Add this handler with your other handlers
+  const handleViolationDialogOpen = () => setViolationDialogOpen(true);
+  const handleViolationDialogClose = () => setViolationDialogOpen(false);
 
   // Keep selectedTeamSessions in sync with fieldTeams when dialog is open
   useEffect(() => {
@@ -712,6 +717,26 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       )
     },
     {
+      field: "equivalentDetractorCount",
+      headerName: "Eq. Detractors",
+      width: 120,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: params.value >= 3 ? 'bold' : 'normal',
+          color: params.value >= 3 ? '#f44336' :
+            params.value === 2 ? '#ff9800' : '#4caf50'
+        }}>
+          {/* <Assessment fontSize="small" sx={{ mr: 0.5 }} /> */}
+          {params.value}
+        </Box>
+      )
+    },
+    {
       field: "totalViolations",
       headerName: "Total Violations",
       width: 120,
@@ -732,26 +757,6 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         </Box>
       )
     },
-    // {
-    //   field: "equivalentDetractorCount",
-    //   headerName: "Eq. Detractors",
-    //   width: 120,
-    //   align: 'center',
-    //   headerAlign: 'center',
-    //   renderCell: (params) => (
-    //     <Box sx={{
-    //       display: 'flex',
-    //       alignItems: 'center',
-    //       justifyContent: 'center',
-    //       fontWeight: params.value >= 3 ? 'bold' : 'normal',
-    //       color: params.value >= 3 ? '#f44336' :
-    //         params.value === 2 ? '#ff9800' : '#4caf50'
-    //     }}>
-    //       {/* <Assessment fontSize="small" sx={{ mr: 0.5 }} /> */}
-    //       {params.value}
-    //     </Box>
-    //   )
-    // },
     {
       field: "dateReachedLimit",
       headerName: "Limit Date",
@@ -885,7 +890,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           justifyContent: 'center',
           color: params.value ? '#4caf50' : '#ff9800'
         }}>
-          {params.value ? <CheckCircle sx={{ mr: 0.5, fontSize: '1.1rem' }} /> : <Pending sx={{ mr: 0.5, fontSize: '1.1rem' }} />}
+          {/* {params.value ? <CheckCircle sx={{ mr: 0.5, fontSize: '1.1rem' }} /> : <Pending sx={{ mr: 0.5, fontSize: '1.1rem' }} />} */}
           {params.value ? 'Yes' : 'No'}
         </Box>
       )
@@ -904,14 +909,14 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           color: params.value >= 9 ? '#4caf50' :
             params.value >= 7 ? '#ff9800' : '#f44336'
         }}>
-          <Grade sx={{ mr: 0.5, fontSize: '1.1rem' }} />
+          {/* <Grade sx={{ mr: 0.5, fontSize: '1.1rem' }} /> */}
           {params.value || 'N/A'}
         </Box>
       )
     },
     {
       field: "violationStatus",
-      headerName: "Status",
+      headerName: "Violation Threshold",
       width: 120,
       align: 'center',
       headerAlign: 'center',
@@ -1158,9 +1163,21 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           sx={{
             color: "#c2c2c2",
             fontSize: isMobile ? "0.9rem" : "1rem",
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
           }}
         >
           Team Violation Tracker
+          <Tooltip title="Learn how violations are evaluated" arrow>
+            <IconButton
+              onClick={handleViolationDialogOpen}
+              size="small"
+              sx={{ color: '#ffffff' }}
+            >
+              <Info fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Typography>
 
         <Stack direction="row" gap={2} alignItems="center" justifyContent={'space-between'} sx={{ width: "100%" }}>
@@ -1311,6 +1328,11 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         onClose={() => setReportAbsenceDialogOpen(false)}
         onSave={handleReportAbsence}
         teamName={selectedTeamForAbsence}
+      />
+
+      <ViolationEvaluationDialog
+        open={violationDialogOpen}
+        onClose={handleViolationDialogClose}
       />
     </Box>
   );
