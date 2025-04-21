@@ -188,7 +188,7 @@ const TaskTable = ({ tasks }) => {
     {
       field: "evaluationScore",
       headerName: "Score",
-      minWidth: 150,
+      minWidth: 100,
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => {
@@ -213,7 +213,8 @@ const TaskTable = ({ tasks }) => {
             fontWeight: "bold"
           }}>
             {/* <MdAssessment sx={{ mr: 1 }} /> */}
-            {score} ({label})
+            {/* {score} ({label}) */}
+            {score}
           </Box>
         );
       },
@@ -261,27 +262,27 @@ const TaskTable = ({ tasks }) => {
         </Box>
       ),
     },
-    {
-      field: "isActive",
-      headerName: "Team Status",
-      minWidth: 100,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => {
-        const teamData = getTeamData(params.row.teamId);
-        return (
-          <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: teamData?.isActive ? '#4caf50' : '#f44336',
-            fontWeight: 'bold'
-          }}>
-            {teamData ? (teamData.isActive ? 'Yes' : 'No') : 'N/A'}
-          </Box>
-        );
-      },
-    },
+    // {
+    //   field: "isActive",
+    //   headerName: "Team Status",
+    //   minWidth: 100,
+    //   align: 'center',
+    //   headerAlign: 'center',
+    //   renderCell: (params) => {
+    //     const teamData = getTeamData(params.row.teamId);
+    //     return (
+    //       <Box sx={{
+    //         display: 'flex',
+    //         alignItems: 'center',
+    //         justifyContent: 'center',
+    //         color: teamData?.isActive ? '#4caf50' : '#f44336',
+    //         fontWeight: 'bold'
+    //       }}>
+    //         {teamData ? (teamData.isActive ? 'Active' : 'Inactive') : 'N/A'}
+    //       </Box>
+    //     );
+    //   },
+    // },
     {
       field: "lastSession",
       headerName: "Last Session",

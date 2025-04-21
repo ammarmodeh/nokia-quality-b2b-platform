@@ -26,7 +26,7 @@ const fieldTeamsSchema = new mongoose.Schema(
     evaluationScore: {
       type: String,
       required: [true, "Evaluation score is required"],
-      default: "0/0 0%",
+      default: "N/A",
     },
     evaluationHistory: [
       {

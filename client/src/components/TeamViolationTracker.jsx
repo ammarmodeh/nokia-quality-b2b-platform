@@ -888,7 +888,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: params.value ? '#4caf50' : '#ff9800'
+          color: "#ffffff"
         }}>
           {/* {params.value ? <CheckCircle sx={{ mr: 0.5, fontSize: '1.1rem' }} /> : <Pending sx={{ mr: 0.5, fontSize: '1.1rem' }} />} */}
           {params.value ? 'Yes' : 'No'}
@@ -906,8 +906,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: params.value >= 9 ? '#4caf50' :
-            params.value >= 7 ? '#ff9800' : '#f44336'
+          color: "#ffffff"
         }}>
           {/* <Grade sx={{ mr: 0.5, fontSize: '1.1rem' }} /> */}
           {params.value || 'N/A'}
@@ -926,11 +925,12 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           <Box sx={{
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: equivalentDetractorCount >= 3 ? "#f44336" :
-              equivalentDetractorCount === 2 ? "#ff9800" : "#4caf50",
+            backgroundColor: equivalentDetractorCount >= 3 ? 'rgba(244, 67, 54, 0.4)' :
+              equivalentDetractorCount === 2 ? 'rgba(255, 152, 0, 0.4)' :
+                'rgba(76, 175, 80, 0.4)',
             color: "white",
             padding: "4px 8px",
-            borderRadius: "4px",
+            // borderRadius: "4px",
             fontWeight: 'bold',
             fontSize: '0.8rem'
           }}>
@@ -955,7 +955,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: params.value ? '#4caf50' : '#f44336'
+          color: "#ffffff"
         }}>
           {params.value ? 'Yes' : 'No'}
         </Box>

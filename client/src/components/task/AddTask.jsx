@@ -30,7 +30,7 @@ const EVALUATIONSCORE = [1, 2, 3, 4, 5, 6, 7, 8]
 const JORDANGOVERNORATES = ["عمَان", "الزرقاء", "إربد", "العقبة", "المفرق", "مادبا", "البلقاء", "جرش", "معان", "الكرك", "عجلون", "الطفيلة"]
 const CUSTOMERTYPE = ["CBU", "EBU"]
 const VALIDATIONSTATUS = ["Validated", "Not validated"]
-const VALIDATIONCATEGORY = ["Knowledge Gap", "Customer Education", "Customer’s Own Criteria", "Lack of Technical Expertise",
+const VALIDATIONCATEGORY = ["Knowledge Gap", "Customer Education", "Customer’s Own Criteria", "Incomplete Service Delivery", "Lack of Technical Expertise",
   "Poor Time Management", "Technical Limitations", "Execution Delay", "Processing Delay", "External Factors", "Bad Team Behavior",
   "Device limitations", "Misuse of Service", "Customer-Declined Solution / Unrealistic Expectation", "Others", "VOIP", "Can't Determine"]
 
