@@ -9,9 +9,8 @@ import { FaTrashAlt, FaUsers, FaCalendar, FaStar, FaRegLightbulb, FaThList } fro
 import { RiTeamFill } from "react-icons/ri";
 import { MdTask } from "react-icons/md";
 import { BiArchive } from "react-icons/bi";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
-import { setIsSidebarOpen } from "../redux/slices/authSlice";
 import clsx from "clsx";
 import { Stack, Accordion, AccordionSummary, AccordionDetails, useMediaQuery } from "@mui/material";
 import { ExpandMore } from "@mui/icons-material";
@@ -261,16 +260,13 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
 };
 
 // Sidebar Component
-const Sidebar = ({ isCollapsed, toggleSidebar }) => {
-  const dispatch = useDispatch();
+const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
   const linkData = SidebarLinks();
   const isMobileOrMediumScreen = useMediaQuery('(max-width:1024px)');
 
   // Close sidebar handler
   const closeSidebar = () => {
-    if (isMobileOrMediumScreen) {
-      dispatch(setIsSidebarOpen(false));
-    }
+    setSidebarOpen(false)
   };
 
   return (

@@ -25,13 +25,10 @@ const authSlice = createSlice({
       state.user = action.payload;
       localStorage.setItem("userInfo", JSON.stringify(action.payload));
     },
-    setIsSidebarOpen: (state, action) => {
-      state.isSidebarOpen = action.payload;
-    },
   },
 });
 
-export const { login, logout, updateUser, setIsSidebarOpen } = authSlice.actions;
+export const { login, logout, updateUser } = authSlice.actions;
 
 export default authSlice.reducer;
 // To simplify what this export, it export the initialState or updated initialState object.

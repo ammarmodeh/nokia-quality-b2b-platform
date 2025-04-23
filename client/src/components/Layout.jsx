@@ -5,14 +5,21 @@ import { Outlet } from "react-router-dom";
 import clsx from "clsx";
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import { AutoGraph, Close } from "@mui/icons-material";
+import FieldTeamsFloatingTable from "./FieldTeamsFloatingTable";
 
 const Layout = () => {
   const theme = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [tableOpen, setTableOpen] = useState(false);
   const isMobileOrMedium = useMediaQuery(theme.breakpoints.down('lg')); // Adjust breakpoint as needed
 
   const toggleSidebar = () => {
     setSidebarOpen(prev => !prev);
+  };
+
+  const toggleTable = () => {
+    setTableOpen(prev => !prev);
   };
 
   return (
@@ -31,6 +38,7 @@ const Layout = () => {
         <Sidebar
           toggleSidebar={toggleSidebar}
           isSidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
           isMobileOrMedium={isMobileOrMedium}
         />
       </div>
@@ -42,6 +50,18 @@ const Layout = () => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
+      {/* Floating button */}
+      <button
+        onClick={toggleTable}
+        className="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg z-40 transition-all duration-300 hover:scale-110"
+        aria-label="Show field teams"
+      >
+        {tableOpen ? <Close /> : <AutoGraph />}
+      </button>
+
+      {/* Field Teams Table */}
+      <FieldTeamsFloatingTable open={tableOpen} onClose={() => setTableOpen(false)} />
 
       {/* Main content area */}
       <main className="flex flex-col bg-[#121212] w-full h-full">
