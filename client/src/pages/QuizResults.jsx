@@ -8,47 +8,32 @@ const QuizResults = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
 
-  // Get results from either navigation state or fallback storage
-  const results = state || JSON.parse(sessionStorage.getItem('quizResultsFallback')) || {
+  const results = state?.quizResults ||
+    JSON.parse(sessionStorage.getItem('quizResultsFallback')) ||
+  {
     teamName: 'فريق غير معروف',
     correctAnswers: 0,
     totalQuestions: 1,
-    userAnswers: [],
+    percentage: 0,
     questions: [],
-    percentage: 0
+    userAnswers: []
   };
 
   useEffect(() => {
-    // Clean up fallback storage
     sessionStorage.removeItem('quizResultsFallback');
 
-    // Redirect if no results data
-    if (!state && !sessionStorage.getItem('quizResultsFallback')) {
-      navigate('/fieldteam-login', { replace: true });
-      return;
+    if (!results.teamName || results.teamName === 'فريق غير معروف') {
+      const isFieldTeam = JSON.parse(sessionStorage.getItem('fieldTeamAuth'));
+      navigate(isFieldTeam ? '/fieldteam-login' : '/auth', { replace: true });
     }
 
-    // Auto-redirect after 3 minutes
     const timeoutId = setTimeout(() => {
-      navigate('/fieldteam-login', { replace: true });
+      const isFieldTeam = JSON.parse(sessionStorage.getItem('fieldTeamAuth'));
+      navigate(isFieldTeam ? '/fieldteam-login' : '/', { replace: true });
     }, 180000);
 
-    // Prevent back navigation
-    const handleBackButton = () => {
-      navigate('/fieldteam-login', { replace: true });
-    };
-
-    window.addEventListener('popstate', handleBackButton);
-
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('popstate', handleBackButton);
-    };
-  }, [navigate, state]);
-
-  const handleExit = () => {
-    navigate('/fieldteam-login', { replace: true });
-  };
+    return () => clearTimeout(timeoutId);
+  }, [navigate, results]);
 
   const generateQRData = () => {
     return `الفريق: ${results.teamName}\nالنتيجة: ${results.correctAnswers}/${results.totalQuestions} (${results.percentage}%)`;
@@ -64,8 +49,17 @@ const QuizResults = () => {
       message += `إجابتي: ${userAnswer}\n\n`;
     });
 
-    const link = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(link, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const handleExit = () => {
+    const isFieldTeam = JSON.parse(sessionStorage.getItem('fieldTeamAuth'));
+    if (isFieldTeam) {
+      sessionStorage.removeItem('fieldTeamAuth');
+      navigate('/fieldteam-login', { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
   };
 
   return (
@@ -153,7 +147,7 @@ const QuizResults = () => {
             fontSize: '1rem'
           }}
         >
-          العودة إلى صفحة الدخول
+          العودة إلى الصفحة الرئيسية
         </Button>
 
         <Alert severity="info" sx={{ mt: 2, py: 0.5, fontSize: '0.875rem' }}>

@@ -51,20 +51,24 @@ const FieldTeamLogin = () => {
         throw new Error('This team is not authorized to take the quiz');
       }
 
+      const authData = {
+        teamId: team._id,
+        teamName: team.teamName,
+        quizCode,
+        isFieldTeam: true
+      };
+
+      sessionStorage.setItem('fieldTeamAuth', JSON.stringify(authData));
       sessionStorage.removeItem('quizResults');
+
       navigate('/quiz', {
-        state: {
-          teamId: team._id,
-          teamName: team.teamName,
-          isFieldTeam: true,
-          quizCode
-        },
+        state: { fieldTeamAuth: authData },
         replace: true
       });
     } catch (err) {
       setSnackbar({
         open: true,
-        message: err.response?.data?.message || err.message,
+        message: err.response?.data?.message || err.message || 'Authentication failed',
         severity: 'error'
       });
     } finally {

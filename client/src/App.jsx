@@ -2,12 +2,8 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useSelector } from "react-redux";
 import { Suspense, lazy } from "react";
-import FieldTeamForm from "./pages/FieldTeams";
 import { FadeLoader } from "react-spinners";
 import { Box } from "@mui/material";
-import CustomerIssuesList from "./components/CustomerIssuesList";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import QuizResults from "./pages/QuizResults";
 
 // Lazy load pages
 const Layout = lazy(() => import("./components/Layout"));
@@ -31,30 +27,42 @@ const MemberSuggestionsDashboard = lazy(() => import("./components/MemberSuggest
 const PoliciesList = lazy(() => import("./components/PoliciesList"));
 const AllTasksList = lazy(() => import("./pages/AllTasksList"));
 const FieldTeamLogin = lazy(() => import("./pages/FieldTeamLogin"));
+const QuizResults = lazy(() => import("./pages/QuizResults"));
+const FieldTeamForm = lazy(() => import("./pages/FieldTeams"));
+const CustomerIssuesList = lazy(() => import("./components/CustomerIssuesList"));
 
-// Private Route Wrapper with Role-Based Access
-const PrivateRoute = ({ children, requiredRole }) => {
+// Custom route handlers
+const QuizRouteHandler = ({ children }) => {
+  const { user } = useSelector((state) => state?.auth);
+  const location = useLocation();
+  const fieldTeamAuth = location.state?.fieldTeamAuth || JSON.parse(sessionStorage.getItem('fieldTeamAuth'));
+
+  if (user || fieldTeamAuth) {
+    return children;
+  }
+  return <Navigate to="/fieldteam-login" state={{ from: location }} replace />;
+};
+
+const QuizResultsRouteHandler = ({ children }) => {
+  const { user } = useSelector((state) => state?.auth);
+  const location = useLocation();
+  const hasResults = location.state?.quizResults || JSON.parse(sessionStorage.getItem('quizResultsFallback'));
+
+  if (user || hasResults) {
+    return children;
+  }
+  return <Navigate to={JSON.parse(sessionStorage.getItem('fieldTeamAuth')) ? "/fieldteam-login" : "/auth"} replace />;
+};
+
+const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user } = useSelector((state) => state?.auth);
   const location = useLocation();
 
-  // Handle field team authentication (stored in location state or sessionStorage)
-  const isFieldTeam = location.state?.isFieldTeam || JSON.parse(sessionStorage.getItem('fieldTeamAuth'));
-
-  // Special handling for quiz routes
-  const isQuizRoute = location.pathname === '/quiz' || location.pathname === '/quiz-results';
-
-  // If no user is logged in and not a field team
-  if (!user && !isFieldTeam) {
-    // For quiz routes, redirect to field team login instead of auth
-    if (isQuizRoute) {
-      return <Navigate to="/fieldteam-login" state={{ from: location }} replace />;
-    }
+  if (!user) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // If a required role is specified and the user doesn't have it, and not a field team
-  if (requiredRole && user?.role !== requiredRole && !isFieldTeam) {
-    alert("You do not have permission to access this page.");
+  if (adminOnly && user.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -68,41 +76,38 @@ const Loading = () => (
   </Box>
 );
 
-// App Component with Route Structure
 const App = () => {
   return (
     <>
       <Suspense fallback={<Loading />}>
         <Routes>
           {/* Public Routes */}
-          <Route path="/auth" element={<Auth />} /> {/* Use Auth component for both login and register */}
+          <Route path="/auth" element={<Auth />} />
           <Route path="/fieldteam-login" element={<FieldTeamLogin />} />
 
-          {/* Quiz route - accessible only to validated field teams */}
+          {/* Quiz Routes */}
           <Route
             path="/quiz"
             element={
-              <PrivateRoute>
+              <QuizRouteHandler>
                 <Quiz />
-              </PrivateRoute>
+              </QuizRouteHandler>
             }
           />
-
-          {/* Quiz results route */}
           <Route
             path="/quiz-results"
             element={
-              <PrivateRoute>
+              <QuizResultsRouteHandler>
                 <QuizResults />
-              </PrivateRoute>
+              </QuizResultsRouteHandler>
             }
           />
 
           {/* Default Route */}
-          <Route path="/" element={<Navigate to="/dashboard" />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           {/* Protected Routes */}
-          <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
+          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route
               path="admin/suggestions"
@@ -112,14 +117,7 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/my-suggestions"
-              element={
-                <ProtectedRoute>
-                  <MemberSuggestionsDashboard />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/my-suggestions" element={<MemberSuggestionsDashboard />} />
             <Route path="/audit/tasks" element={<AllTasksList />} />
             <Route path="/policies" element={<PoliciesList />} />
             <Route path="/profile" element={<Profile />} />
@@ -139,7 +137,7 @@ const App = () => {
           </Route>
 
           {/* 404 Route */}
-          <Route path="*" element={<div>404 Not Found</div>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
       <Toaster richColors />

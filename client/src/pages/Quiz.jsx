@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation, Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/api';
 import { Timer } from '../components/Timer';
 
@@ -21,20 +21,11 @@ const Quiz = () => {
   });
 
   useEffect(() => {
-    const authenticateTeam = () => {
-      if (locationState?.teamId && locationState?.teamName && locationState?.quizCode) {
-        return {
-          teamId: locationState.teamId,
-          teamName: locationState.teamName,
-          quizCode: locationState.quizCode
-        };
-      }
-      return null;
-    };
+    const authData = locationState?.fieldTeamAuth ||
+      JSON.parse(sessionStorage.getItem('fieldTeamAuth'));
 
-    const authData = authenticateTeam();
     if (!authData) {
-      setQuizState(prev => ({ ...prev, error: 'غير مصرح بالوصول. يرجى تسجيل الدخول أولاً.', loading: false }));
+      setQuizState(prev => ({ ...prev, error: 'غير مصرح بالوصول', loading: false }));
       return;
     }
 
@@ -46,11 +37,16 @@ const Quiz = () => {
       loading: false
     }));
 
-    api.get('/quiz/questions')
-      .then(response => setQuizState(prev => ({ ...prev, questions: response.data })))
-      .catch(err => {
-        setQuizState(prev => ({ ...prev, error: 'فشل تحميل الأسئلة. يرجى المحاولة مرة أخرى.' }));
-      });
+    const loadQuestions = async () => {
+      try {
+        const response = await api.get('/quiz/questions');
+        setQuizState(prev => ({ ...prev, questions: response.data }));
+      } catch (err) {
+        setQuizState(prev => ({ ...prev, error: 'فشل تحميل الأسئلة' }));
+      }
+    };
+
+    loadQuestions();
   }, [locationState]);
 
   const handleOptionChange = (e) => {
@@ -64,11 +60,7 @@ const Quiz = () => {
     const isCorrect = selectedOption === questions[currentQuestion].correctAnswer;
     const newScore = isCorrect ? score + 1 : score;
     const newUserAnswers = [...userAnswers];
-
-    newUserAnswers[currentQuestion] = {
-      selectedAnswer: selectedOption,
-      isCorrect
-    };
+    newUserAnswers[currentQuestion] = { selectedAnswer: selectedOption, isCorrect };
 
     if (currentQuestion < questions.length - 1) {
       setQuizState(prev => ({
@@ -79,10 +71,7 @@ const Quiz = () => {
         userAnswers: newUserAnswers
       }));
     } else {
-      const userConfirmed = window.confirm('هل أنت متأكد من إنهاء الاختبار؟');
-      if (userConfirmed) {
-        submitScore(newScore, newUserAnswers);
-      }
+      submitScore(newScore, newUserAnswers);
     }
   };
 
@@ -99,32 +88,23 @@ const Quiz = () => {
       totalQuestions: quizState.questions.length,
       userAnswers: answers,
       questions: quizState.questions,
-      percentage: percentage
+      percentage
     };
 
-    // 1. First try React Router navigation
-    try {
-      navigate('/quiz-results', {
-        state: resultsData,
-        replace: true
-      });
-    } catch (navError) {
-      console.error("React navigation failed, using fallback:", navError);
-      // 2. Fallback to sessionStorage + window.location
-      sessionStorage.setItem('quizResultsFallback', JSON.stringify(resultsData));
-      window.location.href = '/quiz-results';
-      return;
-    }
-
-    // 3. Submit to API in background
     try {
       await api.post('/field-teams/update-score', {
         teamId: quizState.teamId,
         quizCode: quizState.quizCode,
         score: result
       });
-    } catch (apiError) {
-      console.error("API submission failed:", apiError);
+
+      navigate('/quiz-results', {
+        state: { quizResults: resultsData },
+        replace: true
+      });
+    } catch (error) {
+      sessionStorage.setItem('quizResultsFallback', JSON.stringify(resultsData));
+      navigate('/quiz-results', { replace: true });
     }
   };
 
@@ -146,7 +126,7 @@ const Quiz = () => {
   return (
     <div className="p-4 bg-[#121212] min-h-screen" dir="rtl">
       <div className="flex justify-between items-center mb-12">
-        <h2 className="text-xl font-bold text-[#3ea6ff]"> اسم الفريق: {teamName}</h2>
+        <h2 className="text-xl font-bold text-[#3ea6ff]">اسم الفريق: {teamName}</h2>
         <Timer
           timeLimit={3000}
           onTimeUp={() => !quizState.hasSubmitted && submitScore(quizState.score, quizState.userAnswers)}
