@@ -16,23 +16,20 @@ const Quiz = () => {
     quizCode: '',
     teamId: '',
     loading: true,
-    error: null
+    error: null,
+    hasSubmitted: false
   });
 
   useEffect(() => {
     const authenticateTeam = () => {
       if (state?.teamId && state?.teamName && state?.quizCode) {
-        const authData = {
+        return {
           teamId: state.teamId,
           teamName: state.teamName,
           quizCode: state.quizCode
         };
-        sessionStorage.setItem('fieldTeamAuth', JSON.stringify(authData));
-        return authData;
       }
-
-      const savedAuth = JSON.parse(sessionStorage.getItem('fieldTeamAuth'));
-      return savedAuth || null;
+      return null;
     };
 
     const authData = authenticateTeam();
@@ -61,6 +58,8 @@ const Quiz = () => {
   };
 
   const handleSubmit = () => {
+    if (quizState.hasSubmitted) return;
+
     const { questions, currentQuestion, selectedOption, score, userAnswers } = quizState;
     const isCorrect = selectedOption === questions[currentQuestion].correctAnswer;
     const newScore = isCorrect ? score + 1 : score;
@@ -88,42 +87,50 @@ const Quiz = () => {
   };
 
   const submitScore = async (finalScore, answers) => {
+    if (quizState.hasSubmitted) return;
+
     try {
+      setQuizState(prev => ({ ...prev, hasSubmitted: true }));
+
       const percentage = Math.round((finalScore / quizState.questions.length) * 100);
-      const result = `${finalScore}/${quizState.questions.length} ${percentage}%`;
+      const result = `${finalScore}/${quizState.questions.length}`;
 
       const response = await api.post('/field-teams/update-score', {
         teamId: quizState.teamId,
         quizCode: quizState.quizCode,
-        score: result
+        score: result,
+        percentage: percentage
       });
 
       if (response.data.success) {
-        const results = {
-          teamName: quizState.teamName,
-          correctAnswers: finalScore,
-          totalQuestions: quizState.questions.length,
-          userAnswers: answers,
-          questions: quizState.questions
-        };
-
-        sessionStorage.setItem('quizResults', JSON.stringify(results));
-        navigate('/quiz-results', { replace: true });
+        navigate('/quiz-results', {
+          state: {
+            teamName: quizState.teamName,
+            correctAnswers: finalScore,
+            totalQuestions: quizState.questions.length,
+            userAnswers: answers,
+            questions: quizState.questions,
+            percentage: percentage
+          },
+          replace: true
+        });
       }
     } catch (err) {
       if (err.response?.status === 403) {
-        const results = {
-          teamName: quizState.teamName,
-          correctAnswers: finalScore,
-          totalQuestions: quizState.questions.length,
-          userAnswers: answers,
-          questions: quizState.questions
-        };
-
-        sessionStorage.setItem('quizResults', JSON.stringify(results));
-        navigate('/quiz-results', { replace: true });
+        navigate('/quiz-results', {
+          state: {
+            teamName: quizState.teamName,
+            correctAnswers: finalScore,
+            totalQuestions: quizState.questions.length,
+            userAnswers: answers,
+            questions: quizState.questions,
+            percentage: Math.round((finalScore / quizState.questions.length) * 100)
+          },
+          replace: true
+        });
       } else {
-        alert(err.response?.data?.message || 'Failed to submit results');
+        alert(err.response?.data?.message || 'فشل إرسال النتائج. يرجى المحاولة مرة أخرى.');
+        setQuizState(prev => ({ ...prev, hasSubmitted: false }));
       }
     }
   };
@@ -140,14 +147,17 @@ const Quiz = () => {
     );
   }
 
-  const { questions, currentQuestion, selectedOption, teamName, score } = quizState;
+  const { questions, currentQuestion, selectedOption, teamName } = quizState;
   const currentQ = questions[currentQuestion];
 
   return (
     <div className="p-4 bg-[#121212] min-h-screen" dir="rtl">
       <div className="flex justify-between items-center mb-12">
         <h2 className="text-xl font-bold text-[#3ea6ff]"> اسم الفريق: {teamName}</h2>
-        <Timer timeLimit={3000} onTimeUp={() => submitScore(score, quizState.userAnswers)} />
+        <Timer
+          timeLimit={3000}
+          onTimeUp={() => !quizState.hasSubmitted && submitScore(quizState.score, quizState.userAnswers)}
+        />
       </div>
 
       <div className="max-w-[1000px] mx-auto">

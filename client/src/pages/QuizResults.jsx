@@ -1,31 +1,29 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { Box, Button, Typography, Alert } from '@mui/material';
-import { FaWhatsapp } from 'react-icons/fa'; // Import the WhatsApp icon
+import { FaWhatsapp } from 'react-icons/fa';
 
 const QuizResults = () => {
   const navigate = useNavigate();
-  const results = JSON.parse(sessionStorage.getItem('quizResults'));
+  const { state } = useLocation();
+  const results = state;
 
   useEffect(() => {
     if (!results) {
       navigate('/fieldteam-login', { replace: true });
     }
 
-    // Set timeout to navigate after 1 minute (60000 milliseconds)
     const timeoutId = setTimeout(() => {
       navigate('/fieldteam-login', { replace: true });
     }, 180000);
 
-    // Prevent going back
     const handleBackButton = () => {
       navigate('/fieldteam-login', { replace: true });
     };
 
     window.addEventListener('popstate', handleBackButton);
 
-    // Cleanup function
     return () => {
       clearTimeout(timeoutId);
       window.removeEventListener('popstate', handleBackButton);
@@ -33,12 +31,6 @@ const QuizResults = () => {
   }, [navigate, results]);
 
   const handleExit = () => {
-    // Clear session storage
-    sessionStorage.removeItem('fieldTeamAuth');
-    sessionStorage.removeItem('quizResults');
-
-    // Navigate to login and prevent going back
-    window.history.pushState(null, '', '/fieldteam-login');
     navigate('/fieldteam-login', { replace: true });
   };
 
@@ -46,27 +38,18 @@ const QuizResults = () => {
     return null;
   }
 
-  const { teamName, correctAnswers, totalQuestions, userAnswers, questions } = results;
-  const percentage = Math.round((correctAnswers / totalQuestions) * 100);
+  const { teamName, correctAnswers, totalQuestions, userAnswers, questions, percentage } = results;
 
   const generateQRData = () => {
-    const baseData = [
-      `الفريق: ${teamName}`,
-      `النتيجة: ${correctAnswers}/${totalQuestions} (${percentage}%)`
-    ].join("\n");
-
-    const maxLength = 650;
-    return baseData.length > maxLength ? baseData.substring(0, maxLength - 3) + "..." : baseData;
+    return `الفريق: ${teamName}\nالنتيجة: ${correctAnswers}/${totalQuestions} (${percentage}%)`;
   };
 
   const shareResults = () => {
     let message = `نتيجة اختبار فريق ${teamName}:\n`;
     message += `النتيجة النهائية: ${correctAnswers}/${totalQuestions} (${percentage}%)\n\n`;
 
-    // Add each question with user's answer only (without correct answer)
     questions.forEach((question, index) => {
       const userAnswer = userAnswers[index]?.selectedAnswer || 'لم يتم الإجابة';
-
       message += `السؤال ${index + 1}: ${question.question}\n`;
       message += `إجابتي: ${userAnswer}\n\n`;
     });
@@ -143,7 +126,7 @@ const QuizResults = () => {
               gap: 1
             }}
           >
-            <FaWhatsapp size={20} /> {/* Add the WhatsApp icon */}
+            <FaWhatsapp size={20} />
             <Typography>مشاركة النتيجة</Typography>
           </Button>
         </Box>

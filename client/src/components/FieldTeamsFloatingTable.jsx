@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import api from "../api/api";
 
 const FieldTeamsFloatingTable = ({ open, onClose }) => {
@@ -9,38 +10,40 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
   const [filteredTeams, setFilteredTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
   const tableRef = useRef(null);
 
+  const fetchFieldTeams = async () => {
+    try {
+      setRefreshing(true);
+      const response = await api.get("/field-teams/get-field-teams", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      });
+
+      const { data } = response;
+
+      // Filter and sort teams
+      const filteredTeams = data
+        .filter(team => team.evaluationScore !== "N/A")
+        .map(team => ({
+          ...team,
+          // Convert score to number for proper sorting
+          scoreValue: parseFloat(team.evaluationScore.replace('%', ''))
+        }))
+        .sort((a, b) => b.scoreValue - a.scoreValue); // Sort descending
+
+      setFieldTeams(filteredTeams);
+      setFilteredTeams(filteredTeams); // Initialize filtered teams
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching field teams:", error);
+      setLoading(false);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchFieldTeams = async () => {
-      try {
-        const response = await api.get("/field-teams/get-field-teams", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-        });
-
-        // console.log({ response });
-
-        const { data } = response;
-
-        // Filter and sort teams
-        const filteredTeams = data
-          .filter(team => team.evaluationScore !== "N/A")
-          .map(team => ({
-            ...team,
-            // Convert score to number for proper sorting
-            scoreValue: parseFloat(team.evaluationScore.replace('%', ''))
-          }))
-          .sort((a, b) => b.scoreValue - a.scoreValue); // Sort descending
-
-        setFieldTeams(filteredTeams);
-        setFilteredTeams(filteredTeams); // Initialize filtered teams
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching field teams:", error);
-        setLoading(false);
-      }
-    };
-
     if (open) {
       fetchFieldTeams();
     }
@@ -85,9 +88,25 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
       {/* Fixed Header */}
       <div className="flex justify-between items-center p-2 border-b border-[#444] flex-shrink-0">
         <h3 className="text-white font-medium">Team Evaluation Scores (Ranked)</h3>
-        <IconButton onClick={onClose} size="small">
-          <CloseIcon style={{ color: "white" }} />
-        </IconButton>
+        <div>
+          <IconButton
+            onClick={fetchFieldTeams}
+            size="small"
+            disabled={refreshing}
+            title="Refresh teams"
+          >
+            <RefreshIcon
+              style={{
+                color: refreshing ? "#777" : "white",
+                transition: "transform 0.3s",
+                transform: refreshing ? "rotate(360deg)" : "rotate(0deg)"
+              }}
+            />
+          </IconButton>
+          <IconButton onClick={onClose} size="small">
+            <CloseIcon style={{ color: "white" }} />
+          </IconButton>
+        </div>
       </div>
 
       {/* Search Bar */}
