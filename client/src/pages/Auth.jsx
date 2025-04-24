@@ -177,12 +177,12 @@ const Auth = () => {
                     },
                     color: '#c9d1d9',
                     '& input': {
-                      'caret-color': '#58a6ff', // This sets the cursor color
+                      caretColor: '#58a6ff', // Changed to camelCase
                     },
                     // These target the dropdown and selection
                     '& input:-webkit-autofill': {
-                      '-webkit-box-shadow': '0 0 0 100px #0d1117 inset !important',
-                      '-webkit-text-fill-color': '#c9d1d9 !important',
+                      WebkitBoxShadow: '0 0 0 100px #0d1117 inset !important', // Changed to camelCase
+                      WebkitTextFillColor: '#c9d1d9 !important', // Changed to camelCase
                     },
                     '& input:-internal-autofill-selected': {
                       backgroundColor: '#0d1117 !important',
@@ -197,7 +197,6 @@ const Auth = () => {
                   '& .MuiFormHelperText-root': {
                     color: '#8b949e',
                   },
-
                 }}
               />
 
@@ -243,7 +242,15 @@ const Auth = () => {
                     },
                     color: '#c9d1d9',
                     '& input': {
-                      'caret-color': '#58a6ff', // This sets the cursor color
+                      caretColor: '#58a6ff', // ✅ Fixed to camelCase
+                    },
+                    // These target the dropdown and selection
+                    '& input:-webkit-autofill': {
+                      WebkitBoxShadow: '0 0 0 100px #0d1117 inset !important', // ✅ Fixed
+                      WebkitTextFillColor: '#c9d1d9 !important', // ✅ Fixed
+                    },
+                    '& input:-internal-autofill-selected': {
+                      backgroundColor: '#0d1117 !important',
                     },
                   },
                   '& .MuiInputLabel-root': {

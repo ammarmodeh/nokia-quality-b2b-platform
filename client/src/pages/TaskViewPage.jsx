@@ -49,7 +49,8 @@ const TaskViewPage = () => {
   const [usersToNotify, setUsersToNotify] = useState([]);
   const location = useLocation();
   const from = location.state?.from || "/dashboard";
-  const [expandedNotes, setExpandedNotes] = useState({});
+  // const [expandedNotes, setExpandedNotes] = useState({});
+  const [expandedNotes, setExpandedNotes] = useState([]);
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -760,6 +761,7 @@ const TaskViewPage = () => {
           handleSaveNote={handleSaveNote}
           handleReset={handleReset}
           expandedNotes={expandedNotes}
+          setExpandedNotes={setExpandedNotes}
           toggleNoteExpand={toggleNoteExpand}
           isMobile={isMobile}
         />

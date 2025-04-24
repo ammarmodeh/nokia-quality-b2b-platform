@@ -67,6 +67,7 @@ const TaskTable = ({ tasks }) => {
   });
   const [openDialog, setOpenDialog] = useState(false);
   const [teamsData, setTeamsData] = useState([]);
+  // console.log({ teamsData });
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
   const isMobile = useMediaQuery('(max-width:503px)');
@@ -111,15 +112,143 @@ const TaskTable = ({ tasks }) => {
     setSelectedTask(null);
   };
 
-  const exportToExcel = (rows, columns) => {
-    const headers = columns.map(column => column.headerName);
-    const data = rows.map(row => columns.map(column => row[column.field] || ""));
+  // Function to export data to Excel
+  const exportToExcel = () => {
+    try {
+      // First, calculate team statistics
+      const teamStats = {};
 
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Tasks");
+      tasks.forEach(task => {
+        const teamId = task.teamId?.$oid || task.teamId;
+        if (!teamStats[teamId]) {
+          teamStats[teamId] = {
+            totalViolations: 0,
+            neutrals: 0,
+            detractors: 0,
+            teamName: task.teamName,
+            teamCompany: task.teamCompany
+          };
+        }
 
-    XLSX.writeFile(workbook, "tasks_overview.xlsx");
+        teamStats[teamId].totalViolations++;
+
+        const score = task.evaluationScore || 0;
+        if (score >= 7 && score <= 8) {
+          teamStats[teamId].neutrals++;
+        } else if (score <= 6) {
+          teamStats[teamId].detractors++;
+        }
+      });
+
+      // Define the export columns
+      const exportColumns = [
+        { header: "SLID", field: "slid" },
+        { header: "Week", field: "weekNumber" },
+        { header: "Score", field: "evaluationScore" },
+        { header: "Team", field: "teamName" },
+        { header: "Company", field: "teamCompany" },
+        { header: "PIS Date", field: "pisDate" },
+        { header: "Last Session", field: "lastSession" },
+        // { header: "Session Status", field: "sessionStatus" },
+        { header: "Total Violations", field: "totalViolations" },
+        { header: "Neutrals (7-8)", field: "neutrals" },
+        { header: "Detractors (0-6)", field: "detractors" },
+        { header: "Evaluated", field: "isEvaluated" },
+        { header: "Team Score", field: "teamEvaluationScore" },
+        // { header: "Status", field: "status" }
+      ];
+
+      // Prepare the data for export
+      const exportData = tasks.map(task => {
+        const teamId = task.teamId?.$oid || task.teamId;
+        const stats = teamStats[teamId] || {
+          totalViolations: 0,
+          neutrals: 0,
+          detractors: 0
+        };
+
+        // Calculate week number
+        const weekNumber = getWeekNumberForTaksTable(new Date(task.interviewDate?.$date || task.interviewDate));
+
+        // Get team data if available
+        const teamData = getTeamData(teamId);
+
+        // Initialize session variables
+        let lastSession = null;
+        let sessionInfo = 'No sessions';
+        let sessionStatus = 'N/A';
+
+        // Process session history if exists
+        if (teamData?.sessionHistory?.length > 0) {
+          // Find all completed sessions (sorted by date, newest first)
+          const completedSessions = teamData.sessionHistory
+            .filter(session => session.status === 'Completed')
+            .sort((a, b) =>
+              new Date(b.sessionDate?.$date || b.sessionDate) -
+              new Date(a.sessionDate?.$date || a.sessionDate)
+            );
+
+          // Find all other sessions (sorted by date, newest first)
+          const otherSessions = teamData.sessionHistory
+            .filter(session => session.status !== 'Completed')
+            .sort((a, b) =>
+              new Date(b.sessionDate?.$date || b.sessionDate) -
+              new Date(a.sessionDate?.$date || a.sessionDate)
+            );
+
+          // Priority 1: Use most recent completed session if available
+          if (completedSessions.length > 0) {
+            lastSession = completedSessions[0];
+            sessionStatus = 'Completed';
+            sessionInfo = `Completed (${moment(lastSession.sessionDate?.$date || lastSession.sessionDate).format('YYYY-MM-DD')}`;
+          }
+          // Priority 2: Use most recent other session if no completed sessions
+          else if (otherSessions.length > 0) {
+            lastSession = otherSessions[0];
+            sessionStatus = 'Missed';
+            sessionInfo = `Missed (${moment(lastSession.sessionDate?.$date || lastSession.sessionDate).format('YYYY-MM-DD')}`;
+          }
+        }
+
+        return {
+          slid: task.slid,
+          weekNumber: weekNumber,
+          evaluationScore: task.evaluationScore,
+          teamName: task.teamName,
+          teamCompany: task.teamCompany,
+          pisDate: newFormatDate(task.pisDate?.$date || task.pisDate),
+          lastSession: sessionInfo,
+          // sessionStatus: sessionStatus,
+          totalViolations: stats.totalViolations,
+          neutrals: stats.neutrals,
+          detractors: stats.detractors,
+          isEvaluated: teamData ? (teamData.isEvaluated ? 'Yes' : 'No') : 'N/A',
+          teamEvaluationScore: teamData?.evaluationScore || 'N/A',
+          // status: task.status
+        };
+      });
+
+      // Create worksheet with headers
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+      // Auto-size columns
+      const wscols = exportColumns.map(col => ({
+        width: Math.min(Math.max(col.header.length + 2, 10), 30)
+      }));
+      worksheet['!cols'] = wscols;
+
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "All Violations");
+
+      // Generate file with timestamp
+      const timestamp = moment().format("YYYYMMDD_HHmmss");
+      XLSX.writeFile(workbook, `all_violations_exported_${timestamp}.xlsx`);
+
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      alert("Failed to export to Excel. Please try again.");
+    }
   };
 
   // Ensure valid tasks and calculate week numbers using getWeekNumberForTaksTable

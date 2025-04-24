@@ -654,6 +654,8 @@ const UserAvatar = () => {
         }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#ffffff' }}>
             {user?.name}
+            {user?.role === "Admin" && <Chip label="Admin" size="small" style={{ backgroundColor: '#2f29ffd1', color: '#ffffffde', marginLeft: 8 }} />}
+            {user?.title === "Manager" && <Chip label="Quality Manager" size="small" style={{ backgroundColor: '#009688a8', color: '#ffffffde', marginLeft: 8 }} />}
           </Typography>
           <Typography variant="body2" sx={{
             color: '#A1A1A1',
@@ -692,7 +694,7 @@ const UserAvatar = () => {
             <MenuItem onClick={handleOpenSuggestionDialog}>
               <RiFeedbackLine style={{ fontSize: 18, marginRight: 8 }} />
               <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="body2" sx={{ ml: 1 }}>Feedback</Typography>
+                <Typography variant="body2" sx={{ ml: 1 }}>Send Feedback</Typography>
               </Box>
             </MenuItem>
           </div>

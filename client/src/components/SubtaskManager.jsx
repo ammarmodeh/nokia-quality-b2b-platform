@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import { FaEye } from "react-icons/fa";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
+import { useEffect } from "react";
 
 const SubtaskManager = ({
   subtasks,
@@ -24,9 +25,53 @@ const SubtaskManager = ({
   handleNext,
   handleBack,
   handleReset,
-  expandedNotes,
-  toggleNoteExpand
+  expandedNotes = [],
+  setExpandedNotes,
+  toggleNoteExpand,
 }) => {
+  // Convert expandedNotes to array if it's an object (for backward compatibility)
+  const normalizedExpandedNotes = Array.isArray(expandedNotes)
+    ? expandedNotes
+    : subtasks.map((_, index) => expandedNotes[index] || false);
+
+  // Initialize expanded notes on first render
+  useEffect(() => {
+    if (normalizedExpandedNotes.length === 0 && subtasks.length > 0) {
+      // Always expand the current active step first
+      const newExpandedNotes = Array(subtasks.length).fill(false);
+      newExpandedNotes[activeStep] = true;
+
+      // Additionally, expand the last empty note if it's different from activeStep
+      let lastEmptyIndex = -1;
+      for (let i = subtasks.length - 1; i >= 0; i--) {
+        if (!note[i] || note[i].trim() === "") {
+          lastEmptyIndex = i;
+          break;
+        }
+      }
+
+      // If all notes are empty and activeStep is not the first one, expand first note
+      if (lastEmptyIndex === -1 && activeStep !== 0) {
+        lastEmptyIndex = 0;
+      }
+
+      if (lastEmptyIndex !== -1 && lastEmptyIndex !== activeStep) {
+        newExpandedNotes[lastEmptyIndex] = true;
+      }
+
+      setExpandedNotes(newExpandedNotes);
+    }
+  }, []);
+
+  // Expand current step's notes when activeStep changes
+  useEffect(() => {
+    if (normalizedExpandedNotes.length > 0) {
+      const newExpandedNotes = [...normalizedExpandedNotes];
+      newExpandedNotes[activeStep] = true;
+      setExpandedNotes(newExpandedNotes);
+    }
+  }, [activeStep]);
+
   return (
     <DialogContent>
       <Box sx={{ maxWidth: 400 }}>
@@ -62,7 +107,7 @@ const SubtaskManager = ({
                       onClick={() => toggleNoteExpand(index)}
                       sx={{ color: "#3ea6ff" }}
                     >
-                      {expandedNotes[index] ? <ExpandLess /> : <ExpandMore />}
+                      {normalizedExpandedNotes[index] ? <ExpandLess /> : <ExpandMore />}
                     </IconButton>
                   </Stack>
                 </Stack>
@@ -73,7 +118,7 @@ const SubtaskManager = ({
                 )}
               </StepLabel>
               <StepContent>
-                <Collapse in={expandedNotes[index]}>
+                <Collapse in={normalizedExpandedNotes[index]}>
                   <Typography sx={{ mb: 1, color: "#ffffff" }}>{subtask.note}</Typography>
                   <TextField
                     margin="dense"

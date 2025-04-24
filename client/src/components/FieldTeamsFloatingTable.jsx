@@ -79,7 +79,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
   return (
     <div
       ref={tableRef}
-      className="fixed bottom-20 right-4 bg-[#050505] border border-[#444] rounded-lg shadow-lg z-50 w-90 flex flex-col"
+      className="fixed bottom-20 right-4 bg-[#171717fa] border border-[#444] rounded-lg shadow-lg z-50 w-90 flex flex-col"
       style={{ maxHeight: '320px' }}
     >
       {/* Fixed Header */}
@@ -111,7 +111,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
       </div>
 
       {/* Fixed Table Head */}
-      <TableContainer component={Paper} style={{ backgroundColor: "#050505", height: '50px' }}>
+      <TableContainer component={Paper} style={{ backgroundColor: "#171717fa", height: '50px' }}>
         <Table size="small" aria-label="field teams table">
           <TableHead>
             <TableRow>
@@ -125,7 +125,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
 
       {/* Scrollable Table Body */}
       <div className="h-[200px] overflow-y-auto">
-        <TableContainer component={Paper} style={{ backgroundColor: "#050505" }}>
+        <TableContainer component={Paper} style={{ backgroundColor: "#171717fa" }}>
           <Table size="small" style={{ tableLayout: 'fixed' }}>
             <TableBody>
               {loading ? (
@@ -174,8 +174,9 @@ const getScoreColor = (score) => {
   const numericScoreStr = score.split(' ')[1].replace('%', '');
   const numericScore = parseFloat(numericScoreStr);
   // console.log({ numericScore });
-  if (numericScore >= 80) return '#4CAF50'; // Green for high scores
-  if (numericScore >= 60) return '#FFC107'; // Yellow for medium scores
+  if (numericScore >= 90) return '#04970a';
+  if (numericScore >= 75) return '#4CAF50'; // Green for high scores
+  if (numericScore >= 55) return '#FFC107'; // Yellow for medium scores
   return '#F44336'; // Red for low scores
 };
 

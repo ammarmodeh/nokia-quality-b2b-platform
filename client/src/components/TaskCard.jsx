@@ -40,7 +40,8 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
   const [note, setNote] = useState([]);
   const [activeStep, setActiveStep] = useState(0);
   const [cancelState, setCancelState] = useState(false);
-  const [expandedNotes, setExpandedNotes] = useState({});
+  // const [expandedNotes, setExpandedNotes] = useState({});
+  const [expandedNotes, setExpandedNotes] = useState([]);
   const [creatorColor, setCreatorColor] = useState([]);
   const [usersToNotify, setUsersToNotify] = useState([]);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -57,11 +58,19 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
+  // const toggleNoteExpand = (index) => {
+  //   setExpandedNotes(prev => ({
+  //     ...prev,
+  //     [index]: !prev[index]
+  //   }));
+  // };
+
   const toggleNoteExpand = (index) => {
-    setExpandedNotes(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
+    setExpandedNotes(prev => {
+      const newExpanded = Array.isArray(prev) ? [...prev] : Array(subtasks.length).fill(false);
+      newExpanded[index] = !newExpanded[index];
+      return newExpanded;
+    });
   };
 
   const copyToClipboard = () => {
@@ -539,6 +548,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
           handleSaveNote={handleSaveNote}
           handleReset={handleReset}
           expandedNotes={expandedNotes}
+          setExpandedNotes={setExpandedNotes}
           toggleNoteExpand={toggleNoteExpand}
         />
 
