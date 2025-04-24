@@ -9,7 +9,6 @@ const Quiz = () => {
   const [quizState, setQuizState] = useState({
     questions: [],
     currentQuestion: 0,
-    score: 0,
     selectedOption: '',
     userAnswers: [],
     teamName: '',
@@ -21,6 +20,48 @@ const Quiz = () => {
   });
 
   useEffect(() => {
+    // Security measures
+    const preventDefault = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Prevent right-click context menu
+    document.addEventListener('contextmenu', preventDefault);
+
+    // Prevent copy/cut
+    document.addEventListener('copy', preventDefault);
+    document.addEventListener('cut', preventDefault);
+
+    // Prevent drag start
+    document.addEventListener('dragstart', preventDefault);
+
+    // Prevent keyboard shortcuts
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && (e.key === 'c' || e.key === 'C' ||
+        e.key === 'x' || e.key === 'X' ||
+        e.key === 'a' || e.key === 'A')) {
+        preventDefault(e);
+      }
+
+      // Disable F12 and other dev tools shortcuts
+      if (e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+        (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+        (e.ctrlKey && e.key === 'U')) {
+        preventDefault(e);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Blur content when window loses focus
+    const handleBlur = () => {
+      document.body.style.filter = 'blur(5px)';
+      setTimeout(() => document.body.style.filter = '', 1000);
+    };
+    window.addEventListener('blur', handleBlur);
+
+    // Load quiz data
     const authData = locationState?.fieldTeamAuth ||
       JSON.parse(sessionStorage.getItem('fieldTeamAuth'));
 
@@ -40,44 +81,74 @@ const Quiz = () => {
     const loadQuestions = async () => {
       try {
         const response = await api.get('/quiz/questions');
-        setQuizState(prev => ({ ...prev, questions: response.data }));
+        // Initialize userAnswers array with empty objects
+        const initialUserAnswers = response.data.map(() => ({}));
+        setQuizState(prev => ({
+          ...prev,
+          questions: response.data,
+          userAnswers: initialUserAnswers
+        }));
       } catch (err) {
         setQuizState(prev => ({ ...prev, error: 'فشل تحميل الأسئلة' }));
       }
     };
 
     loadQuestions();
+
+    return () => {
+      // Cleanup all event listeners
+      document.removeEventListener('contextmenu', preventDefault);
+      document.removeEventListener('copy', preventDefault);
+      document.removeEventListener('cut', preventDefault);
+      document.removeEventListener('dragstart', preventDefault);
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('blur', handleBlur);
+    };
   }, [locationState]);
 
   const handleOptionChange = (e) => {
-    setQuizState(prev => ({ ...prev, selectedOption: e.target.value }));
+    const { value } = e.target;
+    setQuizState(prev => {
+      const updatedUserAnswers = [...prev.userAnswers];
+      updatedUserAnswers[prev.currentQuestion] = {
+        selectedAnswer: value,
+        isCorrect: value === prev.questions[prev.currentQuestion].correctAnswer
+      };
+
+      return {
+        ...prev,
+        selectedOption: value,
+        userAnswers: updatedUserAnswers
+      };
+    });
   };
 
   const handleSubmit = () => {
     if (quizState.hasSubmitted) return;
 
-    const { questions, currentQuestion, selectedOption, score, userAnswers } = quizState;
-    const isCorrect = selectedOption === questions[currentQuestion].correctAnswer;
-    const newScore = isCorrect ? score + 1 : score;
-    const newUserAnswers = [...userAnswers];
-    newUserAnswers[currentQuestion] = { selectedAnswer: selectedOption, isCorrect };
+    const { questions, currentQuestion, userAnswers } = quizState;
 
     if (currentQuestion < questions.length - 1) {
       setQuizState(prev => ({
         ...prev,
         currentQuestion: prev.currentQuestion + 1,
-        selectedOption: newUserAnswers[prev.currentQuestion + 1]?.selectedAnswer || '',
-        score: newScore,
-        userAnswers: newUserAnswers
+        selectedOption: prev.userAnswers[prev.currentQuestion + 1]?.selectedAnswer || ''
       }));
     } else {
-      submitScore(newScore, newUserAnswers);
+      const confirmSubmit = window.confirm('هل أنت متأكد أنك تريد إنهاء الاختبار؟ لا يمكنك العودة بعد الإرسال.');
+      if (confirmSubmit) {
+        submitScore(userAnswers);
+      }
     }
   };
 
-  const submitScore = async (finalScore, answers) => {
+  const submitScore = async (userAnswers) => {
     if (quizState.hasSubmitted) return;
     setQuizState(prev => ({ ...prev, hasSubmitted: true }));
+
+    const finalScore = userAnswers.reduce((score, answer, index) => {
+      return answer.isCorrect ? score + 1 : score;
+    }, 0);
 
     const percentage = Math.round((finalScore / quizState.questions.length) * 100);
     const result = `${finalScore}/${quizState.questions.length} ${percentage}%`;
@@ -86,7 +157,7 @@ const Quiz = () => {
       teamName: quizState.teamName,
       correctAnswers: finalScore,
       totalQuestions: quizState.questions.length,
-      userAnswers: answers,
+      userAnswers: userAnswers,
       questions: quizState.questions,
       percentage
     };
@@ -120,16 +191,36 @@ const Quiz = () => {
     );
   }
 
-  const { questions, currentQuestion, selectedOption, teamName } = quizState;
+  const { questions, currentQuestion, selectedOption, teamName, userAnswers } = quizState;
   const currentQ = questions[currentQuestion];
 
+  // CSS styles to prevent text selection
+  const quizStyles = {
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    MozUserSelect: 'none',
+    msUserSelect: 'none'
+  };
+
   return (
-    <div className="p-4 bg-[#121212] min-h-screen" dir="rtl">
+    <div
+      className="p-4 bg-[#121212] min-h-screen"
+      dir="rtl"
+      style={quizStyles}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div className="flex justify-between items-center mb-12">
         <h2 className="text-xl font-bold text-[#3ea6ff]">اسم الفريق: {teamName}</h2>
         <Timer
           timeLimit={3000}
-          onTimeUp={() => !quizState.hasSubmitted && submitScore(quizState.score, quizState.userAnswers)}
+          onTimeUp={() => {
+            if (!quizState.hasSubmitted) {
+              const confirmTimeUp = window.confirm('انتهى وقت الاختبار! سيتم إرسال إجاباتك الآن.');
+              if (confirmTimeUp) {
+                submitScore(userAnswers);
+              }
+            }
+          }}
         />
       </div>
 

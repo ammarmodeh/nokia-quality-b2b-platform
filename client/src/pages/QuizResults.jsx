@@ -109,7 +109,7 @@ const QuizResults = () => {
           />
         </Box>
 
-        <Box sx={{
+        {/* <Box sx={{
           display: 'flex',
           justifyContent: 'center',
           gap: 1.5,
@@ -133,7 +133,7 @@ const QuizResults = () => {
             <FaWhatsapp size={20} />
             <Typography>مشاركة النتيجة</Typography>
           </Button>
-        </Box>
+        </Box> */}
 
         <Button
           variant="contained"
@@ -150,9 +150,9 @@ const QuizResults = () => {
           العودة إلى الصفحة الرئيسية
         </Button>
 
-        <Alert severity="info" sx={{ mt: 2, py: 0.5, fontSize: '0.875rem' }}>
+        {/* <Alert severity="info" sx={{ mt: 2, py: 0.5, fontSize: '0.875rem' }}>
           يمكنك مشاركة الاسئلة مع الاجابات عبر الواتساب
-        </Alert>
+        </Alert> */}
       </Box>
     </Box>
   );
