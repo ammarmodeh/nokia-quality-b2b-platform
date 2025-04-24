@@ -4,7 +4,7 @@ import api from '../api/api';
 import { Timer } from '../components/Timer';
 
 const Quiz = () => {
-  const { state } = useLocation();
+  const { state: locationState } = useLocation();
   const navigate = useNavigate();
   const [quizState, setQuizState] = useState({
     questions: [],
@@ -22,11 +22,11 @@ const Quiz = () => {
 
   useEffect(() => {
     const authenticateTeam = () => {
-      if (state?.teamId && state?.teamName && state?.quizCode) {
+      if (locationState?.teamId && locationState?.teamName && locationState?.quizCode) {
         return {
-          teamId: state.teamId,
-          teamName: state.teamName,
-          quizCode: state.quizCode
+          teamId: locationState.teamId,
+          teamName: locationState.teamName,
+          quizCode: locationState.quizCode
         };
       }
       return null;
@@ -51,7 +51,7 @@ const Quiz = () => {
       .catch(err => {
         setQuizState(prev => ({ ...prev, error: 'فشل تحميل الأسئلة. يرجى المحاولة مرة أخرى.' }));
       });
-  }, [state]);
+  }, [locationState]);
 
   const handleOptionChange = (e) => {
     setQuizState(prev => ({ ...prev, selectedOption: e.target.value }));
@@ -88,50 +88,43 @@ const Quiz = () => {
 
   const submitScore = async (finalScore, answers) => {
     if (quizState.hasSubmitted) return;
+    setQuizState(prev => ({ ...prev, hasSubmitted: true }));
 
+    const percentage = Math.round((finalScore / quizState.questions.length) * 100);
+    const result = `${finalScore}/${quizState.questions.length} ${percentage}%`;
+
+    const resultsData = {
+      teamName: quizState.teamName,
+      correctAnswers: finalScore,
+      totalQuestions: quizState.questions.length,
+      userAnswers: answers,
+      questions: quizState.questions,
+      percentage: percentage
+    };
+
+    // 1. First try React Router navigation
     try {
-      setQuizState(prev => ({ ...prev, hasSubmitted: true }));
+      navigate('/quiz-results', {
+        state: resultsData,
+        replace: true
+      });
+    } catch (navError) {
+      console.error("React navigation failed, using fallback:", navError);
+      // 2. Fallback to sessionStorage + window.location
+      sessionStorage.setItem('quizResultsFallback', JSON.stringify(resultsData));
+      window.location.href = '/quiz-results';
+      return;
+    }
 
-      const percentage = Math.round((finalScore / quizState.questions.length) * 100);
-      const result = `${finalScore}/${quizState.questions.length}`;
-
-      const response = await api.post('/field-teams/update-score', {
+    // 3. Submit to API in background
+    try {
+      await api.post('/field-teams/update-score', {
         teamId: quizState.teamId,
         quizCode: quizState.quizCode,
-        score: result,
-        percentage: percentage
+        score: result
       });
-
-      if (response.data.success) {
-        navigate('/quiz-results', {
-          state: {
-            teamName: quizState.teamName,
-            correctAnswers: finalScore,
-            totalQuestions: quizState.questions.length,
-            userAnswers: answers,
-            questions: quizState.questions,
-            percentage: percentage
-          },
-          replace: true
-        });
-      }
-    } catch (err) {
-      if (err.response?.status === 403) {
-        navigate('/quiz-results', {
-          state: {
-            teamName: quizState.teamName,
-            correctAnswers: finalScore,
-            totalQuestions: quizState.questions.length,
-            userAnswers: answers,
-            questions: quizState.questions,
-            percentage: Math.round((finalScore / quizState.questions.length) * 100)
-          },
-          replace: true
-        });
-      } else {
-        alert(err.response?.data?.message || 'فشل إرسال النتائج. يرجى المحاولة مرة أخرى.');
-        setQuizState(prev => ({ ...prev, hasSubmitted: false }));
-      }
+    } catch (apiError) {
+      console.error("API submission failed:", apiError);
     }
   };
 

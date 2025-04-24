@@ -7,17 +7,33 @@ import { FaWhatsapp } from 'react-icons/fa';
 const QuizResults = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const results = state;
+
+  // Get results from either navigation state or fallback storage
+  const results = state || JSON.parse(sessionStorage.getItem('quizResultsFallback')) || {
+    teamName: 'فريق غير معروف',
+    correctAnswers: 0,
+    totalQuestions: 1,
+    userAnswers: [],
+    questions: [],
+    percentage: 0
+  };
 
   useEffect(() => {
-    if (!results) {
+    // Clean up fallback storage
+    sessionStorage.removeItem('quizResultsFallback');
+
+    // Redirect if no results data
+    if (!state && !sessionStorage.getItem('quizResultsFallback')) {
       navigate('/fieldteam-login', { replace: true });
+      return;
     }
 
+    // Auto-redirect after 3 minutes
     const timeoutId = setTimeout(() => {
       navigate('/fieldteam-login', { replace: true });
     }, 180000);
 
+    // Prevent back navigation
     const handleBackButton = () => {
       navigate('/fieldteam-login', { replace: true });
     };
@@ -28,28 +44,22 @@ const QuizResults = () => {
       clearTimeout(timeoutId);
       window.removeEventListener('popstate', handleBackButton);
     };
-  }, [navigate, results]);
+  }, [navigate, state]);
 
   const handleExit = () => {
     navigate('/fieldteam-login', { replace: true });
   };
 
-  if (!results) {
-    return null;
-  }
-
-  const { teamName, correctAnswers, totalQuestions, userAnswers, questions, percentage } = results;
-
   const generateQRData = () => {
-    return `الفريق: ${teamName}\nالنتيجة: ${correctAnswers}/${totalQuestions} (${percentage}%)`;
+    return `الفريق: ${results.teamName}\nالنتيجة: ${results.correctAnswers}/${results.totalQuestions} (${results.percentage}%)`;
   };
 
   const shareResults = () => {
-    let message = `نتيجة اختبار فريق ${teamName}:\n`;
-    message += `النتيجة النهائية: ${correctAnswers}/${totalQuestions} (${percentage}%)\n\n`;
+    let message = `نتيجة اختبار فريق ${results.teamName}:\n`;
+    message += `النتيجة النهائية: ${results.correctAnswers}/${results.totalQuestions} (${results.percentage}%)\n\n`;
 
-    questions.forEach((question, index) => {
-      const userAnswer = userAnswers[index]?.selectedAnswer || 'لم يتم الإجابة';
+    results.questions.forEach((question, index) => {
+      const userAnswer = results.userAnswers[index]?.selectedAnswer || 'لم يتم الإجابة';
       message += `السؤال ${index + 1}: ${question.question}\n`;
       message += `إجابتي: ${userAnswer}\n\n`;
     });
@@ -83,9 +93,9 @@ const QuizResults = () => {
           انتهى الاختبار!
         </Typography>
         <Typography variant="subtitle1" sx={{ mb: 1.5, color: 'grey.300' }}>
-          نتيجتك: <span style={{ color: '#3ea6ff', fontWeight: 'bold' }}>{correctAnswers}</span>/
-          <span style={{ fontWeight: 'bold' }}>{totalQuestions}</span> (
-          <span style={{ fontWeight: 'bold' }}>{percentage}%</span>)
+          نتيجتك: <span style={{ color: '#3ea6ff', fontWeight: 'bold' }}>{results.correctAnswers}</span>/
+          <span style={{ fontWeight: 'bold' }}>{results.totalQuestions}</span> (
+          <span style={{ fontWeight: 'bold' }}>{results.percentage}%</span>)
         </Typography>
 
         <Box sx={{
