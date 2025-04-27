@@ -110,6 +110,11 @@ const SidebarLinks = () => {
     ...(user?.role === "Admin"
       ? [
         {
+          label: "Assessment Results Dashboard",
+          link: "assessment-results",
+          icon: <MdSettings />,
+        },
+        {
           label: "Archived",
           link: "archived",
           icon: <BiArchive />,

@@ -81,8 +81,10 @@ const Quiz = () => {
     const loadQuestions = async () => {
       try {
         const response = await api.get('/quiz/questions');
-        // Initialize userAnswers array with empty objects
-        const initialUserAnswers = response.data.map(() => ({}));
+        // Initialize userAnswers array with empty objects that include category
+        const initialUserAnswers = response.data.map(question => ({
+          category: question.category // Include category in initial state
+        }));
         setQuizState(prev => ({
           ...prev,
           questions: response.data,
@@ -153,16 +155,31 @@ const Quiz = () => {
     const percentage = Math.round((finalScore / quizState.questions.length) * 100);
     const result = `${finalScore}/${quizState.questions.length} ${percentage}%`;
 
+    // Prepare data for both old and new systems
     const resultsData = {
+      teamId: quizState.teamId,
       teamName: quizState.teamName,
+      quizCode: quizState.quizCode,
       correctAnswers: finalScore,
       totalQuestions: quizState.questions.length,
-      userAnswers: userAnswers,
+      userAnswers: userAnswers.map((answer, index) => ({
+        question: quizState.questions[index].question,
+        options: quizState.questions[index].options,
+        correctAnswer: quizState.questions[index].correctAnswer,
+        selectedAnswer: answer.selectedAnswer,
+        isCorrect: answer.isCorrect,
+        category: quizState.questions[index].category // Include category information
+      })),
       questions: quizState.questions,
-      percentage
+      percentage,
+      score: result
     };
 
     try {
+      // First save detailed results to the new system
+      await api.post('/quiz-results', resultsData);
+
+      // Then update the field team score in the old system (maintain backward compatibility)
       await api.post('/field-teams/update-score', {
         teamId: quizState.teamId,
         quizCode: quizState.quizCode,
@@ -174,7 +191,18 @@ const Quiz = () => {
         replace: true
       });
     } catch (error) {
-      sessionStorage.setItem('quizResultsFallback', JSON.stringify(resultsData));
+      console.error('Error saving results:', error);
+
+      // Fallback to session storage if API calls fail
+      sessionStorage.setItem('quizResultsFallback', JSON.stringify({
+        teamName: quizState.teamName,
+        correctAnswers: finalScore,
+        totalQuestions: quizState.questions.length,
+        userAnswers: userAnswers,
+        questions: quizState.questions,
+        percentage
+      }));
+
       navigate('/quiz-results', { replace: true });
     }
   };

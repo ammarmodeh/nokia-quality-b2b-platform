@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { Suspense, lazy } from "react";
 import { FadeLoader } from "react-spinners";
 import { Box } from "@mui/material";
+import NotFound from "./pages/NotFound";
 
 // Lazy load pages
 const Layout = lazy(() => import("./components/Layout"));
@@ -30,6 +31,7 @@ const FieldTeamLogin = lazy(() => import("./pages/FieldTeamLogin"));
 const QuizResults = lazy(() => import("./pages/QuizResults"));
 const FieldTeamForm = lazy(() => import("./pages/FieldTeams"));
 const CustomerIssuesList = lazy(() => import("./components/CustomerIssuesList"));
+const AssessmentResults = lazy(() => import("./pages/AssessmentResults"));
 
 // Custom route handlers
 const QuizRouteHandler = ({ children }) => {
@@ -132,12 +134,13 @@ const App = () => {
             <Route path="/tasks/view-task/:id" element={<TaskViewPage />} />
             <Route path="/team" element={<Users />} />
             <Route path="/fieldTeams" element={<FieldTeamForm />} />
+            <Route path="/assessment-results" element={<AssessmentResults />} />
             <Route path="/archived" element={<Archived />} />
             <Route path="/trashed" element={<Trash />} />
           </Route>
 
-          {/* 404 Route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* 404 Route - Updated to use the NotFound component */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
       <Toaster richColors />
