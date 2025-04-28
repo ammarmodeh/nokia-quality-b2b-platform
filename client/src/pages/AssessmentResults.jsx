@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -25,14 +25,14 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  useTheme
+  useMediaQuery,
+  Stack
 } from '@mui/material';
 import {
   Search,
   ArrowBack,
   BarChart,
   Refresh,
-  MoreVert
 } from '@mui/icons-material';
 import api from '../api/api';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip as ChartTooltip, Legend } from 'chart.js';
@@ -42,7 +42,6 @@ import { Bar } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, ChartTooltip, Legend);
 
 const AssessmentResults = () => {
-  const theme = useTheme();
   const [teamId, setTeamId] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -54,6 +53,7 @@ const AssessmentResults = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentResult, setCurrentResult] = useState(null);
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width:503px)');
 
   // Dark mode colors
   const colors = {
@@ -98,11 +98,6 @@ const AssessmentResults = () => {
     if (e.key === 'Enter') {
       fetchResults();
     }
-  };
-
-  const handleMenuOpen = (event, result) => {
-    setAnchorEl(event.currentTarget);
-    setCurrentResult(result);
   };
 
   const handleMenuClose = () => {
@@ -155,7 +150,7 @@ const AssessmentResults = () => {
   const getCategoryChartData = () => {
     if (!selectedResult) return null;
 
-    const categoryCounts = selectedResult.userAnswers.reduce((acc, answer) => {
+    const categoryData = selectedResult.userAnswers.reduce((acc, answer) => {
       if (!acc[answer.category]) {
         acc[answer.category] = { correct: 0, incorrect: 0 };
       }
@@ -167,21 +162,19 @@ const AssessmentResults = () => {
       return acc;
     }, {});
 
-    const labels = Object.keys(categoryCounts);
-    const correctData = labels.map(category => categoryCounts[category].correct);
-    const incorrectData = labels.map(category => categoryCounts[category].incorrect);
+    const labels = Object.keys(categoryData);
 
     return {
       labels,
       datasets: [
         {
           label: 'Correct',
-          data: correctData,
+          data: labels.map(category => categoryData[category].correct),
           backgroundColor: colors.chartCorrect,
         },
         {
           label: 'Incorrect',
-          data: incorrectData,
+          data: labels.map(category => categoryData[category].incorrect),
           backgroundColor: colors.chartIncorrect,
         },
       ],
@@ -218,6 +211,63 @@ const AssessmentResults = () => {
           color: colors.textPrimary,
           stepSize: 1,
           precision: 0,
+        },
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)'
+        }
+      },
+    },
+  };
+
+  const horizontalChartOptions = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          color: colors.textPrimary
+        }
+      },
+      title: {
+        display: true,
+        text: 'Category Performance',
+        color: colors.textPrimary
+      },
+      tooltip: {
+        callbacks: {
+          label: function (context) {
+            const label = context.dataset.label || '';
+            const value = context.raw;
+            // Get the total for this category (correct + incorrect)
+            const total = context.chart.data.datasets[0].data[context.dataIndex] +
+              context.chart.data.datasets[1].data[context.dataIndex];
+            const percentage = Math.round((value / total) * 100);
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        stacked: true,
+        ticks: {
+          color: colors.textPrimary,
+          stepSize: 1,
+          precision: 0,
+        },
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)'
+        }
+      },
+      y: {
+        stacked: true,
+        ticks: {
+          color: colors.textPrimary,
+          font: {
+            size: isMobile ? 10 : 12
+          }
         },
         grid: {
           color: 'rgba(255, 255, 255, 0.1)'
@@ -269,7 +319,7 @@ const AssessmentResults = () => {
 
   return (
     <Box sx={{
-      p: 3,
+      // p: 3,
       backgroundColor: colors.background,
       minHeight: '100vh',
       color: colors.textPrimary
@@ -304,9 +354,10 @@ const AssessmentResults = () => {
         mb: 3,
         backgroundColor: colors.surface,
         border: `1px solid ${colors.border}`,
-        borderRadius: '8px'
+        borderRadius: '8px',
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {/* Search Bar */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: isMobile ? 'column' : 'row', height: isMobile ? undefined : '36px' }}>
           <TextField
             label="Team ID"
             variant="outlined"
@@ -314,6 +365,7 @@ const AssessmentResults = () => {
             onChange={(e) => setTeamId(e.target.value)}
             onKeyPress={handleKeyPress}
             fullWidth
+            autoComplete="on" // keep autocomplete if needed
             sx={{
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
@@ -326,680 +378,812 @@ const AssessmentResults = () => {
                   borderColor: colors.primary,
                 },
                 color: colors.textPrimary,
+                height: '36px', // 👈 minimize the height here
+                fontSize: '0.8rem', // 👈 smaller text
+              },
+              '& .MuiInputBase-input': {
+                padding: '8px 12px', // 👈 smaller padding
+                height: 'auto', // 👈 prevent default large height
               },
               '& .MuiInputLabel-root': {
                 color: colors.textSecondary,
+                fontSize: '0.8rem', // 👈 smaller label
+                top: '-7px', // 👈 optional fine-tuning
               },
               '& .MuiInputLabel-root.Mui-focused': {
                 color: colors.primary,
+                top: '1px',
               },
               '& input': {
-                caretColor: '#fff', // 👈 white cursor
+                caretColor: '#fff',
               },
               '& input:-webkit-autofill': {
                 WebkitBoxShadow: `0 0 0 1000px transparent inset`,
                 WebkitTextFillColor: colors.textPrimary,
                 transition: 'background-color 5000s ease-in-out 0s',
-                caretColor: '#fff', // 👈 also white cursor when autofilled
+                caretColor: '#fff',
               },
             }}
-
           />
-          <Button
-            variant="contained"
-            startIcon={<Search />}
-            onClick={fetchResults}
-            disabled={loading}
-            sx={{
-              backgroundColor: colors.primary,
-              '&:hover': {
-                backgroundColor: '#1d4ed8',
-              },
-              '&:disabled': {
-                backgroundColor: '#555',
-                color: '#999'
-              },
-              minWidth: '120px'
-            }}
-          >
-            {loading ? 'Searching...' : 'Search'}
-          </Button>
-          <Tooltip title="Refresh">
-            <IconButton
+
+          <Stack sx={{ width: isMobile ? '100%' : 'auto', flexDirection: 'row', gap: 2, height: '36px' }}>
+            <Button
+              variant="contained"
+              startIcon={<Search />}
               onClick={fetchResults}
+              disabled={loading}
               sx={{
+                backgroundColor: colors.primary,
+                '&:hover': {
+                  backgroundColor: '#1d4ed8',
+                },
+                '&:disabled': {
+                  backgroundColor: '#555',
+                  color: '#999'
+                },
+                minWidth: isMobile ? undefined : '120px',
+                width: isMobile ? '100%' : undefined
+              }}
+            >
+              {loading ? 'Searching...' : 'Search'}
+            </Button>
+            <Tooltip title="Refresh">
+              <IconButton
+                onClick={fetchResults}
+                sx={{
+                  color: colors.primary,
+                  '&:hover': {
+                    backgroundColor: colors.primaryHover
+                  }
+                }}
+              >
+                <Refresh />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        </Box>
+      </Paper >
+
+      {/* Error Alert */}
+      {
+        error && (
+          <Alert severity="error" sx={{
+            mb: 3,
+            backgroundColor: '#2d0000',
+            color: '#ff6e6e',
+            border: '1px solid #ff3d3d',
+            borderRadius: '8px'
+          }}>
+            {error}
+          </Alert>
+        )
+      }
+
+      {/* Loading Indicator */}
+      {
+        loading && (
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            p: 4,
+            backgroundColor: colors.surface,
+            borderRadius: '8px',
+            border: `1px solid ${colors.border}`
+          }}>
+            <CircularProgress sx={{ color: colors.primary }} />
+          </Box>
+        )
+      }
+
+      {/* Results Table */}
+      {
+        !loading && results.length > 0 && !selectedResult && (
+          <>
+            <TableContainer component={Paper} sx={{
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderTopLeftRadius: '8px',
+              borderTopRightRadius: '8px',
+              borderBottomLeftRadius: '0px',
+              borderBottomRightRadius: '0px',
+              "& .MuiTableHead-root": {
+                backgroundColor: colors.surfaceElevated,
+                "& .MuiTableCell-root": {
+                  color: colors.textSecondary,
+                  fontWeight: "bold",
+                  borderBottom: `1px solid ${colors.border}`,
+                }
+              },
+              "& .MuiTableBody-root": {
+                "& .MuiTableCell-root": {
+                  borderBottom: `1px solid ${colors.border}`,
+                  color: colors.textPrimary,
+                },
+                "& .MuiTableRow-root": {
+                  backgroundColor: colors.surface,
+                  "&:hover": {
+                    backgroundColor: colors.surfaceElevated,
+                  },
+                }
+              },
+            }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Team Name</TableCell>
+                    {/* <TableCell>Quiz Code</TableCell> */}
+                    <TableCell>Score</TableCell>
+                    <TableCell>Percentage</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {results
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((result) => (
+                      <TableRow key={result._id} hover>
+                        <TableCell>
+                          {new Date(result.submittedAt).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "numeric"
+                          })}
+                        </TableCell>
+                        <TableCell>{result.teamName}</TableCell>
+                        {/* <TableCell>{result.quizCode}</TableCell> */}
+                        <TableCell>
+                          <Chip
+                            label={result.score}
+                            color={getPerformanceColor(result.percentage)}
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>{result.percentage}%</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: "flex", gap: 1 }}>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => setSelectedResult(result)}
+                              sx={{
+                                color: colors.primary,
+                                borderColor: colors.primary,
+                                '&:hover': {
+                                  backgroundColor: colors.primaryHover,
+                                  borderColor: colors.primary,
+                                }
+                              }}
+                            >
+                              View Details
+                            </Button>
+                            {/* <Tooltip title="More options">
+                              <IconButton
+                                size="small"
+                                onClick={(e) => handleMenuOpen(e, result)}
+                                sx={{
+                                  color: colors.textSecondary,
+                                  '&:hover': {
+                                    backgroundColor: colors.primaryHover,
+                                    color: colors.primary
+                                  }
+                                }}
+                              >
+                                <MoreVert />
+                              </IconButton>
+                            </Tooltip> */}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <TablePagination
+              rowsPerPageOptions={[10, 25, 50]}
+              component="div"
+              count={results.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={(e, newPage) => setPage(newPage)}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
+              sx={{
+                color: colors.textPrimary,
+                '& .MuiTablePagination-selectIcon': {
+                  color: colors.textPrimary
+                },
+                '& .MuiSvgIcon-root': {
+                  color: colors.textPrimary
+                },
+                backgroundColor: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderTop: 'none',
+                borderBottomLeftRadius: '8px',
+                borderBottomRightRadius: '8px'
+              }}
+            />
+          </>
+        )
+      }
+
+      {/* Detailed Results View */}
+      {
+        selectedResult && (
+          <Box sx={{ mt: 3 }}>
+            <Button
+              startIcon={<ArrowBack />}
+              onClick={() => setSelectedResult(null)}
+              sx={{
+                mb: 2,
                 color: colors.primary,
                 '&:hover': {
                   backgroundColor: colors.primaryHover
                 }
               }}
             >
-              <Refresh />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Paper>
+              Back to Results List
+            </Button>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{
-          mb: 3,
-          backgroundColor: '#2d0000',
-          color: '#ff6e6e',
-          border: '1px solid #ff3d3d',
-          borderRadius: '8px'
-        }}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Loading Indicator */}
-      {loading && (
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          p: 4,
-          backgroundColor: colors.surface,
-          borderRadius: '8px',
-          border: `1px solid ${colors.border}`
-        }}>
-          <CircularProgress sx={{ color: colors.primary }} />
-        </Box>
-      )}
-
-      {/* Results Table */}
-      {!loading && results.length > 0 && !selectedResult && (
-        <>
-          <TableContainer component={Paper} sx={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '8px',
-            "& .MuiTableHead-root": {
-              backgroundColor: colors.surfaceElevated,
-              "& .MuiTableCell-root": {
-                color: colors.textSecondary,
-                fontWeight: "bold",
-                borderBottom: `1px solid ${colors.border}`,
-              }
-            },
-            "& .MuiTableBody-root": {
-              "& .MuiTableCell-root": {
-                borderBottom: `1px solid ${colors.border}`,
-                color: colors.textPrimary,
-              },
-              "& .MuiTableRow-root": {
+            <div id="assessment-overview">
+              {/* Summary Card */}
+              <Card sx={{
+                mb: 3,
                 backgroundColor: colors.surface,
-                "&:hover": {
-                  backgroundColor: colors.surfaceElevated,
-                },
-              }
-            },
-          }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Team Name</TableCell>
-                  <TableCell>Quiz Code</TableCell>
-                  <TableCell>Score</TableCell>
-                  <TableCell>Percentage</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {results
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((result) => (
-                    <TableRow key={result._id} hover>
-                      <TableCell>
-                        {new Date(result.submittedAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{result.teamName}</TableCell>
-                      <TableCell>{result.quizCode}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={result.score}
-                          color={getPerformanceColor(result.percentage)}
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>{result.percentage}%</TableCell>
-                      <TableCell>
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => setSelectedResult(result)}
-                            sx={{
-                              color: colors.primary,
-                              borderColor: colors.primary,
-                              '&:hover': {
-                                backgroundColor: colors.primaryHover,
-                                borderColor: colors.primary,
-                              }
-                            }}
-                          >
-                            View Details
-                          </Button>
-                          <Tooltip title="More options">
-                            <IconButton
-                              size="small"
-                              onClick={(e) => handleMenuOpen(e, result)}
-                              sx={{
-                                color: colors.textSecondary,
-                                '&:hover': {
-                                  backgroundColor: colors.primaryHover,
-                                  color: colors.primary
-                                }
-                              }}
-                            >
-                              <MoreVert />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          <TablePagination
-            rowsPerPageOptions={[10, 25, 50]}
-            component="div"
-            count={results.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={(e, newPage) => setPage(newPage)}
-            onRowsPerPageChange={(e) => {
-              setRowsPerPage(parseInt(e.target.value, 10));
-              setPage(0);
-            }}
-            sx={{
-              color: colors.textPrimary,
-              '& .MuiTablePagination-selectIcon': {
-                color: colors.textPrimary
-              },
-              '& .MuiSvgIcon-root': {
-                color: colors.textPrimary
-              },
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderTop: 'none',
-              borderBottomLeftRadius: '8px',
-              borderBottomRightRadius: '8px'
-            }}
-          />
-        </>
-      )}
-
-      {/* Detailed Results View */}
-      {selectedResult && (
-        <Box sx={{ mt: 3 }}>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => setSelectedResult(null)}
-            sx={{
-              mb: 2,
-              color: colors.primary,
-              '&:hover': {
-                backgroundColor: colors.primaryHover
-              }
-            }}
-          >
-            Back to Results List
-          </Button>
-
-          {/* Summary Card */}
-          <Card sx={{
-            mb: 3,
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '8px'
-          }}>
-            <CardContent>
-              <Typography variant="h5" gutterBottom sx={{
-                color: colors.primary,
-                mb: 3
+                border: `1px solid ${colors.border}`,
+                borderRadius: '8px'
               }}>
-                Assessment Summary
-              </Typography>
-              <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' },
-                gap: 3,
-                '& > div': {
-                  minWidth: '150px'
-                }
-              }}>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Team Name</Typography>
-                  <Typography sx={{ color: "white" }}>{selectedResult.teamName}</Typography>
-                </Box>
-                {/* <Box>
+                <CardContent>
+                  <Typography variant="h5" gutterBottom sx={{
+                    color: colors.primary,
+                    mb: 3
+                  }}>
+                    Assessment Summary
+                  </Typography>
+                  <Box sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' },
+                    gap: 3,
+                    '& > div': {
+                      minWidth: '150px'
+                    }
+                  }}>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Team Name</Typography>
+                      <Typography sx={{ color: "white" }}>{selectedResult.teamName}</Typography>
+                    </Box>
+                    {/* <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Quiz Code</Typography>
                   <Typography sx={{ color: "white" }}>{selectedResult.quizCode}</Typography>
                 </Box> */}
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Date Taken</Typography>
-                  <Typography sx={{ color: "white" }}>
-                    {new Date(selectedResult.submittedAt).toLocaleString()}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Score</Typography>
-                  <Chip
-                    label={selectedResult.score}
-                    color={getPerformanceColor(selectedResult.percentage)}
-                    size="small"
-                    variant="outlined"
-                  />
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Percentage</Typography>
-                  <Typography sx={{ color: "white" }}>{selectedResult.percentage}%</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Correct Answers</Typography>
-                  <Typography sx={{ color: "white" }}>
-                    {selectedResult.correctAnswers}/{selectedResult.totalQuestions}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-
-          {/* Charts Row */}
-          <Box sx={{
-            display: 'flex',
-            gap: 3,
-            flexDirection: { xs: 'column', md: 'row' },
-            mb: 3
-          }}>
-            {/* Performance Chart */}
-            <Paper sx={{
-              p: 3,
-              flex: 1,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px'
-            }}>
-              <Typography variant="h6" gutterBottom sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                color: colors.primary,
-                mb: 2
-              }}>
-                <BarChart /> Performance Overview
-              </Typography>
-              {getChartData() && (
-                <Box sx={{ height: '300px' }}>
-                  <Bar data={getChartData()} options={chartOptions} />
-                </Box>
-              )}
-            </Paper>
-
-            {/* Statistics Card */}
-            <Paper sx={{
-              p: 3,
-              flex: 1,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px'
-            }}>
-              <Typography variant="h6" gutterBottom sx={{
-                color: colors.primary,
-                mb: 2
-              }}>
-                Key Statistics
-              </Typography>
-
-              {selectedResult && (() => {
-                const { strengths, improvements } = analyzeCategoryPerformance(selectedResult.userAnswers);
-
-                return (
-                  <Box sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 3
-                  }}>
                     <Box>
-                      <Typography variant="subtitle2" sx={{
-                        color: colors.textSecondary,
-                        mb: 1
-                      }}>
-                        Strongest Areas ({strengths.length})
-                      </Typography>
-                      {strengths.length > 0 ? (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {strengths.map((stat, index) => (
-                            <Tooltip
-                              key={index}
-                              title={`${stat.correct}/${stat.total} correct (${stat.percentage}%)`}
-                              arrow
-                            >
-                              <Chip
-                                label={stat.category}
-                                color="success"
-                                size="small"
-                                variant="outlined"
-                                sx={{
-                                  borderColor: colors.success,
-                                  color: colors.textPrimary
-                                }}
-                              />
-                            </Tooltip>
-                          ))}
-                        </Box>
-                      ) : (
-                        <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                          No categories with strong performance
-                        </Typography>
-                      )}
-                    </Box>
-
-                    <Box>
-                      <Typography variant="subtitle2" sx={{
-                        color: colors.textSecondary,
-                        mb: 1
-                      }}>
-                        Areas Needing Improvement ({improvements.length})
-                      </Typography>
-                      {improvements.length > 0 ? (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {improvements.map((stat, index) => (
-                            <Tooltip
-                              key={index}
-                              title={`${stat.correct}/${stat.total} correct (${stat.percentage}%)`}
-                              arrow
-                            >
-                              <Chip
-                                label={stat.category}
-                                color="error"
-                                size="small"
-                                variant="outlined"
-                                sx={{
-                                  borderColor: colors.error,
-                                  color: colors.textPrimary
-                                }}
-                              />
-                            </Tooltip>
-                          ))}
-                        </Box>
-                      ) : (
-                        <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                          All categories meet performance standards
-                        </Typography>
-                      )}
-                    </Box>
-
-                    <Box>
-                      <Typography variant="subtitle2" sx={{
-                        color: colors.textSecondary,
-                        mb: 0.5
-                      }}>
-                        Overall Accuracy
-                      </Typography>
+                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Date Taken</Typography>
                       <Typography sx={{ color: "white" }}>
-                        {Math.round(
-                          (selectedResult.correctAnswers / selectedResult.totalQuestions) * 100
-                        )}%
-                        <Typography component="span" sx={{
-                          color: colors.textSecondary,
-                          ml: 1
-                        }}>
-                          ({selectedResult.correctAnswers}/{selectedResult.totalQuestions} correct)
-                        </Typography>
+                        {new Date(selectedResult.submittedAt).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Score</Typography>
+                      <Chip
+                        label={selectedResult.score}
+                        color={getPerformanceColor(selectedResult.percentage)}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Percentage</Typography>
+                      <Typography sx={{ color: "white" }}>{selectedResult.percentage}%</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Correct Answers</Typography>
+                      <Typography sx={{ color: "white" }}>
+                        {selectedResult.correctAnswers}/{selectedResult.totalQuestions}
                       </Typography>
                     </Box>
                   </Box>
-                );
-              })()}
-            </Paper>
-          </Box>
+                </CardContent>
+              </Card>
 
-          {/* Category Performance */}
-          <Paper sx={{
-            p: 3,
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '8px',
-            mb: 3
-          }}>
-            <Typography variant="h6" gutterBottom sx={{
-              color: colors.primary,
-              mb: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}>
-              <BarChart fontSize="small" /> Category Performance Analysis
-            </Typography>
-
-            {selectedResult && (() => {
-              const { strengths, improvements } = analyzeCategoryPerformance(selectedResult.userAnswers);
-              const chartData = getCategoryChartData();
-
-              return (
-                <>
-                  {/* Summary Stats */}
-                  <Box sx={{
+              {/* Charts Row - Modified for mobile view */}
+              <Box sx={{
+                display: 'flex',
+                gap: 3,
+                flexDirection: { xs: 'column', md: 'row' },
+                mb: 3
+              }}>
+                {/* Performance Chart */}
+                <Paper sx={{
+                  p: 2,
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: '8px',
+                  overflow: 'hidden' // Added to prevent chart overflow
+                }}>
+                  <Typography variant="h6" gutterBottom sx={{
                     display: 'flex',
-                    gap: 3,
-                    mb: 3,
-                    flexWrap: 'wrap'
+                    alignItems: 'center',
+                    gap: 1,
+                    color: colors.primary,
+                    mb: 2,
+                    fontSize: isMobile ? '1.1rem' : '1.25rem' // Smaller font on mobile
                   }}>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>
-                        Strong Categories
-                      </Typography>
-                      <Typography variant="h6" sx={{ color: colors.success }}>
-                        {strengths.length}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>
-                        Weak Categories
-                      </Typography>
-                      <Typography variant="h6" sx={{ color: colors.error }}>
-                        {improvements.length}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>
-                        Total Categories
-                      </Typography>
-                      <Typography variant="h6" sx={{ color: colors.textPrimary }}>
-                        {strengths.length + improvements.length}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {/* Enhanced Chart */}
-                  {chartData && (
-                    <Box sx={{ height: '300px', position: 'relative' }}>
+                    <BarChart fontSize={isMobile ? 'small' : 'medium'} />
+                    {isMobile ? 'Performance' : 'Performance Overview'}
+                  </Typography>
+                  {getChartData() && (
+                    <Box sx={{
+                      height: isMobile ? '250px' : '300px',
+                      position: 'relative',
+                      width: '100%',
+                      minWidth: isMobile ? '100%' : undefined
+                    }}>
                       <Bar
-                        data={chartData}
+                        data={getChartData()}
                         options={{
                           ...chartOptions,
                           plugins: {
                             ...chartOptions.plugins,
-                            tooltip: {
-                              callbacks: {
-                                label: (context) => {
-                                  const label = context.dataset.label || '';
-                                  const total = context.raw + context.dataset.data[context.dataIndex];
-                                  const percentage = Math.round((context.raw / total) * 100);
-                                  return `${label}: ${context.raw} (${percentage}%)`;
-                                }
-                              }
-                            },
                             title: {
                               ...chartOptions.plugins.title,
-                              text: `Performance by Category (${selectedResult.userAnswers.length} Questions)`
+                              display: !isMobile, // Hide title on mobile
+                              text: 'Question-by-Question Performance'
+                            },
+                            legend: {
+                              ...chartOptions.plugins.legend,
+                              position: isMobile ? 'bottom' : 'top' // Move legend to bottom on mobile
                             }
                           },
                           scales: {
                             ...chartOptions.scales,
-                            y: {
-                              ...chartOptions.scales.y,
-                              max: Math.max(
-                                ...chartData.datasets.flatMap(d => d.data)
-                              ) + 1 // Add buffer space
+                            x: {
+                              ...chartOptions.scales.x,
+                              ticks: {
+                                ...chartOptions.scales.x.ticks,
+                                font: {
+                                  size: isMobile ? 10 : 12 // Smaller font on mobile
+                                }
+                              }
                             }
                           }
                         }}
                       />
-
-                      {/* Threshold Indicator */}
-                      <Box sx={{
-                        position: 'absolute',
-                        top: 20,
-                        right: 20,
-                        backgroundColor: 'rgba(30, 30, 30, 0.8)',
-                        p: 1,
-                        borderRadius: 1,
-                        border: `1px solid ${colors.border}`
-                      }}>
-                        <Typography variant="caption" sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          color: colors.textSecondary
-                        }}>
-                          <Box sx={{
-                            width: 10,
-                            height: 10,
-                            backgroundColor: colors.primary,
-                            mr: 1
-                          }} />
-                          Threshold: 70% correct
-                        </Typography>
-                      </Box>
                     </Box>
                   )}
-                </>
-              );
-            })()}
-          </Paper>
+                </Paper>
 
-          {/* Detailed Question Analysis */}
-          <Paper sx={{
-            p: 3,
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '8px'
-          }}>
-            <Typography variant="h6" gutterBottom sx={{
-              color: colors.primary,
-              mb: 2
-            }}>
-              Detailed Question Analysis
-            </Typography>
-            {selectedResult.userAnswers.map((answer, index) => (
-              <Box key={index} sx={{ mb: 3 }}>
-                <Box sx={{
+                {/* Statistics Card */}
+                <Paper sx={{
+                  p: 2,
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: '8px'
+                }}>
+                  <Typography variant="h6" gutterBottom sx={{
+                    color: colors.primary,
+                    mb: 2,
+                    fontSize: isMobile ? '1.1rem' : '1.25rem' // Smaller font on mobile
+                  }}>
+                    {isMobile ? 'Statistics' : 'Key Statistics'}
+                  </Typography>
+
+                  {selectedResult && (() => {
+                    const { strengths, improvements } = analyzeCategoryPerformance(selectedResult.userAnswers);
+
+                    return (
+                      <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2 // Reduced gap on mobile
+                      }}>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{
+                            color: colors.textSecondary,
+                            mb: 1,
+                            fontSize: isMobile ? '0.8rem' : '0.875rem'
+                          }}>
+                            Strongest Areas ({strengths.length})
+                          </Typography>
+                          {strengths.length > 0 ? (
+                            <Box sx={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: 1,
+                              '& .MuiChip-root': {
+                                fontSize: isMobile ? '0.7rem' : '0.8125rem'
+                              }
+                            }}>
+                              {strengths.map((stat, index) => (
+                                <Tooltip
+                                  key={index}
+                                  title={`${stat.correct}/${stat.total} correct (${stat.percentage}%)`}
+                                  arrow
+                                >
+                                  <Chip
+                                    label={isMobile ? stat.category.split(' ')[0] : stat.category} // Shorten category name on mobile
+                                    color="success"
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{
+                                      borderColor: colors.success,
+                                      color: colors.textPrimary
+                                    }}
+                                  />
+                                </Tooltip>
+                              ))}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" sx={{
+                              color: colors.textSecondary,
+                              fontSize: isMobile ? '0.8rem' : '0.875rem'
+                            }}>
+                              No strong categories
+                            </Typography>
+                          )}
+                        </Box>
+
+                        <Box>
+                          <Typography variant="subtitle2" sx={{
+                            color: colors.textSecondary,
+                            mb: 1,
+                            fontSize: isMobile ? '0.8rem' : '0.875rem'
+                          }}>
+                            Areas Needing Improvement ({improvements.length})
+                          </Typography>
+                          {improvements.length > 0 ? (
+                            <Box sx={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: 1,
+                              '& .MuiChip-root': {
+                                fontSize: isMobile ? '0.7rem' : '0.8125rem'
+                              }
+                            }}>
+                              {improvements.map((stat, index) => (
+                                <Tooltip
+                                  key={index}
+                                  title={`${stat.correct}/${stat.total} correct (${stat.percentage}%)`}
+                                  arrow
+                                >
+                                  <Chip
+                                    label={isMobile ? stat.category.split(' ')[0] : stat.category} // Shorten category name on mobile
+                                    color="error"
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{
+                                      borderColor: colors.error,
+                                      color: colors.textPrimary
+                                    }}
+                                  />
+                                </Tooltip>
+                              ))}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" sx={{
+                              color: colors.textSecondary,
+                              fontSize: isMobile ? '0.8rem' : '0.875rem'
+                            }}>
+                              All categories meet standards
+                            </Typography>
+                          )}
+                        </Box>
+
+                        <Box>
+                          <Typography variant="subtitle2" sx={{
+                            color: colors.textSecondary,
+                            mb: 0.5,
+                            fontSize: isMobile ? '0.8rem' : '0.875rem'
+                          }}>
+                            Overall Accuracy
+                          </Typography>
+                          <Typography sx={{
+                            color: "white",
+                            fontSize: isMobile ? '0.9rem' : '1rem'
+                          }}>
+                            {Math.round(
+                              (selectedResult.correctAnswers / selectedResult.totalQuestions) * 100
+                            )}%
+                            <Typography component="span" sx={{
+                              color: colors.textSecondary,
+                              ml: 1,
+                              fontSize: isMobile ? '0.8rem' : '0.875rem'
+                            }}>
+                              ({selectedResult.correctAnswers}/{selectedResult.totalQuestions})
+                            </Typography>
+                          </Typography>
+                        </Box>
+                      </Box>
+                    );
+                  })()}
+                </Paper>
+              </Box>
+
+              {/* Category Performance - Modified for mobile */}
+              <Paper sx={{
+                p: 2,
+                backgroundColor: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderRadius: '8px',
+                mb: 3,
+                overflow: 'hidden' // Added to prevent chart overflow
+              }}>
+                <Typography variant="h6" gutterBottom sx={{
+                  color: colors.primary,
+                  mb: 2,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 1,
-                  mb: 1,
-                  flexWrap: 'wrap'
+                  fontSize: isMobile ? '1.1rem' : '1.25rem'
                 }}>
-                  <Typography variant="subtitle1" sx={{
-                    color: colors.textPrimary,
-                    fontWeight: '500'
-                  }}>
-                    Question {index + 1}:
-                  </Typography>
-                  <Chip
-                    label={answer.isCorrect ? 'Correct' : 'Incorrect'}
-                    color={answer.isCorrect ? 'success' : 'error'}
-                    size="small"
-                    variant="outlined"
-                  />
-                </Box>
-                <Typography sx={{ color: colors.textSecondary, direction: 'rtl', textAlign: 'right' }}>
-                  {answer.question}
+                  <BarChart fontSize={isMobile ? 'small' : 'medium'} />
+                  {isMobile ? 'Categories' : 'Category Performance Analysis'}
                 </Typography>
-                <Box sx={{ pl: 2 }}>
 
-                  <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                    <Typography variant="body2" sx={{
-                      color: colors.textPrimary,
-                      mb: 1
-                    }}>
-                      <strong style={{ color: colors.textSecondary }}>Options:</strong>
-                    </Typography>
-                    <ul style={{
-                      marginTop: 0,
-                      marginBottom: '8px',
-                      paddingLeft: '20px',
-                      direction: 'rtl',
-                      textAlign: 'right',
-                      listStyleType: 'disc', // this is the key part!
-                      listStylePosition: 'inside', // bullets align nicely inside the text
-                    }}>
-                      {answer.options.map((option, optionIndex) => (
-                        <li key={optionIndex} style={{
-                          color: colors.textPrimary,
-                          marginBottom: '4px',
-                        }}>
-                          {option}
-                        </li>
-                      ))}
-                    </ul>
+                {selectedResult && (() => {
+                  const { strengths, improvements } = analyzeCategoryPerformance(selectedResult.userAnswers);
+                  const chartData = getCategoryChartData();
 
-                  </Box>
-
-                  <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                    <Typography variant="body2" sx={{
-                      color: colors.textPrimary,
-                      mb: 1,
-                      display: 'flex',
-                    }}>
-                      <strong style={{ color: colors.textSecondary, width: '200px' }}>Selected Answer:</strong>
-                      <span style={{
-                        color: answer.selectedAnswer ?
-                          (answer.isCorrect ? colors.success : colors.error) :
-                          colors.error,
-                        width: '100%',
-                        direction: 'rtl', textAlign: 'right'
+                  return (
+                    <>
+                      {/* Summary Stats */}
+                      <Box sx={{
+                        display: 'flex',
+                        gap: 3,
+                        mb: 3,
+                        flexWrap: 'wrap',
+                        justifyContent: isMobile ? 'space-between' : 'flex-start'
                       }}>
-                        {answer.selectedAnswer || " No answer selected"}
-                      </span>
-                    </Typography>
-                  </Box>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{
+                            color: colors.textSecondary,
+                            fontSize: isMobile ? '0.8rem' : '0.875rem'
+                          }}>
+                            Strongest Areas
+                          </Typography>
+                          <Typography variant="h6" sx={{
+                            color: colors.success,
+                            fontSize: isMobile ? '1rem' : '1.25rem'
+                          }}>
+                            {strengths.length}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{
+                            color: colors.textSecondary,
+                            fontSize: isMobile ? '0.8rem' : '0.875rem'
+                          }}>
+                            Weakest Areas
+                          </Typography>
+                          <Typography variant="h6" sx={{
+                            color: colors.error,
+                            fontSize: isMobile ? '1rem' : '1.25rem'
+                          }}>
+                            {improvements.length}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{
+                            color: colors.textSecondary,
+                            fontSize: isMobile ? '0.8rem' : '0.875rem'
+                          }}>
+                            Total Areas Covered
+                          </Typography>
+                          <Typography variant="h6" sx={{
+                            color: colors.textPrimary,
+                            fontSize: isMobile ? '1rem' : '1.25rem'
+                          }}>
+                            {strengths.length + improvements.length}
+                          </Typography>
+                        </Box>
+                      </Box>
 
-                  <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                    <Typography variant="body2" sx={{
-                      color: colors.textPrimary,
-                      mb: 1,
-                      display: 'flex'
-                    }}>
-                      <strong style={{ color: colors.textSecondary, width: '200px' }}>Correct Answer:</strong>
-                      <span style={{ color: colors.success, direction: 'rtl', textAlign: 'right', width: '100%' }}>
-                        {answer.correctAnswer}
-                      </span>
-                    </Typography>
-                  </Box>
+                      {/* Enhanced Chart */}
+                      {chartData && (
+                        <Box sx={{
+                          height: isMobile ? '250px' : '300px',
+                          position: 'relative',
+                          width: '100%'
+                        }}>
+                          <Bar
+                            data={chartData}
+                            options={{
+                              ...horizontalChartOptions,
+                              plugins: {
+                                ...horizontalChartOptions.plugins,
+                                tooltip: {
+                                  callbacks: {
+                                    afterLabel: function (context) {
+                                      // const datasetIndex = context.datasetIndex;
+                                      const dataIndex = context.dataIndex;
+                                      const correct = context.chart.data.datasets[0].data[dataIndex];
+                                      const incorrect = context.chart.data.datasets[1].data[dataIndex];
+                                      const total = correct + incorrect;
+                                      const percentage = Math.round((context.raw / total) * 100);
+                                      return `Percentage: ${percentage}%`;
+                                    }
+                                  }
+                                },
+                                title: {
+                                  ...horizontalChartOptions.plugins.title,
+                                  text: `Performance by Category (${selectedResult.userAnswers.length} Questions)`,
+                                  display: !isMobile
+                                },
+                                legend: {
+                                  ...horizontalChartOptions.plugins.legend,
+                                  position: isMobile ? 'bottom' : 'top'
+                                }
+                              },
+                              scales: {
+                                ...horizontalChartOptions.scales,
+                                x: {
+                                  ...horizontalChartOptions.scales.x,
+                                  max: Math.max(...chartData.datasets.flatMap(d => d.data)) + 1
+                                }
+                              }
+                            }}
+                          />
 
-                  <Typography variant="body2" sx={{
-                    color: colors.textPrimary
+                          {/* Threshold Indicator - Hidden on mobile */}
+                          {!isMobile && (
+                            <Box sx={{
+                              position: 'absolute',
+                              top: 20,
+                              right: 20,
+                              backgroundColor: 'rgba(30, 30, 30, 0.8)',
+                              p: 1,
+                              borderRadius: 1,
+                              border: `1px solid ${colors.border}`
+                            }}>
+                              <Typography variant="caption" sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: colors.textSecondary,
+                                fontSize: '0.75rem'
+                              }}>
+                                <Box sx={{
+                                  width: 10,
+                                  height: 10,
+                                  backgroundColor: colors.primary,
+                                  mr: 1
+                                }} />
+                                Threshold: 70% correct
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      )}
+                    </>
+                  );
+                })()}
+              </Paper>
+            </div>
+
+            {/* Detailed Question Analysis */}
+            <Paper sx={{
+              p: 3,
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px'
+            }}>
+              <Typography variant="h6" gutterBottom sx={{
+                color: colors.primary,
+                mb: 2
+              }}>
+                Detailed Question Analysis
+              </Typography>
+              {selectedResult.userAnswers.map((answer, index) => (
+                <Box key={index} sx={{ mb: 3 }}>
+                  <Box sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    mb: 1,
+                    flexWrap: 'wrap'
                   }}>
-                    <strong style={{ color: colors.textSecondary }}>Category:</strong> {answer.category}
+                    <Typography variant="subtitle1" sx={{
+                      color: colors.textPrimary,
+                      fontWeight: '500'
+                    }}>
+                      Question {index + 1}:
+                    </Typography>
+                    <Chip
+                      label={answer.isCorrect ? 'Correct' : 'Incorrect'}
+                      color={answer.isCorrect ? 'success' : 'error'}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </Box>
+                  <Typography sx={{ color: colors.textSecondary, direction: 'rtl', textAlign: 'right' }}>
+                    {answer.question}
                   </Typography>
+                  <Box >
+
+                    <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
+                      <Typography variant="body2" sx={{
+                        color: colors.textPrimary,
+                        mb: 1
+                      }}>
+                        <strong style={{ color: colors.textSecondary }}>Options:</strong>
+                      </Typography>
+                      <ul style={{
+                        marginTop: 0,
+                        marginBottom: '8px',
+                        paddingLeft: '20px',
+                        direction: 'rtl',
+                        textAlign: 'right',
+                        listStyleType: 'disc', // this is the key part!
+                        listStylePosition: 'inside', // bullets align nicely inside the text
+                      }}>
+                        {answer.options.map((option, optionIndex) => (
+                          <li key={optionIndex} style={{
+                            color: colors.textPrimary,
+                            marginBottom: '4px',
+                          }}>
+                            {option}
+                          </li>
+                        ))}
+                      </ul>
+
+                    </Box>
+
+                    <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
+                      <Typography variant="body2" sx={{
+                        color: colors.textPrimary,
+                        mb: 1,
+                        display: 'flex',
+                      }}>
+                        <strong style={{ color: colors.textSecondary, width: '200px' }}>Selected Answer:</strong>
+                        <span style={{
+                          color: answer.selectedAnswer ?
+                            (answer.isCorrect ? colors.success : colors.error) :
+                            colors.error,
+                          width: '100%',
+                          direction: 'rtl', textAlign: 'right'
+                        }}>
+                          {answer.selectedAnswer || " No answer selected"}
+                        </span>
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
+                      <Typography variant="body2" sx={{
+                        color: colors.textPrimary,
+                        mb: 1,
+                        display: 'flex'
+                      }}>
+                        <strong style={{ color: colors.textSecondary, width: '200px' }}>Correct Answer:</strong>
+                        <span style={{ color: colors.success, direction: 'rtl', textAlign: 'right', width: '100%' }}>
+                          {answer.correctAnswer}
+                        </span>
+                      </Typography>
+                    </Box>
+
+                    <Typography variant="body2" sx={{
+                      color: colors.textPrimary
+                    }}>
+                      <strong style={{ color: colors.textSecondary }}>Category:</strong> {answer.category}
+                    </Typography>
+                  </Box>
+                  {index < selectedResult.userAnswers.length - 1 && (
+                    <Divider sx={{
+                      mt: 2,
+                      backgroundColor: colors.border
+                    }} />
+                  )}
                 </Box>
-                {index < selectedResult.userAnswers.length - 1 && (
-                  <Divider sx={{
-                    mt: 2,
-                    backgroundColor: colors.border
-                  }} />
-                )}
-              </Box>
-            ))}
-          </Paper>
-        </Box>
-      )}
+              ))}
+            </Paper>
+
+          </Box>
+        )
+      }
 
       {/* Context Menu */}
       <Menu
@@ -1031,7 +1215,7 @@ const AssessmentResults = () => {
           <ListItemText>Delete Result</ListItemText>
         </MenuItem>
       </Menu>
-    </Box>
+    </Box >
   );
 };
 
