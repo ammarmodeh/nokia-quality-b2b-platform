@@ -14,6 +14,7 @@ import suggestionsRoutes from "./routes/suggestionsRoutes.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import customerIssueRoutes from "./routes/customerIssueRoutes.js";
+import onTheJobAssessmentRoutes from "./routes/onTheJobAssessmentRoutes.js";
 
 dotenv.config();
 
@@ -47,6 +48,7 @@ app.use("/api/favourites", favouriteRoutes);
 app.use("/api/field-teams", fieldTeamsRoutes);
 app.use("/api/quiz", quizRoutes);
 app.use('/api/quiz-results', quizResultRoutes);
+app.use("/api/on-the-job-assessments", onTheJobAssessmentRoutes);
 app.use("/api/archive", archiveRoutes);
 app.use("/api/trash", trashRoutes);
 app.use("/api/customer-issues-notifications", customerIssueRoutes);

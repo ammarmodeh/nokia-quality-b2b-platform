@@ -108,3 +108,36 @@ export const getQuizResultById = async (req, res) => {
     });
   }
 };
+
+// Add this new controller function
+export const getAllTeams = async (req, res) => {
+  try {
+    const teams = await QuizResult.aggregate([
+      {
+        $group: {
+          _id: "$teamId",
+          teamName: { $first: "$teamName" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          teamId: "$_id",
+          teamName: 1
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: teams
+    });
+  } catch (error) {
+    console.error('Error fetching teams:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch teams',
+      error: error.message
+    });
+  }
+};

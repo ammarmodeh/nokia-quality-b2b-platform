@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -18,7 +18,6 @@ import {
   Divider,
   Card,
   CardContent,
-  IconButton,
   Tooltip,
   TablePagination,
   Menu,
@@ -26,7 +25,8 @@ import {
   ListItemIcon,
   ListItemText,
   useMediaQuery,
-  Stack
+  Stack,
+  Autocomplete
 } from '@mui/material';
 import {
   Search,
@@ -41,19 +41,36 @@ import { Bar } from 'react-chartjs-2';
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, ChartTooltip, Legend);
 
-const AssessmentResults = () => {
+const AssessmentDashboard = () => {
   const [teamId, setTeamId] = useState('');
+  const [allTeams, setAllTeams] = useState([]); // State for all evaluated teams
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedResult, setSelectedResult] = useState(null);
-  console.log({ selectedResult });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentResult, setCurrentResult] = useState(null);
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:503px)');
+
+  useEffect(() => {
+    const fetchAllTeams = async () => {
+      try {
+        const response = await api.get('/quiz-results/teams/all', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        });
+        setAllTeams(response.data.data || []);
+      } catch (err) {
+        console.error('Failed to fetch teams:', err);
+      }
+    };
+
+    fetchAllTeams();
+  }, []);
 
   // Dark mode colors
   const colors = {
@@ -74,7 +91,7 @@ const AssessmentResults = () => {
 
   const fetchResults = async () => {
     if (!teamId.trim()) {
-      setError('Please enter a Team ID');
+      setError('Please select a Team');
       return;
     }
 
@@ -82,10 +99,14 @@ const AssessmentResults = () => {
     setError(null);
 
     try {
-      const response = await api.get(`/quiz-results?teamId=${teamId}`);
+      const response = await api.get(`/quiz-results?teamId=${teamId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
       setResults(response.data.data);
       if (response.data.data.length === 0) {
-        setError('No results found for this Team ID');
+        setError('No results found for this Team');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch results');
@@ -109,9 +130,10 @@ const AssessmentResults = () => {
     if (!currentResult) return;
 
     try {
-      await api.delete(`/quiz-results/${currentResult._id}`);
+      await api.delete(`/api/quiz-results/${currentResult._id}`);
       setResults(results.filter(result => result._id !== currentResult._id));
       handleMenuClose();
+      // eslint-disable-next-line no-unused-vars
     } catch (err) {
       setError('Failed to delete result');
     }
@@ -319,7 +341,6 @@ const AssessmentResults = () => {
 
   return (
     <Box sx={{
-      // p: 3,
       backgroundColor: colors.background,
       minHeight: '100vh',
       color: colors.textPrimary
@@ -345,7 +366,7 @@ const AssessmentResults = () => {
         fontWeight: 'bold',
         mb: 4
       }}>
-        Assessment Results
+        Assessment Dashboard
       </Typography>
 
       {/* Search Section */}
@@ -358,50 +379,119 @@ const AssessmentResults = () => {
       }}>
         {/* Search Bar */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: isMobile ? 'column' : 'row', height: isMobile ? undefined : '36px' }}>
-          <TextField
-            label="Team ID"
-            variant="outlined"
-            value={teamId}
-            onChange={(e) => setTeamId(e.target.value)}
-            onKeyPress={handleKeyPress}
-            fullWidth
-            autoComplete="on" // keep autocomplete if needed
+          <Autocomplete
+            freeSolo
+            options={allTeams}
+            getOptionLabel={(option) => option.teamName || option.teamId || ''}
+            value={allTeams.find(team => team.teamId === teamId) || null}
+            onChange={(event, newValue) => {
+              if (newValue) {
+                setTeamId(newValue.teamId);
+              } else {
+                setTeamId('');
+              }
+            }}
+            onInputChange={(event, newInputValue) => {
+              if (!newInputValue) {
+                setTeamId('');
+              }
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Select Team"
+                variant="outlined"
+                onKeyPress={handleKeyPress}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: colors.border,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: colors.primary,
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: colors.primary,
+                    },
+                    color: colors.textPrimary,
+                    height: '36px',
+                    fontSize: '0.8rem',
+                  },
+                  '& .MuiInputBase-input': {
+                    padding: '8px 12px',
+                    height: 'auto',
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: colors.textSecondary,
+                    fontSize: '0.8rem',
+                    top: '-7px',
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: colors.primary,
+                    top: '1px',
+                  },
+                  '& input': {
+                    caretColor: '#fff',
+                  },
+                  '& input:-webkit-autofill': {
+                    WebkitBoxShadow: `0 0 0 1000px ${colors.surface} inset`,
+                    WebkitTextFillColor: colors.textPrimary,
+                    transition: 'background-color 5000s ease-in-out 0s',
+                    caretColor: '#fff',
+                  },
+                }}
+              />
+            )}
             sx={{
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: colors.border,
-                },
-                '&:hover fieldset': {
-                  borderColor: colors.primary,
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: colors.primary,
-                },
-                color: colors.textPrimary,
-                height: '36px', // 👈 minimize the height here
-                fontSize: '0.8rem', // 👈 smaller text
-              },
-              '& .MuiInputBase-input': {
-                padding: '8px 12px', // 👈 smaller padding
-                height: 'auto', // 👈 prevent default large height
-              },
-              '& .MuiInputLabel-root': {
+              width: '100%',
+              '& .MuiAutocomplete-popupIndicator': {
                 color: colors.textSecondary,
-                fontSize: '0.8rem', // 👈 smaller label
-                top: '-7px', // 👈 optional fine-tuning
+                '&:hover': {
+                  backgroundColor: colors.primaryHover,
+                }
               },
-              '& .MuiInputLabel-root.Mui-focused': {
-                color: colors.primary,
-                top: '1px',
+              '& .MuiAutocomplete-clearIndicator': {
+                color: colors.textSecondary,
+                '&:hover': {
+                  backgroundColor: colors.primaryHover,
+                }
               },
-              '& input': {
-                caretColor: '#fff',
+            }}
+            componentsProps={{
+              paper: {
+                sx: {
+                  backgroundColor: colors.surfaceElevated,
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.border}`,
+                  '& .MuiAutocomplete-option': {
+                    '&[aria-selected="true"]': {
+                      backgroundColor: `${colors.primary}22`,
+                    },
+                    '&[aria-selected="true"].Mui-focused': {
+                      backgroundColor: `${colors.primary}33`,
+                    },
+                    '&.Mui-focused': {
+                      backgroundColor: colors.primaryHover,
+                    },
+                  },
+                },
               },
-              '& input:-webkit-autofill': {
-                WebkitBoxShadow: `0 0 0 1000px transparent inset`,
-                WebkitTextFillColor: colors.textPrimary,
-                transition: 'background-color 5000s ease-in-out 0s',
-                caretColor: '#fff',
+              popper: {
+                sx: {
+                  '& .MuiAutocomplete-listbox': {
+                    backgroundColor: colors.surfaceElevated,
+                    '&::-webkit-scrollbar': {
+                      width: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: colors.surface,
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: colors.border,
+                      borderRadius: '4px',
+                    },
+                  },
+                },
               },
             }}
           />
@@ -427,19 +517,6 @@ const AssessmentResults = () => {
             >
               {loading ? 'Searching...' : 'Search'}
             </Button>
-            <Tooltip title="Refresh">
-              <IconButton
-                onClick={fetchResults}
-                sx={{
-                  color: colors.primary,
-                  '&:hover': {
-                    backgroundColor: colors.primaryHover
-                  }
-                }}
-              >
-                <Refresh />
-              </IconButton>
-            </Tooltip>
           </Stack>
         </Box>
       </Paper >
@@ -512,9 +589,7 @@ const AssessmentResults = () => {
                   <TableRow>
                     <TableCell>Date</TableCell>
                     <TableCell>Team Name</TableCell>
-                    {/* <TableCell>Quiz Code</TableCell> */}
                     <TableCell>Score</TableCell>
-                    <TableCell>Percentage</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -533,7 +608,6 @@ const AssessmentResults = () => {
                           })}
                         </TableCell>
                         <TableCell>{result.teamName}</TableCell>
-                        {/* <TableCell>{result.quizCode}</TableCell> */}
                         <TableCell>
                           <Chip
                             label={result.score}
@@ -541,7 +615,6 @@ const AssessmentResults = () => {
                             variant="outlined"
                           />
                         </TableCell>
-                        <TableCell>{result.percentage}%</TableCell>
                         <TableCell>
                           <Box sx={{ display: "flex", gap: 1 }}>
                             <Button
@@ -559,21 +632,6 @@ const AssessmentResults = () => {
                             >
                               View Details
                             </Button>
-                            {/* <Tooltip title="More options">
-                              <IconButton
-                                size="small"
-                                onClick={(e) => handleMenuOpen(e, result)}
-                                sx={{
-                                  color: colors.textSecondary,
-                                  '&:hover': {
-                                    backgroundColor: colors.primaryHover,
-                                    color: colors.primary
-                                  }
-                                }}
-                              >
-                                <MoreVert />
-                              </IconButton>
-                            </Tooltip> */}
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -657,10 +715,6 @@ const AssessmentResults = () => {
                       <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Team Name</Typography>
                       <Typography sx={{ color: "white" }}>{selectedResult.teamName}</Typography>
                     </Box>
-                    {/* <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Quiz Code</Typography>
-                  <Typography sx={{ color: "white" }}>{selectedResult.quizCode}</Typography>
-                </Box> */}
                     <Box>
                       <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Date Taken</Typography>
                       <Typography sx={{ color: "white" }}>
@@ -704,7 +758,7 @@ const AssessmentResults = () => {
                   backgroundColor: colors.surface,
                   border: `1px solid ${colors.border}`,
                   borderRadius: '8px',
-                  overflow: 'hidden' // Added to prevent chart overflow
+                  overflow: 'hidden'
                 }}>
                   <Typography variant="h6" gutterBottom sx={{
                     display: 'flex',
@@ -712,7 +766,7 @@ const AssessmentResults = () => {
                     gap: 1,
                     color: colors.primary,
                     mb: 2,
-                    fontSize: isMobile ? '1.1rem' : '1.25rem' // Smaller font on mobile
+                    fontSize: isMobile ? '1.1rem' : '1.25rem'
                   }}>
                     <BarChart fontSize={isMobile ? 'small' : 'medium'} />
                     {isMobile ? 'Performance' : 'Performance Overview'}
@@ -732,12 +786,12 @@ const AssessmentResults = () => {
                             ...chartOptions.plugins,
                             title: {
                               ...chartOptions.plugins.title,
-                              display: !isMobile, // Hide title on mobile
+                              display: !isMobile,
                               text: 'Question-by-Question Performance'
                             },
                             legend: {
                               ...chartOptions.plugins.legend,
-                              position: isMobile ? 'bottom' : 'top' // Move legend to bottom on mobile
+                              position: isMobile ? 'bottom' : 'top'
                             }
                           },
                           scales: {
@@ -747,7 +801,7 @@ const AssessmentResults = () => {
                               ticks: {
                                 ...chartOptions.scales.x.ticks,
                                 font: {
-                                  size: isMobile ? 10 : 12 // Smaller font on mobile
+                                  size: isMobile ? 10 : 12
                                 }
                               }
                             }
@@ -769,7 +823,7 @@ const AssessmentResults = () => {
                   <Typography variant="h6" gutterBottom sx={{
                     color: colors.primary,
                     mb: 2,
-                    fontSize: isMobile ? '1.1rem' : '1.25rem' // Smaller font on mobile
+                    fontSize: isMobile ? '1.1rem' : '1.25rem'
                   }}>
                     {isMobile ? 'Statistics' : 'Key Statistics'}
                   </Typography>
@@ -781,7 +835,7 @@ const AssessmentResults = () => {
                       <Box sx={{
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 2 // Reduced gap on mobile
+                        gap: 2
                       }}>
                         <Box>
                           <Typography variant="subtitle2" sx={{
@@ -807,7 +861,7 @@ const AssessmentResults = () => {
                                   arrow
                                 >
                                   <Chip
-                                    label={isMobile ? stat.category.split(' ')[0] : stat.category} // Shorten category name on mobile
+                                    label={isMobile ? stat.category.split(' ')[0] : stat.category}
                                     color="success"
                                     size="small"
                                     variant="outlined"
@@ -853,7 +907,7 @@ const AssessmentResults = () => {
                                   arrow
                                 >
                                   <Chip
-                                    label={isMobile ? stat.category.split(' ')[0] : stat.category} // Shorten category name on mobile
+                                    label={isMobile ? stat.category.split(' ')[0] : stat.category}
                                     color="error"
                                     size="small"
                                     variant="outlined"
@@ -912,7 +966,7 @@ const AssessmentResults = () => {
                 border: `1px solid ${colors.border}`,
                 borderRadius: '8px',
                 mb: 3,
-                overflow: 'hidden' // Added to prevent chart overflow
+                overflow: 'hidden'
               }}>
                 <Typography variant="h6" gutterBottom sx={{
                   color: colors.primary,
@@ -1000,7 +1054,6 @@ const AssessmentResults = () => {
                                 tooltip: {
                                   callbacks: {
                                     afterLabel: function (context) {
-                                      // const datasetIndex = context.datasetIndex;
                                       const dataIndex = context.dataIndex;
                                       const correct = context.chart.data.datasets[0].data[dataIndex];
                                       const incorrect = context.chart.data.datasets[1].data[dataIndex];
@@ -1118,8 +1171,8 @@ const AssessmentResults = () => {
                         paddingLeft: '20px',
                         direction: 'rtl',
                         textAlign: 'right',
-                        listStyleType: 'disc', // this is the key part!
-                        listStylePosition: 'inside', // bullets align nicely inside the text
+                        listStyleType: 'disc',
+                        listStylePosition: 'inside',
                       }}>
                         {answer.options.map((option, optionIndex) => (
                           <li key={optionIndex} style={{
@@ -1219,4 +1272,4 @@ const AssessmentResults = () => {
   );
 };
 
-export default AssessmentResults;
+export default AssessmentDashboard;

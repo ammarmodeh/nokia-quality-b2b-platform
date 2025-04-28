@@ -107,13 +107,18 @@ const SidebarLinks = () => {
       link: "quiz",
       icon: <MdAssessment />,
     },
+    {
+      label: "Assessment Dashboard",
+      link: "assessment-dashboard",
+      icon: <MdAssessment />,
+    },
+    {
+      label: "On-the-Job Assessment",
+      link: "on-the-job-assessment",
+      icon: <MdAssessment />,
+    },
     ...(user?.role === "Admin"
       ? [
-        {
-          label: "Assessment Results Dashboard",
-          link: "assessment-results",
-          icon: <MdSettings />,
-        },
         {
           label: "Archived",
           link: "archived",
@@ -212,7 +217,7 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
             }}
           >
             {el.icon}
-            {(!isCollapsed || isMobileOrMediumScreen) && <span>{el.label}</span>}
+            {(!isCollapsed || isMobileOrMediumScreen) && <span className="text-[13px]">{el.label}</span>}
           </AccordionSummary>
           <AccordionDetails sx={{ padding: 0 }}>
             <div className={clsx(
@@ -254,7 +259,7 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
         >
           {el.icon}
           {(!isCollapsed || isMobileOrMediumScreen) && (
-            <div className="w-full">
+            <div className="w-full text-[13px]">
               {el.label}
             </div>
           )}

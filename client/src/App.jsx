@@ -5,6 +5,7 @@ import { Suspense, lazy } from "react";
 import { FadeLoader } from "react-spinners";
 import { Box } from "@mui/material";
 import NotFound from "./pages/NotFound";
+import OnTheJobAssessment from "./pages/OnTheJobAssessment";
 
 // Lazy load pages
 const Layout = lazy(() => import("./components/Layout"));
@@ -31,7 +32,7 @@ const FieldTeamLogin = lazy(() => import("./pages/FieldTeamLogin"));
 const QuizResults = lazy(() => import("./pages/QuizResults"));
 const FieldTeamForm = lazy(() => import("./pages/FieldTeams"));
 const CustomerIssuesList = lazy(() => import("./components/CustomerIssuesList"));
-const AssessmentResults = lazy(() => import("./pages/AssessmentResults"));
+const AssessmentDashboard = lazy(() => import("./pages/AssessmentDashboard"));
 
 // Custom route handlers
 const QuizRouteHandler = ({ children }) => {
@@ -134,7 +135,8 @@ const App = () => {
             <Route path="/tasks/view-task/:id" element={<TaskViewPage />} />
             <Route path="/team" element={<Users />} />
             <Route path="/fieldTeams" element={<FieldTeamForm />} />
-            <Route path="/assessment-results" element={<AssessmentResults />} />
+            <Route path="/assessment-dashboard" element={<AssessmentDashboard />} />
+            <Route path="/on-the-job-assessment" element={<OnTheJobAssessment />} />
             <Route path="/archived" element={<Archived />} />
             <Route path="/trashed" element={<Trash />} />
           </Route>

@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, TextField } from "@mui/material";
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, TextField, Dialog } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import api from "../api/api";
+import AssessmentResultDialog from "./AssessmentDialog"; // Import the new dialog component
+import AdsClickIcon from '@mui/icons-material/AdsClick';
 
 const FieldTeamsFloatingTable = ({ open, onClose }) => {
   const [fieldTeams, setFieldTeams] = useState([]);
@@ -11,7 +13,10 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState(null); // State for selected team
+  const [resultsDialogOpen, setResultsDialogOpen] = useState(false); // State for dialog open/close
   const tableRef = useRef(null);
+  const dialogRef = useRef(null); // Ref for the dialog
 
   const fetchFieldTeams = async () => {
     try {
@@ -63,7 +68,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (tableRef.current && !tableRef.current.contains(event.target)) {
+      if (tableRef.current && !tableRef.current.contains(event.target) && dialogRef.current && !dialogRef.current.contains(event.target)) {
         onClose();
       }
     };
@@ -76,6 +81,16 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [open, onClose]);
+
+  const handleTeamNameClick = (team) => {
+    setSelectedTeam(team);
+    setResultsDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setSelectedTeam(null);
+    setResultsDialogOpen(false);
+  };
 
   if (!open) return null;
 
@@ -162,8 +177,13 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
               ) : (
                 filteredTeams.map((team) => (
                   <TableRow key={team._id}>
-                    <TableCell style={{ color: "white", width: '140px' }} title={team.teamName}>
+                    <TableCell
+                      style={{ color: "white", width: '140px', cursor: 'pointer' }}
+                      title={team.teamName}
+                      onClick={() => handleTeamNameClick(team)}
+                    >
                       {team.teamName}
+                      <AdsClickIcon style={{ marginLeft: '10px', fontSize: '15px' }} />
                     </TableCell>
                     <TableCell style={{ color: "white", width: '100px' }} title={team.teamCompany}>
                       {team.teamCompany}
@@ -183,16 +203,35 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
           </Table>
         </TableContainer>
       </div>
+
+      {/* Assessment Result Dialog */}
+      <Dialog
+        ref={dialogRef} // Add ref to the dialog
+        open={resultsDialogOpen}
+        onClose={handleDialogClose}
+        fullScreen
+        PaperProps={{
+          style: {
+            backgroundColor: '#121212',
+          }
+        }}
+      >
+        {selectedTeam && (
+          <AssessmentResultDialog
+            teamId={selectedTeam._id}
+            teamName={selectedTeam.teamName}
+            onClose={handleDialogClose}
+          />
+        )}
+      </Dialog>
     </div>
   );
 };
 
 // Helper function for score color
 const getScoreColor = (score) => {
-  // console.log({ score });
   const numericScoreStr = score.split(' ')[1].replace('%', '');
   const numericScore = parseFloat(numericScoreStr);
-  // console.log({ numericScore });
   if (numericScore >= 90) return '#04970a';
   if (numericScore >= 75) return '#4CAF50'; // Green for high scores
   if (numericScore >= 55) return '#FFC107'; // Yellow for medium scores
