@@ -50,8 +50,8 @@ const OnTheJobAssessment = () => {
   const [error, setError] = useState(null);
   const [selectedAssessment, setSelectedAssessment] = useState(null);
   const navigate = useNavigate();
-  const isMobile = useMediaQuery('(max-width:600px)');
-  const [teamAssessments, setTeamAssessments] = useState({});
+  const isMobile = useMediaQuery('(max-width:503px)');
+  // console.log({ teamAssessments });
   const [newAssessment, setNewAssessment] = useState({
     conductedBy: "",
     checkPoints: [
@@ -220,85 +220,93 @@ const OnTheJobAssessment = () => {
   const [teamsRowsPerPage, setTeamsRowsPerPage] = useState(10);
   const [assessmentsPage, setAssessmentsPage] = useState(0);
   const [assessmentsRowsPerPage, setAssessmentsRowsPerPage] = useState(10);
+  const [allAssessments, setAllAssessments] = useState([]);
 
   useEffect(() => {
-    const fetchFieldTeams = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await api.get("/field-teams/get-field-teams", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
-        setFieldTeams(response.data);
+        setError(null);
+
+        // Fetch all data in parallel
+        const [teamsResponse, assessmentsResponse, statsResponse] = await Promise.all([
+          api.get("/field-teams/get-field-teams", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          }),
+          api.get("/on-the-job-assessments", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          }),
+          api.get("/on-the-job-assessments/stats", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          })
+        ]);
+
+        setFieldTeams(teamsResponse.data);
+        setAllAssessments(assessmentsResponse.data);
+        setStats(statsResponse.data);
       } catch (error) {
-        console.error("Error fetching field teams:", error);
-        setError("Failed to fetch field teams");
+        console.error("Error fetching data:", error);
+        setError("Failed to fetch data. Please check the console for more details.");
       } finally {
         setLoading(false);
       }
     };
 
-    const fetchStats = async () => {
-      try {
-        const response = await api.get("/on-the-job-assessments/stats", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
-        setStats(response.data);
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-        setError("Failed to fetch assessment statistics");
-      }
-    };
-
-    fetchFieldTeams();
-    fetchStats();
+    fetchData();
   }, []);
 
+  // Memoized map of team assessments for quick lookup
+  const teamAssessmentsMap = useMemo(() => {
+    const map = {};
+    allAssessments.forEach(assessment => {
+      // Handle both populated and unpopulated fieldTeamId
+      const teamId = assessment.fieldTeamId?._id?.toString() ||
+        assessment.fieldTeamId?.toString();
+
+      if (teamId) {
+        if (!map[teamId]) {
+          map[teamId] = [];
+        }
+        map[teamId].push(assessment);
+      }
+    });
+    return map;
+  }, [allAssessments]);
+
+  // Update assessments when selected team changes
   useEffect(() => {
-    if (selectedTeam && teamAssessments[selectedTeam._id]) {
-      setAssessments(teamAssessments[selectedTeam._id]);
+    if (selectedTeam) {
+      const teamId = selectedTeam._id.toString();
+      setAssessments(teamAssessmentsMap[teamId] || []);
     } else {
       setAssessments([]);
     }
-  }, [selectedTeam, teamAssessments]);
+  }, [selectedTeam, teamAssessmentsMap]);
 
-  useEffect(() => {
-    if (fieldTeams.length > 0) {
-      const fetchAllAssessments = async () => {
-        try {
-          setLoading(true);
-          const assessmentsData = {};
+  // Memoized set of assessed team IDs
+  const assessedTeamIds = useMemo(() => {
+    return new Set(
+      allAssessments.map(assessment =>
+        assessment.fieldTeamId?._id?.toString() ||
+        assessment.fieldTeamId?.toString()
+      ).filter(Boolean)
+    );
+  }, [allAssessments]);
 
-          const promises = fieldTeams.map(async (team) => {
-            try {
-              const response = await api.get(
-                `/on-the-job-assessments/field-team/${team._id}`, {
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-                },
-              });
-              assessmentsData[team._id] = response.data;
-            } catch (error) {
-              console.error(`Error fetching assessments for team ${team._id}:`, error);
-              setError("Failed to fetch assessments");
-            }
-          });
+  // Helper function to check if a team has been assessed
+  const isTeamAssessed = useCallback((teamId) => {
+    return assessedTeamIds.has(teamId.toString());
+  }, [assessedTeamIds]);
 
-          await Promise.all(promises);
-          setTeamAssessments(assessmentsData);
-        } catch (error) {
-          console.error("Error fetching assessments:", error);
-          setError("Failed to fetch assessments");
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchAllAssessments();
-    }
-  }, [fieldTeams]);
+  // Helper function to get average score for a team
+  const getTeamAverageScore = useCallback((teamId) => {
+    const teamAssessments = teamAssessmentsMap[teamId.toString()];
+    if (!teamAssessments || teamAssessments.length === 0) return 0;
+
+    const sum = teamAssessments.reduce((total, assessment) =>
+      total + (assessment.overallScore || 0), 0);
+    return Math.round(sum / teamAssessments.length);
+  }, [teamAssessmentsMap]);
 
   const CheckpointsByCategory = useCallback(({ checkPoints, handleCheckPointChange, colors }) => {
     const categories = checkPoints.reduce((acc, checkpoint, index) => {
@@ -460,12 +468,6 @@ const OnTheJobAssessment = () => {
         },
       });
       setAssessments(assessmentsResponse.data);
-
-      // Update team assessments
-      setTeamAssessments(prevState => ({
-        ...prevState,
-        [selectedTeam._id]: assessmentsResponse.data
-      }));
 
       // Reset form
       setNewAssessment(prevState => ({
@@ -866,19 +868,6 @@ const OnTheJobAssessment = () => {
         </Alert>
       )}
 
-      {loading && (
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          p: 4,
-          backgroundColor: colors.surface,
-          borderRadius: '8px',
-          border: `1px solid ${colors.border}`
-        }}>
-          <CircularProgress sx={{ color: colors.primary }} />
-        </Box>
-      )}
-
       {!selectedTeam && user.title === 'Field Technical Support - QoS' && fieldTeams.length > 0 && (
         <>
           <Typography variant="h5" gutterBottom sx={{
@@ -942,30 +931,37 @@ const OnTheJobAssessment = () => {
                   <TableBody>
                     {fieldTeams
                       .slice(teamsPage * teamsRowsPerPage, teamsPage * teamsRowsPerPage + teamsRowsPerPage)
-                      .map((team) => (
-                        <TableRow key={team._id} hover>
-                          <TableCell>{team.teamName}</TableCell>
-                          <TableCell>{team.teamCompany}</TableCell>
-                          <TableCell>
-                            {teamAssessments[team._id] && teamAssessments[team._id].length > 0 ? (
-                              <Chip label="Assessed" color="success" variant="outlined" />
-                            ) : (
-                              <Chip label="Not Assessed" color="error" variant="outlined" />
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {teamAssessments[team._id] && teamAssessments[team._id].length > 0 ? (
+                      .map((team) => {
+                        const teamId = team._id.toString();
+                        const isAssessed = isTeamAssessed(teamId);
+                        const teamAssessments = teamAssessmentsMap[teamId] || [];
+                        const averageScore = teamAssessments.length > 0
+                          ? getTeamAverageScore(teamId)
+                          : 0;
+
+                        return (
+                          <TableRow key={team._id} hover>
+                            <TableCell>{team.teamName}</TableCell>
+                            <TableCell>{team.teamCompany}</TableCell>
+                            <TableCell>
                               <Chip
-                                label={`${Math.round(teamAssessments[team._id].reduce((sum, assessment) => sum + assessment.overallScore, 0) / teamAssessments[team._id].length)}%`}
-                                color={getPerformanceColor(Math.round(teamAssessments[team._id].reduce((sum, assessment) => sum + assessment.overallScore, 0) / teamAssessments[team._id].length))}
+                                label={isAssessed ? "Assessed" : "Not Assessed"}
+                                color={isAssessed ? "success" : "error"}
                                 variant="outlined"
                               />
-                            ) : (
-                              "N/A"
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            </TableCell>
+                            <TableCell>
+                              {isAssessed ? (
+                                <Chip
+                                  label={`${averageScore}%`}
+                                  color={getPerformanceColor(averageScore)}
+                                  variant="outlined"
+                                />
+                              ) : "N/A"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                   </TableBody>
                 </Table>
               </TableContainer>
