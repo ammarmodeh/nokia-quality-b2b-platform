@@ -44,16 +44,16 @@ const OnTheJobAssessment = () => {
   const user = useSelector((state) => state?.auth?.user);
   const [fieldTeams, setFieldTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
+  // console.log({ selectedTeam });
   const [assessments, setAssessments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
   const [selectedAssessment, setSelectedAssessment] = useState(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)');
-
+  // New state to store assessment status and scores for each team
+  const [teamAssessments, setTeamAssessments] = useState({});
   const [newAssessment, setNewAssessment] = useState({
     conductedBy: "",
     checkPoints: [
@@ -218,6 +218,21 @@ const OnTheJobAssessment = () => {
       "Service": 0.25     // 25%
     }
   });
+  // For Field Teams table
+  const [teamsPage, setTeamsPage] = useState(0);
+  const [teamsRowsPerPage, setTeamsRowsPerPage] = useState(10);
+
+  // For Assessments table
+  const [assessmentsPage, setAssessmentsPage] = useState(0);
+  const [assessmentsRowsPerPage, setAssessmentsRowsPerPage] = useState(10);
+
+  useEffect(() => {
+    if (selectedTeam && teamAssessments[selectedTeam._id]) {
+      setAssessments(teamAssessments[selectedTeam._id]);
+    } else {
+      setAssessments([]);
+    }
+  }, [selectedTeam, teamAssessments]);
 
   // Memoize the CheckpointsByCategory component
   const CheckpointsByCategory = useCallback(({ checkPoints, handleCheckPointChange, colors }) => {
@@ -347,6 +362,7 @@ const OnTheJobAssessment = () => {
   useEffect(() => {
     const fetchFieldTeams = async () => {
       try {
+        // console.log("Fetching field teams...");
         setLoading(true);
         const response = await api.get("/field-teams/get-field-teams", {
           headers: {
@@ -354,6 +370,7 @@ const OnTheJobAssessment = () => {
           },
         });
         setFieldTeams(response.data);
+        // console.log("Field teams fetched successfully.");
       } catch (error) {
         console.error("Error fetching field teams:", error);
         setError("Failed to fetch field teams");
@@ -364,12 +381,14 @@ const OnTheJobAssessment = () => {
 
     const fetchStats = async () => {
       try {
+        // console.log("Fetching stats...");
         const response = await api.get("/on-the-job-assessments/stats", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         setStats(response.data);
+        // console.log("Stats fetched successfully.");
       } catch (error) {
         console.error("Error fetching stats:", error);
         setError("Failed to fetch assessment statistics");
@@ -381,17 +400,26 @@ const OnTheJobAssessment = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedTeam) {
-      const fetchAssessments = async () => {
+    if (fieldTeams.length > 0) {
+      const fetchAllAssessments = async () => {
         try {
+          // console.log("Fetching assessments for all teams...");
           setLoading(true);
-          const response = await api.get(
-            `/on-the-job-assessments/field-team/${selectedTeam._id}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
+          const assessmentsData = {};
+
+          const promises = fieldTeams.map(async (team) => {
+            const response = await api.get(
+              `/on-the-job-assessments/field-team/${team._id}`, {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              },
+            });
+            assessmentsData[team._id] = response.data;
           });
-          setAssessments(response.data);
+
+          await Promise.all(promises);
+          setTeamAssessments(assessmentsData);
+          // console.log("Assessments fetched successfully.");
         } catch (error) {
           console.error("Error fetching assessments:", error);
           setError("Failed to fetch assessments");
@@ -399,9 +427,9 @@ const OnTheJobAssessment = () => {
           setLoading(false);
         }
       };
-      fetchAssessments();
+      fetchAllAssessments();
     }
-  }, [selectedTeam]);
+  }, [fieldTeams]);
 
   const handleCheckPointChange = useCallback((index, field, value) => {
     setNewAssessment(prevState => {
@@ -439,6 +467,12 @@ const OnTheJobAssessment = () => {
         },
       });
       setAssessments(assessmentsResponse.data);
+
+      // Update team assessments
+      setTeamAssessments(prevState => ({
+        ...prevState,
+        [selectedTeam._id]: assessmentsResponse.data
+      }));
 
       // Reset form
       setNewAssessment(prevState => ({
@@ -851,7 +885,7 @@ const OnTheJobAssessment = () => {
       )}
 
       {/* Loading Indicator */}
-      {loading && (
+      {/* {loading && (
         <Box sx={{
           display: 'flex',
           justifyContent: 'center',
@@ -862,114 +896,33 @@ const OnTheJobAssessment = () => {
         }}>
           <CircularProgress sx={{ color: colors.primary }} />
         </Box>
-      )}
+      )} */}
 
       {/* Main Content */}
-      {user.title === 'Field Technical Support - QoS' && (
-
-        selectedTeam && !selectedAssessment && (
+      {!selectedTeam && (
+        user.title === 'Field Technical Support - QoS' && (
           <>
-            {/* New Assessment Section */}
-            <Paper sx={{
-              p: 3,
-              mb: 4,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px'
-            }}>
-              <Typography variant="h5" gutterBottom sx={{
-                color: colors.primary,
-                fontWeight: 'bold',
-                mb: 3
-              }}>
-                New Assessment
-              </Typography>
-
-              <TextField
-                label="Conducted By"
-                fullWidth
-                value={newAssessment.conductedBy}
-                onChange={(e) => setNewAssessment(prevState => ({ ...prevState, conductedBy: e.target.value }))}
-                sx={{ mb: 2 }}
-                InputLabelProps={{
-                  style: { color: colors.textSecondary }
-                }}
-                InputProps={{
-                  style: { color: colors.textPrimary }
-                }}
-              />
-
-              <Typography variant="h6" gutterBottom sx={{
-                color: colors.textPrimary,
-                mb: 2
-              }}>
-                Assessment Check Points
-              </Typography>
-
-              <CheckpointsByCategory
-                checkPoints={newAssessment.checkPoints}
-                handleCheckPointChange={handleCheckPointChange}
-                colors={colors}
-              />
-
-              <Typography variant="h6" sx={{
-                mt: 2,
-                color: colors.textPrimary
-              }}>
-                Overall Score: <Chip
-                  label={`${calculateOverallScore(newAssessment.checkPoints, newAssessment.categoryWeights)}%`}
-                  color={getPerformanceColor(calculateOverallScore(newAssessment.checkPoints, newAssessment.categoryWeights))}
-                  variant="outlined"
-                  sx={{ ml: 1 }}
-                />
-              </Typography>
-
-              <TextField
-                label="Feedback"
-                fullWidth
-                multiline
-                rows={4}
-                value={newAssessment.feedback}
-                onChange={(e) => setNewAssessment(prevState => ({ ...prevState, feedback: e.target.value }))}
-                sx={{ mt: 2, mb: 2 }}
-                InputLabelProps={{
-                  style: { color: colors.textSecondary }
-                }}
-                InputProps={{
-                  style: { color: colors.textPrimary }
-                }}
-              />
-
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleSubmitAssessment}
-                disabled={loading || !newAssessment.conductedBy}
-                sx={{
-                  backgroundColor: colors.primary,
-                  '&:hover': {
-                    backgroundColor: '#1d4ed8',
-                  },
-                  '&:disabled': {
-                    backgroundColor: '#555',
-                    color: '#999'
-                  }
-                }}
-              >
-                {loading ? <CircularProgress size={24} sx={{ color: colors.textPrimary }} /> : "Submit Assessment"}
-              </Button>
-            </Paper>
-
-            {/* Previous Assessments Section */}
+            {/* Field Teams Table */}
             <Typography variant="h5" gutterBottom sx={{
               color: colors.primary,
               fontWeight: 'bold',
               mb: 2
             }}>
-              Previous Assessments
+              Field Teams Assessment Status
             </Typography>
 
-            {assessments && assessments.length > 0 ? (
+            {loading ? (
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                p: 4,
+                backgroundColor: colors.surface,
+                borderRadius: '8px',
+                border: `1px solid ${colors.border}`
+              }}>
+                <CircularProgress sx={{ color: colors.primary }} />
+              </Box>
+            ) : (
               <>
                 <TableContainer component={Paper} sx={{
                   backgroundColor: colors.surface,
@@ -1002,53 +955,36 @@ const OnTheJobAssessment = () => {
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Conducted By</TableCell>
+                        <TableCell>Team Name</TableCell>
+                        <TableCell>Company</TableCell>
+                        <TableCell>Assessment Status</TableCell>
                         <TableCell>Score</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell>Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {assessments
-                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                        .map((assessment) => (
-                          <TableRow key={assessment._id} hover>
+                      {fieldTeams
+                        .slice(teamsPage * teamsRowsPerPage, teamsPage * teamsRowsPerPage + teamsRowsPerPage)
+                        .map((team) => (
+                          <TableRow key={team._id} hover>
+                            <TableCell>{team.teamName}</TableCell>
+                            <TableCell>{team.teamCompany}</TableCell>
                             <TableCell>
-                              {new Date(assessment.assessmentDate).toLocaleString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true
-                              })}
+                              {teamAssessments[team._id] && teamAssessments[team._id].length > 0 ? (
+                                <Chip label="Assessed" color="success" variant="outlined" />
+                              ) : (
+                                <Chip label="Not Assessed" color="error" variant="outlined" />
+                              )}
                             </TableCell>
-                            <TableCell>{assessment.conductedBy}</TableCell>
                             <TableCell>
-                              <Chip
-                                label={`${assessment.overallScore}%`}
-                                color={getPerformanceColor(assessment.overallScore)}
-                                variant="outlined"
-                              />
-                            </TableCell>
-                            <TableCell>{assessment.status}</TableCell>
-                            <TableCell>
-                              <Button
-                                variant="outlined"
-                                size="small"
-                                onClick={() => setSelectedAssessment(assessment)}
-                                sx={{
-                                  color: colors.primary,
-                                  borderColor: colors.primary,
-                                  '&:hover': {
-                                    backgroundColor: colors.primaryHover,
-                                    borderColor: colors.primary,
-                                  }
-                                }}
-                              >
-                                View Details
-                              </Button>
+                              {teamAssessments[team._id] && teamAssessments[team._id].length > 0 ? (
+                                <Chip
+                                  label={`${Math.round(teamAssessments[team._id].reduce((sum, assessment) => sum + assessment.overallScore, 0) / teamAssessments[team._id].length)}%`}
+                                  color={getPerformanceColor(Math.round(teamAssessments[team._id].reduce((sum, assessment) => sum + assessment.overallScore, 0) / teamAssessments[team._id].length))}
+                                  variant="outlined"
+                                />
+                              ) : (
+                                "N/A"
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1059,13 +995,13 @@ const OnTheJobAssessment = () => {
                 <TablePagination
                   rowsPerPageOptions={[10, 25, 50]}
                   component="div"
-                  count={assessments.length}
-                  rowsPerPage={rowsPerPage}
-                  page={page}
-                  onPageChange={(e, newPage) => setPage(newPage)}
+                  count={fieldTeams.length}
+                  rowsPerPage={teamsRowsPerPage}
+                  page={teamsPage}
+                  onPageChange={(e, newPage) => setTeamsPage(newPage)}
                   onRowsPerPageChange={(e) => {
-                    setRowsPerPage(parseInt(e.target.value, 10));
-                    setPage(0);
+                    setTeamsRowsPerPage(parseInt(e.target.value, 10));
+                    setTeamsPage(0);
                   }}
                   sx={{
                     color: colors.textPrimary,
@@ -1083,25 +1019,245 @@ const OnTheJobAssessment = () => {
                   }}
                 />
               </>
-            ) : (
-              <Paper sx={{
-                p: 3,
-                backgroundColor: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderRadius: '8px',
-                textAlign: 'center'
-              }}>
-                <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                  No assessments found for this team
-                </Typography>
-              </Paper>
             )}
           </>
         )
       )}
 
+      {selectedTeam && !selectedAssessment && (
+        <>
+          {/* New Assessment Section */}
+          <Paper sx={{
+            p: 3,
+            mb: 4,
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
+            borderRadius: '8px'
+          }}>
+            <Typography variant="h5" gutterBottom sx={{
+              color: colors.primary,
+              fontWeight: 'bold',
+              mb: 3
+            }}>
+              New Assessment
+            </Typography>
+
+            <TextField
+              label="Conducted By"
+              fullWidth
+              value={newAssessment.conductedBy}
+              onChange={(e) => setNewAssessment(prevState => ({ ...prevState, conductedBy: e.target.value }))}
+              sx={{ mb: 2 }}
+              InputLabelProps={{
+                style: { color: colors.textSecondary }
+              }}
+              InputProps={{
+                style: { color: colors.textPrimary }
+              }}
+            />
+
+            <Typography variant="h6" gutterBottom sx={{
+              color: colors.textPrimary,
+              mb: 2
+            }}>
+              Assessment Check Points
+            </Typography>
+
+            <CheckpointsByCategory
+              checkPoints={newAssessment.checkPoints}
+              handleCheckPointChange={handleCheckPointChange}
+              colors={colors}
+            />
+
+            <Typography variant="h6" sx={{
+              mt: 2,
+              color: colors.textPrimary
+            }}>
+              Overall Score: <Chip
+                label={`${calculateOverallScore(newAssessment.checkPoints, newAssessment.categoryWeights)}%`}
+                color={getPerformanceColor(calculateOverallScore(newAssessment.checkPoints, newAssessment.categoryWeights))}
+                variant="outlined"
+                sx={{ ml: 1 }}
+              />
+            </Typography>
+
+            <TextField
+              label="Feedback"
+              fullWidth
+              multiline
+              rows={4}
+              value={newAssessment.feedback}
+              onChange={(e) => setNewAssessment(prevState => ({ ...prevState, feedback: e.target.value }))}
+              sx={{ mt: 2, mb: 2 }}
+              InputLabelProps={{
+                style: { color: colors.textSecondary }
+              }}
+              InputProps={{
+                style: { color: colors.textPrimary }
+              }}
+            />
+
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSubmitAssessment}
+              disabled={loading || !newAssessment.conductedBy}
+              sx={{
+                backgroundColor: colors.primary,
+                '&:hover': {
+                  backgroundColor: '#1d4ed8',
+                },
+                '&:disabled': {
+                  backgroundColor: '#555',
+                  color: '#999'
+                }
+              }}
+            >
+              {loading ? <CircularProgress size={24} sx={{ color: colors.textPrimary }} /> : "Submit Assessment"}
+            </Button>
+          </Paper>
+
+          {/* Previous Assessments Table */}
+          <Typography variant="h5" gutterBottom sx={{
+            color: colors.primary,
+            fontWeight: 'bold',
+            mb: 2
+          }}>
+            Previous Assessments
+          </Typography>
+
+          {assessments && assessments.length > 0 ? (
+            <>
+              <TableContainer component={Paper} sx={{
+                backgroundColor: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderTopLeftRadius: '8px',
+                borderTopRightRadius: '8px',
+                borderBottomLeftRadius: '0px',
+                borderBottomRightRadius: '0px',
+                "& .MuiTableHead-root": {
+                  backgroundColor: colors.surfaceElevated,
+                  "& .MuiTableCell-root": {
+                    color: colors.textSecondary,
+                    fontWeight: "bold",
+                    borderBottom: `1px solid ${colors.border}`,
+                  }
+                },
+                "& .MuiTableBody-root": {
+                  "& .MuiTableCell-root": {
+                    borderBottom: `1px solid ${colors.border}`,
+                    color: colors.textPrimary,
+                  },
+                  "& .MuiTableRow-root": {
+                    backgroundColor: colors.surface,
+                    "&:hover": {
+                      backgroundColor: colors.surfaceElevated,
+                    },
+                  }
+                },
+              }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Conducted By</TableCell>
+                      <TableCell>Score</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {assessments
+                      .slice(assessmentsPage * assessmentsRowsPerPage, assessmentsPage * assessmentsRowsPerPage + assessmentsRowsPerPage)
+                      .map((assessment) => (
+                        <TableRow key={assessment._id} hover>
+                          <TableCell>
+                            {new Date(assessment.assessmentDate).toLocaleString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
+                          </TableCell>
+                          <TableCell>{assessment.conductedBy}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={`${assessment.overallScore}%`}
+                              color={getPerformanceColor(assessment.overallScore)}
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell>{assessment.status}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => setSelectedAssessment(assessment)}
+                              sx={{
+                                color: colors.primary,
+                                borderColor: colors.primary,
+                                '&:hover': {
+                                  backgroundColor: colors.primaryHover,
+                                  borderColor: colors.primary,
+                                }
+                              }}
+                            >
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <TablePagination
+                rowsPerPageOptions={[10, 25, 50]}
+                component="div"
+                count={assessments.length}
+                rowsPerPage={assessmentsRowsPerPage}
+                page={assessmentsPage}
+                onPageChange={(e, newPage) => setAssessmentsPage(newPage)}
+                onRowsPerPageChange={(e) => {
+                  setAssessmentsRowsPerPage(parseInt(e.target.value, 10));
+                  setAssessmentsPage(0);
+                }}
+                sx={{
+                  color: colors.textPrimary,
+                  '& .MuiTablePagination-selectIcon': {
+                    color: colors.textPrimary
+                  },
+                  '& .MuiSvgIcon-root': {
+                    color: colors.textPrimary
+                  },
+                  backgroundColor: colors.surface,
+                  border: `1px solid ${colors.border}`,
+                  borderTop: 'none',
+                  borderBottomLeftRadius: '8px',
+                  borderBottomRightRadius: '8px',
+                }}
+              />
+            </>
+          ) : (
+            <Paper sx={{
+              p: 3,
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px',
+              textAlign: 'center'
+            }}>
+              <Typography variant="body1" sx={{ color: colors.textSecondary }}>
+                No assessments found for this team
+              </Typography>
+            </Paper>
+          )}
+        </>
+      )}
+
       {/* Assessment Detail View */}
-      {selectedAssessment && (
+      {selectedAssessment && selectedTeam && (
         <Box sx={{ mt: 3 }}>
           <Button
             startIcon={<ArrowBack />}

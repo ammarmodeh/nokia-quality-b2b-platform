@@ -1,14 +1,6 @@
 import {
-  MdAssessment,
-  MdDashboard,
-  MdLightbulb,
-  MdOutlinePolicy,
   MdSettings,
 } from "react-icons/md";
-import { FaTrashAlt, FaUsers, FaCalendar, FaStar, FaRegLightbulb, FaThList } from "react-icons/fa";
-import { RiTeamFill } from "react-icons/ri";
-import { MdTask } from "react-icons/md";
-import { BiArchive } from "react-icons/bi";
 import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 import clsx from "clsx";
@@ -24,19 +16,19 @@ const SidebarLinks = () => {
     {
       label: "Dashboard",
       link: "dashboard",
-      icon: <MdDashboard />,
+      icon: <img width={20} height={20} src="/main-dashboard.png" />,
     },
     {
       label: "Policies List",
       link: "policies",
-      icon: <MdOutlinePolicy />,
+      icon: <img width={20} height={20} src="/policy.png" />,
     },
     ...(user?.role !== "Member"
       ? [
         {
           label: "Suggestions Dashboard",
           link: "admin/suggestions",
-          icon: <FaRegLightbulb />,
+          icon: <img width={20} height={20} src="/suggestions.png" />,
         },
       ]
       : []),
@@ -45,14 +37,14 @@ const SidebarLinks = () => {
         {
           label: "My Suggestions",
           link: "my-suggestions",
-          icon: <MdLightbulb />,
+          icon: <img width={20} height={20} src="/suggestions.png" />,
         },
       ]
       : []),
     {
       label: "All Tasks List",
       link: "audit/tasks",
-      icon: <FaThList />,
+      icon: <img width={20} height={20} src="/all-tasks.png" />,
     },
     // ...(condition ? array : [])
     // This is a common pattern used in JavaScript to conditionally include elements in an array without adding null or undefined.
@@ -60,7 +52,7 @@ const SidebarLinks = () => {
     ...(user?.title === "Field Technical Support - QoS" ? [
       {
         label: "Assigned To Me",
-        icon: <MdTask size={20} />,
+        icon: <img width={20} height={20} src="/assigned.png" />,
         subpaths: [
           { label: "All Tasks", link: "assigned-to-me" },
           { label: "Detractor", link: "assigned-to-me/detractor" },
@@ -80,54 +72,60 @@ const SidebarLinks = () => {
     {
       label: "Benchmark Tables",
       link: "benchmark-tables",
-      icon: <img width={20} height={20} src="/benchmark.png" />,
+      icon: <img width={20} height={20} src="/benchmark-2.png" />,
     },
     {
       label: "Favorites",
       link: "favourites",
-      icon: <FaStar />,
+      icon: <img width={20} height={20} src="/favourite.png" />,
     },
     {
       label: "Calender",
       link: "calender",
-      icon: <FaCalendar />,
+      icon: <img width={20} height={20} src="/calendar.png" />,
     },
     {
       label: "Quality Team",
       link: "team",
-      icon: <RiTeamFill />,
+      icon: <img width={20} height={20} src="/department-members-2.png" />,
     },
     {
       label: "Field Teams",
       link: "fieldTeams",
-      icon: <FaUsers />,
+      icon: <img width={20} height={20} src="/all-groups-members-2.png" />,
+    },
+    {
+      label: "Field Teams Portal",
+      link: "fieldTeams-portal",
+      // icon: <FaGripHorizontal />,
+      icon: <img width={20} height={20} src="/portal-2.svg" />,
     },
     {
       label: "Perf Assessment",
       link: "quiz",
-      icon: <MdAssessment />,
+      icon: <img width={20} height={20} src="/perf-assessment.png" />,
     },
     {
       label: "Assessment Dashboard",
       link: "assessment-dashboard",
-      icon: <MdAssessment />,
+      icon: <img width={20} height={20} src="/statistics.png" />,
     },
     {
       label: "On-the-Job Assessment",
       link: "on-the-job-assessment",
-      icon: <MdAssessment />,
+      icon: <img width={20} height={20} src="/on-the-job-assessment.png" />,
     },
     ...(user?.role === "Admin"
       ? [
         {
           label: "Archived",
           link: "archived",
-          icon: <BiArchive />,
+          icon: <img width={20} height={20} src="/archived.png" />,
         },
         {
           label: "Trash",
           link: "trashed",
-          icon: <FaTrashAlt />,
+          icon: <img width={20} height={20} src="/trash.png" />,
         },
       ]
       : []),
