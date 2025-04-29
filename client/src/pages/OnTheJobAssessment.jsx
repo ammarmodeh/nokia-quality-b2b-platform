@@ -44,7 +44,6 @@ const OnTheJobAssessment = () => {
   const user = useSelector((state) => state?.auth?.user);
   const [fieldTeams, setFieldTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
-  // console.log({ selectedTeam });
   const [assessments, setAssessments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState(null);
@@ -52,7 +51,6 @@ const OnTheJobAssessment = () => {
   const [selectedAssessment, setSelectedAssessment] = useState(null);
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)');
-  // New state to store assessment status and scores for each team
   const [teamAssessments, setTeamAssessments] = useState({});
   const [newAssessment, setNewAssessment] = useState({
     conductedBy: "",
@@ -210,18 +208,16 @@ const OnTheJobAssessment = () => {
     ],
     feedback: "",
     categoryWeights: {
-      "Equipment": 0.10,  // 10%
-      "Splicing": 0.25,   // 25%
-      "Configuration": 0.20, // 20%
-      "Validation": 0.10, // 10%
-      "Customer": 0.20,   // 20%
-      "Service": 0.25     // 25%
+      "Equipment": 0.10,
+      "Splicing": 0.25,
+      "Configuration": 0.20,
+      "Validation": 0.10,
+      "Customer": 0.20,
+      "Service": 0.25
     }
   });
-  // For Field Teams table
   const [teamsPage, setTeamsPage] = useState(0);
   const [teamsRowsPerPage, setTeamsRowsPerPage] = useState(10);
-  // For Assessments table
   const [assessmentsPage, setAssessmentsPage] = useState(0);
   const [assessmentsRowsPerPage, setAssessmentsRowsPerPage] = useState(10);
 
@@ -234,7 +230,6 @@ const OnTheJobAssessment = () => {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
-        // console.log("Fetched field teams:", response.data);
         setFieldTeams(response.data);
       } catch (error) {
         console.error("Error fetching field teams:", error);
@@ -251,7 +246,6 @@ const OnTheJobAssessment = () => {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
-        // console.log("Fetched stats:", response.data);
         setStats(response.data);
       } catch (error) {
         console.error("Error fetching stats:", error);
@@ -275,23 +269,26 @@ const OnTheJobAssessment = () => {
     if (fieldTeams.length > 0) {
       const fetchAllAssessments = async () => {
         try {
-          // console.log("Fetching assessments for all teams...");
           setLoading(true);
           const assessmentsData = {};
 
           const promises = fieldTeams.map(async (team) => {
-            const response = await api.get(
-              `/on-the-job-assessments/field-team/${team._id}`, {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-              },
-            });
-            assessmentsData[team._id] = response.data;
+            try {
+              const response = await api.get(
+                `/on-the-job-assessments/field-team/${team._id}`, {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                },
+              });
+              assessmentsData[team._id] = response.data;
+            } catch (error) {
+              console.error(`Error fetching assessments for team ${team._id}:`, error);
+              setError("Failed to fetch assessments");
+            }
           });
 
           await Promise.all(promises);
           setTeamAssessments(assessmentsData);
-          // console.log("Assessments fetched successfully.");
         } catch (error) {
           console.error("Error fetching assessments:", error);
           setError("Failed to fetch assessments");
@@ -303,7 +300,6 @@ const OnTheJobAssessment = () => {
     }
   }, [fieldTeams]);
 
-  // Memoize the CheckpointsByCategory component
   const CheckpointsByCategory = useCallback(({ checkPoints, handleCheckPointChange, colors }) => {
     const categories = checkPoints.reduce((acc, checkpoint, index) => {
       const category = checkpoint.category;
@@ -436,7 +432,7 @@ const OnTheJobAssessment = () => {
     });
   }, []);
 
-  const handleSubmitAssessment = () => {
+  const handleSubmitAssessment = async () => {
     try {
       setLoading(true);
       const payload = {
@@ -446,7 +442,7 @@ const OnTheJobAssessment = () => {
         feedback: newAssessment.feedback,
       };
 
-      api.post(
+      await api.post(
         "/on-the-job-assessments",
         payload,
         {
@@ -457,7 +453,7 @@ const OnTheJobAssessment = () => {
       );
 
       // Refresh assessments list
-      const assessmentsResponse = api.get(
+      const assessmentsResponse = await api.get(
         `/on-the-job-assessments/field-team/${selectedTeam._id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -588,13 +584,13 @@ const OnTheJobAssessment = () => {
     scales: {
       x: {
         min: 0,
-        max: 100,  // Set maximum x-axis value to 100
+        max: 100,
         ticks: {
           color: colors.textPrimary,
           stepSize: 10,
           precision: 0,
           callback: function (value) {
-            return value + '%';  // Add percentage sign to x-axis labels
+            return value + '%';
           }
         },
         grid: {
@@ -652,9 +648,7 @@ const OnTheJobAssessment = () => {
       backgroundColor: colors.background,
       minHeight: '100vh',
       color: colors.textPrimary,
-      // p: isMobile ? 2 : 3
     }}>
-      {/* Back Button */}
       <Button
         startIcon={<ArrowBack />}
         onClick={() => navigate('/')}
@@ -669,7 +663,6 @@ const OnTheJobAssessment = () => {
         Back to Dashboard
       </Button>
 
-      {/* Header */}
       <Typography variant="h4" gutterBottom sx={{
         color: colors.primary,
         fontWeight: 'bold',
@@ -678,7 +671,6 @@ const OnTheJobAssessment = () => {
         On-The-Job Assessments
       </Typography>
 
-      {/* Stats Cards */}
       {stats && (
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {[
@@ -697,11 +689,6 @@ const OnTheJobAssessment = () => {
               value: stats.fieldTeamStats[0]?.teamName || "N/A",
               subtitle: `${stats.fieldTeamStats[0]?.averageScore || 0}%`
             },
-            // {
-            //   title: "Completed",
-            //   value: stats.overallStats.completedAssessments || 0,
-            //   unit: ""
-            // }
           ].map((stat, index) => (
             <Grid item xs={12} sm={6} md={4} key={index}>
               <Card sx={{
@@ -742,7 +729,6 @@ const OnTheJobAssessment = () => {
         </Grid>
       )}
 
-      {/* Search Section */}
       <Paper sx={{
         p: 3,
         mb: 3,
@@ -868,7 +854,6 @@ const OnTheJobAssessment = () => {
         </Box>
       </Paper>
 
-      {/* Error Alert */}
       {error && (
         <Alert severity="error" sx={{
           mb: 3,
@@ -881,8 +866,7 @@ const OnTheJobAssessment = () => {
         </Alert>
       )}
 
-      {/* Loading Indicator */}
-      {/* {loading && (
+      {loading && (
         <Box sx={{
           display: 'flex',
           justifyContent: 'center',
@@ -893,137 +877,132 @@ const OnTheJobAssessment = () => {
         }}>
           <CircularProgress sx={{ color: colors.primary }} />
         </Box>
-      )} */}
+      )}
 
-      {/* Main Content */}
-      {!selectedTeam && (
-        user.title === 'Field Technical Support - QoS' && fieldTeams.length > 0 && (
-          <>
-            {/* Field Teams Table */}
-            <Typography variant="h5" gutterBottom sx={{
-              color: colors.primary,
-              fontWeight: 'bold',
-              mb: 2
+      {!selectedTeam && user.title === 'Field Technical Support - QoS' && fieldTeams.length > 0 && (
+        <>
+          <Typography variant="h5" gutterBottom sx={{
+            color: colors.primary,
+            fontWeight: 'bold',
+            mb: 2
+          }}>
+            Field Teams Assessment Status
+          </Typography>
+
+          {loading ? (
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              p: 4,
+              backgroundColor: colors.surface,
+              borderRadius: '8px',
+              border: `1px solid ${colors.border}`
             }}>
-              Field Teams Assessment Status
-            </Typography>
-
-            {loading ? (
-              <Box sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                p: 4,
+              <CircularProgress sx={{ color: colors.primary }} />
+            </Box>
+          ) : (
+            <>
+              <TableContainer component={Paper} sx={{
                 backgroundColor: colors.surface,
-                borderRadius: '8px',
-                border: `1px solid ${colors.border}`
+                border: `1px solid ${colors.border}`,
+                borderTopLeftRadius: '8px',
+                borderTopRightRadius: '8px',
+                borderBottomLeftRadius: '0px',
+                borderBottomRightRadius: '0px',
+                "& .MuiTableHead-root": {
+                  backgroundColor: colors.surfaceElevated,
+                  "& .MuiTableCell-root": {
+                    color: colors.textSecondary,
+                    fontWeight: "bold",
+                    borderBottom: `1px solid ${colors.border}`,
+                  }
+                },
+                "& .MuiTableBody-root": {
+                  "& .MuiTableCell-root": {
+                    borderBottom: `1px solid ${colors.border}`,
+                    color: colors.textPrimary,
+                  },
+                  "& .MuiTableRow-root": {
+                    backgroundColor: colors.surface,
+                    "&:hover": {
+                      backgroundColor: colors.surfaceElevated,
+                    },
+                  }
+                },
               }}>
-                <CircularProgress sx={{ color: colors.primary }} />
-              </Box>
-            ) : (
-              <>
-                <TableContainer component={Paper} sx={{
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Team Name</TableCell>
+                      <TableCell>Company</TableCell>
+                      <TableCell>Assessment Status</TableCell>
+                      <TableCell>Score</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {fieldTeams
+                      .slice(teamsPage * teamsRowsPerPage, teamsPage * teamsRowsPerPage + teamsRowsPerPage)
+                      .map((team) => (
+                        <TableRow key={team._id} hover>
+                          <TableCell>{team.teamName}</TableCell>
+                          <TableCell>{team.teamCompany}</TableCell>
+                          <TableCell>
+                            {teamAssessments[team._id] && teamAssessments[team._id].length > 0 ? (
+                              <Chip label="Assessed" color="success" variant="outlined" />
+                            ) : (
+                              <Chip label="Not Assessed" color="error" variant="outlined" />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {teamAssessments[team._id] && teamAssessments[team._id].length > 0 ? (
+                              <Chip
+                                label={`${Math.round(teamAssessments[team._id].reduce((sum, assessment) => sum + assessment.overallScore, 0) / teamAssessments[team._id].length)}%`}
+                                color={getPerformanceColor(Math.round(teamAssessments[team._id].reduce((sum, assessment) => sum + assessment.overallScore, 0) / teamAssessments[team._id].length))}
+                                variant="outlined"
+                              />
+                            ) : (
+                              "N/A"
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <TablePagination
+                rowsPerPageOptions={[10, 25, 50]}
+                component="div"
+                count={fieldTeams.length}
+                rowsPerPage={teamsRowsPerPage}
+                page={teamsPage}
+                onPageChange={(e, newPage) => setTeamsPage(newPage)}
+                onRowsPerPageChange={(e) => {
+                  setTeamsRowsPerPage(parseInt(e.target.value, 10));
+                  setTeamsPage(0);
+                }}
+                sx={{
+                  color: colors.textPrimary,
+                  '& .MuiTablePagination-selectIcon': {
+                    color: colors.textPrimary
+                  },
+                  '& .MuiSvgIcon-root': {
+                    color: colors.textPrimary
+                  },
                   backgroundColor: colors.surface,
                   border: `1px solid ${colors.border}`,
-                  borderTopLeftRadius: '8px',
-                  borderTopRightRadius: '8px',
-                  borderBottomLeftRadius: '0px',
-                  borderBottomRightRadius: '0px',
-                  "& .MuiTableHead-root": {
-                    backgroundColor: colors.surfaceElevated,
-                    "& .MuiTableCell-root": {
-                      color: colors.textSecondary,
-                      fontWeight: "bold",
-                      borderBottom: `1px solid ${colors.border}`,
-                    }
-                  },
-                  "& .MuiTableBody-root": {
-                    "& .MuiTableCell-root": {
-                      borderBottom: `1px solid ${colors.border}`,
-                      color: colors.textPrimary,
-                    },
-                    "& .MuiTableRow-root": {
-                      backgroundColor: colors.surface,
-                      "&:hover": {
-                        backgroundColor: colors.surfaceElevated,
-                      },
-                    }
-                  },
-                }}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Team Name</TableCell>
-                        <TableCell>Company</TableCell>
-                        <TableCell>Assessment Status</TableCell>
-                        <TableCell>Score</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {fieldTeams
-                        .slice(teamsPage * teamsRowsPerPage, teamsPage * teamsRowsPerPage + teamsRowsPerPage)
-                        .map((team) => (
-                          <TableRow key={team._id} hover>
-                            <TableCell>{team.teamName}</TableCell>
-                            <TableCell>{team.teamCompany}</TableCell>
-                            <TableCell>
-                              {teamAssessments[team._id] && teamAssessments[team._id].length > 0 ? (
-                                <Chip label="Assessed" color="success" variant="outlined" />
-                              ) : (
-                                <Chip label="Not Assessed" color="error" variant="outlined" />
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {teamAssessments[team._id] && teamAssessments[team._id].length > 0 ? (
-                                <Chip
-                                  label={`${Math.round(teamAssessments[team._id].reduce((sum, assessment) => sum + assessment.overallScore, 0) / teamAssessments[team._id].length)}%`}
-                                  color={getPerformanceColor(Math.round(teamAssessments[team._id].reduce((sum, assessment) => sum + assessment.overallScore, 0) / teamAssessments[team._id].length))}
-                                  variant="outlined"
-                                />
-                              ) : (
-                                "N/A"
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-
-                <TablePagination
-                  rowsPerPageOptions={[10, 25, 50]}
-                  component="div"
-                  count={fieldTeams.length}
-                  rowsPerPage={teamsRowsPerPage}
-                  page={teamsPage}
-                  onPageChange={(e, newPage) => setTeamsPage(newPage)}
-                  onRowsPerPageChange={(e) => {
-                    setTeamsRowsPerPage(parseInt(e.target.value, 10));
-                    setTeamsPage(0);
-                  }}
-                  sx={{
-                    color: colors.textPrimary,
-                    '& .MuiTablePagination-selectIcon': {
-                      color: colors.textPrimary
-                    },
-                    '& .MuiSvgIcon-root': {
-                      color: colors.textPrimary
-                    },
-                    backgroundColor: colors.surface,
-                    border: `1px solid ${colors.border}`,
-                    borderTop: 'none',
-                    borderBottomLeftRadius: '8px',
-                    borderBottomRightRadius: '8px'
-                  }}
-                />
-              </>
-            )}
-          </>
-        )
+                  borderTop: 'none',
+                  borderBottomLeftRadius: '8px',
+                  borderBottomRightRadius: '8px'
+                }}
+              />
+            </>
+          )}
+        </>
       )}
 
       {selectedTeam && !selectedAssessment && (
         <>
-          {/* New Assessment Section */}
           <Paper sx={{
             p: 3,
             mb: 4,
@@ -1114,7 +1093,6 @@ const OnTheJobAssessment = () => {
             </Button>
           </Paper>
 
-          {/* Previous Assessments Table */}
           <Typography variant="h5" gutterBottom sx={{
             color: colors.primary,
             fontWeight: 'bold',
@@ -1253,7 +1231,6 @@ const OnTheJobAssessment = () => {
         </>
       )}
 
-      {/* Assessment Detail View */}
       {selectedAssessment && selectedTeam && (
         <Box sx={{ mt: 3 }}>
           <Button
@@ -1270,7 +1247,6 @@ const OnTheJobAssessment = () => {
             Back to Assessments List
           </Button>
 
-          {/* Summary Card */}
           <Card sx={{
             mb: 3,
             backgroundColor: colors.surface,
@@ -1330,14 +1306,12 @@ const OnTheJobAssessment = () => {
             </CardContent>
           </Card>
 
-          {/* Performance Analysis & Charts Row */}
           <Box sx={{
             display: 'flex',
             gap: 3,
             flexDirection: 'column',
             mb: 3
           }}>
-            {/* Performance Overview*/}
             <Paper sx={{
               p: 2,
               flex: 1,
@@ -1384,7 +1358,6 @@ const OnTheJobAssessment = () => {
               )}
             </Paper>
 
-            {/* Performance Analysis */}
             <Paper sx={{
               p: 2,
               flex: 1,
@@ -1410,7 +1383,6 @@ const OnTheJobAssessment = () => {
                     const analysis = analyzeCategoryPerformance(selectedAssessment.checkPoints);
                     return (
                       <Box sx={{ mt: 2 }}>
-                        {/* Strengths */}
                         <Box sx={{ mb: 3 }}>
                           <Typography variant="subtitle1" sx={{
                             display: 'flex',
@@ -1452,7 +1424,6 @@ const OnTheJobAssessment = () => {
                           )}
                         </Box>
 
-                        {/* Areas for Improvement */}
                         <Box>
                           <Typography variant="subtitle1" sx={{
                             display: 'flex',
@@ -1494,7 +1465,6 @@ const OnTheJobAssessment = () => {
                           )}
                         </Box>
 
-                        {/* Recommendations */}
                         <Box sx={{ mt: 3, pt: 2, borderTop: `1px dashed ${colors.border}` }}>
                           <Typography variant="subtitle1" sx={{
                             color: colors.primary,
@@ -1505,7 +1475,6 @@ const OnTheJobAssessment = () => {
                           </Typography>
 
                           {(() => {
-                            // Filter for critical areas (score <= 50%)
                             const criticalAreas = analysis.improvements.filter(item => item.score <= 60);
 
                             if (criticalAreas.length > 0) {
@@ -1516,7 +1485,6 @@ const OnTheJobAssessment = () => {
                                 </Typography>
                               );
                             } else {
-                              // If no areas are at or below 50%
                               return (
                                 <Typography variant="body2" sx={{ color: colors.textSecondary }}>
                                   No critical areas identified. Continue working on {analysis.improvements.slice(0, 2).map(i => i.category).join(' and ')}
@@ -1534,7 +1502,6 @@ const OnTheJobAssessment = () => {
             </Paper>
           </Box>
 
-          {/* Check Points Details */}
           <Paper sx={{
             p: 3,
             backgroundColor: colors.surface,
@@ -1595,7 +1562,6 @@ const OnTheJobAssessment = () => {
             ))}
           </Paper>
 
-          {/* Feedback Section */}
           <Paper sx={{
             p: 3,
             backgroundColor: colors.surface,
@@ -1614,7 +1580,6 @@ const OnTheJobAssessment = () => {
               multiline
               rows={4}
               value={selectedAssessment.feedback}
-              // disabled
               InputLabelProps={{
                 style: { color: colors.textSecondary }
               }}
