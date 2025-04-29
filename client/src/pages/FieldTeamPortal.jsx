@@ -30,7 +30,6 @@ import {
   BarChart,
 } from '@mui/icons-material';
 import api from "../api/api";
-import { useSelector } from "react-redux";
 import {
   LineChart,
   Line,
@@ -45,7 +44,7 @@ import {
 } from 'recharts';
 
 const FieldTeamPortal = () => {
-  const user = useSelector((state) => state?.auth?.user);
+  // const user = useSelector((state) => state?.auth?.user);
   const [fieldTeams, setFieldTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -256,7 +255,7 @@ const FieldTeamPortal = () => {
     return distribution;
   };
 
-  const renderLineChart = (data, dataKey, title) => (
+  const renderLineChart = (data, dataKey) => (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart data={data} style={{ backgroundColor: colors.surfaceElevated, borderRadius: '8px', padding: '10px' }}>
         <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} />
@@ -272,7 +271,7 @@ const FieldTeamPortal = () => {
     </ResponsiveContainer>
   );
 
-  const renderBarChart = (data, title) => (
+  const renderBarChart = (data) => (
     <ResponsiveContainer width="100%" height={300}>
       <RechartsBarChart data={data} style={{ backgroundColor: colors.surfaceElevated, borderRadius: '8px', padding: '10px' }}>
         <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} />
