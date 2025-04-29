@@ -989,7 +989,8 @@ const OnTheJobAssessment = () => {
                   border: `1px solid ${colors.border}`,
                   borderTop: 'none',
                   borderBottomLeftRadius: '8px',
-                  borderBottomRightRadius: '8px'
+                  borderBottomRightRadius: '8px',
+                  mb: 6
                 }}
               />
             </>
@@ -1208,6 +1209,7 @@ const OnTheJobAssessment = () => {
                   borderTop: 'none',
                   borderBottomLeftRadius: '8px',
                   borderBottomRightRadius: '8px',
+                  mb: 6
                 }}
               />
             </>
