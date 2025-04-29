@@ -221,10 +221,47 @@ const OnTheJobAssessment = () => {
   // For Field Teams table
   const [teamsPage, setTeamsPage] = useState(0);
   const [teamsRowsPerPage, setTeamsRowsPerPage] = useState(10);
-
   // For Assessments table
   const [assessmentsPage, setAssessmentsPage] = useState(0);
   const [assessmentsRowsPerPage, setAssessmentsRowsPerPage] = useState(10);
+
+  useEffect(() => {
+    const fetchFieldTeams = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/field-teams/get-field-teams", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        });
+        // console.log("Fetched field teams:", response.data);
+        setFieldTeams(response.data);
+      } catch (error) {
+        console.error("Error fetching field teams:", error);
+        setError("Failed to fetch field teams");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchStats = async () => {
+      try {
+        const response = await api.get("/on-the-job-assessments/stats", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        });
+        // console.log("Fetched stats:", response.data);
+        setStats(response.data);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+        setError("Failed to fetch assessment statistics");
+      }
+    };
+
+    fetchFieldTeams();
+    fetchStats();
+  }, []);
 
   useEffect(() => {
     if (selectedTeam && teamAssessments[selectedTeam._id]) {
@@ -233,6 +270,38 @@ const OnTheJobAssessment = () => {
       setAssessments([]);
     }
   }, [selectedTeam, teamAssessments]);
+
+  useEffect(() => {
+    if (fieldTeams.length > 0) {
+      const fetchAllAssessments = async () => {
+        try {
+          // console.log("Fetching assessments for all teams...");
+          setLoading(true);
+          const assessmentsData = {};
+
+          const promises = fieldTeams.map(async (team) => {
+            const response = await api.get(
+              `/on-the-job-assessments/field-team/${team._id}`, {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              },
+            });
+            assessmentsData[team._id] = response.data;
+          });
+
+          await Promise.all(promises);
+          setTeamAssessments(assessmentsData);
+          // console.log("Assessments fetched successfully.");
+        } catch (error) {
+          console.error("Error fetching assessments:", error);
+          setError("Failed to fetch assessments");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchAllAssessments();
+    }
+  }, [fieldTeams]);
 
   // Memoize the CheckpointsByCategory component
   const CheckpointsByCategory = useCallback(({ checkPoints, handleCheckPointChange, colors }) => {
@@ -359,78 +428,6 @@ const OnTheJobAssessment = () => {
     chartIncorrect: '#f44336',
   }), []);
 
-  useEffect(() => {
-    const fetchFieldTeams = async () => {
-      try {
-        // console.log("Fetching field teams...");
-        setLoading(true);
-        const response = await api.get("/field-teams/get-field-teams", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
-        setFieldTeams(response.data);
-        // console.log("Field teams fetched successfully.");
-      } catch (error) {
-        console.error("Error fetching field teams:", error);
-        setError("Failed to fetch field teams");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchStats = async () => {
-      try {
-        // console.log("Fetching stats...");
-        const response = await api.get("/on-the-job-assessments/stats", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
-        setStats(response.data);
-        // console.log("Stats fetched successfully.");
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-        setError("Failed to fetch assessment statistics");
-      }
-    };
-
-    fetchFieldTeams();
-    fetchStats();
-  }, []);
-
-  useEffect(() => {
-    if (fieldTeams.length > 0) {
-      const fetchAllAssessments = async () => {
-        try {
-          // console.log("Fetching assessments for all teams...");
-          setLoading(true);
-          const assessmentsData = {};
-
-          const promises = fieldTeams.map(async (team) => {
-            const response = await api.get(
-              `/on-the-job-assessments/field-team/${team._id}`, {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-              },
-            });
-            assessmentsData[team._id] = response.data;
-          });
-
-          await Promise.all(promises);
-          setTeamAssessments(assessmentsData);
-          // console.log("Assessments fetched successfully.");
-        } catch (error) {
-          console.error("Error fetching assessments:", error);
-          setError("Failed to fetch assessments");
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchAllAssessments();
-    }
-  }, [fieldTeams]);
-
   const handleCheckPointChange = useCallback((index, field, value) => {
     setNewAssessment(prevState => {
       const updatedCheckPoints = [...prevState.checkPoints];
@@ -439,7 +436,7 @@ const OnTheJobAssessment = () => {
     });
   }, []);
 
-  const handleSubmitAssessment = async () => {
+  const handleSubmitAssessment = () => {
     try {
       setLoading(true);
       const payload = {
@@ -449,7 +446,7 @@ const OnTheJobAssessment = () => {
         feedback: newAssessment.feedback,
       };
 
-      await api.post(
+      api.post(
         "/on-the-job-assessments",
         payload,
         {
@@ -460,7 +457,7 @@ const OnTheJobAssessment = () => {
       );
 
       // Refresh assessments list
-      const assessmentsResponse = await api.get(
+      const assessmentsResponse = api.get(
         `/on-the-job-assessments/field-team/${selectedTeam._id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -900,7 +897,7 @@ const OnTheJobAssessment = () => {
 
       {/* Main Content */}
       {!selectedTeam && (
-        user.title === 'Field Technical Support - QoS' && (
+        user.title === 'Field Technical Support - QoS' && fieldTeams.length > 0 && (
           <>
             {/* Field Teams Table */}
             <Typography variant="h5" gutterBottom sx={{
