@@ -375,7 +375,8 @@ const FieldTeamPortal = () => {
       backgroundColor: colors.background,
       minHeight: '100vh',
       color: colors.textPrimary,
-      p: isMobile ? 2 : 3
+      p: isMobile ? 2 : 3,
+      px: isMobile ? 0 : 3
     }}>
       {/* Back Button */}
       <Button
@@ -451,7 +452,7 @@ const FieldTeamPortal = () => {
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
-            sx={{ mb: 3, ...darkThemeStyles.tabs }}
+            sx={{ mb: 3, ...darkThemeStyles.tabs, }}
           >
             <Tab
               label="Theoretical Assessments"
