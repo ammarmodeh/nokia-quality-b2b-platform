@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Menu, MenuItem, Button, Typography, Box, Badge, Stack, Divider, Chip, Avatar } from "@mui/material";
+import { Menu, MenuItem, Button, Typography, Box, Badge, Stack, Divider, Chip } from "@mui/material";
 import { BiSolidMessageRounded } from "react-icons/bi";
 import { IoMdDocument, IoMdNotificationsOutline } from "react-icons/io";
 import { IoMdClose } from "react-icons/io";
@@ -26,10 +26,10 @@ const NotificationPanel = () => {
   const open = Boolean(anchorEl);
   const navigate = useNavigate();
 
-  const getInitials = (name = '') => {
-    const names = name.split(' ');
-    return names.map(n => n[0]).join('').toUpperCase();
-  };
+  // const getInitials = (name = '') => {
+  //   const names = name.split(' ');
+  //   return names.map(n => n[0]).join('').toUpperCase();
+  // };
 
   const markPolicyAsRead = async (policyId) => {
     try {
@@ -37,6 +37,7 @@ const NotificationPanel = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
       return response.data.success;
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       return false;
     }
@@ -55,6 +56,7 @@ const NotificationPanel = () => {
         }
       );
       return response.data.success;
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       return false;
     }
@@ -68,6 +70,7 @@ const NotificationPanel = () => {
         { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
       );
       return response.status === 200;
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       return false;
     }
@@ -90,6 +93,7 @@ const NotificationPanel = () => {
       await api.patch(`/suggestions/${suggestionId}/mark-read`, null, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       // console.error("Error marking suggestion as read:", error);
     }
@@ -102,6 +106,7 @@ const NotificationPanel = () => {
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       // console.error("Error marking response as read:", error);
     }
@@ -305,14 +310,15 @@ const NotificationPanel = () => {
 
         setUnreadCount(allNotifications.filter(n => !n.isRead).length);
         setNotifications(allNotifications);
+        // eslint-disable-next-line no-unused-vars
       } catch (error) {
         // console.error("Error fetching notifications:", error);
       }
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    // const interval = setInterval(fetchNotifications, 30000);
+    // return () => clearInterval(interval);
   }, [user]);
 
   const memoizedNotifications = useMemo(() => notifications, [notifications]);
@@ -378,6 +384,7 @@ const NotificationPanel = () => {
           setUnreadCount(prev => Math.max(prev - 1, 0));
         }
       }
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       // console.error("Error handling notification:", error);
     }
