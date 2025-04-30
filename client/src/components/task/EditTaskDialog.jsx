@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogTitle, DialogContent, Button, TextField, Select, MenuItem, Stack, FormControl, InputLabel, FormHelperText } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, Button, TextField, Select, MenuItem, Stack, FormControl, InputLabel, FormHelperText, Autocomplete } from "@mui/material";
 import { useForm } from "react-hook-form";
 import SelectList from "../SelectList";
 import { useSelector } from "react-redux";
@@ -7,7 +7,7 @@ import UserList from "./UserList";
 import api from "../../api/api";
 
 // const LISTS = ["Todo", "In Progress", "Closed"];
-const PRIORITY = ["High", "Medium", "Normal", "Low"];
+const PRIORITY = ["High", "Medium", "Low"];
 const DEPARTMENT = ["Quality", "Production"];
 const CATEGORIES = [
   "Orange HC detractor", "Orange Closure", "Orange Joint", "Nokia MS detractor", "Nokia FAT", "Nokia Closure", "TRC", "TCRM", "Others"
@@ -384,28 +384,29 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
           </Stack>
 
           <Stack direction="row" spacing={2} className="my-6">
-
-            <FormControl fullWidth variant="outlined" error={!!errors.status}>
-              <InputLabel>Team Name</InputLabel>
-              <Select
-                value={teamInfo.teamName}
-                onChange={(e) => {
-                  const selectedTeam = fieldTeams.find(team => team.teamName === e.target.value);
-                  setTeamInfo({
-                    teamName: e.target.value,
-                    teamId: selectedTeam?._id || ''
-                  });
-                }}
-                label="Team Name"
-              >
-                {fieldTeams.map((team, index) => (
-                  <MenuItem key={index} value={team.teamName}>
-                    {team.teamName}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-            </FormControl>
+            <Autocomplete
+              options={fieldTeams}
+              getOptionLabel={(option) => option.teamName}
+              value={fieldTeams.find(team => team.teamName === teamInfo.teamName) || null}
+              onChange={(event, newValue) => {
+                setTeamInfo({
+                  teamName: newValue?.teamName || '',
+                  teamId: newValue?._id || ''
+                });
+              }}
+              renderInput={(params) => (
+                <FormControl fullWidth variant="outlined" error={!!errors.status}>
+                  <TextField
+                    {...params}
+                    label="Team Name"
+                    variant="outlined"
+                    error={!!errors.status}
+                    helperText={errors.status ? errors.status.message : ''}
+                  />
+                </FormControl>
+              )}
+              fullWidth
+            />
 
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Team Company</InputLabel>
@@ -497,7 +498,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             />
           </div>
           <div className="flex gap-4 mt-6">
-            <SelectList label="Priority Level" lists={PRIORITY} selected={priority} setSelected={setPriority} />
+            <SelectList label="Impact Level" lists={PRIORITY} selected={priority} setSelected={setPriority} />
             <SelectList label="Task Category" lists={CATEGORIES} selected={category} setSelected={setCategory} />
           </div>
           <div className="bg-gray-50 py-6 sm:flex sm:flex-row-reverse gap-4">

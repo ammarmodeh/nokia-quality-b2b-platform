@@ -14,6 +14,7 @@ import {
   FormHelperText,
   Stack,
   Box,
+  Autocomplete,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import UserList from './UserList';
@@ -23,7 +24,7 @@ import { useEffect, useState } from 'react';
 import api from '../../api/api';
 
 // const LISTS = ['Todo', 'In Progress', 'Closed'];
-const PRIORIRY = ['High', 'Medium', 'Normal', 'Low'];
+const PRIORIRY = ['High', 'Medium', 'Low'];
 const CATEGORIES = ['Orange HC detractor', 'Orange Closure', 'Orange Joint', 'Nokia MS detractor', 'Nokia FAT', 'Nokia Closure', 'TRC', 'TCRM', 'Others'];
 const TEAMCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team', 'غير معروف']
 const EVALUATIONSCORE = [1, 2, 3, 4, 5, 6, 7, 8]
@@ -421,53 +422,62 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
 
         <Divider sx={{ my: 4 }} />
 
-        <Stack direction={"row"} spacing={2}>
-
-          <FormControl fullWidth variant="outlined" error={!!errors.status}>
-            <InputLabel>Team Name</InputLabel>
-            <Select
-              value={teamInfo.teamName}
-              onChange={(e) => {
-                const selectedTeam = fieldTeams.find(team => team.teamName === e.target.value);
+        <Stack direction="row" spacing={2} alignItems="flex-start">
+          {/* Autocomplete - Takes remaining width (flex-grow) */}
+          <Box sx={{ flexGrow: 1 }}>
+            <Autocomplete
+              options={fieldTeams}
+              getOptionLabel={(option) => option.teamName}
+              value={fieldTeams.find(team => team.teamName === teamInfo.teamName) || null}
+              onChange={(event, newValue) => {
                 setTeamInfo({
-                  teamName: e.target.value,
-                  teamId: selectedTeam?._id || ''
+                  teamName: newValue?.teamName || '',
+                  teamId: newValue?._id || ''
                 });
               }}
-              label="Team Name"
-            >
-              {fieldTeams.map((team, index) => (
-                <MenuItem key={index} value={team.teamName}>
-                  {team.teamName}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-          </FormControl>
+              renderInput={(params) => (
+                <FormControl fullWidth variant="outlined" error={!!errors.status}>
+                  <TextField
+                    {...params}
+                    label="Team Name"
+                    variant="outlined"
+                    error={!!errors.status}
+                    helperText={errors.status ? errors.status.message : ''}
+                  />
+                </FormControl>
+              )}
+            />
+          </Box>
 
-          <FormControl fullWidth variant="outlined" error={!!errors.status}>
-            <InputLabel>Team Company</InputLabel>
-            <Select value={teamCompany} onChange={(e) => setTeamCompany(e.target.value)} label="Team Company">
-              {TEAMCOMPANY.map((list) => (
-                <MenuItem key={list} value={list}>
-                  {list}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-          </FormControl>
+          {/* Team Company - Fixed width */}
+          <Box sx={{ width: 200 }}>
+            <FormControl fullWidth variant="outlined" error={!!errors.status}>
+              <InputLabel>Team Company</InputLabel>
+              <Select value={teamCompany} onChange={(e) => setTeamCompany(e.target.value)} label="Team Company">
+                {TEAMCOMPANY.map((list) => (
+                  <MenuItem key={list} value={list}>
+                    {list}
+                  </MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
+            </FormControl>
+          </Box>
 
-          <FormControl fullWidth variant="outlined" error={!!errors.status}>
-            <InputLabel>Validation Status</InputLabel>
-            <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
-              {VALIDATIONSTATUS.map((list) => (
-                <MenuItem key={list} value={list}>
-                  {list}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-          </FormControl>
+          {/* Validation Status - Fixed width */}
+          <Box sx={{ width: 200 }}>
+            <FormControl fullWidth variant="outlined" error={!!errors.status}>
+              <InputLabel>Validation Status</InputLabel>
+              <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
+                {VALIDATIONSTATUS.map((list) => (
+                  <MenuItem key={list} value={list}>
+                    {list}
+                  </MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
+            </FormControl>
+          </Box>
         </Stack>
 
         <Stack direction={"row"} spacing={2} sx={{ marginTop: '20px' }}>
@@ -546,7 +556,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             <Select
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
-              label="Priority Level"
+              label="Impact Level"
             >
               {PRIORIRY.map((level) => (
                 <MenuItem key={level} value={level}>

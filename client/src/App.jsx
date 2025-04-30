@@ -31,7 +31,7 @@ const FieldTeamLogin = lazy(() => import("./pages/FieldTeamLogin"));
 const QuizResults = lazy(() => import("./pages/QuizResults"));
 const FieldTeamForm = lazy(() => import("./pages/FieldTeams"));
 const CustomerIssuesList = lazy(() => import("./components/CustomerIssuesList"));
-const AssessmentDashboard = lazy(() => import("./pages/AssessmentDashboard"));
+const PerfAssessmentDashboard = lazy(() => import("./pages/PerfAssessmentDashboard"));
 const OnTheJobAssessment = lazy(() => import("./pages/OnTheJobAssessment"));
 const FieldTeamPortal = lazy(() => import("./pages/FieldTeamPortal"));
 
@@ -137,7 +137,7 @@ const App = () => {
             <Route path="/team" element={<Users />} />
             <Route path="/fieldTeams" element={<FieldTeamForm />} />
             <Route path="/fieldTeams-portal" element={<FieldTeamPortal />} />
-            <Route path="/assessment-dashboard" element={<AssessmentDashboard />} />
+            <Route path="/assessment-dashboard" element={<PerfAssessmentDashboard />} />
             <Route path="/on-the-job-assessment" element={<OnTheJobAssessment />} />
             <Route path="/archived" element={<Archived />} />
             <Route path="/trashed" element={<Trash />} />

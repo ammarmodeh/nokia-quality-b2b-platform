@@ -101,19 +101,19 @@ const SidebarLinks = () => {
       icon: <img width={20} height={20} src="/portal-2.svg" />,
     },
     {
-      label: "Assessment Dashboard",
+      label: "Perf Assessment Dashboard",
       link: "assessment-dashboard",
       icon: <img width={20} height={20} src="/statistics.png" />,
-    },
-    {
-      label: "Perf Assessment",
-      link: "quiz",
-      icon: <img width={20} height={20} src="/perf-assessment.png" />,
     },
     {
       label: "On-the-Job Assessment",
       link: "on-the-job-assessment",
       icon: <img width={20} height={20} src="/on-the-job-assessment.png" />,
+    },
+    {
+      label: "Perf Assessment Link",
+      link: "quiz",
+      icon: <img width={20} height={20} src="/perf-assessment.png" />,
     },
     ...(user?.role === "Admin"
       ? [

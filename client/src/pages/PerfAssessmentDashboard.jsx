@@ -41,7 +41,7 @@ import { Bar } from 'react-chartjs-2';
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, ChartTooltip, Legend);
 
-const AssessmentDashboard = () => {
+const PerfAssessmentDashboard = () => {
   const [teamId, setTeamId] = useState('');
   const [allTeams, setAllTeams] = useState([]); // State for all evaluated teams
   const [results, setResults] = useState([]);
@@ -366,7 +366,7 @@ const AssessmentDashboard = () => {
         fontWeight: 'bold',
         mb: 4
       }}>
-        Assessment Dashboard
+        Perf Assessment Dashboard
       </Typography>
 
       {/* Search Section */}
@@ -388,12 +388,18 @@ const AssessmentDashboard = () => {
               if (newValue) {
                 setTeamId(newValue.teamId);
               } else {
+                // Clear both the team ID and results when selection is cleared
                 setTeamId('');
+                setResults([]);
+                setSelectedResult(null);
               }
             }}
             onInputChange={(event, newInputValue) => {
               if (!newInputValue) {
+                // Clear both the team ID and results when input is cleared
                 setTeamId('');
+                setResults([]);
+                setSelectedResult(null);
               }
             }}
             renderInput={(params) => (
@@ -1272,4 +1278,4 @@ const AssessmentDashboard = () => {
   );
 };
 
-export default AssessmentDashboard;
+export default PerfAssessmentDashboard;

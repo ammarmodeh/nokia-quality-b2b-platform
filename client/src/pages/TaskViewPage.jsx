@@ -446,11 +446,11 @@ const TaskViewPage = () => {
             border: '1px solid #444'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'cornflowerblue' }}>
-              Priority & Dates
+              Impact Level & Dates
             </Typography>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
-              <DetailRow label="Priority" value={
+              <DetailRow label="Impact level" value={
                 <Chip
                   size={isMobile ? "small" : "medium"}
                   label={task.priority}
