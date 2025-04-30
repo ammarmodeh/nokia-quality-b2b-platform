@@ -90,7 +90,7 @@ const SidebarLinks = () => {
       icon: <img width={20} height={20} src="/department-members-2.png" />,
     },
     {
-      label: "Field Teams",
+      label: "Manage Field Teams",
       link: "fieldTeams",
       icon: <img width={20} height={20} src="/all-groups-members-2.png" />,
     },
@@ -101,14 +101,14 @@ const SidebarLinks = () => {
       icon: <img width={20} height={20} src="/portal-2.svg" />,
     },
     {
-      label: "Perf Assessment",
-      link: "quiz",
-      icon: <img width={20} height={20} src="/perf-assessment.png" />,
-    },
-    {
       label: "Assessment Dashboard",
       link: "assessment-dashboard",
       icon: <img width={20} height={20} src="/statistics.png" />,
+    },
+    {
+      label: "Perf Assessment",
+      link: "quiz",
+      icon: <img width={20} height={20} src="/perf-assessment.png" />,
     },
     {
       label: "On-the-Job Assessment",

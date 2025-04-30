@@ -26,11 +26,6 @@ const NotificationPanel = () => {
   const open = Boolean(anchorEl);
   const navigate = useNavigate();
 
-  // const getInitials = (name = '') => {
-  //   const names = name.split(' ');
-  //   return names.map(n => n[0]).join('').toUpperCase();
-  // };
-
   const markPolicyAsRead = async (policyId) => {
     try {
       const response = await api.patch(`/policies/${policyId}/mark-read`, {}, {
@@ -95,7 +90,7 @@ const NotificationPanel = () => {
       });
       // eslint-disable-next-line no-unused-vars
     } catch (error) {
-      // console.error("Error marking suggestion as read:", error);
+      // Error handling
     }
   };
 
@@ -108,217 +103,215 @@ const NotificationPanel = () => {
       });
       // eslint-disable-next-line no-unused-vars
     } catch (error) {
-      // console.error("Error marking response as read:", error);
+      // Error handling
     }
   };
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const [tasksResponse, suggestionsResponse, adminSuggestionsResponse, policiesResponse] = await Promise.all([
-          api.get("/tasks/get-all-tasks", {
-            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-          }),
-          user.role === "Member" ? api.get("/suggestions/user", {
-            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-          }) : { data: { data: [] } },
-          user.role === "Admin" ? api.get("/suggestions", {
-            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-          }) : { data: { data: [] } },
-          api.get("/policies/notifications", {
-            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-          })
-        ]);
+  const fetchNotifications = async () => {
+    try {
+      const [tasksResponse, suggestionsResponse, adminSuggestionsResponse, policiesResponse] = await Promise.all([
+        api.get("/tasks/get-all-tasks", {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        }),
+        user.role === "Member" ? api.get("/suggestions/user", {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        }) : { data: { data: [] } },
+        user.role === "Admin" ? api.get("/suggestions", {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        }) : { data: { data: [] } },
+        api.get("/policies/notifications", {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        })
+      ]);
 
-        // Process tasks
-        let taskNotifications = [];
-        if (Array.isArray(tasksResponse.data)) {
-          const myAssignedTasks = tasksResponse.data.filter((task) =>
-            task.assignedTo.some((assignedUser) =>
-              String(assignedUser._id || assignedUser) === String(user._id)
+      // Process tasks
+      let taskNotifications = [];
+      if (Array.isArray(tasksResponse.data)) {
+        const myAssignedTasks = tasksResponse.data.filter((task) =>
+          task.assignedTo.some((assignedUser) =>
+            String(assignedUser._id || assignedUser) === String(user._id)
+          )
+        );
+
+        taskNotifications = myAssignedTasks
+          .filter((task) => !task.readBy.includes(user._id))
+          .map((task) => ({
+            ...task,
+            type: 'task',
+            createdAt: task.createdAt,
+            isRead: task.readBy.includes(user._id)
+          }));
+
+        const taskUpdateNotifications = tasksResponse.data
+          .filter(task =>
+            task.whomItMayConcern &&
+            task.whomItMayConcern.some(userRef =>
+              String(userRef._id || userRef) === String(user._id)
             )
+          )
+          .flatMap(task =>
+            (task.notifications || [])
+              .filter(notif =>
+                String(notif.recipient?._id || notif.recipient) === String(user._id) &&
+                !notif.read &&
+                notif.type !== 'task-closed'
+              )
+              .map(notif => ({
+                ...task,
+                type: 'task-update',
+                notificationId: notif._id,
+                createdAt: notif.createdAt,
+                isRead: notif.read,
+                message: notif.message,
+                recipientId: notif.recipient?._id || notif.recipient
+              }))
           );
 
-          taskNotifications = myAssignedTasks
-            .filter((task) => !task.readBy.includes(user._id))
-            .map((task) => ({
-              ...task,
-              type: 'task',
-              createdAt: task.createdAt,
-              isRead: task.readBy.includes(user._id)
-            }));
-
-          const taskUpdateNotifications = tasksResponse.data
-            .filter(task =>
-              task.whomItMayConcern &&
-              task.whomItMayConcern.some(userRef =>
-                String(userRef._id || userRef) === String(user._id)
-              )
+        const closedTaskNotifications = tasksResponse.data
+          .filter(task =>
+            task.notifications &&
+            task.notifications.some(notif =>
+              String(notif.recipient?._id || notif.recipient) === String(user._id) &&
+              notif.type === 'task-closed' &&
+              !notif.read
             )
-            .flatMap(task =>
-              (task.notifications || [])
-                .filter(notif =>
-                  String(notif.recipient?._id || notif.recipient) === String(user._id) &&
-                  !notif.read &&
-                  notif.type !== 'task-closed'
-                )
-                .map(notif => ({
-                  ...task,
-                  type: 'task-update',
-                  notificationId: notif._id,
-                  createdAt: notif.createdAt,
-                  isRead: notif.read,
-                  message: notif.message,
-                  recipientId: notif.recipient?._id || notif.recipient
-                }))
-            );
-
-          const closedTaskNotifications = tasksResponse.data
-            .filter(task =>
-              task.notifications &&
-              task.notifications.some(notif =>
+          )
+          .flatMap(task =>
+            task.notifications
+              .filter(notif =>
                 String(notif.recipient?._id || notif.recipient) === String(user._id) &&
                 notif.type === 'task-closed' &&
                 !notif.read
               )
-            )
-            .flatMap(task =>
-              task.notifications
-                .filter(notif =>
-                  String(notif.recipient?._id || notif.recipient) === String(user._id) &&
-                  notif.type === 'task-closed' &&
-                  !notif.read
-                )
-                .map(notif => ({
-                  ...task,
-                  type: 'task-closed',
-                  notificationId: notif._id,
-                  createdAt: notif.createdAt,
-                  isRead: notif.read,
-                  message: notif.message,
-                  recipientId: notif.recipient?._id || notif.recipient
-                }))
-            );
+              .map(notif => ({
+                ...task,
+                type: 'task-closed',
+                notificationId: notif._id,
+                createdAt: notif.createdAt,
+                isRead: notif.read,
+                message: notif.message,
+                recipientId: notif.recipient?._id || notif.recipient
+              }))
+          );
 
-          taskNotifications = [...taskNotifications, ...taskUpdateNotifications, ...closedTaskNotifications];
-        }
-
-        // Process policy notifications
-        let policyNotifications = [];
-        if (Array.isArray(policiesResponse.data?.data)) {
-          policyNotifications = policiesResponse.data.data
-            .flatMap(policy => {
-              if (!policy.createdBy) return [];
-              const createdById = policy.createdBy._id || policy.createdBy;
-              const isAdmin = user.role === "Admin";
-              const isManager = user.isManager;
-
-              if (!isAdmin && !isManager) return [];
-
-              if (isAdmin && createdById === user._id) {
-                return (policy.logs || [])
-                  .filter(log => {
-                    if (!log) return false;
-                    const performedById = log.performedBy?._id || log.performedBy;
-                    return log.action === 'update' &&
-                      !(log.readBy || []).includes(user._id) &&
-                      performedById !== user._id;
-                  })
-                  .map(log => ({
-                    ...policy,
-                    type: 'policy-response',
-                    _id: `${policy._id}-${log._id}`,
-                    logId: log._id,
-                    createdAt: log.performedAt || policy.lastUpdate || policy.createdAt,
-                    isRead: false,
-                    lastAction: {
-                      ...log,
-                      performedBy: {
-                        _id: log.performedBy?._id || log.performedBy,
-                        name: log.performedBy?.name || 'Manager'
-                      }
-                    }
-                  }));
-              } else if (isManager && createdById !== user._id) {
-                const hasReadPolicy = (policy.readBy || []).includes(user._id);
-                return (policy.logs || [])
-                  .filter(log => {
-                    if (!log) return false;
-                    return log.action === 'create' &&
-                      !hasReadPolicy &&
-                      (log.performedBy?._id || log.performedBy) !== user._id;
-                  })
-                  .map(log => ({
-                    ...policy,
-                    type: 'policy-admin',
-                    _id: `${policy._id}-${log._id}`,
-                    logId: log._id,
-                    createdAt: log.performedAt || policy.createdAt,
-                    isRead: false,
-                    lastAction: {
-                      ...log,
-                      performedBy: {
-                        _id: log.performedBy?._id || log.performedBy,
-                        name: log.performedBy?.name || 'Admin'
-                      }
-                    }
-                  }));
-              }
-              return [];
-            })
-            .filter(Boolean);
-        }
-
-        // Process suggestions
-        let suggestionNotifications = [];
-        if (Array.isArray(suggestionsResponse.data?.data)) {
-          suggestionNotifications = suggestionsResponse.data.data
-            .filter(suggestion => suggestion.responseLog?.length > 0)
-            .flatMap(suggestion =>
-              suggestion.responseLog
-                .filter(response => !response.readBy?.includes(user._id))
-                .map(response => ({
-                  ...suggestion,
-                  type: 'suggestion-response',
-                  _id: `${suggestion._id}-${response._id}`,
-                  responseId: response._id,
-                  createdAt: response.respondedAt,
-                  isRead: false,
-                  lastResponse: response
-                }))
-            );
-        }
-
-        if (Array.isArray(adminSuggestionsResponse.data?.data)) {
-          const adminSuggestions = adminSuggestionsResponse.data.data
-            .filter(suggestion => !suggestion.readBy?.includes(user._id))
-            .map(suggestion => ({
-              ...suggestion,
-              type: 'suggestion-admin',
-              createdAt: suggestion.createdAt,
-              isRead: false
-            }));
-          suggestionNotifications = [...suggestionNotifications, ...adminSuggestions];
-        }
-
-        // Combine and sort all notifications
-        const allNotifications = [
-          ...taskNotifications,
-          ...suggestionNotifications,
-          ...policyNotifications
-        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        setUnreadCount(allNotifications.filter(n => !n.isRead).length);
-        setNotifications(allNotifications);
-        // eslint-disable-next-line no-unused-vars
-      } catch (error) {
-        // console.error("Error fetching notifications:", error);
+        taskNotifications = [...taskNotifications, ...taskUpdateNotifications, ...closedTaskNotifications];
       }
-    };
 
+      // Process policy notifications
+      let policyNotifications = [];
+      if (Array.isArray(policiesResponse.data?.data)) {
+        policyNotifications = policiesResponse.data.data
+          .flatMap(policy => {
+            if (!policy.createdBy) return [];
+            const createdById = policy.createdBy._id || policy.createdBy;
+            const isAdmin = user.role === "Admin";
+            const isManager = user.isManager;
+
+            if (!isAdmin && !isManager) return [];
+
+            if (isAdmin && createdById === user._id) {
+              return (policy.logs || [])
+                .filter(log => {
+                  if (!log) return false;
+                  const performedById = log.performedBy?._id || log.performedBy;
+                  return log.action === 'update' &&
+                    !(log.readBy || []).includes(user._id) &&
+                    performedById !== user._id;
+                })
+                .map(log => ({
+                  ...policy,
+                  type: 'policy-response',
+                  _id: `${policy._id}-${log._id}`,
+                  logId: log._id,
+                  createdAt: log.performedAt || policy.lastUpdate || policy.createdAt,
+                  isRead: false,
+                  lastAction: {
+                    ...log,
+                    performedBy: {
+                      _id: log.performedBy?._id || log.performedBy,
+                      name: log.performedBy?.name || 'Manager'
+                    }
+                  }
+                }));
+            } else if (isManager && createdById !== user._id) {
+              const hasReadPolicy = (policy.readBy || []).includes(user._id);
+              return (policy.logs || [])
+                .filter(log => {
+                  if (!log) return false;
+                  return log.action === 'create' &&
+                    !hasReadPolicy &&
+                    (log.performedBy?._id || log.performedBy) !== user._id;
+                })
+                .map(log => ({
+                  ...policy,
+                  type: 'policy-admin',
+                  _id: `${policy._id}-${log._id}`,
+                  logId: log._id,
+                  createdAt: log.performedAt || policy.createdAt,
+                  isRead: false,
+                  lastAction: {
+                    ...log,
+                    performedBy: {
+                      _id: log.performedBy?._id || log.performedBy,
+                      name: log.performedBy?.name || 'Admin'
+                    }
+                  }
+                }));
+            }
+            return [];
+          })
+          .filter(Boolean);
+      }
+
+      // Process suggestions
+      let suggestionNotifications = [];
+      if (Array.isArray(suggestionsResponse.data?.data)) {
+        suggestionNotifications = suggestionsResponse.data.data
+          .filter(suggestion => suggestion.responseLog?.length > 0)
+          .flatMap(suggestion =>
+            suggestion.responseLog
+              .filter(response => !response.readBy?.includes(user._id))
+              .map(response => ({
+                ...suggestion,
+                type: 'suggestion-response',
+                _id: `${suggestion._id}-${response._id}`,
+                responseId: response._id,
+                createdAt: response.respondedAt,
+                isRead: false,
+                lastResponse: response
+              }))
+          );
+      }
+
+      if (Array.isArray(adminSuggestionsResponse.data?.data)) {
+        const adminSuggestions = adminSuggestionsResponse.data.data
+          .filter(suggestion => !suggestion.readBy?.includes(user._id))
+          .map(suggestion => ({
+            ...suggestion,
+            type: 'suggestion-admin',
+            createdAt: suggestion.createdAt,
+            isRead: false
+          }));
+        suggestionNotifications = [...suggestionNotifications, ...adminSuggestions];
+      }
+
+      // Combine and sort all notifications
+      const allNotifications = [
+        ...taskNotifications,
+        ...suggestionNotifications,
+        ...policyNotifications
+      ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      setUnreadCount(allNotifications.filter(n => !n.isRead).length);
+      setNotifications(allNotifications);
+      // eslint-disable-next-line no-unused-vars
+    } catch (error) {
+      // Error handling
+    }
+  };
+
+  useEffect(() => {
     fetchNotifications();
-    // const interval = setInterval(fetchNotifications, 30000);
-    // return () => clearInterval(interval);
   }, [user]);
 
   const memoizedNotifications = useMemo(() => notifications, [notifications]);
@@ -386,7 +379,7 @@ const NotificationPanel = () => {
       }
       // eslint-disable-next-line no-unused-vars
     } catch (error) {
-      // console.error("Error handling notification:", error);
+      // Error handling
     }
   };
 
@@ -484,16 +477,6 @@ const NotificationPanel = () => {
     const user = userData || { name: 'User' };
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        {/* <Avatar
-          sx={{
-            width: size,
-            height: size,
-            fontSize: size * 0.5,
-            backgroundColor: isUnread ? theme.palette.error.main : theme.palette.grey[700]
-          }}
-        >
-          {getInitials(user.name)}
-        </Avatar> */}
         <Typography variant="caption" sx={{
           color: isUnread ? '#c2c2c2' : theme.palette.text.secondary,
           fontWeight: isUnread ? 500 : 400
@@ -537,25 +520,6 @@ const NotificationPanel = () => {
     );
   };
 
-  // const renderUserChip = (userData, isUnread, size = 24) => {
-  //   const user = userData || { name: 'User' };
-  //   return (
-  //     <Chip
-  //       label={user.name}
-  //       size="small"
-  //       sx={{
-  //         backgroundColor: "transparent",
-  //         color: isUnread ? theme.palette.error.light : theme.palette.text.secondary,
-  //         "&.MuiChip-root": {
-  //           "& span": {
-  //             paddingLeft: '0'
-  //           }
-  //         }
-  //       }}
-  //     />
-  //   );
-  // };
-
   const menuStyles = {
     '& .MuiPaper-root': {
       backgroundColor: '#121212',
@@ -566,7 +530,6 @@ const NotificationPanel = () => {
       padding: '8px 0',
       maxHeight: '80vh',
       overflow: 'hidden',
-      // boxShadow: theme.shadows[24],
     },
     '& .MuiMenuItem-root': {
       padding: '12px 16px',
@@ -658,24 +621,41 @@ const NotificationPanel = () => {
               {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
             </Typography>
           </Box>
-          <Button
-            onClick={handleClose}
-            sx={{
-              color: "#A1A1A1",
-              minWidth: 'auto',
-              padding: '4px',
-              "&:hover": {
-                color: "#ffffff",
-                backgroundColor: '#FFFFFF0F',
-                borderRadius: '50%'
-              }
-            }}
-          >
-            <IoMdClose size={20} />
-          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button
+              onClick={fetchNotifications}
+              sx={{
+                color: "#A1A1A1",
+                minWidth: 'auto',
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                "&:hover": {
+                  color: "#ffffff",
+                  backgroundColor: '#FFFFFF0F',
+                  borderRadius: '4px'
+                }
+              }}
+            >
+              Refresh
+            </Button>
+            <Button
+              onClick={handleClose}
+              sx={{
+                color: "#A1A1A1",
+                minWidth: 'auto',
+                padding: '4px',
+                "&:hover": {
+                  color: "#ffffff",
+                  backgroundColor: '#FFFFFF0F',
+                  borderRadius: '50%'
+                }
+              }}
+            >
+              <IoMdClose size={20} />
+            </Button>
+          </Box>
         </Stack>
 
-        {/* Notification List Container */}
         <Box sx={{
           flex: 1,
           overflowY: "auto",
