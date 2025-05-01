@@ -49,7 +49,7 @@ const FieldTeamPortal = () => {
   // const user = useSelector((state) => state?.auth?.user);
   const [fieldTeams, setFieldTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
-  console.log({ selectedTeam });
+  // console.log({ selectedTeam });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -104,7 +104,7 @@ const FieldTeamPortal = () => {
           })
         ]);
 
-        console.log({ fieldTeamsRes, quizTeamsRes });
+        // console.log({ fieldTeamsRes, quizTeamsRes });
 
         // Combine and deduplicate teams
         const combinedTeams = [
@@ -154,8 +154,8 @@ const FieldTeamPortal = () => {
             })
           ]);
 
-          console.log("Quiz Results:", quizRes.data);
-          console.log("Job Assessments:", jobRes.data);
+          // console.log("Quiz Results:", quizRes.data);
+          // console.log("Job Assessments:", jobRes.data);
 
           // Correctly set the quizResults state
           setQuizResults(quizRes.data.data);
@@ -377,9 +377,11 @@ const FieldTeamPortal = () => {
     <Box sx={{
       backgroundColor: colors.background,
       minHeight: '100vh',
+      // maxWidth: '100vw',
+      overflowX: 'hidden',
       color: colors.textPrimary,
       p: isMobile ? 2 : 3,
-      px: isMobile ? 0 : 3
+      px: isMobile ? 0 : undefined
     }}>
       {/* Back Button */}
       <Button

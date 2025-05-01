@@ -45,7 +45,7 @@ const FieldTeamTicketsForPortalReview = ({ teamId, teamName }) => {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const isMobile = useMediaQuery('(max-width:600px)');
+  const isMobile = useMediaQuery('(max-width:503px)');
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
 
@@ -416,7 +416,7 @@ const FieldTeamTicketsForPortalReview = ({ teamId, teamName }) => {
       backgroundColor: colors.background,
       color: colors.textPrimary,
       py: isMobile ? 1 : 2,
-      mt: 2
+      mt: 2,
     }}>
       <Typography variant="h5" gutterBottom sx={{
         color: colors.primary,

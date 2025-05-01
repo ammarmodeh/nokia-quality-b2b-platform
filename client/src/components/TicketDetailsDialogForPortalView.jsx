@@ -11,6 +11,7 @@ import {
   Tooltip,
   Chip,
   Button,
+  useMediaQuery,
 } from "@mui/material";
 import { FaCopy, FaTimes } from "react-icons/fa";
 
@@ -46,6 +47,8 @@ const DetailRow = ({ label, value }) => (
 );
 
 const TicketDetailsDialogForPortalView = ({ open, onClose, ticket, onCopy }) => {
+  const isMobile = useMediaQuery('(max-width: 503px)');
+
   const colors = {
     background: '#121212',
     surface: '#1e1e1e',
@@ -72,7 +75,10 @@ const TicketDetailsDialogForPortalView = ({ open, onClose, ticket, onCopy }) => 
         "& .MuiDialog-paper": {
           backgroundColor: colors.surface,
           color: colors.textPrimary,
-          borderRadius: '8px',
+          borderRadius: isMobile ? '0px' : '8px',
+          m: isMobile ? '0px' : undefined,
+          width: isMobile ? '100%' : undefined,
+          maxHeight: isMobile ? '100%' : undefined
         }
       }}
     >
