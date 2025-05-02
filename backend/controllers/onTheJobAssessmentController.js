@@ -1,22 +1,33 @@
 import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
 import { OnTheJobAssessment } from "../models/onTheJobAssessmentModel.js";
-
+import { UserSchema } from "../models/userModel.js";
 
 // Create a new assessment
 export const createAssessment = async (req, res) => {
   try {
-    const { fieldTeamId, conductedBy, checkPoints, feedback, categoryWeights } = req.body;
+    const { fieldTeamId, conductedBy, conductedById, checkPoints, feedback, categoryWeights } = req.body;
+
+    // console.log({ fieldTeamId, conductedById });
 
     // Verify field team exists
     const fieldTeam = await FieldTeamsSchema.findById(fieldTeamId);
     if (!fieldTeam) {
       return res.status(404).json({ message: "Field team not found" });
     }
+    // console.log({ fieldTeam });
+
+    const supervisor = await UserSchema.findById(conductedById);
+    if (!supervisor) {
+      return res.status(404).json({ message: "Supervisor not found" });
+    }
+
+    // console.log({ supervisor });
 
     const assessment = new OnTheJobAssessment({
       fieldTeamId,
       fieldTeamName: fieldTeam.teamName,
       conductedBy,
+      conductedById,
       checkPoints,
       feedback,
       categoryWeights: categoryWeights || undefined, // Use default weights if not provided
@@ -50,6 +61,8 @@ export const updateAssessment = async (req, res) => {
       return res.status(404).json({ message: "Assessment not found" });
     }
 
+    console.log(assessment.conductedBy, req.user._id.toString());
+
     if (checkPoints) assessment.checkPoints = checkPoints;
     if (feedback) assessment.feedback = feedback;
     if (status) assessment.status = status;
@@ -80,10 +93,8 @@ export const updateAssessment = async (req, res) => {
 // Get all assessments
 export const getAllAssessments = async (req, res) => {
   try {
-    const assessments = await OnTheJobAssessment.find().populate(
-      "fieldTeamId",
-      "teamName teamCompany"
-    );
+    const assessments = await OnTheJobAssessment.find({ isDeleted: false })
+      .populate("fieldTeamId", "teamName teamCompany");
     res.status(200).json(assessments);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -94,9 +105,10 @@ export const getAllAssessments = async (req, res) => {
 export const getAssessmentsByFieldTeam = async (req, res) => {
   try {
     const { fieldTeamId } = req.params;
-    const assessments = await OnTheJobAssessment.find({ fieldTeamId }).sort({
-      assessmentDate: -1,
-    });
+    const assessments = await OnTheJobAssessment.find({
+      fieldTeamId,
+      isDeleted: false
+    }).sort({ assessmentDate: -1 });
     res.status(200).json(assessments);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -124,11 +136,32 @@ export const getAssessmentById = async (req, res) => {
 export const deleteAssessment = async (req, res) => {
   try {
     const { id } = req.params;
-    const assessment = await OnTheJobAssessment.findByIdAndDelete(id);
+
+    // Verify user is admin
+    if (req.user.role !== 'Admin') {
+      return res.status(403).json({ message: "Only admins can delete assessments" });
+    }
+
+    // Perform soft delete instead of hard delete
+    const assessment = await OnTheJobAssessment.findByIdAndUpdate(
+      id,
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: req.user._id
+      },
+      { new: true }
+    );
+
     if (!assessment) {
       return res.status(404).json({ message: "Assessment not found" });
     }
-    res.status(200).json({ message: "Assessment deleted successfully" });
+
+    res.status(200).json({
+      message: "Assessment marked as deleted (soft delete)",
+      assessment,
+      undoAvailableUntil: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours to undo
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -138,6 +171,9 @@ export const deleteAssessment = async (req, res) => {
 export const getAssessmentStatistics = async (req, res) => {
   try {
     const stats = await OnTheJobAssessment.aggregate([
+      {
+        $match: { isDeleted: false } // Add this match stage to filter out soft-deleted
+      },
       {
         $group: {
           _id: null,
@@ -166,6 +202,9 @@ export const getAssessmentStatistics = async (req, res) => {
 
     const fieldTeamStats = await OnTheJobAssessment.aggregate([
       {
+        $match: { isDeleted: false } // Add this match stage to filter out soft-deleted
+      },
+      {
         $group: {
           _id: "$fieldTeamId",
           teamName: { $first: "$fieldTeamName" },
@@ -186,8 +225,10 @@ export const getAssessmentStatistics = async (req, res) => {
       { $sort: { averageScore: -1 } },
     ]);
 
-    // Calculate average scores by category across all assessments
     const categoryStats = await OnTheJobAssessment.aggregate([
+      {
+        $match: { isDeleted: false } // Add this match stage to filter out soft-deleted
+      },
       {
         $group: {
           _id: null,
@@ -217,6 +258,103 @@ export const getAssessmentStatistics = async (req, res) => {
       fieldTeamStats,
       categoryStats: categoryStats[0] || {},
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const softDeleteAssessment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const assessment = await OnTheJobAssessment.findByIdAndUpdate(
+      id,
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: req.user._id
+      },
+      { new: true }
+    );
+
+    if (!assessment) {
+      return res.status(404).json({ message: "Assessment not found" });
+    }
+
+    // Get updated stats after deletion
+    const updatedStats = await getUpdatedStats();
+
+    res.status(200).json({
+      message: "Assessment marked as deleted",
+      assessment,
+      stats: updatedStats, // Include updated stats in response
+      undoAvailableUntil: new Date(Date.now() + 24 * 60 * 60 * 1000)
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Helper function to get updated stats
+const getUpdatedStats = async () => {
+  const stats = await OnTheJobAssessment.aggregate([
+    { $match: { isDeleted: false } },
+    {
+      $group: {
+        _id: null,
+        totalAssessments: { $sum: 1 },
+        averageScore: { $avg: "$overallScore" }
+      }
+    }
+  ]);
+
+  return stats[0] || { totalAssessments: 0, averageScore: 0 };
+};
+
+export const restoreAssessment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Look for soft-deleted assessments specifically
+    const assessment = await OnTheJobAssessment.findOneAndUpdate(
+      {
+        _id: id,
+        isDeleted: true,
+        deletedAt: {
+          $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Within 24 hours
+        }
+      },
+      {
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null
+      },
+      { new: true }
+    ).populate('fieldTeamId', 'teamName');
+
+    if (!assessment) {
+      return res.status(404).json({
+        message: "Assessment not found, already restored, or undo period expired"
+      });
+    }
+
+    res.status(200).json({
+      message: "Assessment restored successfully",
+      assessment: {
+        ...assessment._doc,
+        teamName: assessment.fieldTeamId.teamName
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAssessmentsWithDeleted = async (req, res) => {
+  try {
+    const assessments = await OnTheJobAssessment.find()
+      .populate("fieldTeamId", "teamName teamCompany");
+    res.status(200).json(assessments);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

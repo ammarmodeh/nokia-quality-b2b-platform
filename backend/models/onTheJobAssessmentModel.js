@@ -21,6 +21,11 @@ const assessmentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    conductedById: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     checkPoints: [
       {
         name: {
@@ -86,6 +91,17 @@ const assessmentSchema = new mongoose.Schema(
         type: String,
       },
     ],
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
   { timestamps: true }
 );
@@ -116,6 +132,7 @@ assessmentSchema.pre("save", function (next) {
 
     this.overallScore = Math.round(weightedSum);
   }
+  // this.where({ isDeleted: false });
   next();
 });
 

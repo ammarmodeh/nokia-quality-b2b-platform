@@ -1,44 +1,26 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
-  TextField,
   Button,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
   Alert,
-  Chip,
-  Divider,
-  Card,
-  CardContent,
-  TablePagination,
-  Autocomplete,
-  FormControlLabel,
-  Checkbox,
-  Grid,
-  useMediaQuery
+  useMediaQuery,
 } from "@mui/material";
-import {
-  ArrowBack,
-  BarChart,
-  TrendingUp,
-  TrendingDown,
-  BarChartOutlined,
-} from '@mui/icons-material';
+import { ArrowBack } from '@mui/icons-material';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Legend } from 'chart.js';
 import api from "../api/api";
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip as ChartTooltip, Legend } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
 import { useSelector } from "react-redux";
+import AssessmentDetail from "../components/AssessmentDetail";
+import AssessmentForm from "../components/AssessmentForm";
+import StatsOverview from "../components/StatsOverview";
+import TeamList from "../components/TeamList";
+import UndoNotification from "../components/UndoNotification";
+import TeamSelector from "../components/TeamSelector";
+import AssessmentList from "../components/AssessmentList";
 
 // Register ChartJS components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, ChartTooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Legend);
 
 const OnTheJobAssessment = () => {
   const user = useSelector((state) => state?.auth?.user);
@@ -49,10 +31,41 @@ const OnTheJobAssessment = () => {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
   const [selectedAssessment, setSelectedAssessment] = useState(null);
+  const [editMode, setEditMode] = useState(false);
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:503px)');
-  // console.log({ teamAssessments });
-  const [newAssessment, setNewAssessment] = useState({
+  const [teamsPage, setTeamsPage] = useState(0);
+  const [teamsRowsPerPage, setTeamsRowsPerPage] = useState(10);
+  const [assessmentsPage, setAssessmentsPage] = useState(0);
+  const [assessmentsRowsPerPage, setAssessmentsRowsPerPage] = useState(10);
+  const [allAssessments, setAllAssessments] = useState([]);
+  const [showUndo, setShowUndo] = useState(false);
+  const [deletedAssessment, setDeletedAssessment] = useState(null);
+  const [undoTimeout, setUndoTimeout] = useState(null);
+  console.log('OnTheJobAssessment Triggered');
+  // Update your state to include supervisorStats
+  const [supervisorStats, setSupervisorStats] = useState({});
+  const calculateSupervisorStats = useCallback((assessments) => {
+    return assessments.reduce((acc, assessment) => {
+      const key = assessment.conductedById;
+      if (!acc[key]) {
+        acc[key] = {
+          id: assessment.conductedById,
+          name: assessment.conductedBy,
+          assessmentCount: 1,
+        };
+      } else {
+        acc[key].assessmentCount += 1;
+      }
+      return acc;
+    }, {});
+  }, []);
+  // Update this whenever allAssessments changes
+  useEffect(() => {
+    setSupervisorStats(calculateSupervisorStats(allAssessments));
+  }, [allAssessments, calculateSupervisorStats]);
+
+  const initialAssessmentData = useMemo(() => ({
     conductedBy: "",
     checkPoints: [
       // Category A: Equipment and Tools
@@ -215,12 +228,61 @@ const OnTheJobAssessment = () => {
       "Customer": 0.20,
       "Service": 0.25
     }
-  });
-  const [teamsPage, setTeamsPage] = useState(0);
-  const [teamsRowsPerPage, setTeamsRowsPerPage] = useState(10);
-  const [assessmentsPage, setAssessmentsPage] = useState(0);
-  const [assessmentsRowsPerPage, setAssessmentsRowsPerPage] = useState(10);
-  const [allAssessments, setAllAssessments] = useState([]);
+  }), []); // Empty dependency array means it's created once
+
+  const colors = useMemo(() => ({
+    background: '#121212',
+    surface: '#1e1e1e',
+    surfaceElevated: '#252525',
+    border: '#444',
+    primary: '#3ea6ff',
+    primaryHover: 'rgba(62, 166, 255, 0.08)',
+    textPrimary: '#ffffff',
+    textSecondary: '#9e9e9e',
+    success: '#4caf50',
+    warning: '#ff9800',
+    error: '#f44336',
+    chartCorrect: '#4caf50',
+    chartIncorrect: '#f44336',
+  }), []);
+
+  useEffect(() => {
+    // Check for pending undo on component load
+    const pendingUndo = localStorage.getItem('pendingUndo');
+    if (pendingUndo) {
+      const { assessmentId, deletionTime, teamId } = JSON.parse(pendingUndo);
+
+      // Check if undo window is still valid (24 hours)
+      const deletionDate = new Date(deletionTime);
+      const now = new Date();
+      const hoursSinceDeletion = (now - deletionDate) / (1000 * 60 * 60);
+
+      if (hoursSinceDeletion < 24) {
+        setDeletedAssessment(assessmentId);
+        setShowUndo(true);
+
+        // Calculate remaining time for undo
+        const remainingMs = 24 * 60 * 60 * 1000 - (now - deletionDate);
+
+        const timeout = setTimeout(() => {
+          localStorage.removeItem('pendingUndo');
+          setShowUndo(false);
+          setDeletedAssessment(null);
+        }, remainingMs);
+
+        setUndoTimeout(timeout);
+
+        // If we're not already viewing the team, navigate to it
+        if (selectedTeam?._id !== teamId) {
+          // You might want to implement this based on your routing
+          // navigate(`/path-to-team-assessments/${teamId}`);
+        }
+      } else {
+        // Clear expired undo
+        localStorage.removeItem('pendingUndo');
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -254,6 +316,13 @@ const OnTheJobAssessment = () => {
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      // Cleanup timeout if component unmounts
+      if (undoTimeout) clearTimeout(undoTimeout);
+    };
+  }, [undoTimeout]);
 
   // Memoized map of team assessments for quick lookup
   const teamAssessmentsMap = useMemo(() => {
@@ -308,149 +377,24 @@ const OnTheJobAssessment = () => {
     return Math.round(sum / teamAssessments.length);
   }, [teamAssessmentsMap]);
 
-  const CheckpointsByCategory = useCallback(({ checkPoints, handleCheckPointChange, colors }) => {
-    const categories = checkPoints.reduce((acc, checkpoint, index) => {
-      const category = checkpoint.category;
-      if (!acc[category]) {
-        acc[category] = [];
-      }
-      acc[category].push({ ...checkpoint, index });
-      return acc;
-    }, {});
 
-    const categoryTitles = {
-      "Equipment": "Equipment and Tools (10%)",
-      "Splicing": "Fiber Optic Splicing Skills (25%)",
-      "Configuration": "ONT Configuration (20%)",
-      "Validation": "Link Validation (10%)",
-      "Customer": "Customer Education (20%)",
-      "Service": "Customer Service Skills (25%)"
-    };
-
-    const categoryOrder = ["Equipment", "Splicing", "Configuration", "Validation", "Customer", "Service"];
-
-    return (
-      <>
-        {categoryOrder.map(category => (
-          <Box key={category} sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{
-              color: colors.primary,
-              mb: 2,
-              borderBottom: `1px solid ${colors.border}`,
-              pb: 1
-            }}>
-              {categoryTitles[category]}
-            </Typography>
-
-            {categories[category]?.map(point => (
-              <Paper key={point.index} sx={{
-                p: 2,
-                mb: 2,
-                backgroundColor: colors.surfaceElevated,
-                border: `1px solid ${colors.border}`,
-                borderRadius: '8px'
-              }}>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="subtitle1" sx={{ color: colors.textPrimary }}>
-                      {point.name}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                      {point.description}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={2}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={point.isCompleted}
-                          onChange={(e) => handleCheckPointChange(point.index, "isCompleted", e.target.checked)}
-                          sx={{
-                            color: colors.primary,
-                            '&.Mui-checked': {
-                              color: colors.primary,
-                            },
-                          }}
-                        />
-                      }
-                      label="Completed"
-                      sx={{ color: colors.textPrimary }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <TextField
-                      label="Score (0-100)"
-                      type="number"
-                      fullWidth
-                      inputProps={{ min: 0, max: 100 }}
-                      value={point.score}
-                      onChange={(e) => handleCheckPointChange(point.index, "score", parseInt(e.target.value) || 0)}
-                      InputLabelProps={{
-                        style: { color: colors.textSecondary }
-                      }}
-                      InputProps={{
-                        style: { color: colors.textPrimary }
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <TextField
-                      label="Notes"
-                      fullWidth
-                      value={point.notes}
-                      onChange={(e) => handleCheckPointChange(point.index, "notes", e.target.value)}
-                      InputLabelProps={{
-                        style: { color: colors.textSecondary }
-                      }}
-                      InputProps={{
-                        style: { color: colors.textPrimary }
-                      }}
-                    />
-                  </Grid>
-                </Grid>
-              </Paper>
-            ))}
-          </Box>
-        ))}
-      </>
-    );
-  }, []);
-
-  const colors = useMemo(() => ({
-    background: '#121212',
-    surface: '#1e1e1e',
-    surfaceElevated: '#252525',
-    border: '#444',
-    primary: '#3ea6ff',
-    primaryHover: 'rgba(62, 166, 255, 0.08)',
-    textPrimary: '#ffffff',
-    textSecondary: '#9e9e9e',
-    success: '#4caf50',
-    warning: '#ff9800',
-    error: '#f44336',
-    chartCorrect: '#4caf50',
-    chartIncorrect: '#f44336',
-  }), []);
-
-  const handleCheckPointChange = useCallback((index, field, value) => {
-    setNewAssessment(prevState => {
-      const updatedCheckPoints = [...prevState.checkPoints];
-      updatedCheckPoints[index][field] = value;
-      return { ...prevState, checkPoints: updatedCheckPoints };
-    });
-  }, []);
-
-  const handleSubmitAssessment = async () => {
+  const handleSubmitAssessment = useCallback(async (completeAssessment) => {
     try {
       setLoading(true);
+      setError(null);
+
+      if (!selectedTeam) {
+        setError("Please select a team first");
+        setLoading(false);
+        return;
+      }
+
       const payload = {
         fieldTeamId: selectedTeam._id,
-        conductedBy: newAssessment.conductedBy,
-        checkPoints: newAssessment.checkPoints,
-        feedback: newAssessment.feedback,
+        ...completeAssessment
       };
 
-      await api.post(
+      const response = await api.post(
         "/on-the-job-assessments",
         payload,
         {
@@ -460,36 +404,25 @@ const OnTheJobAssessment = () => {
         }
       );
 
-      // Refresh assessments list
+      // Handle successful submission
       const assessmentsResponse = await api.get(
-        `/on-the-job-assessments/field-team/${selectedTeam._id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
+        `/on-the-job-assessments/field-team/${selectedTeam._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
       setAssessments(assessmentsResponse.data);
 
-      // Reset form
-      setNewAssessment(prevState => ({
-        ...prevState,
-        conductedBy: "",
-        checkPoints: prevState.checkPoints.map((cp) => ({
-          ...cp,
-          isCompleted: false,
-          score: 0,
-          notes: "",
-        })),
-        feedback: "",
-      }));
-
-      setError(null);
     } catch (error) {
       console.error("Error submitting assessment:", error);
-      setError("Failed to submit assessment");
+      setError(error.response?.data?.message || "Failed to submit assessment");
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedTeam]);
+
 
   const calculateOverallScore = useCallback((checkPoints, categoryWeights = {}) => {
     if (!checkPoints || checkPoints.length === 0) return 0;
@@ -645,6 +578,220 @@ const OnTheJobAssessment = () => {
     return { strengths, improvements };
   }, []);
 
+  const handleDeleteAssessment = async (assessmentId) => {
+    if (user.role !== 'Admin') {
+      alert("You do not have permission to delete the assessments.");
+      return;
+    }
+
+    const confirmation = confirm("Are you sure you want to delete this assessment?");
+    if (!confirmation) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Optimistically update the UI
+      const deletedAssessment = assessments.find(a => a._id === assessmentId);
+      setAssessments(prev => prev.filter(a => a._id !== assessmentId));
+      // Update allAssessments (which will trigger supervisor stats update)
+      setAllAssessments(prev => prev.filter(a => a._id !== assessmentId));
+      setStats(prev => ({
+        ...prev,
+        overallStats: {
+          ...prev.overallStats,
+          totalAssessments: prev.overallStats.totalAssessments - 1
+        }
+      }));
+
+      // Perform soft delete
+      const response = await api.patch(
+        `/on-the-job-assessments/${assessmentId}/soft-delete`,
+        {},
+        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
+      );
+
+      // Store undo info
+      const deletionInfo = {
+        assessmentId,
+        assessmentData: deletedAssessment,
+        deletionTime: new Date().toISOString(),
+        teamId: selectedTeam._id
+      };
+      localStorage.setItem('pendingUndo', JSON.stringify(deletionInfo));
+
+      setDeletedAssessment(assessmentId);
+      setShowUndo(true);
+
+      // Set undo timeout
+      const timeout = setTimeout(() => {
+        localStorage.removeItem('pendingUndo');
+        setShowUndo(false);
+        setDeletedAssessment(null);
+      }, 24 * 60 * 60 * 1000);
+      setUndoTimeout(timeout);
+
+      // Update stats from response
+      if (response.data.stats) {
+        setStats(prev => ({
+          ...prev,
+          overallStats: response.data.stats
+        }));
+      }
+
+    } catch (error) {
+      console.error("Error deleting assessment:", error);
+      setError("Failed to delete assessment");
+
+      // Revert optimistic updates
+      if (deletedAssessment) {
+        setAssessments(prev => [...prev, deletedAssessment]);
+        setAllAssessments(prev => [...prev, deletedAssessment]);
+        setStats(prev => ({
+          ...prev,
+          overallStats: {
+            ...prev.overallStats,
+            totalAssessments: prev.overallStats.totalAssessments + 1
+          }
+        }));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUndoDelete = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get the undo info from localStorage
+      const pendingUndo = JSON.parse(localStorage.getItem('pendingUndo'));
+      if (!pendingUndo) {
+        setError("No assessment to undo");
+        return;
+      }
+
+      const { assessmentId, assessmentData, teamId } = pendingUndo;
+
+      // Optimistically update all relevant states immediately
+      setAssessments(prev => [...prev, assessmentData]);
+      setAllAssessments(prev => [...prev, assessmentData]);
+      setStats(prev => ({
+        ...prev,
+        overallStats: {
+          ...prev.overallStats,
+          totalAssessments: (prev.overallStats.totalAssessments || 0) + 1
+        }
+      }));
+
+      // Use the proper restore endpoint
+      const response = await api.patch(
+        `/on-the-job-assessments/${assessmentId}/restore`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      // Clear the undo state
+      localStorage.removeItem('pendingUndo');
+      if (undoTimeout) clearTimeout(undoTimeout);
+
+      setShowUndo(false);
+      setDeletedAssessment(null);
+      setError(null);
+
+      // Refresh data to ensure everything is in sync
+      try {
+        const [statsResponse, assessmentsResponse] = await Promise.all([
+          api.get("/on-the-job-assessments/stats", {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }),
+          api.get(`/on-the-job-assessments/field-team/${teamId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          })
+        ]);
+
+        setStats(statsResponse.data);
+        setAssessments(assessmentsResponse.data);
+      } catch (error) {
+        console.error("Error refreshing data:", error);
+        // Don't revert optimistic updates - the restore was successful
+      }
+
+    } catch (error) {
+      console.error("Error undoing delete:", error);
+      setError(error.response?.data?.message || "Failed to undo delete");
+
+      // Revert optimistic updates if the API call fails
+      if (deletedAssessment) {
+        setAssessments(prev => prev.filter(a => a._id !== deletedAssessment._id));
+        setAllAssessments(prev => prev.filter(a => a._id !== deletedAssessment._id));
+        setStats(prev => ({
+          ...prev,
+          overallStats: {
+            ...prev.overallStats,
+            totalAssessments: (prev.overallStats.totalAssessments || 0) - 1
+          }
+        }));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditAssessment = (assessment) => {
+    setSelectedAssessment(assessment);
+    setEditMode(true);
+  };
+
+  const handleUpdateAssessment = useCallback(async (updatedAssessment) => {
+    try {
+      setLoading(true);
+
+      const payload = {
+        ...updatedAssessment,
+        overallScore: calculateOverallScore(updatedAssessment.checkPoints, updatedAssessment.categoryWeights)
+      };
+
+      await api.put(
+        `/on-the-job-assessments/${selectedAssessment._id}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      // Refresh assessments list
+      const assessmentsResponse = await api.get(
+        `/on-the-job-assessments/field-team/${selectedTeam._id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+      setAssessments(assessmentsResponse.data);
+      setEditMode(false);
+      setSelectedAssessment(null);
+      setError(null);
+    } catch (error) {
+      console.error("Error updating assessment:", error);
+      setError("Failed to update assessment");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedAssessment?._id, selectedTeam?._id, calculateOverallScore]);
+
+  const MemoizedAssessmentForm = React.memo(AssessmentForm);
+
   return (
     <Box sx={{
       backgroundColor: colors.background,
@@ -673,190 +820,111 @@ const OnTheJobAssessment = () => {
         On-The-Job Assessments
       </Typography>
 
-      {stats && (
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          {[
-            {
-              title: "Total Assessments",
-              value: stats.overallStats.totalAssessments || 0,
-              unit: ""
-            },
-            {
-              title: "Average Score",
-              value: stats.overallStats.averageScore || 0,
-              unit: "%"
-            },
-            {
-              title: "Top Team",
-              value: stats.fieldTeamStats[0]?.teamName || "N/A",
-              subtitle: `${stats.fieldTeamStats[0]?.averageScore || 0}%`
-            },
-          ].map((stat, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <Card sx={{
-                backgroundColor: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderRadius: '8px',
-                height: '100%'
-              }}>
-                <CardContent>
-                  <Typography variant="subtitle1" sx={{
-                    color: colors.textSecondary,
-                    mb: 1,
-                    fontSize: isMobile ? '0.875rem' : '1rem'
-                  }}>
-                    {stat.title}
-                  </Typography>
-                  <Typography variant="h4" sx={{
-                    color: colors.textPrimary,
-                    fontWeight: 'bold',
-                    fontSize: isMobile ? '0.8rem' : '1.2rem',
-                    mb: 2
-                  }}>
-                    {stat.value}{stat.unit || ''}
-                  </Typography>
-                  {stat.subtitle && (
-                    <Typography variant="body2" sx={{
-                      color: colors.textSecondary,
-                      mt: 1,
-                      fontSize: isMobile ? '0.75rem' : '0.875rem'
-                    }}>
-                      {stat.subtitle}
-                    </Typography>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+      <TeamSelector
+        fieldTeams={fieldTeams}
+        selectedTeam={selectedTeam}
+        setSelectedTeam={setSelectedTeam}
+        loading={loading}
+        colors={colors}
+      />
+
+      {selectedTeam && !selectedAssessment && (
+        <>
+          {user.title === "Field Technical Support - QoS" && (
+            <MemoizedAssessmentForm
+              key={selectedTeam?._id || 'new-assessment'}
+              initialAssessment={initialAssessmentData}
+              loading={loading}
+              colors={colors}
+              onSubmit={handleSubmitAssessment}
+              calculateOverallScore={calculateOverallScore}
+              getPerformanceColor={getPerformanceColor}
+              editMode={editMode}
+            />
+          )}
+
+          <AssessmentList
+            assessments={assessments}
+            colors={colors}
+            getPerformanceColor={getPerformanceColor}
+            onSelectAssessment={setSelectedAssessment}
+            onEditAssessment={handleEditAssessment}
+            onDeleteAssessment={handleDeleteAssessment}
+            user={user}
+            page={assessmentsPage}
+            rowsPerPage={assessmentsRowsPerPage}
+            onPageChange={(e, newPage) => setAssessmentsPage(newPage)}
+            onRowsPerPageChange={(e) => {
+              setAssessmentsRowsPerPage(parseInt(e.target.value, 10));
+              setAssessmentsPage(0);
+            }}
+            loading={loading}
+          />
+        </>
       )}
 
-      <Paper sx={{
-        p: 3,
-        mb: 3,
-        backgroundColor: colors.surface,
-        border: `1px solid ${colors.border}`,
-        borderRadius: '8px',
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: isMobile ? 'column' : 'row' }}>
-          <Autocomplete
-            options={fieldTeams}
-            getOptionLabel={(option) => `${option.teamName} (${option.teamCompany})`}
-            value={selectedTeam}
-            onChange={(event, newValue) => setSelectedTeam(newValue)}
-            disabled={loading}
-            fullWidth
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Select Field Team"
-                variant="outlined"
-                InputLabelProps={{
-                  style: {
-                    color: colors.textSecondary,
-                    fontSize: '0.8rem',
-                    top: '-7px',
-                  },
-                }}
-                InputProps={{
-                  ...params.InputProps,
-                  style: {
-                    color: colors.textPrimary,
-                    height: '36px',
-                    fontSize: '0.8rem',
-                  },
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                      borderColor: colors.border,
-                    },
-                    '&:hover fieldset': {
-                      borderColor: colors.primary,
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: colors.primary,
-                    },
-                    '&.Mui-disabled fieldset': {
-                      borderColor: `${colors.border}80`,
-                    },
-                  },
-                  '& .MuiInputBase-input': {
-                    padding: '8px 12px',
-                    height: 'auto',
-                  },
-                  '& .MuiInputLabel-root.Mui-focused': {
-                    color: colors.primary,
-                    top: '1px',
-                  },
-                  '& input': {
-                    caretColor: colors.primary,
-                  },
-                  '& input:-webkit-autofill': {
-                    WebkitBoxShadow: `0 0 0 1000px ${colors.surface} inset`,
-                    WebkitTextFillColor: colors.textPrimary,
-                    transition: 'background-color 5000s ease-in-out 0s',
-                  },
-                }}
-              />
-            )}
-            sx={{
-              '& .MuiAutocomplete-popupIndicator': {
-                color: colors.textSecondary,
-                '&:hover': {
-                  backgroundColor: colors.primaryHover,
-                }
-              },
-              '& .MuiAutocomplete-clearIndicator': {
-                color: colors.textSecondary,
-                '&:hover': {
-                  backgroundColor: colors.primaryHover,
-                }
-              },
-            }}
-            componentsProps={{
-              paper: {
-                sx: {
-                  backgroundColor: colors.surfaceElevated,
-                  color: colors.textPrimary,
-                  border: `1px solid ${colors.border}`,
-                  marginTop: '4px',
-                  '& .MuiAutocomplete-option': {
-                    '&[aria-selected="true"]': {
-                      backgroundColor: `${colors.primary}22`,
-                    },
-                    '&[aria-selected="true"].Mui-focused': {
-                      backgroundColor: `${colors.primary}33`,
-                    },
-                    '&.Mui-focused': {
-                      backgroundColor: colors.primaryHover,
-                    },
-                  },
-                },
-              },
-              popper: {
-                sx: {
-                  '& .MuiAutocomplete-listbox': {
-                    backgroundColor: colors.surfaceElevated,
-                    '&::-webkit-scrollbar': {
-                      width: '8px',
-                    },
-                    '&::-webkit-scrollbar-track': {
-                      background: colors.surface,
-                    },
-                    '&::-webkit-scrollbar-thumb': {
-                      background: colors.border,
-                      borderRadius: '4px',
-                    },
-                  },
-                },
-              },
-            }}
-          />
-        </Box>
-      </Paper>
+      {selectedAssessment && selectedTeam && !editMode && (
+        <AssessmentDetail
+          assessment={selectedAssessment}
+          team={selectedTeam}
+          colors={colors}
+          getPerformanceColor={getPerformanceColor}
+          getCategoryChartData={getCategoryChartData}
+          horizontalChartOptions={horizontalChartOptions}
+          analyzeCategoryPerformance={analyzeCategoryPerformance}
+          isMobile={isMobile}
+          onBack={() => {
+            setSelectedAssessment(null);
+            setEditMode(false);
+          }}
+          onEdit={() => setEditMode(true)}
+        />
+      )}
 
-      {error && (
+      {editMode && selectedAssessment && (
+        <AssessmentForm
+          initialAssessment={selectedAssessment}
+          loading={loading}
+          colors={colors}
+          onSubmit={handleUpdateAssessment}
+          calculateOverallScore={calculateOverallScore}
+          getPerformanceColor={getPerformanceColor}
+          editMode={editMode}
+          onCancel={() => {
+            setEditMode(false);
+            setSelectedAssessment(null);
+          }}
+        />
+      )}
+
+      <StatsOverview
+        stats={stats}
+        supervisorStats={supervisorStats}  // Pass the raw stats object
+        colors={colors}
+        isMobile={isMobile}
+      />
+
+      {fieldTeams.length > 0 && (
+        <TeamList
+          fieldTeams={fieldTeams}
+          colors={colors}
+          isTeamAssessed={isTeamAssessed}
+          teamAssessmentsMap={teamAssessmentsMap}
+          getTeamAverageScore={getTeamAverageScore}
+          getPerformanceColor={getPerformanceColor}
+          loading={loading}
+          page={teamsPage}
+          rowsPerPage={teamsRowsPerPage}
+          onPageChange={(e, newPage) => setTeamsPage(newPage)}
+          onRowsPerPageChange={(e) => {
+            setTeamsRowsPerPage(parseInt(e.target.value, 10));
+            setTeamsPage(0);
+          }}
+          onSelectTeam={setSelectedTeam}
+        />
+      )}
+
+      {error && !showUndo && (
         <Alert severity="error" sx={{
           mb: 3,
           backgroundColor: '#2d0000',
@@ -868,729 +936,12 @@ const OnTheJobAssessment = () => {
         </Alert>
       )}
 
-      {!selectedTeam && user.title === 'Field Technical Support - QoS' && fieldTeams.length > 0 && (
-        <>
-          <Typography variant="h5" gutterBottom sx={{
-            color: colors.primary,
-            fontWeight: 'bold',
-            mb: 2
-          }}>
-            Field Teams Assessment Status
-          </Typography>
-
-          {loading ? (
-            <Box sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              p: 4,
-              backgroundColor: colors.surface,
-              borderRadius: '8px',
-              border: `1px solid ${colors.border}`
-            }}>
-              <CircularProgress sx={{ color: colors.primary }} />
-            </Box>
-          ) : (
-            <>
-              <TableContainer component={Paper} sx={{
-                backgroundColor: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderTopLeftRadius: '8px',
-                borderTopRightRadius: '8px',
-                borderBottomLeftRadius: '0px',
-                borderBottomRightRadius: '0px',
-                "& .MuiTableHead-root": {
-                  backgroundColor: colors.surfaceElevated,
-                  "& .MuiTableCell-root": {
-                    color: colors.textSecondary,
-                    fontWeight: "bold",
-                    borderBottom: `1px solid ${colors.border}`,
-                  }
-                },
-                "& .MuiTableBody-root": {
-                  "& .MuiTableCell-root": {
-                    borderBottom: `1px solid ${colors.border}`,
-                    color: colors.textPrimary,
-                  },
-                  "& .MuiTableRow-root": {
-                    backgroundColor: colors.surface,
-                    "&:hover": {
-                      backgroundColor: colors.surfaceElevated,
-                    },
-                  }
-                },
-              }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Team Name</TableCell>
-                      <TableCell>Company</TableCell>
-                      <TableCell>Assessment Status</TableCell>
-                      <TableCell>Score</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {fieldTeams
-                      .slice(teamsPage * teamsRowsPerPage, teamsPage * teamsRowsPerPage + teamsRowsPerPage)
-                      .map((team) => {
-                        const teamId = team._id.toString();
-                        const isAssessed = isTeamAssessed(teamId);
-                        const teamAssessments = teamAssessmentsMap[teamId] || [];
-                        const averageScore = teamAssessments.length > 0
-                          ? getTeamAverageScore(teamId)
-                          : 0;
-
-                        return (
-                          <TableRow key={team._id} hover>
-                            <TableCell>{team.teamName}</TableCell>
-                            <TableCell>{team.teamCompany}</TableCell>
-                            <TableCell>
-                              <Chip
-                                label={isAssessed ? "Assessed" : "Not Assessed"}
-                                color={isAssessed ? "success" : "error"}
-                                variant="outlined"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              {isAssessed ? (
-                                <Chip
-                                  label={`${averageScore}%`}
-                                  color={getPerformanceColor(averageScore)}
-                                  variant="outlined"
-                                />
-                              ) : "N/A"}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              <TablePagination
-                rowsPerPageOptions={[10, 25, 50]}
-                component="div"
-                count={fieldTeams.length}
-                rowsPerPage={teamsRowsPerPage}
-                page={teamsPage}
-                onPageChange={(e, newPage) => setTeamsPage(newPage)}
-                onRowsPerPageChange={(e) => {
-                  setTeamsRowsPerPage(parseInt(e.target.value, 10));
-                  setTeamsPage(0);
-                }}
-                sx={{
-                  color: colors.textPrimary,
-                  '& .MuiTablePagination-selectIcon': {
-                    color: colors.textPrimary
-                  },
-                  '& .MuiSvgIcon-root': {
-                    color: colors.textPrimary
-                  },
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  borderTop: 'none',
-                  borderBottomLeftRadius: '8px',
-                  borderBottomRightRadius: '8px',
-                  mb: 6
-                }}
-              />
-            </>
-          )}
-        </>
-      )}
-
-      {selectedTeam && !selectedAssessment && (
-        <>
-          <Paper sx={{
-            p: 3,
-            mb: 4,
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '8px'
-          }}>
-            <Typography variant="h5" gutterBottom sx={{
-              color: colors.primary,
-              fontWeight: 'bold',
-              mb: 3
-            }}>
-              New Assessment
-            </Typography>
-
-            <TextField
-              label="Conducted By"
-              fullWidth
-              value={newAssessment.conductedBy}
-              onChange={(e) => setNewAssessment(prevState => ({ ...prevState, conductedBy: e.target.value }))}
-              sx={{ mb: 2 }}
-              InputLabelProps={{
-                style: { color: colors.textSecondary }
-              }}
-              InputProps={{
-                style: { color: colors.textPrimary }
-              }}
-            />
-
-            <Typography variant="h6" gutterBottom sx={{
-              color: colors.textPrimary,
-              mb: 2
-            }}>
-              Assessment Check Points
-            </Typography>
-
-            <CheckpointsByCategory
-              checkPoints={newAssessment.checkPoints}
-              handleCheckPointChange={handleCheckPointChange}
-              colors={colors}
-            />
-
-            <Typography variant="h6" sx={{
-              mt: 2,
-              color: colors.textPrimary
-            }}>
-              Overall Score: <Chip
-                label={`${calculateOverallScore(newAssessment.checkPoints, newAssessment.categoryWeights)}%`}
-                color={getPerformanceColor(calculateOverallScore(newAssessment.checkPoints, newAssessment.categoryWeights))}
-                variant="outlined"
-                sx={{ ml: 1 }}
-              />
-            </Typography>
-
-            <TextField
-              label="Feedback"
-              fullWidth
-              multiline
-              rows={4}
-              value={newAssessment.feedback}
-              onChange={(e) => setNewAssessment(prevState => ({ ...prevState, feedback: e.target.value }))}
-              sx={{ mt: 2, mb: 2 }}
-              InputLabelProps={{
-                style: { color: colors.textSecondary }
-              }}
-              InputProps={{
-                style: { color: colors.textPrimary }
-              }}
-            />
-
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSubmitAssessment}
-              disabled={loading || !newAssessment.conductedBy}
-              sx={{
-                backgroundColor: colors.primary,
-                '&:hover': {
-                  backgroundColor: '#1d4ed8',
-                },
-                '&:disabled': {
-                  backgroundColor: '#555',
-                  color: '#999'
-                }
-              }}
-            >
-              {loading ? <CircularProgress size={24} sx={{ color: colors.textPrimary }} /> : "Submit Assessment"}
-            </Button>
-          </Paper>
-
-          <Typography variant="h5" gutterBottom sx={{
-            color: colors.primary,
-            fontWeight: 'bold',
-            mb: 2
-          }}>
-            Previous Assessments
-          </Typography>
-
-          {assessments && assessments.length > 0 ? (
-            <>
-              <TableContainer component={Paper} sx={{
-                backgroundColor: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderTopLeftRadius: '8px',
-                borderTopRightRadius: '8px',
-                borderBottomLeftRadius: '0px',
-                borderBottomRightRadius: '0px',
-                "& .MuiTableHead-root": {
-                  backgroundColor: colors.surfaceElevated,
-                  "& .MuiTableCell-root": {
-                    color: colors.textSecondary,
-                    fontWeight: "bold",
-                    borderBottom: `1px solid ${colors.border}`,
-                  }
-                },
-                "& .MuiTableBody-root": {
-                  "& .MuiTableCell-root": {
-                    borderBottom: `1px solid ${colors.border}`,
-                    color: colors.textPrimary,
-                  },
-                  "& .MuiTableRow-root": {
-                    backgroundColor: colors.surface,
-                    "&:hover": {
-                      backgroundColor: colors.surfaceElevated,
-                    },
-                  }
-                },
-              }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Conducted By</TableCell>
-                      <TableCell>Score</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {assessments
-                      .slice(assessmentsPage * assessmentsRowsPerPage, assessmentsPage * assessmentsRowsPerPage + assessmentsRowsPerPage)
-                      .map((assessment) => (
-                        <TableRow key={assessment._id} hover>
-                          <TableCell>
-                            {new Date(assessment.assessmentDate).toLocaleString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true
-                            })}
-                          </TableCell>
-                          <TableCell>{assessment.conductedBy}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={`${assessment.overallScore}%`}
-                              color={getPerformanceColor(assessment.overallScore)}
-                              variant="outlined"
-                            />
-                          </TableCell>
-                          <TableCell>{assessment.status}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => setSelectedAssessment(assessment)}
-                              sx={{
-                                color: colors.primary,
-                                borderColor: colors.primary,
-                                '&:hover': {
-                                  backgroundColor: colors.primaryHover,
-                                  borderColor: colors.primary,
-                                }
-                              }}
-                            >
-                              View Details
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              <TablePagination
-                rowsPerPageOptions={[10, 25, 50]}
-                component="div"
-                count={assessments.length}
-                rowsPerPage={assessmentsRowsPerPage}
-                page={assessmentsPage}
-                onPageChange={(e, newPage) => setAssessmentsPage(newPage)}
-                onRowsPerPageChange={(e) => {
-                  setAssessmentsRowsPerPage(parseInt(e.target.value, 10));
-                  setAssessmentsPage(0);
-                }}
-                sx={{
-                  color: colors.textPrimary,
-                  '& .MuiTablePagination-selectIcon': {
-                    color: colors.textPrimary
-                  },
-                  '& .MuiSvgIcon-root': {
-                    color: colors.textPrimary
-                  },
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  borderTop: 'none',
-                  borderBottomLeftRadius: '8px',
-                  borderBottomRightRadius: '8px',
-                  mb: 6
-                }}
-              />
-            </>
-          ) : (
-            <Paper sx={{
-              p: 3,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px',
-              textAlign: 'center'
-            }}>
-              <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                No assessments found for this team
-              </Typography>
-            </Paper>
-          )}
-        </>
-      )}
-
-      {selectedAssessment && selectedTeam && (
-        <Box sx={{ mt: 3 }}>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => setSelectedAssessment(null)}
-            sx={{
-              mb: 2,
-              color: colors.primary,
-              '&:hover': {
-                backgroundColor: colors.primaryHover
-              }
-            }}
-          >
-            Back to Assessments List
-          </Button>
-
-          <Card sx={{
-            mb: 3,
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '8px'
-          }}>
-            <CardContent>
-              <Typography variant="h5" gutterBottom sx={{
-                color: colors.primary,
-                mb: 3
-              }}>
-                Assessment Summary
-              </Typography>
-              <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' },
-                gap: 3,
-                '& > div': {
-                  minWidth: '150px'
-                }
-              }}>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Team Name</Typography>
-                  <Typography sx={{ color: "white" }}>{selectedTeam.teamName}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Conducted By</Typography>
-                  <Typography sx={{ color: "white" }}>{selectedAssessment.conductedBy}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Date</Typography>
-                  <Typography sx={{ color: "white" }}>
-                    {new Date(selectedAssessment.assessmentDate).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: true
-                    })}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Overall Score</Typography>
-                  <Chip
-                    label={`${selectedAssessment.overallScore}%`}
-                    color={getPerformanceColor(selectedAssessment.overallScore)}
-                    size="small"
-                    variant="outlined"
-                  />
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Status</Typography>
-                  <Typography sx={{ color: "white" }}>{selectedAssessment.status}</Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-
-          <Box sx={{
-            display: 'flex',
-            gap: 3,
-            flexDirection: 'column',
-            mb: 3
-          }}>
-            <Paper sx={{
-              p: 2,
-              flex: 1,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px',
-              overflow: 'hidden'
-            }}>
-              <Typography variant="h6" gutterBottom sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                color: colors.primary,
-                mb: 2,
-                fontSize: isMobile ? '1.1rem' : '1.25rem'
-              }}>
-                <BarChart fontSize={isMobile ? 'small' : 'medium'} />
-                {isMobile ? 'Performance' : 'Performance Overview'}
-              </Typography>
-              {getCategoryChartData() && (
-                <Box sx={{
-                  height: isMobile ? '250px' : '300px',
-                  position: 'relative',
-                  width: '100%'
-                }}>
-                  <Bar
-                    data={getCategoryChartData()}
-                    options={{
-                      ...horizontalChartOptions,
-                      plugins: {
-                        ...horizontalChartOptions.plugins,
-                        title: {
-                          ...horizontalChartOptions.plugins.title,
-                          display: !isMobile
-                        },
-                        legend: {
-                          ...horizontalChartOptions.plugins.legend,
-                          position: isMobile ? 'bottom' : 'top'
-                        }
-                      }
-                    }}
-                  />
-                </Box>
-              )}
-            </Paper>
-
-            <Paper sx={{
-              p: 2,
-              flex: 1,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px',
-            }}>
-              <Typography variant="h6" gutterBottom sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                color: colors.primary,
-                mb: 2,
-                fontSize: isMobile ? '1.1rem' : '1.25rem'
-              }}>
-                <BarChartOutlined fontSize={isMobile ? 'small' : 'medium'} />
-                Performance Analysis
-              </Typography>
-
-              {selectedAssessment && (
-                <>
-                  {(() => {
-                    const analysis = analyzeCategoryPerformance(selectedAssessment.checkPoints);
-                    return (
-                      <Box sx={{ mt: 2 }}>
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="subtitle1" sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            color: colors.success,
-                            fontWeight: 'medium',
-                            mb: 1
-                          }}>
-                            <TrendingUp fontSize="small" sx={{ mr: 1 }} />
-                            Areas of Strength
-                          </Typography>
-
-                          {analysis.strengths.length > 0 ? (
-                            <Box sx={{ pl: 2 }}>
-                              {analysis.strengths.map((item, index) => (
-                                <Box key={index} sx={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  py: 1,
-                                  borderBottom: index < analysis.strengths.length - 1 ? `1px solid ${colors.border}` : 'none'
-                                }}>
-                                  <Typography variant="body2" sx={{ color: colors.textPrimary }}>
-                                    {item.category}
-                                  </Typography>
-                                  <Chip
-                                    label={`${item.score}%`}
-                                    color="success"
-                                    size="small"
-                                    variant="outlined"
-                                  />
-                                </Box>
-                              ))}
-                            </Box>
-                          ) : (
-                            <Typography variant="body2" sx={{ color: colors.textSecondary, pl: 2 }}>
-                              No significant strengths identified.
-                            </Typography>
-                          )}
-                        </Box>
-
-                        <Box>
-                          <Typography variant="subtitle1" sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            color: colors.warning,
-                            fontWeight: 'medium',
-                            mb: 1
-                          }}>
-                            <TrendingDown fontSize="small" sx={{ mr: 1 }} />
-                            Areas for Improvement
-                          </Typography>
-
-                          {analysis.improvements.length > 0 ? (
-                            <Box sx={{ pl: 2 }}>
-                              {analysis.improvements.map((item, index) => (
-                                <Box key={index} sx={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  py: 1,
-                                  borderBottom: index < analysis.improvements.length - 1 ? `1px solid ${colors.border}` : 'none'
-                                }}>
-                                  <Typography variant="body2" sx={{ color: colors.textPrimary }}>
-                                    {item.category}
-                                  </Typography>
-                                  <Chip
-                                    label={`${item.score}%`}
-                                    color={item.score < 50 ? "error" : "warning"}
-                                    size="small"
-                                    variant="outlined"
-                                  />
-                                </Box>
-                              ))}
-                            </Box>
-                          ) : (
-                            <Typography variant="body2" sx={{ color: colors.textSecondary, pl: 2 }}>
-                              No significant areas for improvement.
-                            </Typography>
-                          )}
-                        </Box>
-
-                        <Box sx={{ mt: 3, pt: 2, borderTop: `1px dashed ${colors.border}` }}>
-                          <Typography variant="subtitle1" sx={{
-                            color: colors.primary,
-                            fontWeight: 'medium',
-                            mb: 1
-                          }}>
-                            Recommendations
-                          </Typography>
-
-                          {(() => {
-                            const criticalAreas = analysis.improvements.filter(item => item.score <= 60);
-
-                            if (criticalAreas.length > 0) {
-                              return (
-                                <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                                  Focus training efforts on {criticalAreas.map(i => i.category).join(', ')},
-                                  which {criticalAreas.length === 1 ? 'shows' : 'show'} critical need for improvement with {criticalAreas.length === 1 ? 'a score' : 'scores'} at or below 60%.
-                                </Typography>
-                              );
-                            } else {
-                              return (
-                                <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                                  No critical areas identified. Continue working on {analysis.improvements.slice(0, 2).map(i => i.category).join(' and ')}
-                                  to further enhance overall performance.
-                                </Typography>
-                              );
-                            }
-                          })()}
-                        </Box>
-                      </Box>
-                    );
-                  })()}
-                </>
-              )}
-            </Paper>
-          </Box>
-
-          <Paper sx={{
-            p: 3,
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '8px',
-            mb: 3
-          }}>
-            <Typography variant="h6" gutterBottom sx={{
-              color: colors.primary,
-              mb: 2
-            }}>
-              Check Points Details
-            </Typography>
-
-            {selectedAssessment.checkPoints.map((point, index) => (
-              <Box key={index} sx={{ mb: 3 }}>
-                <Box sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  mb: 1
-                }}>
-                  <Typography variant="subtitle1" sx={{
-                    color: colors.textPrimary,
-                    fontWeight: '500'
-                  }}>
-                    {point.name}
-                  </Typography>
-                  <Chip
-                    label={`${point.score}%`}
-                    color={getPerformanceColor(point.score)}
-                    size="small"
-                    variant="outlined"
-                  />
-                </Box>
-
-                <Typography sx={{ color: colors.textSecondary, mb: 1 }}>
-                  {point.description}
-                </Typography>
-
-                <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                  <Typography variant="body2" sx={{
-                    color: colors.textPrimary,
-                    mb: 1
-                  }}>
-                    <strong style={{ color: colors.textSecondary }}>Notes:</strong> <br />
-                    <span style={{ display: 'flex', direction: point.notes ? 'rtl' : 'ltr', textAlign: point.notes ? 'right' : 'left' }}>{point.notes || "No notes provided"}</span>
-                  </Typography>
-                </Box>
-
-                {index < selectedAssessment.checkPoints.length - 1 && (
-                  <Divider sx={{
-                    mt: 2,
-                    backgroundColor: colors.border
-                  }} />
-                )}
-              </Box>
-            ))}
-          </Paper>
-
-          <Paper sx={{
-            p: 3,
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '8px'
-          }}>
-            <Typography variant="h6" gutterBottom sx={{
-              color: colors.primary,
-              mb: 2
-            }}>
-              Feedback
-            </Typography>
-            <TextField
-              label="Feedback"
-              fullWidth
-              multiline
-              rows={4}
-              value={selectedAssessment.feedback}
-              InputLabelProps={{
-                style: { color: colors.textSecondary }
-              }}
-              InputProps={{
-                style: {
-                  color: colors.textPrimary,
-                  direction: 'rtl',
-                  textAlign: 'right'
-                }
-              }}
-            />
-          </Paper>
-        </Box>
+      {showUndo && (
+        <UndoNotification
+          showUndo={showUndo}
+          onUndo={handleUndoDelete}
+          colors={colors}
+        />
       )}
     </Box>
   );

@@ -35,11 +35,11 @@ import {
   Refresh,
 } from '@mui/icons-material';
 import api from '../api/api';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip as ChartTooltip, Legend } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 
 // Register ChartJS components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, ChartTooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Legend);
 
 const PerfAssessmentDashboard = () => {
   const [teamId, setTeamId] = useState('');

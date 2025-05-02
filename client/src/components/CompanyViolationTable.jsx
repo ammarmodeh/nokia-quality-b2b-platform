@@ -102,6 +102,7 @@ export const CompanyViolationTable = ({ tasks }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [companyTasks, setCompanyTasks] = useState([]);
+  const [open, setOpen] = useState(false);
 
   // Get the total violations for each company
   const companyViolations = getCompanyViolations(tasks);
@@ -238,6 +239,52 @@ export const CompanyViolationTable = ({ tasks }) => {
           }}
         >
           Violations Per Group ( <span style={{ color: "#03a9f4" }}>{netTotal}</span> )
+          <IconButton
+            size="small"
+            onClick={() => setOpen(true)}
+            sx={{
+              backgroundColor: "#a00101",
+              color: "#ffffff",
+              width: 24,
+              height: 24,
+              ml: 1,
+              borderRadius: "50%",
+              p: 0,
+              fontSize: "14px",
+              lineHeight: 1.5,
+              "&:hover": {
+                backgroundColor: "#c20000",
+              },
+            }}
+          >
+            i
+          </IconButton>
+
+          <Dialog
+            open={open}
+            onClose={() => setOpen(false)}
+            maxWidth="xs"
+            fullWidth
+            PaperProps={{
+              sx: {
+                backgroundColor: "#1e1e1e", // Dark background
+                color: "#ffffff",           // White text
+                borderRadius: 2,
+                p: 2,
+              },
+            }}
+          >
+            <DialogTitle sx={{ color: "#ffffff", fontSize: "18px", fontWeight: "bold" }}>
+              Statistics Disclaimer
+            </DialogTitle>
+            <DialogContent>
+              <Typography fontSize="14px" color="#dddddd">
+                Note: The statistics in this section may not be fully accurate due to recent changes in group names and the migration of some teams between groups.
+              </Typography>
+            </DialogContent>
+          </Dialog>
+
+
         </Typography>
         <Tooltip title="Export to Excel">
           <IconButton
@@ -316,7 +363,7 @@ export const CompanyViolationTable = ({ tasks }) => {
         />
       </Paper>
 
-      {/* Dialog to show company tasks */}
+      {/* Dialog to show company tickets */}
       <Dialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
