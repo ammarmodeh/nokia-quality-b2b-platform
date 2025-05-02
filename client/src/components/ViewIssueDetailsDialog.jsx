@@ -10,11 +10,16 @@ import {
   Tooltip,
   IconButton,
   Paper,
-  Divider
+  Divider,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { MdClose, MdContentCopy, MdWhatsapp } from 'react-icons/md';
 
 const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   if (!issue) return null;
 
   const handleCopyDetails = () => {
@@ -66,13 +71,17 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="sm"
+      maxWidth="md" // Changed from "sm" to "md" for wider desktop view
       fullWidth
+      fullScreen={isMobile} // Makes dialog full screen on mobile
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#1e1e1e',
           boxShadow: 'none',
-          borderRadius: '8px',
+          borderRadius: isMobile ? 0 : '8px', // Remove border radius on mobile
+          width: isMobile ? '100%' : 'auto',
+          margin: isMobile ? 0 : '32px',
+          maxHeight: isMobile ? '100%' : 'calc(100% - 64px)'
         }
       }}
     >
@@ -83,7 +92,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
         backgroundColor: '#1e1e1e',
         color: '#ffffff',
         borderBottom: '1px solid #444',
-        padding: '16px 24px',
+        padding: isMobile ? '12px 16px' : '16px 24px',
       }}>
         <Typography variant="h6" component="div">
           Issue Details
@@ -136,15 +145,15 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
       <DialogContent dividers sx={{
         backgroundColor: '#1e1e1e',
         color: '#ffffff',
-        padding: '20px 24px',
+        padding: isMobile ? '16px' : '20px 24px',
         '&.MuiDialogContent-root': {
-          padding: '20px 24px',
+          padding: isMobile ? '16px' : '20px 24px',
         },
       }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 2 : 3, pt: 1 }}>
           {/* Basic Information Section */}
           <Paper elevation={0} sx={{
-            p: 2,
+            p: isMobile ? 1.5 : 2,
             backgroundColor: '#272727',
             borderRadius: 2,
             border: '1px solid #444'
@@ -152,16 +161,16 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: '#ffffff' }}>
               Basic Information
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <DetailRow label="SLID" value={issue.slid} darkMode />
-              <DetailRow label="PIS Date" value={issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'} darkMode />
-              <DetailRow label="Date Reported" value={issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'} darkMode />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 1 : 1.5 }}>
+              <DetailRow label="SLID" value={issue.slid} darkMode isMobile={isMobile} />
+              <DetailRow label="PIS Date" value={issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'} darkMode isMobile={isMobile} />
+              <DetailRow label="Date Reported" value={issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'} darkMode isMobile={isMobile} />
             </Box>
           </Paper>
 
           {/* Reporter Information Section */}
           <Paper elevation={0} sx={{
-            p: 2,
+            p: isMobile ? 1.5 : 2,
             backgroundColor: '#272727',
             borderRadius: 2,
             border: '1px solid #444'
@@ -169,17 +178,17 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: '#ffffff' }}>
               Reporter Information
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <DetailRow label="From" value={issue.from} darkMode />
-              <DetailRow label="Reporter" value={issue.reporter} darkMode />
-              <DetailRow label="Reporter Note" value={issue.reporterNote} darkMode />
-              <DetailRow label="Contact Method" value={issue.contactMethod} darkMode />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 1 : 1.5 }}>
+              <DetailRow label="From" value={issue.from} darkMode isMobile={isMobile} />
+              <DetailRow label="Reporter" value={issue.reporter} darkMode isMobile={isMobile} />
+              <DetailRow label="Reporter Note" value={issue.reporterNote} darkMode isMobile={isMobile} />
+              <DetailRow label="Contact Method" value={issue.contactMethod} darkMode isMobile={isMobile} />
             </Box>
           </Paper>
 
           {/* Team Information Section */}
           <Paper elevation={0} sx={{
-            p: 2,
+            p: isMobile ? 1.5 : 2,
             backgroundColor: '#272727',
             borderRadius: 2,
             border: '1px solid #444'
@@ -187,16 +196,16 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: '#ffffff' }}>
               Team Information
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <DetailRow label="Team/Company" value={issue.teamCompany} darkMode />
-              <DetailRow label="Assigned To" value={issue.assignedTo} darkMode />
-              <DetailRow label="Assigned Note" value={issue.assignedNote || "N/A"} darkMode />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 1 : 1.5 }}>
+              <DetailRow label="Team/Company" value={issue.teamCompany} darkMode isMobile={isMobile} />
+              <DetailRow label="Assigned To" value={issue.assignedTo} darkMode isMobile={isMobile} />
+              <DetailRow label="Assigned Note" value={issue.assignedNote || "N/A"} darkMode isMobile={isMobile} />
             </Box>
           </Paper>
 
           {/* Issue Information Section */}
           <Paper elevation={0} sx={{
-            p: 2,
+            p: isMobile ? 1.5 : 2,
             backgroundColor: '#272727',
             borderRadius: 2,
             border: '1px solid #444'
@@ -204,8 +213,8 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: '#ffffff' }}>
               Issue Information
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <DetailRow label="Issue Category" value={issue.issueCategory} darkMode />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 1 : 1.5 }}>
+              <DetailRow label="Issue Category" value={issue.issueCategory} darkMode isMobile={isMobile} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="subtitle1" color="#ffffff">Status:</Typography>
                 <Chip
@@ -245,7 +254,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
       <DialogActions sx={{
         backgroundColor: '#1e1e1e',
         borderTop: '1px solid #444',
-        padding: '12px 24px',
+        padding: isMobile ? '8px 16px' : '12px 24px',
       }}>
         <Button
           onClick={onClose}
@@ -263,14 +272,15 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
   );
 };
 
-// Helper component for consistent detail rows
-const DetailRow = ({ label, value, darkMode }) => (
+// Updated helper component with mobile responsiveness
+const DetailRow = ({ label, value, darkMode, isMobile }) => (
   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
     <Typography
       variant="subtitle1"
       sx={{
         fontWeight: '500',
-        color: darkMode ? '#aaaaaa' : 'text.primary'
+        color: darkMode ? '#aaaaaa' : 'text.primary',
+        fontSize: isMobile ? '0.875rem' : '1rem'
       }}
     >
       {label}:
@@ -279,7 +289,8 @@ const DetailRow = ({ label, value, darkMode }) => (
       sx={{
         maxWidth: '60%',
         textAlign: 'right',
-        color: darkMode ? '#ffffff' : 'text.secondary'
+        color: darkMode ? '#ffffff' : 'text.secondary',
+        fontSize: isMobile ? '0.875rem' : '1rem'
       }}
     >
       {value || 'N/A'}
