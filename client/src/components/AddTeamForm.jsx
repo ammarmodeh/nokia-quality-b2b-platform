@@ -55,7 +55,7 @@ const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)}>
-      <Typography variant="h4" fontWeight="bold" textAlign="center" mb={5} color="#3ea6ff">
+      <Typography variant="h4" fontWeight="bold" textAlign="left" mb={5} color="#3ea6ff">
         Add Field Team Information
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: isMobileScreen ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 3 }}>

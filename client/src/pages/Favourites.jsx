@@ -17,7 +17,8 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Button
+  Button,
+  useMediaQuery
 } from "@mui/material";
 import {
   MdVisibility,
@@ -41,6 +42,7 @@ const Favourite = () => {
   const [currentTask, setCurrentTask] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useMediaQuery('(max-width:503px)');
 
   const fetchFavourites = useCallback(async () => {
     try {
@@ -130,7 +132,12 @@ const Favourite = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{
+      maxWidth: '1100px',
+      mx: 'auto',
+      p: 2,
+      px: isMobile ? 0 : undefined
+    }}>
       <Typography variant="h5" gutterBottom sx={{
         color: '#3ea6ff',
         fontWeight: 'bold',

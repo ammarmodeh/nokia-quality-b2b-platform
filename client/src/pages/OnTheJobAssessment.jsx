@@ -43,8 +43,9 @@ const OnTheJobAssessment = () => {
   const [deletedAssessment, setDeletedAssessment] = useState(null);
   const [undoTimeout, setUndoTimeout] = useState(null);
   console.log('OnTheJobAssessment Triggered');
-  // Update your state to include supervisorStats
+
   const [supervisorStats, setSupervisorStats] = useState({});
+
   const calculateSupervisorStats = useCallback((assessments) => {
     return assessments.reduce((acc, assessment) => {
       const key = assessment.conductedById;
@@ -60,7 +61,7 @@ const OnTheJobAssessment = () => {
       return acc;
     }, {});
   }, []);
-  // Update this whenever allAssessments changes
+
   useEffect(() => {
     setSupervisorStats(calculateSupervisorStats(allAssessments));
   }, [allAssessments, calculateSupervisorStats]);
@@ -228,7 +229,7 @@ const OnTheJobAssessment = () => {
       "Customer": 0.20,
       "Service": 0.25
     }
-  }), []); // Empty dependency array means it's created once
+  }), []);
 
   const colors = useMemo(() => ({
     background: '#121212',
@@ -247,50 +248,11 @@ const OnTheJobAssessment = () => {
   }), []);
 
   useEffect(() => {
-    // Check for pending undo on component load
-    const pendingUndo = localStorage.getItem('pendingUndo');
-    if (pendingUndo) {
-      const { assessmentId, deletionTime, teamId } = JSON.parse(pendingUndo);
-
-      // Check if undo window is still valid (24 hours)
-      const deletionDate = new Date(deletionTime);
-      const now = new Date();
-      const hoursSinceDeletion = (now - deletionDate) / (1000 * 60 * 60);
-
-      if (hoursSinceDeletion < 24) {
-        setDeletedAssessment(assessmentId);
-        setShowUndo(true);
-
-        // Calculate remaining time for undo
-        const remainingMs = 24 * 60 * 60 * 1000 - (now - deletionDate);
-
-        const timeout = setTimeout(() => {
-          localStorage.removeItem('pendingUndo');
-          setShowUndo(false);
-          setDeletedAssessment(null);
-        }, remainingMs);
-
-        setUndoTimeout(timeout);
-
-        // If we're not already viewing the team, navigate to it
-        if (selectedTeam?._id !== teamId) {
-          // You might want to implement this based on your routing
-          // navigate(`/path-to-team-assessments/${teamId}`);
-        }
-      } else {
-        // Clear expired undo
-        localStorage.removeItem('pendingUndo');
-      }
-    }
-  }, []);
-
-  useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Fetch all data in parallel
         const [teamsResponse, assessmentsResponse, statsResponse] = await Promise.all([
           api.get("/field-teams/get-field-teams", {
             headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
@@ -319,16 +281,45 @@ const OnTheJobAssessment = () => {
 
   useEffect(() => {
     return () => {
-      // Cleanup timeout if component unmounts
       if (undoTimeout) clearTimeout(undoTimeout);
     };
   }, [undoTimeout]);
 
-  // Memoized map of team assessments for quick lookup
+  useEffect(() => {
+    const pendingUndo = localStorage.getItem('pendingUndo');
+    if (pendingUndo) {
+      const { assessmentId, deletionTime, teamId } = JSON.parse(pendingUndo);
+
+      const deletionDate = new Date(deletionTime);
+      const now = new Date();
+      const hoursSinceDeletion = (now - deletionDate) / (1000 * 60 * 60);
+
+      if (hoursSinceDeletion < 24) {
+        setDeletedAssessment(assessmentId);
+        setShowUndo(true);
+
+        const remainingMs = 24 * 60 * 60 * 1000 - (now - deletionDate);
+
+        const timeout = setTimeout(() => {
+          localStorage.removeItem('pendingUndo');
+          setShowUndo(false);
+          setDeletedAssessment(null);
+        }, remainingMs);
+
+        setUndoTimeout(timeout);
+
+        if (selectedTeam?._id !== teamId) {
+          // navigate(`/path-to-team-assessments/${teamId}`);
+        }
+      } else {
+        localStorage.removeItem('pendingUndo');
+      }
+    }
+  }, [selectedTeam]);
+
   const teamAssessmentsMap = useMemo(() => {
     const map = {};
     allAssessments.forEach(assessment => {
-      // Handle both populated and unpopulated fieldTeamId
       const teamId = assessment.fieldTeamId?._id?.toString() ||
         assessment.fieldTeamId?.toString();
 
@@ -342,7 +333,6 @@ const OnTheJobAssessment = () => {
     return map;
   }, [allAssessments]);
 
-  // Update assessments when selected team changes
   useEffect(() => {
     if (selectedTeam) {
       const teamId = selectedTeam._id.toString();
@@ -352,7 +342,6 @@ const OnTheJobAssessment = () => {
     }
   }, [selectedTeam, teamAssessmentsMap]);
 
-  // Memoized set of assessed team IDs
   const assessedTeamIds = useMemo(() => {
     return new Set(
       allAssessments.map(assessment =>
@@ -362,12 +351,10 @@ const OnTheJobAssessment = () => {
     );
   }, [allAssessments]);
 
-  // Helper function to check if a team has been assessed
   const isTeamAssessed = useCallback((teamId) => {
     return assessedTeamIds.has(teamId.toString());
   }, [assessedTeamIds]);
 
-  // Helper function to get average score for a team
   const getTeamAverageScore = useCallback((teamId) => {
     const teamAssessments = teamAssessmentsMap[teamId.toString()];
     if (!teamAssessments || teamAssessments.length === 0) return 0;
@@ -376,7 +363,6 @@ const OnTheJobAssessment = () => {
       total + (assessment.overallScore || 0), 0);
     return Math.round(sum / teamAssessments.length);
   }, [teamAssessmentsMap]);
-
 
   const handleSubmitAssessment = useCallback(async (completeAssessment) => {
     try {
@@ -404,7 +390,6 @@ const OnTheJobAssessment = () => {
         }
       );
 
-      // Handle successful submission
       const assessmentsResponse = await api.get(
         `/on-the-job-assessments/field-team/${selectedTeam._id}`,
         {
@@ -422,7 +407,6 @@ const OnTheJobAssessment = () => {
       setLoading(false);
     }
   }, [selectedTeam]);
-
 
   const calculateOverallScore = useCallback((checkPoints, categoryWeights = {}) => {
     if (!checkPoints || checkPoints.length === 0) return 0;
@@ -591,10 +575,8 @@ const OnTheJobAssessment = () => {
       setLoading(true);
       setError(null);
 
-      // Optimistically update the UI
       const deletedAssessment = assessments.find(a => a._id === assessmentId);
       setAssessments(prev => prev.filter(a => a._id !== assessmentId));
-      // Update allAssessments (which will trigger supervisor stats update)
       setAllAssessments(prev => prev.filter(a => a._id !== assessmentId));
       setStats(prev => ({
         ...prev,
@@ -604,14 +586,12 @@ const OnTheJobAssessment = () => {
         }
       }));
 
-      // Perform soft delete
       const response = await api.patch(
         `/on-the-job-assessments/${assessmentId}/soft-delete`,
         {},
         { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
       );
 
-      // Store undo info
       const deletionInfo = {
         assessmentId,
         assessmentData: deletedAssessment,
@@ -623,7 +603,6 @@ const OnTheJobAssessment = () => {
       setDeletedAssessment(assessmentId);
       setShowUndo(true);
 
-      // Set undo timeout
       const timeout = setTimeout(() => {
         localStorage.removeItem('pendingUndo');
         setShowUndo(false);
@@ -631,7 +610,6 @@ const OnTheJobAssessment = () => {
       }, 24 * 60 * 60 * 1000);
       setUndoTimeout(timeout);
 
-      // Update stats from response
       if (response.data.stats) {
         setStats(prev => ({
           ...prev,
@@ -643,7 +621,6 @@ const OnTheJobAssessment = () => {
       console.error("Error deleting assessment:", error);
       setError("Failed to delete assessment");
 
-      // Revert optimistic updates
       if (deletedAssessment) {
         setAssessments(prev => [...prev, deletedAssessment]);
         setAllAssessments(prev => [...prev, deletedAssessment]);
@@ -665,7 +642,6 @@ const OnTheJobAssessment = () => {
       setLoading(true);
       setError(null);
 
-      // Get the undo info from localStorage
       const pendingUndo = JSON.parse(localStorage.getItem('pendingUndo'));
       if (!pendingUndo) {
         setError("No assessment to undo");
@@ -674,7 +650,6 @@ const OnTheJobAssessment = () => {
 
       const { assessmentId, assessmentData, teamId } = pendingUndo;
 
-      // Optimistically update all relevant states immediately
       setAssessments(prev => [...prev, assessmentData]);
       setAllAssessments(prev => [...prev, assessmentData]);
       setStats(prev => ({
@@ -685,7 +660,6 @@ const OnTheJobAssessment = () => {
         }
       }));
 
-      // Use the proper restore endpoint
       const response = await api.patch(
         `/on-the-job-assessments/${assessmentId}/restore`,
         {},
@@ -696,7 +670,6 @@ const OnTheJobAssessment = () => {
         }
       );
 
-      // Clear the undo state
       localStorage.removeItem('pendingUndo');
       if (undoTimeout) clearTimeout(undoTimeout);
 
@@ -704,33 +677,25 @@ const OnTheJobAssessment = () => {
       setDeletedAssessment(null);
       setError(null);
 
-      // Refresh data to ensure everything is in sync
-      try {
-        const [statsResponse, assessmentsResponse] = await Promise.all([
-          api.get("/on-the-job-assessments/stats", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }),
-          api.get(`/on-the-job-assessments/field-team/${teamId}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          })
-        ]);
+      const [statsResponse, assessmentsResponse] = await Promise.all([
+        api.get("/on-the-job-assessments/stats", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }),
+        api.get(`/on-the-job-assessments/field-team/${teamId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        })
+      ]);
 
-        setStats(statsResponse.data);
-        setAssessments(assessmentsResponse.data);
-      } catch (error) {
-        console.error("Error refreshing data:", error);
-        // Don't revert optimistic updates - the restore was successful
-      }
-
+      setStats(statsResponse.data);
+      setAssessments(assessmentsResponse.data);
     } catch (error) {
       console.error("Error undoing delete:", error);
       setError(error.response?.data?.message || "Failed to undo delete");
 
-      // Revert optimistic updates if the API call fails
       if (deletedAssessment) {
         setAssessments(prev => prev.filter(a => a._id !== deletedAssessment._id));
         setAllAssessments(prev => prev.filter(a => a._id !== deletedAssessment._id));
@@ -771,7 +736,6 @@ const OnTheJobAssessment = () => {
         }
       );
 
-      // Refresh assessments list
       const assessmentsResponse = await api.get(
         `/on-the-job-assessments/field-team/${selectedTeam._id}`, {
         headers: {
@@ -796,7 +760,11 @@ const OnTheJobAssessment = () => {
     <Box sx={{
       backgroundColor: colors.background,
       minHeight: '100vh',
+      maxWidth: '1100px',
+      mx: 'auto',
       color: colors.textPrimary,
+      p: 2,
+      px: isMobile ? 0 : undefined
     }}>
       <Button
         startIcon={<ArrowBack />}
@@ -898,8 +866,9 @@ const OnTheJobAssessment = () => {
       )}
 
       <StatsOverview
+        key={JSON.stringify(stats) + JSON.stringify(supervisorStats)}
         stats={stats}
-        supervisorStats={supervisorStats}  // Pass the raw stats object
+        supervisorStats={supervisorStats}
         colors={colors}
         isMobile={isMobile}
       />

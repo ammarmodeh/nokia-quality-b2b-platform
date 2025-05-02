@@ -17,7 +17,8 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Button
+  Button,
+  useMediaQuery
 } from "@mui/material";
 import { FaUndoAlt } from 'react-icons/fa';
 import { MdDelete, MdRefresh } from 'react-icons/md';
@@ -34,6 +35,7 @@ const Trash = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentTask, setCurrentTask] = useState(null);
+  const isMobile = useMediaQuery('(max-width:503px)');
 
   // Define fetchTrashes outside of useEffect
   const fetchTrashes = useCallback(async () => {
@@ -147,7 +149,12 @@ const Trash = () => {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{
+      maxWidth: '1100px',
+      mx: 'auto',
+      p: 2,
+      px: isMobile ? 0 : undefined
+    }}>
       <Typography variant="h5" gutterBottom sx={{
         color: '#3ea6ff',
         fontWeight: 'bold',

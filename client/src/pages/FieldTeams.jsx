@@ -79,7 +79,6 @@ const FieldTeamForm = () => {
     pageSize: 10,
     page: 0,
   });
-
   const isMobile = useMediaQuery('(max-width: 503px)');
 
   const handleAddTeam = async (data) => {
@@ -789,89 +788,6 @@ const FieldTeamForm = () => {
         },
       ]
       : []),
-
-    // {
-    //   field: 'isSuspended',
-    //   headerName: 'Suspended',
-    //   flex: 1,
-    //   headerClassName: 'dark-header',
-    //   type: 'boolean',
-    //   renderCell: (params) => (
-    //     <Box sx={{
-    //       display: 'flex',
-    //       alignItems: 'center',
-    //       color: params.value ? '#ed6c02' : '#2e7d32'
-    //     }}>
-    //       {params.value ? (
-    //         <>
-    //           <PauseCircleOutlineIcon fontSize="small" sx={{ mr: 0.5 }} />
-    //           <Typography variant="body2">Suspended</Typography>
-    //         </>
-    //       ) : (
-    //         <>
-    //           <CheckCircleOutlineIcon fontSize="small" sx={{ mr: 0.5 }} />
-    //           <Typography variant="body2">Active</Typography>
-    //         </>
-    //       )}
-    //     </Box>
-    //   ),
-    //   minWidth: 120,
-    // },
-    // {
-    //   field: 'suspensionDuration',
-    //   headerName: 'Suspension Duration',
-    //   flex: 1,
-    //   headerClassName: 'dark-header',
-    //   renderCell: (params) => (
-    //     params.row.isSuspended ? (
-    //       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-    //         <AccessTimeIcon fontSize="small" sx={{ mr: 0.5, color: '#ed6c02' }} />
-    //         <Typography variant="body2">{params.value || 'N/A'}</Typography>
-    //       </Box>
-    //     ) : (
-    //       <Typography variant="body2" color="textSecondary">-</Typography>
-    //     )
-    //   ),
-    //   minWidth: 200,
-    // },
-    // {
-    //   field: 'suspensionReason',
-    //   headerName: 'Suspension Reason',
-    //   flex: 1,
-    //   headerClassName: 'dark-header',
-    //   renderCell: (params) => (
-    //     params.row.isSuspended ? (
-    //       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-    //         <InfoOutlinedIcon fontSize="small" sx={{ mr: 0.5, color: '#ed6c02' }} />
-    //         <Typography variant="body2" noWrap>
-    //           {params.value || 'No reason provided'}
-    //         </Typography>
-    //       </Box>
-    //     ) : (
-    //       <Typography variant="body2" color="textSecondary">-</Typography>
-    //     )
-    //   ),
-    //   minWidth: 200,
-    // },
-    // {
-    //   field: 'terminationReason',
-    //   headerName: 'Termination Reason',
-    //   flex: 1,
-    //   headerClassName: 'dark-header',
-    //   renderCell: (params) => (
-    //     params.row.isTerminated ? (
-    //       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-    //         <WarningAmberOutlinedIcon fontSize="small" sx={{ mr: 0.5, color: '#d32f2f' }} />
-    //         <Typography variant="body2" noWrap>
-    //           {params.value || 'No reason provided'}
-    //         </Typography>
-    //       </Box>
-    //     ) : (
-    //       <Typography variant="body2" color="textSecondary">-</Typography>
-    //     )
-    //   ),
-    //   minWidth: 200,
-    // },
     {
       field: 'isActive',
       headerName: 'Team Status',
@@ -923,7 +839,14 @@ const FieldTeamForm = () => {
   ], [handleDeleteClick, handleEditClick, handleOnLeaveClick, handleReactivateClick, handleResignedClick, handleSuspendClick, handleTerminateClick, handleToggleQuizPermission, handleViewHistoryClick, handleViewLogsClick, user.role]);
 
   return (
-    <div className="max-w-[1000px] mx-auto">
+    <Box
+      sx={{
+        maxWidth: '1100px',
+        mx: 'auto',
+        p: 2,
+        px: isMobile ? 0 : undefined
+      }}
+    >
       <Box sx={{ backgroundColor: '#121212', minHeight: '100vh', py: 3, color: '#ffffff' }}>
         {/* Add Team Form */}
         <AddTeamForm onSubmit={handleAddTeam} errorMessage={errorMessage} user={user} />
@@ -1614,7 +1537,7 @@ const FieldTeamForm = () => {
           </DialogActions>
         </Dialog>
       </Box>
-    </div>
+    </Box>
   );
 };
 

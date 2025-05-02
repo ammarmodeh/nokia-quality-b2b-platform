@@ -10,7 +10,7 @@ import {
 } from "date-fns";
 import { getCustomWeekNumber } from "../utils/helpers";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { Paper, Typography, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
+import { Paper, Typography, Select, MenuItem, FormControl, InputLabel, useMediaQuery, Box } from "@mui/material";
 
 // Dark theme
 const darkTheme = createTheme({
@@ -31,6 +31,7 @@ const CalendarPage = () => {
   const [weeks, setWeeks] = useState([]);
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const isMobile = useMediaQuery('(max-width:503px)');
 
   // Generate all weeks of the selected year (ensuring weeks start on Sunday)
   useEffect(() => {
@@ -73,7 +74,14 @@ const CalendarPage = () => {
 
   return (
     <ThemeProvider theme={darkTheme}>
-      <div className="p-4 max-w-[1100px] mx-auto" style={{ backgroundColor: darkTheme.palette.background.default, color: "#3ea6ff" }}>
+      <Box
+        sx={{
+          maxWidth: '1100px',
+          mx: 'auto',
+          p: 2,
+          px: isMobile ? 0 : undefined
+        }}
+        style={{ backgroundColor: darkTheme.palette.background.default, color: "#3ea6ff" }}>
         <Typography variant="h4" gutterBottom>
           Yearly Calendar with Custom Weeks
         </Typography>
@@ -126,7 +134,7 @@ const CalendarPage = () => {
             </Paper>
           ))}
         </div>
-      </div>
+      </Box>
     </ThemeProvider>
   );
 };

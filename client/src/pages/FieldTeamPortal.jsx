@@ -377,10 +377,11 @@ const FieldTeamPortal = () => {
     <Box sx={{
       backgroundColor: colors.background,
       minHeight: '100vh',
-      // maxWidth: '100vw',
+      maxWidth: '1100px',
+      mx: 'auto',
       overflowX: 'hidden',
       color: colors.textPrimary,
-      p: isMobile ? 2 : 3,
+      p: 2,
       px: isMobile ? 0 : undefined
     }}>
       {/* Back Button */}

@@ -343,7 +343,11 @@ const PerfAssessmentDashboard = () => {
     <Box sx={{
       backgroundColor: colors.background,
       minHeight: '100vh',
-      color: colors.textPrimary
+      color: colors.textPrimary,
+      maxWidth: '1100px',
+      mx: 'auto',
+      p: 2,
+      px: isMobile ? 0 : undefined
     }}>
       {/* Back Button */}
       <Button

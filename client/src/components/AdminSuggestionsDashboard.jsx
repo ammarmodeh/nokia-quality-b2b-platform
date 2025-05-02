@@ -193,7 +193,12 @@ const AdminSuggestionsDashboard = () => {
   ];
 
   return (
-    <Box sx={{ p: isMobile ? 1 : 3 }}>
+    <Box sx={{
+      maxWidth: '1100px',
+      mx: 'auto',
+      p: 2,
+      px: isMobile ? 0 : undefined
+    }}>
       <Typography variant="h5" gutterBottom sx={{
         color: '#3ea6ff',
         fontWeight: 'bold',

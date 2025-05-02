@@ -11,7 +11,6 @@ import {
   Chip,
   IconButton,
   useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import { FileCopy as FileCopyIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
 import { MdOutlineSearch, MdClose } from "react-icons/md";
@@ -20,8 +19,7 @@ import { useSelector } from "react-redux";
 import VisibilityDialog from "../components/VisibilityDialog";
 
 const TeamPage = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery('(max-width:503px)');
   const [team, setTeam] = useState([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -110,13 +108,15 @@ const TeamPage = () => {
 
   return (
     <Container
-      maxWidth="lg"
+      // maxWidth="lg"
       sx={{
         mt: isMobile ? 3 : 5,
-        // backgroundColor: '#1e1e1e',
         minHeight: '100vh',
-        p: isMobile ? 2 : 3,
-        color: '#ffffff'
+        color: '#ffffff',
+        maxWidth: '1100px !important',
+        mx: 'auto',
+        p: 2,
+        px: isMobile ? '0px' : '16px !important',
       }}
     >
       <Typography
