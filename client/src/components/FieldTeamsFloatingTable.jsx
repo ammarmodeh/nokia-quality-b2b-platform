@@ -1,26 +1,33 @@
 import { useState, useEffect, useRef } from "react";
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, TextField, Dialog } from "@mui/material";
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, TextField, Dialog, Tabs, Tab, Box } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import api from "../api/api";
-import AssessmentResultDialog from "./AssessmentDialog"; // Import the new dialog component
+import AssessmentResultDialog from "./AssessmentDialog";
+import PracticalAssessmentResultDialog from "./PracticalAssessmentResultDialog"; // Import the new dialog
 import AdsClickIcon from '@mui/icons-material/AdsClick';
+import WorkIcon from '@mui/icons-material/Work';
 
 const FieldTeamsFloatingTable = ({ open, onClose }) => {
   const [fieldTeams, setFieldTeams] = useState([]);
+  const [practicalAssessments, setPracticalAssessments] = useState([]);
   const [filteredTeams, setFilteredTeams] = useState([]);
+  const [filteredPracticalTeams, setFilteredPracticalTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState(null); // State for selected team
-  const [resultsDialogOpen, setResultsDialogOpen] = useState(false); // State for dialog open/close
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
+  const [practicalResultsDialogOpen, setPracticalResultsDialogOpen] = useState(false); // New state for practical dialog
+  const [tabValue, setTabValue] = useState(0); // 0 for theoretical, 1 for practical
   const tableRef = useRef(null);
-  const dialogRef = useRef(null); // Ref for the dialog
+  const dialogRef = useRef(null);
 
   const fetchFieldTeams = async () => {
     try {
       setRefreshing(true);
+      // Fetch theoretical assessments
       const response = await api.get("/field-teams/get-field-teams", {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
@@ -32,16 +39,39 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
         .filter(team => team.evaluationScore !== "N/A")
         .map(team => ({
           ...team,
-          // Convert score to number for proper sorting
           scoreValue: parseFloat(team.evaluationScore.replace('%', ''))
         }))
-        .sort((a, b) => b.scoreValue - a.scoreValue); // Sort descending
+        .sort((a, b) => b.scoreValue - a.scoreValue);
 
       setFieldTeams(filteredTeams);
-      setFilteredTeams(filteredTeams); // Initialize filtered teams
+      setFilteredTeams(filteredTeams);
+
+      // Fetch practical assessments
+      const practicalResponse = await api.get("/on-the-job-assessments", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      });
+
+      const practicalData = practicalResponse.data;
+
+      // Process practical assessments
+      const processedPracticalTeams = practicalData
+        .filter(assessment => assessment.status === "Completed")
+        .map(assessment => ({
+          ...assessment,
+          teamName: assessment.fieldTeamId?.teamName || assessment.fieldTeamName,
+          teamCompany: assessment.fieldTeamId?.teamCompany || "",
+          evaluationScore: `${assessment.overallScore}%`,
+          scoreValue: assessment.overallScore,
+          assessmentDate: assessment.assessmentDate,
+          isPractical: true
+        }))
+        .sort((a, b) => b.scoreValue - a.scoreValue);
+
+      setPracticalAssessments(processedPracticalTeams);
+      setFilteredPracticalTeams(processedPracticalTeams);
       setLoading(false);
     } catch (error) {
-      console.error("Error fetching field teams:", error);
+      console.error("Error fetching data:", error);
       setLoading(false);
     } finally {
       setRefreshing(false);
@@ -58,13 +88,19 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
     // Filter teams based on search term
     if (searchTerm.trim() === "") {
       setFilteredTeams(fieldTeams);
+      setFilteredPracticalTeams(practicalAssessments);
     } else {
       const filtered = fieldTeams.filter(team =>
         team.teamName.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredTeams(filtered);
+
+      const filteredPractical = practicalAssessments.filter(team =>
+        team.teamName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredPracticalTeams(filteredPractical);
     }
-  }, [searchTerm, fieldTeams]);
+  }, [searchTerm, fieldTeams, practicalAssessments]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -87,9 +123,19 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
     setResultsDialogOpen(true);
   };
 
+  const handlePracticalTeamNameClick = (team) => {
+    setSelectedTeam(team);
+    setPracticalResultsDialogOpen(true); // Open the practical dialog
+  };
+
   const handleDialogClose = () => {
     setSelectedTeam(null);
     setResultsDialogOpen(false);
+    setPracticalResultsDialogOpen(false); // Close the practical dialog
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
   };
 
   if (!open) return null;
@@ -98,11 +144,13 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
     <div
       ref={tableRef}
       className="fixed bottom-20 right-4 bg-[#171717fa] border border-[#444] rounded-lg shadow-lg z-50 w-90 flex flex-col"
-      style={{ maxHeight: '320px' }}
+      style={{ maxHeight: '400px', width: '400px' }}
     >
       {/* Fixed Header */}
       <div className="flex justify-between items-center p-2 border-b border-[#444] flex-shrink-0">
-        <h3 className="text-white font-medium">Team Evaluation Scores (Ranked)</h3>
+        <h3 className="text-white font-medium">
+          {tabValue === 0 ? "Theoretical Assessment Scores" : "On-The-Job Assessment Scores"}
+        </h3>
         <div>
           <IconButton
             onClick={fetchFieldTeams}
@@ -124,20 +172,46 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
         </div>
       </div>
 
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          aria-label="assessment tabs"
+          variant="fullWidth"
+        >
+          <Tab
+            label="Theoretical"
+            sx={{
+              color: tabValue === 0 ? 'white' : '#777',
+              minWidth: 0,
+              fontSize: '0.7rem'
+            }}
+          />
+          <Tab
+            label="Practical"
+            sx={{
+              color: tabValue === 1 ? 'white' : '#777',
+              minWidth: 0,
+              fontSize: '0.7rem'
+            }}
+          />
+        </Tabs>
+      </Box>
+
       {/* Search Bar */}
       <div className="border-b border-[#444]">
         <TextField
           fullWidth
           variant="outlined"
           size="small"
-          placeholder="Search team name..."
+          placeholder={`Search ${tabValue === 0 ? 'theoretical' : 'practical'} team name...`}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{
             startAdornment: <SearchIcon style={{ color: "#777", marginRight: "8px" }} />,
             style: {
               color: "white",
-              // backgroundColor: "#1E1E1E",
               borderRadius: "0px",
             },
           }}
@@ -152,35 +226,38 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
               <TableCell style={{ color: "white", fontWeight: 'bold', width: '140px' }}>Team Name</TableCell>
               <TableCell style={{ color: "white", fontWeight: 'bold', width: '100px' }}>Group</TableCell>
               <TableCell style={{ color: "white", fontWeight: 'bold' }}>Score</TableCell>
+              {tabValue === 1 && (
+                <TableCell style={{ color: "white", fontWeight: 'bold', width: '100px' }}>Date</TableCell>
+              )}
             </TableRow>
           </TableHead>
         </Table>
       </TableContainer>
 
       {/* Scrollable Table Body */}
-      <div className="h-[200px] overflow-y-auto">
+      <div className="h-[250px] overflow-y-auto">
         <TableContainer component={Paper} style={{ backgroundColor: "#171717fa" }}>
           <Table size="small" style={{ tableLayout: 'fixed' }}>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={3} style={{ color: "white", textAlign: "center" }}>
+                  <TableCell colSpan={tabValue === 0 ? 3 : 4} style={{ color: "white", textAlign: "center" }}>
                     Loading...
                   </TableCell>
                 </TableRow>
-              ) : filteredTeams.length === 0 ? (
+              ) : (tabValue === 0 ? filteredTeams : filteredPracticalTeams).length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} style={{ color: "white", textAlign: "center" }}>
-                    {searchTerm ? "No matching teams found" : "No evaluated teams found"}
+                  <TableCell colSpan={tabValue === 0 ? 3 : 4} style={{ color: "white", textAlign: "center" }}>
+                    {searchTerm ? "No matching teams found" : `No ${tabValue === 0 ? 'evaluated' : 'assessed'} teams found`}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredTeams.map((team) => (
+                (tabValue === 0 ? filteredTeams : filteredPracticalTeams).map((team) => (
                   <TableRow key={team._id}>
                     <TableCell
                       style={{ color: "white", width: '140px', cursor: 'pointer' }}
                       title={team.teamName}
-                      onClick={() => handleTeamNameClick(team)}
+                      onClick={() => tabValue === 0 ? handleTeamNameClick(team) : handlePracticalTeamNameClick(team)}
                     >
                       {team.teamName}
                       <AdsClickIcon style={{ marginLeft: '10px', fontSize: '15px' }} />
@@ -196,6 +273,11 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
                         ? team.evaluationScore
                         : `${team.evaluationScore}%`}
                     </TableCell>
+                    {tabValue === 1 && (
+                      <TableCell style={{ color: "white", width: '100px' }}>
+                        {new Date(team.assessmentDate).toLocaleDateString()}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -206,7 +288,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
 
       {/* Assessment Result Dialog */}
       <Dialog
-        ref={dialogRef} // Add ref to the dialog
+        ref={dialogRef}
         open={resultsDialogOpen}
         onClose={handleDialogClose}
         fullScreen
@@ -221,6 +303,28 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
             teamId={selectedTeam._id}
             teamName={selectedTeam.teamName}
             onClose={handleDialogClose}
+            isPractical={selectedTeam.isPractical}
+          />
+        )}
+      </Dialog>
+
+      {/* Practical Assessment Result Dialog */}
+      <Dialog
+        ref={dialogRef}
+        open={practicalResultsDialogOpen}
+        onClose={handleDialogClose}
+        fullScreen
+        PaperProps={{
+          style: {
+            backgroundColor: '#121212',
+          }
+        }}
+      >
+        {selectedTeam && (
+          <PracticalAssessmentResultDialog
+            assessmentId={selectedTeam._id}
+            teamName={selectedTeam.teamName}
+            onClose={handleDialogClose}
           />
         )}
       </Dialog>
@@ -230,12 +334,19 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
 
 // Helper function for score color
 const getScoreColor = (score) => {
-  const numericScoreStr = score.split(' ')[1].replace('%', '');
+  let numericScoreStr;
+
+  if (typeof score === 'string') {
+    numericScoreStr = score.split(' ')[1]?.replace('%', '') || score.replace('%', '');
+  } else {
+    numericScoreStr = score.toString();
+  }
+
   const numericScore = parseFloat(numericScoreStr);
   if (numericScore >= 90) return '#04970a';
-  if (numericScore >= 75) return '#4CAF50'; // Green for high scores
-  if (numericScore >= 55) return '#FFC107'; // Yellow for medium scores
-  return '#F44336'; // Red for low scores
+  if (numericScore >= 75) return '#4CAF50';
+  if (numericScore >= 55) return '#FFC107';
+  return '#F44336';
 };
 
 export default FieldTeamsFloatingTable;

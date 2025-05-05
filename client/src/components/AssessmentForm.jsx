@@ -231,12 +231,21 @@ const AssessmentForm = ({
   };
 
   const validateForm = () => {
-    // Check if all required checkpoints have scores
-    const allScored = checkPoints.every(point =>
-      point.isCompleted ? point.score > 0 : true
-    );
+    // Check if user name and feedback exist
+    if (!user.name || !feedback) return false;
 
-    return user.name && feedback && allScored;
+    // Check all checkpoints
+    const allValid = checkPoints.every(point => {
+      // If score is > 0, checkbox must be checked
+      if (point.score > 0 && !point.isCompleted) return false;
+
+      // If checkbox is checked, score must be > 0
+      if (point.isCompleted && point.score <= 0) return false;
+
+      return true;
+    });
+
+    return allValid;
   };
 
   return (
