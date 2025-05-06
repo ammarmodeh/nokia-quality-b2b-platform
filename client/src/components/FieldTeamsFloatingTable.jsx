@@ -27,33 +27,39 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
   const fetchFieldTeams = async () => {
     try {
       setRefreshing(true);
-      // Fetch theoretical assessments
-      const response = await api.get("/field-teams/get-field-teams", {
+
+      // 1. Fetch theoretical assessments from quiz-results
+      const quizResultsResponse = await api.get("/quiz-results", {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
 
-      const { data } = response;
+      const quizResultsData = quizResultsResponse.data.data;
 
-      // Filter and sort teams
-      const filteredTeams = data
-        .filter(team => team.evaluationScore !== "N/A")
-        .map(team => ({
-          ...team,
-          scoreValue: parseFloat(team.evaluationScore.replace('%', ''))
+      // Process theoretical assessments
+      const processedTheoreticalTeams = quizResultsData
+        .filter(result => result.percentage !== null && result.percentage !== undefined)
+        .map(result => ({
+          _id: result.teamId,
+          teamName: result.teamName,
+          evaluationScore: `${result.percentage}%`,
+          scoreValue: result.percentage,
+          submittedAt: result.submittedAt,
+          isPractical: false,
+          // Add any additional fields you need from field-teams
+          teamCompany: result.teamCompany || "" // You might need to fetch this separately
         }))
         .sort((a, b) => b.scoreValue - a.scoreValue);
 
-      setFieldTeams(filteredTeams);
-      setFilteredTeams(filteredTeams);
+      setFieldTeams(processedTheoreticalTeams);
+      setFilteredTeams(processedTheoreticalTeams);
 
-      // Fetch practical assessments
+      // 2. Fetch practical assessments (keep existing code)
       const practicalResponse = await api.get("/on-the-job-assessments", {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
 
       const practicalData = practicalResponse.data;
 
-      // Process practical assessments
       const processedPracticalTeams = practicalData
         .filter(assessment => assessment.status === "Completed")
         .map(assessment => ({
@@ -141,17 +147,19 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
   if (!open) return null;
 
   return (
-    <Box sx={{
-      width: '100%',
-      height: '100%',
-    }}>
+    <Box sx={{ width: '100%', height: '100%' }}>
       <div
         ref={tableRef}
-        className={`${isMobile ? 'absolute left-1/2 -translate-x-1/2' : 'fixed right-4'
-          } bottom-20 bg-[#171717fa] border border-[#444] rounded-lg shadow-lg z-50 flex flex-col overflow-auto`}
-        style={{ maxHeight: '400px', width: isMobile ? '90%' : '400px' }}
+        className={`${isMobile ? 'absolute left-1/2 -translate-x-1/2' : 'fixed right-4'} bottom-20 bg-[#171717fa] border border-[#444] rounded-lg shadow-lg z-50 flex flex-col`}
+        style={{
+          height: '400px', // Set a fixed height
+          width: isMobile ? '90%' : '500px',
+          maxHeight: '400px', // Ensure max height is also set
+          overflowY: 'auto', // Make the content scrollable if it overflows
+          display: 'flex',
+          flexDirection: 'column'
+        }}
       >
-
         {/* Fixed Header */}
         <div className="flex justify-between items-center p-2 border-b border-[#444] flex-shrink-0">
           <h3 className="text-white font-medium">
@@ -224,75 +232,115 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
           />
         </div>
 
-        {/* Fixed Table Head */}
-        <TableContainer component={Paper} style={{ backgroundColor: "#171717fa", height: '50px' }}>
-          <Table size="small" aria-label="field teams table">
-            <TableHead>
-              <TableRow>
-                <TableCell style={{ color: "white", fontWeight: 'bold', width: '140px' }}>Team Name</TableCell>
-                <TableCell style={{ color: "white", fontWeight: 'bold', width: '100px' }}>Group</TableCell>
-                <TableCell style={{ color: "white", fontWeight: 'bold' }}>Score</TableCell>
-                {tabValue === 1 && (
-                  <TableCell style={{ color: "white", fontWeight: 'bold', width: '100px' }}>Date</TableCell>
-                )}
-              </TableRow>
-            </TableHead>
-          </Table>
-        </TableContainer>
+        {/* Combined Scrollable Table */}
+        <div style={{
+          overflow: 'auto',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <TableContainer
+            component={Paper}
+            style={{
+              backgroundColor: "#171717fa",
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <Table
+              size="small"
+              style={{
+                minWidth: isMobile ? '500px' : '100%',
+                tableLayout: 'auto',
+                flex: 1
+              }}
+            >
+              <TableHead>
+                <TableRow>
+                  <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 140 }}>Team Name</TableCell>
+                  <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 100 }}>Group</TableCell>
+                  <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 120 }}>Score</TableCell>
+                  <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 150 }}>Date & Time</TableCell>
+                </TableRow>
+              </TableHead>
 
-        {/* Scrollable Table Body */}
-        <div className="h-[250px] overflow-y-auto">
-          <TableContainer component={Paper} style={{ backgroundColor: "#171717fa" }}>
-            <Table size="small" style={{ tableLayout: 'fixed' }}>
               <TableBody>
                 {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={tabValue === 0 ? 3 : 4} style={{ color: "white", textAlign: "center" }}>
+                  <TableRow style={{ height: '40px' }}>
+                    <TableCell colSpan={4} style={{ color: "white", textAlign: "center" }}>
                       Loading...
                     </TableCell>
                   </TableRow>
                 ) : (tabValue === 0 ? filteredTeams : filteredPracticalTeams).length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={tabValue === 0 ? 3 : 4} style={{ color: "white", textAlign: "center" }}>
+                  <TableRow style={{ height: '40px' }}>
+                    <TableCell colSpan={4} style={{ color: "white", textAlign: "center" }}>
                       {searchTerm ? "No matching teams found" : `No ${tabValue === 0 ? 'evaluated' : 'assessed'} teams found`}
                     </TableCell>
                   </TableRow>
                 ) : (
                   (tabValue === 0 ? filteredTeams : filteredPracticalTeams).map((team) => (
-                    <TableRow key={team._id}>
+                    <TableRow key={team._id} style={{ height: '40px' }}>
                       <TableCell
-                        style={{ color: "white", width: '140px', cursor: 'pointer' }}
+                        style={{
+                          color: "white",
+                          cursor: 'pointer',
+                          minWidth: 140,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          lineHeight: '40px'
+                        }}
                         title={team.teamName}
                         onClick={() => tabValue === 0 ? handleTeamNameClick(team) : handlePracticalTeamNameClick(team)}
                       >
                         {team.teamName}
-                        <AdsClickIcon style={{ marginLeft: '10px', fontSize: '15px' }} />
+                        <AdsClickIcon style={{ marginLeft: '10px', fontSize: '15px', verticalAlign: 'middle' }} />
                       </TableCell>
-                      <TableCell style={{ color: "white", width: '100px' }} title={team.teamCompany}>
+                      <TableCell
+                        style={{
+                          color: "white",
+                          minWidth: 100,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          lineHeight: '40px'
+                        }}
+                        title={team.teamCompany}
+                      >
                         {team.teamCompany}
                       </TableCell>
                       <TableCell style={{
                         color: getScoreColor(team.evaluationScore),
-                        fontWeight: 'bold'
+                        fontWeight: 'bold',
+                        minWidth: 80,
+                        textAlign: 'left',
+                        lineHeight: '40px'
                       }}>
                         {team.evaluationScore.includes('%')
                           ? team.evaluationScore
                           : `${team.evaluationScore}%`}
                       </TableCell>
-                      {tabValue === 1 && (
-                        <TableCell style={{ color: "white", width: '100px' }}>
-                          {new Date(team.assessmentDate).toLocaleDateString()}
-                        </TableCell>
-                      )}
+                      <TableCell
+                        style={{
+                          color: "white",
+                          minWidth: 150,
+                          whiteSpace: 'nowrap',
+                          lineHeight: '40px'
+                        }}
+                      >
+                        {new Date(tabValue === 0 ? team.submittedAt : team.assessmentDate).toLocaleString()}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
+
             </Table>
           </TableContainer>
         </div>
 
-        {/* Assessment Result Dialog */}
+        {/* Keep your existing Dialog components */}
         <Dialog
           ref={dialogRef}
           open={resultsDialogOpen}
@@ -314,7 +362,6 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
           )}
         </Dialog>
 
-        {/* Practical Assessment Result Dialog */}
         <Dialog
           ref={dialogRef}
           open={practicalResultsDialogOpen}
@@ -339,7 +386,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
   );
 };
 
-// Helper function for score color
+// Keep your existing getScoreColor function
 const getScoreColor = (score) => {
   let numericScoreStr;
 
