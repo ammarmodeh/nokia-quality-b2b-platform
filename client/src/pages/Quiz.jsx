@@ -12,6 +12,7 @@ const Quiz = () => {
     selectedOption: '',
     userAnswers: [],
     teamName: '',
+    teamCompany: '',
     quizCode: '',
     teamId: '',
     loading: true,
@@ -74,6 +75,7 @@ const Quiz = () => {
       ...prev,
       teamId: authData.teamId,
       teamName: authData.teamName,
+      teamCompany: authData.teamCompany,
       quizCode: authData.quizCode,
       loading: false
     }));
@@ -148,6 +150,8 @@ const Quiz = () => {
     if (quizState.hasSubmitted) return;
     setQuizState(prev => ({ ...prev, hasSubmitted: true }));
 
+    // console.log({ quizState });
+
     const finalScore = userAnswers.reduce((score, answer, index) => {
       return answer.isCorrect ? score + 1 : score;
     }, 0);
@@ -159,6 +163,7 @@ const Quiz = () => {
     const resultsData = {
       teamId: quizState.teamId,
       teamName: quizState.teamName,
+      teamCompany: quizState.teamCompany,
       quizCode: quizState.quizCode,
       correctAnswers: finalScore,
       totalQuestions: quizState.questions.length,
@@ -174,6 +179,8 @@ const Quiz = () => {
       percentage,
       score: result
     };
+
+    // console.log({ resultsData });
 
     try {
       // First save detailed results to the new system

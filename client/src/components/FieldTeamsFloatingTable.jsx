@@ -59,6 +59,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
       });
 
       const practicalData = practicalResponse.data;
+      // console.log({ practicalData });
 
       const processedPracticalTeams = practicalData
         .filter(assessment => assessment.status === "Completed")
@@ -147,242 +148,242 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
   if (!open) return null;
 
   return (
-    <Box sx={{ width: '100%', height: '100%' }}>
-      <div
-        ref={tableRef}
-        className={`${isMobile ? 'absolute left-1/2 -translate-x-1/2' : 'fixed right-4'} bottom-20 bg-[#171717fa] border border-[#444] rounded-lg shadow-lg z-50 flex flex-col`}
-        style={{
-          height: '400px', // Set a fixed height
-          width: isMobile ? '90%' : '500px',
-          maxHeight: '400px', // Ensure max height is also set
-          overflowY: 'auto', // Make the content scrollable if it overflows
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        {/* Fixed Header */}
-        <div className="flex justify-between items-center p-2 border-b border-[#444] flex-shrink-0">
-          <h3 className="text-white font-medium">
-            {tabValue === 0 ? "Theoretical Assessment Scores" : "On-The-Job Assessment Scores"}
-          </h3>
-          <div>
-            <IconButton
-              onClick={fetchFieldTeams}
-              size="small"
-              disabled={refreshing}
-              title="Refresh teams"
-            >
-              <RefreshIcon
-                style={{
-                  color: refreshing ? "#777" : "white",
-                  transition: "transform 0.3s",
-                  transform: refreshing ? "rotate(360deg)" : "rotate(0deg)"
-                }}
-              />
-            </IconButton>
-            <IconButton onClick={onClose} size="small">
-              <CloseIcon style={{ color: "white" }} />
-            </IconButton>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            aria-label="assessment tabs"
-            variant="fullWidth"
-          >
-            <Tab
-              label="Theoretical"
-              sx={{
-                color: tabValue === 0 ? 'white' : '#777',
-                minWidth: 0,
-                fontSize: '0.7rem'
-              }}
-            />
-            <Tab
-              label="Practical"
-              sx={{
-                color: tabValue === 1 ? 'white' : '#777',
-                minWidth: 0,
-                fontSize: '0.7rem'
-              }}
-            />
-          </Tabs>
-        </Box>
-
-        {/* Search Bar */}
-        <div className="border-b border-[#444]">
-          <TextField
-            fullWidth
-            variant="outlined"
+    // <Box sx={{ width: '100%', height: '100%' }}>
+    <div
+      ref={tableRef}
+      className={`${isMobile ? 'absolute left-1/2 -translate-x-1/2' : 'fixed right-4'} bottom-20 bg-[#171717fa] border border-[#444] rounded-lg shadow-lg z-50 flex flex-col`}
+      style={{
+        height: '400px', // Set a fixed height
+        width: isMobile ? '90%' : '500px',
+        maxHeight: '400px', // Ensure max height is also set
+        overflowY: 'auto', // Make the content scrollable if it overflows
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
+      {/* Fixed Header */}
+      <div className="flex justify-between items-center p-2 border-b border-[#444] flex-shrink-0">
+        <h3 className="text-white font-medium">
+          {tabValue === 0 ? "Theoretical Assessment Scores" : "On-The-Job Assessment Scores"}
+        </h3>
+        <div>
+          <IconButton
+            onClick={fetchFieldTeams}
             size="small"
-            placeholder={`Search ${tabValue === 0 ? 'theoretical' : 'practical'} team name...`}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: <SearchIcon style={{ color: "#777", marginRight: "8px" }} />,
-              style: {
-                color: "white",
-                borderRadius: "0px",
-              },
+            disabled={refreshing}
+            title="Refresh teams"
+          >
+            <RefreshIcon
+              style={{
+                color: refreshing ? "#777" : "white",
+                transition: "transform 0.3s",
+                transform: refreshing ? "rotate(360deg)" : "rotate(0deg)"
+              }}
+            />
+          </IconButton>
+          <IconButton onClick={onClose} size="small">
+            <CloseIcon style={{ color: "white" }} />
+          </IconButton>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          aria-label="assessment tabs"
+          variant="fullWidth"
+        >
+          <Tab
+            label="Theoretical"
+            sx={{
+              color: tabValue === 0 ? 'white' : '#777',
+              minWidth: 0,
+              fontSize: '0.7rem'
             }}
           />
-        </div>
+          <Tab
+            label="Practical"
+            sx={{
+              color: tabValue === 1 ? 'white' : '#777',
+              minWidth: 0,
+              fontSize: '0.7rem'
+            }}
+          />
+        </Tabs>
+      </Box>
 
-        {/* Combined Scrollable Table */}
-        <div style={{
-          overflow: 'auto',
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <TableContainer
-            component={Paper}
+      {/* Search Bar */}
+      <div className="border-b border-[#444]">
+        <TextField
+          fullWidth
+          variant="outlined"
+          size="small"
+          placeholder={`Search ${tabValue === 0 ? 'theoretical' : 'practical'} team name...`}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: <SearchIcon style={{ color: "#777", marginRight: "8px" }} />,
+            style: {
+              color: "white",
+              borderRadius: "0px",
+            },
+          }}
+        />
+      </div>
+
+      {/* Combined Scrollable Table */}
+      <div style={{
+        overflow: 'auto',
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        <TableContainer
+          component={Paper}
+          style={{
+            backgroundColor: "#171717fa",
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <Table
+            size="small"
             style={{
-              backgroundColor: "#171717fa",
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column'
+              minWidth: isMobile ? '500px' : '100%',
+              tableLayout: 'auto',
+              flex: 1
             }}
           >
-            <Table
-              size="small"
-              style={{
-                minWidth: isMobile ? '500px' : '100%',
-                tableLayout: 'auto',
-                flex: 1
-              }}
-            >
-              <TableHead>
-                <TableRow>
-                  <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 140 }}>Team Name</TableCell>
-                  <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 100 }}>Group</TableCell>
-                  <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 120 }}>Score</TableCell>
-                  <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 150 }}>Date & Time</TableCell>
+            <TableHead>
+              <TableRow>
+                <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 140 }}>Team Name</TableCell>
+                <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 100 }}>Group</TableCell>
+                <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 120 }}>Score</TableCell>
+                <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 150 }}>Date & Time</TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {loading ? (
+                <TableRow style={{ height: '40px' }}>
+                  <TableCell colSpan={4} style={{ color: "white", textAlign: "center" }}>
+                    Loading...
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-
-              <TableBody>
-                {loading ? (
-                  <TableRow style={{ height: '40px' }}>
-                    <TableCell colSpan={4} style={{ color: "white", textAlign: "center" }}>
-                      Loading...
-                    </TableCell>
-                  </TableRow>
-                ) : (tabValue === 0 ? filteredTeams : filteredPracticalTeams).length === 0 ? (
-                  <TableRow style={{ height: '40px' }}>
-                    <TableCell colSpan={4} style={{ color: "white", textAlign: "center" }}>
-                      {searchTerm ? "No matching teams found" : `No ${tabValue === 0 ? 'evaluated' : 'assessed'} teams found`}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  (tabValue === 0 ? filteredTeams : filteredPracticalTeams).map((team) => (
-                    <TableRow key={team._id} style={{ height: '40px' }}>
-                      <TableCell
-                        style={{
-                          color: "white",
-                          cursor: 'pointer',
-                          minWidth: 140,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          lineHeight: '40px'
-                        }}
-                        title={team.teamName}
-                        onClick={() => tabValue === 0 ? handleTeamNameClick(team) : handlePracticalTeamNameClick(team)}
-                      >
-                        {team.teamName}
-                        <AdsClickIcon style={{ marginLeft: '10px', fontSize: '15px', verticalAlign: 'middle' }} />
-                      </TableCell>
-                      <TableCell
-                        style={{
-                          color: "white",
-                          minWidth: 100,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          lineHeight: '40px'
-                        }}
-                        title={team.teamCompany}
-                      >
-                        {team.teamCompany}
-                      </TableCell>
-                      <TableCell style={{
-                        color: getScoreColor(team.evaluationScore),
-                        fontWeight: 'bold',
-                        minWidth: 80,
-                        textAlign: 'left',
+              ) : (tabValue === 0 ? filteredTeams : filteredPracticalTeams).length === 0 ? (
+                <TableRow style={{ height: '40px' }}>
+                  <TableCell colSpan={4} style={{ color: "white", textAlign: "center" }}>
+                    {searchTerm ? "No matching teams found" : `No ${tabValue === 0 ? 'evaluated' : 'assessed'} teams found`}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                (tabValue === 0 ? filteredTeams : filteredPracticalTeams).map((team) => (
+                  <TableRow key={team._id} style={{ height: '40px' }}>
+                    <TableCell
+                      style={{
+                        color: "white",
+                        cursor: 'pointer',
+                        minWidth: 140,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
                         lineHeight: '40px'
-                      }}>
-                        {team.evaluationScore.includes('%')
-                          ? team.evaluationScore
-                          : `${team.evaluationScore}%`}
-                      </TableCell>
-                      <TableCell
-                        style={{
-                          color: "white",
-                          minWidth: 150,
-                          whiteSpace: 'nowrap',
-                          lineHeight: '40px'
-                        }}
-                      >
-                        {new Date(tabValue === 0 ? team.submittedAt : team.assessmentDate).toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
+                      }}
+                      title={team.teamName}
+                      onClick={() => tabValue === 0 ? handleTeamNameClick(team) : handlePracticalTeamNameClick(team)}
+                    >
+                      {team.teamName}
+                      <AdsClickIcon style={{ marginLeft: '10px', fontSize: '15px', verticalAlign: 'middle' }} />
+                    </TableCell>
+                    <TableCell
+                      style={{
+                        color: "white",
+                        minWidth: 100,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        lineHeight: '40px'
+                      }}
+                      title={team.teamCompany}
+                    >
+                      {team.teamCompany}
+                    </TableCell>
+                    <TableCell style={{
+                      color: getScoreColor(team.evaluationScore),
+                      fontWeight: 'bold',
+                      minWidth: 80,
+                      textAlign: 'left',
+                      lineHeight: '40px'
+                    }}>
+                      {team.evaluationScore.includes('%')
+                        ? team.evaluationScore
+                        : `${team.evaluationScore}%`}
+                    </TableCell>
+                    <TableCell
+                      style={{
+                        color: "white",
+                        minWidth: 150,
+                        whiteSpace: 'nowrap',
+                        lineHeight: '40px'
+                      }}
+                    >
+                      {new Date(tabValue === 0 ? team.submittedAt : team.assessmentDate).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
 
-            </Table>
-          </TableContainer>
-        </div>
-
-        {/* Keep your existing Dialog components */}
-        <Dialog
-          ref={dialogRef}
-          open={resultsDialogOpen}
-          onClose={handleDialogClose}
-          fullScreen
-          PaperProps={{
-            style: {
-              backgroundColor: '#121212',
-            }
-          }}
-        >
-          {selectedTeam && (
-            <AssessmentResultDialog
-              teamId={selectedTeam._id}
-              teamName={selectedTeam.teamName}
-              onClose={handleDialogClose}
-              isPractical={selectedTeam.isPractical}
-            />
-          )}
-        </Dialog>
-
-        <Dialog
-          ref={dialogRef}
-          open={practicalResultsDialogOpen}
-          onClose={handleDialogClose}
-          fullScreen
-          PaperProps={{
-            style: {
-              backgroundColor: '#121212',
-            }
-          }}
-        >
-          {selectedTeam && (
-            <PracticalAssessmentResultDialog
-              assessmentId={selectedTeam._id}
-              teamName={selectedTeam.teamName}
-              onClose={handleDialogClose}
-            />
-          )}
-        </Dialog>
+          </Table>
+        </TableContainer>
       </div>
-    </Box>
+
+      {/* Keep your existing Dialog components */}
+      <Dialog
+        ref={dialogRef}
+        open={resultsDialogOpen}
+        onClose={handleDialogClose}
+        fullScreen
+        PaperProps={{
+          style: {
+            backgroundColor: '#121212',
+          }
+        }}
+      >
+        {selectedTeam && (
+          <AssessmentResultDialog
+            teamId={selectedTeam._id}
+            teamName={selectedTeam.teamName}
+            onClose={handleDialogClose}
+            isPractical={selectedTeam.isPractical}
+          />
+        )}
+      </Dialog>
+
+      <Dialog
+        ref={dialogRef}
+        open={practicalResultsDialogOpen}
+        onClose={handleDialogClose}
+        fullScreen
+        PaperProps={{
+          style: {
+            backgroundColor: '#121212',
+          }
+        }}
+      >
+        {selectedTeam && (
+          <PracticalAssessmentResultDialog
+            assessmentId={selectedTeam._id}
+            teamName={selectedTeam.teamName}
+            onClose={handleDialogClose}
+          />
+        )}
+      </Dialog>
+    </div>
+    // </Box>
   );
 };
 

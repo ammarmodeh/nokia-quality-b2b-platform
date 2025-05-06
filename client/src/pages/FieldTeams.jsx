@@ -14,32 +14,21 @@ import {
   Block as BlockIcon,
   PlayCircleOutline as PlayCircleOutlineIcon,
   BeachAccess as BeachAccessIcon,
-  ExitToApp as ExitToAppIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
   Cancel as CancelIcon,
-  AccessTime as AccessTimeIcon,
-  InfoOutlined as InfoOutlinedIcon,
-  WarningAmberOutlined as WarningAmberOutlinedIcon,
   CancelOutlined as CancelOutlinedIcon,
   History as HistoryIcon,
-  Groups as GroupsIcon,
-  Business as BusinessIcon,
   Phone as PhoneIcon,
   DeviceHub as DeviceHubIcon,
   Laptop as LaptopIcon,
   CheckCircle as CheckCircleIcon,
-  Assessment as AssessmentIcon,
   TaskAlt as TaskAltIcon,
   Pending as PendingIcon,
-  Event as EventIcon,
-  Quiz as QuizIcon,
-  Assignment as AssignmentIcon,
-  AssignmentTurnedIn as AssignmentTurnedInIcon,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
 import { useSelector } from 'react-redux';
-import { FaEye, FaSignOutAlt } from 'react-icons/fa';
+import { FaSignOutAlt } from 'react-icons/fa';
 import { MdClose, MdOutlineSearch } from 'react-icons/md';
 import { SuspendTeamDialog } from '../components/SuspendTeamDialog';
 import { TerminateTeamDialog } from '../components/TerminateTeamDialog';
@@ -1112,7 +1101,11 @@ const FieldTeamForm = () => {
                         </Typography>
                       }
                       secondary={
-                        <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#aaaaaa', mt: 1 }}>
+                        <Typography
+                          variant={isMobile ? "caption" : "body2"}
+                          component="span" // Add this to prevent using <p> tag
+                          sx={{ color: '#aaaaaa', mt: 1 }}
+                        >
                           Score: <Chip
                             label={evaluation.score}
                             size={isMobile ? "small" : "medium"}

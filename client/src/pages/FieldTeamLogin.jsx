@@ -47,6 +47,7 @@ const FieldTeamLogin = () => {
       }
 
       const team = response.data.team;
+      // console.log({ team });
       if (!team.canTakeQuiz) {
         throw new Error('This team is not authorized to take the quiz');
       }
@@ -54,6 +55,7 @@ const FieldTeamLogin = () => {
       const authData = {
         teamId: team._id,
         teamName: team.teamName,
+        teamCompany: team.teamCompany,
         quizCode,
         isFieldTeam: true
       };

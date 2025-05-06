@@ -1,14 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   CircularProgress,
   Alert,
   Chip,
@@ -16,7 +10,6 @@ import {
   Card,
   CardContent,
   Button,
-  Tooltip,
   useMediaQuery,
   Stack,
 } from '@mui/material';
@@ -365,7 +358,7 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Feedback</Typography>
-                  <Typography sx={{ color: "white" }}>{assessment.feedback}</Typography>
+                  <Typography sx={{ color: "white", direction: 'rtl', textAlign: 'right' }}>{assessment.feedback}</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -600,7 +593,7 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
                         <Box component="ul" sx={{ pl: 2 }}>
                           {strengths.map((strength, index) => (
                             <Box component="li" key={index} sx={{ mb: 1 }}>
-                              <Typography variant="body2" sx={{ color: colors.textPrimary }}>
+                              <Typography variant="body2" component="span" sx={{ color: colors.textPrimary }}>
                                 <Stack direction="row" alignItems="center" spacing={1}>
                                   <strong>{strength.category}</strong>: {strength.averageScore}% average score
                                   <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block' }}>

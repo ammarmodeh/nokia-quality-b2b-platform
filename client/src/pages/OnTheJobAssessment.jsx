@@ -42,7 +42,7 @@ const OnTheJobAssessment = () => {
   const [showUndo, setShowUndo] = useState(false);
   const [deletedAssessment, setDeletedAssessment] = useState(null);
   const [undoTimeout, setUndoTimeout] = useState(null);
-  console.log('OnTheJobAssessment Triggered');
+  // console.log('OnTheJobAssessment Triggered');
 
   const [supervisorStats, setSupervisorStats] = useState({});
 
@@ -380,6 +380,8 @@ const OnTheJobAssessment = () => {
         ...completeAssessment
       };
 
+      console.log({ payload });
+
       const response = await api.post(
         "/on-the-job-assessments",
         payload,
@@ -408,39 +410,59 @@ const OnTheJobAssessment = () => {
     }
   }, [selectedTeam]);
 
-  const calculateOverallScore = useCallback((checkPoints, categoryWeights = {}) => {
+  // const calculateOverallScore = useCallback((checkPoints, categoryWeights = {}) => {
+  //   if (!checkPoints || checkPoints.length === 0) return 0;
+
+  //   const defaultWeights = {
+  //     "Equipment": 0.10,
+  //     "Splicing": 0.25,
+  //     "Configuration": 0.20,
+  //     "Validation": 0.10,
+  //     "Customer": 0.20,
+  //     "Service": 0.25
+  //   };
+
+  //   const weights = Object.keys(categoryWeights).length > 0 ? categoryWeights : defaultWeights;
+
+  //   const categories = checkPoints.reduce((acc, checkpoint) => {
+  //     const category = checkpoint.category;
+  //     if (!acc[category]) {
+  //       acc[category] = [];
+  //     }
+  //     acc[category].push(checkpoint);
+  //     return acc;
+  //   }, {});
+
+  //   let weightedSum = 0;
+
+  //   Object.entries(categories).forEach(([category, points]) => {
+  //     const categoryScore = points.reduce((sum, point) => sum + point.score, 0) / points.length;
+  //     const weight = weights[category] || 0;
+  //     weightedSum += categoryScore * weight;
+  //   });
+
+  //   return Math.round(weightedSum);
+  // }, []);
+
+  const calculateOverallScore = useCallback((checkPoints) => {
     if (!checkPoints || checkPoints.length === 0) return 0;
 
-    const defaultWeights = {
-      "Equipment": 0.10,
-      "Splicing": 0.25,
-      "Configuration": 0.20,
-      "Validation": 0.10,
-      "Customer": 0.20,
-      "Service": 0.25
-    };
+    // Calculate the total score by summing all checkpoint scores
+    const totalScore = checkPoints.reduce((sum, checkpoint) => sum + checkpoint.score, 0);
+    console.log({ totalScore });
 
-    const weights = Object.keys(categoryWeights).length > 0 ? categoryWeights : defaultWeights;
+    // Calculate the average score
+    const averageScore = totalScore / checkPoints.length;
+    console.log({ averageScore });
 
-    const categories = checkPoints.reduce((acc, checkpoint) => {
-      const category = checkpoint.category;
-      if (!acc[category]) {
-        acc[category] = [];
-      }
-      acc[category].push(checkpoint);
-      return acc;
-    }, {});
+    // Log the total score and average score for debugging
+    console.log("Total Score:", totalScore);
+    console.log("Average Score (before rounding):", averageScore);
 
-    let weightedSum = 0;
-
-    Object.entries(categories).forEach(([category, points]) => {
-      const categoryScore = points.reduce((sum, point) => sum + point.score, 0) / points.length;
-      const weight = weights[category] || 0;
-      weightedSum += categoryScore * weight;
-    });
-
-    return Math.round(weightedSum);
+    // Return the average score, optionally rounded
+    return Math.round(averageScore); // You can remove Math.round if you want the exact value
   }, []);
+
 
   const getPerformanceColor = useCallback((score) => {
     if (score >= 80) return 'success';

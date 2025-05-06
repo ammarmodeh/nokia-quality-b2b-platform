@@ -29,7 +29,7 @@ const AssessmentForm = ({
   editMode
 }) => {
   // Split the state into smaller pieces
-  const [conductedBy, setConductedBy] = useState(initialAssessment.conductedBy);
+  // const [conductedBy, setConductedBy] = useState(initialAssessment.conductedBy);
   const [feedback, setFeedback] = useState(initialAssessment.feedback);
   const [checkPoints, setCheckPoints] = useState(initialAssessment.checkPoints);
   const [expandedNotes, setExpandedNotes] = useState({});

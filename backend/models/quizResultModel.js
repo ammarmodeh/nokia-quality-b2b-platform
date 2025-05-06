@@ -9,6 +9,10 @@ const quizResultSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  teamCompany: {
+    type: String,
+    required: true
+  },
   quizCode: {
     type: String,
     required: true

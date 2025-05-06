@@ -5,7 +5,7 @@ import { UserSchema } from "../models/userModel.js";
 // Create a new assessment
 export const createAssessment = async (req, res) => {
   try {
-    const { fieldTeamId, conductedBy, conductedById, checkPoints, feedback, categoryWeights } = req.body;
+    const { fieldTeamId, conductedBy, conductedById, checkPoints, feedback, categoryWeights, overallScore } = req.body;
 
     // console.log({ fieldTeamId, conductedById });
 
@@ -31,18 +31,19 @@ export const createAssessment = async (req, res) => {
       checkPoints,
       feedback,
       categoryWeights: categoryWeights || undefined, // Use default weights if not provided
+      overallScore
     });
 
     await assessment.save();
 
     // Update field team's evaluation history
-    fieldTeam.evaluationHistory.push({
-      score: assessment.overallScore.toString(),
-      date: assessment.assessmentDate,
-    });
-    fieldTeam.lastEvaluationDate = assessment.assessmentDate;
-    fieldTeam.isEvaluated = true;
-    await fieldTeam.save();
+    // fieldTeam.evaluationHistory.push({
+    //   score: assessment.overallScore.toString(),
+    //   date: assessment.assessmentDate,
+    // });
+    // fieldTeam.lastEvaluationDate = assessment.assessmentDate;
+    // fieldTeam.isEvaluated = true;
+    // await fieldTeam.save();
 
     res.status(201).json(assessment);
   } catch (error) {
@@ -71,18 +72,18 @@ export const updateAssessment = async (req, res) => {
     await assessment.save();
 
     // Update field team's evaluation history if score changed
-    const fieldTeam = await FieldTeamsSchema.findById(assessment.fieldTeamId);
-    if (fieldTeam) {
-      // Find the evaluation that matches this assessment date
-      const evalIndex = fieldTeam.evaluationHistory.findIndex(
-        evaluation => evaluation.date.getTime() === assessment.assessmentDate.getTime()
-      );
+    // const fieldTeam = await FieldTeamsSchema.findById(assessment.fieldTeamId);
+    // if (fieldTeam) {
+    //   // Find the evaluation that matches this assessment date
+    //   const evalIndex = fieldTeam.evaluationHistory.findIndex(
+    //     evaluation => evaluation.date.getTime() === assessment.assessmentDate.getTime()
+    //   );
 
-      if (evalIndex !== -1) {
-        fieldTeam.evaluationHistory[evalIndex].score = assessment.overallScore.toString();
-        await fieldTeam.save();
-      }
-    }
+    //   if (evalIndex !== -1) {
+    //     fieldTeam.evaluationHistory[evalIndex].score = assessment.overallScore.toString();
+    //     await fieldTeam.save();
+    //   }
+    // }
 
     res.status(200).json(assessment);
   } catch (error) {

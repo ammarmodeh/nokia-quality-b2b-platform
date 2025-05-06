@@ -23,6 +23,7 @@ export const validateTeam = async (req, res) => {
       team: {
         _id: team._id,
         teamName: team.teamName,
+        teamCompany: team.teamCompany,
         quizCode: team.quizCode,
         canTakeQuiz: team.canTakeQuiz
       }

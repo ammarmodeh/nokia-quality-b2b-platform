@@ -108,8 +108,22 @@ const assessmentSchema = new mongoose.Schema(
 
 // Calculate overall score and category scores before saving
 assessmentSchema.pre("save", function (next) {
+  if (this.overallScore !== undefined && this.overallScore !== null) {
+    // Skip recalculation if overallScore is already set
+    return next();
+  }
+
   if (this.checkPoints && this.checkPoints.length > 0) {
-    // Group checkpoints by category
+    // Calculate the total score by summing all checkpoint scores
+    const totalScore = this.checkPoints.reduce((sum, checkpoint) => sum + checkpoint.score, 0);
+
+    // Calculate the average score
+    const averageScore = totalScore / this.checkPoints.length;
+
+    // Set the overall score
+    this.overallScore = Math.round(averageScore); // You can remove Math.round if you want the exact value
+
+    // Calculate category scores
     const categories = this.checkPoints.reduce((acc, checkpoint) => {
       const category = checkpoint.category;
       if (!acc[category]) {
@@ -119,22 +133,14 @@ assessmentSchema.pre("save", function (next) {
       return acc;
     }, {});
 
-    // Calculate category scores
-    let weightedSum = 0;
-
     Object.entries(categories).forEach(([category, points]) => {
       const categoryScore = points.reduce((sum, point) => sum + point.score, 0) / points.length;
-      this.categoryScores[category] = Math.round(categoryScore);
-
-      const weight = this.categoryWeights[category] || 0;
-      weightedSum += categoryScore * weight;
+      this.categoryScores[category] = Math.round(categoryScore); // You can remove Math.round if you want the exact value
     });
-
-    this.overallScore = Math.round(weightedSum);
   }
-  // this.where({ isDeleted: false });
   next();
 });
+
 
 export const OnTheJobAssessment = mongoose.model(
   "OnTheJobAssessment",

@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { Box, Button, Typography, Alert } from '@mui/material';
-import { FaWhatsapp } from 'react-icons/fa';
+import { Box, Button, Typography } from '@mui/material';
+// import { FaWhatsapp } from 'react-icons/fa';
 
 const QuizResults = () => {
   const navigate = useNavigate();
@@ -39,18 +39,18 @@ const QuizResults = () => {
     return `الفريق: ${results.teamName}\nالنتيجة: ${results.correctAnswers}/${results.totalQuestions} (${results.percentage}%)`;
   };
 
-  const shareResults = () => {
-    let message = `نتيجة اختبار فريق ${results.teamName}:\n`;
-    message += `النتيجة النهائية: ${results.correctAnswers}/${results.totalQuestions} (${results.percentage}%)\n\n`;
+  // const shareResults = () => {
+  //   let message = `نتيجة اختبار فريق ${results.teamName}:\n`;
+  //   message += `النتيجة النهائية: ${results.correctAnswers}/${results.totalQuestions} (${results.percentage}%)\n\n`;
 
-    results.questions.forEach((question, index) => {
-      const userAnswer = results.userAnswers[index]?.selectedAnswer || 'لم يتم الإجابة';
-      message += `السؤال ${index + 1}: ${question.question}\n`;
-      message += `إجابتي: ${userAnswer}\n\n`;
-    });
+  //   results.questions.forEach((question, index) => {
+  //     const userAnswer = results.userAnswers[index]?.selectedAnswer || 'لم يتم الإجابة';
+  //     message += `السؤال ${index + 1}: ${question.question}\n`;
+  //     message += `إجابتي: ${userAnswer}\n\n`;
+  //   });
 
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-  };
+  //   window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  // };
 
   const handleExit = () => {
     const isFieldTeam = JSON.parse(sessionStorage.getItem('fieldTeamAuth'));
