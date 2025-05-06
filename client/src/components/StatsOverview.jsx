@@ -187,7 +187,7 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
               mb: 0.5,
               fontSize: '0.7rem'
             }}>
-              Top Team
+              Highest-Scoring Team
             </Typography>
             <Typography component="div" variant="body1" sx={{
               color: colors.textPrimary,
@@ -214,7 +214,7 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
               mb: 0.5,
               fontSize: '0.7rem'
             }}>
-              Needs Improvement
+              Lowest-Scoring Team
             </Typography>
             <Typography component="div" variant="body1" sx={{
               color: colors.textPrimary,

@@ -100,8 +100,11 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
   const getCategoryChartData = () => {
     if (!assessment) return null;
 
-    const labels = Object.keys(assessment.categoryScores);
-    const scores = Object.values(assessment.categoryScores);
+    // Calculate averages from checkPoints
+    const categoryAverages = calculateCategoryAverages(assessment.checkPoints);
+
+    const labels = Object.keys(categoryAverages);
+    const scores = Object.values(categoryAverages);
 
     return {
       labels,
@@ -247,6 +250,23 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
     return { strengths, improvements };
   };
 
+  const calculateCategoryAverages = (checkPoints) => {
+    const categoryStats = checkPoints.reduce((acc, checkPoint) => {
+      if (!acc[checkPoint.category]) {
+        acc[checkPoint.category] = { totalScore: 0, count: 0 };
+      }
+      acc[checkPoint.category].totalScore += checkPoint.score;
+      acc[checkPoint.category].count += 1;
+      return acc;
+    }, {});
+
+    const categoryAverages = {};
+    Object.keys(categoryStats).forEach(category => {
+      categoryAverages[category] = Math.round(categoryStats[category].totalScore / categoryStats[category].count);
+    });
+
+    return categoryAverages;
+  };
 
   return (
     <Box sx={{
