@@ -133,6 +133,7 @@ const FieldTeamTicketsForPortalReview = ({ teamId, teamName }) => {
       Evaluation Score: ${ticket.evaluationScore || 'N/A'}
       Customer Feedback: ${ticket.customerFeedback}
       Reason: ${ticket.reason}
+      Impact Level: ${ticket.priority || 'Not specified'}
     `;
 
     if (navigator.clipboard) {

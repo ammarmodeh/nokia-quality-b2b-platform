@@ -210,7 +210,7 @@ const TicketDetailsDialogForPortalView = ({ open, onClose, ticket, onCopy }) => 
               />
               <DetailRow label="Customer Feedback" value={ticket.customerFeedback} />
               <DetailRow label="Reason" value={ticket.reason} />
-              <DetailRow label="Status" value={ticket.status} />
+              <DetailRow label="Status" value={ticket.priority} />
             </Box>
           </Paper>
         </Box>

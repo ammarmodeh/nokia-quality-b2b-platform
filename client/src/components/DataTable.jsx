@@ -103,49 +103,6 @@ export const DataTable = ({ groupedData }) => {
 
   return (
     <div style={{ width: '100%' }}>
-      {/* <div style={{
-        backgroundColor: '#333',
-        padding: '10px',
-        borderRadius: '4px',
-        marginBottom: '10px',
-      }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'pointer',
-            justifyContent: 'space-between'
-          }}
-          onClick={() => setExpanded(!expanded)}
-        >
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <InfoIcon style={{ color: '#9e9e9e', marginRight: '8px' }} />
-            <Typography variant="body2" style={{ color: '#ffffff' }}>
-              QoS Violations Metrics
-            </Typography>
-          </div>
-          <IconButton size="small" style={{ color: '#9e9e9e', padding: 0 }}>
-            {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
-        </div>
-
-        <Collapse in={expanded}>
-          <Typography variant="body2" style={{
-            color: '#ffffff',
-            marginTop: '10px',
-            padding: '8px',
-            backgroundColor: '#444',
-            borderRadius: '4px'
-          }}>
-            <strong>QoS Metrics:</strong><br />
-            - NPS = Promoters% - Detractors%<br />
-            - NPS Target: &gt;75%<br />
-            - Detractor Target: &lt;9%<br />
-            <br />
-            Note: Some samples may be excluded due to unrelated issues.<br />
-          </Typography>
-        </Collapse>
-      </div> */}
 
       <Paper sx={{
         height: 240,
@@ -153,7 +110,6 @@ export const DataTable = ({ groupedData }) => {
         backgroundColor: "#333",
         overflow: "hidden" // Prevent double scrollbars
       }}>
-        {/* <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '240px', overflowY: 'auto', width: '100%' }}> */}
         <DataGrid
           rows={rows}
           columns={columns}
@@ -218,7 +174,6 @@ export const DataTable = ({ groupedData }) => {
             '& .neutral-cell': { color: 'gray' },
           }}
         />
-        {/* </div> */}
       </Paper>
     </div>
   );

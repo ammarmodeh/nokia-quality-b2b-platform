@@ -67,6 +67,11 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         'Detractor Violations (1-6)': row.detractorCount,
         'Neutral Violations (7-8)': row.neutralCount,
         'Total Violations': row.totalViolations,
+
+        'Low Priority Tickets': row.lowPriorityCount,
+        'Medium Priority Tickets': row.mediumPriorityCount,
+        'High Priority Tickets': row.highPriorityCount,
+
         'Date Reached Violation Limit': row.dateReachedLimit || 'N/A',
         'How Threshold Was Reached': row.thresholdDescription,
         'Consequence Applied': row.consequenceApplied,
@@ -272,23 +277,37 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     const teamViolations = {};
 
     tasks.forEach((task) => {
-      const { teamName, evaluationScore, interviewDate } = task;
+      const { teamName, evaluationScore, interviewDate, priority } = task; // Include both interviewDate and priority
       if (!teamViolations[teamName]) {
         teamViolations[teamName] = {
           detractor: 0,
           neutral: 0,
+          lowPriority: 0,    // New: Count of Low priority tickets
+          mediumPriority: 0, // New: Count of Medium priority tickets
+          highPriority: 0,   // New: Count of High priority tickets
           violations: []
         };
       }
       teamViolations[teamName].violations.push({
         score: evaluationScore,
-        date: interviewDate
+        date: interviewDate,  // Keep using interviewDate as in original
+        priority: priority    // New: Store priority level
       });
 
+      // Original score classification
       if (evaluationScore >= 1 && evaluationScore <= 6) {
         teamViolations[teamName].detractor += 1;
       } else if (evaluationScore >= 7 && evaluationScore <= 8) {
         teamViolations[teamName].neutral += 1;
+      }
+
+      // New: Count priority levels
+      if (priority === 'Low') {
+        teamViolations[teamName].lowPriority += 1;
+      } else if (priority === 'Medium') {
+        teamViolations[teamName].mediumPriority += 1;
+      } else if (priority === 'High') {
+        teamViolations[teamName].highPriority += 1;
       }
     });
 
@@ -298,7 +317,14 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const rows = useMemo(() => {
     const rowsData = fieldTeams.map((team) => {
       const teamName = team.teamName;
-      const teamViolations = violationData[teamName] || { detractor: 0, neutral: 0, violations: [] };
+      const teamViolations = violationData[teamName] || {
+        detractor: 0,
+        neutral: 0,
+        lowPriority: 0,
+        mediumPriority: 0,
+        highPriority: 0,
+        violations: []
+      };
       const violations = teamViolations.violations;
       const sortedViolations = [...violations].sort((a, b) =>
         new Date(a.date) - new Date(b.date)
@@ -446,6 +472,11 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         neutralCount: totalNeutrals,
         totalViolations,
         equivalentDetractorCount: currentEquivalent,
+
+        lowPriorityCount: teamViolations.lowPriority,
+        mediumPriorityCount: teamViolations.mediumPriority,
+        highPriorityCount: teamViolations.highPriority,
+
         dateReachedLimit: dateReachedLimit
           ? new Date(dateReachedLimit).toLocaleDateString()
           : currentEquivalent >= 3 ? "Threshold not recorded" : null,

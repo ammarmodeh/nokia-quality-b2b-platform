@@ -43,7 +43,12 @@ const handleCopyTaskData = (taskData) => {
     Customer Feedback: ${taskData.customerFeedback}
     Reason: ${taskData.reason}
     Evaluation Score: ${taskData.evaluationScore}
+    Impact Level: ${taskData.impactLevel || taskData.priority || 'Not specified'}
     Interview Date: ${new Date(taskData.interviewDate).toLocaleDateString()}
+    Week Number: ${getWeekNumberForTaksTable(new Date(taskData.interviewDate))}
+    Team Evaluation Score: ${taskData.teamData?.evaluationScore || 'N/A'}
+    Team Status: ${taskData.teamData?.isActive ? 'Active' : 'Inactive'}
+    Team Evaluated: ${taskData.teamData?.isEvaluated ? 'Yes' : 'No'}
   `.trim();
 
   // Copy to clipboard
@@ -52,7 +57,7 @@ const handleCopyTaskData = (taskData) => {
       alert("Task data copied to clipboard!");
     })
     .catch((err) => {
-      // console.error("Failed to copy: ", err);
+      console.error("Failed to copy: ", err);
       alert("Failed to copy data to clipboard");
     });
 };
@@ -115,7 +120,7 @@ const TaskTable = ({ tasks }) => {
   // Function to export data to Excel
   const exportToExcel = () => {
     try {
-      // First, calculate team statistics
+      // First, calculate team statistics including impact levels
       const teamStats = {};
 
       tasks.forEach(task => {
@@ -125,6 +130,9 @@ const TaskTable = ({ tasks }) => {
             totalViolations: 0,
             neutrals: 0,
             detractors: 0,
+            lowPriority: 0,
+            mediumPriority: 0,
+            highPriority: 0,
             teamName: task.teamName,
             teamCompany: task.teamCompany
           };
@@ -132,11 +140,22 @@ const TaskTable = ({ tasks }) => {
 
         teamStats[teamId].totalViolations++;
 
+        // Count by score type
         const score = task.evaluationScore || 0;
         if (score >= 7 && score <= 8) {
           teamStats[teamId].neutrals++;
         } else if (score <= 6) {
           teamStats[teamId].detractors++;
+        }
+
+        // Count by priority level
+        const priority = task.priority;
+        if (priority === 'Low') {
+          teamStats[teamId].lowPriority++;
+        } else if (priority === 'Medium') {
+          teamStats[teamId].mediumPriority++;
+        } else if (priority === 'High') {
+          teamStats[teamId].highPriority++;
         }
       });
 
@@ -144,19 +163,23 @@ const TaskTable = ({ tasks }) => {
       const exportColumns = [
         { header: "SLID", field: "slid" },
         { header: "Week", field: "weekNumber" },
+        { header: "Customer", field: "customerName" },
+        { header: "Feedback", field: "customerFeedback" },
         { header: "Score", field: "evaluationScore" },
-        { header: "Customer Feedback", field: "customerFeedback" },
+        { header: "Impact Level", field: "impactLevel" },
         { header: "Team", field: "teamName" },
         { header: "Company", field: "teamCompany" },
         { header: "PIS Date", field: "pisDate" },
         { header: "Last Session", field: "lastSession" },
-        // { header: "Session Status", field: "sessionStatus" },
-        { header: "Total Violations", field: "totalViolations" },
         { header: "Neutrals (7-8)", field: "neutrals" },
         { header: "Detractors (0-6)", field: "detractors" },
+        { header: "Total Violations", field: "totalViolations" },
+        // Add new columns for impact levels
+        { header: "Low Priority", field: "lowPriority" },
+        { header: "Medium Priority", field: "mediumPriority" },
+        { header: "High Priority", field: "highPriority" },
         { header: "Evaluated", field: "isEvaluated" },
         { header: "Team Score", field: "teamEvaluationScore" },
-        // { header: "Status", field: "status" }
       ];
 
       // Prepare the data for export
@@ -165,7 +188,10 @@ const TaskTable = ({ tasks }) => {
         const stats = teamStats[teamId] || {
           totalViolations: 0,
           neutrals: 0,
-          detractors: 0
+          detractors: 0,
+          lowPriority: 0,
+          mediumPriority: 0,
+          highPriority: 0
         };
 
         // Calculate week number
@@ -214,19 +240,22 @@ const TaskTable = ({ tasks }) => {
         return {
           slid: task.slid,
           weekNumber: weekNumber,
-          evaluationScore: task.evaluationScore,
+          customerName: task.customerName,
           customerFeedback: task.customerFeedback,
+          evaluationScore: task.evaluationScore,
+          impactLevel: task.priority,
           teamName: task.teamName,
           teamCompany: task.teamCompany,
           pisDate: newFormatDate(task.pisDate?.$date || task.pisDate),
           lastSession: sessionInfo,
-          // sessionStatus: sessionStatus,
-          totalViolations: stats.totalViolations,
-          neutrals: stats.neutrals,
-          detractors: stats.detractors,
           isEvaluated: teamData ? (teamData.isEvaluated ? 'Yes' : 'No') : 'N/A',
           teamEvaluationScore: teamData?.evaluationScore || 'N/A',
-          // status: task.status
+          neutrals: stats.neutrals,
+          detractors: stats.detractors,
+          totalViolations: stats.totalViolations,
+          lowPriority: stats.lowPriority,
+          mediumPriority: stats.mediumPriority,
+          highPriority: stats.highPriority,
         };
       });
 
@@ -317,6 +346,23 @@ const TaskTable = ({ tasks }) => {
       ),
     },
     {
+      field: "customerName",
+      headerName: "Customer",
+      minWidth: 200,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => params.value,
+
+    },
+    {
+      field: "customerFeedback",
+      headerName: "Feedback",
+      minWidth: 200,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => params.value,
+    },
+    {
       field: "evaluationScore",
       headerName: "Score",
       minWidth: 100,
@@ -347,6 +393,37 @@ const TaskTable = ({ tasks }) => {
             {/* {score} ({label}) */}
             {score}
           </Box>
+        );
+      },
+    },
+    {
+      field: "impactLevel",
+      headerName: "Impact Level",
+      minWidth: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const value = params.value;
+        let color = '';
+
+        switch (value) {
+          case 'Low':
+            color = '#569256';
+            break;
+          case 'Medium':
+            color = '#ca9433';
+            break;
+          case 'High':
+            color = '#d33131';
+            break;
+          default:
+            color = 'gray';
+        }
+
+        return (
+          <span style={{ color, fontWeight: 'bold', textTransform: 'capitalize' }}>
+            {value}
+          </span>
         );
       },
     },
@@ -511,7 +588,6 @@ const TaskTable = ({ tasks }) => {
       field: "actions",
       headerName: "Actions",
       width: 100,
-      // flex: 1,
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => {
@@ -533,7 +609,9 @@ const TaskTable = ({ tasks }) => {
             Customer Feedback: ${params.row.customerFeedback}
             Reason: ${params.row.reason}
             Evaluation Score: ${params.row.evaluationScore}
+            Impact Level: ${params.row.impactLevel || params.row.priority || 'Not specified'}
             Interview Date: ${moment(params.row.interviewDate).format("YYYY-MM-DD")}
+            Week Number: ${params.row.weekNumber}
           `.trim();
 
           navigator.clipboard.writeText(formattedData);
@@ -569,20 +647,25 @@ const TaskTable = ({ tasks }) => {
           </Box>
         );
       },
-    },
+    }
   ];
 
+  // Map tasks correctly with the new week numbering system
   // Map tasks correctly with the new week numbering system
   const rows = sortedTasks.map((task, index) => ({
     id: index + 1,
     slid: task.slid,
+    customerName: task.customerName,
+    customerFeedback: task.customerFeedback,
+    impactLevel: task.priority,  // This ensures the field is available as impactLevel
+    priority: task.priority,     // Keep the original field as well for compatibility
     weekNumber: getWeekNumberForTaksTable(new Date(task.interviewDate)),
     evaluationScore: task.evaluationScore,
     team: task.teamName,
     company: task.teamCompany,
     pisDate: task.pisDate,
     status: task._id,
-    teamId: task.teamId?.$oid || task.teamId, // Handle both formats
+    teamId: task.teamId?.$oid || task.teamId,
     // Add all the fields needed for copying
     contactNumber: task.contactNumber,
     requestNumber: task.requestNumber,
@@ -592,8 +675,6 @@ const TaskTable = ({ tasks }) => {
     teamCompany: task.teamCompany,
     tarrifName: task.tarrifName,
     customerType: task.customerType,
-    customerFeedback: task.customerFeedback,
-    customerName: task.customerName,
     reason: task.reason,
     interviewDate: task.interviewDate,
   }));

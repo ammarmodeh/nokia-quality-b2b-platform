@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import {
   DataGrid,
   GridToolbarContainer,
-  GridToolbarExport,
   GridToolbarColumnsButton,
   GridToolbarDensitySelector
 } from "@mui/x-data-grid";
@@ -21,7 +20,6 @@ const CustomToolbar = () => {
     <GridToolbarContainer>
       <GridToolbarColumnsButton />
       <GridToolbarDensitySelector />
-      <GridToolbarExport />
     </GridToolbarContainer>
   );
 };
@@ -109,6 +107,36 @@ const ViolationDataGrid = ({
           backgroundColor: '#383838',
           padding: '4px 8px'
         }}>
+          {params.value}
+        </Box>
+      )
+    },
+    {
+      field: "lowPriorityCount",
+      headerName: "Low Impact",
+      width: 100,
+      renderCell: (params) => (
+        <Box sx={{ color: params.value > 0 ? '#4caf50' : '#aaaaaa' }}>
+          {params.value}
+        </Box>
+      )
+    },
+    {
+      field: "mediumPriorityCount",
+      headerName: "Medium Impact",
+      width: 120,
+      renderCell: (params) => (
+        <Box sx={{ color: params.value > 0 ? '#ff9800' : '#aaaaaa' }}>
+          {params.value}
+        </Box>
+      )
+    },
+    {
+      field: "highPriorityCount",
+      headerName: "High Impact",
+      width: 100,
+      renderCell: (params) => (
+        <Box sx={{ color: params.value > 0 ? '#f44336' : '#aaaaaa' }}>
           {params.value}
         </Box>
       )

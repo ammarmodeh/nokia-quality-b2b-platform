@@ -43,6 +43,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       textToCopy += `Team Company: ${task.teamCompany}\n`;
       textToCopy += `Evaluation Score: ${task.evaluationScore} (${task.evaluationScore >= 9 ? 'Promoter' :
         task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'})\n`;
+      textToCopy += `Impact Level: ${task.priority || 'Not specified'}\n`;
       textToCopy += `Customer Feedback: ${task.customerFeedback}\n`;
       textToCopy += `Reason: ${task.reason}\n\n`;
 
@@ -75,11 +76,12 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       'Request Number': task.requestNumber,
       'SLID': task.slid,
       'PIS Date': new Date(task.pisDate).toLocaleString(),
-      'Evaluation Score': task.evaluationScore,
       'Customer Name': task.customerName,
+      'Customer Feedback': task.customerFeedback,
+      'Evaluation Score': task.evaluationScore,
+      'Impact Level': task.priority || 'Not specified',
       'Contact Number': task.contactNumber,
       'Tariff Name': task.tarrifName,
-      'Customer Feedback': task.customerFeedback,
       'Reason': task.reason,
       'Customer Type': task.customerType,
       'Governorate': task.governorate,
@@ -295,6 +297,23 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                   />
                   <DetailRow label="Customer Feedback" value={task.customerFeedback} isMobile={isMobile} />
                   <DetailRow label="Reason" value={task.reason} isMobile={isMobile} />
+                  <DetailRow
+                    label="Impact Level"
+                    value={
+                      <Chip
+                        label={task.priority || 'Not specified'}
+                        size={isMobile ? "small" : "medium"}
+                        sx={{
+                          color: '#ffffff',
+                          backgroundColor:
+                            task.priority === 'High' ? '#f44336' :
+                              task.priority === 'Medium' ? '#ff9800' : '#4caf50',
+                          fontWeight: 'bold'
+                        }}
+                      />
+                    }
+                    isMobile={isMobile}
+                  />
                 </Box>
               </Paper>
 
