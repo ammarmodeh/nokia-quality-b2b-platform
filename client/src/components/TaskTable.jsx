@@ -997,6 +997,7 @@ const TaskTable = ({ tasks }) => {
                   />
                   <DetailRow label="Customer Feedback" value={selectedTask.customerFeedback} />
                   <DetailRow label="Reason" value={selectedTask.reason} />
+                  <DetailRow label="Customer Feedback" value={selectedTask.priority} />
                 </Box>
               </Paper>
             </Box>

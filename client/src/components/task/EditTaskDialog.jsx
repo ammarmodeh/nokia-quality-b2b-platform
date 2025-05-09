@@ -176,14 +176,17 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       slid: `INT${data.slid}`,
       assignedTo,
       whomItMayConcern,
-      // status,
       priority,
       department,
       category,
       teamCompany,
       teamName: teamInfo.teamName,
       teamId: teamInfo.teamId,
-      evaluationScore
+      evaluationScore,
+      governorate,
+      customerType,
+      validationStatus,
+      validationCat
     };
 
     // console.log({ formData });
@@ -194,15 +197,14 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       const response = await api.put(`/tasks/update-task/${task._id}`, formData, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
-      // console.log({ response });
-      // return
+
       if (response.status === 200) {
         alert("Task updated successfully!");
-        handleTaskUpdate(response.data);
+        handleTaskUpdate(response.data);  // This should update the parent component's state
         setOpen(false);
       }
     } catch (error) {
-      // console.error("Error updating task:", error.response.data.error);
+      console.error("Error updating task:", error.response?.data?.error);
     }
   };
 

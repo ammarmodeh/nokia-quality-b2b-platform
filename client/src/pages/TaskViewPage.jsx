@@ -49,7 +49,6 @@ const TaskViewPage = () => {
   const [usersToNotify, setUsersToNotify] = useState([]);
   const location = useLocation();
   const from = location.state?.from || "/dashboard";
-  // const [expandedNotes, setExpandedNotes] = useState({});
   const [expandedNotes, setExpandedNotes] = useState([]);
 
   useEffect(() => {
@@ -272,12 +271,12 @@ const TaskViewPage = () => {
 
   const handleEditTask = (updatedTask) => {
     if (!updatedTask) {
-      // console.error("Updated task is undefined");
+      console.error("Updated task is undefined");
       return;
     }
     const filledTask = fillTaskExceptCreatedFields(updatedTask);
-    setTask(filledTask);
-    setEditDialogOpen(true);
+    setTask(filledTask);  // This updates the task state
+    setEditDialogOpen(false);  // Close the dialog after update
   };
 
   const handleTaskDelete = async (taskId) => {
