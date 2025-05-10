@@ -130,9 +130,9 @@ const TaskTable = ({ tasks }) => {
             totalViolations: 0,
             neutrals: 0,
             detractors: 0,
-            lowPriority: 0,
-            mediumPriority: 0,
-            highPriority: 0,
+            lowImpact: 0,
+            mediumImpact: 0,
+            highImpact: 0,
             teamName: task.teamName,
             teamCompany: task.teamCompany
           };
@@ -151,11 +151,11 @@ const TaskTable = ({ tasks }) => {
         // Count by priority level
         const priority = task.priority;
         if (priority === 'Low') {
-          teamStats[teamId].lowPriority++;
+          teamStats[teamId].lowImpact++;
         } else if (priority === 'Medium') {
-          teamStats[teamId].mediumPriority++;
+          teamStats[teamId].mediumImpact++;
         } else if (priority === 'High') {
-          teamStats[teamId].highPriority++;
+          teamStats[teamId].highImpact++;
         }
       });
 
@@ -175,9 +175,9 @@ const TaskTable = ({ tasks }) => {
         { header: "Detractors (0-6)", field: "detractors" },
         { header: "Total Violations", field: "totalViolations" },
         // Add new columns for impact levels
-        { header: "Low Priority", field: "lowPriority" },
-        { header: "Medium Priority", field: "mediumPriority" },
-        { header: "High Priority", field: "highPriority" },
+        { header: "Low Priority", field: "lowImpact" },
+        { header: "Medium Priority", field: "mediumImpact" },
+        { header: "High Priority", field: "highImpact" },
         { header: "Evaluated", field: "isEvaluated" },
         { header: "Team Score", field: "teamEvaluationScore" },
       ];
@@ -189,9 +189,9 @@ const TaskTable = ({ tasks }) => {
           totalViolations: 0,
           neutrals: 0,
           detractors: 0,
-          lowPriority: 0,
-          mediumPriority: 0,
-          highPriority: 0
+          lowImpact: 0,
+          mediumImpact: 0,
+          highImpact: 0
         };
 
         // Calculate week number
@@ -227,13 +227,13 @@ const TaskTable = ({ tasks }) => {
           if (completedSessions.length > 0) {
             lastSession = completedSessions[0];
             sessionStatus = 'Completed';
-            sessionInfo = `Completed (${moment(lastSession.sessionDate?.$date || lastSession.sessionDate).format('YYYY-MM-DD')}`;
+            sessionInfo = `Completed (${moment(lastSession.sessionDate?.$date || lastSession.sessionDate).format('YYYY-MM-DD')})`;
           }
           // Priority 2: Use most recent other session if no completed sessions
           else if (otherSessions.length > 0) {
             lastSession = otherSessions[0];
             sessionStatus = 'Missed';
-            sessionInfo = `Missed (${moment(lastSession.sessionDate?.$date || lastSession.sessionDate).format('YYYY-MM-DD')}`;
+            sessionInfo = `Missed (${moment(lastSession.sessionDate?.$date || lastSession.sessionDate).format('YYYY-MM-DD')})`;
           }
         }
 
@@ -253,9 +253,9 @@ const TaskTable = ({ tasks }) => {
           neutrals: stats.neutrals,
           detractors: stats.detractors,
           totalViolations: stats.totalViolations,
-          lowPriority: stats.lowPriority,
-          mediumPriority: stats.mediumPriority,
-          highPriority: stats.highPriority,
+          lowImpact: stats.lowImpact,
+          mediumImpact: stats.mediumImpact,
+          highImpact: stats.highImpact,
         };
       });
 

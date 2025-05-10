@@ -40,7 +40,9 @@ import {
   MdRefresh,
   MdStar,
   MdStarOutline,
-  MdFilterList
+  MdFilterList,
+  MdCheckCircle,
+  MdError
 } from 'react-icons/md';
 import { IoMdAdd } from "react-icons/io";
 import api from '../api/api';
@@ -49,6 +51,7 @@ import { TaskDetailsDialog } from '../components/TaskDetailsDialog';
 import { format, parseISO } from 'date-fns';
 import { utils, writeFile } from 'xlsx';
 import AddTask from '../components/task/AddTask';
+import moment from 'moment';
 
 const AllTasksList = () => {
   const theme = useTheme();
@@ -70,6 +73,25 @@ const AllTasksList = () => {
   const [filter, setFilter] = useState('all'); // 'all', 'neutrals', 'detractors'
   const [openAddTask, setOpenAddTask] = useState(false);
   const [updateRefetchTasks, setUpdateRefetchTasks] = useState(false);
+  const [selectedRowId, setSelectedRowId] = useState(null);
+  const [priorityFilter, setPriorityFilter] = useState('all'); // 'all', 'High', 'Medium', 'Low'
+
+  const getCustomWeekNumber = (date, year) => {
+    if (!date) return null;
+    const startOfYear = moment(`${year}-01-01`);
+    return moment(date).isoWeek() - startOfYear.isoWeek();
+  };
+
+  const handleRowClick = (taskId) => {
+    setSelectedRowId(prevId => {
+      // If clicking the same row, toggle selection
+      if (prevId === taskId) {
+        return null;
+      }
+      // Otherwise select the new row
+      return taskId;
+    });
+  };
 
   // Fetch all non-deleted tasks and sort by interview date
   const fetchTasks = async () => {
@@ -162,14 +184,20 @@ const AllTasksList = () => {
     );
 
     // Apply evaluation score filter
-    let matchesFilter = true;
+    let matchesScoreFilter = true;
     if (filter === 'neutrals') {
-      matchesFilter = task.evaluationScore >= 7 && task.evaluationScore <= 8;
+      matchesScoreFilter = task.evaluationScore >= 7 && task.evaluationScore <= 8;
     } else if (filter === 'detractors') {
-      matchesFilter = task.evaluationScore >= 1 && task.evaluationScore <= 6;
+      matchesScoreFilter = task.evaluationScore >= 1 && task.evaluationScore <= 6;
     }
 
-    return matchesSearch && matchesFilter;
+    // Apply priority filter
+    let matchesPriorityFilter = true;
+    if (priorityFilter !== 'all') {
+      matchesPriorityFilter = task.priority === priorityFilter;
+    }
+
+    return matchesSearch && matchesScoreFilter && matchesPriorityFilter;
   });
 
   // Handle pagination
@@ -225,7 +253,6 @@ const AllTasksList = () => {
     }
   };
 
-
   // Export to Excel function
   const exportToExcel = () => {
     const data = filteredTasks.map(task => ({
@@ -240,13 +267,33 @@ const AllTasksList = () => {
       'Team Name': task.teamName || 'N/A',
       'Team Company': task.teamCompany || 'N/A',
       'Evaluation Score': task.evaluationScore || 'N/A',
-      'Interview Date': task.interviewDate ? format(parseISO(task.interviewDate), 'dd/MM/yyyy') : 'N/A'
+      'Impact Level': task.priority || 'N/A',
+      'Interview Week': task.interviewDate ? getWeekDisplay(task.interviewDate) : 'N/A'
     }));
 
     const worksheet = utils.json_to_sheet(data);
     const workbook = utils.book_new();
     utils.book_append_sheet(workbook, worksheet, 'Tasks');
     writeFile(workbook, 'Tasks_Export.xlsx');
+  };
+
+  const handleTableContainerClick = (e) => {
+    // Check if we're clicking directly on the container (not a child element that might stop propagation)
+    if (e.target === e.currentTarget) {
+      setSelectedRowId(null);
+    }
+  };
+
+  const getWeekDisplay = (dateString) => {
+    if (!dateString) return "-";
+    try {
+      const date = moment(dateString);
+      const year = date.year();
+      const weekNum = getCustomWeekNumber(date, year);
+      return `${weekNum}`; // Matches your calendar's format
+    } catch (e) {
+      return "-";
+    }
   };
 
   if (loading) {
@@ -275,7 +322,7 @@ const AllTasksList = () => {
 
   return (
     <Box sx={{
-      maxWidth: '1100px',
+      maxWidth: '1200px',
       mx: 'auto',
       p: 2,
       px: isMobile ? 0 : undefined
@@ -367,7 +414,7 @@ const AllTasksList = () => {
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
           <InputLabel id="filter-select-label" sx={{ color: '#aaaaaa' }}>
-            Filter
+            Eval Score
           </InputLabel>
           <Select
             labelId="filter-select-label"
@@ -419,6 +466,63 @@ const AllTasksList = () => {
           </Select>
         </FormControl>
 
+        <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
+          <InputLabel id="priority-filter-label" sx={{ color: '#aaaaaa' }}>
+            Impact Level
+          </InputLabel>
+          <Select
+            labelId="priority-filter-label"
+            id="priority-filter"
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            label="Impact Level"
+            sx={{
+              color: '#ffffff',
+              borderRadius: '20px',
+              backgroundColor: '#272727',
+              '& .MuiOutlinedInput-notchedOutline': {
+                border: 'none',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #666 !important',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #3ea6ff !important',
+              },
+            }}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  backgroundColor: '#272727',
+                  color: '#ffffff',
+                },
+              },
+            }}
+          >
+            <MenuItem value="all">
+              <Box display="flex" alignItems="center" gap={1}>
+                <MdFilterList />
+                <span>All Levels</span>
+              </Box>
+            </MenuItem>
+            <MenuItem value="High">
+              <Box display="flex" alignItems="center" gap={1}>
+                <Chip label="High" size="small" color="error" />
+              </Box>
+            </MenuItem>
+            <MenuItem value="Medium">
+              <Box display="flex" alignItems="center" gap={1}>
+                <Chip label="Medium" size="small" color="warning" />
+              </Box>
+            </MenuItem>
+            <MenuItem value="Low">
+              <Box display="flex" alignItems="center" gap={1}>
+                <Chip label="Low" size="small" color="success" />
+              </Box>
+            </MenuItem>
+          </Select>
+        </FormControl>
+
         <Button
           variant="outlined"
           onClick={exportToExcel}
@@ -465,58 +569,62 @@ const AllTasksList = () => {
       </Box>
 
       {/* Tasks Table */}
-      <TableContainer component={Paper} sx={{
-        mt: 2,
-        maxWidth: '100%',
-        overflowX: 'auto',
-        backgroundColor: '#1e1e1e',
-        border: '1px solid #444',
-        "& .MuiTable-root": {
-          backgroundColor: "#272727",
-        },
-        "& .MuiTableHead-root": {
-          backgroundColor: "#333",
-          "& .MuiTableCell-root": {
-            color: "#9e9e9e",
-            fontSize: "0.875rem",
-            fontWeight: "bold",
-            borderBottom: "1px solid #444",
-          }
-        },
-        "& .MuiTableBody-root": {
-          "& .MuiTableCell-root": {
-            borderBottom: "1px solid #444",
-            color: "#ffffff",
-          },
-          "& .MuiTableRow-root": {
+      <TableContainer component={Paper} onClick={handleTableContainerClick}
+        sx={{
+          mt: 2,
+          maxWidth: '100%',
+          overflowX: 'auto',
+          backgroundColor: '#1e1e1e',
+          border: '1px solid #444',
+          borderRadius: '0px',
+          "& .MuiTable-root": {
             backgroundColor: "#272727",
-            "&:hover": {
-              backgroundColor: "#333",
+          },
+          "& .MuiTableHead-root": {
+            backgroundColor: "#333",
+            "& .MuiTableCell-root": {
+              color: "#9e9e9e",
+              fontSize: "0.875rem",
+              fontWeight: "bold",
+              borderBottom: "1px solid #444",
+            }
+          },
+          "& .MuiTableBody-root": {
+            "& .MuiTableCell-root": {
+              borderBottom: "1px solid #444",
+              color: "#ffffff",
             },
-          }
-        },
-        "&::-webkit-scrollbar": {
-          width: "8px",
-          height: "8px",
-        },
-        "&::-webkit-scrollbar-thumb": {
-          backgroundColor: "#666",
-          borderRadius: "4px",
-        },
-        "&::-webkit-scrollbar-track": {
-          backgroundColor: "#444",
-        },
-      }}>
+            // "& .MuiTableRow-root": {
+            //   backgroundColor: "#272727",
+            //   "&:hover": {
+            //     backgroundColor: "#333",
+            //   },
+            // }
+          },
+          "&::-webkit-scrollbar": {
+            width: "8px",
+            height: "8px",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "#666",
+            borderRadius: "4px",
+          },
+          "&::-webkit-scrollbar-track": {
+            backgroundColor: "#444",
+          },
+        }}
+      >
         <Table size={isMobile ? 'small' : 'medium'}>
           <TableHead>
             <TableRow>
-              <TableCell>SLID</TableCell>
-              <TableCell>Customer Name</TableCell>
-              <TableCell>Contact</TableCell>
-              <TableCell>Customer Feedback</TableCell>
-              <TableCell>Evaluation Score</TableCell>
-              <TableCell>Interview Date</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell style={{ fontSize: '0.875rem' }}>SLID</TableCell>
+              <TableCell style={{ fontSize: '0.875rem' }}>Customer Name</TableCell>
+              {/* <TableCell>Contact</TableCell> */}
+              <TableCell style={{ fontSize: '0.875rem' }}>Customer Feedback</TableCell>
+              <TableCell style={{ fontSize: '0.875rem' }}>Impact Level</TableCell>
+              <TableCell style={{ fontSize: '0.875rem' }}>Eval Score</TableCell>
+              <TableCell style={{ fontSize: '0.875rem' }}>Week</TableCell>
+              <TableCell style={{ fontSize: '0.875rem' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -526,14 +634,34 @@ const AllTasksList = () => {
                 .map((task) => {
                   const { isFavorited } = getFavoriteStatus(task._id);
                   return (
-                    <TableRow key={task._id}>
-                      <TableCell>{task.slid || "-"}</TableCell>
+                    <TableRow
+                      key={task._id}
+                      onClick={() => handleRowClick(task._id)}
+                      sx={{
+                        backgroundColor: task._id === selectedRowId ? '#333' : '#272727',
+                        cursor: 'pointer',
+                      }}
+                    >
                       <TableCell>
-                        <Typography fontWeight={500}>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Typography>{task.slid || "-"}</Typography>
+                          {task.validationStatus === 'Validated' ? (
+                            <Tooltip title="Validated">
+                              <MdCheckCircle color="#4caf50" size={16} />
+                            </Tooltip>
+                          ) : task.validationStatus === 'Not validated' ? (
+                            <Tooltip title="Not validated">
+                              <MdError color="#ff9800" size={16} />
+                            </Tooltip>
+                          ) : null}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography fontWeight={500} sx={{ direction: 'rtl', textAlign: 'right', fontSize: '0.8rem' }}>
                           {task.customerName || "-"}
                         </Typography>
                       </TableCell>
-                      <TableCell>{task.contactNumber || "-"}</TableCell>
+                      {/* <TableCell>{task.contactNumber || "-"}</TableCell> */}
                       <TableCell>
                         {task.customerFeedback ? (
                           <Typography
@@ -543,13 +671,30 @@ const AllTasksList = () => {
                               WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
-                              // I want to make the text from tight to left
                               textAlign: 'right',
                               direction: 'rtl',
+                              fontSize: '0.8rem'
                             }}
                           >
                             {task.customerFeedback}
                           </Typography>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {task.priority ? (
+                          <Chip
+                            label={task.priority}
+                            size="small"
+                            color={
+                              task.priority === 'High' ? 'error' :
+                                task.priority === 'Medium' ? 'warning' :
+                                  task.priority === 'Low' ? 'success' : 'default'
+                            }
+                            sx={{
+                              fontWeight: 'bold',
+                              minWidth: 80
+                            }}
+                          />
                         ) : "-"}
                       </TableCell>
                       <TableCell>
@@ -565,14 +710,17 @@ const AllTasksList = () => {
                         ) : "-"}
                       </TableCell>
                       <TableCell>
-                        {task.interviewDate ? format(parseISO(task.interviewDate), 'dd/MM/yyyy') : "-"}
+                        {getWeekDisplay(task.interviewDate)}
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: "flex", gap: 1 }}>
                           <Tooltip title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}>
                             <IconButton
                               size="small"
-                              onClick={() => toggleFavorite(task)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFavorite(task);
+                              }}
                               sx={{
                                 color: isFavorited ? '#ffc107' : '#aaaaaa',
                                 '&:hover': {
@@ -587,7 +735,8 @@ const AllTasksList = () => {
                             <IconButton
                               size="small"
                               color="info"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedTask(task);
                                 setViewDialogOpen(true);
                               }}
@@ -603,7 +752,8 @@ const AllTasksList = () => {
                                   <IconButton
                                     size="small"
                                     color="primary"
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       setSelectedTask(task);
                                       setEditDialogOpen(true);
                                     }}
@@ -616,7 +766,8 @@ const AllTasksList = () => {
                                   <IconButton
                                     size="small"
                                     color="error"
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       setTaskToDelete(task);
                                       setDeleteDialogOpen(true);
                                     }}
@@ -647,8 +798,9 @@ const AllTasksList = () => {
       {/* Pagination */}
       <Box sx={{
         display: 'flex',
-        justifyContent: 'center',
-        mt: 2,
+        justifyContent: 'flex-start',
+        mt: 0,
+        width: '100%',
         '& .MuiTablePagination-root': {
           color: '#ffffff',
         },
@@ -664,6 +816,30 @@ const AllTasksList = () => {
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{
+            // borderTop: '1px solid #444',
+            backgroundColor: '#1e1e1e',
+            display: 'flex',
+            justifyContent: 'flex-start',
+            width: '100%',
+            color: '#ffffff',
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+              color: '#ffffff',
+              marginBottom: 0
+            },
+            '& .MuiSelect-select, & .MuiInputBase-root': {
+              color: '#ffffff',
+            },
+            '& .MuiSvgIcon-root': {
+              color: '#ffffff',
+            },
+            '& .MuiButtonBase-root': {
+              color: '#ffffff',
+              '&:disabled': {
+                color: '#666666'
+              }
+            }
+          }}
         />
       </Box>
 

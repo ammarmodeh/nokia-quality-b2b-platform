@@ -96,7 +96,11 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     try {
       const response = await api.put(
         `/field-teams/${selectedTeamIdForSession}/update-session/${updatedSession._id}`,
-        updatedSession
+        updatedSession, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      }
       );
 
       if (!response.data.success) throw new Error("Failed to update session");
@@ -130,7 +134,11 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
 
     try {
       const response = await api.delete(
-        `/field-teams/${selectedTeamIdForSession}/delete-session/${sessionToDelete._id}`
+        `/field-teams/${selectedTeamIdForSession}/delete-session/${sessionToDelete._id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        }
+      }
       );
 
       if (!response.data.success) throw new Error("Failed to delete session");
@@ -220,7 +228,12 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
 
       const response = await api.post(
         `/field-teams/${selectedTeamIdForSession}/add-session`,
-        sessionData
+        sessionData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          }
+        }
       );
 
       if (!response.data?.success) {
@@ -510,6 +523,11 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         {
           sessionDate: absenceData.sessionDate,
           reason: absenceData.reason
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          }
         }
       );
 
@@ -517,7 +535,11 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         throw new Error("Failed to report absence");
       }
 
-      const teamResponse = await api.get(`/field-teams/get-field-teams`);
+      const teamResponse = await api.get(`/field-teams/get-field-teams`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        }
+      });
       setFieldTeams(teamResponse.data);
 
       enqueueSnackbar("Absence reported successfully! Violation recorded.", {
