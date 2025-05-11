@@ -17,7 +17,7 @@ import { Person, Assessment, EmojiEvents } from '@mui/icons-material';
 import React from "react";
 
 const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
-  console.log({ stats });
+  // console.log({ stats });
   const theme = useTheme();
 
   if (!stats) return null;
@@ -67,7 +67,7 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
     }
   });
 
-  console.log({ scoreDistribution, totalAssessments });
+  // console.log({ scoreDistribution, totalAssessments });
 
   // Sort teams to find top and bottom performers
   const sortedTeamsByScore = [...(stats.fieldTeamStats || [])].sort((a, b) =>

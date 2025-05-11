@@ -28,6 +28,23 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const [selectedTeamSessions, setSelectedTeamSessions] = useState([]);
   const [selectedTeamForSession, setSelectedTeamForSession] = useState(null);
   const [selectedTeamForAbsence, setSelectedTeamForAbsence] = useState(null);
+  const [assessments, setAssessments] = useState([]);
+
+  useEffect(() => {
+    const fetchAssessments = async () => {
+      try {
+        const response = await api.get('/on-the-job-assessments', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          }
+        });
+        setAssessments(response.data);
+      } catch (error) {
+        console.error('Failed to fetch assessments:', error);
+      }
+    };
+    fetchAssessments();
+  }, []);
 
   // Keep selectedTeamSessions in sync
   useEffect(() => {
@@ -60,25 +77,32 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         'Team Name': row.teamName,
         'Team Company': row.teamCompany || 'N/A',
         'Trained': row.hasTraining ? 'Yes' : 'No',
-        'Last Completed Session': row.mostRecentCompletedSession,
-        'Last Missed/Canceled Session': row.mostRecentMissedCanceledSession,
         'Completed Sessions': completedSessions.length > 0 ? completedSessions.join('\n\n') : 'None',
+        'Last Completed Session': row.mostRecentCompletedSession,
         'Missed/Canceled Sessions': missedCanceledSessions.length > 0 ? missedCanceledSessions.join('\n\n') : 'None',
+        'Last Missed/Canceled Session': row.mostRecentMissedCanceledSession,
         'Detractor Violations (1-6)': row.detractorCount,
         'Neutral Violations (7-8)': row.neutralCount,
         'Total Violations': row.totalViolations,
 
-        'Low Priority Tickets': row.lowPriorityCount,
-        'Medium Priority Tickets': row.mediumPriorityCount,
-        'High Priority Tickets': row.highPriorityCount,
+        'Low Impact Tickets': row.lowPriorityCount,
+        'Medium Impact Tickets': row.mediumPriorityCount,
+        'High Impact Tickets': row.highPriorityCount,
 
         'Date Reached Violation Limit': row.dateReachedLimit || 'N/A',
         'How Threshold Was Reached': row.thresholdDescription,
         'Consequence Applied': row.consequenceApplied,
         'Notes/Comments': row.notes,
         'Team Status': row.validationStatus,
-        'Evaluated': row.isEvaluated ? 'Yes' : 'No',
+
+        // 'Evaluated': row.isEvaluated ? 'Yes' : 'No',
         'Evaluation Score': row.evaluationScore || 'N/A',
+
+        'OTJ Assessment Result': row.otjAssessmentResult !== 'N/A' ? `${row.otjAssessmentResult}%` : row.otjAssessmentResult,
+        'OTJ Assessment Date': row.otjAssessmentDate,
+        'OTJ Assessment Feedback': row.otjAssessmentFeedback,
+        'Conducted By': row.otjAssessmentConductedBy,
+
         'Violation Status': row.equivalentDetractorCount >= 3 ? 'Violated' :
           row.equivalentDetractorCount === 2 ? 'Warning' : 'OK',
         'Exported Date': new Date().toLocaleDateString()
@@ -330,6 +354,12 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const rows = useMemo(() => {
     const rowsData = fieldTeams.map((team) => {
       const teamName = team.teamName;
+      // Get assessments for this team
+      const teamAssessments = assessments.filter(a =>
+        a.fieldTeamId?._id === team._id || a.fieldTeamId === team._id
+      ).sort((a, b) => new Date(b.assessmentDate) - new Date(a.assessmentDate));
+
+      const latestAssessment = teamAssessments[0];
       const teamViolations = violationData[teamName] || {
         detractor: 0,
         neutral: 0,
@@ -490,6 +520,14 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         mediumPriorityCount: teamViolations.mediumPriority,
         highPriorityCount: teamViolations.highPriority,
 
+        // Add assessment data
+        otjAssessmentResult: latestAssessment?.overallScore || 'N/A',
+        otjAssessmentDate: latestAssessment?.assessmentDate
+          ? new Date(latestAssessment.assessmentDate).toLocaleDateString()
+          : 'N/A',
+        otjAssessmentFeedback: latestAssessment?.feedback || 'N/A',
+        otjAssessmentConductedBy: latestAssessment?.conductedBy || 'N/A',
+
         dateReachedLimit: dateReachedLimit
           ? new Date(dateReachedLimit).toLocaleDateString()
           : currentEquivalent >= 3 ? "Threshold not recorded" : null,
@@ -514,7 +552,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       }
       return b.equivalentDetractorCount - a.equivalentDetractorCount;
     });
-  }, [violationData, fieldTeams]);
+  }, [fieldTeams, assessments, violationData]);
 
   const handleReportAbsence = async (absenceData) => {
     try {
@@ -593,6 +631,8 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           setSearchText={setSearchText}
           exportToExcel={exportToExcel}
           onViolationInfoClick={handleViolationDialogOpen}
+          tasks={tasks}  // Add this line to pass the tasks data
+          fieldTeams={fieldTeams} // Also pass fieldTeams if needed for team names
         />
 
         <ViolationDataGrid

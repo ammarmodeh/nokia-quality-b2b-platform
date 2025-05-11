@@ -380,7 +380,7 @@ const OnTheJobAssessment = () => {
         ...completeAssessment
       };
 
-      console.log({ payload });
+      // console.log({ payload });
 
       const response = await api.post(
         "/on-the-job-assessments",
@@ -449,15 +449,15 @@ const OnTheJobAssessment = () => {
 
     // Calculate the total score by summing all checkpoint scores
     const totalScore = checkPoints.reduce((sum, checkpoint) => sum + checkpoint.score, 0);
-    console.log({ totalScore });
+    // console.log({ totalScore });
 
     // Calculate the average score
     const averageScore = totalScore / checkPoints.length;
-    console.log({ averageScore });
+    // console.log({ averageScore });
 
     // Log the total score and average score for debugging
-    console.log("Total Score:", totalScore);
-    console.log("Average Score (before rounding):", averageScore);
+    // console.log("Total Score:", totalScore);
+    // console.log("Average Score (before rounding):", averageScore);
 
     // Return the average score, optionally rounded
     return Math.round(averageScore); // You can remove Math.round if you want the exact value

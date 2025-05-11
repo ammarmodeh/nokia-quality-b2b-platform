@@ -118,7 +118,7 @@ const Profile = () => {
 
       const updatedUser = response.data;
 
-      console.log({ updatedUser });
+      // console.log({ updatedUser });
 
       // Only perform these actions if the profile is successfully updated
       dispatch(updateUser(updatedUser));
