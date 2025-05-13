@@ -276,7 +276,7 @@ const TaskViewPage = () => {
     }
     const filledTask = fillTaskExceptCreatedFields(updatedTask);
     setTask(filledTask);  // This updates the task state
-    setEditDialogOpen(false);  // Close the dialog after update
+    setEditDialogOpen(true);  // Close the dialog after update
   };
 
   const handleTaskDelete = async (taskId) => {

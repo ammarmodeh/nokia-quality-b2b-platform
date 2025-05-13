@@ -78,8 +78,33 @@ const AllTasksList = () => {
 
   const getCustomWeekNumber = (date, year) => {
     if (!date) return null;
-    const startOfYear = moment(`${year}-01-01`);
-    return moment(date).isoWeek() - startOfYear.isoWeek();
+
+    // Create a moment object for the given date
+    const momentDate = moment(date);
+
+    // Find the first Sunday of the year (ISO weeks start on Monday)
+    let firstSunday = moment(`${year}-01-01`).startOf('year');
+    while (firstSunday.day() !== 0) { // 0 is Sunday in moment.js
+      firstSunday.add(1, 'day');
+    }
+
+    // Calculate the difference in weeks
+    const diffInWeeks = momentDate.diff(firstSunday, 'weeks') + 1;
+
+    // Ensure week number is at least 1
+    return Math.max(1, diffInWeeks);
+  };
+
+  const getWeekDisplay = (dateString) => {
+    if (!dateString) return "-";
+    try {
+      const date = moment(dateString);
+      const year = date.year();
+      const weekNum = getCustomWeekNumber(date, year);
+      return `${weekNum}`;
+    } catch (e) {
+      return "-";
+    }
   };
 
   const handleRowClick = (taskId) => {
@@ -281,18 +306,6 @@ const AllTasksList = () => {
     // Check if we're clicking directly on the container (not a child element that might stop propagation)
     if (e.target === e.currentTarget) {
       setSelectedRowId(null);
-    }
-  };
-
-  const getWeekDisplay = (dateString) => {
-    if (!dateString) return "-";
-    try {
-      const date = moment(dateString);
-      const year = date.year();
-      const weekNum = getCustomWeekNumber(date, year);
-      return `${weekNum}`; // Matches your calendar's format
-    } catch (e) {
-      return "-";
     }
   };
 

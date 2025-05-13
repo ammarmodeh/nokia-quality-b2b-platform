@@ -37,7 +37,7 @@ const handleCopyTaskData = (taskData) => {
     Governorate: ${taskData.governorate}
     District: ${taskData.district}
     Team Name: ${taskData.teamName}
-    Team Company: ${taskData.teamCompany}
+    Team Group: ${taskData.teamCompany}
     Tariff Name: ${taskData.tarrifName}
     Customer Type: ${taskData.customerType}
     Customer Feedback: ${taskData.customerFeedback}
@@ -168,7 +168,7 @@ const TaskTable = ({ tasks }) => {
         { header: "Score", field: "evaluationScore" },
         { header: "Impact Level", field: "impactLevel" },
         { header: "Team", field: "teamName" },
-        { header: "Company", field: "teamCompany" },
+        { header: "Group", field: "teamCompany" },
         { header: "PIS Date", field: "pisDate" },
         { header: "Last Session", field: "lastSession" },
         { header: "Neutrals (7-8)", field: "neutrals" },
@@ -442,7 +442,7 @@ const TaskTable = ({ tasks }) => {
     },
     {
       field: "company",
-      headerName: "Company",
+      headerName: "Group",
       minWidth: 100,
       align: 'center',
       headerAlign: 'center',
@@ -603,7 +603,7 @@ const TaskTable = ({ tasks }) => {
             Governorate: ${params.row.governorate}
             District: ${params.row.district}
             Team Name: ${params.row.teamName}
-            Team Company: ${params.row.teamCompany}
+            Team Group: ${params.row.teamCompany}
             Tariff Name: ${params.row.tarrifName}
             Customer Type: ${params.row.customerType}
             Customer Feedback: ${params.row.customerFeedback}
@@ -905,7 +905,7 @@ const TaskTable = ({ tasks }) => {
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                   <DetailRow label="Team Name" value={selectedTask.teamName} />
-                  <DetailRow label="Team Company" value={selectedTask.teamCompany} />
+                  <DetailRow label="Team Group" value={selectedTask.teamCompany} />
                 </Box>
               </Paper>
 
