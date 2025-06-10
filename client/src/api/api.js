@@ -3,9 +3,9 @@ import store from "../redux/store";
 import { logout } from "../redux/slices/authSlice";
 
 const api = axios.create({
-  // baseURL: "http://localhost:5000/api",
+  baseURL: "http://localhost:5000/api",
   // baseURL: "https://nokia-quality-b2b-platform.onrender.com/api",
-  baseURL: "https://nokia-quality-b2b-platform.vercel.app/api",
+  // baseURL: "https://nokia-quality-b2b-platform.vercel.app/api",
   withCredentials: true,
 });
 

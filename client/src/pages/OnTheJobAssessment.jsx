@@ -6,21 +6,27 @@ import {
   Button,
   Alert,
   useMediaQuery,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  TextField,
 } from "@mui/material";
 import { ArrowBack } from '@mui/icons-material';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Legend } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import api from "../api/api";
 import { useSelector } from "react-redux";
 import AssessmentDetail from "../components/AssessmentDetail";
 import AssessmentForm from "../components/AssessmentForm";
 import StatsOverview from "../components/StatsOverview";
 import TeamList from "../components/TeamList";
-import UndoNotification from "../components/UndoNotification";
 import TeamSelector from "../components/TeamSelector";
 import AssessmentList from "../components/AssessmentList";
 
 // Register ChartJS components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Legend, ChartDataLabels);
 
 const OnTheJobAssessment = () => {
   const user = useSelector((state) => state?.auth?.user);
@@ -39,12 +45,10 @@ const OnTheJobAssessment = () => {
   const [assessmentsPage, setAssessmentsPage] = useState(0);
   const [assessmentsRowsPerPage, setAssessmentsRowsPerPage] = useState(10);
   const [allAssessments, setAllAssessments] = useState([]);
-  const [showUndo, setShowUndo] = useState(false);
-  const [deletedAssessment, setDeletedAssessment] = useState(null);
-  const [undoTimeout, setUndoTimeout] = useState(null);
-  // console.log('OnTheJobAssessment Triggered');
-
   const [supervisorStats, setSupervisorStats] = useState({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [assessmentToDelete, setAssessmentToDelete] = useState(null);
+  const [teamNameConfirmation, setTeamNameConfirmation] = useState("");
 
   const calculateSupervisorStats = useCallback((assessments) => {
     return assessments.reduce((acc, assessment) => {
@@ -69,27 +73,27 @@ const OnTheJobAssessment = () => {
   const initialAssessmentData = useMemo(() => ({
     conductedBy: "",
     checkPoints: [
-      // Category A: Equipment and Tools
+      // Category A: Splicing & Testing Equipment
       {
-        name: "Splicing Equipment",
-        description: "Splicing machine, cleaver, stripper condition validation",
-        category: "Equipment",
+        name: "Splicing Equipment Condition (FSM)",
+        description: "Verifies proper condition and functionality of the splicing machine, cleaver, and fiber stripper before use.",
+        category: "Splicing & Testing Equipment",
         isCompleted: false,
         score: 0,
         notes: "",
       },
       {
-        name: "Testing Equipment",
+        name: "Testing Tools Condition (OPM and VFL)",
         description: "Optical power meter, laser source functionality check",
-        category: "Equipment",
+        category: "Splicing & Testing Equipment",
         isCompleted: false,
         score: 0,
         notes: "",
       },
       {
-        name: "Consumables",
-        description: "Cleaning solution, fiber wipes, protection sleeves availability",
-        category: "Equipment",
+        name: "Consumables Availability",
+        description: "Confirms the availability of essential consumables including cleaning solution, fiber wipes, and protection sleeves.",
+        category: "Splicing & Testing Equipment",
         isCompleted: false,
         score: 0,
         notes: "",
@@ -98,7 +102,7 @@ const OnTheJobAssessment = () => {
       {
         name: "Splicing Process Execution",
         description: "Correct process of splicing fiber optic cables",
-        category: "Splicing",
+        category: "Fiber Optic Splicing Skills",
         isCompleted: false,
         score: 0,
         notes: "",
@@ -106,7 +110,15 @@ const OnTheJobAssessment = () => {
       {
         name: "Fiber Loop Management",
         description: "Proper fiber loop at splice tray (FDB - BEP - OTO)",
-        category: "Splicing",
+        category: "Fiber Optic Splicing Skills",
+        isCompleted: false,
+        score: 0,
+        notes: "",
+      },
+      {
+        name: "Power Thresholds and link-loss Management",
+        description: "Ensures proper power levels and effective link-loss management to maintain optimal signal quality and network performance.",
+        category: "Fiber Optic Splicing Skills",
         isCompleted: false,
         score: 0,
         notes: "",
@@ -114,120 +126,94 @@ const OnTheJobAssessment = () => {
       {
         name: "Standard Labelling",
         description: "Follows standard-based labelling procedures",
-        category: "Splicing",
+        category: "Fiber Optic Splicing Skills",
         isCompleted: false,
         score: 0,
         notes: "",
       },
-      // Category C: ONT Configuration (20%)
+      // Category C: ONT Placement, Configuration and testing (20%)
       {
-        name: "ONT Placement",
+        name: "ONT and Repeater Placement",
         description: "Verifying the best location for ONT and Wi-Fi repeater",
-        category: "Configuration",
+        category: "ONT Placement, Configuration and testing",
         isCompleted: false,
         score: 0,
         notes: "",
       },
       {
-        name: "Device Settings",
-        description: "ONT and Wi-Fi repeater configuration based on recommended settings",
-        category: "Configuration",
+        name: "ONT and Repeater Configuration",
+        description: "Configures the ONT and Wi-Fi repeater according to standard network guidelines, ensuring optimal performance, coverage, and security.",
+        category: "ONT Placement, Configuration and testing",
         isCompleted: false,
         score: 0,
         notes: "",
       },
       {
-        name: "Speed Testing",
-        description: "Performing Wi-Fi and Ethernet speed tests with proper equipment",
-        category: "Configuration",
-        isCompleted: false,
-        score: 0,
-        notes: "",
-      },
-      // Category D: Link Validation (10%)
-      {
-        name: "Power Thresholds",
-        description: "Understanding endpoints' maximum and minimum power thresholds",
-        category: "Validation",
-        isCompleted: false,
-        score: 0,
-        notes: "",
-      },
-      {
-        name: "Link-loss Management",
-        description: "P2P Link-loss power management skills",
-        category: "Validation",
+        name: "Speed Test Verification",
+        description: "Performs speed tests using technician and customer devices over both Ethernet and Wi-Fi (2.4GHz and 5GHz). Ensures results align with service plan expectations and documents any discrepancies.",
+        category: "ONT Placement, Configuration and testing",
         isCompleted: false,
         score: 0,
         notes: "",
       },
       // Category E: Customer Education (20%)
       {
-        name: "Product Knowledge",
-        description: "Demonstrates knowledge of product details and offerings",
-        category: "Customer",
-        isCompleted: false,
-        score: 0,
-        notes: "",
-      },
-      {
         name: "Wi-Fi Education",
         description: "Explains Wi-Fi coverage limits, affecting factors, and speed expectations",
-        category: "Customer",
+        category: "Customer Education",
         isCompleted: false,
         score: 0,
         notes: "",
       },
       {
-        name: "Troubleshooting Guidance",
-        description: "Ability to identify and explain IPTV and VPN service difficulties",
-        category: "Customer",
+        name: "Troubleshooting Support",
+        description: "Demonstrates the ability to accurately diagnose IPTV and VPN-related issues and guide the customer through clear, step-by-step solutions using non-technical language when appropriate.",
+        category: "Customer Education",
+        isCompleted: false,
+        score: 0,
+        notes: "",
+      },
+      {
+        name: "Delivering the Evaluation Message to the Client",
+        description: "Ensure the team effectively communicates the evaluation system to the client, explaining that a rating of 9 or 10 means satisfaction, and below that indicates dissatisfaction.",
+        category: "Customer Education",
         isCompleted: false,
         score: 0,
         notes: "",
       },
       // Category F: Customer Service Skills (25%)
       {
-        name: "Professional Appearance",
+        name: "Appearance",
         description: "Maintains appropriate professional appearance",
-        category: "Service",
+        category: "Customer Service Skills",
         isCompleted: false,
         score: 0,
         notes: "",
       },
       {
-        name: "Technical Proficiency",
-        description: "Overall technical knowledge and installation skills",
-        category: "Service",
+        name: "Communication",
+        description: "Demonstrates clear, respectful, and effective communication with the customer and team member(s) throughout the service process.",
+        category: "Customer Service Skills",
         isCompleted: false,
         score: 0,
         notes: "",
       },
       {
-        name: "Patience and Communication",
-        description: "Demonstrates patience and effective communication with customers",
-        category: "Service",
+        name: "Patience and Precision",
+        description: "Ensure the team takes adequate time to address customer needs thoroughly, avoiding rushing through tasks.",
+        category: "Customer Service Skills",
         isCompleted: false,
         score: 0,
         notes: "",
-      },
-      {
-        name: "Responsiveness",
-        description: "Available when needed within the guarantee period",
-        category: "Service",
-        isCompleted: false,
-        score: 0,
-        notes: "",
-      },
+      }
     ],
     feedback: "",
     categoryWeights: {
-      "Equipment": 0.10,
-      "Splicing": 0.25,
-      "Configuration": 0.20,
-      "Validation": 0.10,
-      "Customer": 0.20,
-      "Service": 0.25
+      "Splicing & Testing Equipment": 0.20,
+      "Fiber Optic Splicing Skills": 0.20,
+      "ONT Placement, Configuration and testing": 0.20,
+      "Customer Education": 0.20,
+      "Customer Service Skills": 0.20
     }
   }), []);
 
@@ -278,44 +264,6 @@ const OnTheJobAssessment = () => {
 
     fetchData();
   }, []);
-
-  useEffect(() => {
-    return () => {
-      if (undoTimeout) clearTimeout(undoTimeout);
-    };
-  }, [undoTimeout]);
-
-  useEffect(() => {
-    const pendingUndo = localStorage.getItem('pendingUndo');
-    if (pendingUndo) {
-      const { assessmentId, deletionTime, teamId } = JSON.parse(pendingUndo);
-
-      const deletionDate = new Date(deletionTime);
-      const now = new Date();
-      const hoursSinceDeletion = (now - deletionDate) / (1000 * 60 * 60);
-
-      if (hoursSinceDeletion < 24) {
-        setDeletedAssessment(assessmentId);
-        setShowUndo(true);
-
-        const remainingMs = 24 * 60 * 60 * 1000 - (now - deletionDate);
-
-        const timeout = setTimeout(() => {
-          localStorage.removeItem('pendingUndo');
-          setShowUndo(false);
-          setDeletedAssessment(null);
-        }, remainingMs);
-
-        setUndoTimeout(timeout);
-
-        if (selectedTeam?._id !== teamId) {
-          // navigate(`/path-to-team-assessments/${teamId}`);
-        }
-      } else {
-        localStorage.removeItem('pendingUndo');
-      }
-    }
-  }, [selectedTeam]);
 
   const teamAssessmentsMap = useMemo(() => {
     const map = {};
@@ -380,8 +328,6 @@ const OnTheJobAssessment = () => {
         ...completeAssessment
       };
 
-      // console.log({ payload });
-
       const response = await api.post(
         "/on-the-job-assessments",
         payload,
@@ -410,59 +356,13 @@ const OnTheJobAssessment = () => {
     }
   }, [selectedTeam]);
 
-  // const calculateOverallScore = useCallback((checkPoints, categoryWeights = {}) => {
-  //   if (!checkPoints || checkPoints.length === 0) return 0;
-
-  //   const defaultWeights = {
-  //     "Equipment": 0.10,
-  //     "Splicing": 0.25,
-  //     "Configuration": 0.20,
-  //     "Validation": 0.10,
-  //     "Customer": 0.20,
-  //     "Service": 0.25
-  //   };
-
-  //   const weights = Object.keys(categoryWeights).length > 0 ? categoryWeights : defaultWeights;
-
-  //   const categories = checkPoints.reduce((acc, checkpoint) => {
-  //     const category = checkpoint.category;
-  //     if (!acc[category]) {
-  //       acc[category] = [];
-  //     }
-  //     acc[category].push(checkpoint);
-  //     return acc;
-  //   }, {});
-
-  //   let weightedSum = 0;
-
-  //   Object.entries(categories).forEach(([category, points]) => {
-  //     const categoryScore = points.reduce((sum, point) => sum + point.score, 0) / points.length;
-  //     const weight = weights[category] || 0;
-  //     weightedSum += categoryScore * weight;
-  //   });
-
-  //   return Math.round(weightedSum);
-  // }, []);
-
   const calculateOverallScore = useCallback((checkPoints) => {
     if (!checkPoints || checkPoints.length === 0) return 0;
 
-    // Calculate the total score by summing all checkpoint scores
     const totalScore = checkPoints.reduce((sum, checkpoint) => sum + checkpoint.score, 0);
-    // console.log({ totalScore });
-
-    // Calculate the average score
     const averageScore = totalScore / checkPoints.length;
-    // console.log({ averageScore });
-
-    // Log the total score and average score for debugging
-    // console.log("Total Score:", totalScore);
-    // console.log("Average Score (before rounding):", averageScore);
-
-    // Return the average score, optionally rounded
-    return Math.round(averageScore); // You can remove Math.round if you want the exact value
+    return Math.round(averageScore);
   }, []);
-
 
   const getPerformanceColor = useCallback((score) => {
     if (score >= 80) return 'success';
@@ -584,22 +484,35 @@ const OnTheJobAssessment = () => {
     return { strengths, improvements };
   }, []);
 
-  const handleDeleteAssessment = async (assessmentId) => {
+  const handleDeleteAssessment = (assessmentId) => {
     if (user.role !== 'Admin') {
       alert("You do not have permission to delete the assessments.");
       return;
     }
 
-    const confirmation = confirm("Are you sure you want to delete this assessment?");
-    if (!confirmation) return;
+    const assessment = assessments.find(a => a._id === assessmentId);
+    setAssessmentToDelete(assessment);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteAssessment = async () => {
+    // console.log({ assessmentToDelete });
+    if (!assessmentToDelete) return;
+
+    // Check if the entered team name matches
+    if (teamNameConfirmation !== selectedTeam?.teamName) {
+      // console.log({ teamNameConfirmation, selectedTeam });
+      setError("Team name does not match. Please enter the exact team name to confirm deletion.");
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
 
-      const deletedAssessment = assessments.find(a => a._id === assessmentId);
-      setAssessments(prev => prev.filter(a => a._id !== assessmentId));
-      setAllAssessments(prev => prev.filter(a => a._id !== assessmentId));
+      // Remove from local state first
+      setAssessments(prev => prev.filter(a => a._id !== assessmentToDelete._id));
+      setAllAssessments(prev => prev.filter(a => a._id !== assessmentToDelete._id));
       setStats(prev => ({
         ...prev,
         overallStats: {
@@ -608,124 +521,31 @@ const OnTheJobAssessment = () => {
         }
       }));
 
-      const response = await api.patch(
-        `/on-the-job-assessments/${assessmentId}/soft-delete`,
+      // Make API call to delete
+      await api.patch(
+        `/on-the-job-assessments/${assessmentToDelete._id}/soft-delete`,
         {},
         { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
       );
 
-      const deletionInfo = {
-        assessmentId,
-        assessmentData: deletedAssessment,
-        deletionTime: new Date().toISOString(),
-        teamId: selectedTeam._id
-      };
-      localStorage.setItem('pendingUndo', JSON.stringify(deletionInfo));
-
-      setDeletedAssessment(assessmentId);
-      setShowUndo(true);
-
-      const timeout = setTimeout(() => {
-        localStorage.removeItem('pendingUndo');
-        setShowUndo(false);
-        setDeletedAssessment(null);
-      }, 24 * 60 * 60 * 1000);
-      setUndoTimeout(timeout);
-
-      if (response.data.stats) {
-        setStats(prev => ({
-          ...prev,
-          overallStats: response.data.stats
-        }));
-      }
+      // Reset dialog state
+      setDeleteDialogOpen(false);
+      setTeamNameConfirmation("");
+      setAssessmentToDelete(null);
 
     } catch (error) {
       console.error("Error deleting assessment:", error);
       setError("Failed to delete assessment");
 
-      if (deletedAssessment) {
-        setAssessments(prev => [...prev, deletedAssessment]);
-        setAllAssessments(prev => [...prev, deletedAssessment]);
+      // Revert local state if deletion fails
+      if (assessmentToDelete) {
+        setAssessments(prev => [...prev, assessmentToDelete]);
+        setAllAssessments(prev => [...prev, assessmentToDelete]);
         setStats(prev => ({
           ...prev,
           overallStats: {
             ...prev.overallStats,
             totalAssessments: prev.overallStats.totalAssessments + 1
-          }
-        }));
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUndoDelete = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const pendingUndo = JSON.parse(localStorage.getItem('pendingUndo'));
-      if (!pendingUndo) {
-        setError("No assessment to undo");
-        return;
-      }
-
-      const { assessmentId, assessmentData, teamId } = pendingUndo;
-
-      setAssessments(prev => [...prev, assessmentData]);
-      setAllAssessments(prev => [...prev, assessmentData]);
-      setStats(prev => ({
-        ...prev,
-        overallStats: {
-          ...prev.overallStats,
-          totalAssessments: (prev.overallStats.totalAssessments || 0) + 1
-        }
-      }));
-
-      const response = await api.patch(
-        `/on-the-job-assessments/${assessmentId}/restore`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        }
-      );
-
-      localStorage.removeItem('pendingUndo');
-      if (undoTimeout) clearTimeout(undoTimeout);
-
-      setShowUndo(false);
-      setDeletedAssessment(null);
-      setError(null);
-
-      const [statsResponse, assessmentsResponse] = await Promise.all([
-        api.get("/on-the-job-assessments/stats", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        }),
-        api.get(`/on-the-job-assessments/field-team/${teamId}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        })
-      ]);
-
-      setStats(statsResponse.data);
-      setAssessments(assessmentsResponse.data);
-    } catch (error) {
-      console.error("Error undoing delete:", error);
-      setError(error.response?.data?.message || "Failed to undo delete");
-
-      if (deletedAssessment) {
-        setAssessments(prev => prev.filter(a => a._id !== deletedAssessment._id));
-        setAllAssessments(prev => prev.filter(a => a._id !== deletedAssessment._id));
-        setStats(prev => ({
-          ...prev,
-          overallStats: {
-            ...prev.overallStats,
-            totalAssessments: (prev.overallStats.totalAssessments || 0) - 1
           }
         }));
       }
@@ -915,7 +735,7 @@ const OnTheJobAssessment = () => {
         />
       )}
 
-      {error && !showUndo && (
+      {error && (
         <Alert severity="error" sx={{
           mb: 3,
           backgroundColor: '#2d0000',
@@ -927,13 +747,76 @@ const OnTheJobAssessment = () => {
         </Alert>
       )}
 
-      {showUndo && (
-        <UndoNotification
-          showUndo={showUndo}
-          onUndo={handleUndoDelete}
-          colors={colors}
-        />
-      )}
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setTeamNameConfirmation("");
+        }}
+        aria-labelledby="delete-dialog-title"
+        PaperProps={{
+          sx: {
+            backgroundColor: colors.surface,
+            color: colors.textPrimary
+          }
+        }}
+      >
+        <DialogTitle id="delete-dialog-title">Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: colors.textSecondary, mb: 2 }}>
+            Are you sure you want to delete this assessment? This action cannot be undone.
+          </DialogContentText>
+          <DialogContentText sx={{ color: colors.textSecondary, mb: 2 }}>
+            To confirm, please enter the team name: <strong>{selectedTeam?.name}</strong>
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="team-name"
+            label="Team Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={teamNameConfirmation}
+            onChange={(e) => setTeamNameConfirmation(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: colors.border,
+                },
+                '&:hover fieldset': {
+                  borderColor: colors.primary,
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: colors.textSecondary,
+              },
+              '& .MuiInputBase-input': {
+                color: colors.textPrimary,
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setDeleteDialogOpen(false);
+              setTeamNameConfirmation("");
+            }}
+            sx={{ color: colors.textSecondary }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmDeleteAssessment}
+            disabled={teamNameConfirmation !== selectedTeam?.teamName}
+            sx={{ color: colors.error }}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

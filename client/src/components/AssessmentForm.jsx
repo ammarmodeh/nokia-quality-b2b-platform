@@ -73,15 +73,14 @@ const AssessmentForm = ({
     }, {});
 
     const categoryTitles = {
-      "Equipment": "Equipment and Tools",
-      "Splicing": "Fiber Optic Splicing Skills",
-      "Configuration": "ONT Configuration",
-      "Validation": "Link Validation",
-      "Customer": "Customer Education",
-      "Service": "Customer Service Skills"
+      "Splicing & Testing Equipment": "Splicing & Testing Equipment",
+      "Fiber Optic Splicing Skills": "Fiber Optic Splicing Skills",
+      "ONT Placement, Configuration and testing": "ONT Placement, Configuration and testing",
+      "Customer Education": "Customer Education",
+      "Customer Service Skills": "Customer Service Skills"
     };
 
-    const categoryOrder = ["Equipment", "Splicing", "Configuration", "Validation", "Customer", "Service"];
+    const categoryOrder = ["Splicing & Testing Equipment", "Fiber Optic Splicing Skills", "ONT Placement, Configuration and testing", "Customer Education", "Customer Service Skills"];
 
     return (
       <>

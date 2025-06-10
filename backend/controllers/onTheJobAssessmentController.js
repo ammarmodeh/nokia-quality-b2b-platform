@@ -36,15 +36,6 @@ export const createAssessment = async (req, res) => {
 
     await assessment.save();
 
-    // Update field team's evaluation history
-    // fieldTeam.evaluationHistory.push({
-    //   score: assessment.overallScore.toString(),
-    //   date: assessment.assessmentDate,
-    // });
-    // fieldTeam.lastEvaluationDate = assessment.assessmentDate;
-    // fieldTeam.isEvaluated = true;
-    // await fieldTeam.save();
-
     res.status(201).json(assessment);
   } catch (error) {
     res.status(500).json({ error: error.message });

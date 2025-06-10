@@ -24,6 +24,91 @@ const AssessmentDetail = ({
   onBack,
   onEdit,
 }) => {
+  // Function to get the background color for each bar
+  const getBarColors = (data) => {
+    return data.datasets[0].data.map(score => {
+      if (score < 50) {
+        return colors.error; // Red for scores below 50
+      } else if (score < 75) {
+        return colors.warning; // Orange for scores below 75
+      } else {
+        return colors.primary; // Default color for other scores
+      }
+    });
+  };
+
+  // Custom chart options based on mobile or desktop view
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: isMobile ? 'y' : 'x',
+    plugins: {
+      legend: {
+        display: false,
+      },
+      // title: {
+      //   display: true,
+      //   text: 'Category Performance',
+      //   color: colors.textPrimary,
+      //   font: {
+      //     size: 16,
+      //   },
+      // },
+      tooltip: {
+        enabled: true,
+        callbacks: {
+          label: function (context) {
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.parsed !== null) {
+              label += context.parsed + '%';
+            }
+            return label;
+          }
+        }
+      },
+      datalabels: {
+        anchor: 'end',
+        align: 'top',
+        formatter: (value) => `${value}%`,
+        color: colors.textPrimary,
+        font: {
+          weight: 'bold',
+        },
+      },
+    },
+    scales: {
+      x: {
+        max: 100,
+        grid: {
+          display: !isMobile,
+          color: colors.border,
+        },
+        ticks: {
+          color: colors.textSecondary,
+        },
+      },
+      y: {
+        max: 100,
+        grid: {
+          display: !isMobile,
+          color: colors.border,
+        },
+        ticks: {
+          color: colors.textSecondary,
+        },
+      }
+    }
+  };
+
+  // Custom chart data with background colors for the bars
+  const chartData = getCategoryChartData();
+  if (chartData) {
+    chartData.datasets[0].backgroundColor = getBarColors(chartData);
+  }
+
   return (
     <Box sx={{ mt: 3 }}>
       <Button
@@ -124,28 +209,15 @@ const AssessmentDetail = ({
             <BarChart fontSize={isMobile ? 'small' : 'medium'} />
             {isMobile ? 'Performance' : 'Performance Overview'}
           </Typography>
-          {getCategoryChartData() && (
+          {chartData && (
             <Box sx={{
-              height: isMobile ? '250px' : '300px',
+              height: isMobile ? '350px' : '450px',
               position: 'relative',
               width: '100%'
             }}>
               <Bar
-                data={getCategoryChartData()}
-                options={{
-                  ...horizontalChartOptions,
-                  plugins: {
-                    ...horizontalChartOptions.plugins,
-                    title: {
-                      ...horizontalChartOptions.plugins.title,
-                      display: !isMobile
-                    },
-                    legend: {
-                      ...horizontalChartOptions.plugins.legend,
-                      position: isMobile ? 'bottom' : 'top'
-                    }
-                  }
-                }}
+                data={chartData}
+                options={chartOptions}
               />
             </Box>
           )}

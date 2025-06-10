@@ -349,6 +349,11 @@ export const getDesiredWeeks = (data, range) => {
   });
 };
 
+export const getCustomWeekNumber = (date, year) => {
+  const startOfYear = moment(`${year}-01-01`);
+  return moment(date).isoWeek() - startOfYear.isoWeek() + 1;
+};
+
 export const getActivationTeamValidationData = (tasks) => {
   const validationCounts = {};
 
@@ -585,11 +590,6 @@ export const getCompanyViolations = (tasks) => {
     total: violations.total,
     percentage: ((violations.total / totalViolations) * 100).toFixed(2) + "%", // Calculate percentage
   }));
-};
-
-export const getCustomWeekNumber = (date, year) => {
-  const startOfYear = moment(`${year}-01-01`);
-  return moment(date).isoWeek() - startOfYear.isoWeek() + 1;
 };
 ///////////////////////////////////////////////////// Constants //////////////////////////////////////////////////////////////////
 

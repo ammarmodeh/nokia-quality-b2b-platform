@@ -55,6 +55,79 @@ export const getAllFieldTeams = async (req, res) => {
   }
 }
 
+export const getTeamPerformanceData = async (req, res) => {
+  try {
+    const { teamId } = req.params;
+
+    // Get all tasks for this team
+    const tasks = await FieldTeamsSchema.find({
+      teamId: teamId,
+      isDeleted: false
+    }).sort({ pisDate: 1 });
+
+    if (!tasks.length) {
+      return res.status(404).json({ message: "No tasks found for this team" });
+    }
+
+    // Calculate statistics
+    const evaluationScores = tasks.map(task => task.evaluationScore).filter(score => score);
+    const detractors = evaluationScores.filter(score => score >= 1 && score <= 6).length;
+    const passives = evaluationScores.filter(score => score >= 7 && score <= 8).length;
+    const promoters = evaluationScores.filter(score => score >= 9 && score <= 10).length;
+
+    // Group by reason
+    const violationReasons = {};
+    tasks.forEach(task => {
+      if (task.reason) {
+        if (!violationReasons[task.reason]) {
+          violationReasons[task.reason] = {
+            total: 0,
+            before: 0,
+            after: 0,
+            scores: []
+          };
+        }
+        violationReasons[task.reason].total++;
+        violationReasons[task.reason].scores.push(task.evaluationScore || 0);
+      }
+    });
+
+    // Convert to array sorted by total
+    const violationPercentages = Object.keys(violationReasons)
+      .map(reason => ({
+        reason,
+        percentage: (violationReasons[reason].total / tasks.length) * 100,
+        ...violationReasons[reason]
+      }))
+      .sort((a, b) => b.percentage - a.percentage);
+
+    // Find first and last task dates
+    const firstTaskDate = tasks[0].pisDate;
+    const lastTaskDate = tasks[tasks.length - 1].pisDate;
+
+    // Prepare response
+    const response = {
+      teamName: tasks[0].teamName,
+      totalTasks: tasks.length,
+      evaluationScores,
+      detractors,
+      passives,
+      promoters,
+      nps: promoters > 0 || detractors > 0 ?
+        ((promoters - detractors) / (promoters + passives + detractors)) * 100 : 0,
+      violationReasons,
+      violationPercentages,
+      firstTaskDate,
+      lastTaskDate,
+      tasks // include raw tasks if needed
+    };
+
+    return res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Get Field Team by Quiz Code
 export const getFieldTeamByQuizCode = async (req, res) => {
   const { quizCode } = req.params;

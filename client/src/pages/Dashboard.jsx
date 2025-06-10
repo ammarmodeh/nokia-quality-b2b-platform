@@ -140,20 +140,12 @@ const Dashboard = () => {
             spacing={2}
             alignItems="stretch"
           >
-            <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
+            {/* <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
               <CompanyViolationTable tasks={tasks} />
-            </Box>
+              </Box> */}
             <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
               <ActivationTeamRespTable tasks={tasks} />
             </Box>
-          </Stack>
-
-          {/* Row 2 */}
-          <Stack
-            direction={isMediumScreen ? "column" : "row"}
-            spacing={2}
-            alignItems="stretch"
-          >
             <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
               <Stack
                 backgroundColor="#1a1a1aa3"
@@ -188,7 +180,49 @@ const Dashboard = () => {
                 </Box>
               </Stack>
             </Box>
-            <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
+          </Stack>
+
+          {/* Row 2 */}
+          <Stack
+            direction={isMediumScreen ? "column" : "row"}
+            spacing={2}
+            alignItems="stretch"
+          >
+            {/* <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
+              <Stack
+                backgroundColor="#1a1a1aa3"
+                padding={2}
+                borderRadius={4}
+                direction={'column'}
+              >
+                <AllReasonsTable tasks={tasks} />
+                <Box sx={{
+                  backgroundColor: '#1e1e1e',
+                  p: 2,
+                  borderRadius: '8px',
+                  border: '1px solid #444',
+                  mt: 2
+                }}>
+                  <Typography variant="body2" sx={{
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}>
+                    How we categorize feedback reasons
+                    <ReasonCategoriesDialog />
+                  </Typography>
+                  <Typography variant="caption" sx={{
+                    color: '#aaaaaa',
+                    display: 'block',
+                    mt: 1
+                  }}>
+                    Click the info icon to understand our reason categorization methodology.
+                  </Typography>
+                </Box>
+              </Stack>
+            </Box> */}
+            {/* <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
               <Stack
                 backgroundColor="#1a1a1aa3"
                 padding={2}
@@ -221,7 +255,7 @@ const Dashboard = () => {
                   </Typography>
                 </Box>
               </Stack>
-            </Box>
+            </Box> */}
           </Stack>
 
           {/* Row 3 */}

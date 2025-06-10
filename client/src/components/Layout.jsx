@@ -52,13 +52,13 @@ const Layout = () => {
       )}
 
       {/* Floating button */}
-      <button
+      {/* <button
         onClick={toggleTable}
         className="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg z-40 transition-all duration-300 hover:scale-110"
         aria-label="Show field teams"
       >
         {tableOpen ? <Close /> : <AutoGraph />}
-      </button>
+      </button> */}
 
       {/* Field Teams Table */}
       <FieldTeamsFloatingTable open={tableOpen} onClose={() => setTableOpen(false)} />

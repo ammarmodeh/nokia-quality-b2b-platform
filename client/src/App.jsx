@@ -5,6 +5,8 @@ import { Suspense, lazy } from "react";
 import { FadeLoader } from "react-spinners";
 import { Box } from "@mui/material";
 import NotFound from "./pages/NotFound";
+import TeamsPerformancePage from "./pages/TeamsPerformancePage";
+import MainStats from "./pages/MainStats";
 
 // Lazy load pages
 const Layout = lazy(() => import("./components/Layout"));
@@ -121,6 +123,7 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route path="/main-stats" element={<MainStats />} />
             <Route path="/my-suggestions" element={<MemberSuggestionsDashboard />} />
             <Route path="/audit/tasks" element={<AllTasksList />} />
             <Route path="/policies" element={<PoliciesList />} />
@@ -139,6 +142,7 @@ const App = () => {
             <Route path="/fieldTeams-portal" element={<FieldTeamPortal />} />
             <Route path="/assessment-dashboard" element={<PerfAssessmentDashboard />} />
             <Route path="/on-the-job-assessment" element={<OnTheJobAssessment />} />
+            <Route path="/teams-performance-page" element={<TeamsPerformancePage />} />
             <Route path="/archived" element={<Archived />} />
             <Route path="/trashed" element={<Trash />} />
           </Route>

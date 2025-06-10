@@ -33,6 +33,8 @@ const TeamList = ({
 }) => {
   const theme = useTheme();
 
+  // console.log({ fieldTeams });
+
   const formatLocalDate = (dateString) => {
     if (!dateString) return "N/A";
 

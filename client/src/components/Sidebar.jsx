@@ -1,12 +1,10 @@
-import {
-  MdSettings,
-} from "react-icons/md";
+import { ExpandMore } from "@mui/icons-material";
+import { Accordion, AccordionDetails, AccordionSummary, Stack, useMediaQuery } from "@mui/material";
+import clsx from "clsx";
+import { useEffect, useState } from "react";
+import { MdSettings } from "react-icons/md";
 import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
-import clsx from "clsx";
-import { Stack, Accordion, AccordionSummary, AccordionDetails, useMediaQuery } from "@mui/material";
-import { ExpandMore } from "@mui/icons-material";
-import { useEffect, useState } from "react";
 
 // Sidebar link data
 const SidebarLinks = () => {
@@ -17,11 +15,19 @@ const SidebarLinks = () => {
       label: "Dashboard",
       link: "dashboard",
       icon: <img width={20} height={20} src="/main-dashboard.png" />,
+      isNew: false,
+    },
+    {
+      label: "Main Stats",
+      link: "main-stats",
+      icon: <img width={20} height={20} src="/main-stats.png" />,
+      isNew: true, // Example of a new link
     },
     {
       label: "Policies List",
       link: "policies",
       icon: <img width={20} height={20} src="/policy.png" />,
+      isNew: false,
     },
     ...(user?.role !== "Member"
       ? [
@@ -29,6 +35,7 @@ const SidebarLinks = () => {
           label: "Suggestions Dashboard",
           link: "admin/suggestions",
           icon: <img width={20} height={20} src="/suggestions.png" />,
+          isNew: false,
         },
       ]
       : []),
@@ -38,6 +45,7 @@ const SidebarLinks = () => {
           label: "My Suggestions",
           link: "my-suggestions",
           icon: <img width={20} height={20} src="/suggestions.png" />,
+          isNew: false,
         },
       ]
       : []),
@@ -45,14 +53,13 @@ const SidebarLinks = () => {
       label: "All Tasks List",
       link: "audit/tasks",
       icon: <img width={20} height={20} src="/all-tasks.png" />,
+      isNew: false,
     },
-    // ...(condition ? array : [])
-    // This is a common pattern used in JavaScript to conditionally include elements in an array without adding null or undefined.
-    // The parentheses () in this context are used only for grouping—they help JavaScript understand that you're spreading the result of the entire ternary expression, not just part of it.
     ...(user?.title === "Field Technical Support - QoS" ? [
       {
         label: "Assigned To Me",
         icon: <img width={20} height={20} src="/assigned.png" />,
+        isNew: false,
         subpaths: [
           { label: "All Tasks", link: "assigned-to-me" },
           { label: "Detractor", link: "assigned-to-me/detractor" },
@@ -60,60 +67,65 @@ const SidebarLinks = () => {
         ],
       }
     ] : []),
-    // {
-    //   label: "Assigned To Me",
-    //   icon: <MdTask size={20} />,
-    //   subpaths: [
-    //     { label: "All Tasks", link: "assigned-to-me" },
-    //     { label: "Detractor", link: "assigned-to-me/detractor" },
-    //     { label: "Neutrals", link: "assigned-to-me/neutrals" },
-    //   ],
-    // },
     {
       label: "Benchmark Tables",
       link: "benchmark-tables",
       icon: <img width={20} height={20} src="/benchmark-2.png" />,
+      isNew: false,
     },
     {
       label: "Favorites",
       link: "favourites",
       icon: <img width={20} height={20} src="/favourite.png" />,
+      isNew: false,
     },
     {
       label: "Calender",
       link: "calender",
       icon: <img width={20} height={20} src="/calendar.png" />,
+      isNew: false,
     },
     {
       label: "Quality Team",
       link: "team",
       icon: <img width={20} height={20} src="/department-members-2.png" />,
+      isNew: false,
     },
     {
       label: "Manage Field Teams",
       link: "fieldTeams",
       icon: <img width={20} height={20} src="/all-groups-members-2.png" />,
+      isNew: false,
     },
     {
       label: "Field Teams Portal",
       link: "fieldTeams-portal",
-      // icon: <FaGripHorizontal />,
       icon: <img width={20} height={20} src="/portal-2.svg" />,
+      isNew: false,
     },
     {
       label: "Perf Assessment Dashboard",
       link: "assessment-dashboard",
       icon: <img width={20} height={20} src="/statistics.png" />,
+      isNew: false,
     },
     {
       label: "On-the-Job Assessment",
       link: "on-the-job-assessment",
       icon: <img width={20} height={20} src="/on-the-job-assessment.png" />,
+      isNew: false,
+    },
+    {
+      label: "Teams Performance Page",
+      link: "teams-performance-page",
+      icon: <img width={20} height={20} src="/team-performance-page.png" />,
+      isNew: true,
     },
     {
       label: "Perf Assessment Link",
       link: "quiz",
       icon: <img width={20} height={20} src="/perf-assessment.png" />,
+      isNew: false,
     },
     ...(user?.role === "Admin"
       ? [
@@ -121,11 +133,13 @@ const SidebarLinks = () => {
           label: "Archived",
           link: "archived",
           icon: <img width={20} height={20} src="/archived.png" />,
+          isNew: false,
         },
         {
           label: "Trash",
           link: "trashed",
           icon: <img width={20} height={20} src="/trash.png" />,
+          isNew: false,
         },
       ]
       : []),
@@ -140,7 +154,6 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const isMobileOrMediumScreen = useMediaQuery('(max-width:1024px)');
 
-  // Automatically expand if current path matches any subpath
   useEffect(() => {
     if (el.subpaths) {
       const shouldExpand = el.subpaths.some(sub =>
@@ -151,7 +164,6 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
     }
   }, [location.pathname, el.subpaths]);
 
-  // Check if subpath is active (exact match)
   const isSubActive = (subLink) => {
     const currentPath = location.pathname;
     const targetPath = `/${subLink}`;
@@ -160,15 +172,12 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
       currentPath === `${targetPath}/`;
   };
 
-  // Parent is only active when exactly on its path
   const isParentActive = location.pathname === `/${el.link}`;
 
-  // Check if any child is active
   const hasActiveChild = el.subpaths && el.subpaths.some(sub => isSubActive(sub.link));
 
   return (
     <div className="w-full">
-      {/* If the link has subpaths, render an Accordion */}
       {el.subpaths ? (
         <Accordion
           disableGutters
@@ -215,7 +224,12 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
             }}
           >
             {el.icon}
-            {(!isCollapsed || isMobileOrMediumScreen) && <span className="text-[13px]">{el.label}</span>}
+            {(!isCollapsed || isMobileOrMediumScreen) && (
+              <div className="flex items-center">
+                <span className="text-[13px]">{el.label}</span>
+                {el.isNew && <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2">New</span>}
+              </div>
+            )}
           </AccordionSummary>
           <AccordionDetails sx={{ padding: 0 }}>
             <div className={clsx(
@@ -245,7 +259,7 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
         </Accordion>
       ) : (
         <Link
-          to={`/${el.link}`} // Changed from conditional to direct link
+          to={`/${el.link}`}
           onClick={onClick}
           className={clsx(
             "w-full flex gap-2 px-3 py-2 rounded-md items-center text-base transition-colors duration-200",
@@ -257,8 +271,9 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
         >
           {el.icon}
           {(!isCollapsed || isMobileOrMediumScreen) && (
-            <div className="w-full text-[13px]">
-              {el.label}
+            <div className="w-full flex items-center">
+              <span className="text-[13px]">{el.label}</span>
+              {el.isNew && <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2">New</span>}
             </div>
           )}
         </Link>
@@ -272,7 +287,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
   const linkData = SidebarLinks();
   const isMobileOrMediumScreen = useMediaQuery('(max-width:1024px)');
 
-  // Close sidebar handler
   const closeSidebar = () => {
     setSidebarOpen(false)
   };
@@ -281,7 +295,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
     <div className={clsx(
       "flex flex-col h-screen bg-[#121212] transition-all duration-300",
     )}>
-      {/* Logo Section */}
       <div className="h-[55px] flex items-center justify-between p-2">
         <div className="flex gap-2 items-center">
           <div className="p-2 rounded-full flex items-center justify-center">
@@ -305,7 +318,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
       </div>
 
       <Stack flexGrow={1} justifyContent={"space-between"} sx={{ overflow: "auto" }}>
-        {/* Navigation Links */}
         <div className="flex-1 flex flex-col gap-y-2 p-4 overflow-y-auto">
           {linkData.map((link) => (
             <NavLink
@@ -317,7 +329,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
           ))}
         </div>
 
-        {/* Settings Button */}
         <div>
           <hr className="mx-4 border-[#444]" />
           <div className="p-4">

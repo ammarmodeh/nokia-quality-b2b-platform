@@ -13,11 +13,13 @@ import {
   restoreAssessment,
   getAssessmentsWithDeleted
 } from "../controllers/onTheJobAssessmentController.js";
+import { getTeamPerformanceData } from "../controllers/fieldTeamsControllers.js";
 
 const router = express.Router();
 
 router.post("/", protect, createAssessment);
 router.get("/", protect, getAllAssessments);
+router.get("/team-performance/:teamId", protect, getTeamPerformanceData);
 router.get("/stats", protect, getAssessmentStatistics);
 router.get("/field-team/:fieldTeamId", protect, getAssessmentsByFieldTeam);
 router.get("/:id", protect, getAssessmentById);

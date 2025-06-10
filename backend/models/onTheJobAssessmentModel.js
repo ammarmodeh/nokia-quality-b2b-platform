@@ -38,7 +38,13 @@ const assessmentSchema = new mongoose.Schema(
         category: {
           type: String,
           required: true,
-          enum: ["Equipment", "Splicing", "Configuration", "Validation", "Customer", "Service"],
+          enum: [
+            "Splicing & Testing Equipment",
+            "Fiber Optic Splicing Skills",
+            "ONT Placement, Configuration and testing",
+            "Customer Education",
+            "Customer Service Skills"
+          ],
         },
         isCompleted: {
           type: Boolean,
@@ -56,12 +62,11 @@ const assessmentSchema = new mongoose.Schema(
       },
     ],
     categoryWeights: {
-      Equipment: { type: Number, default: 0.10 },
-      Splicing: { type: Number, default: 0.25 },
-      Configuration: { type: Number, default: 0.20 },
-      Validation: { type: Number, default: 0.10 },
-      Customer: { type: Number, default: 0.20 },
-      Service: { type: Number, default: 0.25 },
+      "Splicing & Testing Equipment": { type: Number, default: 0.20 },
+      "Fiber Optic Splicing Skills": { type: Number, default: 0.20 },
+      "ONT Placement, Configuration and testing": { type: Number, default: 0.20 },
+      "Customer Education": { type: Number, default: 0.20 },
+      "Customer Service Skills": { type: Number, default: 0.20 }
     },
     overallScore: {
       type: Number,
@@ -70,12 +75,11 @@ const assessmentSchema = new mongoose.Schema(
       default: 0,
     },
     categoryScores: {
-      Equipment: { type: Number, default: 0 },
-      Splicing: { type: Number, default: 0 },
-      Configuration: { type: Number, default: 0 },
-      Validation: { type: Number, default: 0 },
-      Customer: { type: Number, default: 0 },
-      Service: { type: Number, default: 0 },
+      "Splicing & Testing Equipment": { type: Number, default: 0 },
+      "Fiber Optic Splicing Skills": { type: Number, default: 0 },
+      "ONT Placement, Configuration and testing": { type: Number, default: 0 },
+      "Customer Education": { type: Number, default: 0 },
+      "Customer Service Skills": { type: Number, default: 0 }
     },
     status: {
       type: String,
