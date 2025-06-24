@@ -477,7 +477,7 @@ const FieldTeamForm = () => {
     },
     {
       field: 'evaluationScore',
-      headerName: 'Evaluation Score',
+      headerName: 'Satisfaction Score',
       flex: 1,
       headerClassName: 'dark-header',
       type: 'number',

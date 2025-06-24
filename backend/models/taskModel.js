@@ -1,5 +1,150 @@
 import mongoose from "mongoose";
 
+const justificationSchema = new mongoose.Schema({
+  question: String,
+  choices: [
+    {
+      label: String,
+      value: String,
+    },
+  ],
+  selected: {
+    type: String,
+    default: null,
+  },
+  notes: {
+    question: String,
+    value: {
+      type: String,
+      default: "",
+    },
+  },
+}, { _id: false });
+
+const checkpointSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, "Checkpoint name is required"],
+  },
+  checked: {
+    type: Boolean,
+    default: false,
+  },
+  score: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
+    required: false,
+    validate: {
+      validator: function (value) {
+        return value === null || (Number.isInteger(value) && value >= 0 && value <= 100);
+      },
+      message: "Score must be null or an integer between 0 and 100",
+    },
+  },
+  options: {
+    type: {
+      type: String,
+      enum: ["conditional", "text", null],
+      default: null,
+    },
+    question: {
+      type: String,
+    },
+    choices: [
+      {
+        label: String,
+        value: mongoose.Schema.Types.Mixed, // Changed to Mixed to handle both String and null
+      },
+    ],
+    selected: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    value: {
+      type: String,
+      default: "",
+    },
+    simpleQuestion: {
+      type: Boolean,
+      default: false
+    },
+    followUpQuestion: {
+      question: String,
+      choices: [
+        {
+          label: String,
+          value: mongoose.Schema.Types.Mixed,
+        },
+      ],
+      selected: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null,
+      },
+      actionTaken: {
+        question: String,
+        choices: [
+          {
+            label: String,
+            value: String,
+          },
+        ],
+        selected: {
+          type: String,
+          default: null,
+        },
+        justification: justificationSchema,
+      },
+    },
+    actionTaken: {
+      question: String,
+      choices: [
+        {
+          label: String,
+          value: String,
+        },
+      ],
+      selected: {
+        type: String,
+        default: null,
+      },
+      justification: justificationSchema,
+    },
+    generalJustification: justificationSchema,
+  },
+  signalTestNotes: {
+    type: String,
+    default: "",
+  },
+});
+
+const subtaskSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: [true, "Subtask title is required"]
+  },
+  note: {
+    type: String,
+    default: ""
+  },
+  dateTime: {
+    type: Date
+  },
+  status: {
+    type: String,
+    enum: ["Open", "Closed"],
+    default: "Open"
+  },
+  checkpoints: [checkpointSchema],
+  progress: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  }
+});
+
 const taskSchema = new mongoose.Schema(
   {
     slid: { type: String, required: [true, "SLID is required"], trim: true, unique: true },
@@ -132,7 +277,7 @@ const taskSchema = new mongoose.Schema(
       type: String,
       enum: {
         values: ["Validated", "Not validated"],
-        message: "Validation status must be either Pending, Approved, or Rejected",
+        message: "Validation status must be either Validated or Not validated",
       },
     },
     validationCat: {
@@ -168,14 +313,12 @@ const taskSchema = new mongoose.Schema(
         description: String,
       },
     ],
-    subTasks: [
-      {
-        title: { type: String, },
-        note: { type: String, },
-        progress: { type: Number, },
-        dateTime: { type: String, },
-      }
-    ],
+    subtaskType: {
+      type: String,
+      enum: ["original", "visit", "phone", "no_answer", "others"],
+      default: "original"
+    },
+    subTasks: [subtaskSchema],
     isDeleted: {
       type: Boolean,
       default: false,
@@ -183,16 +326,54 @@ const taskSchema = new mongoose.Schema(
     evaluationScore: {
       type: Number,
       default: 1,
-      required: [true, "Evaluation score is required"],
+      required: [true, "Satisfaction score is required"],
     },
-    // readByWhenClosed: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     notifications: [{
       recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
       message: { type: String, required: true },
       read: { type: Boolean, default: false },
       createdAt: { type: Date, default: Date.now }
     }],
-  }, { timestamps: true }
+    ontType: {
+      type: String,
+      enum: [
+        "nokia g-140w-h",
+        "nokia g-140w-c",
+        "nokia g-240w-c",
+        "nokia g-2426g-p",
+        "sagemcom",
+        "zte wifi6 (1G)",
+        "zte wifi6 (2G)"
+      ],
+      default: null
+    },
+    speed: {
+      type: Number,
+      default: null
+    },
+    serviceRecipientInitial: {
+      type: String,
+      enum: ["Authorized Representative", "Primary Subscriber"],
+      default: null
+    },
+    serviceRecipientQoS: {
+      type: String,
+      enum: ["Authorized Representative", "Primary Subscriber"],
+      default: null
+    }
+  },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
+
+// Add index for better performance on frequently queried fields
+taskSchema.index({ slid: 1 });
+taskSchema.index({ status: 1 });
+taskSchema.index({ priority: 1 });
+taskSchema.index({ createdBy: 1 });
+taskSchema.index({ assignedTo: 1 });
 
 export const TaskSchema = mongoose.model("Task", taskSchema);

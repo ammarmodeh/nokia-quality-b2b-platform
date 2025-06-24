@@ -156,7 +156,7 @@ export const AllReasonsTable = ({ tasks }) => {
       'Request Number': task.requestNumber,
       'SLID': task.slid,
       'PIS Date': task.pisDate ? new Date(task.pisDate).toLocaleString() : 'N/A',
-      'Evaluation Score': task.evaluationScore,
+      'Satisfaction Score': task.evaluationScore,
       'Customer Name': task.customerName,
       'Contact Number': task.contactNumber,
       'Tariff Name': task.tarrifName,
@@ -283,9 +283,9 @@ export const AllReasonsTable = ({ tasks }) => {
       <Dialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-        fullScreen={fullScreen}
+        // maxWidth="md"
+        // fullWidth
+        fullScreen
         sx={{
           "& .MuiDialog-paper": {
             backgroundColor: '#1e1e1e',
@@ -353,7 +353,7 @@ export const AllReasonsTable = ({ tasks }) => {
                       day: 'numeric'
                     }) : 'N/A'} />
                     <DetailRow
-                      label="Evaluation Score"
+                      label="Satisfaction Score"
                       value={
                         <Chip
                           label={task.evaluationScore}

@@ -96,7 +96,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         'Team Status': row.validationStatus,
 
         // 'Evaluated': row.isEvaluated ? 'Yes' : 'No',
-        'Evaluation Score': row.evaluationScore || 'N/A',
+        'Satisfaction Score': row.evaluationScore || 'N/A',
 
         'OTJ Assessment Result': row.otjAssessmentResult !== 'N/A' ? `${row.otjAssessmentResult}%` : row.otjAssessmentResult,
         'OTJ Assessment Date': row.otjAssessmentDate,

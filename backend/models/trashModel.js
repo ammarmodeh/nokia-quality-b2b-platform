@@ -144,7 +144,7 @@ const trashSchema = new mongoose.Schema(
         dateTime: { type: String },
       },
     ],
-    evaluationScore: { type: Number, default: 1, required: [true, "Evaluation score is required"] },
+    evaluationScore: { type: Number, default: 1, required: [true, "Satisfaction score is required"] },
     // readByWhenClosed: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     notifications: [{
       recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

@@ -42,11 +42,11 @@ const handleCopyTaskData = (taskData) => {
     Customer Type: ${taskData.customerType}
     Customer Feedback: ${taskData.customerFeedback}
     Reason: ${taskData.reason}
-    Evaluation Score: ${taskData.evaluationScore}
-    Impact Level: ${taskData.impactLevel || taskData.priority || 'Not specified'}
+    Satisfaction Score: ${taskData.evaluationScore}
+    Feedback Severity: ${taskData.impactLevel || taskData.priority || 'Not specified'}
     Interview Date: ${new Date(taskData.interviewDate).toLocaleDateString()}
     Week Number: ${getWeekNumberForTaksTable(new Date(taskData.interviewDate))}
-    Team Evaluation Score: ${taskData.teamData?.evaluationScore || 'N/A'}
+    Team Satisfaction Score: ${taskData.teamData?.evaluationScore || 'N/A'}
     Team Status: ${taskData.teamData?.isActive ? 'Active' : 'Inactive'}
     Team Evaluated: ${taskData.teamData?.isEvaluated ? 'Yes' : 'No'}
   `.trim();
@@ -120,7 +120,7 @@ const TaskTable = ({ tasks }) => {
   // Function to export data to Excel
   const exportToExcel = () => {
     try {
-      // First, calculate team statistics including impact levels
+      // First, calculate team statistics including Feedback Severitys
       const teamStats = {};
 
       tasks.forEach(task => {
@@ -166,7 +166,7 @@ const TaskTable = ({ tasks }) => {
         { header: "Customer", field: "customerName" },
         { header: "Feedback", field: "customerFeedback" },
         { header: "Score", field: "evaluationScore" },
-        { header: "Impact Level", field: "impactLevel" },
+        { header: "Feedback Severity", field: "impactLevel" },
         { header: "Team", field: "teamName" },
         { header: "Group", field: "teamCompany" },
         { header: "PIS Date", field: "pisDate" },
@@ -174,7 +174,7 @@ const TaskTable = ({ tasks }) => {
         { header: "Neutrals (7-8)", field: "neutrals" },
         { header: "Detractors (0-6)", field: "detractors" },
         { header: "Total Violations", field: "totalViolations" },
-        // Add new columns for impact levels
+        // Add new columns for Feedback Severitys
         { header: "Low Priority", field: "lowImpact" },
         { header: "Medium Priority", field: "mediumImpact" },
         { header: "High Priority", field: "highImpact" },
@@ -398,7 +398,7 @@ const TaskTable = ({ tasks }) => {
     },
     {
       field: "impactLevel",
-      headerName: "Impact Level",
+      headerName: "Feedback Severity",
       minWidth: 100,
       align: 'center',
       headerAlign: 'center',
@@ -608,8 +608,8 @@ const TaskTable = ({ tasks }) => {
             Customer Type: ${params.row.customerType}
             Customer Feedback: ${params.row.customerFeedback}
             Reason: ${params.row.reason}
-            Evaluation Score: ${params.row.evaluationScore}
-            Impact Level: ${params.row.impactLevel || params.row.priority || 'Not specified'}
+            Satisfaction Score: ${params.row.evaluationScore}
+            Feedback Severity: ${params.row.impactLevel || params.row.priority || 'Not specified'}
             Interview Date: ${moment(params.row.interviewDate).format("YYYY-MM-DD")}
             Week Number: ${params.row.weekNumber}
           `.trim();
@@ -789,9 +789,9 @@ const TaskTable = ({ tasks }) => {
       <Dialog
         open={openDialog}
         onClose={handleClose}
-        maxWidth="sm"
-        fullWidth
-        fullScreen={fullScreen}
+        // maxWidth="sm"
+        // fullWidth
+        fullScreen
         sx={{
           "& .MuiDialog-paper": {
             backgroundColor: '#1e1e1e',
@@ -946,7 +946,7 @@ const TaskTable = ({ tasks }) => {
                       />
                     }
                   />
-                  <DetailRow label="Team Evaluation Score" value={selectedTask.teamData?.evaluationScore || 'N/A'} />
+                  <DetailRow label="Team Satisfaction Score" value={selectedTask.teamData?.evaluationScore || 'N/A'} />
                   {selectedTask.teamData?.sessionHistory?.[0] && (
                     <DetailRow
                       label="Last Session"
@@ -977,7 +977,7 @@ const TaskTable = ({ tasks }) => {
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                   <DetailRow
-                    label="Evaluation Score"
+                    label="Satisfaction Score"
                     value={
                       <Box component="span">
                         <Chip

@@ -6,7 +6,8 @@ import * as XLSX from 'xlsx';
 import {
   Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Grid, IconButton, Rating, Tooltip as MuiToolTip, Chip, MenuItem
+  DialogActions, TextField, Grid, IconButton, Rating, Tooltip as MuiToolTip, Chip, MenuItem,
+  Autocomplete
 } from '@mui/material';
 import { Download, FilterAlt, Search, ArrowBack } from '@mui/icons-material';
 import TeamDetailView from '../components/TeamDetailView';
@@ -208,11 +209,11 @@ const TeamsPerformancePage = () => {
     }
 
     const currentDate = new Date();
+    const ABSOLUTE_MIN_DAYS = 7; // Absolute minimum days required after training
 
     const teamStats = teamsData.fieldTeamStats.map(team => {
       const teamId = team.teamId._id;
       const teamTrainingDates = trainingDates[teamId] || [];
-
       const completedSessions = team.sessionHistory?.filter(session => session.status === "Completed") || [];
       const mostRecentTrainingDate = completedSessions.length > 0
         ? new Date(Math.max(...completedSessions.map(session => new Date(session.sessionDate).getTime())))
@@ -223,6 +224,7 @@ const TeamsPerformancePage = () => {
         ? new Date(Math.min(...teamViolations.map(v => new Date(v.pisDate).getTime())))
         : null;
 
+      // Calculate violations before and after training
       const violationsBeforeTraining = mostRecentTrainingDate
         ? teamViolations.filter(violation => new Date(violation.pisDate) < mostRecentTrainingDate)
         : [];
@@ -230,6 +232,53 @@ const TeamsPerformancePage = () => {
         ? teamViolations.filter(violation => new Date(violation.pisDate) >= mostRecentTrainingDate)
         : teamViolations;
 
+      // Calculate time periods
+      const daysFromCurrentYearStart = mostRecentTrainingDate
+        ? calculateDaysFromCurrentYearStart(mostRecentTrainingDate)
+        : 0;
+      const daysAfterTraining = mostRecentTrainingDate
+        ? calculateDaysBetween(mostRecentTrainingDate, currentDate)
+        : 0;
+
+      // Calculate dynamic threshold (10% of days since year start, with 7-day minimum)
+      const requiredDaysForComparison = Math.max(
+        ABSOLUTE_MIN_DAYS,
+        Math.ceil(daysFromCurrentYearStart * 0.10)
+      );
+      const hasSufficientData = daysAfterTraining >= requiredDaysForComparison;
+
+      // Calculate violation rates (per day)
+      const violationRateBefore = daysFromCurrentYearStart > 0
+        ? violationsBeforeTraining.length / daysFromCurrentYearStart
+        : 0;
+      const violationRateAfter = daysAfterTraining > 0
+        ? violationsAfterTraining.length / daysAfterTraining
+        : 0;
+
+      // Calculate improvement percentage
+      let improvementPercentage = "N/A";
+      let hasNewViolations = false;
+
+      if (mostRecentTrainingDate) {
+        if (violationsBeforeTraining.length === 0) {
+          if (violationsAfterTraining.length > 0) {
+            hasNewViolations = true;
+            improvementPercentage = -100;
+          } else {
+            improvementPercentage = 0;
+          }
+        } else if (hasSufficientData) {
+          if (violationRateBefore > 0) {
+            improvementPercentage = ((violationRateBefore - violationRateAfter) / violationRateBefore) * 100;
+          } else if (violationRateAfter > 0) {
+            improvementPercentage = -100;
+          } else {
+            improvementPercentage = 0;
+          }
+        }
+      }
+
+      // Prepare violation reasons breakdown
       const violationReasons = teamViolations.reduce((acc, violation) => {
         const reason = violation.reason;
         if (!acc[reason]) {
@@ -246,39 +295,6 @@ const TeamsPerformancePage = () => {
         return acc;
       }, {});
 
-      const daysBeforeTraining = mostRecentTrainingDate && firstViolationDate
-        ? calculateDaysBetween(firstViolationDate, mostRecentTrainingDate)
-        : "N/A";
-
-      const daysFromCurrentYearStart = mostRecentTrainingDate
-        ? calculateDaysFromCurrentYearStart(mostRecentTrainingDate)
-        : "N/A";
-
-      const daysAfterTraining = mostRecentTrainingDate
-        ? calculateDaysBetween(mostRecentTrainingDate, currentDate)
-        : "N/A";
-
-      const violationRateBefore = daysFromCurrentYearStart !== "N/A" && daysFromCurrentYearStart > 0
-        ? (violationsBeforeTraining.length / daysFromCurrentYearStart).toFixed(3)
-        : "N/A";
-
-      const violationRateAfter = daysAfterTraining !== "N/A" && daysAfterTraining > 0
-        ? (violationsAfterTraining.length / daysAfterTraining).toFixed(3)
-        : "N/A";
-
-      let improvementPercentage;
-      if (violationsBeforeTraining.length === 0) {
-        if (violationsAfterTraining.length === 0) {
-          improvementPercentage = 0;
-        } else {
-          improvementPercentage = -100;
-        }
-      } else {
-        improvementPercentage = violationRateBefore !== "N/A" && violationRateBefore > 0
-          ? ((violationRateBefore - violationRateAfter) / violationRateBefore * 100).toFixed(1)
-          : "N/A";
-      }
-
       return {
         ...team,
         mostRecentTrainingDate,
@@ -287,12 +303,17 @@ const TeamsPerformancePage = () => {
         violationsBeforeTraining: violationsBeforeTraining.length,
         violationsAfterTraining: violationsAfterTraining.length,
         violationReasons,
-        daysBeforeTraining,
+        daysBeforeTraining: mostRecentTrainingDate && firstViolationDate
+          ? calculateDaysBetween(firstViolationDate, mostRecentTrainingDate)
+          : "N/A",
         daysFromCurrentYearStart,
         daysAfterTraining,
-        violationRateBefore,
-        violationRateAfter,
+        requiredDaysForComparison, // For debugging/display purposes
+        hasSufficientData,
+        violationRateBefore: violationRateBefore.toFixed(3),
+        violationRateAfter: violationRateAfter.toFixed(3),
         improvementPercentage,
+        hasNewViolations,
         violationPercentages: Object.entries(violationReasons).map(([reason, counts]) => ({
           reason,
           percentage: (counts.total / teamViolations.length) * 100,
@@ -871,7 +892,13 @@ const TeamsPerformancePage = () => {
   const categorizeTeams = (teams) => {
     if (!teams || !Array.isArray(teams)) {
       return {
-        trained: { improvedTeams: [], declinedTeams: [], noChangeTeams: [], noViolationsTeams: [] },
+        trained: {
+          improvedTeams: [],
+          declinedTeams: [],
+          noChangeTeams: [],
+          noViolationsTeams: [],
+          newViolationsTeams: [] // New category
+        },
         untrained: []
       };
     }
@@ -892,18 +919,19 @@ const TeamsPerformancePage = () => {
     const declinedTeams = [];
     const noChangeTeams = [];
     const noViolationsTeams = [];
+    const newViolationsTeams = []; // Teams with 0 before and >0 after
 
     trainedTeams.forEach(team => {
       if (team.totalViolations === 0) {
         noViolationsTeams.push(team);
-      } else if (team.improvementPercentage === 0 || team.improvementPercentage === "N/A" || team.improvementPercentage === null || team.improvementPercentage === undefined) {
+      } else if (team.hasNewViolations) {
+        newViolationsTeams.push(team);
+      } else if (team.improvementPercentage === 0 || team.improvementPercentage === "N/A") {
         noChangeTeams.push(team);
       } else if (team.improvementPercentage > 0) {
         improvedTeams.push(team);
-      } else if (team.improvementPercentage < 0) {
-        declinedTeams.push(team);
       } else {
-        noChangeTeams.push(team); // This catches improvementPercentage === 0
+        declinedTeams.push(team);
       }
     });
 
@@ -912,6 +940,7 @@ const TeamsPerformancePage = () => {
     declinedTeams.sort((a, b) => a.improvementPercentage - b.improvementPercentage);
     noChangeTeams.sort((a, b) => b.totalViolations - a.totalViolations);
     noViolationsTeams.sort((a, b) => b.totalViolations - a.totalViolations);
+    newViolationsTeams.sort((a, b) => b.violationsAfterTraining - a.violationsAfterTraining);
 
     // Sort untrained teams by total violations
     const sortedUntrainedTeams = [...untrainedTeams].sort((a, b) => b.totalViolations - a.totalViolations);
@@ -921,14 +950,21 @@ const TeamsPerformancePage = () => {
         improvedTeams,
         declinedTeams,
         noChangeTeams,
-        noViolationsTeams
+        noViolationsTeams,
+        newViolationsTeams
       },
       untrained: sortedUntrainedTeams
     };
   };
 
   const { trained, untrained } = categorizeTeams(teamsData.fieldTeamStats);
-  const { improvedTeams, declinedTeams, noChangeTeams, noViolationsTeams } = trained;
+  const {
+    improvedTeams,
+    declinedTeams,
+    noChangeTeams,
+    noViolationsTeams,
+    newViolationsTeams // Add this line
+  } = trained;
   console.log({ trained, untrained });
   console.log({ improvedTeams, declinedTeams, noChangeTeams, noViolationsTeams });
 
@@ -977,36 +1013,48 @@ const TeamsPerformancePage = () => {
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 2 : 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-          <TextField
-            select
-            label="Select Team"
-            value={selectedTeamId}
-            onChange={(e) => {
-              setSelectedTeamId(e.target.value);
-              const team = teamsData.fieldTeamStats.find(t => t.teamId._id === e.target.value);
-              if (team) handleTeamSelect(team);
+          <Autocomplete
+            options={teamsData.fieldTeamStats}
+            getOptionLabel={(option) => option.teamName}
+            value={teamsData.fieldTeamStats.find(team => team.teamId._id === selectedTeamId) || null}
+            onChange={(event, newValue) => {
+              setSelectedTeamId(newValue ? newValue.teamId._id : '');
+              if (newValue) handleTeamSelect(newValue);
             }}
-            sx={{
-              minWidth: 200,
-              '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: colors.border }, '&:hover fieldset': { borderColor: colors.primary } },
-              '& .MuiInputLabel-root': { color: colors.textSecondary },
-              '& .MuiInputBase-input': { color: colors.textPrimary }
-            }}
-          >
-            <MenuItem value="">All Teams</MenuItem>
-            {teamsData.fieldTeamStats.map((team) => (
-              <MenuItem key={team.teamId._id} value={team.teamId._id}>
-                {team.teamName}
-                {team.assessmentCount === 0 && (
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Select Team"
+                sx={{
+                  minWidth: 400,
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderColor: colors.border },
+                    '&:hover fieldset': { borderColor: colors.primary }
+                  },
+                  '& .MuiInputLabel-root': { color: colors.textSecondary },
+                  '& .MuiInputBase-input': { color: colors.textPrimary }
+                }}
+              />
+            )}
+            renderOption={(props, option) => (
+              <li {...props} key={option.teamId._id}>
+                {option.teamName}
+                {option.assessmentCount === 0 && (
                   <Chip
                     label="Not Assessed"
                     size="small"
-                    sx={{ ml: 1, backgroundColor: colors.warning, color: colors.textPrimary }}
+                    sx={{
+                      ml: 1,
+                      backgroundColor: colors.warning,
+                      color: colors.textPrimary
+                    }}
                   />
                 )}
-              </MenuItem>
-            ))}
-          </TextField>
+              </li>
+            )}
+            isOptionEqualToValue={(option, value) => option.teamId._id === value.teamId._id}
+            sx={{ minWidth: 200 }}
+          />
 
           <Button
             variant="outlined"
@@ -1026,7 +1074,7 @@ const TeamsPerformancePage = () => {
             Clear Selection
           </Button>
 
-          <TextField
+          {/* <TextField
             label="Search Teams"
             variant="outlined"
             size="small"
@@ -1040,7 +1088,7 @@ const TeamsPerformancePage = () => {
               '& .MuiInputBase-input': { color: colors.textPrimary },
               height: '100%',
             }}
-          />
+          /> */}
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2, flexDirection: isMobile ? 'column' : 'row' }}>
@@ -1351,13 +1399,32 @@ const TeamsPerformancePage = () => {
               boxShadow: `0 0 8px ${colors.error}33`
             }}>
               <Typography variant="subtitle1" sx={{ color: colors.textPrimary }}>
-                Teams Declined
+                Unchanged Performance
               </Typography>
               <Typography variant="h4" sx={{ color: colors.error }}>
                 {declinedTeams.length}
               </Typography>
               <Typography variant="caption" sx={{ color: colors.textSecondary }}>
                 Teams performing worse after training
+              </Typography>
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Paper sx={{
+              p: 2,
+              backgroundColor: colors.surfaceElevated,
+              border: `1px solid ${colors.error}`,
+              boxShadow: `0 0 8px ${colors.error}33`
+            }}>
+              <Typography variant="subtitle1" sx={{ color: colors.textPrimary }}>
+                New Violations After Training
+              </Typography>
+              <Typography variant="h4" sx={{ color: colors.error }}>
+                {newViolationsTeams.length}
+              </Typography>
+              <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                Teams with new violations after training
               </Typography>
             </Paper>
           </Grid>
@@ -1389,7 +1456,7 @@ const TeamsPerformancePage = () => {
               boxShadow: `0 0 8px ${colors.success}33`
             }}>
               <Typography variant="subtitle1" sx={{ color: colors.textPrimary }}>
-                Teams Improved
+                Improved Performance
               </Typography>
               <Typography variant="h4" sx={{ color: colors.success }}>
                 {improvedTeams.length}
@@ -1422,7 +1489,7 @@ const TeamsPerformancePage = () => {
 
         {declinedTeams.length > 0 && (
           <TeamPerformanceTablesAccordion
-            title="Declined Teams (Sorted by Decline %)"
+            title="Unchanged Performance Teams"
             color="error"
             defaultExpanded={true}
           >
@@ -1435,7 +1502,7 @@ const TeamsPerformancePage = () => {
                     <TableCell sx={{ color: colors.textPrimary }} align="right">Violations After</TableCell>
                     <TableCell sx={{ color: colors.textPrimary }} align="right">Rate Before</TableCell>
                     <TableCell sx={{ color: colors.textPrimary }} align="right">Rate After</TableCell>
-                    <TableCell sx={{ color: colors.textPrimary }} align="right">Decline</TableCell>
+                    <TableCell sx={{ color: colors.textPrimary }} align="right">Rate of Change</TableCell>
                     <TableCell sx={{ color: colors.textPrimary }}>Last Training Date</TableCell>
                   </TableRow>
                 </TableHead>
@@ -1468,6 +1535,53 @@ const TeamsPerformancePage = () => {
                       </TableCell>
                       <TableCell align="right" sx={{ color: colors.error, fontWeight: 'bold' }}>
                         {team.improvementPercentage}%
+                      </TableCell>
+                      <TableCell sx={{ color: colors.textPrimary }}>
+                        {team.mostRecentTrainingDate ? new Date(team.mostRecentTrainingDate).toLocaleDateString() : 'N/A'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </TeamPerformanceTablesAccordion>
+        )}
+
+        {newViolationsTeams.length > 0 && (
+          <TeamPerformanceTablesAccordion
+            title="Teams with New Violations After Training"
+            color="error"
+          >
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: colors.surfaceElevated }}>
+                    <TableCell sx={{ color: colors.textPrimary }}>Team Name</TableCell>
+                    <TableCell sx={{ color: colors.textPrimary }} align="right">New Violations</TableCell>
+                    <TableCell sx={{ color: colors.textPrimary }} align="right">Violation Rate</TableCell>
+                    <TableCell sx={{ color: colors.textPrimary }}>Last Training Date</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {newViolationsTeams.map((team) => (
+                    <TableRow
+                      key={team.teamId._id}
+                      hover
+                      onClick={() => handleTeamSelect(team)}
+                      sx={{
+                        cursor: 'pointer',
+                        backgroundColor: `${colors.error}10`,
+                        '&:hover': { backgroundColor: `${colors.error}20` }
+                      }}
+                    >
+                      <TableCell sx={{ color: colors.textPrimary }}>
+                        {team.teamName}
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: colors.error }}>
+                        {team.violationsAfterTraining}
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: colors.error }}>
+                        {team.violationRateAfter}
                       </TableCell>
                       <TableCell sx={{ color: colors.textPrimary }}>
                         {team.mostRecentTrainingDate ? new Date(team.mostRecentTrainingDate).toLocaleDateString() : 'N/A'}
@@ -1541,7 +1655,7 @@ const TeamsPerformancePage = () => {
 
         {improvedTeams.length > 0 && (
           <TeamPerformanceTablesAccordion
-            title="Improved Teams (Sorted by Improvement %)"
+            title="Improved Performance Teams"
             color="success"
           >
             <TableContainer>
@@ -1709,7 +1823,7 @@ const TeamsPerformancePage = () => {
 
       {untrained.length > 0 && (
         <TeamPerformanceTablesAccordion
-          title="Untrained Teams (No Completed Training Sessions, Sorted by Total Violations)"
+          title="Untrained Teams"
           color="warning"
         >
           <TableContainer>

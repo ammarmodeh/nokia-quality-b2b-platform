@@ -1,19 +1,62 @@
 import { FavouriteSchema } from "../models/favouriteModel.js";
 import { TaskSchema } from "../models/taskModel.js";
+import mongoose from "mongoose";
 
 export const addTask = async (req, res) => {
   try {
-    const { slid, contactNumber, customerName, requestNumber, governorate, district,
-      date, priority, assignedTo, whomItMayConcern, reason, interviewDate,
-      category, tarrifName, teamName, teamId, customerFeedback, customerType,
-      teamCompany, evaluationScore, pisDate, validationStatus, responsibility, validationCat,
+    const {
+      slid,
+      contactNumber,
+      customerName,
+      requestNumber,
+      governorate,
+      district,
+      date,
+      priority,
+      assignedTo,
+      whomItMayConcern,
+      reason,
+      interviewDate,
+      category,
+      tarrifName,
+      teamName,
+      teamId,
+      customerFeedback,
+      customerType,
+      teamCompany,
+      evaluationScore,
+      pisDate,
+      validationStatus,
+      responsibility,
+      validationCat,
     } = req.body;
 
+    // Define the predefined subtasks with the desired structure
     const predefinedSubtasks = [
-      { title: "Receive the task", progress: 0, note: "" },
-      { title: "Called to the customer and specify an appointment", progress: 0, note: "" },
-      { title: "Reach at the customer and solve the problem", progress: 0, note: "" },
-      { title: "If the customer refuses the visit to close the task", progress: 0, note: "" },
+      {
+        title: "Task Reception",
+        note: "",
+        progress: 0,
+        status: "Open",
+      },
+      {
+        title: "Customer Contact and Appointment Scheduling",
+        note: "",
+        progress: 0,
+        status: "Open",
+      },
+      {
+        title: "On-Site Problem Resolution",
+        note: "",
+        progress: 0,
+        status: "Open",
+      },
+      {
+        title: "Task Closure for Declined Visits",
+        note: "",
+        progress: 0,
+        status: "Open",
+      },
     ];
 
     const task = new TaskSchema({
@@ -43,7 +86,7 @@ export const addTask = async (req, res) => {
       subTasks: predefinedSubtasks,
       responsibility,
       validationCat,
-      // readByWhenClosed: []
+      subtaskType: "original", // Set the default subtask type to "original"
     });
 
     task.taskLogs.push({
@@ -58,6 +101,7 @@ export const addTask = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const updateTask = async (req, res) => {
   const updatedData = req.body;
@@ -188,74 +232,149 @@ export const getTask = async (req, res) => {
   }
 };
 
+
+// backend/controllers/taskController.js
 export const updateSubtask = async (req, res) => {
   try {
     const taskId = req.params.id;
-    const newSubtasks = req.body;
+    if (!taskId) {
+      return res.status(400).json({ message: "Task ID is required" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
+      return res.status(400).json({ message: "Invalid Task ID" });
+    }
+
+    const { subtasks: newSubtasks, subtaskType, ontType, speed, serviceRecipientInitial, serviceRecipientQoS } = req.body;
+
+    if (!newSubtasks || !Array.isArray(newSubtasks)) {
+      return res.status(400).json({ message: "Subtasks must be a non-empty array" });
+    }
 
     const task = await TaskSchema.findById(taskId);
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    const changes = [];
-    const oldSubtasks = task.subTasks || [];
-
-    // Check if this is a reset operation (all subtasks progress set to 0)
-    const isResetOperation = newSubtasks.every(sub => sub.progress === 0) &&
-      !oldSubtasks.every(sub => sub.progress === 0);
-
-    newSubtasks.forEach((newSub, index) => {
-      const oldSub = oldSubtasks[index];
-      if (oldSub) {
-        if (newSub.progress !== oldSub.progress) {
-          changes.push(`Subtask "${newSub.title}" progress changed from ${oldSub.progress} to ${newSub.progress}`);
-        }
-        if (newSub.note !== oldSub.note) {
-          changes.push(`Subtask "${newSub.title}" note changed`);
-        }
+    // Validate and normalize subtasks structure
+    const normalizedSubtasks = newSubtasks.map((subtask, index) => {
+      if (!subtask.title) {
+        throw new Error(`Subtask at index ${index} is missing required field: title`);
       }
+
+      // Validate subtaskType
+      const validSubtaskTypes = ["original", "visit", "phone", "no_answer", "others"];
+      if (subtaskType && !validSubtaskTypes.includes(subtaskType)) {
+        return res.status(400).json({ message: "Invalid subtaskType" });
+      }
+
+      // Update task with the correct subtaskType
+      if (subtaskType) {
+        task.subtaskType = subtaskType;
+      }
+
+      return {
+        _id: subtask._id || undefined,
+        title: subtask.title,
+        note: subtask.note || "",
+        dateTime: subtask.dateTime || null,
+        status: subtask.status || "Open",
+        checkpoints: subtask.checkpoints ? subtask.checkpoints.map((checkpoint, cpIndex) => {
+          if (!checkpoint.name) {
+            throw new Error(`Checkpoint at index ${cpIndex} in subtask "${subtask.title}" is missing required field: name`);
+          }
+          return {
+            _id: checkpoint._id || undefined,
+            name: checkpoint.name,
+            checked: checkpoint.checked || false,
+            score: checkpoint.score || 0,
+            options: checkpoint.options ? {
+              type: checkpoint.options.type || null,
+              question: checkpoint.options.question || "",
+              choices: checkpoint.options.choices || [],
+              selected: checkpoint.options.selected || null,
+              value: checkpoint.options.value || "",
+              followUpQuestion: checkpoint.options.followUpQuestion ? {
+                question: checkpoint.options.followUpQuestion.question || "",
+                choices: checkpoint.options.followUpQuestion.choices || [],
+                selected: checkpoint.options.followUpQuestion.selected || null,
+                actionTaken: checkpoint.options.followUpQuestion.actionTaken ? {
+                  question: checkpoint.options.followUpQuestion.actionTaken.question || "",
+                  choices: checkpoint.options.followUpQuestion.actionTaken.choices || [],
+                  selected: checkpoint.options.followUpQuestion.actionTaken.selected || null,
+                  justification: checkpoint.options.followUpQuestion.actionTaken.justification ? {
+                    question: checkpoint.options.followUpQuestion.actionTaken.justification.question || "",
+                    choices: checkpoint.options.followUpQuestion.actionTaken.justification.choices || [],
+                    selected: checkpoint.options.followUpQuestion.actionTaken.justification.selected || null,
+                    notes: checkpoint.options.followUpQuestion.actionTaken.justification.notes ? {
+                      question: checkpoint.options.followUpQuestion.actionTaken.justification.notes.question || "",
+                      value: checkpoint.options.followUpQuestion.actionTaken.justification.notes.value || ""
+                    } : null
+                  } : null
+                } : null
+              } : null,
+              actionTaken: checkpoint.options.actionTaken ? {
+                question: checkpoint.options.actionTaken.question || "",
+                choices: checkpoint.options.actionTaken.choices || [],
+                selected: checkpoint.options.actionTaken.selected || null,
+                justification: checkpoint.options.actionTaken.justification ? {
+                  question: checkpoint.options.actionTaken.justification.question || "",
+                  choices: checkpoint.options.actionTaken.justification.choices || [],
+                  selected: checkpoint.options.actionTaken.justification.selected || null,
+                  notes: checkpoint.options.actionTaken.justification.notes ? {
+                    question: checkpoint.options.actionTaken.justification.notes.question || "",
+                    value: checkpoint.options.actionTaken.justification.notes.value || ""
+                  } : null
+                } : null
+              } : null,
+            } : null,
+            signalTestNotes: checkpoint.signalTestNotes || "",
+          };
+        }) : [],
+      };
     });
 
-    task.subTasks = newSubtasks;
+    // After normalizing checkpoints, add validation
+    // In your updateSubtask controller:
+    normalizedSubtasks.forEach((subtask) => {
+      subtask.checkpoints.forEach((checkpoint) => {
+        if (checkpoint.options?.simpleQuestion) return;
+        // Check followUpQuestion actionTaken justification
+        if (checkpoint.options?.followUpQuestion?.actionTaken?.selected === "no_action" &&
+          checkpoint.options.followUpQuestion.actionTaken.justification &&
+          !checkpoint.options.followUpQuestion.actionTaken.justification.selected) {
+          throw new Error(`Justification required for "No corrective action" in ${checkpoint.name}`);
+        }
 
-    // If this is a reset operation, clear all notifications
-    if (isResetOperation) {
-      task.notifications = [];
-      changes.push("All notifications cleared due to subtasks reset");
-    }
+        // Check main actionTaken justification
+        if (checkpoint.options?.actionTaken?.selected === "no_action" &&
+          checkpoint.options.actionTaken.justification &&
+          !checkpoint.options.actionTaken.justification.selected) {
+          throw new Error(`Justification required for "No corrective action" in ${checkpoint.name}`);
+        }
+      });
+    });
 
-    if (changes.length > 0) {
-      const updateLog = {
-        action: "updated",
-        user: req.user._id,
-        description: `Subtasks updated: ${changes.join(", ")}`,
-        timestamp: new Date()
-      };
-      task.taskLogs.push(updateLog);
+    task.subTasks = normalizedSubtasks;
+    if (subtaskType && ["original", "visit", "phone"].includes(subtaskType)) {
+      task.subtaskType = subtaskType;
     }
+    // Update task-level fields
+    task.ontType = ontType || null;
+    task.speed = speed || null;
+    task.serviceRecipientInitial = serviceRecipientInitial || null;
+    task.serviceRecipientQoS = serviceRecipientQoS || null;
 
     const updateOperation = {
       $set: {
-        subTasks: newSubtasks,
-        // Add notifications to the update operation if it's a reset
-        ...(isResetOperation && { notifications: [] })
-      }
+        subTasks: task.subTasks,
+        subtaskType: task.subtaskType,
+        ontType: task.ontType,
+        speed: task.speed,
+        serviceRecipientInitial: task.serviceRecipientInitial,
+        serviceRecipientQoS: task.serviceRecipientQoS,
+        status: getStatusFromCheckpoints(task.subTasks),
+      },
     };
-
-    if (changes.length > 0) {
-      updateOperation.$push = {
-        taskLogs: {
-          $each: [{
-            action: "updated",
-            user: req.user._id,
-            description: `Subtasks updated: ${changes.join(", ")}`,
-            timestamp: new Date()
-          }],
-          $position: 0
-        }
-      };
-    }
 
     await Promise.all([
       task.save(),
@@ -266,19 +385,49 @@ export const updateSubtask = async (req, res) => {
       task.slid && FavouriteSchema.updateMany(
         { slid: task.slid },
         updateOperation
-      )
+      ),
     ]);
+    console.log("Saved task:", JSON.stringify(task.subTasks, null, 2)); // Debug log
 
     res.status(200).json(task);
-
   } catch (error) {
+    console.error("Update subtask error:", error);
     res.status(500).json({
       message: "Error updating subtasks",
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
   }
 };
+
+// Helper function to determine status based on checkpoints
+function getStatusFromCheckpoints(subtasks) {
+  if (!subtasks || subtasks.length === 0) return "Todo";
+
+  // Check if all required justifications are provided
+  const allJustificationsValid = subtasks.every(subtask => {
+    return subtask.checkpoints.every(checkpoint => {
+      if (checkpoint.options?.followUpQuestion?.actionTaken?.selected === "no_action") {
+        return !!checkpoint.options.followUpQuestion.actionTaken.justification?.selected;
+      }
+      if (checkpoint.options?.actionTaken?.selected === "no_action") {
+        return !!checkpoint.options.actionTaken.justification?.selected;
+      }
+      return true;
+    });
+  });
+
+  if (!allJustificationsValid) return "In Progress";
+
+  const allSubtasksClosed = subtasks.every(subtask => subtask.status === "Closed");
+  const someSubtasksClosed = subtasks.some(subtask => subtask.status === "Closed");
+
+  if (allSubtasksClosed) return "Closed";
+  if (someSubtasksClosed) return "In Progress";
+  return "Todo";
+}
+
+
 
 export const getAllTasks = async (req, res) => {
   try {
@@ -763,11 +912,20 @@ export const createNotification = async (req, res) => {
   try {
     const { taskId } = req.params;
     const { recipient, message } = req.body;
+    console.log({ taskId, recipient, message });
+
+    // Validate input
+    if (!recipient || !message) {
+      return res.status(400).json({ message: "Recipient and message are required" });
+    }
 
     const task = await TaskSchema.findById(taskId);
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
+
+    // Log the creation of a notification for debugging and monitoring purposes
+    console.log(`Creating notification for task: ${taskId}`);
 
     const notification = {
       recipient,
@@ -779,8 +937,14 @@ export const createNotification = async (req, res) => {
     task.notifications.push(notification);
     await task.save();
 
+    // Log successful creation of notification
+    console.log(`Notification created successfully for task: ${taskId}`);
+
     res.status(201).json(notification);
   } catch (error) {
+    // Log the error for debugging purposes
+    console.error(`Error creating notification for task ${taskId}:`, error);
+
     res.status(500).json({ error: error.message });
   }
 };
@@ -794,12 +958,22 @@ export const clearNotifications = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
+    // Log the clearing of notifications for debugging and monitoring purposes
+    console.log(`Clearing notifications for task: ${taskId}`);
+
     // Clear the notifications array
     task.notifications = [];
     await task.save();
 
+    // Log successful clearing of notifications
+    console.log(`Notifications cleared successfully for task: ${taskId}`);
+
     res.status(200).json({ message: "Notifications cleared successfully" });
   } catch (error) {
+    // Log the error for debugging purposes
+    console.error(`Error clearing notifications for task ${taskId}:`, error);
+
     res.status(500).json({ error: error.message });
   }
 };
+

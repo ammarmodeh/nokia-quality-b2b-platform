@@ -62,20 +62,6 @@ export const updateAssessment = async (req, res) => {
 
     await assessment.save();
 
-    // Update field team's evaluation history if score changed
-    // const fieldTeam = await FieldTeamsSchema.findById(assessment.fieldTeamId);
-    // if (fieldTeam) {
-    //   // Find the evaluation that matches this assessment date
-    //   const evalIndex = fieldTeam.evaluationHistory.findIndex(
-    //     evaluation => evaluation.date.getTime() === assessment.assessmentDate.getTime()
-    //   );
-
-    //   if (evalIndex !== -1) {
-    //     fieldTeam.evaluationHistory[evalIndex].score = assessment.overallScore.toString();
-    //     await fieldTeam.save();
-    //   }
-    // }
-
     res.status(200).json(assessment);
   } catch (error) {
     res.status(500).json({ error: error.message });

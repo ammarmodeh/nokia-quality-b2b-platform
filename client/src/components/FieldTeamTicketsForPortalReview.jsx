@@ -130,10 +130,10 @@ const FieldTeamTicketsForPortalReview = ({ teamId, teamName }) => {
       District: ${ticket.district}
       Team Name: ${ticket.teamName}
       Team Company: ${ticket.teamCompany}
-      Evaluation Score: ${ticket.evaluationScore || 'N/A'}
+      Satisfaction Score: ${ticket.evaluationScore || 'N/A'}
       Customer Feedback: ${ticket.customerFeedback}
       Reason: ${ticket.reason}
-      Impact Level: ${ticket.priority || 'Not specified'}
+      Feedback Severity: ${ticket.priority || 'Not specified'}
     `;
 
     if (navigator.clipboard) {
@@ -490,7 +490,7 @@ const FieldTeamTicketsForPortalReview = ({ teamId, teamName }) => {
 
         {/* Priority Distribution */}
         <Paper sx={{ p: 2, ...darkThemeStyles.paper }}>
-          {renderBarChart(priorityData, 'Impact Level Distribution')}
+          {renderBarChart(priorityData, 'Feedback Severity Distribution')}
         </Paper>
 
         {/* Top Reasons */}

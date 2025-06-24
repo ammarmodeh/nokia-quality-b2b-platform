@@ -14,9 +14,12 @@ import {
   Select,
   FormControl,
   InputLabel,
-  IconButton
+  IconButton,
+  FormLabel,
+  RadioGroup,
+  Radio
 } from "@mui/material";
-import { ExpandMore, ExpandLess } from '@mui/icons-material';
+import { ExpandMore, ExpandLess, Circle } from '@mui/icons-material';
 import { useSelector } from "react-redux";
 
 const AssessmentForm = ({
@@ -26,31 +29,26 @@ const AssessmentForm = ({
   onSubmit,
   calculateOverallScore,
   getPerformanceColor,
-  editMode
+  editMode,
+  onCancel
 }) => {
-  // Split the state into smaller pieces
-  // const [conductedBy, setConductedBy] = useState(initialAssessment.conductedBy);
   const [feedback, setFeedback] = useState(initialAssessment.feedback);
   const [checkPoints, setCheckPoints] = useState(initialAssessment.checkPoints);
   const [expandedNotes, setExpandedNotes] = useState({});
   const user = useSelector((state) => state?.auth?.user);
 
-  // Optimized handler for checkpoint changes
   const handleCheckPointChange = useCallback((index, field, value) => {
-    if (field === "notes") {
-      // For notes, update immediately without state function for better responsiveness
-      const updatedCheckPoints = [...checkPoints];
-      updatedCheckPoints[index][field] = value;
-      setCheckPoints(updatedCheckPoints);
-    } else {
-      // For other fields, use the standard approach
-      setCheckPoints(prevCheckPoints => {
-        const updated = [...prevCheckPoints];
-        updated[index][field] = value;
-        return updated;
-      });
-    }
-  }, [checkPoints]);
+    setCheckPoints(prevCheckPoints => {
+      const updated = [...prevCheckPoints];
+      updated[index][field] = value;
+
+      // If marking as not available, set score to 0
+      if (field === 'isAvailable' && value === false) {
+        updated[index].score = 0;
+      }
+      return updated;
+    });
+  }, [])
 
   const toggleNotes = (index) => {
     setExpandedNotes(prev => ({
@@ -61,7 +59,75 @@ const AssessmentForm = ({
 
   const scoreOptions = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
-  // Memoized CheckpointsByCategory component
+  const getCheckpointScoreOptions = (checkpointName) => {
+    // Equipment Condition (4 levels)
+    if (checkpointName === "Splicing Equipment Condition (FSM)" ||
+      checkpointName === "Testing Tools Condition (OPM and VFL)") {
+      return [
+        { value: 0, label: "Defective", color: "error" },
+        { value: 50, label: "Marginal", color: "warning" },
+        { value: 75, label: "Good", color: "success" },
+        { value: 100, label: "Excellent", color: "success" }
+      ];
+    }
+
+    // Consumables Availability (3 levels)
+    if (checkpointName === "Consumables Availability") {
+      return [
+        { value: 0, label: "Not Available", color: "error" },
+        { value: 50, label: "Partially Available", color: "warning" },
+        { value: 100, label: "Fully Available", color: "success" }
+      ];
+    }
+
+    // Customer Service Skills - Appearance
+    if (checkpointName === "Appearance") {
+      return [
+        { value: 0, label: "Unprofessional", color: "error", description: "Inappropriate attire, poor grooming" },
+        { value: 30, label: "Needs Improvement", color: "warning", description: "Basic but could be more professional" },
+        { value: 70, label: "Professional", color: "success", description: "Neat and appropriate for the job" },
+        { value: 100, label: "Exemplary", color: "success", description: "Exceeds professional standards" }
+      ];
+    }
+
+    // Customer Service Skills - Communication
+    if (checkpointName === "Communication") {
+      return [
+        { value: 0, label: "Poor", color: "error", description: "Unclear, unprofessional language" },
+        { value: 40, label: "Basic", color: "warning", description: "Understandable but could improve" },
+        { value: 80, label: "Effective", color: "success", description: "Clear and professional" },
+        { value: 100, label: "Exceptional", color: "success", description: "Excellent listening and explanation skills" }
+      ];
+    }
+
+    // Customer Service Skills - Patience and Precision
+    if (checkpointName === "Patience and Precision") {
+      return [
+        { value: 0, label: "Rushed", color: "error", description: "Hurried through tasks, missed details" },
+        { value: 50, label: "Adequate", color: "warning", description: "Took time but could be more thorough" },
+        { value: 85, label: "Thorough", color: "success", description: "Patient and precise in work" },
+        { value: 100, label: "Meticulous", color: "success", description: "Exceptional attention to detail" }
+      ];
+    }
+
+    return null; // Default to percentage-based
+  };
+
+  const isEquipmentCheckpoint = (checkpointName) => {
+    return [
+      "Splicing Equipment Condition (FSM)",
+      "Testing Tools Condition (OPM and VFL)"
+    ].includes(checkpointName);
+  };
+
+  const isSpecialScoringCheckpoint = (checkpointName) => {
+    return [
+      "Splicing Equipment Condition (FSM)",
+      "Testing Tools Condition (OPM and VFL)",
+      "Consumables Availability"
+    ].includes(checkpointName);
+  };
+
   const CheckpointsByCategory = useCallback(({ checkPoints, handleCheckPointChange, colors }) => {
     const categories = checkPoints.reduce((acc, checkpoint, index) => {
       const category = checkpoint.category;
@@ -72,15 +138,13 @@ const AssessmentForm = ({
       return acc;
     }, {});
 
-    const categoryTitles = {
-      "Splicing & Testing Equipment": "Splicing & Testing Equipment",
-      "Fiber Optic Splicing Skills": "Fiber Optic Splicing Skills",
-      "ONT Placement, Configuration and testing": "ONT Placement, Configuration and testing",
-      "Customer Education": "Customer Education",
-      "Customer Service Skills": "Customer Service Skills"
-    };
-
-    const categoryOrder = ["Splicing & Testing Equipment", "Fiber Optic Splicing Skills", "ONT Placement, Configuration and testing", "Customer Education", "Customer Service Skills"];
+    const categoryOrder = [
+      "Splicing & Testing Equipment",
+      "Fiber Optic Splicing Skills",
+      "ONT Placement, Configuration and testing",
+      "Customer Education",
+      "Customer Service Skills"
+    ];
 
     return (
       <>
@@ -92,7 +156,7 @@ const AssessmentForm = ({
               borderBottom: `1px solid ${colors.border}`,
               pb: 1
             }}>
-              {categoryTitles[category]}
+              {category}
             </Typography>
 
             {categories[category]?.map(point => (
@@ -111,72 +175,142 @@ const AssessmentForm = ({
                     <Typography variant="body2" sx={{ color: colors.textSecondary }}>
                       {point.description}
                     </Typography>
+
+                    {/* Availability Toggle for Equipment */}
+                    {isEquipmentCheckpoint(point.name) && (
+                      <Box sx={{ mt: 1 }}>
+                        <FormControl component="fieldset">
+                          <FormLabel component="legend" sx={{ color: colors.textPrimary }}>
+                            Equipment Status
+                          </FormLabel>
+                          <RadioGroup
+                            row
+                            value={point.isAvailable !== false ? "available" : "notAvailable"}
+                            onChange={(e) => handleCheckPointChange(
+                              point.index,
+                              'isAvailable',
+                              e.target.value === 'available'
+                            )}
+                          >
+                            <FormControlLabel
+                              value="available"
+                              control={<Radio sx={{ color: colors.primary }} />}
+                              label="Available"
+                              sx={{ color: colors.textPrimary }}
+                            />
+                            <FormControlLabel
+                              value="notAvailable"
+                              control={<Radio sx={{ color: colors.error }} />}
+                              label="Not Available"
+                              sx={{ color: colors.textPrimary }}
+                            />
+                          </RadioGroup>
+                        </FormControl>
+                      </Box>
+                    )}
                   </Grid>
+
                   <Grid item xs={6} sm={6} md={2}>
                     <FormControlLabel
                       control={
                         <Checkbox
                           checked={point.isCompleted}
                           onChange={(e) => handleCheckPointChange(point.index, "isCompleted", e.target.checked)}
+                          disabled={point.isAvailable === false}
                           sx={{
                             color: colors.primary,
                             '&.Mui-checked': {
                               color: colors.primary,
                             },
+                            '&.Mui-disabled': {
+                              color: colors.textSecondary,
+                            },
                           }}
                         />
                       }
                       label="Completed"
-                      sx={{ color: colors.textPrimary }}
+                      sx={{
+                        color: point.isAvailable === false ? colors.textSecondary : colors.textPrimary
+                      }}
                     />
                   </Grid>
+
                   <Grid item xs={6} sm={6} md={3}>
                     <FormControl fullWidth>
-                      <InputLabel sx={{ color: colors.textSecondary }}>Score</InputLabel>
+                      <InputLabel sx={{
+                        color: point.isAvailable === false ? colors.textSecondary : colors.textPrimary
+                      }}>
+                        {isSpecialScoringCheckpoint(point.name) ?
+                          (point.name === "Consumables Availability" ? "Availability" : "Condition") :
+                          "Score"}
+                      </InputLabel>
                       <Select
                         value={point.score}
                         onChange={(e) => handleCheckPointChange(point.index, "score", e.target.value)}
-                        label="Score"
+                        label={isSpecialScoringCheckpoint(point.name) ?
+                          (point.name === "Consumables Availability" ? "Availability" : "Condition") :
+                          "Score"}
+                        disabled={point.isAvailable === false}
                         sx={{
-                          color: colors.textPrimary,
+                          color: point.isAvailable === false ? colors.textSecondary : colors.textPrimary,
                           '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: colors.border,
+                            borderColor: point.isAvailable === false ? colors.border : colors.primary,
                           },
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: colors.primary,
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: colors.primary,
-                          },
-                        }}
-                        MenuProps={{
-                          PaperProps: {
-                            sx: {
-                              backgroundColor: colors.surfaceElevated,
-                              color: colors.textPrimary,
-                              '& .MuiMenuItem-root': {
-                                '&:hover': {
-                                  backgroundColor: colors.primaryHover,
-                                },
-                                '&.Mui-selected': {
-                                  backgroundColor: `${colors.primary}22`,
-                                },
-                                '&.Mui-selected:hover': {
-                                  backgroundColor: `${colors.primary}33`,
-                                },
-                              }
-                            }
+                          '&.Mui-disabled': {
+                            backgroundColor: colors.surface,
                           }
                         }}
                       >
-                        {scoreOptions.map((option) => (
-                          <MenuItem key={option} value={option}>
-                            {option}%
+                        {point.isAvailable === false ? (
+                          <MenuItem value={0} sx={{ color: colors.error }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Circle sx={{
+                                color: colors.error,
+                                fontSize: '1rem',
+                                mr: 1
+                              }} />
+                              Not Available
+                            </Box>
                           </MenuItem>
-                        ))}
+                        ) : getCheckpointScoreOptions(point.name) ? (
+                          getCheckpointScoreOptions(point.name).map((option) => (
+                            <MenuItem
+                              key={option.value}
+                              value={option.value}
+                              sx={{ color: colors[option.color] }}
+                            >
+                              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Circle sx={{
+                                    color: colors[option.color],
+                                    fontSize: '1rem',
+                                    mr: 1
+                                  }} />
+                                  <Typography>{option.label}</Typography>
+                                </Box>
+                                {option.description && (
+                                  <Typography variant="caption" sx={{
+                                    color: colors.textSecondary,
+                                    ml: '24px', // Match icon width + margin
+                                    fontStyle: 'italic'
+                                  }}>
+                                    {option.description}
+                                  </Typography>
+                                )}
+                              </Box>
+                            </MenuItem>
+                          ))
+                        ) : (
+                          scoreOptions.map((option) => (
+                            <MenuItem key={option} value={option}>
+                              {option}%
+                            </MenuItem>
+                          ))
+                        )}
                       </Select>
                     </FormControl>
                   </Grid>
+
                   <Grid item xs={12} sm={6} md={12}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <TextField
@@ -186,21 +320,33 @@ const AssessmentForm = ({
                         rows={expandedNotes[point.index] ? 5 : 1}
                         value={point.notes}
                         onChange={(e) => handleCheckPointChange(point.index, "notes", e.target.value)}
+                        disabled={point.isAvailable === false}
                         InputLabelProps={{
-                          style: { color: colors.textSecondary }
+                          style: {
+                            color: point.isAvailable === false ? colors.textSecondary : colors.textPrimary
+                          }
                         }}
                         InputProps={{
-                          style: { color: colors.textPrimary }
+                          style: {
+                            color: point.isAvailable === false ? colors.textSecondary : colors.textPrimary
+                          }
                         }}
                         sx={{
                           direction: 'rtl',
                           textAlign: 'right',
+                          '& .MuiOutlinedInput-root.Mui-disabled': {
+                            backgroundColor: colors.surface,
+                          }
                         }}
                       />
                       <IconButton
                         onClick={() => toggleNotes(point.index)}
                         size="small"
-                        sx={{ ml: 1, color: colors.textSecondary }}
+                        disabled={point.isAvailable === false}
+                        sx={{
+                          ml: 1,
+                          color: point.isAvailable === false ? colors.textSecondary : colors.textPrimary
+                        }}
                       >
                         {expandedNotes[point.index] ? <ExpandLess /> : <ExpandMore />}
                       </IconButton>
@@ -215,36 +361,27 @@ const AssessmentForm = ({
     );
   }, [expandedNotes]);
 
-  // Combine all state when submitting
   const handleSubmit = (e) => {
-    e.preventDefault(); // Prevent default form behavior
+    e.preventDefault();
     const completeAssessment = {
-      conductedBy: user.name, // Use the actual user name
+      conductedBy: user.name,
       conductedById: user._id,
       feedback,
       checkPoints,
       categoryWeights: initialAssessment.categoryWeights,
       overallScore: calculateOverallScore(checkPoints, initialAssessment.categoryWeights)
     };
-    onSubmit(completeAssessment); // Use the prop name consistently
+    onSubmit(completeAssessment);
   };
 
   const validateForm = () => {
-    // Check if user name and feedback exist
     if (!user.name || !feedback) return false;
 
-    // Check all checkpoints
-    const allValid = checkPoints.every(point => {
-      // If score is > 0, checkbox must be checked
+    return checkPoints.every(point => {
       if (point.score > 0 && !point.isCompleted) return false;
-
-      // If checkbox is checked, score must be > 0
       if (point.isCompleted && point.score <= 0) return false;
-
       return true;
     });
-
-    return allValid;
   };
 
   return (
@@ -270,7 +407,6 @@ const AssessmentForm = ({
         label="Conducted By"
         fullWidth
         value={user.name}
-        // onChange={(e) => setConductedBy(e.target.value)}
         sx={{ mb: 2 }}
         InputLabelProps={{
           style: { color: colors.textSecondary }
@@ -321,25 +457,41 @@ const AssessmentForm = ({
         }}
       />
 
-      <Button
-        type="submit"
-        variant="contained"
-        color="primary"
-        onClick={handleSubmit}
-        disabled={loading || !validateForm()}
-        sx={{
-          backgroundColor: colors.primary,
-          '&:hover': {
-            backgroundColor: '#1d4ed8',
-          },
-          '&:disabled': {
-            backgroundColor: '#555',
-            color: '#999'
-          }
-        }}
-      >
-        {loading ? <CircularProgress size={24} sx={{ color: colors.textPrimary }} /> : editMode ? "Update Assessment" : "Submit Assessment"}
-      </Button>
+      <Box sx={{ display: 'flex', gap: 2 }}>
+        {editMode && (
+          <Button
+            variant="outlined"
+            onClick={onCancel}
+            sx={{
+              color: colors.textPrimary,
+              borderColor: colors.border,
+              '&:hover': {
+                borderColor: colors.primary
+              }
+            }}
+          >
+            Cancel
+          </Button>
+        )}
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          disabled={loading || !validateForm()}
+          sx={{
+            backgroundColor: colors.primary,
+            '&:hover': {
+              backgroundColor: '#1d4ed8',
+            },
+            '&:disabled': {
+              backgroundColor: '#555',
+              color: '#999'
+            }
+          }}
+        >
+          {loading ? <CircularProgress size={24} sx={{ color: colors.textPrimary }} /> : editMode ? "Update Assessment" : "Submit Assessment"}
+        </Button>
+      </Box>
     </Paper>
   );
 };

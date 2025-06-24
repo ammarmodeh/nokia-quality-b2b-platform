@@ -41,9 +41,9 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       textToCopy += `District: ${task.district}\n`;
       textToCopy += `Team Name: ${task.teamName}\n`;
       textToCopy += `Team Company: ${task.teamCompany}\n`;
-      textToCopy += `Evaluation Score: ${task.evaluationScore} (${task.evaluationScore >= 9 ? 'Promoter' :
+      textToCopy += `Satisfaction Score: ${task.evaluationScore} (${task.evaluationScore >= 9 ? 'Promoter' :
         task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'})\n`;
-      textToCopy += `Impact Level: ${task.priority || 'Not specified'}\n`;
+      textToCopy += `Feedback Severity: ${task.priority || 'Not specified'}\n`;
       textToCopy += `Customer Feedback: ${task.customerFeedback}\n`;
       textToCopy += `Reason: ${task.reason}\n\n`;
 
@@ -78,8 +78,8 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       'PIS Date': new Date(task.pisDate).toLocaleString(),
       'Customer Name': task.customerName,
       'Customer Feedback': task.customerFeedback,
-      'Evaluation Score': task.evaluationScore,
-      'Impact Level': task.priority || 'Not specified',
+      'Satisfaction Score': task.evaluationScore,
+      'Feedback Severity': task.priority || 'Not specified',
       'Contact Number': task.contactNumber,
       'Tariff Name': task.tarrifName,
       'Reason': task.reason,
@@ -105,9 +105,8 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
     <Dialog
       open={open}
       onClose={onClose}
-      fullScreen={isMobile}
-      fullWidth
-      maxWidth="md"
+      fullScreen
+      // fullWidth
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#1e1e1e',
@@ -275,7 +274,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                   gap: isMobile ? 1.5 : 2
                 }}>
                   <DetailRow
-                    label="Evaluation Score"
+                    label="Satisfaction Score"
                     value={
                       <Box component="span">
                         <Chip
@@ -298,7 +297,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                   <DetailRow label="Customer Feedback" value={task.customerFeedback} isMobile={isMobile} />
                   <DetailRow label="Reason" value={task.reason} isMobile={isMobile} />
                   <DetailRow
-                    label="Impact Level"
+                    label="Feedback Severity"
                     value={
                       <Chip
                         label={task.priority || 'Not specified'}

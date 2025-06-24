@@ -122,10 +122,10 @@ const TaskViewPage = () => {
   const formattedDate = task?.date ? format(new Date(task.date), "MMM dd, yyyy HH:mm") : "No Date";
   const remainingMinutes = task?.date ? differenceInMinutes(new Date(task.date), new Date()) : null;
 
-  const handleNoteDialogOpen = () => {
-    setNote(subtasks.map((subtask) => subtask.note || ""));
-    setNoteDialogOpen(true);
-  };
+  // const handleNoteDialogOpen = () => {
+  //   setNote(subtasks.map((subtask) => subtask.note || ""));
+  //   setNoteDialogOpen(true);
+  // };
 
   const handleNoteDialogClose = () => {
     setNoteDialogOpen(false);
@@ -320,7 +320,7 @@ const TaskViewPage = () => {
       Request Number: ${task.requestNumber}
       SLID: ${task.slid}
       Tarrif Name: ${task.tarrifName}
-      Evaluation Score: ${task.evaluationScore}
+      Satisfaction Score: ${task.evaluationScore}
       PIS Date: ${formattedPISDate}
       Due Date: ${formattedDate}
       Customer Name: ${task.customerName || "N/A"}
@@ -423,7 +423,7 @@ const TaskViewPage = () => {
               <DetailRow label="Request Number" value={task.requestNumber} isMobile={isMobile} />
               <DetailRow label="SLID" value={task.slid} isMobile={isMobile} />
               <DetailRow label="Tarrif Name" value={task.tarrifName} isMobile={isMobile} />
-              <DetailRow label="Evaluation Score" value={
+              <DetailRow label="Satisfaction Score" value={
                 <Chip
                   size={isMobile ? "small" : "medium"}
                   label={task.evaluationScore}
@@ -445,11 +445,11 @@ const TaskViewPage = () => {
             border: '1px solid #444'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'cornflowerblue' }}>
-              Impact Level & Dates
+              Feedback Severity & Dates
             </Typography>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
-              <DetailRow label="Impact level" value={
+              <DetailRow label="Feedback Severity" value={
                 <Chip
                   size={isMobile ? "small" : "medium"}
                   label={task.priority}
@@ -662,7 +662,7 @@ const TaskViewPage = () => {
               ))}
             </Paper>
 
-            {user && task.assignedTo[0] === user._id && (
+            {/* {user && task.assignedTo[0] === user._id && (
               <Button
                 variant="contained"
                 onClick={handleNoteDialogOpen}
@@ -677,7 +677,7 @@ const TaskViewPage = () => {
               >
                 Manage Subtasks
               </Button>
-            )}
+            )} */}
           </Paper>
 
           {/* Metadata Section */}

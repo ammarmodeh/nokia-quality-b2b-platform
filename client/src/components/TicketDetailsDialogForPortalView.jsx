@@ -195,7 +195,7 @@ const TicketDetailsDialogForPortalView = ({ open, onClose, ticket, onCopy }) => 
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
               <DetailRow
-                label="Evaluation Score"
+                label="Satisfaction Score"
                 value={
                   <Chip
                     label={`${ticket.evaluationScore || 'N/A'}`}

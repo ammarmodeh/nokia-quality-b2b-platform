@@ -91,7 +91,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
       displayName: "Created By",
       format: (value) => value?.name || 'N/A'
     },
-    evaluationScore: { displayName: "Evaluation Score" },
+    evaluationScore: { displayName: "Satisfaction Score" },
     subTasks: {
       displayName: "Subtasks",
       format: (value) => value?.map ? value.map(sub => `• ${sub.title}: ${sub.note || 'No note'}`).join('\n') : 'N/A'
@@ -149,7 +149,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
       'Customer Name': task.customerName,
       'Contact Number': task.contactNumber || 'N/A',
       'Customer Type': task.customerType,
-      'Evaluation Score': task.evaluationScore,
+      'Satisfaction Score': task.evaluationScore,
       'Governorate': task.governorate,
       'District': task.district,
       'Tariff Name': task.tarrifName,
@@ -264,9 +264,9 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
       <Dialog
         open={open}
         onClose={onClose}
-        fullScreen={isMobile}
-        fullWidth
-        maxWidth="md"
+        fullScreen
+        // fullWidth
+        // maxWidth="md"
         sx={{
           "& .MuiDialog-paper": {
             backgroundColor: "#131111",
@@ -525,9 +525,9 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
       <Dialog
         open={viewDialogOpen}
         onClose={() => setViewDialogOpen(false)}
-        fullScreen={isMobile}
-        fullWidth
-        maxWidth="md"
+        fullScreen
+        // fullWidth
+        // maxWidth="md"
         sx={{
           "& .MuiDialog-paper": {
             backgroundColor: '#1e1e1e',
@@ -690,7 +690,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                   gap: isMobile ? 1.5 : 2
                 }}>
                   <DetailRow
-                    label="Evaluation Score"
+                    label="Satisfaction Score"
                     value={
                       <Box component="span">
                         <Chip

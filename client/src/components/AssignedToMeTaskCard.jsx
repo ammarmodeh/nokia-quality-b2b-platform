@@ -62,7 +62,7 @@ const AssignedToMeTaskCard = ({
   const formatTaskForWhatsApp = () => {
     const formattedMessage = `
       **SLID**: ${task.slid}
-      **Evaluation Score**: ${task.evaluationScore}
+      **Satisfaction Score**: ${task.evaluationScore}
       **Status**: ${task.status}
       **Due Date**: ${formattedDate}
       **Remaining Time**: ${remainingMinutes > 0 ? `${Math.floor(remainingMinutes / 1440)} days, ${Math.floor((remainingMinutes % 1440) / 60)} hours, ${remainingMinutes % 60} minutes left` : `${Math.floor(Math.abs(remainingMinutes) / 1440)} days, ${Math.floor((Math.abs(remainingMinutes) % 1440) / 60)} hours, ${Math.abs(remainingMinutes) % 60} minutes overdue`}

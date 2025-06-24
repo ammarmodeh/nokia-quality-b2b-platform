@@ -220,7 +220,7 @@ const ViolationDataGrid = ({
     },
     {
       field: "evaluationScore",
-      headerName: "Theoretical Evaluation Score",
+      headerName: "Theoretical Satisfaction Score",
       width: 100,
       renderCell: (params) => (
         <Box>{params.value || 'N/A'}</Box>

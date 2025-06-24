@@ -194,7 +194,7 @@ export const CompanyViolationTable = ({ tasks }) => {
       'Request Number': task.requestNumber,
       'SLID': task.slid,
       'PIS Date': task.pisDate ? new Date(task.pisDate).toLocaleString() : 'N/A',
-      'Evaluation Score': task.evaluationScore,
+      'Satisfaction Score': task.evaluationScore,
       'Customer Name': task.customerName,
       'Contact Number': task.contactNumber,
       'Tariff Name': task.tarrifName,
@@ -437,7 +437,7 @@ export const CompanyViolationTable = ({ tasks }) => {
                       day: 'numeric'
                     }) : 'N/A'} />
                     <DetailRow
-                      label="Evaluation Score"
+                      label="Satisfaction Score"
                       value={
                         <Chip
                           label={task.evaluationScore}

@@ -188,7 +188,7 @@ const MainStats = () => {
       return acc;
     }, {});
 
-    // Calculate evaluation score distribution
+    // Calculate Satisfaction Score distribution
     const evaluationStats = tasks.reduce((acc, task) => {
       const score = Math.floor(task.evaluationScore || 0);
       if (!acc[score]) {
@@ -396,7 +396,7 @@ const MainStats = () => {
     return {
       labels: Array.from({ length: 8 }, (_, i) => i + 1), // Labels from 1 to 8
       datasets: [{
-        label: 'Evaluation Score Distribution',
+        label: 'Satisfaction Score Distribution',
         data: evaluationData.slice(1), // Use data from index 1 to 8
         backgroundColor: evaluationData.slice(1).map((_, index) =>
           index < 6 ? colors.error : colors.warning
@@ -1014,10 +1014,10 @@ const MainStats = () => {
         </Box>
       </Paper> */}
 
-      {/* Evaluation Score Distribution */}
+      {/* Satisfaction Score Distribution */}
       <Paper sx={{ p: 2, mb: 4, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
         <Typography variant="h6" gutterBottom sx={{ color: colors.textPrimary }}>
-          Evaluation Score Distribution
+          Satisfaction Score Distribution
         </Typography>
         <Box sx={{ height: '400px' }}>
           <Bar data={prepareEvaluationChartData()} options={chartOptions} />
@@ -1027,7 +1027,7 @@ const MainStats = () => {
       {/* Score Reasons Distribution */}
       {/* <Paper sx={{ p: 2, mb: 4, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
         <Typography variant="h6" gutterBottom sx={{ color: colors.textPrimary }}>
-          Evaluation Score Reasons Distribution
+          Satisfaction Score Reasons Distribution
         </Typography>
         {prepareScoreReasonsData(stats.scoreReasons).map((scoreData, index) => (
           <Accordion key={index} sx={{ backgroundColor: colors.surfaceElevated, mb: 2 }}>
@@ -1097,10 +1097,10 @@ const MainStats = () => {
         ))}
       </Paper> */}
 
-      {/* Evaluation Score Statistics */}
+      {/* Satisfaction Score Statistics */}
       <Paper sx={{ p: 2, mb: 4, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
         <Typography variant="h6" gutterBottom sx={{ color: colors.textPrimary }}>
-          Customer Evaluation Scores
+          Customer Satisfaction Scores
         </Typography>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
@@ -1179,7 +1179,7 @@ const MainStats = () => {
                       {stats.evaluationScoreStats.average?.toFixed(1) || 'N/A'}
                     </TableCell>
                     <TableCell sx={{ color: colors.textSecondary }}>
-                      Average of all evaluation scores (1-10 scale)
+                      Average of all Satisfaction Scores (1-10 scale)
                     </TableCell>
                   </TableRow>
                   <TableRow>

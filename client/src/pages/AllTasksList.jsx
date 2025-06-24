@@ -208,7 +208,7 @@ const AllTasksList = () => {
       task.customerFeedback?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Apply evaluation score filter
+    // Apply Satisfaction Score filter
     let matchesScoreFilter = true;
     if (filter === 'neutrals') {
       matchesScoreFilter = task.evaluationScore >= 7 && task.evaluationScore <= 8;
@@ -291,8 +291,8 @@ const AllTasksList = () => {
       'District': task.district || 'N/A',
       'Team Name': task.teamName || 'N/A',
       'Team Company': task.teamCompany || 'N/A',
-      'Evaluation Score': task.evaluationScore || 'N/A',
-      'Impact Level': task.priority || 'N/A',
+      'Satisfaction Score': task.evaluationScore || 'N/A',
+      'Feedback Severity': task.priority || 'N/A',
       'Interview Week': task.interviewDate ? getWeekDisplay(task.interviewDate) : 'N/A'
     }));
 
@@ -481,14 +481,14 @@ const AllTasksList = () => {
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
           <InputLabel id="priority-filter-label" sx={{ color: '#aaaaaa' }}>
-            Impact Level
+            Feedback Severity
           </InputLabel>
           <Select
             labelId="priority-filter-label"
             id="priority-filter"
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            label="Impact Level"
+            label="Feedback Severity"
             sx={{
               color: '#ffffff',
               borderRadius: '20px',
@@ -634,7 +634,7 @@ const AllTasksList = () => {
               <TableCell style={{ fontSize: '0.875rem' }}>Customer Name</TableCell>
               {/* <TableCell>Contact</TableCell> */}
               <TableCell style={{ fontSize: '0.875rem' }}>Customer Feedback</TableCell>
-              <TableCell style={{ fontSize: '0.875rem' }}>Impact Level</TableCell>
+              <TableCell style={{ fontSize: '0.875rem' }}>Feedback Severity</TableCell>
               <TableCell style={{ fontSize: '0.875rem' }}>Eval Score</TableCell>
               <TableCell style={{ fontSize: '0.875rem' }}>Week</TableCell>
               <TableCell style={{ fontSize: '0.875rem' }}>Actions</TableCell>

@@ -115,7 +115,7 @@ const TeamStatistics = ({ team, tabValue, setTabValue, colors, prepareViolationR
   //   return {
   //     labels: ['Detractors (1-6)', 'Neutrals (7-8)'],
   //     datasets: [{
-  //       label: 'Evaluation Scores',
+  //       label: 'Satisfaction Scores',
   //       data: [detractors, neutrals],
   //       backgroundColor: [colors.error, colors.warning],
   //       borderColor: [colors.error, colors.warning],
@@ -325,23 +325,37 @@ const TeamStatistics = ({ team, tabValue, setTabValue, colors, prepareViolationR
                   colors.warning,
               fontWeight: '600'
             }} align="right">
-              {team.improvementPercentage === "N/A" ? (
-                <Chip label="N/A" size="small" sx={{ bgcolor: colors.border, color: colors.textPrimary }} />
-              ) : team.improvementPercentage === -100 ? (
-                <Chip label="New violations" size="small" sx={{ bgcolor: colors.error, color: colors.textPrimary }} />
-              ) : team.improvementPercentage === 0 ? (
-                "0%"
-              ) : (
-                <>
-                  {team.improvementPercentage > 0 ? '↓' : '↑'}
-                  {Math.abs(team.improvementPercentage)}%
-                  {team.improvementPercentage > 0 ? (
-                    <CheckCircleOutline fontSize="small" sx={{ color: colors.success, ml: 0.5, verticalAlign: 'middle' }} />
-                  ) : (
-                    <WarningAmber fontSize="small" sx={{ color: colors.error, ml: 0.5, verticalAlign: 'middle' }} />
-                  )}
-                </>
-              )}
+              {(() => {
+                // Only calculate improvement if we have at least 7 days after training
+                if (!team.daysAfterTraining || team.daysAfterTraining < 7) {
+                  return <Chip label="Insufficient data" size="small" sx={{ bgcolor: colors.border, color: colors.textPrimary }} />;
+                }
+
+                // Calculate violation rates per day
+                const rateBefore = team.violationsBeforeTraining / team.daysFromCurrentYearStart;
+                const rateAfter = team.violationsAfterTraining / team.daysAfterTraining;
+
+                // Calculate improvement percentage
+                let improvement = 0;
+                if (rateBefore > 0) {
+                  improvement = ((rateBefore - rateAfter) / rateBefore) * 100;
+                } else if (rateAfter > 0) {
+                  return <Chip label="New violations" size="small" sx={{ bgcolor: colors.error, color: colors.textPrimary }} />;
+                }
+
+                // Format the improvement
+                return (
+                  <>
+                    {improvement > 0 ? '↑' : improvement < 0 ? '↓' : ''}
+                    {Math.abs(improvement).toFixed(1)}%
+                    {improvement > 0 ? (
+                      <CheckCircleOutline fontSize="small" sx={{ color: colors.success, ml: 0.5, verticalAlign: 'middle' }} />
+                    ) : improvement < 0 ? (
+                      <WarningAmber fontSize="small" sx={{ color: colors.error, ml: 0.5, verticalAlign: 'middle' }} />
+                    ) : null}
+                  </>
+                );
+              })()}
             </TableCell>
           </TableRow>
         </>
@@ -869,9 +883,19 @@ const TeamStatistics = ({ team, tabValue, setTabValue, colors, prepareViolationR
                       color: colors.textSecondary,
                       lineHeight: 1.6
                     }}>
-                      {team.improvementPercentage > 0
-                        ? 'The training program has demonstrated statistically significant effectiveness in reducing violations.'
-                        : 'The training effectiveness requires further evaluation and potential curriculum adjustments.'}
+                      {
+                        team.improvementPercentage >= 75
+                          ? 'Outstanding improvement observed; the training has had a transformative impact on team performance.'
+                          : team.improvementPercentage >= 50
+                            ? 'Strong improvement noted; the training is proving highly effective.'
+                            : team.improvementPercentage >= 25
+                              ? 'Moderate improvement detected; continued monitoring and minor reinforcement may be beneficial.'
+                              : team.improvementPercentage > 0
+                                ? 'Slight improvement noted; consider additional support or targeted retraining.'
+                                : team.improvementPercentage === 0
+                                  ? 'No measurable improvement; training effectiveness needs evaluation.'
+                                  : 'Performance declined after training; immediate investigation and corrective action are recommended.'
+                      }
                     </Typography>
                   </Paper>
                 </Grid>
@@ -930,7 +954,7 @@ const TeamStatistics = ({ team, tabValue, setTabValue, colors, prepareViolationR
                       {tasksScoreData.totalTasks}
                     </Typography>
                     <Typography variant="caption" sx={{ color: colors.textSecondary }}>
-                      {tasksScoreData.scoredTasksCount} with evaluation scores
+                      {tasksScoreData.scoredTasksCount} with Satisfaction Scores
                     </Typography>
                   </Paper>
                 </Grid>
@@ -1227,7 +1251,7 @@ const TeamStatistics = ({ team, tabValue, setTabValue, colors, prepareViolationR
                     if (before !== 0) {
                       change = ((after - before) / before) * 100;
                       changeFormatted = Math.abs(change).toFixed(1);
-                      changeSign = change < 0 ? '↓' : change > 0 ? '↑' : '→';
+                      changeSign = change < 0 ? '↑' : change > 0 ? '↓' : '→';
                     } else if (after > 0) {
                       isNew = true;
                     }
@@ -1278,20 +1302,22 @@ const TeamStatistics = ({ team, tabValue, setTabValue, colors, prepareViolationR
                             <Typography variant="body2" sx={{ color: colors.textSecondary }}>
                               —
                             </Typography>
-                          ) : (
-                            <Box sx={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              color: change < 0 ? colors.success : colors.error
-                            }}>
-                              {changeSign} {changeFormatted}%
-                              {change < 0 ? (
-                                <TrendingDown fontSize="small" sx={{ ml: 0.5 }} />
-                              ) : (
-                                <TrendingUp fontSize="small" sx={{ ml: 0.5 }} />
-                              )}
-                            </Box>
-                          )}
+                          )
+                            : (
+                              <Box sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                color: change < 0 ? colors.success : colors.error
+                              }}>
+                                {changeSign} {changeFormatted}%
+                                {change < 0 ? (
+                                  <TrendingUp fontSize="small" sx={{ ml: 0.5 }} />
+                                ) : (
+                                  <TrendingDown fontSize="small" sx={{ ml: 0.5 }} />
+                                )}
+                              </Box>
+                            )
+                          }
                         </TableCell>
                       </TableRow>
                     );

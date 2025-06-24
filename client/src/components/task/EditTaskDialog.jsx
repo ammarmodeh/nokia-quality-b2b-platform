@@ -17,7 +17,7 @@ const EVALUATIONSCORE = [1, 2, 3, 4, 5, 6, 7, 8]
 const JORDANGOVERNORATES = ["عمَان", "الزرقاء", "إربد", "العقبة", "المفرق", "مادبا", "البلقاء", "جرش", "معان", "الكرك", "عجلون", "الطفيلة"]
 const CUSTOMERTYPE = ["CBU", "EBU"]
 const VALIDATIONSTATUS = ["Validated", "Not validated"]
-const VALIDATIONCATEGORY = ["Knowledge Gap", "Customer Education", "Customer Perception", "Incomplete Service Delivery", "Lack of Technical Expertise",
+const VALIDATIONCATEGORY = ["Knowledge Gap", "Customer Education", "Customer Perception", "Incomplete Service Delivery", "Lack of Technical Expertise", "Unprofessional Conduct",
   "Poor Time Management", "Technical Limitations", "Execution Delay", "Processing Delay", "External Factors", "Bad Team Behavior",
   "Device limitations", "Misuse of Service", "Customer-Declined Solution / Unrealistic Expectation", "Others", "VOIP", "Can't Determine"]
 
@@ -282,8 +282,8 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             />
 
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
-              <InputLabel>Evaluation Score</InputLabel>
-              <Select value={evaluationScore} onChange={(e) => setEvaluationScore(e.target.value)} label="Evaluation Score">
+              <InputLabel>Satisfaction Score</InputLabel>
+              <Select value={evaluationScore} onChange={(e) => setEvaluationScore(e.target.value)} label="Satisfaction Score">
                 {EVALUATIONSCORE.map((score) => (
                   <MenuItem key={score} value={score}>
                     {score}
@@ -500,7 +500,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             />
           </div>
           <div className="flex gap-4 mt-6">
-            <SelectList label="Impact Level" lists={PRIORITY} selected={priority} setSelected={setPriority} />
+            <SelectList label="Feedback Severity" lists={PRIORITY} selected={priority} setSelected={setPriority} />
             <SelectList label="Task Category" lists={CATEGORIES} selected={category} setSelected={setCategory} />
           </div>
           <div className="bg-gray-50 py-6 sm:flex sm:flex-row-reverse gap-4">

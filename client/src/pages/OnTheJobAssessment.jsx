@@ -356,12 +356,22 @@ const OnTheJobAssessment = () => {
     }
   }, [selectedTeam]);
 
-  const calculateOverallScore = useCallback((checkPoints) => {
+  const calculateOverallScore = useCallback((checkPoints, categoryWeights) => {
     if (!checkPoints || checkPoints.length === 0) return 0;
 
-    const totalScore = checkPoints.reduce((sum, checkpoint) => sum + checkpoint.score, 0);
-    const averageScore = totalScore / checkPoints.length;
-    return Math.round(averageScore);
+    // Calculate weighted scores
+    const totalScore = checkPoints.reduce((sum, checkpoint) => {
+      const weight = categoryWeights[checkpoint.category] || 1;
+      return sum + (checkpoint.score * weight);
+    }, 0);
+
+    // Calculate maximum possible score based on weights
+    const maxPossibleScore = checkPoints.reduce((sum, checkpoint) => {
+      const weight = categoryWeights[checkpoint.category] || 1;
+      return sum + (100 * weight);
+    }, 0);
+
+    return Math.round((totalScore / maxPossibleScore) * 100);
   }, []);
 
   const getPerformanceColor = useCallback((score) => {
@@ -563,9 +573,12 @@ const OnTheJobAssessment = () => {
     try {
       setLoading(true);
 
+      // Calculate overall score before sending
+      const overallScore = calculateOverallScore(updatedAssessment.checkPoints, updatedAssessment.categoryWeights);
+
       const payload = {
         ...updatedAssessment,
-        overallScore: calculateOverallScore(updatedAssessment.checkPoints, updatedAssessment.categoryWeights)
+        overallScore
       };
 
       await api.put(

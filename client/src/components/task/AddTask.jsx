@@ -31,23 +31,9 @@ const EVALUATIONSCORE = [1, 2, 3, 4, 5, 6, 7, 8]
 const JORDANGOVERNORATES = ["عمَان", "الزرقاء", "إربد", "العقبة", "المفرق", "مادبا", "البلقاء", "جرش", "معان", "الكرك", "عجلون", "الطفيلة"]
 const CUSTOMERTYPE = ["CBU", "EBU"]
 const VALIDATIONSTATUS = ["Validated", "Not validated"]
-const VALIDATIONCATEGORY = ["Knowledge Gap", "Customer Education", "Customer Perception", "Incomplete Service Delivery", "Lack of Technical Expertise",
+const VALIDATIONCATEGORY = ["Knowledge Gap", "Customer Education", "Customer Perception", "Incomplete Service Delivery", "Lack of Technical Expertise", "Unprofessional Conduct",
   "Poor Time Management", "Technical Limitations", "Execution Delay", "Processing Delay", "External Factors", "Bad Team Behavior",
   "Device limitations", "Misuse of Service", "Customer-Declined Solution / Unrealistic Expectation", "Others", "VOIP", "Can't Determine"]
-
-// If the field team caused the delay: (e.g., due to poor time management, lack of preparedness, skill gaps, or equipment issues)
-// If the company delayed the transaction (e.g., due to internal processing, lack of material availability, slow approval procedures), then it’s an operational or administrative issue within the company.
-// If the delay was caused by external factors (e.g., customer availability, municipality permits, or unexpected site conditions), then neither the team nor the company is directly responsible, but better coordination might be needed.
-// Categorizing the Complaint:
-// "Execution Delay - Field Team" → If the team is at fault.
-// "Processing Delay - Internal Handling" → If the company’s workflow caused it.
-// "External Factors - Uncontrollable Delay" → If the issue was beyond both the team's and company’s control.
-
-// Main Category: Slow Internet Performance
-// Subcategory 1: Wi-Fi Coverage Issue (Weak signal inside the house)
-// Subcategory 2: Network Congestion/ISP Issue (External network problems)
-// Subcategory 3: Fiber Connection Issue (Bad splicing, high attenuation)
-// Subcategory 4: Equipment Issue (Faulty router, ONT problems)
 
 
 const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
@@ -193,9 +179,11 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       if (response.status === 201) {
         setOpen(false);
         setUpdateRefetchTasks(prev => !prev);
+        alert('Task created successfully!');
       }
     } catch (error) {
-      // console.log('Error while adding task:', error.response.data.error);
+      alert(error.response.data.message);
+      console.log(error);
     }
   };
 
@@ -296,7 +284,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
 
           <Stack direction={"row"} spacing={2}>
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
-              <InputLabel>Evaluation Score</InputLabel>
+              <InputLabel>Satisfaction Score</InputLabel>
               <Select value={evaluationScore} onChange={(e) => setEvaluationScore(e.target.value)} label="Team Company">
                 {EVALUATIONSCORE.map((list) => (
                   <MenuItem key={list} value={list}>
@@ -556,7 +544,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             <Select
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
-              label="Impact Level"
+              label="Feedback Severity"
             >
               {PRIORIRY.map((level) => (
                 <MenuItem key={level} value={level}>

@@ -215,7 +215,7 @@ const archiveSchema = new mongoose.Schema(
     evaluationScore: {
       type: Number,
       default: 1,
-      required: [true, "Evaluation score is required"],
+      required: [true, "Satisfaction score is required"],
     },
 
   }, { timestamps: true }
