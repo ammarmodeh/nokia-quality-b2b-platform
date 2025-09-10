@@ -1534,7 +1534,7 @@ const TeamsPerformancePage = () => {
                         {team.violationRateAfter}
                       </TableCell>
                       <TableCell align="right" sx={{ color: colors.error, fontWeight: 'bold' }}>
-                        {team.improvementPercentage}%
+                        {team.improvementPercentage.toFixed(1)}%
                       </TableCell>
                       <TableCell sx={{ color: colors.textPrimary }}>
                         {team.mostRecentTrainingDate ? new Date(team.mostRecentTrainingDate).toLocaleDateString() : 'N/A'}

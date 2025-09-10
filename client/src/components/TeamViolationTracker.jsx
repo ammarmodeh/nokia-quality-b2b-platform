@@ -19,6 +19,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     pageSize: 10,
     page: 0,
   });
+  const [evaluationData, setEvaluationData] = useState([]);
 
   // Dialog states
   const [addSessionDialogOpen, setAddSessionDialogOpen] = useState(false);
@@ -29,6 +30,39 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const [selectedTeamForSession, setSelectedTeamForSession] = useState(null);
   const [selectedTeamForAbsence, setSelectedTeamForAbsence] = useState(null);
   const [assessments, setAssessments] = useState([]);
+
+  useEffect(() => {
+    const fetchEvaluationData = async () => {
+      try {
+        const response = await api.get('/quiz-results/teams/evaluation', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        });
+
+        if (response.status === 200) {
+          setEvaluationData(response.data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching evaluation data:', error);
+      }
+    };
+
+    fetchEvaluationData();
+  }, []);
+
+  const getTheoreticalSatisfactionScore = (teamName) => {
+    const teamEvaluation = evaluationData.find(team =>
+      team.teamName === teamName || team.teamId === teamName
+    );
+
+    if (teamEvaluation && teamEvaluation.history && teamEvaluation.history.length > 0) {
+      const latestEvaluation = teamEvaluation.history[0];
+      return latestEvaluation.percentage || 'N/A';
+    }
+
+    return 'N/A';
+  };
 
   useEffect(() => {
     const fetchAssessments = async () => {
@@ -57,7 +91,13 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   }, [fieldTeams, viewSessionsDialogOpen, selectedTeamIdForSession]);
 
   const exportToExcel = () => {
-    const exportData = rows.map(row => {
+    // Enhance rows with theoretical Online Test Score for export
+    const enhancedExportRows = rows.map(row => ({
+      ...row,
+      evaluationScore: getTheoreticalSatisfactionScore(row.teamName)
+    }));
+
+    const exportData = enhancedExportRows.map(row => {
       const team = fieldTeams.find(t => t._id === row.id);
       const allSessions = team?.sessionHistory || [];
 
@@ -95,8 +135,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         'Notes/Comments': row.notes,
         'Team Status': row.validationStatus,
 
-        // 'Evaluated': row.isEvaluated ? 'Yes' : 'No',
-        'Satisfaction Score': row.evaluationScore || 'N/A',
+        'Online Test Score': row.evaluationScore !== 'N/A' ? `${row.evaluationScore}%` : row.evaluationScore, // This will now have the actual score
 
         'OTJ Assessment Result': row.otjAssessmentResult !== 'N/A' ? `${row.otjAssessmentResult}%` : row.otjAssessmentResult,
         'OTJ Assessment Date': row.otjAssessmentDate,
@@ -631,8 +670,8 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           setSearchText={setSearchText}
           exportToExcel={exportToExcel}
           onViolationInfoClick={handleViolationDialogOpen}
-          tasks={tasks}  // Add this line to pass the tasks data
-          fieldTeams={fieldTeams} // Also pass fieldTeams if needed for team names
+          tasks={tasks}
+          fieldTeams={fieldTeams}
         />
 
         <ViolationDataGrid

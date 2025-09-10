@@ -34,12 +34,28 @@ const quizResultSchema = new mongoose.Schema({
     required: true
   },
   userAnswers: [{
-    question: String,
-    options: [String],
-    correctAnswer: String,
-    selectedAnswer: String,
-    isCorrect: Boolean,
-    category: String // Add this line to include the category
+    question: {
+      type: String,
+      required: true
+    },
+    options: [String], // Optional, only for options-type questions
+    correctAnswer: String, // Optional, only for options-type questions
+    selectedAnswer: String, // Optional, only for options-type questions
+    essayAnswer: String, // Optional, for essay-type questions
+    score: {
+      type: Number,
+      default: 0 // Default score of 0 for essay questions
+    },
+    isCorrect: Boolean, // Optional, only for options-type questions
+    category: {
+      type: String,
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ['options', 'essay'],
+      default: 'options' // Default to options for backward compatibility
+    }
   }],
   submittedAt: {
     type: Date,

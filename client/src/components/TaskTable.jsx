@@ -46,7 +46,7 @@ const handleCopyTaskData = (taskData) => {
     Feedback Severity: ${taskData.impactLevel || taskData.priority || 'Not specified'}
     Interview Date: ${new Date(taskData.interviewDate).toLocaleDateString()}
     Week Number: ${getWeekNumberForTaksTable(new Date(taskData.interviewDate))}
-    Team Satisfaction Score: ${taskData.teamData?.evaluationScore || 'N/A'}
+    Team Evaluation Score: ${taskData.teamData?.evaluationScore || 'N/A'}
     Team Status: ${taskData.teamData?.isActive ? 'Active' : 'Inactive'}
     Team Evaluated: ${taskData.teamData?.isEvaluated ? 'Yes' : 'No'}
   `.trim();
@@ -72,7 +72,7 @@ const TaskTable = ({ tasks }) => {
   });
   const [openDialog, setOpenDialog] = useState(false);
   const [teamsData, setTeamsData] = useState([]);
-  // console.log({ teamsData });
+  const [evaluationData, setEvaluationData] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
   const isMobile = useMediaQuery('(max-width:503px)');
@@ -96,6 +96,41 @@ const TaskTable = ({ tasks }) => {
 
     fetchTeamsData();
   }, []);
+
+  // Fetch evaluation data for theoretical satisfaction scores
+  useEffect(() => {
+    const fetchEvaluationData = async () => {
+      try {
+        const response = await api.get('/quiz-results/teams/evaluation', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        });
+
+        if (response.status === 200) {
+          setEvaluationData(response.data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching evaluation data:', error);
+      }
+    };
+
+    fetchEvaluationData();
+  }, []);
+
+  // Function to get theoretical satisfaction score for a team
+  const getTheoreticalSatisfactionScore = (teamName) => {
+    const teamEvaluation = evaluationData.find(team =>
+      team.teamName === teamName || team.teamId === teamName
+    );
+
+    if (teamEvaluation && teamEvaluation.history && teamEvaluation.history.length > 0) {
+      const latestEvaluation = teamEvaluation.history[0];
+      return latestEvaluation.percentage !== null ? `${latestEvaluation.percentage}%` : 'N/A';
+    }
+
+    return 'N/A';
+  };
 
   // Helper function to get team data by ID
   const getTeamData = (teamId) => {
@@ -200,6 +235,9 @@ const TaskTable = ({ tasks }) => {
         // Get team data if available
         const teamData = getTeamData(teamId);
 
+        // Get theoretical satisfaction score
+        const teamEvaluationScore = getTheoreticalSatisfactionScore(task.teamName);
+
         // Initialize session variables
         let lastSession = null;
         let sessionInfo = 'No sessions';
@@ -249,7 +287,7 @@ const TaskTable = ({ tasks }) => {
           pisDate: newFormatDate(task.pisDate?.$date || task.pisDate),
           lastSession: sessionInfo,
           isEvaluated: teamData ? (teamData.isEvaluated ? 'Yes' : 'No') : 'N/A',
-          teamEvaluationScore: teamData?.evaluationScore || 'N/A',
+          teamEvaluationScore: teamEvaluationScore,
           neutrals: stats.neutrals,
           detractors: stats.detractors,
           totalViolations: stats.totalViolations,
@@ -286,15 +324,13 @@ const TaskTable = ({ tasks }) => {
   const filteredTasks = tasks.filter(task => {
     const interviewDate = new Date(task.interviewDate);
     if (isNaN(interviewDate)) {
-      // console.error("Invalid interviewDate for task:", task);
       return false;
     }
 
-    return getWeekNumberForTaksTable(interviewDate) !== null; // Ensures tasks belong to a valid week
+    return getWeekNumberForTaksTable(interviewDate) !== null;
   });
 
   const sortedTasks = filteredTasks.sort((a, b) => new Date(b.interviewDate) - new Date(a.interviewDate));
-  // console.log({ sortedTasks });
 
   const taskColumns = [
     {
@@ -316,7 +352,6 @@ const TaskTable = ({ tasks }) => {
               backgroundColor: 'rgba(62, 166, 255, 0.1)'
             }
           }}
-        // startIcon={<MdRequestPage />}
         >
           {params.value}
         </Button>
@@ -352,7 +387,6 @@ const TaskTable = ({ tasks }) => {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => params.value,
-
     },
     {
       field: "customerFeedback",
@@ -389,8 +423,6 @@ const TaskTable = ({ tasks }) => {
             color,
             fontWeight: "bold"
           }}>
-            {/* <MdAssessment sx={{ mr: 1 }} /> */}
-            {/* {score} ({label}) */}
             {score}
           </Box>
         );
@@ -435,7 +467,6 @@ const TaskTable = ({ tasks }) => {
       headerAlign: 'center',
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {/* <MdGroups sx={{ mr: 1, color: '#9c27b0' }} /> */}
           {params.value}
         </Box>
       )
@@ -448,9 +479,6 @@ const TaskTable = ({ tasks }) => {
       headerAlign: 'center',
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {/* <Box sx={{ mr: 1, color: '#fffff' }}>
-            <MdBusiness />
-          </Box> */}
           {params.value}
         </Box>
       )
@@ -463,34 +491,10 @@ const TaskTable = ({ tasks }) => {
       minWidth: 150,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {/* <Box sx={{ mr: 1, color: '#fffff' }}>
-            <MdDateRange />
-          </Box> */}
           {newFormatDate(params.value)}
         </Box>
       ),
     },
-    // {
-    //   field: "isActive",
-    //   headerName: "Team Status",
-    //   minWidth: 100,
-    //   align: 'center',
-    //   headerAlign: 'center',
-    //   renderCell: (params) => {
-    //     const teamData = getTeamData(params.row.teamId);
-    //     return (
-    //       <Box sx={{
-    //         display: 'flex',
-    //         alignItems: 'center',
-    //         justifyContent: 'center',
-    //         color: teamData?.isActive ? '#4caf50' : '#f44336',
-    //         fontWeight: 'bold'
-    //       }}>
-    //         {teamData ? (teamData.isActive ? 'Active' : 'Inactive') : 'N/A'}
-    //       </Box>
-    //     );
-    //   },
-    // },
     {
       field: "lastSession",
       headerName: "Last Session",
@@ -546,7 +550,7 @@ const TaskTable = ({ tasks }) => {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => {
-        const teamData = getTeamData(params.row.teamId);
+        const teamEvaluationScore = getTheoreticalSatisfactionScore(params.row.teamName);
         return (
           <Box sx={{
             display: 'flex',
@@ -555,7 +559,7 @@ const TaskTable = ({ tasks }) => {
             color: '#ffffff',
             fontWeight: 'bold'
           }}>
-            {teamData?.evaluationScore || 'N/A'}
+            {teamEvaluationScore}
           </Box>
         );
       },
@@ -651,14 +655,13 @@ const TaskTable = ({ tasks }) => {
   ];
 
   // Map tasks correctly with the new week numbering system
-  // Map tasks correctly with the new week numbering system
   const rows = sortedTasks.map((task, index) => ({
     id: index + 1,
     slid: task.slid,
     customerName: task.customerName,
     customerFeedback: task.customerFeedback,
-    impactLevel: task.priority,  // This ensures the field is available as impactLevel
-    priority: task.priority,     // Keep the original field as well for compatibility
+    impactLevel: task.priority,
+    priority: task.priority,
     weekNumber: getWeekNumberForTaksTable(new Date(task.interviewDate)),
     evaluationScore: task.evaluationScore,
     team: task.teamName,
@@ -666,7 +669,6 @@ const TaskTable = ({ tasks }) => {
     pisDate: task.pisDate,
     status: task._id,
     teamId: task.teamId?.$oid || task.teamId,
-    // Add all the fields needed for copying
     contactNumber: task.contactNumber,
     requestNumber: task.requestNumber,
     governorate: task.governorate,
@@ -724,62 +726,61 @@ const TaskTable = ({ tasks }) => {
           disableColumnResize
           pageSizeOptions={[5, 10, 25]}
           paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel} // Handle updates
+          onPaginationModelChange={setPaginationModel}
           disableVirtualization={true}
           sx={{
             border: 0,
-            color: "#ffffff", // Ensure text color is white
+            color: "#ffffff",
             "& .MuiDataGrid-filler": {
-              backgroundColor: "#333", // This changes the filler area color
+              backgroundColor: "#333",
             },
             "& .MuiDataGrid-main": {
-              backgroundColor: "#272727", // Dark background for the entire table
+              backgroundColor: "#272727",
             },
             "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#333", // Darker background for headers
-              color: "#9e9e9e", // Light gray text for headers
-              fontSize: "0.875rem", // Smaller font size for headers
-              fontWeight: "bold", // Bold text for headers
-              borderBottom: "1px solid #444", // Add border below headers
+              backgroundColor: "#333",
+              color: "#9e9e9e",
+              fontSize: "0.875rem",
+              fontWeight: "bold",
+              borderBottom: "1px solid #444",
             },
             "& .MuiDataGrid-columnHeader": {
-              backgroundColor: "#333", // Ensure individual headers also have the dark background
+              backgroundColor: "#333",
             },
             "& .MuiDataGrid-cell": {
-              borderBottom: "1px solid #444", // Add border between rows
+              borderBottom: "1px solid #444",
             },
             "& .MuiDataGrid-row": {
-              backgroundColor: "#272727", // Dark background for rows
+              backgroundColor: "#272727",
               "&:hover": {
-                backgroundColor: "#333", // Darker background on row hover
+                backgroundColor: "#333",
               },
             },
             "& .MuiDataGrid-footerContainer": {
-              minHeight: "64px", // Set the height of the footer
-              backgroundColor: "#333", // Darker background for footer
-              color: "#ffffff", // Ensure text color in footer is white
-              borderTop: "1px solid #444", // Add border above footer
+              minHeight: "64px",
+              backgroundColor: "#333",
+              color: "#ffffff",
+              borderTop: "1px solid #444",
               "& .MuiTablePagination-root": {
-                color: "#ffffff", // Ensure pagination text color is white
+                color: "#ffffff",
               },
             },
             "& .MuiDataGrid-virtualScroller": {
-              overflow: "auto", // Allow scrolling for the body
+              overflow: "auto",
               "&::-webkit-scrollbar": {
-                width: "8px", // Set scrollbar width
-                height: "8px", // Set scrollbar height
+                width: "8px",
+                height: "8px",
               },
               "&::-webkit-scrollbar-thumb": {
-                backgroundColor: "#666", // Dark gray scrollbar thumb
-                borderRadius: "4px", // Rounded corners for the thumb
+                backgroundColor: "#666",
+                borderRadius: "4px",
               },
               "&::-webkit-scrollbar-track": {
-                backgroundColor: "#444", // Dark gray scrollbar track
+                backgroundColor: "#444",
               },
             },
-            // Fix for the white scrollbar filler
             "& .MuiDataGrid-scrollbarFiller": {
-              backgroundColor: "#333", // Match the header background color
+              backgroundColor: "#333",
             },
           }}
         />
@@ -789,14 +790,12 @@ const TaskTable = ({ tasks }) => {
       <Dialog
         open={openDialog}
         onClose={handleClose}
-        // maxWidth="sm"
-        // fullWidth
         fullScreen
         sx={{
           "& .MuiDialog-paper": {
             backgroundColor: '#1e1e1e',
             boxShadow: 'none',
-            borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
+            borderRadius: fullScreen ? '0px' : '8px',
           }
         }}
       >
@@ -1033,7 +1032,7 @@ const DetailRow = ({ label, value }) => (
   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
     <Typography
       variant="body2"
-      component="div" // Add this to change from <p> to <div>
+      component="div"
       sx={{
         fontWeight: '500',
         color: '#aaaaaa'
@@ -1044,7 +1043,7 @@ const DetailRow = ({ label, value }) => (
     {typeof value === 'string' || typeof value === 'number' ? (
       <Typography
         variant="body1"
-        component="div" // Add this to change from <p> to <div>
+        component="div"
         sx={{
           color: '#ffffff',
           wordBreak: 'break-word'
@@ -1053,7 +1052,6 @@ const DetailRow = ({ label, value }) => (
         {value || 'N/A'}
       </Typography>
     ) : (
-      // For non-string values (like the Chip component)
       <Box sx={{ display: 'inline-block' }}>
         {value}
       </Box>

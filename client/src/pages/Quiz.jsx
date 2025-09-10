@@ -10,6 +10,7 @@ const Quiz = () => {
     questions: [],
     currentQuestion: 0,
     selectedOption: '',
+    essayAnswer: '',
     userAnswers: [],
     teamName: '',
     teamCompany: '',
@@ -21,31 +22,23 @@ const Quiz = () => {
   });
 
   useEffect(() => {
-    // Security measures
+    // Security measures (unchanged)
     const preventDefault = (e) => {
       e.preventDefault();
       return false;
     };
 
-    // Prevent right-click context menu
     document.addEventListener('contextmenu', preventDefault);
-
-    // Prevent copy/cut
     document.addEventListener('copy', preventDefault);
     document.addEventListener('cut', preventDefault);
-
-    // Prevent drag start
     document.addEventListener('dragstart', preventDefault);
 
-    // Prevent keyboard shortcuts
     const handleKeyDown = (e) => {
       if (e.ctrlKey && (e.key === 'c' || e.key === 'C' ||
         e.key === 'x' || e.key === 'X' ||
         e.key === 'a' || e.key === 'A')) {
         preventDefault(e);
       }
-
-      // Disable F12 and other dev tools shortcuts
       if (e.key === 'F12' ||
         (e.ctrlKey && e.shiftKey && e.key === 'I') ||
         (e.ctrlKey && e.shiftKey && e.key === 'J') ||
@@ -55,7 +48,6 @@ const Quiz = () => {
     };
     document.addEventListener('keydown', handleKeyDown);
 
-    // Blur content when window loses focus
     const handleBlur = () => {
       document.body.style.filter = 'blur(5px)';
       setTimeout(() => document.body.style.filter = '', 1000);
@@ -83,9 +75,9 @@ const Quiz = () => {
     const loadQuestions = async () => {
       try {
         const response = await api.get('/quiz/questions');
-        // Initialize userAnswers array with empty objects that include category
         const initialUserAnswers = response.data.map(question => ({
-          category: question.category // Include category in initial state
+          category: question.category,
+          type: question.type || 'options'
         }));
         setQuizState(prev => ({
           ...prev,
@@ -100,7 +92,6 @@ const Quiz = () => {
     loadQuestions();
 
     return () => {
-      // Cleanup all event listeners
       document.removeEventListener('contextmenu', preventDefault);
       document.removeEventListener('copy', preventDefault);
       document.removeEventListener('cut', preventDefault);
@@ -115,6 +106,7 @@ const Quiz = () => {
     setQuizState(prev => {
       const updatedUserAnswers = [...prev.userAnswers];
       updatedUserAnswers[prev.currentQuestion] = {
+        ...updatedUserAnswers[prev.currentQuestion],
         selectedAnswer: value,
         isCorrect: value === prev.questions[prev.currentQuestion].correctAnswer
       };
@@ -122,6 +114,24 @@ const Quiz = () => {
       return {
         ...prev,
         selectedOption: value,
+        userAnswers: updatedUserAnswers
+      };
+    });
+  };
+
+  const handleEssayChange = (e) => {
+    const { value } = e.target;
+    setQuizState(prev => {
+      const updatedUserAnswers = [...prev.userAnswers];
+      updatedUserAnswers[prev.currentQuestion] = {
+        ...updatedUserAnswers[prev.currentQuestion],
+        essayAnswer: value,
+        score: 0
+      };
+
+      return {
+        ...prev,
+        essayAnswer: value,
         userAnswers: updatedUserAnswers
       };
     });
@@ -136,7 +146,8 @@ const Quiz = () => {
       setQuizState(prev => ({
         ...prev,
         currentQuestion: prev.currentQuestion + 1,
-        selectedOption: prev.userAnswers[prev.currentQuestion + 1]?.selectedAnswer || ''
+        selectedOption: prev.userAnswers[prev.currentQuestion + 1]?.selectedAnswer || '',
+        essayAnswer: prev.userAnswers[prev.currentQuestion + 1]?.essayAnswer || ''
       }));
     } else {
       const confirmSubmit = window.confirm('هل أنت متأكد أنك تريد إنهاء الاختبار؟ لا يمكنك العودة بعد الإرسال.');
@@ -150,43 +161,42 @@ const Quiz = () => {
     if (quizState.hasSubmitted) return;
     setQuizState(prev => ({ ...prev, hasSubmitted: true }));
 
-    // console.log({ quizState });
-
+    // Calculate score only for options-type questions
     const finalScore = userAnswers.reduce((score, answer, index) => {
+      if (quizState.questions[index].type === 'essay') return score; // Essay questions contribute 0 to score
       return answer.isCorrect ? score + 1 : score;
     }, 0);
 
-    const percentage = Math.round((finalScore / quizState.questions.length) * 100);
-    const result = `${finalScore}/${quizState.questions.length} ${percentage}%`;
+    // Count all questions (options and essay)
+    const totalQuestions = quizState.questions.length;
+    const percentage = totalQuestions > 0 ? Math.round((finalScore / totalQuestions) * 100) : 0;
+    const result = `${finalScore}/${totalQuestions} ${percentage}%`;
 
-    // Prepare data for both old and new systems
     const resultsData = {
       teamId: quizState.teamId,
       teamName: quizState.teamName,
       teamCompany: quizState.teamCompany,
       quizCode: quizState.quizCode,
       correctAnswers: finalScore,
-      totalQuestions: quizState.questions.length,
+      totalQuestions: totalQuestions,
       userAnswers: userAnswers.map((answer, index) => ({
         question: quizState.questions[index].question,
         options: quizState.questions[index].options,
         correctAnswer: quizState.questions[index].correctAnswer,
         selectedAnswer: answer.selectedAnswer,
+        essayAnswer: answer.essayAnswer,
+        score: answer.score || 0,
         isCorrect: answer.isCorrect,
-        category: quizState.questions[index].category // Include category information
+        category: quizState.questions[index].category,
+        type: quizState.questions[index].type || 'options'
       })),
       questions: quizState.questions,
       percentage,
       score: result
     };
 
-    // console.log({ resultsData });
-
     try {
-      // First save detailed results to the new system
       await api.post('/quiz-results', resultsData);
-
-      // Then update the field team score in the old system (maintain backward compatibility)
       await api.post('/field-teams/update-score', {
         teamId: quizState.teamId,
         quizCode: quizState.quizCode,
@@ -199,12 +209,10 @@ const Quiz = () => {
       });
     } catch (error) {
       console.error('Error saving results:', error);
-
-      // Fallback to session storage if API calls fail
       sessionStorage.setItem('quizResultsFallback', JSON.stringify({
         teamName: quizState.teamName,
         correctAnswers: finalScore,
-        totalQuestions: quizState.questions.length,
+        totalQuestions: totalQuestions,
         userAnswers: userAnswers,
         questions: quizState.questions,
         percentage
@@ -226,10 +234,9 @@ const Quiz = () => {
     );
   }
 
-  const { questions, currentQuestion, selectedOption, teamName, userAnswers } = quizState;
+  const { questions, currentQuestion, selectedOption, essayAnswer, teamName, userAnswers } = quizState;
   const currentQ = questions[currentQuestion];
 
-  // CSS styles to prevent text selection
   const quizStyles = {
     userSelect: 'none',
     WebkitUserSelect: 'none',
@@ -262,20 +269,35 @@ const Quiz = () => {
       <div className="max-w-[1000px] mx-auto">
         <h3 className="text-2xl font-bold text-white mb-4">{currentQ.question}</h3>
 
-        {currentQ.options.map((option, index) => (
-          <div key={index} className="mb-2">
-            <label className="flex items-center bg-[#1e1e1e] p-3 rounded border border-[#444] hover:border-[#3ea6ff]">
-              <input
-                type="radio"
-                value={option}
-                checked={selectedOption === option}
-                onChange={handleOptionChange}
-                className="ml-2"
-              />
-              <span className="text-white">{option}</span>
-            </label>
+        {currentQ.type === 'essay' ? (
+          <div className="mb-4">
+            {currentQ.guideline && (
+              <p className="text-gray-400 mb-2">الإرشادات: {currentQ.guideline}</p>
+            )}
+            <textarea
+              className="w-full p-3 bg-[#1e1e1e] text-white rounded border border-[#444] focus:border-[#3ea6ff]"
+              rows="6"
+              value={essayAnswer}
+              onChange={handleEssayChange}
+              placeholder="اكتب إجابتك هنا..."
+            />
           </div>
-        ))}
+        ) : (
+          currentQ.options.map((option, index) => (
+            <div key={index} className="mb-2">
+              <label className="flex items-center bg-[#1e1e1e] p-3 rounded border border-[#444] hover:border-[#3ea6ff]">
+                <input
+                  type="radio"
+                  value={option}
+                  checked={selectedOption === option}
+                  onChange={handleOptionChange}
+                  className="ml-2"
+                />
+                <span className="text-white">{option}</span>
+              </label>
+            </div>
+          ))
+        )}
 
         <div className="flex justify-between gap-2 mt-4">
           <button
@@ -290,7 +312,8 @@ const Quiz = () => {
               setQuizState(prev => ({
                 ...prev,
                 currentQuestion: prev.currentQuestion - 1,
-                selectedOption: prev.userAnswers[prev.currentQuestion - 1]?.selectedAnswer || ''
+                selectedOption: prev.userAnswers[prev.currentQuestion - 1]?.selectedAnswer || '',
+                essayAnswer: prev.userAnswers[prev.currentQuestion - 1]?.essayAnswer || ''
               }));
             }}
             disabled={currentQuestion === 0}

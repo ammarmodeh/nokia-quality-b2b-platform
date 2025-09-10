@@ -21,8 +21,6 @@ dotenv.config();
 const corsOptions = {
   origin: [
     // "http://localhost:3000", // For local development
-    // "https://nokia-jo-qos-platform.netlify.app", // For production on Netlify
-    // "https://nokia-quality-b2b-platform-bfrq-kuo8m1lfn.vercel.app",
     "https://nokia-quality-b2b-platform-bfrq.vercel.app"
   ],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
@@ -55,8 +53,8 @@ app.use("/api/customer-issues-notifications", customerIssueRoutes);
 app.use("/api/suggestions", suggestionsRoutes);
 app.use("/api/policies", policyRoutes);
 
-// const PORT = process.env.PORT || 5001;
-// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // This export is used to export the app object, which is the main entry point for your Express application.
 export default app;

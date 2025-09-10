@@ -1,28 +1,13 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Box, TextField, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Divider, Tooltip, Typography, IconButton,
-  useMediaQuery,
-  List,
-  ListItem,
-  ListItemText,
-  Chip,
+  useMediaQuery, List, ListItem, ListItemText, Chip,
 } from '@mui/material';
 import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  PauseCircleOutline as PauseCircleOutlineIcon,
-  Block as BlockIcon,
-  PlayCircleOutline as PlayCircleOutlineIcon,
-  BeachAccess as BeachAccessIcon,
-  CheckCircleOutline as CheckCircleOutlineIcon,
-  Cancel as CancelIcon,
-  CancelOutlined as CancelOutlinedIcon,
-  History as HistoryIcon,
-  Phone as PhoneIcon,
-  DeviceHub as DeviceHubIcon,
-  Laptop as LaptopIcon,
-  CheckCircle as CheckCircleIcon,
-  TaskAlt as TaskAltIcon,
+  Edit as EditIcon, Delete as DeleteIcon, PauseCircleOutline as PauseCircleOutlineIcon, Block as BlockIcon,
+  PlayCircleOutline as PlayCircleOutlineIcon, BeachAccess as BeachAccessIcon, CheckCircleOutline as CheckCircleOutlineIcon,
+  Cancel as CancelIcon, CancelOutlined as CancelOutlinedIcon, History as HistoryIcon, Phone as PhoneIcon,
+  DeviceHub as DeviceHubIcon, Laptop as LaptopIcon, CheckCircle as CheckCircleIcon, TaskAlt as TaskAltIcon,
   Pending as PendingIcon,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
@@ -54,7 +39,6 @@ const FieldTeamForm = () => {
   const [openTerminateDialog, setOpenTerminateDialog] = useState(false);
   const [openReactivateDialog, setOpenReactivateDialog] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState(null);
-  // console.log({ selectedTeamId });
   const [updateTeamStatus, setUpdateTeamStatus] = useState(false);
   const [openLogsDialog, setOpenLogsDialog] = useState(false);
   const [selectedLogs, setSelectedLogs] = useState([]);
@@ -74,9 +58,9 @@ const FieldTeamForm = () => {
     try {
       const formData = {
         teamName: [data.firstName, data.secondName, data.thirdName, data.surname]
-          .filter(Boolean) // Remove empty strings
-          .join(' ') // Join with a single space
-          .trim(), // Trim any leading or trailing spaces
+          .filter(Boolean)
+          .join(' ')
+          .trim(),
         teamCompany: data.teamCompany,
         contactNumber: data.contactNumber,
         fsmSerialNumber: data.fsmSerialNumber || 'N/A',
@@ -91,41 +75,61 @@ const FieldTeamForm = () => {
 
       if (response.status === 201) {
         alert('Team information submitted successfully!');
-        setUpdateState((prev) => !prev); // Refresh the teams list
+        setUpdateState((prev) => !prev);
       } else {
         setErrorMessage('There was an error submitting the information.');
       }
     } catch (error) {
-      // console.error('Error:', error);
       setErrorMessage('There was an error submitting the information.');
     }
   };
 
-  // Fetch teams
+  // Fetch teams and evaluation data
   useEffect(() => {
-    const fetchTeams = async () => {
+    const fetchTeamsAndEvaluations = async () => {
+      setLoading(true);
       try {
-        const response = await api.get('/field-teams/get-field-teams', {
+        // Fetch FieldTeams
+        const teamsResponse = await api.get('/field-teams/get-field-teams', {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
           },
         });
 
-        if (response.status === 200) {
-          setTeams(response.data.map(team => ({
-            ...team,
-            evaluationScore: team.evaluationScore || 0,
-            isEvaluated: team.isEvaluated || false,
-          })));
+        // Fetch Evaluation Data
+        const evalResponse = await api.get('/quiz-results/teams/evaluation', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        });
+
+        if (teamsResponse.status === 200 && evalResponse.status === 200) {
+          const evalData = evalResponse.data.data;
+          const updatedTeams = teamsResponse.data.map(team => {
+            const evalTeam = evalData.find(e => e.teamId === team._id) || {};
+            const history = evalTeam.history || [];
+            const latestEval = history.length > 0 ? history[0] : null;
+            return {
+              ...team,
+              evaluationScore: team.evaluationScore || 0,
+              isEvaluated: team.isEvaluated || !!latestEval,
+              lastEvaluationDate: latestEval ? new Date(latestEval.submittedAt) : team.lastEvaluationDate,
+              quizCode: latestEval ? latestEval.quizCode : team.quizCode,
+              evaluationHistory: history,
+            };
+          });
+          setTeams(updatedTeams);
         } else {
-          // console.error('Failed to fetch teams');
+          setErrorMessage('Failed to fetch teams or evaluation data');
         }
       } catch (error) {
-        // console.error('Error fetching teams:', error);
+        setErrorMessage('Error fetching data: ' + error.message);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchTeams();
+    fetchTeamsAndEvaluations();
   }, [stateUpdate, updateTeamStatus]);
 
   // Handle edit click
@@ -147,12 +151,11 @@ const FieldTeamForm = () => {
       );
 
       if (response.status === 200) {
-        setUpdateState((prev) => !prev); // Refresh the teams list
+        setUpdateState((prev) => !prev);
       } else {
         alert('Failed to update quiz permission');
       }
     } catch (error) {
-      // console.error('Error toggling quiz permission:', error);
       alert('An error occurred while updating quiz permission');
     }
   }, []);
@@ -175,7 +178,6 @@ const FieldTeamForm = () => {
         alert('Failed to delete the team.');
       }
     } catch (error) {
-      // console.error('Error deleting team:', error);
       alert('An error occurred while deleting the team.');
     }
   }, []);
@@ -197,7 +199,6 @@ const FieldTeamForm = () => {
     };
 
     try {
-      // Step 1: Update the FieldTeams document
       const response = await api.put(`/field-teams/update-field-team/${editTeam._id}`, updatedData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
@@ -205,7 +206,6 @@ const FieldTeamForm = () => {
       });
 
       if (response.status === 200) {
-        // Step 2: Update all Task documents with the matching teamId
         try {
           const updateTasksResponse = await api.put(
             `/tasks/update-tasks-by-team-id/${editTeam._id}`,
@@ -217,7 +217,6 @@ const FieldTeamForm = () => {
             }
           );
 
-          // This will now succeed even if no tasks were found
           alert('Team information updated successfully!' +
             (updateTasksResponse.data.updatedCount > 0
               ? ` ${updateTasksResponse.data.updatedCount} related tasks were also updated.`
@@ -227,15 +226,12 @@ const FieldTeamForm = () => {
           setUpdateState((prev) => !prev);
           setOpenEditDialog(false);
         } catch (taskError) {
-          // This will only catch actual errors, not the "no tasks" case
-          // console.error('Task update error:', taskError);
           alert('Team information updated successfully, but there was an error updating related tasks.');
         }
       } else {
         setErrorMessage('There was an error updating the information.');
       }
     } catch (error) {
-      // console.error('Error:', error);
       setErrorMessage('There was an error updating the information.');
     } finally {
       setLoading(false);
@@ -252,8 +248,9 @@ const FieldTeamForm = () => {
       LaptopSerialNumber: team.laptopSerialNumber,
       EvaluationScore: team.evaluationScore || 0,
       IsEvaluated: team.isEvaluated ? 'Yes' : 'No',
-      LastEvaluationDate: team.lastEvaluationDate ? new Date(team.lastEvaluationDate).toLocaleDateString() : '',
-      quizCode: team.quizCode,
+      LastEvaluationDate: team.lastEvaluationDate ? new Date(team.lastEvaluationDate).toLocaleDateString() : 'Never',
+      LatestEvaluationPercentage: team.evaluationHistory?.[0]?.percentage || 'N/A',
+      QuizCode: team.quizCode || 'N/A',
       IsSuspended: team.isSuspended ? 'Yes' : 'No',
       SuspensionDuration: team.suspensionDuration || '',
       SuspensionReason: team.suspensionReason || '',
@@ -270,25 +267,16 @@ const FieldTeamForm = () => {
   }, [teams]);
 
   // Handle view history click
-  const handleViewHistoryClick = useCallback(async (teamId) => {
-    try {
-      const response = await api.get(`/field-teams/get-evaluation-history/${teamId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
-      if (response.status === 200) {
-        setEvaluationHistory(response.data);
-        setSelectedTeamId(teamId);
-        setOpenHistoryDialog(true);
-      } else {
-        alert('Failed to fetch evaluation history');
-      }
-    } catch (error) {
-      // console.error('Error fetching evaluation history:', error);
-      alert('Error fetching evaluation history');
+  const handleViewHistoryClick = useCallback((teamId) => {
+    const team = teams.find(t => t._id === teamId);
+    if (team && team.evaluationHistory) {
+      setEvaluationHistory(team.evaluationHistory);
+      setSelectedTeamId(teamId);
+      setOpenHistoryDialog(true);
+    } else {
+      alert('No evaluation history available for this team.');
     }
-  }, []);
+  }, [teams]);
 
   // Handle suspend, terminate, reactivate, on leave, and resigned clicks
   const handleSuspendClick = useCallback((teamId) => {
@@ -337,7 +325,6 @@ const FieldTeamForm = () => {
         alert('Failed to mark team as on leave.');
       }
     } catch (error) {
-      // console.error('Error marking team as on leave:', error);
       alert('An error occurred while marking the team as on leave.');
     }
   }, [leaveReason, leaveStartDate, leaveEndDate, selectedTeamId]);
@@ -360,7 +347,6 @@ const FieldTeamForm = () => {
         alert('Failed to mark team as resigned.');
       }
     } catch (error) {
-      // console.error('Error marking team as resigned:', error);
       alert('An error occurred while marking the team as resigned.');
     }
   }, [resignationReason, selectedTeamId]);
@@ -396,7 +382,6 @@ const FieldTeamForm = () => {
       team.teamName && team.teamName.toLowerCase().includes(searchText.toLowerCase())
     );
   }, [teams, searchText]);
-  // console.log({ filteredTeams });
 
   // Columns for DataGrid
   const columns = useMemo(() => [
@@ -409,7 +394,6 @@ const FieldTeamForm = () => {
       headerAlign: 'center',
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          {/* <GroupsIcon fontSize="small" sx={{ mr: 1, color: '#3ea6ff' }} /> */}
           <Typography variant="body2">{params.value}</Typography>
         </Box>
       ),
@@ -424,7 +408,6 @@ const FieldTeamForm = () => {
       headerAlign: 'center',
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          {/* <BusinessIcon fontSize="small" sx={{ mr: 1, color: '#9c27b0' }} /> */}
           <Typography variant="body2">{params.value}</Typography>
         </Box>
       ),
@@ -475,31 +458,7 @@ const FieldTeamForm = () => {
       ),
       minWidth: 200,
     },
-    {
-      field: 'evaluationScore',
-      headerName: 'Satisfaction Score',
-      flex: 1,
-      headerClassName: 'dark-header',
-      type: 'number',
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => {
-        const score = params.value;
-        let color = '#f44336'; // Red for low scores
-        if (score >= 7) color = '#ff9800'; // Orange for medium
-        if (score >= 9) color = '#4caf50'; // Green for high
-
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            {/* <AssessmentIcon fontSize="small" sx={{ mr: 1, color }} /> */}
-            <Typography variant="body2" sx={{ color }}>
-              {score || 'N/A'}
-            </Typography>
-          </Box>
-        );
-      },
-      minWidth: 120,
-    },
+    // REMOVED the evaluationScore column
     {
       field: 'isEvaluated',
       headerName: 'Evaluated',
@@ -530,24 +489,29 @@ const FieldTeamForm = () => {
       minWidth: 120,
     },
     {
-      field: 'lastEvaluationDate',
-      headerName: 'Last Evaluation',
-      minWidth: 100,
+      field: 'lastEvaluation',
+      headerName: 'Latest Evaluation',
+      flex: 1,
       headerClassName: 'dark-header',
       align: 'center',
       headerAlign: 'center',
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          {/* <EventIcon fontSize="small" sx={{ mr: 1, color: '#2196f3' }} /> */}
-          <Typography variant="body2">
-            {params.value ? new Date(params.value).toLocaleDateString() : 'Never'}
-          </Typography>
-        </Box>
-      ),
+      renderCell: (params) => {
+        const latestEval = params.row.evaluationHistory?.[0];
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <Typography variant="body2">
+              {latestEval
+                ? `${latestEval.percentage}% (${new Date(latestEval.submittedAt).toLocaleDateString()})`
+                : 'Never'}
+            </Typography>
+          </Box>
+        );
+      },
+      minWidth: 150,
     },
     {
       field: 'viewHistory',
-      headerName: 'Team EvaluationHistory',
+      headerName: 'Evaluation History',
       flex: 1,
       align: 'center',
       headerAlign: 'center',
@@ -578,7 +542,8 @@ const FieldTeamForm = () => {
       headerAlign: 'center',
       renderCell: (params) => (
         <Box sx={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%',
+          display: 'flex',
+          alignItems: 'center',
           color: params.value ? '#4caf50' : '#f44336'
         }}>
           {params.value ? (
@@ -626,7 +591,6 @@ const FieldTeamForm = () => {
           headerAlign: 'center',
           renderCell: (params) => (
             <Stack direction="row" spacing={1} height="100%" justifyContent="center" alignItems="center">
-              {/* Edit */}
               <Tooltip title="Edit">
                 <span>
                   <IconButton
@@ -642,10 +606,8 @@ const FieldTeamForm = () => {
                   </IconButton>
                 </span>
               </Tooltip>
-
-              {/* Delete */}
-              <span>
-                <Tooltip title="Delete">
+              <Tooltip title="Delete">
+                <span>
                   <IconButton
                     color="error"
                     onClick={() => handleDeleteClick(params.row._id)}
@@ -657,12 +619,10 @@ const FieldTeamForm = () => {
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
-                </Tooltip>
-              </span>
-
-              {/* Suspend */}
-              <span>
-                <Tooltip title="Suspend">
+                </span>
+              </Tooltip>
+              <Tooltip title="Suspend">
+                <span>
                   <IconButton
                     color="warning"
                     disabled={user.role !== 'Admin'}
@@ -674,12 +634,10 @@ const FieldTeamForm = () => {
                   >
                     <PauseCircleOutlineIcon fontSize="small" />
                   </IconButton>
-                </Tooltip>
-              </span>
-
-              {/* Terminate */}
-              <span>
-                <Tooltip title="Terminate">
+                </span>
+              </Tooltip>
+              <Tooltip title="Terminate">
+                <span>
                   <IconButton
                     color="error"
                     disabled={user.role !== 'Admin'}
@@ -691,12 +649,10 @@ const FieldTeamForm = () => {
                   >
                     <BlockIcon fontSize="small" />
                   </IconButton>
-                </Tooltip>
-              </span>
-
-              {/* Reactivate */}
-              <span>
-                <Tooltip title="Reactivate">
+                </span>
+              </Tooltip>
+              <Tooltip title="Reactivate">
+                <span>
                   <IconButton
                     color="success"
                     disabled={user.role !== 'Admin'}
@@ -708,12 +664,10 @@ const FieldTeamForm = () => {
                   >
                     <PlayCircleOutlineIcon fontSize="small" />
                   </IconButton>
-                </Tooltip>
-              </span>
-
-              {/* On Leave */}
-              <span>
-                <Tooltip title="On Leave">
+                </span>
+              </Tooltip>
+              <Tooltip title="On Leave">
+                <span>
                   <IconButton
                     color="info"
                     disabled={user.role !== 'Admin'}
@@ -725,12 +679,10 @@ const FieldTeamForm = () => {
                   >
                     <BeachAccessIcon fontSize="small" />
                   </IconButton>
-                </Tooltip>
-              </span>
-
-              {/* Resigned */}
-              <span>
-                <Tooltip title="Resigned">
+                </span>
+              </Tooltip>
+              <Tooltip title="Resigned">
+                <span>
                   <IconButton
                     color="secondary"
                     disabled={user.role !== 'Admin'}
@@ -742,12 +694,10 @@ const FieldTeamForm = () => {
                   >
                     <FaSignOutAlt fontSize="small" />
                   </IconButton>
-                </Tooltip>
-              </span>
-
-              {/* Quiz Permission Toggle */}
-              <span>
-                <Tooltip title={params.row.canTakeQuiz ? "Disallow Quiz" : "Allow Quiz"}>
+                </span>
+              </Tooltip>
+              <Tooltip title={params.row.canTakeQuiz ? "Disallow Quiz" : "Allow Quiz"}>
+                <span>
                   <IconButton
                     color={params.row.canTakeQuiz ? "success" : "error"}
                     disabled={user.role !== 'Admin'}
@@ -769,11 +719,11 @@ const FieldTeamForm = () => {
                       <CancelIcon fontSize="small" />
                     )}
                   </IconButton>
-                </Tooltip>
-              </span>
+                </span>
+              </Tooltip>
             </Stack>
           ),
-          minWidth: 400, // Reduced from 700 since icons take less space
+          minWidth: 400,
         },
       ]
       : []),
@@ -837,12 +787,10 @@ const FieldTeamForm = () => {
       }}
     >
       <Box sx={{ backgroundColor: '#121212', minHeight: '100vh', py: 3, color: '#ffffff' }}>
-        {/* Add Team Form */}
+        {loading && <Typography>Loading...</Typography>}
+        {errorMessage && <Typography color="error">{errorMessage}</Typography>}
         <AddTeamForm onSubmit={handleAddTeam} errorMessage={errorMessage} user={user} />
-
         <Divider sx={{ my: 4, backgroundColor: '#444' }} />
-
-        {/* MUI Table */}
         <Box sx={{ mt: 4 }}>
           <Stack direction="row" flexDirection={'row'} justifyContent="space-between" gap={2} alignItems="center" sx={{ mb: 2 }}>
             <Box
@@ -933,13 +881,12 @@ const FieldTeamForm = () => {
             <DataGrid
               rows={filteredTeams}
               columns={columns}
-              getRowId={(row) => row.teamName}
+              getRowId={(row) => row._id} // Changed to use _id for unique row ID
               pageSizeOptions={[5, 10, 25]}
               paginationModel={paginationModel}
               onPaginationModelChange={setPaginationModel}
               checkboxSelection
               disableRowSelectionOnClick
-              // disableVirtualization
               sx={{
                 flex: 1,
                 width: '100%',
@@ -1045,7 +992,7 @@ const FieldTeamForm = () => {
           onClose={() => setOpenHistoryDialog(false)}
           fullScreen={isMobile}
           fullWidth
-          maxWidth="md"
+          maxWidth="md" // Reduced from lg to md since we're showing less information
           sx={{
             "& .MuiDialog-paper": {
               backgroundColor: '#1e1e1e',
@@ -1053,7 +1000,7 @@ const FieldTeamForm = () => {
               borderRadius: isMobile ? 0 : '8px',
               border: isMobile ? 'none' : '1px solid #444',
               margin: 0,
-              width: isMobile ? '100%' : '70%',
+              width: isMobile ? '100%' : '60%', // Reduced width
               maxWidth: '100%'
             }
           }}
@@ -1089,36 +1036,40 @@ const FieldTeamForm = () => {
               <Typography variant="body1" sx={{ color: '#aaaaaa' }}>No evaluation history available</Typography>
             ) : (
               <List sx={{ width: '100%' }}>
-                {evaluationHistory.map((evaluation, index) => (
-                  <ListItem key={index} sx={{
+                {evaluationHistory.map((quiz, index) => (
+                  <ListItem key={quiz._id} sx={{
                     padding: isMobile ? '8px 0' : '12px 0',
-                    borderBottom: index < evaluationHistory.length - 1 ? '1px solid #444' : 'none'
+                    borderBottom: index < evaluationHistory.length - 1 ? '1px solid #444' : 'none',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start'
                   }}>
                     <ListItemText
                       primary={
                         <Typography variant={isMobile ? "body2" : "body1"} sx={{ color: '#ffffff' }}>
-                          {new Date(evaluation.date).toLocaleString()}
+                          {new Date(quiz.submittedAt).toLocaleString()}
                         </Typography>
                       }
                       secondary={
-                        <Typography
-                          variant={isMobile ? "caption" : "body2"}
-                          component="span" // Add this to prevent using <p> tag
-                          sx={{ color: '#aaaaaa', mt: 1 }}
-                        >
-                          Score: <Chip
-                            label={evaluation.score}
-                            size={isMobile ? "small" : "medium"}
-                            sx={{
-                              backgroundColor: evaluation.score >= 9 ? '#4caf50' :
-                                evaluation.score >= 7 ? '#9e9e9e' : '#f44336',
-                              color: '#ffffff',
-                              fontWeight: 'bold',
-                              ml: 1,
-                              fontSize: isMobile ? '0.75rem' : '0.875rem'
-                            }}
-                          />
-                        </Typography>
+                        <Box sx={{ mt: 1 }}>
+                          <Typography
+                            variant={isMobile ? "caption" : "body2"}
+                            component="span"
+                            sx={{ color: '#aaaaaa' }}
+                          >
+                            Score: <Chip
+                              label={`${quiz.score} (${quiz.percentage}%)`}
+                              size={isMobile ? "small" : "medium"}
+                              sx={{
+                                backgroundColor: quiz.percentage >= 90 ? '#4caf50' :
+                                  quiz.percentage >= 70 ? '#ff9800' : '#f44336',
+                                color: '#ffffff',
+                                fontWeight: 'bold',
+                                ml: 1,
+                                fontSize: isMobile ? '0.75rem' : '0.875rem'
+                              }}
+                            />
+                          </Typography>
+                        </Box>
                       }
                     />
                   </ListItem>
@@ -1199,7 +1150,7 @@ const FieldTeamForm = () => {
             ) : (
               <List>
                 {selectedLogs.map((log, index) => (
-                  <Box key={log._id.$oid || index} sx={{ mb: isMobile ? 2 : 3 }}>
+                  <Box key={log._id?.$oid || index} sx={{ mb: isMobile ? 2 : 3 }}>
                     <Box sx={{
                       backgroundColor: '#272727',
                       p: isMobile ? 1.5 : 2,

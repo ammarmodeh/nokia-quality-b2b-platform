@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   DataGrid,
   GridToolbarContainer,
@@ -24,6 +24,7 @@ import {
 import { newFormatDate } from "../utils/helpers";
 import TeamStatusBadge from "./ViolationTeamStatusBadge";
 import ViolationThresholdBadge from "./ViolationThresholdBadge";
+import api from "../api/api"; // Import your API instance
 
 const CustomToolbar = () => {
   return (
@@ -44,8 +45,58 @@ const ViolationDataGrid = ({
   onViewSessionsClick,
   onReportAbsenceClick,
 }) => {
-
   const isMobile = useMediaQuery('(max-width:503px)');
+  const [evaluationData, setEvaluationData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch evaluation data
+  useEffect(() => {
+    const fetchEvaluationData = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get('/quiz-results/teams/evaluation', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        });
+
+        if (response.status === 200) {
+          setEvaluationData(response.data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching evaluation data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvaluationData();
+  }, []);
+
+  // Function to get theoretical Online Test Score for a team
+  const getTheoreticalSatisfactionScore = (teamName) => {
+    const teamEvaluation = evaluationData.find(team =>
+      team.teamName === teamName || team.teamId === teamName
+    );
+
+    if (teamEvaluation && teamEvaluation.history && teamEvaluation.history.length > 0) {
+      // Get the latest Online Test Score
+      const latestEvaluation = teamEvaluation.history[0];
+      return latestEvaluation.percentage || 'N/A';
+    }
+
+    return 'N/A';
+  };
+
+  // Enhance rows with theoretical Online Test Score
+  const enhancedRows = useMemo(() => {
+    if (!rows || rows.length === 0) return [];
+
+    return rows.map(row => ({
+      ...row,
+      evaluationScore: getTheoreticalSatisfactionScore(row.teamName)
+    }));
+  }, [rows, evaluationData]);
 
   const columns = useMemo(() => [
     {
@@ -220,10 +271,18 @@ const ViolationDataGrid = ({
     },
     {
       field: "evaluationScore",
-      headerName: "Theoretical Satisfaction Score",
+      headerName: "Online Test Score",
       width: 100,
       renderCell: (params) => (
-        <Box>{params.value || 'N/A'}</Box>
+        <Box sx={{
+          fontWeight: 'bold',
+          color: params.value === 'N/A' ? '#aaaaaa' :
+            params.value >= 90 ? '#04970a' :
+              params.value >= 75 ? '#4CAF50' :
+                params.value >= 55 ? '#FFC107' : '#f44336'
+        }}>
+          {params.value !== 'N/A' ? `${params.value}%` : params.value}
+        </Box>
       )
     },
     {
@@ -402,15 +461,21 @@ const ViolationDataGrid = ({
 
   // Calculate statistics
   const calculateStats = () => {
-    if (!rows || rows.length === 0) return {};
+    if (!enhancedRows || enhancedRows.length === 0) return {};
 
-    const totalTeams = rows.length;
-    const trainedTeams = rows.filter(row => row.hasTraining).length;
+    const totalTeams = enhancedRows.length;
+    const trainedTeams = enhancedRows.filter(row => row.hasTraining).length;
     const nonTrainedTeams = totalTeams - trainedTeams;
 
-    const violatedTeams = rows.filter(row => row.equivalentDetractorCount >= 3).length;
-    const warningTeams = rows.filter(row => row.equivalentDetractorCount === 2).length;
-    const okTeams = rows.filter(row => row.equivalentDetractorCount <= 1).length;
+    const violatedTeams = enhancedRows.filter(row => row.equivalentDetractorCount >= 3).length;
+    const warningTeams = enhancedRows.filter(row => row.equivalentDetractorCount === 2).length;
+    const okTeams = enhancedRows.filter(row => row.equivalentDetractorCount <= 1).length;
+
+    // Calculate average theoretical Online Test Score
+    const teamsWithScore = enhancedRows.filter(row => row.evaluationScore !== 'N/A');
+    const avgSatisfactionScore = teamsWithScore.length > 0
+      ? Math.round(teamsWithScore.reduce((sum, row) => sum + parseInt(row.evaluationScore), 0) / teamsWithScore.length)
+      : 'N/A';
 
     return {
       totalTeams,
@@ -424,6 +489,7 @@ const ViolationDataGrid = ({
       violatedPercent: totalTeams > 0 ? Math.round((violatedTeams / totalTeams) * 100) : 0,
       warningPercent: totalTeams > 0 ? Math.round((warningTeams / totalTeams) * 100) : 0,
       okPercent: totalTeams > 0 ? Math.round((okTeams / totalTeams) * 100) : 0,
+      avgSatisfactionScore
     };
   };
 
@@ -433,7 +499,7 @@ const ViolationDataGrid = ({
     <Box sx={{ width: "100%" }}>
       <Paper sx={{ height: 400, width: "100%", backgroundColor: "#272727", mb: 2 }}>
         <DataGrid
-          rows={rows}
+          rows={enhancedRows}
           columns={columns}
           pageSizeOptions={[5, 10, 25]}
           paginationModel={paginationModel}
@@ -540,6 +606,30 @@ const ViolationDataGrid = ({
               sx={{
                 backgroundColor: 'rgba(76, 175, 80, 0.1)',
                 color: '#4caf50',
+                fontSize: '0.75rem'
+              }}
+            />
+          </Stack>
+        </Box>
+
+        {/* Overall Team Score */}
+        <Box sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, width: '100%' }}>
+          <Typography variant="subtitle2" sx={{ color: '#5b5b5b', fontSize: '0.7rem', fontWeight: 600, mb: 1 }}>
+            Overall Team Score
+          </Typography>
+          <Stack direction="row" gap={1} flexWrap="wrap">
+            <Chip
+              label={`Avg: ${stats.avgSatisfactionScore}${stats.avgSatisfactionScore !== 'N/A' ? '%' : ''}`}
+              size="small"
+              sx={{
+                backgroundColor: stats.avgSatisfactionScore === 'N/A' ? 'rgba(170, 170, 170, 0.1)' :
+                  stats.avgSatisfactionScore >= 90 ? 'rgba(4, 151, 10, 0.1)' :
+                    stats.avgSatisfactionScore >= 75 ? 'rgba(76, 175, 80, 0.1)' :
+                      stats.avgSatisfactionScore >= 55 ? 'rgba(255, 193, 7, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+                color: stats.avgSatisfactionScore === 'N/A' ? '#aaaaaa' :
+                  stats.avgSatisfactionScore >= 90 ? '#04970a' :
+                    stats.avgSatisfactionScore >= 75 ? '#4CAF50' :
+                      stats.avgSatisfactionScore >= 55 ? '#FFC107' : '#f44336',
                 fontSize: '0.75rem'
               }}
             />

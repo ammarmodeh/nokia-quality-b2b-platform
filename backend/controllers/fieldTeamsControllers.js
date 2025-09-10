@@ -4,11 +4,8 @@ dotenv.config();
 
 export const validateTeam = async (req, res) => {
   const { teamId, quizCode } = req.body;
-  // console.log({ teamId, quizCode });
   try {
     const team = await FieldTeamsSchema.findOne({ _id: teamId, quizCode });
-    // console.log({ team });
-
     if (!team) {
       return res.status(404).json({ message: 'Team not found or invalid quiz code' });
     }
@@ -17,7 +14,6 @@ export const validateTeam = async (req, res) => {
       return res.status(403).json({ message: 'This team is not authorized to take the quiz' });
     }
 
-    // Don't send sensitive information
     res.json({
       isValid: true,
       team: {
@@ -29,21 +25,10 @@ export const validateTeam = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error(`Error in validateTeam for team ${teamId}:`, error);
     res.status(500).json({ message: error.message });
   }
 }
-
-// Get field team by ID
-// export const getFieldTeamById = async (req, res) => {
-//   const { id } = req.params;
-//   try {
-//     const team = await FieldTeamsSchema.findById(id);
-//     if (!team) return res.status(404).json({ message: "Field Team not found" });
-//     res.status(200).json(team);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// }
 
 export const getAllFieldTeams = async (req, res) => {
   try {
@@ -59,7 +44,6 @@ export const getTeamPerformanceData = async (req, res) => {
   try {
     const { teamId } = req.params;
 
-    // Get all tasks for this team
     const tasks = await FieldTeamsSchema.find({
       teamId: teamId,
       isDeleted: false
@@ -69,13 +53,19 @@ export const getTeamPerformanceData = async (req, res) => {
       return res.status(404).json({ message: "No tasks found for this team" });
     }
 
-    // Calculate statistics
-    const evaluationScores = tasks.map(task => task.evaluationScore).filter(score => score);
+    // Parse evaluationScore strings (format: "correctAnswers/maxScore percentage%") to extract correctAnswers
+    const evaluationScores = tasks
+      .map(task => {
+        if (!task.evaluationScore || task.evaluationScore === "N/A") return null;
+        const match = task.evaluationScore.match(/^([\d.]+)\/(\d+)\s+(\d+)%$/);
+        return match ? parseFloat(match[1]) : null;
+      })
+      .filter(score => score !== null);
+
     const detractors = evaluationScores.filter(score => score >= 1 && score <= 6).length;
     const passives = evaluationScores.filter(score => score >= 7 && score <= 8).length;
     const promoters = evaluationScores.filter(score => score >= 9 && score <= 10).length;
 
-    // Group by reason
     const violationReasons = {};
     tasks.forEach(task => {
       if (task.reason) {
@@ -88,11 +78,13 @@ export const getTeamPerformanceData = async (req, res) => {
           };
         }
         violationReasons[task.reason].total++;
-        violationReasons[task.reason].scores.push(task.evaluationScore || 0);
+        const score = task.evaluationScore && task.evaluationScore !== "N/A"
+          ? parseFloat(task.evaluationScore.split('/')[0])
+          : 0;
+        violationReasons[task.reason].scores.push(score);
       }
     });
 
-    // Convert to array sorted by total
     const violationPercentages = Object.keys(violationReasons)
       .map(reason => ({
         reason,
@@ -101,11 +93,9 @@ export const getTeamPerformanceData = async (req, res) => {
       }))
       .sort((a, b) => b.percentage - a.percentage);
 
-    // Find first and last task dates
     const firstTaskDate = tasks[0].pisDate;
     const lastTaskDate = tasks[tasks.length - 1].pisDate;
 
-    // Prepare response
     const response = {
       teamName: tasks[0].teamName,
       totalTasks: tasks.length,
@@ -119,7 +109,7 @@ export const getTeamPerformanceData = async (req, res) => {
       violationPercentages,
       firstTaskDate,
       lastTaskDate,
-      tasks // include raw tasks if needed
+      tasks
     };
 
     return res.json(response);
@@ -128,7 +118,6 @@ export const getTeamPerformanceData = async (req, res) => {
   }
 };
 
-// Get Field Team by Quiz Code
 export const getFieldTeamByQuizCode = async (req, res) => {
   const { quizCode } = req.params;
 
@@ -144,16 +133,13 @@ export const getFieldTeamByQuizCode = async (req, res) => {
   }
 }
 
-// Add New Field Team
 export const addFieldTeam = async (req, res) => {
   try {
     const { teamName, teamCompany, contactNumber, fsmSerialNumber, laptopSerialNumber } = req.body;
 
-    // Generate a random 10-character alphanumeric quiz code
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const quizCode = Array.from({ length: 10 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
 
-    // Ensure all required fields are provided
     if (!teamName || !teamCompany || !contactNumber) {
       return res.status(400).json({ error: "Missing required fields: teamName, teamCompany, or contactNumber" });
     }
@@ -165,22 +151,19 @@ export const addFieldTeam = async (req, res) => {
       fsmSerialNumber: fsmSerialNumber || 'N/A',
       laptopSerialNumber: laptopSerialNumber || 'N/A',
       quizCode,
-      canTakeQuiz: false, // Default to false - requires admin approval
-      isActive: true, // Default active status
-      isSuspended: false, // Default not suspended
-      isTerminated: false, // Default not terminated
-      // role will be automatically set to 'fieldTeam' by the schema default
+      canTakeQuiz: false,
+      isActive: true,
+      isSuspended: false,
+      isTerminated: false,
     });
 
     await newFieldTeam.save();
     res.status(201).json(newFieldTeam);
   } catch (error) {
-    // console.error("Error adding field team:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-// Suspend Field Team
 export const suspendTeam = async (req, res) => {
   try {
     const { teamId } = req.params;
@@ -191,7 +174,6 @@ export const suspendTeam = async (req, res) => {
       return res.status(404).json({ message: "Team not found" });
     }
 
-    // Clear existing statuses
     team.isOnLeave = false;
     team.leaveReason = null;
     team.leaveStartDate = null;
@@ -200,14 +182,12 @@ export const suspendTeam = async (req, res) => {
     team.isResigned = false;
     team.resignationReason = null;
 
-    // Set suspension status
     team.isSuspended = true;
     team.suspensionStartDate = suspensionStartDate;
     team.suspensionEndDate = suspensionEndDate;
     team.suspensionReason = suspensionReason;
     team.isActive = false;
 
-    // Add to state log
     team.stateLogs.push({
       state: "Suspended",
       reason: suspensionReason,
@@ -222,7 +202,6 @@ export const suspendTeam = async (req, res) => {
   }
 };
 
-// Terminate Field Team
 export const terminateTeam = async (req, res) => {
   try {
     const { teamId } = req.params;
@@ -233,7 +212,6 @@ export const terminateTeam = async (req, res) => {
       return res.status(404).json({ message: "Team not found" });
     }
 
-    // Clear existing statuses
     team.isOnLeave = false;
     team.leaveReason = null;
     team.leaveStartDate = null;
@@ -247,12 +225,10 @@ export const terminateTeam = async (req, res) => {
     team.isResigned = false;
     team.resignationReason = null;
 
-    // Set termination status
     team.isTerminated = true;
     team.terminationReason = terminationReason;
     team.isActive = false;
 
-    // Add to state log
     team.stateLogs.push({
       state: "Terminated",
       reason: terminationReason,
@@ -265,7 +241,6 @@ export const terminateTeam = async (req, res) => {
   }
 };
 
-// Reactivate Field Team
 export const reactivateTeam = async (req, res) => {
   try {
     const { teamId } = req.params;
@@ -275,29 +250,24 @@ export const reactivateTeam = async (req, res) => {
       return res.status(404).json({ message: "Team not found" });
     }
 
-    // Clear suspension-related fields
     team.isSuspended = false;
     team.suspensionReason = null;
     team.suspensionStartDate = null;
     team.suspensionEndDate = null;
 
-    // Clear termination-related fields
     team.isTerminated = false;
     team.terminationReason = null;
 
-    // Clear on leave-related fields
     team.isOnLeave = false;
     team.leaveReason = null;
     team.leaveStartDate = null;
     team.leaveEndDate = null;
 
-    // Clear resigned-related fields
     team.isResigned = false;
     team.resignationReason = null;
 
     team.isActive = true;
 
-    // Add to state log
     team.stateLogs.push({
       state: "Active",
       changedAt: new Date(),
@@ -310,13 +280,10 @@ export const reactivateTeam = async (req, res) => {
   }
 };
 
-// On Leave Field Team
 export const onLeaveTeam = async (req, res) => {
   try {
     const { teamId } = req.params;
     const { leaveReason, leaveStartDate, leaveEndDate } = req.body;
-
-    // console.log({ teamId, leaveReason, leaveStartDate, leaveEndDate });
 
     const team = await FieldTeamsSchema.findById(teamId);
     if (!team) {
@@ -329,7 +296,6 @@ export const onLeaveTeam = async (req, res) => {
     team.leaveEndDate = leaveEndDate;
     team.isActive = false;
 
-    // Add to state log
     team.stateLogs.push({
       state: "On Leave",
       reason: leaveReason,
@@ -344,7 +310,6 @@ export const onLeaveTeam = async (req, res) => {
   }
 };
 
-// Resigned Field Team
 export const resignedTeam = async (req, res) => {
   try {
     const { teamId } = req.params;
@@ -359,7 +324,6 @@ export const resignedTeam = async (req, res) => {
     team.resignationReason = resignationReason;
     team.isActive = false;
 
-    // Add to state log
     team.stateLogs.push({
       state: "Resigned",
       reason: resignationReason,
@@ -372,7 +336,6 @@ export const resignedTeam = async (req, res) => {
   }
 };
 
-// Delete Field Team
 export const deleteFieldTeam = async (req, res) => {
   try {
     const teamId = req.params.id;
@@ -389,7 +352,6 @@ export const deleteFieldTeam = async (req, res) => {
   }
 };
 
-// Update Field Team
 export const updateFieldTeam = async (req, res) => {
   try {
     const teamId = req.params.id;
@@ -408,19 +370,40 @@ export const updateFieldTeam = async (req, res) => {
   }
 };
 
-// Update team score
 export const updateTeamScore = async (req, res) => {
-  const { teamId, quizCode, score } = req.body;
+  const { teamId, quizCode, correctAnswers, totalQuestions, percentage } = req.body;
 
   // Validate input
-  if (!teamId || !quizCode || !score) {
+  if (!teamId || !quizCode || correctAnswers === undefined || totalQuestions === undefined || percentage === undefined) {
     return res.status(400).json({
-      message: 'Missing required fields: teamId, quizCode, or score'
+      message: 'Missing required fields: teamId, quizCode, correctAnswers, totalQuestions, or percentage'
+    });
+  }
+
+  // Validate numeric inputs
+  const parsedCorrectAnswers = parseFloat(correctAnswers);
+  const parsedTotalQuestions = parseInt(totalQuestions);
+  const parsedPercentage = parseInt(percentage);
+  if (isNaN(parsedCorrectAnswers) || parsedCorrectAnswers < 0) {
+    return res.status(400).json({
+      message: 'correctAnswers must be a valid non-negative number'
+    });
+  }
+  if (isNaN(parsedTotalQuestions) || parsedTotalQuestions <= 0) {
+    return res.status(400).json({
+      message: 'totalQuestions must be a positive integer'
+    });
+  }
+  if (isNaN(parsedPercentage) || parsedPercentage < 0 || parsedPercentage > 100) {
+    return res.status(400).json({
+      message: 'percentage must be a valid number between 0 and 100'
     });
   }
 
   try {
     const currentDate = new Date();
+    const maxScore = parsedTotalQuestions * 2;
+    const scoreString = `${parsedCorrectAnswers}/${maxScore} ${parsedPercentage}%`;
 
     // Verify team exists and quiz code matches
     const team = await FieldTeamsSchema.findOne({
@@ -434,26 +417,56 @@ export const updateTeamScore = async (req, res) => {
       });
     }
 
+    // Check if team is allowed to take the quiz
+    if (!team.canTakeQuiz) {
+      return res.status(403).json({
+        message: 'This team is not authorized to take the quiz'
+      });
+    }
+
+    // Check if an evaluationHistory entry exists for this quizCode
+    const historyIndex = team.evaluationHistory.findIndex(
+      entry => entry.quizCode === quizCode
+    );
+
+    const updateQuery = {
+      $set: {
+        evaluationScore: scoreString,
+        lastEvaluationDate: currentDate,
+        isEvaluated: true,
+        canTakeQuiz: false,
+        isActive: true
+      }
+    };
+
+    if (historyIndex >= 0) {
+      // Update existing evaluationHistory entry
+      updateQuery.$set[`evaluationHistory.${historyIndex}.score`] = scoreString;
+      updateQuery.$set[`evaluationHistory.${historyIndex}.date`] = currentDate;
+    } else {
+      // Add new evaluationHistory entry
+      updateQuery.$push = {
+        evaluationHistory: {
+          score: scoreString,
+          date: currentDate,
+          quizCode: quizCode
+        }
+      };
+    }
+
     // Update team score and state
     const updatedTeam = await FieldTeamsSchema.findByIdAndUpdate(
       teamId,
-      {
-        $set: {
-          evaluationScore: score,
-          lastEvaluationDate: currentDate,
-          isEvaluated: true,
-          canTakeQuiz: false,
-          isActive: true // Ensure team is marked active
-        },
-        $push: {
-          evaluationHistory: {
-            score,
-            date: currentDate
-          }
-        }
-      },
+      updateQuery,
       { new: true, runValidators: true }
     );
+
+    // Verify canTakeQuiz was set to false
+    if (updatedTeam.canTakeQuiz) {
+      console.error(`Failed to set canTakeQuiz to false for team ${teamId}`);
+    } else {
+      console.log(`Successfully set canTakeQuiz to false for team ${teamId}`);
+    }
 
     res.json({
       success: true,
@@ -461,7 +474,7 @@ export const updateTeamScore = async (req, res) => {
     });
 
   } catch (err) {
-    // console.error('Score update error:', err);
+    console.error(`Error in updateTeamScore for team ${teamId}:`, err);
     res.status(500).json({
       message: 'Failed to update score',
       error: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -476,14 +489,12 @@ export const getTeamEvaluationHistory = async (req, res) => {
     if (!team) {
       return res.status(404).send('Team not found');
     }
-    return res.json(team.evaluationHistory); // assuming 'evaluations' is an array of history data
+    return res.json(team.evaluationHistory);
   } catch (error) {
-    // console.error('Error fetching evaluation history:', error);
     res.status(500).send('Server error');
   }
 }
 
-// Add session
 export const addSession = async (req, res) => {
   const { teamId } = req.params;
   const { sessionDate, conductedBy, sessionTitle, outlines } = req.body;
@@ -494,7 +505,6 @@ export const addSession = async (req, res) => {
       return res.status(404).json({ success: false, message: "Team not found" });
     }
 
-    // Create new session with all fields
     const newSession = {
       sessionDate,
       conductedBy,
@@ -503,23 +513,20 @@ export const addSession = async (req, res) => {
       status: "Completed"
     };
 
-    // Add session to history
     team.sessionHistory.push(newSession);
     team.totalViolationPoints = Math.max(0, (team.totalViolationPoints || 0) - 2);
 
     await team.save();
 
-    // Get the saved session with _id
     const savedSession = team.sessionHistory[team.sessionHistory.length - 1];
 
     res.status(200).json({
       success: true,
       message: "Session added successfully",
-      session: savedSession,  // Return the full session with _id
+      session: savedSession,
       updatedViolationPoints: team.totalViolationPoints
     });
   } catch (error) {
-    // console.error("Error adding session:", error);
     res.status(500).json({
       success: false,
       message: "Error adding session",
@@ -528,11 +535,9 @@ export const addSession = async (req, res) => {
   }
 };
 
-// Update session
 export const updateSessionForTeam = async (req, res) => {
   try {
     const { teamId, sessionId } = req.params;
-    // console.log({ teamId, sessionId });
     const { sessionDate, conductedBy, sessionTitle, outlines } = req.body;
 
     const team = await FieldTeamsSchema.findById(teamId);
@@ -582,7 +587,6 @@ export const deleteSessionForTeam = async (req, res) => {
       return res.status(404).json({ success: false, message: "Team not found" });
     }
 
-    // Find session to get violation points
     const sessionToDelete = team.sessionHistory.find(
       session => session._id.toString() === sessionId
     );
@@ -591,15 +595,12 @@ export const deleteSessionForTeam = async (req, res) => {
       return res.status(404).json({ success: false, message: "Session not found" });
     }
 
-    // Calculate points to deduct (only from session now)
     const pointsToDeduct = sessionToDelete.violationPoints || 0;
 
-    // Remove session
     team.sessionHistory = team.sessionHistory.filter(
       session => session._id.toString() !== sessionId
     );
 
-    // Adjust violation points (ensure it doesn't go below 0)
     team.totalViolationPoints = Math.max(0, (team.totalViolationPoints || 0) - pointsToDeduct);
 
     await team.save();
@@ -619,7 +620,7 @@ export const deleteSessionForTeam = async (req, res) => {
     });
   }
 };
-// Report absence
+
 export const reportAbsence = async (req, res) => {
   const { teamId } = req.params;
   const { sessionDate, reason } = req.body;
@@ -630,18 +631,16 @@ export const reportAbsence = async (req, res) => {
       return res.status(404).json({ message: "Team not found" });
     }
 
-    // Create a missed session record with violation info
     const newSession = {
       sessionDate,
       conductedBy: req.user.name || "System",
       notes: `Missed session - ${reason || "No reason provided"}`,
       status: "Missed",
-      violationPoints: 2, // 2 points for missing a session
+      violationPoints: 2,
       reason,
-      violationType: "Absence" // Added this to replace violations.type
+      violationType: "Absence"
     };
 
-    // Update the team
     team.sessionHistory.push(newSession);
     team.totalViolationPoints += 2;
 
@@ -657,7 +656,6 @@ export const reportAbsence = async (req, res) => {
       }
     });
   } catch (error) {
-    // console.error("Error reporting absence:", error);
     res.status(500).json({
       success: false,
       message: "Failed to report absence",
@@ -666,7 +664,6 @@ export const reportAbsence = async (req, res) => {
   }
 };
 
-// Get team violations
 export const getTeamViolations = async (req, res) => {
   const { teamId } = req.params;
 
@@ -678,7 +675,6 @@ export const getTeamViolations = async (req, res) => {
       return res.status(404).json({ message: "Team not found" });
     }
 
-    // Filter sessions that have violationPoints > 0
     const violations = team.sessionHistory.filter(
       session => session.violationPoints > 0
     ).map(session => ({
@@ -697,7 +693,6 @@ export const getTeamViolations = async (req, res) => {
       teamName: team.teamName
     });
   } catch (error) {
-    // console.error("Error fetching violations:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch violations",
@@ -715,14 +710,6 @@ export const toggleQuizPermission = async (req, res) => {
       teamId,
       {
         $set: { canTakeQuiz },
-        // $push: {
-        //   stateLogs: {
-        //     state: 'Quiz Permission Changed',
-        //     quizPermissionChanged: true,
-        //     newQuizPermission: canTakeQuiz,
-        //     changedAt: new Date()
-        //   }
-        // }
       },
       { new: true }
     );
@@ -731,9 +718,10 @@ export const toggleQuizPermission = async (req, res) => {
       return res.status(404).json({ error: "Team not found" });
     }
 
+    console.log(`Updated canTakeQuiz to ${canTakeQuiz} for team ${teamId}`);
     res.status(200).json(updatedTeam);
   } catch (error) {
-    // console.error("Error updating quiz permission:", error);
+    console.error(`Error in toggleQuizPermission for team ${teamId}:`, error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
