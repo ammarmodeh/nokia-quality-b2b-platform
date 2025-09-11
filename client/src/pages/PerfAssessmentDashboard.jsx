@@ -33,11 +33,13 @@ import {
   ArrowBack,
   BarChart,
   Refresh,
-  Save
+  Save,
+  Download
 } from '@mui/icons-material';
 import api from '../api/api';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import * as XLSX from 'xlsx';
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Legend);
@@ -56,6 +58,7 @@ const PerfAssessmentDashboard = () => {
   const [essayScores, setEssayScores] = useState({});
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:503px)');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const fetchAllTeams = async () => {
@@ -76,6 +79,7 @@ const PerfAssessmentDashboard = () => {
 
   useEffect(() => {
     if (selectedResult) {
+      console.log('Selected Result:', JSON.stringify(selectedResult, null, 2)); // Debug log
       const initialScores = selectedResult.userAnswers.reduce((acc, answer, index) => {
         if (answer.type === 'essay') {
           acc[index] = answer.score !== undefined ? answer.score.toString() : '0';
@@ -118,6 +122,7 @@ const PerfAssessmentDashboard = () => {
         },
       });
       setResults(response.data.data);
+      console.log('Quiz Results:', JSON.stringify(response.data.data, null, 2)); // Debug log
       if (response.data.data.length === 0) {
         setError('No results found for this Team');
       }
@@ -143,7 +148,7 @@ const PerfAssessmentDashboard = () => {
     if (!currentResult) return;
 
     try {
-      await api.delete(`/api/quiz-results/${currentResult._id}`);
+      await api.delete(`/quiz-results/${currentResult._id}`);
       setResults(results.filter(result => result._id !== currentResult._id));
       handleMenuClose();
     } catch (err) {
@@ -185,11 +190,13 @@ const PerfAssessmentDashboard = () => {
   const getChartData = () => {
     if (!selectedResult) return null;
 
-    const labels = selectedResult.userAnswers.map((_, index) => `Q${index + 1}`);
-    const correctData = selectedResult.userAnswers.map(answer =>
-      answer.type === 'essay' ? (answer.score || 0) : (answer.isCorrect ? 2 : 0));
-    const incorrectData = selectedResult.userAnswers.map(answer =>
-      answer.type === 'essay' ? 0 : (answer.isCorrect ? 0 : 2));
+    const labels = Array.from({ length: selectedResult.totalQuestions }, (_, i) => `Q${i + 1}`);
+    const correctData = Array(selectedResult.totalQuestions).fill(0);
+    const incorrectData = Array(selectedResult.totalQuestions).fill(0);
+    selectedResult.userAnswers.forEach((answer, index) => {
+      correctData[index] = answer.type === 'essay' ? (answer.score || 0) : (answer.isCorrect ? 2 : 0);
+      incorrectData[index] = answer.type === 'essay' ? 0 : (answer.isCorrect ? 0 : 2);
+    });
 
     return {
       labels,
@@ -384,6 +391,93 @@ const PerfAssessmentDashboard = () => {
     return { strengths, improvements };
   };
 
+  const exportToExcel = () => {
+    if (!results.length) return;
+
+    setExporting(true);
+
+    try {
+      // Prepare data for Excel
+      const worksheetData = results.map(result => ({
+        'Team Name': result.teamName,
+        'Date': new Date(result.submittedAt).toLocaleString(),
+        'Score': `${result.correctAnswers}/${result.totalQuestions * 2}`,
+        'Percentage': `${result.percentage}%`,
+        'Total Questions': result.totalQuestions,
+        'Correct Answers': result.correctAnswers,
+        'Max Possible Score': result.totalQuestions * 2
+      }));
+
+      // Create worksheet
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Quiz Results');
+
+      // Generate Excel file
+      const teamNameForFile = results[0].teamName.replace(/[^a-z0-9]/gi, '_');
+      const fileName = `Quiz_Results_${teamNameForFile}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+      // Download the file
+      XLSX.writeFile(workbook, fileName);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      setError('Failed to export results to Excel');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Add this function to export detailed results
+  const exportDetailedResults = (result) => {
+    if (!result) return;
+
+    try {
+      // Prepare detailed data for Excel
+      const detailedData = result.userAnswers.map((answer, index) => ({
+        'Question Number': index + 1,
+        'Question': answer.question,
+        'Type': answer.type,
+        'Category': answer.category,
+        'Selected Answer': answer.selectedAnswer || answer.essayAnswer || 'No answer provided',
+        'Correct Answer': answer.correctAnswer || 'N/A (Essay)',
+        'Score': answer.type === 'essay' ? (answer.score || 0) : (answer.isCorrect ? 2 : 0),
+        'Is Correct': answer.type === 'essay' ? 'Scored' : (answer.isCorrect ? 'Yes' : 'No')
+      }));
+
+      // Add summary row
+      detailedData.push({});
+      detailedData.push({
+        'Question Number': 'SUMMARY',
+        'Question': '',
+        'Type': '',
+        'Category': '',
+        'Selected Answer': '',
+        'Correct Answer': '',
+        'Score': result.correctAnswers,
+        'Is Correct': `Percentage: ${result.percentage}%`
+      });
+
+      // Create worksheet
+      const worksheet = XLSX.utils.json_to_sheet(detailedData);
+
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Detailed Results');
+
+      // Generate Excel file
+      const teamNameForFile = result.teamName.replace(/[^a-z0-9]/gi, '_');
+      const fileName = `Detailed_Results_${teamNameForFile}_${new Date(result.submittedAt).toISOString().slice(0, 10)}.xlsx`;
+
+      // Download the file
+      XLSX.writeFile(workbook, fileName);
+    } catch (error) {
+      console.error('Error exporting detailed results:', error);
+      setError('Failed to export detailed results to Excel');
+    }
+  };
+
   return (
     <Box sx={{
       backgroundColor: colors.background,
@@ -566,6 +660,31 @@ const PerfAssessmentDashboard = () => {
             >
               {loading ? 'Searching...' : 'Search'}
             </Button>
+
+            {results.length > 0 && (
+              <Button
+                variant="outlined"
+                startIcon={<Download />}
+                onClick={exportToExcel}
+                disabled={exporting}
+                sx={{
+                  color: colors.primary,
+                  borderColor: colors.primary,
+                  '&:hover': {
+                    backgroundColor: colors.primaryHover,
+                    borderColor: colors.primary,
+                  },
+                  '&:disabled': {
+                    borderColor: '#555',
+                    color: '#999'
+                  },
+                  minWidth: isMobile ? undefined : '140px',
+                  width: isMobile ? '100%' : undefined
+                }}
+              >
+                {exporting ? 'Exporting...' : 'Export Excel'}
+              </Button>
+            )}
           </Stack>
         </Box>
       </Paper>
@@ -651,7 +770,7 @@ const PerfAssessmentDashboard = () => {
                       <TableCell>{result.teamName}</TableCell>
                       <TableCell>
                         <Chip
-                          label={result.score}
+                          label={`${result.correctAnswers}/${result.totalQuestions * 2} ${result.percentage}%`}
                           color={getPerformanceColor(result.percentage)}
                           variant="outlined"
                         />
@@ -672,6 +791,22 @@ const PerfAssessmentDashboard = () => {
                             }}
                           >
                             View Details
+                          </Button>
+                          {/* Add Export Detail Button */}
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => exportDetailedResults(result)}
+                            sx={{
+                              color: colors.success,
+                              borderColor: colors.success,
+                              '&:hover': {
+                                backgroundColor: 'rgba(76, 175, 80, 0.08)',
+                                borderColor: colors.success,
+                              }
+                            }}
+                          >
+                            Export Details
                           </Button>
                         </Box>
                       </TableCell>
@@ -712,19 +847,37 @@ const PerfAssessmentDashboard = () => {
 
       {selectedResult && (
         <Box sx={{ mt: 3 }}>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => setSelectedResult(null)}
-            sx={{
-              mb: 2,
-              color: colors.primary,
-              '&:hover': {
-                backgroundColor: colors.primaryHover
-              }
-            }}
-          >
-            Back to Results List
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Button
+              startIcon={<ArrowBack />}
+              onClick={() => setSelectedResult(null)}
+              sx={{
+                color: colors.primary,
+                '&:hover': {
+                  backgroundColor: colors.primaryHover
+                }
+              }}
+            >
+              Back to Results List
+            </Button>
+
+            {/* Add Export Button for Detailed View */}
+            <Button
+              variant="outlined"
+              startIcon={<Download />}
+              onClick={() => exportDetailedResults(selectedResult)}
+              sx={{
+                color: colors.success,
+                borderColor: colors.success,
+                '&:hover': {
+                  backgroundColor: 'rgba(76, 175, 80, 0.08)',
+                  borderColor: colors.success,
+                }
+              }}
+            >
+              Export Detailed Results
+            </Button>
+          </Box>
 
           <div id="assessment-overview">
             <Card sx={{
@@ -761,7 +914,7 @@ const PerfAssessmentDashboard = () => {
                   <Box>
                     <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Score</Typography>
                     <Chip
-                      label={selectedResult.score}
+                      label={`${selectedResult.correctAnswers}/${selectedResult.totalQuestions * 2} ${selectedResult.percentage}%`}
                       color={getPerformanceColor(selectedResult.percentage)}
                       size="small"
                       variant="outlined"
@@ -1094,7 +1247,7 @@ const PerfAssessmentDashboard = () => {
                               },
                               title: {
                                 ...horizontalChartOptions.plugins.title,
-                                text: `Performance by Category (${selectedResult.userAnswers.length} Questions)`,
+                                text: `Performance by Category (${selectedResult.totalQuestions} Questions)`,
                                 display: !isMobile
                               },
                               legend: {

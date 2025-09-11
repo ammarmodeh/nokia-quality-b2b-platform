@@ -344,7 +344,7 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
                 color: colors.primary,
                 mb: 3
               }}>
-                Assessment Summary 00000
+                Assessment Summary
               </Typography>
               <Box sx={{
                 display: 'grid',

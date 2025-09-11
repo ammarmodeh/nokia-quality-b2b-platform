@@ -8,17 +8,10 @@ export const saveQuizResults = async (req, res) => {
       quizCode,
       teamName,
       teamCompany,
-      correctAnswers,
       totalQuestions,
       userAnswers,
-      questions,
-      percentage
+      questions
     } = req.body;
-
-    // Calculate max score (2 points per question)
-    const maxScore = totalQuestions * 2;
-    // Create the score string for QuizResult
-    const score = `${correctAnswers}/${maxScore} ${percentage}%`;
 
     // Map user answers with questions for better structure
     const detailedAnswers = userAnswers.map((answer, index) => ({
@@ -33,15 +26,27 @@ export const saveQuizResults = async (req, res) => {
       type: questions[index].type || 'options'
     }));
 
+    // Calculate initial score (points-based)
+    const calculatedScore = detailedAnswers.reduce((acc, answer) => {
+      if (answer.type === 'essay') {
+        return acc + (answer.score || 0);
+      }
+      return answer.isCorrect ? acc + 2 : acc;
+    }, 0);
+
+    const maxScore = totalQuestions * 2;
+    const calculatedPercentage = maxScore > 0 ? Math.round((calculatedScore / maxScore) * 100) : 0;
+    const scoreString = `${calculatedScore}/${maxScore} ${calculatedPercentage}%`;
+
     // Create new quiz result
     const quizResult = new QuizResult({
       teamId,
       quizCode,
       teamName,
       teamCompany,
-      score,
-      percentage,
-      correctAnswers,
+      score: scoreString,
+      percentage: calculatedPercentage,
+      correctAnswers: calculatedScore,
       totalQuestions,
       userAnswers: detailedAnswers
     });
@@ -51,7 +56,7 @@ export const saveQuizResults = async (req, res) => {
 
     // Update FieldTeamsSchema with the quiz score
     await updateTeamScore({
-      body: { teamId, quizCode, correctAnswers, totalQuestions, percentage }
+      body: { teamId, quizCode, correctAnswers: calculatedScore, totalQuestions, percentage: calculatedPercentage }
     }, { json: () => { }, status: () => ({ json: () => { } }) });
 
     res.status(201).json({
