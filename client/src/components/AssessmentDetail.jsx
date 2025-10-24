@@ -20,6 +20,7 @@ const AssessmentDetail = ({
   getCategoryChartData,
   horizontalChartOptions,
   analyzeCategoryPerformance,
+  getLabelForCheckpoint,
   isMobile,
   onBack,
   onEdit,
@@ -108,6 +109,45 @@ const AssessmentDetail = ({
   if (chartData) {
     chartData.datasets[0].backgroundColor = getBarColors(chartData);
   }
+
+  // Compute category averages
+  const categoryStats = assessment.checkPoints.reduce((acc, point) => {
+    if (!acc[point.category]) {
+      acc[point.category] = {
+        totalScore: 0,
+        count: 0,
+        weight: assessment.categoryWeights[point.category] || 0.20
+      };
+    }
+    acc[point.category].totalScore += point.score;
+    acc[point.category].count += 1;
+    return acc;
+  }, {});
+
+  const categoryList = Object.entries(categoryStats).map(([category, stats]) => ({
+    category,
+    average: Math.round(stats.totalScore / stats.count),
+    weight: stats.weight
+  }));
+
+  // Checkpoint strengths and improvements
+  const checkpointStrengths = assessment.checkPoints
+    .filter(cp => cp.score >= 80)
+    .sort((a, b) => b.score - a.score)
+    .map(cp => ({
+      name: cp.name,
+      score: cp.score,
+      label: getLabelForCheckpoint(cp.name, cp.score)
+    }));
+
+  const checkpointImprovements = assessment.checkPoints
+    .filter(cp => cp.score < 80)
+    .sort((a, b) => a.score - b.score)
+    .map(cp => ({
+      name: cp.name,
+      score: cp.score,
+      label: getLabelForCheckpoint(cp.name, cp.score)
+    }));
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -242,124 +282,119 @@ const AssessmentDetail = ({
             Performance Analysis
           </Typography>
 
-          {(() => {
-            const analysis = analyzeCategoryPerformance(assessment.checkPoints);
-            return (
-              <Box sx={{ mt: 2 }}>
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{
+          <Box sx={{ mt: 2 }}>
+            {/* Category Averages */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ color: colors.textPrimary, fontWeight: 'medium', mb: 1 }}>
+                Category Averages
+              </Typography>
+              <Box sx={{ pl: 2 }}>
+                {categoryList.map((item, index) => (
+                  <Box key={index} sx={{
                     display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    color: colors.success,
-                    fontWeight: 'medium',
-                    mb: 1
+                    py: 1,
+                    borderBottom: index < categoryList.length - 1 ? `1px solid ${colors.border}` : 'none'
                   }}>
-                    <TrendingUp fontSize="small" sx={{ mr: 1 }} />
-                    Areas of Strength
-                  </Typography>
-
-                  {analysis.strengths.length > 0 ? (
-                    <Box sx={{ pl: 2 }}>
-                      {analysis.strengths.map((item, index) => (
-                        <Box key={index} sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          py: 1,
-                          borderBottom: index < analysis.strengths.length - 1 ? `1px solid ${colors.border}` : 'none'
-                        }}>
-                          <Typography variant="body2" sx={{ color: colors.textPrimary }}>
-                            {item.category}
-                          </Typography>
-                          <Chip
-                            label={`${item.score}%`}
-                            color="success"
-                            size="small"
-                            variant="outlined"
-                          />
-                        </Box>
-                      ))}
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" sx={{ color: colors.textSecondary, pl: 2 }}>
-                      No significant strengths identified.
+                    <Typography variant="body2" sx={{ color: colors.textPrimary }}>
+                      {item.category}
                     </Typography>
-                  )}
-                </Box>
-
-                <Box>
-                  <Typography variant="subtitle1" sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    color: colors.warning,
-                    fontWeight: 'medium',
-                    mb: 1
-                  }}>
-                    <TrendingDown fontSize="small" sx={{ mr: 1 }} />
-                    Areas for Improvement
-                  </Typography>
-
-                  {analysis.improvements.length > 0 ? (
-                    <Box sx={{ pl: 2 }}>
-                      {analysis.improvements.map((item, index) => (
-                        <Box key={index} sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          py: 1,
-                          borderBottom: index < analysis.improvements.length - 1 ? `1px solid ${colors.border}` : 'none'
-                        }}>
-                          <Typography variant="body2" sx={{ color: colors.textPrimary }}>
-                            {item.category}
-                          </Typography>
-                          <Chip
-                            label={`${item.score}%`}
-                            color={item.score < 50 ? "error" : "warning"}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </Box>
-                      ))}
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" sx={{ color: colors.textSecondary, pl: 2 }}>
-                      No significant areas for improvement.
-                    </Typography>
-                  )}
-                </Box>
-
-                <Box sx={{ mt: 3, pt: 2, borderTop: `1px dashed ${colors.border}` }}>
-                  <Typography variant="subtitle1" sx={{
-                    color: colors.primary,
-                    fontWeight: 'medium',
-                    mb: 1
-                  }}>
-                    Recommendations
-                  </Typography>
-
-                  {(() => {
-                    const criticalAreas = analysis.improvements.filter(item => item.score <= 60);
-
-                    if (criticalAreas.length > 0) {
-                      return (
-                        <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                          Focus training efforts on {criticalAreas.map(i => i.category).join(', ')},
-                          which {criticalAreas.length === 1 ? 'shows' : 'show'} critical need for improvement with {criticalAreas.length === 1 ? 'a score' : 'scores'} at or below 60%.
-                        </Typography>
-                      );
-                    } else {
-                      return (
-                        <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                          No critical areas identified. Continue working on {analysis.improvements.slice(0, 2).map(i => i.category).join(' and ')}
-                          to further enhance overall performance.
-                        </Typography>
-                      );
-                    }
-                  })()}
-                </Box>
+                    <Chip
+                      label={`${item.average}%`}
+                      color={getPerformanceColor(item.average)}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </Box>
+                ))}
               </Box>
-            );
-          })()}
+            </Box>
+
+            {/* Checkpoint Strengths */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{
+                display: 'flex',
+                alignItems: 'center',
+                color: colors.success,
+                fontWeight: 'medium',
+                mb: 1
+              }}>
+                <TrendingUp fontSize="small" sx={{ mr: 1 }} />
+                Checkpoint Strengths
+              </Typography>
+
+              {checkpointStrengths.length > 0 ? (
+                <Box sx={{ pl: 2 }}>
+                  {checkpointStrengths.map((item, index) => (
+                    <Box key={index} sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      py: 1,
+                      borderBottom: index < checkpointStrengths.length - 1 ? `1px solid ${colors.border}` : 'none'
+                    }}>
+                      <Typography variant="body2" sx={{ color: colors.textPrimary }}>
+                        {item.name}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Chip label={`${item.score}%`} color="success" size="small" variant="outlined" />
+                        {/* <Chip label={item.label} size="small" variant="outlined" sx={{ backgroundColor: '#4caf50', color: 'white' }} /> */}
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" sx={{ color: colors.textSecondary, pl: 2 }}>
+                  No significant strengths identified.
+                </Typography>
+              )}
+            </Box>
+
+            {/* Checkpoint Improvements */}
+            <Box>
+              <Typography variant="subtitle1" sx={{
+                display: 'flex',
+                alignItems: 'center',
+                color: colors.warning,
+                fontWeight: 'medium',
+                mb: 1
+              }}>
+                <TrendingDown fontSize="small" sx={{ mr: 1 }} />
+                Checkpoint Areas for Improvement
+              </Typography>
+
+              {checkpointImprovements.length > 0 ? (
+                <Box sx={{ pl: 2 }}>
+                  {checkpointImprovements.map((item, index) => (
+                    <Box key={index} sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      py: 1,
+                      borderBottom: index < checkpointImprovements.length - 1 ? `1px solid ${colors.border}` : 'none'
+                    }}>
+                      <Typography variant="body2" sx={{ color: colors.textPrimary }}>
+                        {item.name}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Chip label={`${item.score}%`} color={item.score < 50 ? "error" : "warning"} size="small" variant="outlined" />
+                        {/* <Chip label={item.label} size="small" variant="outlined" sx={{
+                          backgroundColor: item.score < 50 ? '#f44336' : '#ff9800',
+                          color: 'white'
+                        }} /> */}
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" sx={{ color: colors.textSecondary, pl: 2 }}>
+                  No significant areas for improvement.
+                </Typography>
+              )}
+            </Box>
+          </Box>
+
         </Paper>
       </Box>
 
@@ -397,6 +432,19 @@ const AssessmentDetail = ({
                 size="small"
                 variant="outlined"
               />
+              {/* <Chip
+                label={getLabelForCheckpoint(point.name, point.score)}
+                size="small"
+                variant="outlined"
+                sx={{
+                  backgroundColor: getPerformanceColor(point.score) === 'success' ? '#4caf50' :
+                    getPerformanceColor(point.score) === 'warning' ? '#ff9800' : '#f44336',
+                  color: 'white',
+                  '& .MuiChip-outlined': {
+                    borderColor: 'transparent'
+                  }
+                }}
+              /> */}
             </Box>
 
             <Typography sx={{ color: colors.textSecondary, mb: 1 }}>

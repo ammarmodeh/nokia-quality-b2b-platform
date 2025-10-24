@@ -13,9 +13,10 @@ import {
   DialogActions,
   TextField,
 } from "@mui/material";
-import { ArrowBack } from '@mui/icons-material';
+import { ArrowBack, Download } from '@mui/icons-material';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Legend } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
+import * as XLSX from 'xlsx';
 import api from "../api/api";
 import { useSelector } from "react-redux";
 import AssessmentDetail from "../components/AssessmentDetail";
@@ -38,6 +39,9 @@ const OnTheJobAssessment = () => {
   const [error, setError] = useState(null);
   const [selectedAssessment, setSelectedAssessment] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [openAssessmentDialog, setOpenAssessmentDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openDetailDialog, setOpenDetailDialog] = useState(false);
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:503px)');
   const [teamsPage, setTeamsPage] = useState(0);
@@ -49,6 +53,84 @@ const OnTheJobAssessment = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assessmentToDelete, setAssessmentToDelete] = useState(null);
   const [teamNameConfirmation, setTeamNameConfirmation] = useState("");
+
+  // Consistent scoring labels function
+  const getScoreLabel = useCallback((score) => {
+    if (score >= 90) return 'Excellent';
+    if (score >= 75) return 'Good';
+    if (score >= 60) return 'Satisfactory';
+    if (score >= 40) return 'Needs Improvement';
+    return 'Poor';
+  }, []);
+
+  const getCheckpointScoreOptions = useCallback((checkpointName) => {
+    // Equipment Condition (4 levels) - adjusted to match consistent labels
+    if (checkpointName === "Splicing Equipment Condition (FSM)" ||
+      checkpointName === "Testing Tools Condition (OPM and VFL)") {
+      return [
+        { value: 0, label: "Poor", color: "error" },
+        { value: 50, label: "Needs Improvement", color: "warning" },
+        { value: 75, label: "Good", color: "success" },
+        { value: 100, label: "Excellent", color: "success" }
+      ];
+    }
+
+    // Consumables Availability (3 levels) - adjusted to match consistent labels
+    if (checkpointName === "Consumables Availability") {
+      return [
+        { value: 0, label: "Poor", color: "error" },
+        { value: 50, label: "Needs Improvement", color: "warning" },
+        { value: 100, label: "Excellent", color: "success" }
+      ];
+    }
+
+    // Standard Labelling (4 levels) - adjusted to match consistent labels
+    if (checkpointName === "Standard Labelling") {
+      return [
+        { value: 0, label: "Poor", color: "error", description: "Does not follow labelling standards" },
+        { value: 50, label: "Needs Improvement", color: "warning", description: "Basic labelling but inconsistent" },
+        { value: 75, label: "Good", color: "success", description: "Follows standards appropriately" },
+        { value: 100, label: "Excellent", color: "success", description: "Exceeds labelling standards" }
+      ];
+    }
+
+    // Customer Service Skills - Appearance - adjusted to match consistent labels
+    if (checkpointName === "Appearance") {
+      return [
+        { value: 0, label: "Poor", color: "error", description: "Inappropriate attire, poor grooming" },
+        { value: 50, label: "Needs Improvement", color: "warning", description: "Basic but could be more professional" },
+        { value: 75, label: "Good", color: "success", description: "Neat and appropriate for the job" },
+        { value: 100, label: "Excellent", color: "success", description: "Exceeds professional standards" }
+      ];
+    }
+
+    // Customer Service Skills - Communication - adjusted to match consistent labels
+    if (checkpointName === "Communication") {
+      return [
+        { value: 0, label: "Poor", color: "error", description: "Unclear, unprofessional language" },
+        { value: 50, label: "Needs Improvement", color: "warning", description: "Understandable but could improve" },
+        { value: 75, label: "Good", color: "success", description: "Clear and professional" },
+        { value: 100, label: "Excellent", color: "success", description: "Excellent listening and explanation skills" }
+      ];
+    }
+
+    // Customer Service Skills - Patience and Precision - adjusted to match consistent labels
+    if (checkpointName === "Patience and Precision") {
+      return [
+        { value: 0, label: "Poor", color: "error", description: "Hurried through tasks, missed details" },
+        { value: 50, label: "Needs Improvement", color: "warning", description: "Took time but could be more thorough" },
+        { value: 75, label: "Good", color: "success", description: "Patient and precise in work" },
+        { value: 100, label: "Excellent", color: "success", description: "Exceptional attention to detail" }
+      ];
+    }
+
+    return null; // Default to percentage-based
+  }, []);
+
+  const getLabelForCheckpoint = useCallback((checkpointName, score) => {
+    // Use consistent threshold-based labels for all checkpoints to ensure uniformity with category labels
+    return getScoreLabel(score);
+  }, [getScoreLabel]);
 
   const calculateSupervisorStats = useCallback((assessments) => {
     return assessments.reduce((acc, assessment) => {
@@ -69,6 +151,13 @@ const OnTheJobAssessment = () => {
   useEffect(() => {
     setSupervisorStats(calculateSupervisorStats(allAssessments));
   }, [allAssessments, calculateSupervisorStats]);
+
+  // Auto-open new assessment dialog when a team is selected
+  useEffect(() => {
+    if (selectedTeam && user.title === "Field Technical Support - QoS") {
+      setOpenAssessmentDialog(true);
+    }
+  }, [selectedTeam]);
 
   const initialAssessmentData = useMemo(() => ({
     conductedBy: "",
@@ -312,6 +401,303 @@ const OnTheJobAssessment = () => {
     return Math.round(sum / teamAssessments.length);
   }, [teamAssessmentsMap]);
 
+  const analyzeCategoryPerformance = useCallback((checkPoints, categoryWeights = {}) => {
+    const categoryStats = checkPoints.reduce((acc, point) => {
+      if (!acc[point.category]) {
+        acc[point.category] = {
+          totalScore: 0,
+          count: 0,
+          weight: categoryWeights[point.category] || 0.20
+        };
+      }
+      acc[point.category].totalScore += point.score;
+      acc[point.category].count += 1;
+      return acc;
+    }, {});
+
+    const categoryList = Object.entries(categoryStats).map(([category, stats]) => ({
+      category,
+      score: Math.round(stats.totalScore / stats.count), // Changed from 'average' to 'score'
+      weight: stats.weight
+    }));
+
+    // Updated to use consistent thresholds
+    const strengths = categoryList.filter(cat => cat.score >= 75).sort((a, b) => b.score - a.score);
+    const improvements = categoryList.filter(cat => cat.score < 75).sort((a, b) => a.score - b.score);
+
+    return { strengths, improvements, categoryList };
+  }, []);
+
+  // Helper to create safe sheet names (max 31 chars, no invalid chars)
+  const createSafeSheetName = useCallback((teamName) => {
+    // Replace invalid characters
+    let safeName = teamName.replace(/[\\/:*?"<>|]/g, '_').trim();
+    // Truncate to 31 chars if needed
+    if (safeName.length > 31) {
+      safeName = safeName.substring(0, 31);
+    }
+    return safeName;
+  }, []);
+
+  // XLSX Export Helpers
+  const handleExportTeamSummary = useCallback(() => {
+    const exportDate = new Date().toISOString().split('T')[0];
+    const filename = `all_teams_otj-assessment_summary_${exportDate}.xlsx`;
+
+    const wb = XLSX.utils.book_new();
+
+    // Overall Summary Sheet
+    const summaryData = Array.from(assessedTeamIds).map(teamId => {
+      const team = fieldTeams.find(t => t._id.toString() === teamId);
+      const numAssessments = teamAssessmentsMap[teamId]?.length || 0;
+      const avgScore = getTeamAverageScore(teamId);
+      return [
+        team?.teamName || 'Unknown',
+        numAssessments,
+        `${avgScore}%`,
+        getScoreLabel(avgScore) // Added consistent label
+      ];
+    });
+
+    const ws_overall = XLSX.utils.aoa_to_sheet([
+      ['Team Name', 'Number of Assessments', 'Average Score', 'Performance Label'],
+      ...summaryData
+    ]);
+    XLSX.utils.book_append_sheet(wb, ws_overall, 'Overall Summary');
+
+    // Category weights (fixed)
+    const categoryWeights = {
+      "Splicing & Testing Equipment": 0.20,
+      "Fiber Optic Splicing Skills": 0.20,
+      "ONT Placement, Configuration and testing": 0.20,
+      "Customer Education": 0.20,
+      "Customer Service Skills": 0.20
+    };
+
+    // For each assessed team, create a single detailed sheet
+    Array.from(assessedTeamIds).forEach(teamId => {
+      const team = fieldTeams.find(t => t._id.toString() === teamId);
+      if (!team) return;
+
+      const teamName = team.teamName;
+      const teamAssessments = teamAssessmentsMap[teamId] || [];
+      const numAssessments = teamAssessments.length;
+      const avgScore = getTeamAverageScore(teamId);
+
+      // Compute category stats
+      const categoryTotals = {};
+      teamAssessments.forEach(assessment => {
+        assessment.checkPoints.forEach(point => {
+          const cat = point.category;
+          if (!categoryTotals[cat]) {
+            categoryTotals[cat] = { totalScore: 0, count: 0, weight: categoryWeights[cat] || 0.20 };
+          }
+          categoryTotals[cat].totalScore += point.score;
+          categoryTotals[cat].count += 1;
+        });
+      });
+
+      const categoryList = Object.entries(categoryTotals).map(([category, stats]) => ({
+        category,
+        average: Math.round(stats.totalScore / stats.count),
+        weight: stats.weight
+      }));
+
+      const categoryRows = categoryList.map(c => [c.category, `${c.average}%`, getScoreLabel(c.average)]);
+
+      // Compute checkpoint averages
+      const checkpointTotals = {};
+      teamAssessments.forEach(assessment => {
+        assessment.checkPoints.forEach(cp => {
+          const key = cp.name;
+          if (!checkpointTotals[key]) {
+            checkpointTotals[key] = {
+              sum: 0,
+              count: 0,
+              category: cp.category,
+              description: cp.description || 'No description available'
+            };
+          }
+          checkpointTotals[key].sum += cp.score;
+          checkpointTotals[key].count += 1;
+        });
+      });
+
+      const checkpointList = Object.entries(checkpointTotals).map(([name, stats]) => {
+        const avg = Math.round(stats.sum / stats.count);
+        return {
+          name,
+          average: avg,
+          label: getScoreLabel(avg), // Use consistent threshold-based label
+          category: stats.category,
+          description: stats.description
+        };
+      });
+
+      // Updated thresholds to match consistent labels
+      const checkpointStrengths = checkpointList
+        .filter(cp => cp.average >= 75) // Changed from 80 to 75 for "Good" and above
+        .sort((a, b) => b.average - a.average)
+        .map(cp => [cp.name, `${cp.average}%`, cp.label]);
+
+      const checkpointImprovements = checkpointList
+        .filter(cp => cp.average < 75) // Changed from 80 to 75
+        .sort((a, b) => a.average - b.average)
+        .map(cp => [cp.name, `${cp.average}%`, cp.label]);
+
+      const detailRows = checkpointList.map(cp => [
+        cp.category,
+        cp.name,
+        cp.description,
+        `${cp.average}%`,
+        cp.label
+      ]);
+
+      // Single sheet data combining summary, strengths/improvements, and details (like individual export)
+      const teamSheetData = [
+        [`Team Summary for ${teamName}`],
+        [],
+        ['Number of Assessments', numAssessments],
+        ['Overall Average Score', `${avgScore}%`, getScoreLabel(avgScore)],
+        [],
+        ['Category Averages'],
+        ['Category', 'Average Score (%)', 'Performance Label'],
+        ...categoryRows,
+        [],
+        ['Checkpoint Strengths (Average Score >= 75% - Good/Excellent)'],
+        ['Checkpoint', 'Average Score (%)', 'Label'],
+        ...checkpointStrengths,
+        [],
+        ['Checkpoint Areas for Improvement (Average Score < 75%)'],
+        ['Checkpoint', 'Average Score (%)', 'Label'],
+        ...checkpointImprovements,
+        [],
+        ['Detailed Checkpoint Averages'],
+        ['Category', 'Checkpoint Name', 'Description', 'Average Score (%)', 'Label'],
+        ...detailRows
+      ];
+
+      const ws_team = XLSX.utils.aoa_to_sheet(teamSheetData);
+      const safeSheetName = createSafeSheetName(teamName);
+      XLSX.utils.book_append_sheet(wb, ws_team, safeSheetName);
+      // Set column widths for the widest section (5 columns)
+      ws_team['!cols'] = [
+        { wch: 30 }, // Category/Checkpoint
+        { wch: 25 }, // Name
+        { wch: 50 }, // Description
+        { wch: 12 }, // Score
+        { wch: 15 }  // Label
+      ];
+    });
+
+    XLSX.writeFile(wb, filename);
+  }, [assessedTeamIds, fieldTeams, teamAssessmentsMap, getTeamAverageScore, createSafeSheetName, getScoreLabel]);
+
+  const handleExportIndividualAssessment = useCallback((assessment, teamName) => {
+    const date = assessment.assessmentDate ? new Date(assessment.assessmentDate).toLocaleDateString() : (assessment.createdAt ? new Date(assessment.createdAt).toLocaleDateString() : 'N/A');
+
+    // Compute category statistics for detailed export
+    const categoryStats = assessment.checkPoints.reduce((acc, point) => {
+      if (!acc[point.category]) {
+        acc[point.category] = {
+          totalScore: 0,
+          count: 0,
+          weight: assessment.categoryWeights[point.category] || 0.20
+        };
+      }
+      acc[point.category].totalScore += point.score;
+      acc[point.category].count += 1;
+      return acc;
+    }, {});
+
+    const categoryList = Object.entries(categoryStats).map(([category, stats]) => ({
+      category,
+      average: Math.round(stats.totalScore / stats.count),
+      weight: stats.weight
+    }));
+
+    const categoryRows = categoryList.map(c => [c.category, `${c.average}%`, getScoreLabel(c.average)]);
+
+    // Updated thresholds to match consistent labels
+    const checkpointStrengths = assessment.checkPoints
+      .filter(cp => cp.score >= 75) // Changed from 80 to 75 for "Good" and above
+      .sort((a, b) => b.score - a.score)
+      .map(cp => [cp.name, `${cp.score}%`, getScoreLabel(cp.score)]); // Use consistent threshold-based label
+
+    const checkpointImprovements = assessment.checkPoints
+      .filter(cp => cp.score < 75) // Changed from 80 to 75
+      .sort((a, b) => a.score - b.score)
+      .map(cp => [cp.name, `${cp.score}%`, getScoreLabel(cp.score)]); // Use consistent threshold-based label
+
+    // Summary Sheet Data - now with category performance
+    const summaryData = [
+      [`Assessment Summary for ${teamName}`],
+      [],
+      ['Team Name', teamName],
+      ['Conducted By', assessment.conductedBy || 'N/A'],
+      ['Date', date],
+      ['Overall Score', `${assessment.overallScore || 0}%`, getScoreLabel(assessment.overallScore || 0)],
+      [],
+      ['Category Averages'],
+      ['Category', 'Average Score (%)', 'Performance Label'],
+      ...categoryRows,
+      [],
+      ['Feedback'],
+      [assessment.feedback || 'No feedback provided.']
+    ];
+
+    // Checkpoints Sheet Data with strengths and improvements
+    const detailHeaders = ['Category', 'Checkpoint Name', 'Description', 'Completed', 'Score (%)', 'Label', 'Notes'];
+    const detailRows = assessment.checkPoints.map(cp => [
+      cp.category,
+      cp.name,
+      cp.description || 'No description available',
+      cp.isCompleted ? 'Yes' : 'No',
+      `${cp.score}%`,
+      getScoreLabel(cp.score), // Use consistent threshold-based label
+      cp.notes || ''
+    ]);
+
+    const checkpointsSheetData = [
+      [`Checkpoints for ${teamName}`],
+      [],
+      ['Checkpoint Strengths (Score >= 75% - Good/Excellent)'],
+      ['Checkpoint', 'Score (%)', 'Label'],
+      ...checkpointStrengths,
+      [],
+      ['Checkpoint Areas for Improvement (Score < 75%)'],
+      ['Checkpoint', 'Score (%)', 'Label'],
+      ...checkpointImprovements,
+      [],
+      detailHeaders,
+      ...detailRows
+    ];
+
+    const wb = XLSX.utils.book_new();
+
+    // Summary Sheet
+    const ws_summary = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, ws_summary, 'Summary');
+    ws_summary['!cols'] = [{ wch: 40 }, { wch: 20 }, { wch: 20 }];
+
+    // Checkpoints Sheet
+    const ws_details = XLSX.utils.aoa_to_sheet(checkpointsSheetData);
+    XLSX.utils.book_append_sheet(wb, ws_details, 'Checkpoints');
+    ws_details['!cols'] = [
+      { wch: 30 },
+      { wch: 25 },
+      { wch: 50 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 30 }
+    ];
+
+    const filename = `${teamName}_OTJ-Assessment.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+  }, [getScoreLabel]);
+
   const handleSubmitAssessment = useCallback(async (completeAssessment) => {
     try {
       setLoading(true);
@@ -347,7 +733,7 @@ const OnTheJobAssessment = () => {
         }
       );
       setAssessments(assessmentsResponse.data);
-
+      setOpenAssessmentDialog(false); // Close the dialog after successful submission
     } catch (error) {
       console.error("Error submitting assessment:", error);
       setError(error.response?.data?.message || "Failed to submit assessment");
@@ -359,25 +745,34 @@ const OnTheJobAssessment = () => {
   const calculateOverallScore = useCallback((checkPoints, categoryWeights) => {
     if (!checkPoints || checkPoints.length === 0) return 0;
 
-    // Calculate weighted scores
-    const totalScore = checkPoints.reduce((sum, checkpoint) => {
-      const weight = categoryWeights[checkpoint.category] || 1;
-      return sum + (checkpoint.score * weight);
-    }, 0);
+    // Group checkpoints by category to compute category averages
+    const categoryScores = {};
+    checkPoints.forEach((checkpoint) => {
+      const category = checkpoint.category;
+      if (!categoryScores[category]) {
+        categoryScores[category] = { sum: 0, count: 0 };
+      }
+      categoryScores[category].sum += checkpoint.score;
+      categoryScores[category].count += 1;
+    });
 
-    // Calculate maximum possible score based on weights
-    const maxPossibleScore = checkPoints.reduce((sum, checkpoint) => {
-      const weight = categoryWeights[checkpoint.category] || 1;
-      return sum + (100 * weight);
-    }, 0);
+    // Compute weighted sum of category averages
+    let totalWeighted = 0;
+    Object.entries(categoryScores).forEach(([category, stats]) => {
+      const categoryAvg = stats.sum / stats.count;
+      const weight = categoryWeights[category] || 0.20;
+      totalWeighted += categoryAvg * weight;
+    });
 
-    return Math.round((totalScore / maxPossibleScore) * 100);
+    return Math.round(totalWeighted);
   }, []);
 
   const getPerformanceColor = useCallback((score) => {
-    if (score >= 80) return 'success';
-    if (score >= 50) return 'warning';
-    return 'error';
+    // Updated to match consistent label thresholds
+    if (score >= 75) return 'success'; // Good & Excellent
+    if (score >= 60) return 'warning'; // Satisfactory
+    if (score >= 40) return 'warning'; // Needs Improvement (using warning color)
+    return 'error'; // Poor
   }, []);
 
   const getCategoryChartData = useCallback(() => {
@@ -462,36 +857,15 @@ const OnTheJobAssessment = () => {
     },
   }), [colors, isMobile]);
 
-  const analyzeCategoryPerformance = useCallback((checkPoints) => {
-    const categoryStats = checkPoints.reduce((acc, point) => {
-      if (!acc[point.name]) {
-        acc[point.name] = { score: 0 };
-      }
-      acc[point.name].score = point.score;
-      return acc;
-    }, {});
+  const handleNewAssessment = useCallback(() => {
+    if (user.title === "Field Technical Support - QoS") {
+      setOpenAssessmentDialog(true);
+    }
+  }, [user.title]);
 
-    const strengths = [];
-    const improvements = [];
-
-    Object.entries(categoryStats).forEach(([category, stats]) => {
-      if (stats.score >= 80) {
-        strengths.push({
-          category,
-          score: stats.score,
-        });
-      } else {
-        improvements.push({
-          category,
-          score: stats.score,
-        });
-      }
-    });
-
-    strengths.sort((a, b) => b.score - a.score);
-    improvements.sort((a, b) => a.score - b.score);
-
-    return { strengths, improvements };
+  const handleSelectAssessment = useCallback((assessment) => {
+    setSelectedAssessment(assessment);
+    setOpenDetailDialog(true);
   }, []);
 
   const handleDeleteAssessment = (assessmentId) => {
@@ -506,12 +880,10 @@ const OnTheJobAssessment = () => {
   };
 
   const confirmDeleteAssessment = async () => {
-    // console.log({ assessmentToDelete });
     if (!assessmentToDelete) return;
 
     // Check if the entered team name matches
     if (teamNameConfirmation !== selectedTeam?.teamName) {
-      // console.log({ teamNameConfirmation, selectedTeam });
       setError("Team name does not match. Please enter the exact team name to confirm deletion.");
       return;
     }
@@ -567,6 +939,7 @@ const OnTheJobAssessment = () => {
   const handleEditAssessment = (assessment) => {
     setSelectedAssessment(assessment);
     setEditMode(true);
+    setOpenEditDialog(true);
   };
 
   const handleUpdateAssessment = useCallback(async (updatedAssessment) => {
@@ -600,6 +973,7 @@ const OnTheJobAssessment = () => {
       setAssessments(assessmentsResponse.data);
       setEditMode(false);
       setSelectedAssessment(null);
+      setOpenEditDialog(false);
       setError(null);
     } catch (error) {
       console.error("Error updating assessment:", error);
@@ -652,8 +1026,107 @@ const OnTheJobAssessment = () => {
       />
 
       {selectedTeam && !selectedAssessment && (
-        <>
-          {user.title === "Field Technical Support - QoS" && (
+        <AssessmentList
+          assessments={assessments}
+          colors={colors}
+          getPerformanceColor={getPerformanceColor}
+          onSelectAssessment={handleSelectAssessment}
+          onEditAssessment={handleEditAssessment}
+          onDeleteAssessment={handleDeleteAssessment}
+          onNewAssessment={user.title === "Field Technical Support - QoS" ? handleNewAssessment : undefined}
+          user={user}
+          page={assessmentsPage}
+          rowsPerPage={assessmentsRowsPerPage}
+          onPageChange={(e, newPage) => setAssessmentsPage(newPage)}
+          onRowsPerPageChange={(e) => {
+            setAssessmentsRowsPerPage(parseInt(e.target.value, 10));
+            setAssessmentsPage(0);
+          }}
+          loading={loading}
+        />
+      )}
+
+      {/* Detail Dialog */}
+      {selectedAssessment && selectedTeam && !editMode && openDetailDialog && (
+        <Dialog
+          open={openDetailDialog}
+          onClose={() => {
+            setOpenDetailDialog(false);
+            setSelectedAssessment(null);
+          }}
+          fullScreen
+          PaperProps={{
+            sx: {
+              backgroundColor: colors.surface,
+              color: colors.textPrimary
+            }
+          }}
+        >
+          <DialogTitle sx={{ color: colors.primary, fontWeight: 'bold' }}>
+            Assessment Details for {selectedTeam.teamName}
+          </DialogTitle>
+          <DialogContent>
+            <AssessmentDetail
+              assessment={selectedAssessment}
+              team={selectedTeam}
+              colors={colors}
+              getPerformanceColor={getPerformanceColor}
+              getCategoryChartData={getCategoryChartData}
+              horizontalChartOptions={horizontalChartOptions}
+              analyzeCategoryPerformance={analyzeCategoryPerformance}
+              getLabelForCheckpoint={getLabelForCheckpoint}
+              getScoreLabel={getScoreLabel}
+              getCheckpointScoreOptions={getCheckpointScoreOptions}
+              isMobile={isMobile}
+              onBack={() => {
+                setOpenDetailDialog(false);
+                setSelectedAssessment(null);
+              }}
+              onEdit={() => {
+                setEditMode(true);
+                setOpenDetailDialog(false);
+                setOpenEditDialog(true);
+              }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => handleExportIndividualAssessment(selectedAssessment, selectedTeam.teamName)}
+              startIcon={<Download />}
+              sx={{ color: colors.primary }}
+            >
+              Export Assessment
+            </Button>
+            <Button
+              onClick={() => {
+                setOpenDetailDialog(false);
+                setSelectedAssessment(null);
+              }}
+              sx={{ color: colors.textSecondary }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
+      {/* New Assessment Dialog */}
+      {user.title === "Field Technical Support - QoS" && selectedTeam && (
+        <Dialog
+          open={openAssessmentDialog}
+          onClose={() => setOpenAssessmentDialog(false)}
+          fullScreen
+          PaperProps={{
+            sx: {
+              backgroundColor: colors.surface,
+              color: colors.textPrimary
+            }
+          }}
+        >
+          <DialogTitle sx={{ color: colors.primary, fontWeight: 'bold' }}>
+            New Assessment for {selectedTeam.teamName}
+          </DialogTitle>
+          <DialogContent>
             <MemoizedAssessmentForm
               key={selectedTeam?._id || 'new-assessment'}
               initialAssessment={initialAssessmentData}
@@ -662,62 +1135,73 @@ const OnTheJobAssessment = () => {
               onSubmit={handleSubmitAssessment}
               calculateOverallScore={calculateOverallScore}
               getPerformanceColor={getPerformanceColor}
-              editMode={editMode}
+              editMode={false}
+              getScoreLabel={getScoreLabel}
+              getCheckpointScoreOptions={getCheckpointScoreOptions}
             />
-          )}
-
-          <AssessmentList
-            assessments={assessments}
-            colors={colors}
-            getPerformanceColor={getPerformanceColor}
-            onSelectAssessment={setSelectedAssessment}
-            onEditAssessment={handleEditAssessment}
-            onDeleteAssessment={handleDeleteAssessment}
-            user={user}
-            page={assessmentsPage}
-            rowsPerPage={assessmentsRowsPerPage}
-            onPageChange={(e, newPage) => setAssessmentsPage(newPage)}
-            onRowsPerPageChange={(e) => {
-              setAssessmentsRowsPerPage(parseInt(e.target.value, 10));
-              setAssessmentsPage(0);
-            }}
-            loading={loading}
-          />
-        </>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setOpenAssessmentDialog(false)}
+              sx={{ color: colors.textSecondary }}
+            >
+              Cancel
+            </Button>
+          </DialogActions>
+        </Dialog>
       )}
 
-      {selectedAssessment && selectedTeam && !editMode && (
-        <AssessmentDetail
-          assessment={selectedAssessment}
-          team={selectedTeam}
-          colors={colors}
-          getPerformanceColor={getPerformanceColor}
-          getCategoryChartData={getCategoryChartData}
-          horizontalChartOptions={horizontalChartOptions}
-          analyzeCategoryPerformance={analyzeCategoryPerformance}
-          isMobile={isMobile}
-          onBack={() => {
-            setSelectedAssessment(null);
-            setEditMode(false);
-          }}
-          onEdit={() => setEditMode(true)}
-        />
-      )}
-
-      {editMode && selectedAssessment && (
-        <AssessmentForm
-          initialAssessment={selectedAssessment}
-          loading={loading}
-          colors={colors}
-          onSubmit={handleUpdateAssessment}
-          calculateOverallScore={calculateOverallScore}
-          getPerformanceColor={getPerformanceColor}
-          editMode={editMode}
-          onCancel={() => {
+      {/* Edit Assessment Dialog */}
+      {editMode && selectedAssessment && selectedTeam && (
+        <Dialog
+          open={openEditDialog}
+          onClose={() => {
             setEditMode(false);
             setSelectedAssessment(null);
+            setOpenEditDialog(false);
           }}
-        />
+          fullScreen
+          PaperProps={{
+            sx: {
+              backgroundColor: colors.surface,
+              color: colors.textPrimary
+            }
+          }}
+        >
+          <DialogTitle sx={{ color: colors.primary, fontWeight: 'bold' }}>
+            Edit Assessment for {selectedTeam.teamName}
+          </DialogTitle>
+          <DialogContent>
+            <AssessmentForm
+              initialAssessment={selectedAssessment}
+              loading={loading}
+              colors={colors}
+              onSubmit={handleUpdateAssessment}
+              calculateOverallScore={calculateOverallScore}
+              getPerformanceColor={getPerformanceColor}
+              editMode={editMode}
+              onCancel={() => {
+                setEditMode(false);
+                setSelectedAssessment(null);
+                setOpenEditDialog(false);
+              }}
+              getScoreLabel={getScoreLabel}
+              getCheckpointScoreOptions={getCheckpointScoreOptions}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setEditMode(false);
+                setSelectedAssessment(null);
+                setOpenEditDialog(false);
+              }}
+              sx={{ color: colors.textSecondary }}
+            >
+              Cancel
+            </Button>
+          </DialogActions>
+        </Dialog>
       )}
 
       <StatsOverview
@@ -726,7 +1210,25 @@ const OnTheJobAssessment = () => {
         supervisorStats={supervisorStats}
         colors={colors}
         isMobile={isMobile}
+        getScoreLabel={getScoreLabel}
       />
+
+      {/* Export Team Summary Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Button
+          onClick={handleExportTeamSummary}
+          variant="contained"
+          startIcon={<Download />}
+          sx={{
+            backgroundColor: colors.primary,
+            '&:hover': {
+              backgroundColor: '#1d4ed8',
+            }
+          }}
+        >
+          Export Team Summary
+        </Button>
+      </Box>
 
       {fieldTeams.length > 0 && (
         <TeamList
@@ -736,6 +1238,7 @@ const OnTheJobAssessment = () => {
           teamAssessmentsMap={teamAssessmentsMap}
           getTeamAverageScore={getTeamAverageScore}
           getPerformanceColor={getPerformanceColor}
+          getScoreLabel={getScoreLabel}
           loading={loading}
           page={teamsPage}
           rowsPerPage={teamsRowsPerPage}
@@ -781,7 +1284,7 @@ const OnTheJobAssessment = () => {
             Are you sure you want to delete this assessment? This action cannot be undone.
           </DialogContentText>
           <DialogContentText sx={{ color: colors.textSecondary, mb: 2 }}>
-            To confirm, please enter the team name: <strong>{selectedTeam?.name}</strong>
+            To confirm, please enter the team name: <strong>{selectedTeam?.teamName}</strong>
           </DialogContentText>
           <TextField
             autoFocus

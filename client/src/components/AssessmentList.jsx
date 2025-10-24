@@ -10,6 +10,7 @@ import {
   Chip,
   Button,
   TablePagination,
+  Box,
 } from "@mui/material";
 
 const AssessmentList = ({
@@ -19,6 +20,7 @@ const AssessmentList = ({
   onSelectAssessment,
   onEditAssessment,
   onDeleteAssessment,
+  onNewAssessment,
   user,
   page,
   rowsPerPage,
@@ -27,13 +29,29 @@ const AssessmentList = ({
 }) => {
   return (
     <>
-      <Typography variant="h5" gutterBottom sx={{
-        color: colors.primary,
-        fontWeight: 'bold',
-        mb: 2
-      }}>
-        Previous Assessments
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h5" sx={{
+          color: colors.primary,
+          fontWeight: 'bold',
+        }}>
+          Previous Assessments
+        </Typography>
+        {onNewAssessment && (
+          <Button
+            variant="contained"
+            onClick={onNewAssessment}
+            sx={{
+              backgroundColor: colors.primary,
+              color: colors.textPrimary,
+              '&:hover': {
+                backgroundColor: '#1d4ed8',
+              }
+            }}
+          >
+            New Assessment
+          </Button>
+        )}
+      </Box>
 
       {assessments && assessments.length > 0 ? (
         <>

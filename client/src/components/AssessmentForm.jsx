@@ -17,7 +17,8 @@ import {
   IconButton,
   FormLabel,
   RadioGroup,
-  Radio
+  Radio,
+  Alert
 } from "@mui/material";
 import { ExpandMore, ExpandLess, Circle } from '@mui/icons-material';
 import { useSelector } from "react-redux";
@@ -375,13 +376,24 @@ const AssessmentForm = ({
   };
 
   const validateForm = () => {
-    if (!user.name || !feedback) return false;
+    if (!user.name || !feedback?.trim()) return false;
 
-    return checkPoints.every(point => {
-      if (point.score > 0 && !point.isCompleted) return false;
-      if (point.isCompleted && point.score <= 0) return false;
-      return true;
+    let isValid = true;
+    const warnings = []; // Optional: Collect warnings for UI feedback
+
+    checkPoints.forEach(point => {
+      if (point.score > 0 && !point.isCompleted) {
+        isValid = false;
+        warnings.push(`${point.name}: Score given but not marked as completed.`);
+      }
+      // Remove or soften this: Allow completed + low score, but warn
+      if (point.isCompleted && point.score <= 0) {
+        // isValid = false; // Comment out to allow submission
+        warnings.push(`${point.name}: Marked as completed but score is 0—consider if this fits.`);
+      }
     });
+
+    return isValid;
   };
 
   return (
@@ -440,6 +452,12 @@ const AssessmentForm = ({
           sx={{ ml: 1 }}
         />
       </Typography>
+
+      {!feedback?.trim() && (
+        <Alert severity="warning" sx={{ mt: 1, mb: 2 }}>
+          Feedback is required to submit the assessment.
+        </Alert>
+      )}
 
       <TextField
         label="Feedback"
