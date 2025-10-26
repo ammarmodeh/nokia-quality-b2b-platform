@@ -451,18 +451,40 @@ const OnTheJobAssessment = () => {
       const team = fieldTeams.find(t => t._id.toString() === teamId);
       const numAssessments = teamAssessmentsMap[teamId]?.length || 0;
       const avgScore = getTeamAverageScore(teamId);
+      // Find the most recent assessment date for the team
+      const teamAssessments = teamAssessmentsMap[teamId] || [];
+      const latestAssessment = teamAssessments.reduce((latest, assessment) => {
+        const assessmentDate = assessment.assessmentDate || assessment.createdAt;
+        if (!assessmentDate) return latest;
+        const currentDate = new Date(assessmentDate);
+        if (!latest || currentDate > new Date(latest.assessmentDate || latest.createdAt)) {
+          return assessment;
+        }
+        return latest;
+      }, null);
+      const latestDateTime = latestAssessment
+        ? new Date(latestAssessment.assessmentDate || latestAssessment.createdAt).toLocaleString()
+        : 'N/A';
       return [
         team?.teamName || 'Unknown',
         numAssessments,
         `${avgScore}%`,
-        getScoreLabel(avgScore) // Added consistent label
+        getScoreLabel(avgScore),
+        latestDateTime // Added next to Performance Label
       ];
     });
 
     const ws_overall = XLSX.utils.aoa_to_sheet([
-      ['Team Name', 'Number of Assessments', 'Average Score', 'Performance Label'],
+      ['Team Name', 'Number of Assessments', 'Average Score', 'Performance Label', 'Latest Assessment Date and Time'], // Updated header
       ...summaryData
     ]);
+    ws_overall['!cols'] = [
+      { wch: 30 }, // Team Name
+      { wch: 20 }, // Number of Assessments
+      { wch: 15 }, // Average Score
+      { wch: 20 }, // Performance Label
+      { wch: 20 }  // Latest Assessment Date and Time
+    ];
     XLSX.utils.book_append_sheet(wb, ws_overall, 'Overall Summary');
 
     // Category weights (fixed)
@@ -505,22 +527,34 @@ const OnTheJobAssessment = () => {
 
       const categoryRows = categoryList.map(c => [c.category, `${c.average}%`, getScoreLabel(c.average)]);
 
-      // Compute checkpoint averages
-      const checkpointTotals = {};
+      // Compute checkpoint details (no date here to avoid repetition)
+      const checkpointDetails = [];
       teamAssessments.forEach(assessment => {
         assessment.checkPoints.forEach(cp => {
-          const key = cp.name;
-          if (!checkpointTotals[key]) {
-            checkpointTotals[key] = {
-              sum: 0,
-              count: 0,
-              category: cp.category,
-              description: cp.description || 'No description available'
-            };
-          }
-          checkpointTotals[key].sum += cp.score;
-          checkpointTotals[key].count += 1;
+          checkpointDetails.push({
+            category: cp.category,
+            name: cp.name,
+            description: cp.description || 'No description available',
+            score: cp.score,
+            label: getScoreLabel(cp.score)
+          });
         });
+      });
+
+      // Aggregate checkpoint averages for strengths and improvements
+      const checkpointTotals = {};
+      checkpointDetails.forEach(cp => {
+        const key = cp.name;
+        if (!checkpointTotals[key]) {
+          checkpointTotals[key] = {
+            sum: 0,
+            count: 0,
+            category: cp.category,
+            description: cp.description
+          };
+        }
+        checkpointTotals[key].sum += cp.score;
+        checkpointTotals[key].count += 1;
       });
 
       const checkpointList = Object.entries(checkpointTotals).map(([name, stats]) => {
@@ -528,32 +562,32 @@ const OnTheJobAssessment = () => {
         return {
           name,
           average: avg,
-          label: getScoreLabel(avg), // Use consistent threshold-based label
+          label: getScoreLabel(avg),
           category: stats.category,
           description: stats.description
         };
       });
 
-      // Updated thresholds to match consistent labels
       const checkpointStrengths = checkpointList
-        .filter(cp => cp.average >= 75) // Changed from 80 to 75 for "Good" and above
+        .filter(cp => cp.average >= 75)
         .sort((a, b) => b.average - a.average)
         .map(cp => [cp.name, `${cp.average}%`, cp.label]);
 
       const checkpointImprovements = checkpointList
-        .filter(cp => cp.average < 75) // Changed from 80 to 75
+        .filter(cp => cp.average < 75)
         .sort((a, b) => a.average - b.average)
         .map(cp => [cp.name, `${cp.average}%`, cp.label]);
 
-      const detailRows = checkpointList.map(cp => [
+      // Detailed rows without assessment date to avoid repetition
+      const detailRows = checkpointDetails.map(cp => [
         cp.category,
         cp.name,
         cp.description,
-        `${cp.average}%`,
+        `${cp.score}%`,
         cp.label
       ]);
 
-      // Single sheet data combining summary, strengths/improvements, and details (like individual export)
+      // Single sheet data combining summary, strengths/improvements, and details
       const teamSheetData = [
         [`Team Summary for ${teamName}`],
         [],
@@ -572,18 +606,17 @@ const OnTheJobAssessment = () => {
         ['Checkpoint', 'Average Score (%)', 'Label'],
         ...checkpointImprovements,
         [],
-        ['Detailed Checkpoint Averages'],
-        ['Category', 'Checkpoint Name', 'Description', 'Average Score (%)', 'Label'],
+        ['Detailed Checkpoint Scores'],
+        ['Category', 'Checkpoint Name', 'Description', 'Score (%)', 'Label'], // No date here
         ...detailRows
       ];
 
       const ws_team = XLSX.utils.aoa_to_sheet(teamSheetData);
       const safeSheetName = createSafeSheetName(teamName);
       XLSX.utils.book_append_sheet(wb, ws_team, safeSheetName);
-      // Set column widths for the widest section (5 columns)
       ws_team['!cols'] = [
-        { wch: 30 }, // Category/Checkpoint
-        { wch: 25 }, // Name
+        { wch: 30 }, // Category
+        { wch: 25 }, // Checkpoint Name
         { wch: 50 }, // Description
         { wch: 12 }, // Score
         { wch: 15 }  // Label
@@ -594,7 +627,10 @@ const OnTheJobAssessment = () => {
   }, [assessedTeamIds, fieldTeams, teamAssessmentsMap, getTeamAverageScore, createSafeSheetName, getScoreLabel]);
 
   const handleExportIndividualAssessment = useCallback((assessment, teamName) => {
-    const date = assessment.assessmentDate ? new Date(assessment.assessmentDate).toLocaleDateString() : (assessment.createdAt ? new Date(assessment.createdAt).toLocaleDateString() : 'N/A');
+    // Format date and time
+    const dateTime = assessment.assessmentDate
+      ? new Date(assessment.assessmentDate).toLocaleString()
+      : (assessment.createdAt ? new Date(assessment.createdAt).toLocaleString() : 'N/A');
 
     // Compute category statistics for detailed export
     const categoryStats = assessment.checkPoints.reduce((acc, point) => {
@@ -620,22 +656,23 @@ const OnTheJobAssessment = () => {
 
     // Updated thresholds to match consistent labels
     const checkpointStrengths = assessment.checkPoints
-      .filter(cp => cp.score >= 75) // Changed from 80 to 75 for "Good" and above
+      .filter(cp => cp.score >= 75)
       .sort((a, b) => b.score - a.score)
-      .map(cp => [cp.name, `${cp.score}%`, getScoreLabel(cp.score)]); // Use consistent threshold-based label
+      .map(cp => [cp.name, `${cp.score}%`, getScoreLabel(cp.score)]);
 
     const checkpointImprovements = assessment.checkPoints
-      .filter(cp => cp.score < 75) // Changed from 80 to 75
+      .filter(cp => cp.score < 75)
       .sort((a, b) => a.score - b.score)
-      .map(cp => [cp.name, `${cp.score}%`, getScoreLabel(cp.score)]); // Use consistent threshold-based label
+      .map(cp => [cp.name, `${cp.score}%`, getScoreLabel(cp.score)]);
 
-    // Summary Sheet Data - now with category performance
+    // Summary Sheet Data - include date and time in a single cell
+    // Summary Sheet Data - include date and time in a single cell
     const summaryData = [
       [`Assessment Summary for ${teamName}`],
       [],
       ['Team Name', teamName],
       ['Conducted By', assessment.conductedBy || 'N/A'],
-      ['Date', date],
+      ['Assessment Date and Time', dateTime], // Date and time in a single cell
       ['Overall Score', `${assessment.overallScore || 0}%`, getScoreLabel(assessment.overallScore || 0)],
       [],
       ['Category Averages'],
@@ -646,7 +683,7 @@ const OnTheJobAssessment = () => {
       [assessment.feedback || 'No feedback provided.']
     ];
 
-    // Checkpoints Sheet Data with strengths and improvements
+    // Checkpoints Sheet Data - no date repetition
     const detailHeaders = ['Category', 'Checkpoint Name', 'Description', 'Completed', 'Score (%)', 'Label', 'Notes'];
     const detailRows = assessment.checkPoints.map(cp => [
       cp.category,
@@ -654,13 +691,13 @@ const OnTheJobAssessment = () => {
       cp.description || 'No description available',
       cp.isCompleted ? 'Yes' : 'No',
       `${cp.score}%`,
-      getScoreLabel(cp.score), // Use consistent threshold-based label
+      getScoreLabel(cp.score),
       cp.notes || ''
     ]);
 
     const checkpointsSheetData = [
       [`Checkpoints for ${teamName}`],
-      [],
+      [], // Removed date from here to avoid repetition
       ['Checkpoint Strengths (Score >= 75% - Good/Excellent)'],
       ['Checkpoint', 'Score (%)', 'Label'],
       ...checkpointStrengths,
@@ -693,7 +730,11 @@ const OnTheJobAssessment = () => {
       { wch: 30 }
     ];
 
-    const filename = `${teamName}_OTJ-Assessment.xlsx`;
+    // Use date only (no time) for filename to keep it concise
+    const dateForFilename = assessment.assessmentDate
+      ? new Date(assessment.assessmentDate).toLocaleDateString().replace(/\//g, '-')
+      : (assessment.createdAt ? new Date(assessment.createdAt).toLocaleDateString().replace(/\//g, '-') : 'unknown');
+    const filename = `${teamName}_OTJ-Assessment_${dateForFilename}.xlsx`;
 
     XLSX.writeFile(wb, filename);
   }, [getScoreLabel]);
