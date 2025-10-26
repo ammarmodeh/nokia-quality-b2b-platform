@@ -502,7 +502,7 @@ const AssessmentDetail = ({
         />
       </Paper>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+      {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
         <Button
           variant="contained"
           onClick={() => onEdit(assessment)}
@@ -516,7 +516,7 @@ const AssessmentDetail = ({
         >
           Edit Assessment
         </Button>
-      </Box>
+      </Box> */}
 
       <Button
         startIcon={<ArrowBack />}
