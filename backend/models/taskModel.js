@@ -147,7 +147,7 @@ const subtaskSchema = new mongoose.Schema({
 
 const taskSchema = new mongoose.Schema(
   {
-    slid: { type: String, required: [true, "SLID is required"], trim: true, unique: true },
+    slid: { type: String, required: [true, "SLID is required"], trim: true, unique: false },
     pisDate: {
       type: Date,
       required: [true, "PIS Date is required"],
@@ -159,6 +159,7 @@ const taskSchema = new mongoose.Schema(
     requestNumber: {
       type: Number,
       required: [true, "Request number is required"],
+      unique: true
     },
     governorate: {
       type: String,
