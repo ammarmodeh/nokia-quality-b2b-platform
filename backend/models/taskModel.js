@@ -147,7 +147,7 @@ const subtaskSchema = new mongoose.Schema({
 
 const taskSchema = new mongoose.Schema(
   {
-    slid: { type: String, required: [true, "SLID is required"], trim: true, unique: false },
+    slid: { type: String, required: [true, "SLID is required"], trim: true },
     pisDate: {
       type: Date,
       required: [true, "PIS Date is required"],
