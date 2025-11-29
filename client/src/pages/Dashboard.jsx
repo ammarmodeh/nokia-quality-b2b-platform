@@ -14,7 +14,9 @@ import { KnowledgeGapReasonsTable } from "../components/KnowledgeGapReasonsTable
 import { CustomerEducationReasonsTable } from "../components/CustomerEducationReasonsTable";
 import IssueCategoriesDialog from "../components/IssueCategoriesDialog";
 import ReasonCategoriesDialog from "../components/ReasonCategoriesDialog";
+import { prepareWeeklyAnalyticsData } from "../utils/analyticsHelper";
 import ResponsibilityCategoriesDialog from "../components/ResponsibilityCategoriesDialog";
+import AIInsightButton from "../components/AIInsightButton";
 
 // Lazy load components
 const Chart = lazy(() => import("../components/Chart"));
@@ -121,9 +123,15 @@ const Dashboard = () => {
 
       {/* Weekly Count of QoS-Related Detractor & Neutral Customers Section */}
       <Box sx={{ margin: "20px 0" }}>
-        <Typography sx={{ marginBottom: isMediumScreen ? "4px" : "20px", color: "#767676", fontSize: isMediumScreen ? "12px" : "15px" }} variant="h5">
-          Weekly Count of QoS-Related Detractor & Neutral Customers
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: 1, mb: isMediumScreen ? "4px" : "20px" }}>
+          <Typography sx={{ color: "#767676", fontSize: isMediumScreen ? "12px" : "15px" }}>
+            Weekly Count of QoS-Related Detractor & Neutral Customers
+          </Typography>
+          <AIInsightButton
+            title="Deep Weekly QoS & NPS Executive Report"
+            endpoint="/ai/deep-weekly-analysis"
+          />
+        </Box>
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
           <Chart tasks={tasks} />
         </Suspense>

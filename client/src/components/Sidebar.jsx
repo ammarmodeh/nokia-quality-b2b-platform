@@ -2,7 +2,7 @@ import { ExpandMore } from "@mui/icons-material";
 import { Accordion, AccordionDetails, AccordionSummary, Stack, useMediaQuery } from "@mui/material";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { MdSettings } from "react-icons/md";
+import { MdSettings, MdPsychology } from "react-icons/md";
 import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 
@@ -22,6 +22,12 @@ const SidebarLinks = () => {
       link: "main-stats",
       icon: <img width={20} height={20} src="/main-stats.png" />,
       isNew: true, // Example of a new link
+    },
+    {
+      label: "AI Portal",
+      link: "ai-portal",
+      icon: <MdPsychology size={20} />,
+      isNew: true,
     },
     {
       label: "Policies List",

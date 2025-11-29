@@ -36,6 +36,8 @@ const CustomerIssuesList = lazy(() => import("./components/CustomerIssuesList"))
 const PerfAssessmentDashboard = lazy(() => import("./pages/PerfAssessmentDashboard"));
 const OnTheJobAssessment = lazy(() => import("./pages/OnTheJobAssessment"));
 const FieldTeamPortal = lazy(() => import("./pages/FieldTeamPortal"));
+const AIPortal = lazy(() => import("./pages/AIPortal"));
+const AIIntegrationExample = lazy(() => import("./pages/AIIntegrationExample"));
 
 // Custom route handlers
 const QuizRouteHandler = ({ children }) => {
@@ -145,6 +147,8 @@ const App = () => {
             <Route path="/teams-performance-page" element={<TeamsPerformancePage />} />
             <Route path="/archived" element={<Archived />} />
             <Route path="/trashed" element={<Trash />} />
+            <Route path="/ai-portal" element={<AIPortal />} />
+            <Route path="/ai-example" element={<AIIntegrationExample />} />
           </Route>
 
           {/* 404 Route - Updated to use the NotFound component */}

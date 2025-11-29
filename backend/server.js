@@ -15,6 +15,7 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import customerIssueRoutes from "./routes/customerIssueRoutes.js";
 import onTheJobAssessmentRoutes from "./routes/onTheJobAssessmentRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 
 dotenv.config();
 
@@ -30,8 +31,8 @@ const corsOptions = {
 
 const app = express();
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 connectDB();
@@ -52,6 +53,7 @@ app.use("/api/trash", trashRoutes);
 app.use("/api/customer-issues-notifications", customerIssueRoutes);
 app.use("/api/suggestions", suggestionsRoutes);
 app.use("/api/policies", policyRoutes);
+app.use("/api/ai", aiRoutes);
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
