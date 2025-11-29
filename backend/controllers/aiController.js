@@ -210,201 +210,135 @@ export const handleChat = async (req, res) => {
 
 
 // controllers/aiController.js → Replace only the deepWeeklyAnalysis function
-
 export const deepWeeklyAnalysis = async (req, res) => {
   try {
-    // --- 1. Dynamic Team Count and Limit Calculation ---
+    // --- 1. Dynamic Team Count & Limit ---
     const totalTeams = await FieldTeamsSchema.countDocuments({ role: 'fieldTeam', isActive: true });
     const actualTotalTeams = totalTeams > 0 ? totalTeams : 1;
 
-    // Target calculation: Dynamic calculation based on project KPIs (9% of annual sample)
     const SAMPLES_PER_WEEK = 115;
     const WEEKS_PER_YEAR = 52;
-    const MAX_DETRACTOR_RATE = 0.09; // 9%
-
-    // Calculate the Project-Wide Annual Detractor/Neutral Limit
+    const MAX_DETRACTOR_RATE = 0.09;
     const MAX_YEARLY_DETRACTORS_POOL = Math.round(SAMPLES_PER_WEEK * WEEKS_PER_YEAR * MAX_DETRACTOR_RATE);
-    // Allocate pool limit equally among active teams, rounded up.
     const YTD_DETRACTOR_LIMIT_PER_TEAM = Math.ceil(MAX_YEARLY_DETRACTORS_POOL / actualTotalTeams);
 
+    // --- 2. Dynamic Base Date: First Monday of actual data ---
+    const firstTask = await TaskSchema.findOne({
+      evaluationScore: { $lte: 8 },
+      interviewDate: { $exists: true }
+    })
+      .sort({ interviewDate: 1 })
+      .select('interviewDate')
+      .lean();
 
-    // Helper functions
+    let baseDate;
+    if (firstTask?.interviewDate) {
+      const firstDate = new Date(firstTask.interviewDate);
+      firstDate.setHours(0, 0, 0, 0);
+      const day = firstDate.getDay(); // 0 = Sun, 1 = Mon...
+      const diffToMonday = day === 0 ? 1 : (8 - day) % 7;
+      baseDate = new Date(firstDate);
+      baseDate.setDate(firstDate.getDate() + diffToMonday);
+    } else {
+      baseDate = new Date(2024, 11, 30); // Fallback: Monday 30 Dec 2024
+    }
+    baseDate.setHours(0, 0, 0, 0);
+
+    // --- 3. Helper: Week number since project start ---
     const getWeekNumber = (date) => {
       const d = new Date(date);
       d.setHours(0, 0, 0, 0);
-      const baseDate = new Date(2024, 11, 29);
-      baseDate.setHours(0, 0, 0, 0);
       const diffDays = Math.floor((d - baseDate) / 86400000);
-      return Math.floor(diffDays / 7);
+      const weekNum = Math.floor(diffDays / 7) + 1; // Week 1 = first full week
+      return weekNum >= 1 ? weekNum : 1;
     };
 
-    const getQuarterNumber = (date) => {
-      const d = new Date(date);
-      const month = d.getMonth() + 1; // getMonth() returns 0-11
-      return Math.ceil(month / 3);
-    };
-
-    // Fetch ALL tasks
-    const allTasks = await TaskSchema.find()
-      .select("interviewDate evaluationScore reason responsibility teamName teamCompany validationStatus")
-      .sort({ interviewDate: 1 });
-
-    // Filter the tasks to only include Detractor/Neutral cases (Score 1-8). This is the correct scope for the report.
-    const tasks = allTasks.filter(t => t.evaluationScore >= 1 && t.evaluationScore <= 8);
-
-    console.log(`AI Report: Processing ${tasks.length} detractor/neutral cases`);
+    // --- 4. Fetch detractor/neutral tasks only ---
+    const tasks = await TaskSchema.find({
+      evaluationScore: { $gte: 1, $lte: 8 },
+      interviewDate: { $exists: true }
+    })
+      .select("interviewDate teamName reason validationStatus")
+      .lean();
 
     if (tasks.length === 0) {
       return res.json({
-        analysis: `# QoS Executive Report — All Clear\n\n**No detractor or neutral cases (score 1-8) found.**\n\nAll customers are Promoters (9–10). Outstanding performance across all teams.\n\nKeep pushing for excellence.`,
+        analysis: `# QoS Executive Report — All Clear\n\n**No detractor or neutral cases found.**\n\nAll customers are Promoters (9–10). Outstanding performance.\n\nKeep pushing for excellence.`,
+        metadata: { totalCases: 0, generatedAt: new Date().toLocaleString() }
       });
     }
 
-    // Aggregations
-    const weekly = {}; // For volume and trend
-    const monthly = {}; // For volume and trend
-    const reasonCount = {}; // For YTD top 5 reasons
-    const teamDetractorCount = {}; // For chronic offenders
+    // --- 5. Aggregations ---
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const threeWeeksAgo = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    const teamCurrentMonth = {};
+    const teamLast3Weeks = {};
+    const teamLast2Weeks = {};
+    const teamWeeklyCount = {}; // For 2+ in same week
+    const teamYTDCount = {};
+    const reasonCount = {};
     const closure = { fixed: 0, pending: 0 };
 
-    // NEW AGGREGATIONS
-    const quarterly = {};
-    const monthlyReason = {}; // For month-to-month reason trend
-    const weeklyReason = {}; // For week-to-week reason trend
-
     tasks.forEach(t => {
+      const team = (t.teamName || "Unknown Team").trim();
+      const reason = String(t.reason || "Unspecified").trim();
       const weekNum = getWeekNumber(t.interviewDate);
       const weekKey = `Wk-${weekNum}`;
-      const monthKey = new Date(t.interviewDate).toLocaleString('en-US', { year: 'numeric', month: 'short' });
-      const quarterNum = getQuarterNumber(t.interviewDate);
-      const quarterKey = `Q${quarterNum}`;
 
-      const reason = String(t.reason || "Unspecified").trim();
-      const team = (t.teamName || "Unknown Team").trim();
-
-      // Weekly & Monthly Aggregation
-      if (!weekly[weekKey]) weekly[weekKey] = { total: 0, detractorNeutrals: 0 };
-      if (!monthly[monthKey]) monthly[monthKey] = { total: 0, detractorNeutrals: 0 };
-
-      weekly[weekKey].total++;
-      monthly[monthKey].total++;
-      weekly[weekKey].detractorNeutrals++;
-      monthly[monthKey].detractorNeutrals++;
-
-      teamDetractorCount[team] = (teamDetractorCount[team] || 0) + 1;
-
-      // Reasons (YTD)
+      // YTD counts
+      teamYTDCount[team] = (teamYTDCount[team] || 0) + 1;
       reasonCount[reason] = (reasonCount[reason] || 0) + 1;
 
-      // NEW: QUARTERLY Aggregation
-      if (!quarterly[quarterKey]) quarterly[quarterKey] = { total: 0, reasons: {} };
-      quarterly[quarterKey].total++;
-      quarterly[quarterKey].reasons[reason] = (quarterly[quarterKey].reasons[reason] || 0) + 1;
+      // Closure
+      if (t.validationStatus === "Validated") closure.fixed++;
+      else closure.pending++;
 
-      // NEW: MONTHLY REASON Aggregation
-      if (!monthlyReason[monthKey]) monthlyReason[monthKey] = { reasons: {} };
-      monthlyReason[monthKey].reasons[reason] = (monthlyReason[monthKey].reasons[reason] || 0) + 1;
-
-      // NEW: WEEKLY REASON Aggregation
-      if (!weeklyReason[weekKey]) weeklyReason[weekKey] = { reasons: {} };
-      weeklyReason[weekKey].reasons[reason] = (weeklyReason[weekKey].reasons[reason] || 0) + 1;
-
-      // Closure Metrics
-      if (t.validationStatus === "Validated") {
-        closure.fixed++;
-      } else {
-        closure.pending++;
+      // Current month
+      if (t.interviewDate >= startOfMonth) {
+        teamCurrentMonth[team] = (teamCurrentMonth[team] || 0) + 1;
       }
+      // Last 3 & 2 weeks
+      if (t.interviewDate >= threeWeeksAgo) teamLast3Weeks[team] = (teamLast3Weeks[team] || 0) + 1;
+      if (t.interviewDate >= twoWeeksAgo) teamLast2Weeks[team] = (teamLast2Weeks[team] || 0) + 1;
+
+      // Weekly repeat offenders
+      if (!teamWeeklyCount[weekKey]) teamWeeklyCount[weekKey] = {};
+      teamWeeklyCount[weekKey][team] = (teamWeeklyCount[weekKey][team] || 0) + 1;
     });
 
-    // --- 2. Post-Loop Processing ---
-
-    // Helper to get top reason string
-    const getTopReason = (reasonsObj) => {
-      if (Object.keys(reasonsObj).length === 0) return 'N/A';
-      const top = Object.entries(reasonsObj)
-        .sort((a, b) => b[1] - a[1])[0];
-      return `${top[0]} (${top[1]})`;
+    // --- 6. New Insights ---
+    const formatTopTeam = (obj) => {
+      if (Object.keys(obj).length === 0) return "None";
+      const [team, count] = Object.entries(obj).sort((a, b) => b[1] - a[1])[0];
+      return `**${team}** (${count} cases)`;
     };
 
-    // Quarterly Summary and Analysis String
-    const sortedQuarters = Object.entries(quarterly)
-      .sort(([qA], [qB]) => parseInt(qA.substring(1)) - parseInt(qB.substring(1))); // Sort Q1, Q2, Q3, Q4
+    const mostRepeatedCurrentMonth = formatTopTeam(teamCurrentMonth);
+    const mostRepeatedLast3Weeks = formatTopTeam(teamLast3Weeks);
+    const mostRepeatedLast2Weeks = formatTopTeam(teamLast2Weeks);
 
-    const quarterlyAnalysis = sortedQuarters.map(([q, data], index) => {
-      const topReason = getTopReason(data.reasons);
-      let trend = "";
-      let changeAnalysis = "";
-
-      // Compare with the previous quarter if it exists
-      if (index > 0) {
-        const prevQ = sortedQuarters[index - 1][0];
-        const prevData = sortedQuarters[index - 1][1];
-        const caseChange = data.total - prevData.total;
-        const prevTopReason = getTopReason(prevData.reasons);
-
-        trend = caseChange > 0 ? ` (▲ ${caseChange} cases)` : (caseChange < 0 ? ` (▼ ${Math.abs(caseChange)} cases)` : ` (— Stable)`);
-
-        if (topReason !== prevTopReason) {
-          changeAnalysis = `The primary failure mode shifted from **${prevTopReason.split(' (')[0]}** in ${prevQ} to **${topReason.split(' (')[0]}** in ${q}.`;
-        } else {
-          changeAnalysis = `The primary failure mode of **${topReason.split(' (')[0]}** persisted from ${prevQ}.`;
-        }
-      }
-
-      return `• **${q}**: ${data.total} reported cases${trend}. Primary Failure: "${topReason}". ${changeAnalysis}`;
-    }).join('\n');
-
-
-    // Monthly Trend Analysis String
-    const sortedMonths = Object.keys(monthlyReason)
-      .sort((a, b) => new Date(a.replace(' ', ' 1, ')) - new Date(b.replace(' ', ' 1, '))); // Sort chronologically
-
-    const monthlyTrendSummary = sortedMonths.map((month, index) => {
-      const topReason = getTopReason(monthlyReason[month].reasons);
-      let changeNote = "";
-
-      if (index > 0) {
-        const prevMonth = sortedMonths[index - 1];
-        const prevTopReason = getTopReason(monthlyReason[prevMonth].reasons);
-        if (topReason !== prevTopReason) {
-          changeNote = ` (Shift from ${prevTopReason.split(' (')[0]})`;
-        }
-      }
-      return `• **${month}**: Top Failure: ${topReason}${changeNote}`;
-    }).join('\n');
-
-    // Weekly Trend Analysis String (Last 4 Weeks)
-    const sortedWeeks = Object.keys(weekly).sort((a, b) => {
-      const aNum = parseInt(a.replace("Wk-", ""));
-      const bNum = parseInt(b.replace("Wk-", ""));
-      return bNum - aNum;
+    const weeklyRepeatOffenders = [];
+    Object.entries(teamWeeklyCount).forEach(([week, teams]) => {
+      Object.entries(teams)
+        .filter(([_, count]) => count >= 2)
+        .forEach(([team, count]) => {
+          weeklyRepeatOffenders.push(`• **${team}** — ${count} cases in ${week}`);
+        });
     });
+    const weeklyRepeatOffendersText = weeklyRepeatOffenders.length > 0
+      ? weeklyRepeatOffenders.sort().join('\n')
+      : "None detected";
 
-    const weeklyTrendSummary = sortedWeeks.slice(0, 4)
-      .map(week => {
-        const topReason = getTopReason(weeklyReason[week].reasons);
-        return `• **${week}**: Top Failure: ${topReason}`;
-      }).join('\n');
-
-
-    // YTD Summary Metrics
-    const lastWeek = sortedWeeks[0] || "N/A";
-    const lastWeekCases = weekly[lastWeek]?.total || 0;
-    const currentMonth = new Date().toLocaleString('en-US', { year: 'numeric', month: 'short' });
-    const currentMonthCases = monthly[currentMonth]?.total || 0;
-    const totalYTDDetractors = tasks.length;
-    const maxQuarter = sortedQuarters.reduce((max, [q, data]) => data.total > max.total ? { q, total: data.total } : max, { q: 'N/A', total: 0 });
-
-
-    // Top 5 Reasons
+    // --- 7. Existing Top 5 Reasons & Chronic Offenders ---
     const topReasons = Object.entries(reasonCount)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([r, c], i) => `${i + 1}. **${r}** — ${c} cases (${((c / totalYTDDetractors) * 100).toFixed(1)}%)`);
+      .map(([r, c], i) => `${i + 1}. **${r}** — ${c} cases (${((c / tasks.length) * 100).toFixed(1)}%)`);
 
-    // Chronic Offenders (Teams Exceeding Dynamic YTD Detractor Limit)
-    const chronicOffenders = Object.entries(teamDetractorCount)
+    const chronicOffenders = Object.entries(teamYTDCount)
       .filter(([_, c]) => c >= YTD_DETRACTOR_LIMIT_PER_TEAM)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 7)
@@ -412,81 +346,176 @@ export const deepWeeklyAnalysis = async (req, res) => {
         const teamReasons = tasks
           .filter(t => (t.teamName || "Unknown Team").trim() === team)
           .map(t => String(t.reason || "Unspecified").trim());
-
-        const reasonCounts = teamReasons.reduce((acc, reason) => {
-          acc[reason] = (acc[reason] || 0) + 1;
-          return acc;
-        }, {});
-
-        const topReason = Object.entries(reasonCounts)
-          .sort((a, b) => b[1] - a[1])[0]?.[0] || 'Mixed/Unspecified';
-
+        const topReason = Object.entries(teamReasons.reduce((a, r) => (a[r] = (a[r] || 0) + 1, a), {}))
+          .sort((a, b) => b[1] - a[1])[0]?.[0] || "Mixed";
         return `• **${team}** — ${c} cases (Limit: ${YTD_DETRACTOR_LIMIT_PER_TEAM}). Top failure: "${topReason}"`;
       });
 
-    const closureRate = totalYTDDetractors > 0
-      ? ((closure.fixed / totalYTDDetractors) * 100).toFixed(1)
-      : 0;
+    const closureRate = ((closure.fixed / tasks.length) * 100).toFixed(1);
 
+    // --- 8. Final Prompt to Gemini ---
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       temperature: 0.3,
     });
 
     const prompt = `
-You are an **AI Quality Analyst** dedicated to the OrangeJO-Nokia FTTH Project Quality Team.
-Your task is to generate a comprehensive, data-driven report focusing exclusively on **Reported Detractor (1-6) and Neutral (7-8) Customer Feedback (QoS/NPS)**.
+      You are an **AI Senior Quality Intelligence Advisor** for the OrangeJO–Nokia FTTH Program.  
+Your mission is to convert detractor/neutral cases (scores 1–8) into a **high-authority, trend-driven, executive intelligence report** with deep operational insights.
 
-The primary audience is the Quality Control team, which requires detailed statistical analysis, root cause identification, and actionable solutions based on provided best practices.
-
-### Key Data Summary:
-- Total **Reported** Cases (Year-to-Date, Score 1-8): ${totalYTDDetractors}
-- Last Week (${lastWeek}): ${lastWeekCases} reported cases
-- Current Month (${currentMonth}): ${currentMonthCases} reported cases
-- Total Cases Validated/Fixed: ${closure.fixed} (${closureRate}%)
-- Total Cases Pending Validation: **${closure.pending}**
-- Total Teams Monitored: **${totalTeams}**
-- Team YTD Detractor Limit (Calculated Target): **${YTD_DETRACTOR_LIMIT_PER_TEAM}** cases (9% of annual sample allocated per team).
+Audience: CTO, PMO Directors, Nokia Quality Managers  
+Tone: Executive, strict, data-driven, no soft language.  
+Always interpret the data — never restate it blindly.
 
 ---
-### Detailed Trends:
-#### Top 5 Persistent Root Causes (Total Count and Percentage of YTD Reported Cases):
+
+# 🔸 Raw Operational Flags (Computed)
+- **Most repeated team (Current Month):** ${mostRepeatedCurrentMonth}
+- **Most repeated team (Last 3 Weeks):** ${mostRepeatedLast3Weeks}
+- **Most repeated team (Last 2 Weeks):** ${mostRepeatedLast2Weeks}
+- **Weekly repeat offenders (≥2 cases in same week):**
+${weeklyRepeatOffendersText}
+
+---
+
+# 🔸 KPIs & Load Indicators
+- **Total Detractor/Neutral Cases (Score 1–8):** ${tasks.length}
+- **Validated Closures:** ${closureRate}%
+- **Active Field Teams:** ${totalTeams}
+- **Dynamic YTD Maximum Detractor Allowance Per Team:** ${YTD_DETRACTOR_LIMIT_PER_TEAM}
+
+---
+
+# 🔸 Top 5 Root Causes (Weighted YTD)
 ${topReasons.join("\n")}
 
-#### Chronic Offenders (Teams Exceeding YTD Detractor Limit of ${YTD_DETRACTOR_LIMIT_PER_TEAM}):
-${chronicOffenders.length > 0 ? chronicOffenders.join("\n") : "None detected"}
+---
+
+# 🔸 Chronic Offenders (Exceeded Annual Threshold)
+${chronicOffenders.length > 0 ? chronicOffenders.join("\n") : "No teams exceeded threshold."}
 
 ---
 
-### Pre-Approved Solutions Library (Use to inform recommendations):
-* **Splicing & Installation:** Adhere to best practices for fusion splicing, ensure clean cleaving, and regular calibration of equipment to minimize signal loss. (Source: FTTH Training Guide) 
-* **Customer Education - Technical:** Provide clear guidance on Wi-Fi optimization, proper router placement (high, open, away from electronics), and the difference between 2.4GHz/5GHz bands. (Source: FTTH Training Guide, Router Placement Guide) 
-* **Customer Education - Scoring System:** **HIGH PRIORITY:** Teams must proactively educate customers that scores **1-8 indicate dissatisfaction** and **9-10 indicate satisfaction (Promoter status)**, as this impacts the validity of positive feedback. This education also addresses the nuance of customer perception. (Source: User Request)
-* **Team Coaching:** Implement intensive coaching sessions focused on correct fiber installation, activation procedures, and effective customer communication (positive, direct, setting clear next steps). (Source: Comprehensive Action Plan, Customer Talk Tips)
-* **On-Site Verification:** Conduct immediate, targeted field inspections for teams flagged as chronic offenders to enforce adherence to quality standards. (Source: Comprehensive Action Plan)
+# 🎯 REQUIRED OUTPUT FORMAT (STRICT)
+
+Generate a **deep, insight-rich, aggressive Markdown report** structured EXACTLY as follows:
 
 ---
 
-### Strict Report Generation Rules:
+### **1. Annual Performance Overview**
+- High-level health of detractor behavior.
+- Whether the current trajectory risks breaching annual KPI ceilings.
+- Macro failure pressure points.
 
-1.  **Format:** Must be a **clean, visually structured, and professional report in Markdown only.** Use headings, tables, and **bold** for clarity.
-2.  **Tone:** Analytical, direct, focused purely on operational statistics and technical insights.
-3.  **Cross-Reference:** Explicitly link the **Top 5 Root Causes** to the teams listed under **Chronic Offenders**.
-4.  **Customer Perception Acknowledgment:** In the recurrence analysis, acknowledge that root causes can sometimes be **soft issues** such as unmet customer expectations or poor communication, even if the service is technically flawless (due to the score system nuance).
-5.  **Actionable Solutions:** The recommendations must be aggressive, concrete, and must be based on or directly align with the points in the **Pre-Approved Solutions Library**.
-6.  **Required Sections (in this EXACT order):**
+---
 
-| # | Section Title | Content Focus |
-|---|---|---|
-| 1 | **Annual Performance Overview** | One sentence verdict on the overall YTD performance trend (improving, stable, escalating) and a summary of the largest quarter (**${maxQuarter.q}**). |
-| 2 | **QoS Metrics Snapshot** | A Markdown table comparing Last Week vs. Current Month metrics (Total Reported Cases, YTD Validated Rate, Total Pending). |
-| 3 | **Quarterly Trend & Volatility Analysis** | Deep analysis of the changes from quartile to quartile. Use the following data: \n${quarterlyAnalysis} \n Analyze volatility in case volume and the **change in the top failure mode** between quarters. |
-| 4 | **Dominant Failure Modes (YTD)** | Deep dive into the **Top 3 Root Causes** of the Top 5. Analyze their technical implications and persistence across the year. |
-| 5 | **Monthly Failure Mode Evolution** | Analyze the month-to-month changes in the top root cause. Use the following data: \n${monthlyTrendSummary}\nAlso, report the top reason for the **last 4 weeks**:\n${weeklyTrendSummary} |
-| 6 | **Accountability & Exceeded Limits** | Direct analysis of teams exceeding the YTD detractor limit. Identify their top failure mode. |
-| 7 | **Recurrence and Quality Gap** | Analyze why the Top 3 YTD Root Causes are reappearing. Address the role of **customer perception and expectation management** in recurrence. |
-| 8 | **Immediate & Strategic Solutions** | **5 numbered, high-priority actions.** Must include the specific action to **Educate Customers on the Scoring System** (9-10 is Promoter). |
-| 9 | **Strategic Risk Outlook** | A final paragraph on the operational risk if the Top 3 Root Causes are not immediately resolved (e.g., impact on overall quality score, cost of repeat visits). |
+### **2. QoS Metrics Snapshot**
+- Include repeat offenders across weeks and months.
+- Highlight clusters, spikes, and operational anomalies.
+- Identify any teams showing pattern-level deterioration.
+
+---
+
+### **3. Quarterly Trend & Volatility Analysis**
+Perform **trend analytics over the last 13 weeks (quarter)**:
+- Identify rising vs. declining teams.
+- Highlight volatility zones (weeks with surge vs. calm).
+- Detect structural instability (recurrence patterns).
+
+---
+
+### **4. Team Trend Intelligence (MANDATORY SECTION)**
+Provide deep trend analytics for team-level behavior:
+
+#### **a. 4-Week Rolling Trend (Per Team)**
+- Identify the most frequently recurring teams across the last 4 full weeks.
+- Highlight teams showing continuous deterioration or week-over-week increase.
+- Flag any team appearing in **≥3 of the last 4 weeks**.
+
+#### **b. Quarter Trend (13 Weeks)**
+- Identify the **top persistent violators** across the quarter.
+- Highlight teams with recurring presence across multiple intervals.
+- Determine if violations are spiking, plateauing, or cyclic.
+
+#### **c. Repeat Appearance Analysis**
+- List any team appearing in multiple trend windows:
+  - Current Month  
+  - Last 3 Weeks  
+  - Last 2 Weeks  
+  - Weekly repeat offenders  
+- Clearly flag teams that create **cross-window violations** (structural issue).
+
+#### **d. “Most Violating Team Over Time”**
+- Identify the team with the highest cumulative detractor load across:
+  - 4-week window  
+  - 8-week window  
+  - Quarter window  
+  - YTD (if applicable)  
+- Explain the operational implication.
+
+This section must read like a **Quality Intelligence Early-Warning System**.
+
+---
+
+### **5. Dominant Failure Modes (YTD)**
+- Interpretation of root causes.
+- Which failure modes are accelerating.
+- Their operational trigger points.
+
+---
+
+### **6. Monthly Failure Mode Evolution**
+- How root causes shifted month-over-month.
+- Detect newly emerging failure drivers.
+- Identify seasonal/logistical/coverage-driven cause changes.
+
+---
+
+### **7. Accountability & Exceeded Limits**
+You must:
+- Aggressively call out the **most repeated teams**.
+- Highlight weekly repeat offenders.
+- List all teams approaching or exceeding YTD detractor ceilings.
+- Present consequences from an operational risk perspective.
+
+---
+
+### **8. Recurrence and Quality Gap**
+- Explain why certain teams repeatedly appear.
+- Identify skill gaps, process non-compliance, installation issues, or customer-interaction issues.
+- Provide clear cause chains:  
+  **Process → Skill → Customer Experience → Score Impact**
+
+---
+
+### **9. Immediate & Strategic Solutions**
+Use only the **Pre-Approved Solutions Library**.  
+Provide:
+- Immediate actions (0–2 weeks)
+- Tactical improvements (1–3 months)
+- Strategic corrections (quarter scale)
+- **MANDATORY:** Include customer scoring education (9–10 = Promoter).
+
+Tone must be strict, operational, and executive.
+
+---
+
+### **10. Strategic Risk Outlook**
+- Predict high-risk teams for upcoming 4–8 weeks.
+- Assess likelihood of KPI failure.
+- Provide a 4-level severity signal: Low / Medium / High / Critical.
+- Identify regions or teams likely to escalate.
+
+---
+
+# STYLE RULES
+- No generic text.  
+- Must not repeat numerical stats without interpretation.  
+- Use decision-oriented, operational language.  
+- The final output must resemble a **CTO-level executive intelligence brief**.
+
+Now generate the full report.
+
 `;
 
     const result = await model.generateContent(prompt);
@@ -496,17 +525,22 @@ ${chronicOffenders.length > 0 ? chronicOffenders.join("\n") : "None detected"}
       analysis,
       metadata: {
         model: "gemini-2.5-flash",
-        totalCases: totalYTDDetractors,
-        lastWeek: lastWeek,
-        currentMonthCases,
+        totalCases: tasks.length,
+        mostRepeatedCurrentMonth,
+        mostRepeatedLast3Weeks,
+        mostRepeatedLast2Weeks,
+        weeklyRepeatOffenders: weeklyRepeatOffenders.length,
         closureRate: `${closureRate}%`,
-        totalTeams: totalTeams,
+        totalTeams,
         detractorLimitPerTeam: YTD_DETRACTOR_LIMIT_PER_TEAM,
-        generatedAt: new Date().toLocaleString("en-GB", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        generatedAt: new Date().toLocaleString("en-GB", {
+          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        }),
       },
     });
   } catch (error) {
     console.error("AI Report Failed:", error);
-    res.status(500).json({ error: "Failed to generate executive report", details: error.message });
+    res.status(500).json({ error: "Failed to generate report", details: error.message });
   }
 };
