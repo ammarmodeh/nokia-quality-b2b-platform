@@ -264,24 +264,34 @@ const TaskViewPage = () => {
       }
     } catch (error) {
       // console.error("Error in handleSaveAndNotify:", error);
-    } finally {
-      handleNoteDialogClose();
+      console.log(error);
     }
+    handleNoteDialogClose();
   };
 
-  const handleEditTask = (updatedTask) => {
+  const handleTaskUpdate = (updatedTask) => {
     if (!updatedTask) {
       console.error("Updated task is undefined");
       return;
     }
-    const filledTask = fillTaskExceptCreatedFields(updatedTask);
-    setTask(filledTask);  // This updates the task state
-    setEditDialogOpen(true);  // Close the dialog after update
+
+    // Preserve createdBy if it's an object in the current task but not in the updated task
+    let finalTask = { ...updatedTask };
+    if (task?.createdBy && typeof task.createdBy === 'object' &&
+      (!updatedTask.createdBy || typeof updatedTask.createdBy !== 'object')) {
+      finalTask.createdBy = task.createdBy;
+    }
+
+    const filledTask = fillTaskExceptCreatedFields(finalTask);
+    setTask(filledTask);
+  };
+
+  const handleOpenEditDialog = () => {
+    setEditDialogOpen(true);
   };
 
   const handleTaskDelete = async (taskId) => {
     const confirmDelete = window.confirm("Are you sure you want to delete this task?");
-
     if (!confirmDelete) return;
 
     try {
@@ -389,7 +399,7 @@ const TaskViewPage = () => {
             {task.createdBy._id === user._id && (
               <>
                 <Tooltip title="Edit Task">
-                  <IconButton onClick={() => handleEditTask(task)} sx={{ color: '#ffffff' }}>
+                  <IconButton onClick={handleOpenEditDialog} sx={{ color: '#ffffff' }}>
                     <FaEdit size={isMobile ? 18 : 24} />
                   </IconButton>
                 </Tooltip>
@@ -886,7 +896,7 @@ const TaskViewPage = () => {
         </DialogActions>
       </Dialog>
 
-      <EditTaskDialog open={editDialogOpen} setOpen={setEditDialogOpen} task={task} handleTaskUpdate={handleEditTask} />
+      <EditTaskDialog open={editDialogOpen} setOpen={setEditDialogOpen} task={task} handleTaskUpdate={handleTaskUpdate} />
     </Box>
   );
 };
