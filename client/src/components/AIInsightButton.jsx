@@ -9,10 +9,10 @@ const AIInsightButton = ({
   title = "Deep AI Executive Analysis",
   endpoint = "/ai/deep-weekly-analysis",
   size = "medium",
-  color = "#00e5ff"
+  color = "#ffffff"
 }) => {
   const [loading, setLoading] = useState(false);
-  const [insights, setInsights] = useState(null);
+  const [data, setData] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const handleAnalyze = async () => {
@@ -22,14 +22,13 @@ const AIInsightButton = ({
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
       });
 
-      setInsights(data.analysis || "No insights generated.");
+      setData(data); // Contains analysis + metadata
       setDialogOpen(true);
     } catch (error) {
-      console.error("AI Analysis Error:", error);
-      setInsights(
-        error.response?.data?.error ||
-        "Failed to connect to AI engine. Please try again later."
-      );
+      setData({
+        analysis: error.response?.data?.error || "Failed to generate report. Please try again.",
+        metadata: { generatedAt: new Date().toLocaleString() }
+      });
       setDialogOpen(true);
     } finally {
       setLoading(false);
@@ -38,34 +37,39 @@ const AIInsightButton = ({
 
   const handleClose = () => setDialogOpen(false);
   const handleRegenerate = () => {
-    setInsights(null);
+    setData(null);
     handleAnalyze();
   };
 
   return (
     <>
-      <Tooltip title="Deep AI Executive Insights" arrow placement="top">
+      <Tooltip title="AI Executive Report" arrow>
         <IconButton
           onClick={handleAnalyze}
           disabled={loading}
           size={size}
           sx={{
             color,
-            ml: 1,
-            '&:hover': { backgroundColor: 'rgba(0, 229, 255, 0.15)' },
+            background: loading ? 'rgba(0,229,255,0.1)' : 'transparent',
+            '&:hover': { backgroundColor: 'rgba(0, 229, 255, 0.2)' },
+            boxShadow: loading ? '0 0 10px rgba(0,229,255,0.4)' : 'none',
+            transition: 'all 0.3s ease'
           }}
         >
-          {loading ? <CircularProgress size={22} color="inherit" /> : <MdPsychology size={26} />}
+          {loading ? <CircularProgress size={22} /> : <MdPsychology size={28} />}
         </IconButton>
       </Tooltip>
 
-      <AIInsightDialog
-        open={dialogOpen}
-        onClose={handleClose}
-        insights={insights}
-        title={title}
-        onRegenerate={handleRegenerate}
-      />
+      {data && (
+        <AIInsightDialog
+          open={dialogOpen}
+          onClose={handleClose}
+          insights={data.analysis}
+          metadata={data.metadata}
+          title={title}
+          onRegenerate={handleRegenerate}
+        />
+      )}
     </>
   );
 };

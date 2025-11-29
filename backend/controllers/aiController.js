@@ -215,29 +215,29 @@ export const deepWeeklyAnalysis = async (req, res) => {
   try {
     // --- 1. Dynamic Team Count and Limit Calculation ---
     const totalTeams = await FieldTeamsSchema.countDocuments({ role: 'fieldTeam', isActive: true });
-    const actualTotalTeams = totalTeams > 0 ? totalTeams : 1; 
+    const actualTotalTeams = totalTeams > 0 ? totalTeams : 1;
 
     // Target calculation: Dynamic calculation based on project KPIs (9% of annual sample)
     const SAMPLES_PER_WEEK = 115;
     const WEEKS_PER_YEAR = 52;
     const MAX_DETRACTOR_RATE = 0.09; // 9%
-    
+
     // Calculate the Project-Wide Annual Detractor/Neutral Limit
     const MAX_YEARLY_DETRACTORS_POOL = Math.round(SAMPLES_PER_WEEK * WEEKS_PER_YEAR * MAX_DETRACTOR_RATE);
     // Allocate pool limit equally among active teams, rounded up.
-    const YTD_DETRACTOR_LIMIT_PER_TEAM = Math.ceil(MAX_YEARLY_DETRACTORS_POOL / actualTotalTeams); 
+    const YTD_DETRACTOR_LIMIT_PER_TEAM = Math.ceil(MAX_YEARLY_DETRACTORS_POOL / actualTotalTeams);
 
 
     // Helper functions
     const getWeekNumber = (date) => {
       const d = new Date(date);
       d.setHours(0, 0, 0, 0);
-      const baseDate = new Date(2024, 11, 29); 
+      const baseDate = new Date(2024, 11, 29);
       baseDate.setHours(0, 0, 0, 0);
       const diffDays = Math.floor((d - baseDate) / 86400000);
       return Math.floor(diffDays / 7);
     };
-        
+
     const getQuarterNumber = (date) => {
       const d = new Date(date);
       const month = d.getMonth() + 1; // getMonth() returns 0-11
@@ -265,49 +265,49 @@ export const deepWeeklyAnalysis = async (req, res) => {
     const monthly = {}; // For volume and trend
     const reasonCount = {}; // For YTD top 5 reasons
     const teamDetractorCount = {}; // For chronic offenders
-    const closure = { fixed: 0, pending: 0 }; 
-        
-        // NEW AGGREGATIONS
-        const quarterly = {};
-        const monthlyReason = {}; // For month-to-month reason trend
-        const weeklyReason = {}; // For week-to-week reason trend
+    const closure = { fixed: 0, pending: 0 };
+
+    // NEW AGGREGATIONS
+    const quarterly = {};
+    const monthlyReason = {}; // For month-to-month reason trend
+    const weeklyReason = {}; // For week-to-week reason trend
 
     tasks.forEach(t => {
       const weekNum = getWeekNumber(t.interviewDate);
       const weekKey = `Wk-${weekNum}`;
       const monthKey = new Date(t.interviewDate).toLocaleString('en-US', { year: 'numeric', month: 'short' });
-            const quarterNum = getQuarterNumber(t.interviewDate);
-            const quarterKey = `Q${quarterNum}`;
-      
+      const quarterNum = getQuarterNumber(t.interviewDate);
+      const quarterKey = `Q${quarterNum}`;
+
       const reason = String(t.reason || "Unspecified").trim();
       const team = (t.teamName || "Unknown Team").trim();
 
       // Weekly & Monthly Aggregation
       if (!weekly[weekKey]) weekly[weekKey] = { total: 0, detractorNeutrals: 0 };
       if (!monthly[monthKey]) monthly[monthKey] = { total: 0, detractorNeutrals: 0 };
-      
+
       weekly[weekKey].total++;
       monthly[monthKey].total++;
       weekly[weekKey].detractorNeutrals++;
       monthly[monthKey].detractorNeutrals++;
-      
+
       teamDetractorCount[team] = (teamDetractorCount[team] || 0) + 1;
 
       // Reasons (YTD)
       reasonCount[reason] = (reasonCount[reason] || 0) + 1;
 
-            // NEW: QUARTERLY Aggregation
-            if (!quarterly[quarterKey]) quarterly[quarterKey] = { total: 0, reasons: {} };
-            quarterly[quarterKey].total++;
-            quarterly[quarterKey].reasons[reason] = (quarterly[quarterKey].reasons[reason] || 0) + 1;
+      // NEW: QUARTERLY Aggregation
+      if (!quarterly[quarterKey]) quarterly[quarterKey] = { total: 0, reasons: {} };
+      quarterly[quarterKey].total++;
+      quarterly[quarterKey].reasons[reason] = (quarterly[quarterKey].reasons[reason] || 0) + 1;
 
-            // NEW: MONTHLY REASON Aggregation
-            if (!monthlyReason[monthKey]) monthlyReason[monthKey] = { reasons: {} };
-            monthlyReason[monthKey].reasons[reason] = (monthlyReason[monthKey].reasons[reason] || 0) + 1;
-            
-            // NEW: WEEKLY REASON Aggregation
-            if (!weeklyReason[weekKey]) weeklyReason[weekKey] = { reasons: {} };
-            weeklyReason[weekKey].reasons[reason] = (weeklyReason[weekKey].reasons[reason] || 0) + 1;
+      // NEW: MONTHLY REASON Aggregation
+      if (!monthlyReason[monthKey]) monthlyReason[monthKey] = { reasons: {} };
+      monthlyReason[monthKey].reasons[reason] = (monthlyReason[monthKey].reasons[reason] || 0) + 1;
+
+      // NEW: WEEKLY REASON Aggregation
+      if (!weeklyReason[weekKey]) weeklyReason[weekKey] = { reasons: {} };
+      weeklyReason[weekKey].reasons[reason] = (weeklyReason[weekKey].reasons[reason] || 0) + 1;
 
       // Closure Metrics
       if (t.validationStatus === "Validated") {
@@ -317,95 +317,95 @@ export const deepWeeklyAnalysis = async (req, res) => {
       }
     });
 
-        // --- 2. Post-Loop Processing ---
+    // --- 2. Post-Loop Processing ---
 
-        // Helper to get top reason string
-        const getTopReason = (reasonsObj) => {
-            if (Object.keys(reasonsObj).length === 0) return 'N/A';
-            const top = Object.entries(reasonsObj)
-                .sort((a, b) => b[1] - a[1])[0];
-            return `${top[0]} (${top[1]})`; 
-        };
+    // Helper to get top reason string
+    const getTopReason = (reasonsObj) => {
+      if (Object.keys(reasonsObj).length === 0) return 'N/A';
+      const top = Object.entries(reasonsObj)
+        .sort((a, b) => b[1] - a[1])[0];
+      return `${top[0]} (${top[1]})`;
+    };
 
-        // Quarterly Summary and Analysis String
-        const sortedQuarters = Object.entries(quarterly)
-            .sort(([qA], [qB]) => parseInt(qA.substring(1)) - parseInt(qB.substring(1))); // Sort Q1, Q2, Q3, Q4
+    // Quarterly Summary and Analysis String
+    const sortedQuarters = Object.entries(quarterly)
+      .sort(([qA], [qB]) => parseInt(qA.substring(1)) - parseInt(qB.substring(1))); // Sort Q1, Q2, Q3, Q4
 
-        const quarterlyAnalysis = sortedQuarters.map(([q, data], index) => {
-            const topReason = getTopReason(data.reasons);
-            let trend = "";
-            let changeAnalysis = "";
-            
-            // Compare with the previous quarter if it exists
-            if (index > 0) {
-                const prevQ = sortedQuarters[index - 1][0];
-                const prevData = sortedQuarters[index - 1][1];
-                const caseChange = data.total - prevData.total;
-                const prevTopReason = getTopReason(prevData.reasons);
-                
-                trend = caseChange > 0 ? ` (▲ ${caseChange} cases)` : (caseChange < 0 ? ` (▼ ${Math.abs(caseChange)} cases)` : ` (— Stable)`);
-                
-                if (topReason !== prevTopReason) {
-                    changeAnalysis = `The primary failure mode shifted from **${prevTopReason.split(' (')[0]}** in ${prevQ} to **${topReason.split(' (')[0]}** in ${q}.`;
-                } else {
-                    changeAnalysis = `The primary failure mode of **${topReason.split(' (')[0]}** persisted from ${prevQ}.`;
-                }
-            }
-            
-            return `• **${q}**: ${data.total} reported cases${trend}. Primary Failure: "${topReason}". ${changeAnalysis}`;
-        }).join('\n');
+    const quarterlyAnalysis = sortedQuarters.map(([q, data], index) => {
+      const topReason = getTopReason(data.reasons);
+      let trend = "";
+      let changeAnalysis = "";
 
+      // Compare with the previous quarter if it exists
+      if (index > 0) {
+        const prevQ = sortedQuarters[index - 1][0];
+        const prevData = sortedQuarters[index - 1][1];
+        const caseChange = data.total - prevData.total;
+        const prevTopReason = getTopReason(prevData.reasons);
 
-        // Monthly Trend Analysis String
-        const sortedMonths = Object.keys(monthlyReason)
-            .sort((a, b) => new Date(a.replace(' ', ' 1, ')) - new Date(b.replace(' ', ' 1, '))); // Sort chronologically
+        trend = caseChange > 0 ? ` (▲ ${caseChange} cases)` : (caseChange < 0 ? ` (▼ ${Math.abs(caseChange)} cases)` : ` (— Stable)`);
 
-        const monthlyTrendSummary = sortedMonths.map((month, index) => {
-            const topReason = getTopReason(monthlyReason[month].reasons);
-            let changeNote = "";
+        if (topReason !== prevTopReason) {
+          changeAnalysis = `The primary failure mode shifted from **${prevTopReason.split(' (')[0]}** in ${prevQ} to **${topReason.split(' (')[0]}** in ${q}.`;
+        } else {
+          changeAnalysis = `The primary failure mode of **${topReason.split(' (')[0]}** persisted from ${prevQ}.`;
+        }
+      }
 
-            if (index > 0) {
-                const prevMonth = sortedMonths[index - 1];
-                const prevTopReason = getTopReason(monthlyReason[prevMonth].reasons);
-                if (topReason !== prevTopReason) {
-                    changeNote = ` (Shift from ${prevTopReason.split(' (')[0]})`;
-                }
-            }
-            return `• **${month}**: Top Failure: ${topReason}${changeNote}`;
-        }).join('\n');
-
-        // Weekly Trend Analysis String (Last 4 Weeks)
-        const sortedWeeks = Object.keys(weekly).sort((a, b) => {
-            const aNum = parseInt(a.replace("Wk-", ""));
-            const bNum = parseInt(b.replace("Wk-", ""));
-            return bNum - aNum;
-        });
-        
-        const weeklyTrendSummary = sortedWeeks.slice(0, 4)
-            .map(week => {
-                const topReason = getTopReason(weeklyReason[week].reasons);
-                return `• **${week}**: Top Failure: ${topReason}`;
-            }).join('\n');
+      return `• **${q}**: ${data.total} reported cases${trend}. Primary Failure: "${topReason}". ${changeAnalysis}`;
+    }).join('\n');
 
 
-        // YTD Summary Metrics
+    // Monthly Trend Analysis String
+    const sortedMonths = Object.keys(monthlyReason)
+      .sort((a, b) => new Date(a.replace(' ', ' 1, ')) - new Date(b.replace(' ', ' 1, '))); // Sort chronologically
+
+    const monthlyTrendSummary = sortedMonths.map((month, index) => {
+      const topReason = getTopReason(monthlyReason[month].reasons);
+      let changeNote = "";
+
+      if (index > 0) {
+        const prevMonth = sortedMonths[index - 1];
+        const prevTopReason = getTopReason(monthlyReason[prevMonth].reasons);
+        if (topReason !== prevTopReason) {
+          changeNote = ` (Shift from ${prevTopReason.split(' (')[0]})`;
+        }
+      }
+      return `• **${month}**: Top Failure: ${topReason}${changeNote}`;
+    }).join('\n');
+
+    // Weekly Trend Analysis String (Last 4 Weeks)
+    const sortedWeeks = Object.keys(weekly).sort((a, b) => {
+      const aNum = parseInt(a.replace("Wk-", ""));
+      const bNum = parseInt(b.replace("Wk-", ""));
+      return bNum - aNum;
+    });
+
+    const weeklyTrendSummary = sortedWeeks.slice(0, 4)
+      .map(week => {
+        const topReason = getTopReason(weeklyReason[week].reasons);
+        return `• **${week}**: Top Failure: ${topReason}`;
+      }).join('\n');
+
+
+    // YTD Summary Metrics
     const lastWeek = sortedWeeks[0] || "N/A";
     const lastWeekCases = weekly[lastWeek]?.total || 0;
     const currentMonth = new Date().toLocaleString('en-US', { year: 'numeric', month: 'short' });
     const currentMonthCases = monthly[currentMonth]?.total || 0;
-        const totalYTDDetractors = tasks.length;
-        const maxQuarter = sortedQuarters.reduce((max, [q, data]) => data.total > max.total ? { q, total: data.total } : max, { q: 'N/A', total: 0 });
+    const totalYTDDetractors = tasks.length;
+    const maxQuarter = sortedQuarters.reduce((max, [q, data]) => data.total > max.total ? { q, total: data.total } : max, { q: 'N/A', total: 0 });
 
 
     // Top 5 Reasons
     const topReasons = Object.entries(reasonCount)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5) 
+      .slice(0, 5)
       .map(([r, c], i) => `${i + 1}. **${r}** — ${c} cases (${((c / totalYTDDetractors) * 100).toFixed(1)}%)`);
 
     // Chronic Offenders (Teams Exceeding Dynamic YTD Detractor Limit)
     const chronicOffenders = Object.entries(teamDetractorCount)
-      .filter(([_, c]) => c >= YTD_DETRACTOR_LIMIT_PER_TEAM) 
+      .filter(([_, c]) => c >= YTD_DETRACTOR_LIMIT_PER_TEAM)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 7)
       .map(([team, c]) => {
@@ -429,7 +429,7 @@ export const deepWeeklyAnalysis = async (req, res) => {
       : 0;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash", 
+      model: "gemini-2.5-flash",
       temperature: 0.3,
     });
 

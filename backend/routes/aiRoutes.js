@@ -7,6 +7,6 @@ const router = express.Router();
 router.post("/insights", protect, generateInsights);
 router.post("/chat", protect, handleChat);
 router.post("/analyze-chart", protect, analyzeChartData);
-router.post("/deep-weekly-analysis", protect, deepWeeklyAnalysis);// ← NEW
+router.post("/deep-weekly-analysis", protect, deepWeeklyAnalysis);
 
 export default router;

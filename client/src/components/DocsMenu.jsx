@@ -81,44 +81,84 @@ export const DocsMenu = ({ anchorEl, open, onClose, isDrawer = false }) => {
 
   const shredWithFieldTeams = [
     {
-      title: "ONT Config Steps - NOKIA Type-H",
-      href: "https://drive.google.com/uc?export=download&id=1nkPvcN1Zq9zH0V5s0FDaqrhOrRPZh7uT",
-    },
-    {
-      title: "Nokia G-140W-C Configuration",
-      href: "https://drive.google.com/uc?export=download&id=1JKXIVBdhTGmhC5chmdaPnuYY3wIWFXhv",
-    },
-    {
-      title: "ZTE F6600P",
-      href: "https://drive.google.com/uc?export=download&id=1ULDpENcnuhsJyj7SwJvUQbT_THs1QBc3",
+      title: "Comprehensive Action Plan for Training Field Teams and Improving NPS",
+      href: "https://drive.google.com/file/d/1NSgGNi1qWC9UiWLEmJOxesx5IOZwyAcf/view?usp=sharing",
     },
     {
       title: "Factors affecting gaming ping in arabic",
-      href: "https://drive.google.com/uc?export=download&id=1tWQ2R__RkVC27uar6eYV39ns49K3J4tu",
+      href: "https://drive.google.com/file/d/1yV_OSTqxoWUBxvhiFV7nj-FH4HYdxpA3/view?usp=drive_link",
     },
     {
       title: "Factors Affecting VPN Connections in arabic",
-      href: "https://drive.google.com/uc?export=download&id=1F8kqyOlcRwxZ7r8p-wqQR_HFIiL4_Tq7",
-    },
-    {
-      title: "Troubleshoot common IPTV problems in arabic",
-      href: "https://drive.google.com/uc?export=download&id=1bwAw_XjzyWRRYlEhbAZqv6pgCT5U0Y5v",
-    },
-    {
-      title: "The best place for wireless router in arabic",
-      href: "https://drive.google.com/uc?export=download&id=1uQt-SmbqsWMfCrdnMSvTghdw2Mj2tsZL",
+      href: "https://drive.google.com/file/d/1vn3uGGRIWxmwPIvWgEA0F4uQdFZHSUn7/view?usp=drive_link",
     },
     {
       title: "Labeling Standard",
-      href: "https://drive.google.com/uc?export=download&id=1KM6fRTuaYsQK7TWId6pRd_h2g4MJm0Ne",
+      href: "https://drive.google.com/file/d/1kqNm-6EtBSUf8M0yWrJ1mWT2FmmF68oB/view?usp=drive_link",
+    },
+    {
+      title: "Nokia G-140W-C Configuration",
+      href: "https://drive.google.com/file/d/15P_OzblC8a6tIIyQfpE4_DBEpYXxCp6R/view?usp=drive_link",
+    },
+    {
+      title: "Nokia G-2426G-P (WiFi 6)",
+      href: "https://drive.google.com/file/d/1i-88cqu5lfa4_gXmIPI1EzF9V-i4NM8O/view?usp=drive_link",
+    },
+    {
+      title: "ONT Config Steps - NOKIA Type-H",
+      href: "https://drive.google.com/file/d/18DoLwOu5VHlak47-wBRp00wXAjso_Nt4/view?usp=drive_link",
+    },
+    {
+      title: "The best place for wireless router in arabic",
+      href: "https://drive.google.com/file/d/14AOMy7zwogwnlrt9azJ2TYiognxG4llY/view?usp=drive_link",
     },
     {
       title: "Tips on how to talk to customers in arabic",
-      href: "https://drive.google.com/uc?export=download&id=1qaH3iHVdKMCY2nmWaYNx0WLMB5Vzg7vX",
+      href: "https://drive.google.com/file/d/1gZdSFiyxVdjAxHLdI2UuZZAytwIZCKKP/view?usp=drive_link",
     },
     {
-      title: "fusion-splicing arc calibration and cleaning session",
-      href: "https://drive.google.com/uc?export=download&id=1sJVTOMsQMBZtI9Kqh7HyZDgYR1sZ9qAH",
+      title: "Troubleshoot common IPTV problems in arabic",
+      href: "https://drive.google.com/file/d/1OicDupRWjCX75kc3EoDl46qQVG_z4sSf/view?usp=drive_link",
+    },
+    {
+      title: "ZTE F6600P",
+      href: "https://drive.google.com/file/d/1JTbu7c5LxUPGZMMywE_1A4fPQ46mWrdY/view?usp=drive_link",
+    },
+    {
+      title: "Being Effective Worker at Workplace",
+      href: "https://drive.google.com/file/d/1wSSfzr_hxtPO0vZSMyPeLPQu8W7vxrky/view?usp=drive_link",
+    },
+    {
+      title: "Electrod lifetime",
+      href: "https://drive.google.com/file/d/14KX8PnfBTDn2yPkLPQFMXdACbMmqgK2g/view?usp=drive_link",
+    },
+    {
+      title: "Factors affect optical fiber splicing loss",
+      href: "https://drive.google.com/file/d/1ksbOKaVe4cE1Y7ibxNpmqhkWoq5rbHbt/view?usp=drive_link",
+    },
+    {
+      title: "fusion-splicing arc calibration and cleaning session .-44-46",
+      href: "https://drive.google.com/file/d/1iU2Yz5PWyuu54p8A7h_pZqaPEzN464eo/view?usp=drive_link",
+    },
+    {
+      title: "How to check the strength of your Wi-Fi signal and interpret or improve its strength level",
+      href: "https://drive.google.com/file/d/1Lua0kWIdVTKvmYsVDEI_MxFElsIRl7aO/view?usp=drive_link",
+    },
+    {
+      title: "Media Streamers Tech Specifications",
+      href: "https://drive.google.com/file/d/1Ev2Lx1wkFcsZ2kd4WIbDmYzUKpS1LOih/view?usp=drive_link",
+    },
+    {
+      title: "Must-have Tools for Fiber Optic Technicians",
+      href: "https://docs.google.com/document/d/1pjJNIKl9P3oLpiqNHe71oSsZy6sUUedC/edit?usp=drive_link&ouid=109709095419447676835&rtpof=true&sd=true",
+    },
+    {
+      title: "ways to troubleshoot and fix any Wi-Fi problems you're encountering",
+      href: "https://docs.google.com/document/d/1TXluJoZyAcBuTcENXTfpYJX9Zo3gihsS/edit?usp=drive_link&ouid=109709095419447676835&rtpof=true&sd=true",
+    },
+    {
+      title: "WiFi",
+      href: "https://drive.google.com/file/d/1jbfbxrOjJv1Erk9wn08AjvOlviK0Yr1r/view?usp=drive_link",
     },
   ];
 
