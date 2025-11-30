@@ -1,5 +1,5 @@
 import express from "express";
-import { generateInsights, handleChat, analyzeChartData, deepWeeklyAnalysis } from "../controllers/aiController.js";
+import { generateInsights, handleChat, analyzeChartData, deepWeeklyAnalysis, generateReportFile } from "../controllers/aiController.js";
 import { protect } from "../middleware/authMiddleware.js"; // Assuming you have auth middleware
 
 const router = express.Router();
@@ -7,6 +7,8 @@ const router = express.Router();
 router.post("/insights", protect, generateInsights);
 router.post("/chat", protect, handleChat);
 router.post("/analyze-chart", protect, analyzeChartData);
+
+router.post("/report/download", protect, generateReportFile);
 router.post("/deep-weekly-analysis", protect, deepWeeklyAnalysis);
 
 export default router;

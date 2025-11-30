@@ -6,16 +6,16 @@ import api from "../api/api";
 import { useSelector } from "react-redux";
 import { MoonLoader } from "react-spinners";
 import { SnackbarProvider } from "notistack";
-import { CompanyViolationTable } from "../components/CompanyViolationTable";
+// import { CompanyViolationTable } from "../components/CompanyViolationTable";
 import { ActivationTeamRespTable } from "../components/ActivationTeamRespTable";
 import { AllReasonsTable } from "../components/AllReasonsTable";
-import { AllResponsiblesTable } from "../components/AllResponsiblesTable";
+// import { AllResponsiblesTable } from "../components/AllResponsiblesTable";
 import { KnowledgeGapReasonsTable } from "../components/KnowledgeGapReasonsTable";
 import { CustomerEducationReasonsTable } from "../components/CustomerEducationReasonsTable";
 import IssueCategoriesDialog from "../components/IssueCategoriesDialog";
 import ReasonCategoriesDialog from "../components/ReasonCategoriesDialog";
-import { prepareWeeklyAnalyticsData } from "../utils/analyticsHelper";
-import ResponsibilityCategoriesDialog from "../components/ResponsibilityCategoriesDialog";
+// import { prepareWeeklyAnalyticsData } from "../utils/analyticsHelper";
+// import ResponsibilityCategoriesDialog from "../components/ResponsibilityCategoriesDialog";
 import AIInsightButton from "../components/AIInsightButton";
 
 // Lazy load components
@@ -188,82 +188,6 @@ const Dashboard = () => {
                 </Box>
               </Stack>
             </Box>
-          </Stack>
-
-          {/* Row 2 */}
-          <Stack
-            direction={isMediumScreen ? "column" : "row"}
-            spacing={2}
-            alignItems="stretch"
-          >
-            {/* <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
-              <Stack
-                backgroundColor="#1a1a1aa3"
-                padding={2}
-                borderRadius={4}
-                direction={'column'}
-              >
-                <AllReasonsTable tasks={tasks} />
-                <Box sx={{
-                  backgroundColor: '#1e1e1e',
-                  p: 2,
-                  borderRadius: '8px',
-                  border: '1px solid #444',
-                  mt: 2
-                }}>
-                  <Typography variant="body2" sx={{
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
-                  }}>
-                    How we categorize feedback reasons
-                    <ReasonCategoriesDialog />
-                  </Typography>
-                  <Typography variant="caption" sx={{
-                    color: '#aaaaaa',
-                    display: 'block',
-                    mt: 1
-                  }}>
-                    Click the info icon to understand our reason categorization methodology.
-                  </Typography>
-                </Box>
-              </Stack>
-            </Box> */}
-            {/* <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
-              <Stack
-                backgroundColor="#1a1a1aa3"
-                padding={2}
-                borderRadius={4}
-                direction={'column'}
-              >
-                <AllResponsiblesTable tasks={tasks} />
-                <Box sx={{
-                  backgroundColor: '#1e1e1e',
-                  p: 2,
-                  borderRadius: '8px',
-                  border: '1px solid #444',
-                  mt: 2
-                }}>
-                  <Typography variant="body2" sx={{
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
-                  }}>
-                    How we assign responsibility for issues
-                    <ResponsibilityCategoriesDialog />
-                  </Typography>
-                  <Typography variant="caption" sx={{
-                    color: '#aaaaaa',
-                    display: 'block',
-                    mt: 1
-                  }}>
-                    Click the info icon to understand our responsibility assignment methodology.
-                  </Typography>
-                </Box>
-              </Stack>
-            </Box> */}
           </Stack>
 
           {/* Row 3 */}

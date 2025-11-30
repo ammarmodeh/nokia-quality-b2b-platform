@@ -1,5 +1,5 @@
 // src/components/AIInsightDialog.jsx
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -11,9 +11,10 @@ import {
   Box,
   Snackbar,
   Alert,
-  // Chip,
   Stack,
   Link,
+  TextField,
+  CircularProgress,
 } from '@mui/material';
 import {
   MdClose,
@@ -21,11 +22,16 @@ import {
   MdRefresh,
   MdPsychology,
   MdOpenInNew,
+  MdPictureAsPdf,
+  MdChat,
+  MdSend,
 } from 'react-icons/md';
 import { FaWhatsapp } from 'react-icons/fa';
+import api from '../api/api';
 
 // === OFFICIAL FIELD TEAM RESOURCES (2025) ===
 const shredWithFieldTeams = [
+  // ... (Your resource list remains unchanged)
   {
     title: "Comprehensive Action Plan for Training Field Teams & Improving NPS",
     href: "https://drive.google.com/file/d/1NSgGNi1qWC9UiWLEmJOxesx5IOZwyAcf/view?usp=sharing",
@@ -36,7 +42,7 @@ const shredWithFieldTeams = [
   },
   {
     title: "Factors Affecting VPN Connections (Arabic)",
-    href: "https://drive.google.com/file/d/1vn3uGGRIWxmwPIvWgEA0F4uQdFZHSUn7/view?usp=drive_link",
+    href: "https://drive.google.com/file/d/1vn3uGGRIWxmwPIvWgEA0F4uQdFZHSUn3/view?usp=drive_link",
   },
   {
     title: "Labeling Standard",
@@ -108,8 +114,25 @@ const shredWithFieldTeams = [
   },
 ];
 
+// Component updated to accept 'api' as a prop
 const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadata }) => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  // === NEW CHAT STATE ===
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatHistory, chatOpen]);
+  // === END CHAT STATE ===
 
   const reportUrl = `${window.location.origin}/dashboard`;
   const whatsappText = encodeURIComponent(
@@ -129,6 +152,125 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
 
   const handleSnackbarClose = () => setSnackbar({ ...snackbar, open: false });
 
+  // === CHAT SEND HANDLER (Logic Unchanged) ===
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    setChatLoading(true);
+
+    const newHistory = [...chatHistory, { sender: 'user', text: userMessage }];
+    setChatHistory(newHistory);
+
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        throw new Error("Authentication token not found. Please log in.");
+      }
+
+      const response = await api.post(
+        '/ai/chat',
+        {
+          reportContext: insights,
+          userQuery: userMessage,
+          chatHistory: newHistory.filter(msg => msg.sender === 'user').map(msg => msg.text)
+        },
+        {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        }
+      );
+
+      setChatHistory(prev => [
+        ...prev,
+        { sender: 'ai', text: response.data.chatResponse || "Sorry, I couldn't process that request." }
+      ]);
+
+    } catch (error) {
+      console.error('Chat failed:', error);
+
+      let errorMsg = "Failed to get a response from the AI.";
+
+      if (error.response?.status === 503) {
+        errorMsg = "AI Service is temporarily busy/overloaded. Please wait a moment and try sending your question again.";
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+
+      setChatHistory(prev => [
+        ...prev,
+        { sender: 'ai', text: `Error: ${errorMsg}` }
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+  // === END CHAT SEND HANDLER ===
+
+
+  // === DOWNLOAD HANDLER (Logic Unchanged) ===
+  const handleDownload = async (format) => {
+    setSnackbar({ open: true, message: `Generating ${format.toUpperCase()} report...`, severity: 'info' });
+
+    try {
+      const endpoint = '/ai/report/download';
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        throw new Error("Authentication token not found. Please log in.");
+      }
+
+      const response = await api.post(
+        endpoint,
+        {
+          reportContent: insights,
+          format: format,
+          title: title || 'QoS Executive Report'
+        },
+        {
+          responseType: 'blob',
+          headers: { Authorization: `Bearer ${accessToken}` }
+        }
+      );
+
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `${(title || 'QoS_Report').replace(/\s/g, '_')}_${new Date().toISOString().slice(0, 10)}.${format}`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+?)"/);
+        if (filenameMatch && filenameMatch.length === 2) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      setSnackbar({ open: true, message: `${format.toUpperCase()} report successfully generated!`, severity: 'success' });
+
+    } catch (error) {
+      console.error('Download failed:', error);
+      const errorMsg = error.response?.data?.error || error.message || "Unknown error.";
+      setSnackbar({
+        open: true,
+        message: `Download failed: ${errorMsg}`,
+        severity: 'error'
+      });
+    }
+  };
+  // === END DOWNLOAD HANDLER ===
+
+
   return (
     <>
       <Dialog
@@ -144,136 +286,299 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
           }
         }}
       >
-        {/* Header */}
-        <DialogTitle sx={{ bgcolor: '#00e5ff15', borderBottom: '1px solid #333', py: 2.5, px: 4 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h5" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <MdPsychology size={28} color="#00e5ff" />
-              {title || "QoS Executive Report"}
-            </Typography>
-            <IconButton onClick={onClose} sx={{ color: '#aaa' }}>
-              <MdClose size={26} />
-            </IconButton>
-          </Box>
-          {metadata && (
-            <Typography variant="body2" color="#00e5ff" mt={1}>
-              Generated on {metadata.generatedAt} • {metadata.totalCases} cases analyzed
-            </Typography>
-          )}
-        </DialogTitle>
+        {/* Header: Centered horizontally with max-width */}
+        <Box sx={{ mx: 'auto', width: '100%' }}>
+          <DialogTitle sx={{ bgcolor: '#00e5ff15', borderBottom: '1px solid #333', py: 1.5, px: 3 }}> {/* Reduced padding */}
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Typography variant="h6" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}> {/* Reduced Typography variant */}
+                <MdPsychology size={22} color="#00e5ff" /> {/* Reduced icon size */}
+                {title || "QoS Executive Report"}
+              </Typography>
+              <IconButton onClick={onClose} sx={{ color: '#aaa', p: 0.5 }}> {/* Reduced padding */}
+                <MdClose size={20} /> {/* Reduced icon size */}
+              </IconButton>
+            </Box>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} mt={1}>
+              {metadata && (
+                <Typography variant="caption" color="#00e5ff" mt={0.5}> {/* Reduced Typography variant/margin */}
+                  Generated on {metadata.generatedAt} • {metadata.totalCases} cases analyzed
+                </Typography>
+              )}
+              {/* Chat Toggle Button */}
+              <Button
+                size="small" // Small button size
+                startIcon={<MdChat size={16} />}
+                onClick={() => setChatOpen(!chatOpen)}
+                variant="outlined"
+                sx={{
+                  color: chatOpen ? '#dc3545' : '#00e5ff',
+                  borderColor: chatOpen ? '#dc3545' : '#00e5ff',
+                  '&:hover': {
+                    borderColor: chatOpen ? '#dc3545' : '#00e5ff',
+                    bgcolor: chatOpen ? '#dc354510' : '#00e5ff10'
+                  },
+                  mr: 1, // Reduced margin
+                  p: '4px 10px' // Custom padding for smaller look
+                }}
+              >
+                {chatOpen ? 'Hide Chat' : 'Ask AI'}
+              </Button>
+            </Stack>
+          </DialogTitle>
+        </Box>
 
-        <DialogContent sx={{ px: { xs: 2, sm: 4 }, py: 3 }}>
-          {/* Main Report */}
-          <Box
-            sx={{
-              backgroundColor: '#1a1a1a',
-              border: '1px solid #333',
-              borderRadius: 2,
-              p: { xs: 2, sm: 3 },
-              maxHeight: '60vh',
-              overflowY: 'auto',
-              fontSize: '0.98rem',
-              lineHeight: 1.75,
-              '& h1, & h2, & h3': {
-                color: '#00e5ff',
-                mt: 3,
-                mb: 1.5,
-                fontWeight: 600,
-                borderBottom: '1px dashed #444',
-                pb: 1
-              },
-              '& strong': { color: '#fff', fontWeight: 700 },
-              '& ul, & ol': { pl: 3, my: 2 },
-              '& li': { mb: 0.7 },
-            }}
-          >
-            <Typography component="div" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {insights || 'Generating insights...'}
-            </Typography>
-          </Box>
+        {/* Content: Constrained to max-width and centered */}
+        <Box
+          sx={{
+            // maxWidth: 'lg',
+            mx: 'auto',
+            width: '100%',
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto'
+          }}
+        >
+          <DialogContent sx={{ px: { xs: 1, sm: 3 }, py: 2, display: 'flex', flexDirection: 'column', flexGrow: 1 }}> {/* Reduced padding */}
 
-          {/* === FIELD TEAM RESOURCES === */}
-          <Box mt={5}>
-            <Typography variant="h6" color="#00e5ff" mb={2} fontWeight={600}>
-              Field Team Resources & Training Materials
-            </Typography>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
-                gap: 1.5,
-                maxHeight: '400px',
-                overflowY: 'auto',
-                pr: 1,
-              }}
-            >
-              {shredWithFieldTeams.map((resource, idx) => (
-                <Link
-                  key={idx}
-                  href={resource.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  underline="none"
+            <Box display="flex" flexGrow={1} minHeight={0}>
+              {/* Main Report Content (Always Visible) */}
+              <Box
+                flexGrow={1}
+                sx={{
+                  pr: chatOpen ? 2 : 0,
+                  width: chatOpen ? '65%' : '100%',
+                  transition: 'width 0.3s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
+                <Box
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    bgcolor: '#252525',
-                    color: '#ccc',
-                    p: 2,
-                    borderRadius: 2,
-                    border: '1px solid #444',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      bgcolor: '#303030',
-                      borderColor: '#00e5ff',
-                      color: '#fff',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 4px 12px rgba(0,229,255,0.15)',
+                    backgroundColor: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: 1, // Reduced border radius
+                    p: { xs: 1.5, sm: 2 }, // Reduced padding
+                    height: chatOpen ? '50vh' : '60vh',
+                    flexGrow: 1,
+                    overflowY: 'auto',
+                    fontSize: '0.9rem', // Reduced overall font size
+                    lineHeight: 1.6, // Reduced line height slightly
+                    '& h1, & h2, & h3': {
+                      color: '#00e5ff',
+                      mt: 2, mb: 1, fontWeight: 600, // Reduced margins
+                      borderBottom: '1px dashed #444', pb: 0.5 // Reduced padding
                     },
+                    // Specific text size reduction for the Markdown content
+                    '& h1': { fontSize: '1.5rem' },
+                    '& h2': { fontSize: '1.25rem' },
+                    '& h3': { fontSize: '1.1rem' },
+                    '& strong': { color: '#fff', fontWeight: 700 },
+                    '& ul, & ol': { pl: 2.5, my: 1.5 }, // Reduced padding/margin
+                    '& li': { mb: 0.5 }, // Reduced margin
+                    '& table': { width: '100%', borderCollapse: 'collapse', my: 1.5, fontSize: '0.85rem' }, // Reduced size
+                    '& th, & td': { border: '1px solid #444', p: 1, textAlign: 'left' }, // Reduced padding
+                    '& th': { backgroundColor: '#333' }
                   }}
                 >
-                  <MdOpenInNew size={18} color="#00e5ff" />
-                  <Typography variant="body2" sx={{ fontSize: '0.9rem', lineHeight: 1.4 }}>
-                    {resource.title}
+                  <Typography component="div" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    {insights || 'Generating insights...'}
                   </Typography>
-                </Link>
-              ))}
-            </Box>
-          </Box>
-        </DialogContent>
+                </Box>
+              </Box>
 
-        {/* Footer */}
-        <DialogActions sx={{
-          borderTop: '1px solid #333',
-          py: 2.5,
-          px: 4,
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: 2
-        }}>
-          <Typography variant="caption" color="#777" flexGrow={1}>
-            Powered by Gemini 2.5 Flash • OrangeJO-Nokia FTTH Quality Team
-          </Typography>
-          <Stack direction="row" spacing={1.5}>
-            <Button startIcon={<MdContentCopy />} onClick={handleCopy} variant="outlined" sx={{ color: '#90caf9', borderColor: '#444' }}>
-              Copy Report
-            </Button>
-            <Button
-              startIcon={<FaWhatsapp />}
-              onClick={handleShareWhatsApp}
-              variant="contained"
-              sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#1DA851' }, color: '#fff' }}
-            >
-              Share via WhatsApp
-            </Button>
-            <Button startIcon={<MdRefresh />} onClick={onRegenerate} variant="outlined" sx={{ color: '#90caf9', borderColor: '#444' }}>
-              Regenerate
-            </Button>
-            <Button onClick={onClose} variant="contained" color="primary">
-              Close
-            </Button>
-          </Stack>
-        </DialogActions>
+              {/* === AI CHAT PANEL === */}
+              <Box
+                sx={{
+                  width: chatOpen ? '35%' : '0',
+                  ml: chatOpen ? 2 : 0,
+                  overflow: 'hidden',
+                  transition: 'width 0.3s ease, margin 0.3s ease',
+                  display: chatOpen ? 'flex' : 'none',
+                  flexDirection: 'column',
+                  borderLeft: '1px solid #333',
+                  pl: 2,
+                }}
+              >
+                <Typography variant="subtitle1" color="#00e5ff" mb={1} fontWeight={600}> {/* Reduced Typography variant */}
+                  Report Q&A
+                </Typography>
+
+                {/* Chat History Area */}
+                <Box
+                  sx={{
+                    flexGrow: 1,
+                    overflowY: 'auto',
+                    mb: 1, // Reduced margin
+                    p: 1,
+                    background: '#1a1a1a',
+                    borderRadius: 1,
+                    border: '1px solid #444',
+                  }}
+                >
+                  {chatHistory.length === 0 ? (
+                    <Typography color="#777" p={1.5} textAlign="center" variant="caption"> {/* Reduced Typography variant/padding */}
+                      Ask me about any term, metric, or implication in the report!
+                    </Typography>
+                  ) : (
+                    chatHistory.map((message, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          display: 'flex',
+                          justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start',
+                          mb: 0.5, // Reduced margin
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            maxWidth: '80%',
+                            p: 0.8, // Reduced padding
+                            borderRadius: 1, // Reduced border radius
+                            bgcolor: message.sender === 'user' ? '#00e5ff20' : '#444',
+                            color: message.sender === 'user' ? '#fff' : '#ccc',
+                            fontSize: '0.8rem', // Reduced font size
+                          }}
+                        >
+                          {message.text}
+                        </Box>
+                      </Box>
+                    ))
+                  )}
+                  {chatLoading && (
+                    <Box display="flex" justifyContent="flex-start" mt={0.5}>
+                      <CircularProgress size={18} color="primary" sx={{ color: '#00e5ff' }} /> {/* Reduced size */}
+                    </Box>
+                  )}
+                  <div ref={messagesEndRef} />
+                </Box>
+
+                {/* Chat Input */}
+                <form onSubmit={handleSendMessage} style={{ display: 'flex', width: '100%' }}>
+                  <TextField
+                    fullWidth
+                    variant="outlined"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Inquire about the report..."
+                    size="small" // Small size
+                    sx={{
+                      mr: 1,
+                      '& .MuiOutlinedInput-root': {
+                        color: '#fff',
+                        '& fieldset': { borderColor: '#555' },
+                        '&:hover fieldset': { borderColor: '#00e5ff' },
+                        '&.Mui-focused fieldset': { borderColor: '#00e5ff' },
+                      },
+                      // The size="small" prop handles the internal padding
+                    }}
+                    disabled={chatLoading}
+                  />
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    size="small" // Small button size
+                    startIcon={<MdSend size={16} />}
+                    disabled={!chatInput.trim() || chatLoading}
+                    sx={{ bgcolor: '#00e5ff', '&:hover': { bgcolor: '#00c3d9' } }}
+                  >
+                    Send
+                  </Button>
+                </form>
+              </Box>
+            </Box>
+
+            {/* === FIELD TEAM RESOURCES === */}
+            <Box mt={3}> {/* Reduced margin */}
+              <Typography variant="h6" color="#00e5ff" mb={1} fontWeight={600} fontSize="1.1rem"> {/* Reduced Typography variant/size */}
+                Field Team Resources & Training Materials
+              </Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+                  gap: 1, // Reduced gap
+                  maxHeight: '100px', // Further reduced height
+                  overflowY: 'auto',
+                  pr: 1,
+                }}
+              >
+                {shredWithFieldTeams.map((resource, idx) => (
+                  <Link
+                    key={idx}
+                    href={resource.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    underline="none"
+                    sx={{
+                      display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#252525', color: '#ccc',
+                      p: 1.5, borderRadius: 1, border: '1px solid #444', transition: 'all 0.2s', // Reduced padding/radius
+                      '&:hover': { bgcolor: '#303030', borderColor: '#00e5ff', color: '#fff', transform: 'translateY(-1px)', boxShadow: '0 2px 6px rgba(0,229,255,0.15)' }, // Reduced transform/shadow
+                    }}
+                  >
+                    <MdOpenInNew size={16} color="#00e5ff" /> {/* Reduced icon size */}
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem', lineHeight: 1.3 }}> {/* Reduced Typography size */}
+                      {resource.title}
+                    </Typography>
+                  </Link>
+                ))}
+              </Box>
+            </Box>
+
+          </DialogContent>
+        </Box>
+
+        {/* Footer: Centered horizontally with max-width */}
+        <Box sx={{ mx: 'auto', width: '100%' }}>
+          <DialogActions sx={{
+            borderTop: '1px solid #333',
+            py: 1.5, // Reduced padding
+            px: 3, // Reduced padding
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 1.5 // Reduced gap
+          }}>
+            <Typography variant="caption" color="#777" flexGrow={1}> {/* Reduced Typography variant */}
+              Powered by Gemini 2.5 Flash • OrangeJO-Nokia FTTH Quality Team
+            </Typography>
+            <Stack direction="row" spacing={1}> {/* Reduced spacing */}
+              {/* PDF DOWNLOAD BUTTON */}
+              <Button
+                size="small" // Small button size
+                startIcon={<MdPictureAsPdf size={16} />}
+                onClick={() => handleDownload('pdf')}
+                variant="contained"
+                sx={{
+                  bgcolor: '#dc3545',
+                  '&:hover': { bgcolor: '#c82333' },
+                  color: '#fff'
+                }}
+                disabled={!insights}
+              >
+                Download PDF
+              </Button>
+
+              <Button size="small" startIcon={<MdContentCopy size={16} />} onClick={handleCopy} variant="outlined" sx={{ color: '#90caf9', borderColor: '#444' }}>
+                Copy Report
+              </Button>
+              <Button
+                size="small"
+                startIcon={<FaWhatsapp size={16} />}
+                onClick={handleShareWhatsApp}
+                variant="contained"
+                sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#1DA851' }, color: '#fff' }}
+              >
+                Share via WhatsApp
+              </Button>
+              <Button size="small" startIcon={<MdRefresh size={16} />} onClick={onRegenerate} variant="outlined" sx={{ color: '#90caf9', borderColor: '#444' }}>
+                Regenerate
+              </Button>
+              <Button onClick={onClose} variant="contained" color="primary" size="small">
+                Close
+              </Button>
+            </Stack>
+          </DialogActions>
+        </Box>
       </Dialog>
 
       <Snackbar
@@ -282,7 +587,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity={snackbar.severity} onClose={handleSnackbarClose} variant="filled">
+        <Alert severity={snackbar.severity} onClose={handleSnackbarClose} variant="filled" sx={{ fontSize: '0.9rem', py: 0.5 }}>
           {snackbar.message}
         </Alert>
       </Snackbar>
