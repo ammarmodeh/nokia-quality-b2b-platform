@@ -7,13 +7,14 @@ import AIInsightDialog from './AIInsightDialog';
 
 const AIInsightButton = ({
   title = "Deep AI Executive Analysis",
-  endpoint = "/ai/deep-weekly-analysis",
   size = "medium",
   color = "#ffffff"
 }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const endpoint = `${import.meta.env.VITE_BACKEND_URL}/api/ai/deep-weekly-analysis`
 
   const handleAnalyze = async () => {
     setLoading(true);

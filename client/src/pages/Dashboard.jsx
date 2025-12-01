@@ -127,10 +127,7 @@ const Dashboard = () => {
           <Typography sx={{ color: "#767676", fontSize: isMediumScreen ? "12px" : "15px" }}>
             Weekly Count of QoS-Related Detractor & Neutral Customers
           </Typography>
-          <AIInsightButton
-            title="Deep Weekly QoS & NPS Executive Report"
-            endpoint="/ai/deep-weekly-analysis"
-          />
+          <AIInsightButton />
         </Box>
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
           <Chart tasks={tasks} />
