@@ -350,8 +350,11 @@ export const deepWeeklyAnalysis = async (req, res) => {
     // Simple placeholder implementation to verify endpoint and CORS.
     // In production you would replace this with the full analysis logic.
     const dummyResult = {
-      message: "Deep weekly analysis placeholder response.",
-      timestamp: new Date().toISOString()
+      analysis: "## 🟢 QoS Executive Report — Placeholder\n\n**CORS Check Successful.**\n\nThis is a placeholder response to verify that the CORS configuration is working correctly on Vercel.",
+      metadata: {
+        generatedAt: new Date().toLocaleString(),
+        totalCases: 0
+      }
     };
     res.status(200).json(dummyResult);
   } catch (error) {
