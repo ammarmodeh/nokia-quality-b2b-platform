@@ -2,6 +2,8 @@ import axios from "axios";
 import store from "../redux/store";
 import { logout } from "../redux/slices/authSlice";
 
+// console.log('import.meta.env.VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
+
 const api = axios.create({
   baseURL: `${import.meta.env.VITE_BACKEND_URL}/api`,
   withCredentials: true,
