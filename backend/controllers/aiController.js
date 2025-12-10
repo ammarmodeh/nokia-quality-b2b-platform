@@ -6,6 +6,7 @@ import QuizResult from "../models/quizResultModel.js";
 import { OnTheJobAssessment } from "../models/onTheJobAssessmentModel.js";
 import { SuggestionSchema } from "../models/suggestionsModel.js";
 import { CustomerIssueSchema } from "../models/customerIssueModel.js";
+import { AIReport } from "../models/aiReportModel.js";
 
 import htmlPdfNode from 'html-pdf-node';
 import markdownit from 'markdown-it';
@@ -351,6 +352,68 @@ export const handleChat = async (req, res) => {
 // controllers/aiController.js (Optimized with MongoDB Aggregation)
 export const deepWeeklyAnalysis = async (req, res) => {
   try {
+    const { period = 'ytd' } = req.body;
+    const now = new Date();
+    let startDate, endDate;
+    let periodTitle = "Year-to-Date (YTD)";
+
+    // Helper to get start of week (Monday)
+    // Helper to get start of week (Sunday - Jordan Standard)
+    const getStartOfWeek = (date) => {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day; // 0 is Sunday, so just subtract day
+      return new Date(d.setDate(diff));
+    };
+
+    // Calculate Date Range based on period
+    if (period === 'last_month') {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+      endDate.setHours(23, 59, 59, 999);
+      periodTitle = "Last Month";
+    } else if (period === 'current_month') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      periodTitle = "Current Month";
+    } else if (period === 'last_week') {
+      const startOfCurrentWeek = getStartOfWeek(now);
+      startDate = new Date(startOfCurrentWeek);
+      startDate.setDate(startDate.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0);
+
+      endDate = new Date(startOfCurrentWeek);
+      endDate.setDate(endDate.getDate() - 1);
+      endDate.setHours(23, 59, 59, 999);
+      periodTitle = "Last Week";
+    } else if (period === 'current_week') {
+      startDate = getStartOfWeek(now);
+      startDate.setHours(0, 0, 0, 0);
+      periodTitle = "Current Week";
+    } else if (period === 'custom') {
+      const { startDate: customStart, endDate: customEnd } = req.body;
+      if (!customStart || !customEnd) {
+        throw { status: 400, message: "Start date and End date are required for custom period." };
+      }
+      startDate = new Date(customStart);
+      startDate.setHours(0, 0, 0, 0);
+
+      endDate = new Date(customEnd);
+      endDate.setHours(23, 59, 59, 999);
+
+      periodTitle = `Custom Range (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`;
+    } else {
+      // YTD
+      startDate = new Date(now.getFullYear(), 0, 1);
+      // For YTD, implicit end date is now
+      periodTitle = `Year-to-Date (YTD) (${startDate.toLocaleDateString()} - Present)`;
+    }
+
+    // Append dates to standard periods if not already formatted
+    if (period !== 'custom' && period !== 'ytd') {
+      const endStr = endDate ? endDate.toLocaleDateString() : 'Present';
+      periodTitle += ` (${startDate.toLocaleDateString()} - ${endStr})`;
+    }
+
     // --- 1. Dynamic Team Count & Limit ---
     const totalTeams = await FieldTeamsSchema.countDocuments({ role: 'fieldTeam', isActive: true });
     const actualTotalTeams = totalTeams > 0 ? totalTeams : 1;
@@ -390,17 +453,23 @@ export const deepWeeklyAnalysis = async (req, res) => {
     baseDate.setHours(0, 0, 0, 0);
 
     // --- 3. Aggregation Pipeline ---
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const threeWeeksAgo = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000);
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    // --- 3. Aggregation Pipeline ---
+    const referenceDate = endDate || now; // Use endDate as reference if custom/past, otherwise now
+    const startOfReferenceMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+    const threeWeeksBeforeRef = new Date(referenceDate.getTime() - 21 * 24 * 60 * 60 * 1000);
+    const twoWeeksBeforeRef = new Date(referenceDate.getTime() - 14 * 24 * 60 * 60 * 1000);
+
     const EXCLUDE_TEAMS = ["Unknown Team", "غير معروف"];
 
     const aggregationResults = await TaskSchema.aggregate([
       {
         $match: {
           evaluationScore: { $gte: 1, $lte: 8 },
-          interviewDate: { $exists: true },
+          interviewDate: {
+            $exists: true,
+            $gte: startDate,
+            ...(endDate && { $lte: endDate })
+          },
           teamName: { $nin: EXCLUDE_TEAMS }
         }
       },
@@ -419,7 +488,7 @@ export const deepWeeklyAnalysis = async (req, res) => {
             }
           ],
 
-          // Top Reasons
+          // All Reasons (Breakdown)
           reasons: [
             {
               $group: {
@@ -427,8 +496,8 @@ export const deepWeeklyAnalysis = async (req, res) => {
                 count: { $sum: 1 }
               }
             },
-            { $sort: { count: -1 } },
-            { $limit: 5 }
+            { $sort: { count: -1 } }
+            // Removed limit to show all drivers as requested
           ],
 
           // Team Stats (YTD, Detractor, Neutral, Recent Periods)
@@ -444,13 +513,13 @@ export const deepWeeklyAnalysis = async (req, res) => {
                   $sum: { $cond: [{ $and: [{ $gte: ["$evaluationScore", 7] }, { $lte: ["$evaluationScore", 8] }] }, 1, 0] }
                 },
                 currentMonth: {
-                  $sum: { $cond: [{ $gte: ["$interviewDate", startOfMonth] }, 1, 0] }
+                  $sum: { $cond: [{ $gte: ["$interviewDate", startOfReferenceMonth] }, 1, 0] }
                 },
                 last3Weeks: {
-                  $sum: { $cond: [{ $gte: ["$interviewDate", threeWeeksAgo] }, 1, 0] }
+                  $sum: { $cond: [{ $gte: ["$interviewDate", threeWeeksBeforeRef] }, 1, 0] }
                 },
                 last2Weeks: {
-                  $sum: { $cond: [{ $gte: ["$interviewDate", twoWeeksAgo] }, 1, 0] }
+                  $sum: { $cond: [{ $gte: ["$interviewDate", twoWeeksBeforeRef] }, 1, 0] }
                 },
                 // Collect reasons for chronic offender analysis
                 reasons: { $push: { $ifNull: ["$reason", "Unspecified"] } }
@@ -551,42 +620,57 @@ export const deepWeeklyAnalysis = async (req, res) => {
         return `• ** ${t._id}** — ${t.detractors} Detractors(Limit: ${YTD_DETRACTOR_LIMIT_PER_TEAM})(+${t.neutrals} Neutrals, Limit: ${YTD_NEUTRAL_LIMIT_PER_TEAM}).Total D / N: ${totalDNCount}. ** Exceeds Detractor Limit By: ${percentExceeded}%**.Top failure: "${topReason}"`;
       });
 
-    // --- 5. Generate Prompt (Unchanged) ---
+    // Full Team Breakdown (All Teams found in period)
+    const allTeamsStatsText = teamStats
+      .sort((a, b) => b.totalYTD - a.totalYTD)
+      .map(t => {
+        const teamReasonCounts = t.reasons.reduce((acc, r) => { acc[r] = (acc[r] || 0) + 1; return acc; }, {});
+        const topReason = Object.entries(teamReasonCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Mixed";
+        return `| ${t._id} | ${t.totalYTD} | ${t.detractors} | ${t.neutrals} | ${topReason} |`;
+      }).join('\n');
+
+    const allTeamsTable = `
+| Team Name | Total Cases | Detractors | Neutrals | Primary Failure |
+| :--- | :---: | :---: | :---: | :--- |
+${allTeamsStatsText}
+    `;
+
+    // --- 5. Generate Prompt (Dynamic) ---
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       temperature: 0.3,
     });
 
-    const prompt = `
+    let prompt = "";
+
+    // Standard Prompt for YTD/Month (Detailed Structured Report)
+    const standardPrompt = `
         You are an ** AI Senior Quality Intelligence Advisor ** for the OrangeJO–Nokia FTTH Program. 
         Your mission is to convert detractor / neutral cases(scores 1–8) into a ** high - authority, trend - driven, executive intelligence report ** with deep operational insights.
+        
+        ** REPORT PERIOD: ${periodTitle} **
+        (Note: "Total Cases" and statistics usually refer to YTD, but currently reflect the selected period: ${periodTitle}. Adapt your language accordingly.)
 
-  Audience: CTO, PMO Directors, Nokia Quality Managers
-Tone: ** Executive, highly professional, direct, data - driven, and assertive.**
+        Audience: CTO, PMO Directors, Nokia Quality Managers
+        Tone: ** Executive, highly professional, direct, data - driven, and assertive.**
 
         ** STRICT FORMATTING RULES(MANDATORY):**
-  1. ** Avoid excessive bullet points(* or -):** For interpretation sections, use ** structured paragraphs ** and ** bold key findings ** instead of simple lists.
-        2. ** Use Tables for Data Comparison:** Whenever listing chronic offenders, top teams, or key metrics, format the data using ** Markdown Tables ** to improve readability and professionalism.
-        3. ** Use Subheadings(###) to separate points ** within major sections(1 - 10) for better hierarchy.
-        4. ** Do not use any teams named "غير معروف" or "Unknown Team".**
-
-  ---
+         1. ** Avoid excessive bullet points(* or -):** For interpretation sections, use ** structured paragraphs ** and ** bold key findings ** instead of simple lists.
+         2. ** Use Tables for Data Comparison:** Whenever listing chronic offenders, top teams, or key metrics, format the data using ** Markdown Tables ** to improve readability and professionalism.
+         3. ** Use Subheadings(###) to separate points ** within major sections(1 - 10) for better hierarchy.
+         4. ** Do not use any teams named "غير معروف" or "Unknown Team".**
 
         # 🚨 Operational Intelligence Flags(High - Priority)
-
-  * ** CRITICAL: Most Repeated Team(Current Month):** ${mostRepeatedCurrentMonth}
-        * ** HIGH RISK: Most Repeated Team(Last 3 Weeks):** ${mostRepeatedLast3Weeks}
-        * ** IMMEDIATE: Most Repeated Team(Last 2 Weeks):** ${mostRepeatedLast2Weeks}
+          * ** CRITICAL: Most Repeated Team(Period End):** ${mostRepeatedCurrentMonth}
+          * ** HIGH RISK: Most Repeated Team(Last 3 Weeks of Period):** ${mostRepeatedLast3Weeks}
+          * ** IMMEDIATE: Most Repeated Team(Last 2 Weeks of Period):** ${mostRepeatedLast2Weeks}
 
         ## 📉 Weekly Repeat Offender Analysis(Structural Failure Indicator)
-        Teams demonstrating 2 or more detractor / neutral cases in the same calendar week, indicating process and quality control breakdown:
+        Teams demonstrating 2 or more detractor / neutral cases in the same calendar week within the period:
         ${weeklyRepeatOffendersText}
 
----
-
         # 📊 Key Performance Indicators & Load Indicators
-
-  | Metric | Value | Interpretation |
+        | Metric | Value | Interpretation |
         | : --- | : --- | : --- |
         | ** Total Cases(Score 1 - 8) ** | ${totalCases} | Operational Failure Load |
         | ** Validated Closure Rate ** | ${closureRate}% | Effectiveness of Corrective Action(Target: > 95 %) |
@@ -594,136 +678,109 @@ Tone: ** Executive, highly professional, direct, data - driven, and assertive.**
         | ** YTD Max Detractor Allowance Per Team ** | ${YTD_DETRACTOR_LIMIT_PER_TEAM} | Proactive Annual Performance Ceiling(9 % max) |
         | ** YTD Max Neutral Allowance Per Team ** | ${YTD_NEUTRAL_LIMIT_PER_TEAM} | Logical Annual Performance Ceiling(16 % max) |
 
-  ---
-
-        # 🚩 Top 5 Root Causes(Weighted YTD Failure Modes)
-        These represent the highest - frequency failure modes contributing to customer dissatisfaction:
+        # 🚩 Failure Drivers Breakdown (Complete List & Weighted %)
+        These represent the failure modes contributing to customer dissatisfaction, sorted by frequency:
         ${topReasons.join("\n")}
 
----
-
         # 🚧 Chronic Offenders(Exceeded Annual Detractor Threshold)
-        Teams that have critically breached the Year - to - Date Maximum ** Detractor Allowance ** (Limit: ${YTD_DETRACTOR_LIMIT_PER_TEAM} cases). This signals a ** structural quality failure ** requiring executive intervention.
-  ${chronicOffenders.length > 0 ? chronicOffenders.join("\n") : "No registered teams exceeded the YTD Detractor threshold."}
+        ${chronicOffenders.length > 0 ? chronicOffenders.join("\n") : "No registered teams exceeded the YTD Detractor threshold."}
 
----
+        # 📋 Full Team Performance Breakdown (All Active Teams in Period)
+        ${allTeamsTable}
 
         # 🎯 REQUIRED OUTPUT FORMAT(STRICT & PROFESSIONAL)
+         Generate a ** deep, insight - rich, aggressive Markdown report **.
 
-        Generate a ** deep, insight - rich, aggressive Markdown report ** structured EXACTLY as follows.Ensure all interpretations use professional language, avoiding asterisk - based lists wherever a structured paragraph or subheading is better suited.
-
-        ---
-  ---
-
-        ## 1. 🛡️ Annual Performance Overview
-
-        ### 1.1.Health Trajectory & Load
-        Analyze the current detractor volume(${totalCases} cases).State whether this load is sustainable and what it signals about the systemic state of quality control across the program.
-
-        ### 1.2.KPI Risk Assessment(Closure Rate & Allowance)
-        Critically assess the ** ${closureRate}% Validated Closure Rate ** against the > 95 % target.Analyze the implication of multiple teams routinely breaching the ** ${YTD_DETRACTOR_LIMIT_PER_TEAM} detractor allowance ** and the supplementary ** ${YTD_NEUTRAL_LIMIT_PER_TEAM} neutral allowance **.
-
-        ---
+        ## 1. 🛡️ Period Performance Overview
+        Analyze the current detractor volume(${totalCases} cases). State whether this load is sustainable.
 
         ## 2. 📈 QoS Metrics Snapshot: Operational Deterioration
+        Focus on the single team appearing highest across the current period and recent weeks.
+        Interpret the "Weekly Repeat Offenders" list as evidence of widespread deficiencies.
 
-        ### 2.1.Clustering, Spikes, and Escalation
-        Focus the analysis on the single team appearing highest across the current month, last 3 weeks, and last 2 weeks.Confirm if this constitutes a ** persistent and escalating failure point **.
+        ## 3. 🗓️ Trend & Volatility Analysis
+        Identify teams exhibiting a clear ** rising detractor trajectory ** over the period.
+        Highlight specific weeks/days that demonstrate significant surges.
 
-        ### 2.2.Structural Failure Indicators
-        Interpret the significance of the ** Weekly Repeat Offenders ** list.This must be presented as evidence of widespread deficiencies in supervision, process adherence, and quality control at the operational level.
+        ## 4. 🧠 Team Trend Intelligence: Early - Warning System
+        Identify high alert teams appearing frequently in the last few weeks of the period.
+        Referece the "Full Team Performance Breakdown" table to discuss broader team performance.
 
-        ---
+        ## 5. 🛠️ Dominant Failure Modes
+        Provide a concise, executive interpretation of the Top 5 Root Causes.
 
-        ## 3. 🗓️ Quarterly Trend & Volatility Analysis(13 Weeks)
-
-        ### 3.1.Directional Trend Analysis
-        Identify teams exhibiting a clear ** rising detractor trajectory ** over the recent weeks(Wk - 45, Wk - 46, Wk - 47) based on the computed recurrence data.
-
-        ### 3.2.Volatility Zones and Concentrated Breakdown
-        Highlight specific weeks that demonstrate significant surges(Volatility Zones) and demand immediate investigation into the common factors contributing to the quality breakdown during those concentrated periods.
-
-        ### 3.3.Structural Instability Confirmation
-        Conclude by confirming if the consistent recurrence of chronic teams across the quarter provides ** irrefutable evidence of systemic instability ** in quality control processes.
-
-        ---
-
-        ## 4. 🧠 Team Trend Intelligence: Early - Warning System(MANDATORY SECTION)
-
-        ### 4.1.High Alert: 4 - Week Deterioration
-        Identify and flag the specific team appearing in **≥3 of the last 4 weeks ** as a ** HIGH ALERT ** entity requiring immediate executive intervention.Analyze the nature of its deterioration.
-
-        ### 4.2.Persistent Violators & Systemic Deficiencies
-        List the top three teams based on recurring appearances across the weekly and quarterly intervals.State that these represent ** deep - seated, systemic performance deficiencies **.
-
-        ### 4.3.Critical Cross - Window Violation
-        Identify the single team appearing in ** ALL FOUR ** high - priority lists(Current Month, Last 3 Weeks, Last 2 Weeks, Weekly Repeat Offenders).Flag this as a ** critical, entrenched structural failure **.
-
-        ### 4.4.Centralized Failure Point(Cumulative Load)
-        Identify the team with the highest ** Cumulative Detractor Load(YTD) ** and explain the operational implication of this centralized failure point.
-
-        ---
-
-        ## 5. 🛠️ Dominant Failure Modes(YTD Deep Dive)
-
-        ### 5.1.Root Cause Interpretation and Data Integrity
-        Provide a concise, executive interpretation of the Top 5 Root Causes. ** Critically address the "Positive Feedback" entry ** as a data integrity anomaly that must be rectified immediately.Map the technical causes(Speed, WiFi Coverage) to the relevant operational segments(Installation Quality, Network Provisioning).
-
-        ### 5.2.Acceleration and Operational Triggers
-        Define the most likely ** Operational Triggers ** for the top technical failures(e.g., poor in -home setup, inadequate expectation management, network bottlenecks).
-
-        ---
-
-        ## 6. 🔄 Monthly Failure Mode Evolution
-
-        Acknowledge the ** critical data limitation **: without month - over - month cause data, strategic analysis of shifts in failure hierarchy, emergence of new drivers, or contextual changes is ** currently hindered **.State the necessity of implementing this data capture for future reports.
-
-        ---
+        ## 6. 🔄 Failure Mode Evolution
+        Acknowledge data limitations if month-over-month cause data is missing.
 
         ## 7. 🎯 Accountability & Exceeded Limits
-
-        ### 7.1.Direct Accountability Call - Out
-        Aggressively call out the single ** Most Repeated Team ** in the last month and the last 2 weeks as a critical, ongoing operational liability.
-
-        ### 7.2.Risk Listing: Breached Allowance
-        Present a list of all teams that have critically exceeded the annual ** detractor ** allowance of ${YTD_DETRACTOR_LIMIT_PER_TEAM} cases.Format this list professionally, including the ** percentage ** by which they exceed the limit. ** MANDATORY: For each chronic team, you must analyze the volume of Neutral(Passive) cases and compare them to the Neutral Limit(${YTD_NEUTRAL_LIMIT_PER_TEAM}), stating that a high Neutral count, especially when combined with a Detractor breach, indicates a profound systemic failure to deliver quality beyond minimum acceptable standards.**
-
-  ---
+        Call out the ** Most Repeated Team ** as a critical liability.
+        List teams that have exceeded their allowance.
 
         ## 8. 🔍 Recurrence and Quality Gap
+        Analyze the recurrence mechanism (Skill Gap, Process Non-Compliance).
 
-        Provide an analysis explaining the pervasive recurrence mechanism, focusing on: ** Skill Gap **, ** Process Non - Compliance **, ** Supervisory Deficiency **, and the distortion caused by the ** Data Integrity Failure **.Conclude with the full ** Clear Cause Chain ** summary.
-
-        ---
-
-        ## 9. ✅ Immediate & Strategic Solutions(Pre - Approved Library)
-
-        Provide actionable, prioritized solutions. ** Crucially, reference the existence of specific training materials ** related to the top failure modes(e.g., WiFi, Speed) in the Field Team Resources library to make the solutions concrete.
-
-        ### 9.1.Immediate Actions(0–2 weeks)
-        Focus on ** Mandatory Executive Intervention ** for chronic teams, the ** Critical Data Audit **, and immediate deployment of ** Targeted Re - training & Certification ** (referencing the training materials).
-
-        ### 9.2.Tactical Improvements(1–3 months)
-        Focus on ** Enhanced Supervisory Models **, ** SOP Reinforcement **, and establishing an ** Integrated Feedback Loop **.
-
-        ### 9.3.Strategic Corrections(Quarter Scale)
-        Focus on implementing a ** Comprehensive Quality Management Framework **, a ** Tiered Technical Certification Program **, and ** Performance - Based Accountability ** overhaul.
-
-        ### 9.4.MANDATORY: Promoter Score Directive
-        Include the non - negotiable directive that ** only customer scores of 9–10 unequivocally designate a "Promoter" **.
-
-        ---
+        ## 9. ✅ Immediate & Strategic Solutions
+        Provide actionable solutions referencing specific training materials.
 
         ## 10. ⚠️ Strategic Risk Outlook
+        Predict high-risk teams for the upcoming weeks based on this period's data.
+    `;
 
-        ### 10.1.Risk Prediction & Operational Instability
-        Predict the high - risk teams for the upcoming 4–8 weeks.State the implication of the weekly repeat offender trend on broad operational stability.
+    // Adaptive Prompt for Custom Ranges (Simpler, Context-Aware)
+    let customPrompt = "";
+    if (period === 'custom' || period === 'current_week' || period === 'last_week') {
+      const endStr = endDate ? endDate.toLocaleDateString() : new Date().toLocaleDateString();
+      customPrompt = `
+        You are an ** AI Senior Quality Intelligence Advisor ** for the OrangeJO–Nokia FTTH Program.
+        
+        ** CUSTOM REPORT PERIOD: ${periodTitle} **
+        ** DATA CONTEXT **: The statistics provided below are STRICTLY calculated for the custom range: ${startDate.toLocaleDateString()} to ${endStr}.
+        
+        ** Audience **: CTO, PMO Directors, Nokia Quality Managers
+        ** Tone **: Executive, highly professional, direct, data - driven.
 
-        ### 10.2.KPI Severity Signal & Escalation Zones
-        Declare the overall KPI Severity Signal(Low / Medium / High / ** CRITICAL **) based on the closure rate failure and widespread allowance breach.Identify the specific ** Teams / Regions ** that are primary escalation zones.
+        ** KEY STATISTICS FOR THIS PERIOD **:
+        - ** Total Detractor / Neutral Cases **: ${totalCases}
+        - ** Closure Rate **: ${closureRate}%
+        - ** Top Failure Modes **:
+        ${topReasons.join("\n")}
+        
+        - ** Most Active Offender (Entire Custom Period) **: ${mostRepeatedCurrentMonth}
+        - ** Recent Spikes (Last 2-3 Weeks of Selection) **: ${mostRepeatedLast2Weeks} / ${mostRepeatedLast3Weeks}
+        
+        - ** Repeat Offenders ( > 1 case / week) **:
+        ${weeklyRepeatOffendersText}
 
-        ---
-  `;
+        - ** Chronic Threshold Breaches (YTD Context) **:
+        ${chronicOffenders.length > 0 ? chronicOffenders.join("\n") : "No teams exceeded YTD limits."}
+
+        - ** Full Team Performance Breakdown **:
+        ${allTeamsTable}
+
+        ** INSTRUCTIONS **:
+        Generate a concise, high-impact executive summary for this specific custom period.
+        Do NOT hallucinate trends outside this date range.
+        Do NOT force "Quarterly" or "Annual" analysis if the period is short.
+        
+        Structure:
+        ## 1. 📊 Custom Period Overview
+        Analyze the volume (${totalCases}) and the closure rate (${closureRate}%) within this specific window.
+        
+        ## 2. 🚩 Key Failure Drivers (Full Breakdown)
+        Analyze the failure drivers listed above, paying attention to both high-frequency issues and smaller recurring problems.
+        
+        ## 3. ⚠️ Team Performance & Risks
+        Highlight the teams with the most violations in this specific range.
+        Discuss the "Repeat Offenders" if any are listed.
+        Review the "Full Team Performance Breakdown" to provide a complete picture of all teams involved.
+        
+        ## 4. ✅ Recommended Actions
+        Provide immediate corrective actions based on the failure modes observed in this period.
+    `;
+    }
+
+    prompt = (period === 'custom' || period === 'current_week' || period === 'last_week') ? customPrompt : standardPrompt;
+
 
     // 6. Execute with Retry
     const apiCall = async () => {
@@ -733,29 +790,65 @@ Tone: ** Executive, highly professional, direct, data - driven, and assertive.**
 
     const analysis = await retryApiCall(apiCall);
 
+    // --- 7. Save Report to History ---
+    // Extract metadata for saving
+    const reportMetadata = {
+      model: "gemini-2.5-flash",
+      period: periodTitle,
+      totalCases: totalCases,
+      mostRepeatedCurrentMonth,
+      mostRepeatedLast3Weeks,
+      mostRepeatedLast2Weeks,
+      weeklyRepeatOffenders: results.weeklyStats.length,
+      closureRate: `${closureRate}% `,
+      totalTeams: actualTotalTeams,
+      detractorLimitPerTeam: YTD_DETRACTOR_LIMIT_PER_TEAM,
+      generatedAt: new Date().toLocaleString("en-GB", {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      })
+    };
+
+    try {
+      await AIReport.create({
+        period: period,
+        periodTitle: periodTitle,
+        startDate: startDate,
+        endDate: endDate || new Date(), // Use current date if undefined (like for YTD)
+        analysis: analysis,
+        metadata: {
+          totalCases: totalCases,
+          closureRate: `${closureRate}%`,
+          totalTeams: actualTotalTeams,
+          detractorLimitPerTeam: YTD_DETRACTOR_LIMIT_PER_TEAM
+        },
+        generatedBy: req.user?._id // Assuming middleware adds user to req
+      });
+    } catch (saveError) {
+      console.error("Failed to save report to history:", saveError);
+      // Constructive failure - don't block the response, just log it
+    }
+
     res.json({
       analysis,
-      metadata: {
-        model: "gemini-2.5-flash",
-        totalCases: totalCases,
-        mostRepeatedCurrentMonth,
-        mostRepeatedLast3Weeks,
-        mostRepeatedLast2Weeks,
-        weeklyRepeatOffenders: results.weeklyStats.length,
-        closureRate: `${closureRate}% `,
-        totalTeams: actualTotalTeams,
-        detractorLimitPerTeam: YTD_DETRACTOR_LIMIT_PER_TEAM,
-        generatedAt: new Date().toLocaleString("en-GB", {
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-          hour: '2-digit', minute: '2-digit'
-        }),
-      },
+      metadata: reportMetadata
     });
   } catch (error) {
-    console.error("AI Report Failed:", error.originalError || error);
-    res.status(error.status || 500).json({
-      error: error.message || "Failed to generate report",
-      details: error.message || 'Server error'
-    });
+    console.error("Error generating deep weekly analysis:", error);
+    res.status(500).json({ error: "Failed to generate deep weekly analysis." });
+  }
+};
+
+export const getReportHistory = async (req, res) => {
+  try {
+    const history = await AIReport.find()
+      .sort({ generatedAt: -1 })
+      .limit(50)
+      .select('periodTitle generatedAt analysis metadata'); // Select necessary fields
+
+    res.status(200).json(history);
+  } catch (error) {
+    console.error("Error fetching report history:", error);
+    res.status(500).json({ error: "Failed to fetch report history." });
   }
 };

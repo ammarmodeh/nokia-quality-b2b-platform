@@ -26,7 +26,7 @@ import {
 import { calculateTrendData, calculatePercentageChange } from '../utils/dateFilterHelpers';
 import { MdTrendingFlat, MdFileDownload } from 'react-icons/md';
 import * as XLSX from 'xlsx';
-import AIAnalysisButton from './AIAnalysisButton';
+// import AIAnalysisButton from './AIAnalysisButton';
 
 // Register ChartJS components
 ChartJS.register(
@@ -313,11 +313,11 @@ const TrendStatistics = ({ tasks }) => {
             <MdFileDownload />
           </IconButton>
 
-          <AIAnalysisButton
+          {/* <AIAnalysisButton
             data={chartData}
             title={`Trend Analysis - ${analysisType === 'team' ? 'Teams' : 'Reasons'}`}
             context={`Trend analysis for ${selectedEntities.length > 0 ? 'selected' : (viewMode === 'top5' ? 'top 5' : 'all')} ${analysisType}s based on ${selectedMetric}. Period: ${range} ${period}s.`}
-          />
+          /> */}
         </Box>
       </Box>
 

@@ -301,7 +301,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} mt={1}>
               {metadata && (
                 <Typography variant="caption" color="#00e5ff" mt={0.5}> {/* Reduced Typography variant/margin */}
-                  Generated on {metadata.generatedAt} • {metadata.totalCases} cases analyzed
+                  Generated on {metadata.generatedAt} • Period: {metadata.period || 'YTD'} • {metadata.totalCases} cases analyzed
                 </Typography>
               )}
               {/* Chat Toggle Button */}

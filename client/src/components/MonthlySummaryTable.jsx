@@ -26,7 +26,7 @@ import { getCustomWeekNumber } from '../utils/helpers';
 import * as XLSX from 'xlsx';
 import { MdFileDownload } from 'react-icons/md';
 import { IconButton, Tooltip } from '@mui/material';
-import AIAnalysisButton from './AIAnalysisButton';
+// import AIAnalysisButton from './AIAnalysisButton';
 import ViolationDetailsDialog from './ViolationDetailsDialog';
 import { MdVisibility } from 'react-icons/md';
 
@@ -213,20 +213,20 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
         </Box>
       ),
     },
-    {
-      field: 'equivalentDetractorCount',
-      headerName: 'Eq. Detractors',
-      width: 140,
-      renderCell: (params) => (
-        <Box sx={{
-          fontWeight: 'bold',
-          color: params.value >= 3 ? '#f44336' :
-            params.value === 2 ? '#ff9800' : '#4caf50'
-        }}>
-          {params.value}
-        </Box>
-      ),
-    },
+    // {
+    //   field: 'equivalentDetractorCount',
+    //   headerName: 'Eq. Detractors',
+    //   width: 140,
+    //   renderCell: (params) => (
+    //     <Box sx={{
+    //       fontWeight: 'bold',
+    //       color: params.value >= 3 ? '#f44336' :
+    //         params.value === 2 ? '#ff9800' : '#4caf50'
+    //     }}>
+    //       {params.value}
+    //     </Box>
+    //   ),
+    // },
     {
       field: 'totalViolations',
       headerName: 'Total Violations',
@@ -312,7 +312,7 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
         'Group': row.teamCompany,
         'Detractors (Count)': row.detractorCount,
         'Neutrals (Count)': row.neutralCount,
-        'Eq. Detractors': row.equivalentDetractorCount,
+        // 'Eq. Detractors': row.equivalentDetractorCount,
         'Total Violations': row.totalViolations,
         'Low Impact (Count)': row.lowPriorityCount,
         'Medium Impact (Count)': row.mediumPriorityCount,
@@ -347,7 +347,7 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
             'Impact': task.priority,
             'Detractors': teamSummary['Detractors (Count)'],
             'Neutrals': teamSummary['Neutrals (Count)'],
-            'Eq. Detractors': teamSummary['Eq. Detractors'],
+            // 'Eq. Detractors': teamSummary['Eq. Detractors'],
             'Total Violations': teamSummary['Total Violations'],
             'Low Impact': teamSummary['Low Impact (Count)'],
             'Medium Impact': teamSummary['Medium Impact (Count)'],
@@ -471,11 +471,11 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
             </IconButton>
           </Tooltip>
 
-          <AIAnalysisButton
+          {/* <AIAnalysisButton
             data={rows}
             title={`Monthly Summary - ${selectedMonth ? availableMonths.find(m => m.key === selectedMonth)?.label : 'Custom Range'}`}
             context={`Detailed monthly performance analysis for ${rows.length} teams. Period: ${selectedMonth ? availableMonths.find(m => m.key === selectedMonth)?.label : 'Custom Range'}`}
-          />
+          /> */}
         </Box>
       </Box>
 
