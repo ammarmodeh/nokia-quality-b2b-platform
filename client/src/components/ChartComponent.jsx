@@ -53,7 +53,7 @@ export const ChartComponent = ({ chartData }) => {
           },
         },
         backgroundColor: "rgba(30, 30, 30, 0.9)",
-        titleColor: "#ffffff",
+        titlecolor: "#ffffff",
         bodyColor: "#e0e0e0"
       },
     },
@@ -102,7 +102,7 @@ export const ChartComponent = ({ chartData }) => {
             borderColor: 'rgba(255, 99, 132, 1)', // Red for Detractor
             backgroundColor: 'rgba(255, 99, 132, 0.5)',
             pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-            pointBorderColor: '#fff',
+            pointBordercolor: '#ffffff',
             borderWidth: 2,
             fill: false
           };
@@ -113,7 +113,7 @@ export const ChartComponent = ({ chartData }) => {
             borderColor: 'rgba(255, 159, 64, 1)', // Orange for Neutral
             backgroundColor: 'rgba(255, 159, 64, 0.5)',
             pointBackgroundColor: 'rgba(255, 159, 64, 1)',
-            pointBorderColor: '#fff',
+            pointBordercolor: '#ffffff',
             borderWidth: 2,
             fill: false
           };
@@ -124,7 +124,7 @@ export const ChartComponent = ({ chartData }) => {
             borderColor: 'rgba(75, 192, 192, 1)', // Keep existing color for Violations
             backgroundColor: 'rgba(75, 192, 192, 0.5)',
             pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-            pointBorderColor: '#fff',
+            pointBordercolor: '#ffffff',
             borderWidth: 2,
             fill: false
           };
@@ -152,7 +152,7 @@ export const ChartComponent = ({ chartData }) => {
         borderWidth: 2,
         fill: false,
         pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-        pointBorderColor: '#fff',
+        pointBordercolor: '#ffffff',
       }]
       : prepareDatasets()
   };
@@ -170,7 +170,7 @@ export const ChartComponent = ({ chartData }) => {
       alignItems: "start",
       gap: "20px",
       marginTop: "20px",
-      backgroundColor: "#121212",
+      // backgroundColor: "#2d2d2d",
       padding: "20px",
       borderRadius: "8px"
     }}>

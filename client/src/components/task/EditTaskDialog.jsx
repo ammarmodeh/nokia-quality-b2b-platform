@@ -503,9 +503,9 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             <SelectList label="Feedback Severity" lists={PRIORITY} selected={priority} setSelected={setPriority} />
             <SelectList label="Task Category" lists={CATEGORIES} selected={category} setSelected={setCategory} />
           </div>
-          <div className="bg-gray-50 py-6 sm:flex sm:flex-row-reverse gap-4">
+          <div className="bg-[#2d2d2d] py-6 sm:flex sm:flex-row-reverse gap-4">
             <Button type="submit" color="primary" className="bg-blue-600 px-8 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto">Save</Button>
-            <Button type="button" className="bg-white px-5 text-sm font-semibold text-gray-900 sm:w-auto" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="button" className="bg-[#2d2d2d] px-5 text-sm font-semibold text-white sm:w-auto" onClick={() => setOpen(false)}>Cancel</Button>
           </div>
         </form>
       </DialogContent>

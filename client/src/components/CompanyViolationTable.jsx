@@ -65,7 +65,7 @@ const DetailRow = ({ label, value }) => (
       component="div"
       sx={{
         fontWeight: '500',
-        color: '#aaaaaa',
+        color: '#b3b3b3',
       }}
     >
       {label}
@@ -267,7 +267,7 @@ export const CompanyViolationTable = ({ tasks }) => {
             fullWidth
             PaperProps={{
               sx: {
-                backgroundColor: "#1e1e1e", // Dark background
+                backgroundColor: "#2d2d2d", // Dark background
                 color: "#ffffff",           // White text
                 borderRadius: 2,
                 p: 2,
@@ -304,7 +304,7 @@ export const CompanyViolationTable = ({ tasks }) => {
       <Paper sx={{
         height: 370,
         width: "100%",
-        backgroundColor: "#272727",
+        backgroundColor: "#2d2d2d",
         overflow: "hidden" // Prevent double scrollbars
       }}>
         <DataGrid
@@ -319,25 +319,25 @@ export const CompanyViolationTable = ({ tasks }) => {
             border: 0,
             color: "#ffffff",
             "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#333",
-              color: "#9e9e9e",
+              backgroundColor: "#2d2d2d",
+              color: "#b3b3b3",
               fontSize: "0.875rem",
               fontWeight: "bold",
             },
             "& .MuiDataGrid-columnHeader": {
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
             },
             "& .MuiDataGrid-cell": {
-              borderBottom: "1px solid #444",
+              borderBottom: "1px solid #e5e7eb",
             },
             "& .MuiDataGrid-row": {
               "&:hover": {
-                backgroundColor: "#333",
+                backgroundColor: "#2d2d2d",
               },
             },
             "& .MuiDataGrid-footerContainer": {
               minHeight: "64px",
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
               color: "#ffffff",
               "& .MuiTablePagination-root": {
                 color: "#ffffff",
@@ -353,11 +353,11 @@ export const CompanyViolationTable = ({ tasks }) => {
                 borderRadius: "4px",
               },
               "&::-webkit-scrollbar-track": {
-                backgroundColor: "#444",
+                backgroundColor: "#e5e7eb",
               },
             },
             "& .MuiDataGrid-scrollbarFiller": {
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
             },
           }}
         />
@@ -372,7 +372,7 @@ export const CompanyViolationTable = ({ tasks }) => {
         fullScreen={fullScreen}
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             boxShadow: 'none',
             borderRadius: fullScreen ? '0px' : '8px',
           }
@@ -382,9 +382,9 @@ export const CompanyViolationTable = ({ tasks }) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: '16px 24px',
         }}>
           <Typography variant="h6" component="div">
@@ -403,10 +403,10 @@ export const CompanyViolationTable = ({ tasks }) => {
           </IconButton>
         </DialogTitle>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogContent dividers sx={{
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
           padding: '20px 24px',
         }}>
@@ -417,12 +417,12 @@ export const CompanyViolationTable = ({ tasks }) => {
                 elevation={0}
                 sx={{
                   p: 3,
-                  backgroundColor: '#272727',
+                  backgroundColor: '#2d2d2d',
                   borderRadius: 2,
-                  border: '1px solid #444'
+                  border: '1px solid #3d3d3d'
                 }}
               >
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
                   Task {index + 1}
                 </Typography>
 
@@ -445,7 +445,7 @@ export const CompanyViolationTable = ({ tasks }) => {
                             color: '#ffffff',
                             backgroundColor:
                               task.evaluationScore >= 9 ? '#4caf50' :
-                                task.evaluationScore >= 7 ? '#9e9e9e' : '#f44336',
+                                task.evaluationScore >= 7 ? '#6b7280' : '#f44336',
                             fontWeight: 'bold'
                           }}
                         />
@@ -469,14 +469,14 @@ export const CompanyViolationTable = ({ tasks }) => {
                 {/* Subtasks section */}
                 {task.subTasks && task.subTasks.length > 0 && (
                   <Box sx={{ mt: 3 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#3ea6ff', mb: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#7b68ee', mb: 1 }}>
                       Subtasks
                     </Typography>
                     <Box sx={{
-                      backgroundColor: '#333',
+                      backgroundColor: '#2d2d2d',
                       p: 2,
                       borderRadius: 1,
-                      border: '1px solid #444'
+                      border: '1px solid #3d3d3d'
                     }}>
                       {task.subTasks.map((sub, index) => (
                         <Box key={index} sx={{ mb: 1 }}>
@@ -495,7 +495,7 @@ export const CompanyViolationTable = ({ tasks }) => {
                   justifyContent: 'space-between',
                   mt: 3,
                   pt: 2,
-                  borderTop: '1px solid #444',
+                  borderTop: '1px solid #e5e7eb',
                   flexWrap: 'wrap',
                   gap: 2
                 }}>
@@ -512,11 +512,11 @@ export const CompanyViolationTable = ({ tasks }) => {
           </Stack>
         </DialogContent>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogActions sx={{
-          backgroundColor: '#1e1e1e',
-          borderTop: '1px solid #444',
+          backgroundColor: '#2d2d2d',
+          borderTop: '1px solid #e5e7eb',
           padding: '12px 24px',
         }}>
           <Button

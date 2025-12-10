@@ -228,7 +228,7 @@ const Quiz = () => {
 
   if (quizState.loading || quizState.questions.length === 0) {
     return (
-      <div className="p-4 bg-[#121212] min-h-screen flex items-center justify-center text-white" dir="rtl">
+      <div className="p-4 bg-[#f9fafb] min-h-screen flex items-center justify-center text-white" dir="rtl">
         جار التحميل...
       </div>
     );
@@ -246,13 +246,13 @@ const Quiz = () => {
 
   return (
     <div
-      className="p-4 bg-[#121212] min-h-screen"
+      className="p-4 bg-[#f9fafb] min-h-screen"
       dir="rtl"
       style={quizStyles}
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="flex justify-between items-center mb-12">
-        <h2 className="text-xl font-bold text-[#3ea6ff]">اسم الفريق: {teamName}</h2>
+        <h2 className="text-xl font-bold text-[#7b68ee]">اسم الفريق: {teamName}</h2>
         <Timer
           timeLimit={3000}
           onTimeUp={() => {
@@ -275,7 +275,7 @@ const Quiz = () => {
               <p className="text-gray-400 mb-2">الإرشادات: {currentQ.guideline}</p>
             )}
             <textarea
-              className="w-full p-3 bg-[#1e1e1e] text-white rounded border border-[#444] focus:border-[#3ea6ff]"
+              className="w-full p-3 bg-[#ffffff] text-white rounded border border-[#e5e7eb] focus:border-[#7b68ee]"
               rows="6"
               value={essayAnswer}
               onChange={handleEssayChange}
@@ -285,7 +285,7 @@ const Quiz = () => {
         ) : (
           currentQ.options.map((option, index) => (
             <div key={index} className="mb-2">
-              <label className="flex items-center bg-[#1e1e1e] p-3 rounded border border-[#444] hover:border-[#3ea6ff]">
+              <label className="flex items-center bg-[#ffffff] p-3 rounded border border-[#e5e7eb] hover:border-[#7b68ee]">
                 <input
                   type="radio"
                   value={option}
@@ -301,13 +301,13 @@ const Quiz = () => {
 
         <div className="flex justify-between gap-2 mt-4">
           <button
-            className="bg-[#3ea6ff] text-white px-4 py-2 rounded hover:bg-[#1d4ed8]"
+            className="bg-[#7b68ee] text-white px-4 py-2 rounded hover:bg-[#1d4ed8]"
             onClick={handleSubmit}
           >
             {currentQuestion === questions.length - 1 ? "إنهاء الاختبار" : "التالي"}
           </button>
           <button
-            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+            className="bg-[#2d2d2d]0 text-white px-4 py-2 rounded hover:bg-gray-600"
             onClick={() => {
               setQuizState(prev => ({
                 ...prev,

@@ -29,7 +29,7 @@ const VisibilityDialog = ({ open, onClose, member, team, currentUserId, handleVi
       fullScreen={isMobile}
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           boxShadow: 'none',
           borderRadius: isMobile ? 0 : '8px',
         }
@@ -37,9 +37,9 @@ const VisibilityDialog = ({ open, onClose, member, team, currentUserId, handleVi
     >
       {/* Dialog Title */}
       <DialogTitle sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
-        borderBottom: '1px solid #444',
+        borderBottom: '1px solid #e5e7eb',
         padding: isMobile ? '12px 16px' : '16px 24px',
         display: 'flex',
         justifyContent: 'space-between',
@@ -53,13 +53,13 @@ const VisibilityDialog = ({ open, onClose, member, team, currentUserId, handleVi
       {/* Dialog Content */}
       <DialogContent sx={{
         padding: isMobile ? '12px 16px' : '20px 24px',
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
         '&::-webkit-scrollbar': {
           width: '4px',
         },
         '&::-webkit-scrollbar-thumb': {
-          backgroundColor: '#444',
+          backgroundColor: '#e5e7eb',
           borderRadius: '2px',
         },
       }}>
@@ -75,40 +75,40 @@ const VisibilityDialog = ({ open, onClose, member, team, currentUserId, handleVi
             }}
             sx={{
               "& .MuiSelect-select": {
-                backgroundColor: "#272727",
+                backgroundColor: "#2d2d2d",
                 color: "#ffffff",
                 padding: isMobile ? '12px 14px' : '14px 16px',
                 fontSize: isMobile ? '0.875rem' : '1rem',
                 borderRadius: '4px',
               },
               "& .MuiSelect-icon": {
-                color: "#3ea6ff",
+                color: "#7b68ee",
               },
               "& .MuiOutlinedInput-notchedOutline": {
-                border: "1px solid #444",
+                border: "1px solid #3d3d3d",
               },
               "&:hover .MuiOutlinedInput-notchedOutline": {
-                border: "1px solid #3ea6ff",
+                border: "1px solid #7b68ee",
               },
               "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                border: "1px solid #3ea6ff",
+                border: "1px solid #7b68ee",
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: "#272727",
+                  backgroundColor: "#2d2d2d",
                   color: "#ffffff",
                   maxHeight: isMobile ? '60vh' : 'none',
                   "& .MuiMenuItem-root": {
                     fontSize: isMobile ? '0.875rem' : '1rem',
                     padding: isMobile ? '8px 16px' : '10px 16px',
                     "&:hover": {
-                      backgroundColor: "#333",
+                      backgroundColor: "#2d2d2d",
                     },
                     "&.Mui-selected": {
-                      backgroundColor: "#3ea6ff33",
-                      color: "#3ea6ff",
+                      backgroundColor: "#7b68ee33",
+                      color: "#7b68ee",
                     },
                   },
                 },
@@ -130,7 +130,7 @@ const VisibilityDialog = ({ open, onClose, member, team, currentUserId, handleVi
 
         {/* Selected Members Chips */}
         <Box sx={{ mt: 3 }}>
-          <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#aaaaaa', mb: 1 }}>
+          <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#b3b3b3', mb: 1 }}>
             Selected Members:
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
@@ -143,11 +143,11 @@ const VisibilityDialog = ({ open, onClose, member, team, currentUserId, handleVi
                     label={selectedMember.name}
                     size={isMobile ? "small" : "medium"}
                     sx={{
-                      backgroundColor: '#333',
+                      backgroundColor: '#2d2d2d',
                       color: '#ffffff',
-                      border: '1px solid #3ea6ff',
+                      border: '1px solid #7b68ee',
                       '& .MuiChip-deleteIcon': {
-                        color: '#3ea6ff',
+                        color: '#7b68ee',
                       },
                     }}
                   />
@@ -160,8 +160,8 @@ const VisibilityDialog = ({ open, onClose, member, team, currentUserId, handleVi
 
       {/* Dialog Actions */}
       <DialogActions sx={{
-        backgroundColor: '#1e1e1e',
-        borderTop: '1px solid #444',
+        backgroundColor: '#2d2d2d',
+        borderTop: '1px solid #e5e7eb',
         padding: isMobile ? '8px 16px' : '12px 24px',
       }}>
         <Button

@@ -191,7 +191,7 @@ const TeamViolationTable = ({ trend }) => {
         sx={{
           minWidth: 200,
           boxShadow: 1,
-          background: "#1e1e1e",
+          background: "#2d2d2d",
           color: "#e0e0e0",
         }}
       >
@@ -230,7 +230,7 @@ const TeamViolationTable = ({ trend }) => {
     <MUICard
       sx={{
         boxShadow: 1,
-        background: "#1e1e1e",
+        background: "#2d2d2d",
         color: "#e0e0e0",
         mx: '4px',
         transition: "transform 0.3s ease, box-shadow 0.3s ease",
@@ -246,7 +246,7 @@ const TeamViolationTable = ({ trend }) => {
             label={`Week ${week}`}
             sx={{ backgroundColor: "#ffffff29", color: "#e0e0e0" }}
           />
-          <Typography variant="body1" sx={{ color: "#9e9e9e", fontFamily: 'IBM Plex Mono', fontSize: '10px' }}>
+          <Typography variant="body1" sx={{ color: "#b3b3b3", fontFamily: 'IBM Plex Mono', fontSize: '10px' }}>
             {getWeekDateRange(week)}
           </Typography>
         </Stack>
@@ -310,7 +310,7 @@ const WeekSlider = ({ trends }) => {
       <MUICard
         sx={{
           boxShadow: 1,
-          background: "#1e1e1e",
+          background: "#2d2d2d",
           color: "#e0e0e0",
         }}
       >
@@ -342,7 +342,7 @@ const WeeklyTeamViolationTrends = ({ tasks }) => {
         sx={{
           minWidth: 200,
           boxShadow: 1,
-          background: "#1e1e1e",
+          background: "#2d2d2d",
           color: "#e0e0e0",
         }}
       >
@@ -364,7 +364,7 @@ const WeeklyTeamViolationTrends = ({ tasks }) => {
 const TeamViolationTrend = ({ tasks }) => {
   // console.log({ tasks });
   return (
-    <div style={{ padding: "0", backgroundColor: "#121212" }}>
+    <div style={{ padding: "0" }}>
       <WeeklyTeamViolationTrends tasks={tasks} />
     </div>
   );

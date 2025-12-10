@@ -279,16 +279,16 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
         fullScreen
         PaperProps={{
           sx: {
-            background: 'linear-gradient(135deg, #141414 0%, #1e1e1e 100%)',
-            color: '#fff',
-            border: '1px solid #333',
+            background: 'linear-gradient(135deg, #141414 0%, #ffffff 100%)',
+            color: '#ffffff',
+            border: '1px solid #f3f4f6',
             boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
           }
         }}
       >
         {/* Header: Centered horizontally with max-width */}
         <Box sx={{ mx: 'auto', width: '100%' }}>
-          <DialogTitle sx={{ bgcolor: '#00e5ff15', borderBottom: '1px solid #333', py: 1.5, px: 3 }}> {/* Reduced padding */}
+          <DialogTitle sx={{ bgcolor: '#00e5ff15', borderBottom: '1px solid #f3f4f6', py: 1.5, px: 3 }}> {/* Reduced padding */}
             <Box display="flex" justifyContent="space-between" alignItems="center">
               <Typography variant="h6" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}> {/* Reduced Typography variant */}
                 <MdPsychology size={22} color="#00e5ff" /> {/* Reduced icon size */}
@@ -356,8 +356,8 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
               >
                 <Box
                   sx={{
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #333',
+                    backgroundColor: '#2d2d2d',
+                    border: '1px solid #f3f4f6',
                     borderRadius: 1, // Reduced border radius
                     p: { xs: 1.5, sm: 2 }, // Reduced padding
                     height: chatOpen ? '50vh' : '60vh',
@@ -368,18 +368,18 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                     '& h1, & h2, & h3': {
                       color: '#00e5ff',
                       mt: 2, mb: 1, fontWeight: 600, // Reduced margins
-                      borderBottom: '1px dashed #444', pb: 0.5 // Reduced padding
+                      borderBottom: '1px dashed #e5e7eb', pb: 0.5 // Reduced padding
                     },
                     // Specific text size reduction for the Markdown content
                     '& h1': { fontSize: '1.5rem' },
                     '& h2': { fontSize: '1.25rem' },
                     '& h3': { fontSize: '1.1rem' },
-                    '& strong': { color: '#fff', fontWeight: 700 },
+                    '& strong': { color: '#ffffff', fontWeight: 700 },
                     '& ul, & ol': { pl: 2.5, my: 1.5 }, // Reduced padding/margin
                     '& li': { mb: 0.5 }, // Reduced margin
                     '& table': { width: '100%', borderCollapse: 'collapse', my: 1.5, fontSize: '0.85rem' }, // Reduced size
-                    '& th, & td': { border: '1px solid #444', p: 1, textAlign: 'left' }, // Reduced padding
-                    '& th': { backgroundColor: '#333' }
+                    '& th, & td': { border: '1px solid #3d3d3d', p: 1, textAlign: 'left' }, // Reduced padding
+                    '& th': { backgroundColor: '#2d2d2d' }
                   }}
                 >
                   <Typography component="div" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -397,7 +397,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                   transition: 'width 0.3s ease, margin 0.3s ease',
                   display: chatOpen ? 'flex' : 'none',
                   flexDirection: 'column',
-                  borderLeft: '1px solid #333',
+                  borderLeft: '1px solid #f3f4f6',
                   pl: 2,
                 }}
               >
@@ -412,9 +412,9 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                     overflowY: 'auto',
                     mb: 1, // Reduced margin
                     p: 1,
-                    background: '#1a1a1a',
+                    background: '#2d2d2d',
                     borderRadius: 1,
-                    border: '1px solid #444',
+                    border: '1px solid #3d3d3d',
                   }}
                 >
                   {chatHistory.length === 0 ? (
@@ -436,7 +436,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                             maxWidth: '80%',
                             p: 0.8, // Reduced padding
                             borderRadius: 1, // Reduced border radius
-                            bgcolor: message.sender === 'user' ? '#00e5ff20' : '#444',
+                            bgcolor: message.sender === 'user' ? '#00e5ff20' : '#e5e7eb',
                             color: message.sender === 'user' ? '#fff' : '#ccc',
                             fontSize: '0.8rem', // Reduced font size
                           }}
@@ -466,7 +466,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                     sx={{
                       mr: 1,
                       '& .MuiOutlinedInput-root': {
-                        color: '#fff',
+                        color: '#ffffff',
                         '& fieldset': { borderColor: '#555' },
                         '&:hover fieldset': { borderColor: '#00e5ff' },
                         '&.Mui-focused fieldset': { borderColor: '#00e5ff' },
@@ -513,8 +513,8 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                     underline="none"
                     sx={{
                       display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#252525', color: '#ccc',
-                      p: 1.5, borderRadius: 1, border: '1px solid #444', transition: 'all 0.2s', // Reduced padding/radius
-                      '&:hover': { bgcolor: '#303030', borderColor: '#00e5ff', color: '#fff', transform: 'translateY(-1px)', boxShadow: '0 2px 6px rgba(0,229,255,0.15)' }, // Reduced transform/shadow
+                      p: 1.5, borderRadius: 1, border: '1px solid #3d3d3d', transition: 'all 0.2s', // Reduced padding/radius
+                      '&:hover': { bgcolor: '#303030', borderColor: '#00e5ff', color: '#ffffff', transform: 'translateY(-1px)', boxShadow: '0 2px 6px rgba(0,229,255,0.15)' }, // Reduced transform/shadow
                     }}
                   >
                     <MdOpenInNew size={16} color="#00e5ff" /> {/* Reduced icon size */}
@@ -532,7 +532,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
         {/* Footer: Centered horizontally with max-width */}
         <Box sx={{ mx: 'auto', width: '100%' }}>
           <DialogActions sx={{
-            borderTop: '1px solid #333',
+            borderTop: '1px solid #f3f4f6',
             py: 1.5, // Reduced padding
             px: 3, // Reduced padding
             flexDirection: { xs: 'column', sm: 'row' },
@@ -551,14 +551,14 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                 sx={{
                   bgcolor: '#dc3545',
                   '&:hover': { bgcolor: '#c82333' },
-                  color: '#fff'
+                  color: '#ffffff'
                 }}
                 disabled={!insights}
               >
                 Download PDF
               </Button>
 
-              <Button size="small" startIcon={<MdContentCopy size={16} />} onClick={handleCopy} variant="outlined" sx={{ color: '#90caf9', borderColor: '#444' }}>
+              <Button size="small" startIcon={<MdContentCopy size={16} />} onClick={handleCopy} variant="outlined" sx={{ color: '#90caf9', borderColor: '#3d3d3d' }}>
                 Copy Report
               </Button>
               <Button
@@ -566,11 +566,11 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                 startIcon={<FaWhatsapp size={16} />}
                 onClick={handleShareWhatsApp}
                 variant="contained"
-                sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#1DA851' }, color: '#fff' }}
+                sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#1DA851' }, color: '#ffffff' }}
               >
                 Share via WhatsApp
               </Button>
-              <Button size="small" startIcon={<MdRefresh size={16} />} onClick={onRegenerate} variant="outlined" sx={{ color: '#90caf9', borderColor: '#444' }}>
+              <Button size="small" startIcon={<MdRefresh size={16} />} onClick={onRegenerate} variant="outlined" sx={{ color: '#90caf9', borderColor: '#3d3d3d' }}>
                 Regenerate
               </Button>
               <Button onClick={onClose} variant="contained" color="primary" size="small">

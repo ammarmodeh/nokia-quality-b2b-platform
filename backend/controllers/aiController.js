@@ -140,6 +140,28 @@ export const generateInsights = async (req, res) => {
       { $group: { _id: "$role", count: { $sum: 1 } } }
     ]);
 
+    // Performance Assessments
+    const totalQuizResults = await QuizResult.countDocuments();
+    const avgQuizScore = await QuizResult.aggregate([
+      { $group: { _id: null, avgPercentage: { $avg: "$percentage" } } }
+    ]);
+    const totalAssessments = await OnTheJobAssessment.countDocuments();
+    const avgAssessmentScore = await OnTheJobAssessment.aggregate([
+      { $group: { _id: null, avgScore: { $avg: "$score" } } }
+    ]);
+
+    // Customer Feedback
+    const totalCustomerIssues = await CustomerIssueSchema.countDocuments();
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentIssues = await CustomerIssueSchema.countDocuments({
+      createdAt: { $gte: sevenDaysAgo }
+    });
+
+    // Suggestions
+    const totalSuggestions = await SuggestionSchema.countDocuments();
+    const pendingSuggestions = await SuggestionSchema.countDocuments({ status: "Pending" });
+    const approvedSuggestions = await SuggestionSchema.countDocuments({ status: "Approved" });
+
     const context = `
         COMPREHENSIVE SYSTEM DATA SUMMARY:
         

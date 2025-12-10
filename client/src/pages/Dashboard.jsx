@@ -23,6 +23,9 @@ const Chart = lazy(() => import("../components/Chart"));
 const Card = lazy(() => import("../components/Card"));
 const TaskTable = lazy(() => import("../components/TaskTable"));
 const TeamViolationTracker = lazy(() => import("../components/TeamViolationTracker"));
+const WeeklySummaryTable = lazy(() => import("../components/WeeklySummaryTable"));
+const MonthlySummaryTable = lazy(() => import("../components/MonthlySummaryTable"));
+const TrendStatistics = lazy(() => import("../components/TrendStatistics"));
 
 const Dashboard = () => {
   const { user } = useSelector((state) => state?.auth);
@@ -103,7 +106,7 @@ const Dashboard = () => {
   if (tasksError || teamsError) return <div>Error fetching data</div>;
 
   return (
-    <div style={{ padding: "0", backgroundColor: "#121212", maxWidth: "1100px", margin: "0 auto", minHeight: "calc(100vh - 55px)", color: "#ffffff" }}>
+    <div style={{ padding: "0", backgroundColor: "#1a1a1a", maxWidth: "1100px", margin: "0 auto", minHeight: "calc(100vh - 55px)", color: "#ffffff" }}>
       {/* Welcome Snackbar */}
       <Snackbar open={snackbarOpen} autoHideDuration={5000} onClose={handleSnackbarClose}>
         <Alert onClose={handleSnackbarClose} severity="success" variant="filled">
@@ -112,19 +115,19 @@ const Dashboard = () => {
       </Snackbar>
 
       {/* Card Section */}
-      <Typography variant="h6" align="center" gutterBottom sx={{ fontWeight: "bold", color: "#333", textAlign: "left", fontSize: "10px" }}>
+      <Typography variant="h6" align="center" gutterBottom sx={{ fontWeight: 600, color: "#b3b3b3", textAlign: "left", fontSize: "0.75rem" }}>
         These statistics, which are for QoS-related tickets, are recorded from the beginning of {currentYear} until {todayDate}.
       </Typography>
       <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
         <Card tasks={tasks} setUpdateTasksList={setUpdateTasksList} />
       </Suspense>
 
-      <Divider sx={{ margin: "20px 0", borderColor: "#444" }} />
+      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
 
       {/* Weekly Count of QoS-Related Detractor & Neutral Customers Section */}
       <Box sx={{ margin: "20px 0" }}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: 1, mb: isMediumScreen ? "4px" : "20px" }}>
-          <Typography sx={{ color: "#767676", fontSize: isMediumScreen ? "12px" : "15px" }}>
+          <Typography sx={{ color: "#b3b3b3", fontSize: isMediumScreen ? "12px" : "15px" }}>
             Weekly Count of QoS-Related Detractor & Neutral Customers
           </Typography>
           <AIInsightButton />
@@ -134,7 +137,7 @@ const Dashboard = () => {
         </Suspense>
       </Box>
 
-      <Divider sx={{ margin: "20px 0", borderColor: "#444" }} />
+      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
 
       {/* Responsive Tables Section */}
       <Box sx={{ margin: "40px 0" }}>
@@ -153,21 +156,23 @@ const Dashboard = () => {
             </Box>
             <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
               <Stack
-                backgroundColor="#1a1a1aa3"
+                // backgroundColor="#ffffff"
                 padding={2}
-                borderRadius={4}
+                borderRadius={2}
                 direction={'column'}
+                sx={{ border: '1px solid #3d3d3d' }}
               >
                 <AllReasonsTable tasks={tasks} />
                 <Box sx={{
-                  backgroundColor: '#1e1e1e',
+                  backgroundColor: '#2d2d2d',
                   p: 2,
                   borderRadius: '8px',
-                  border: '1px solid #444',
+                  border: '1px solid #3d3d3d',
                   mt: 2
                 }}>
                   <Typography variant="body2" sx={{
                     color: '#ffffff',
+                    fontWeight: 500,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1
@@ -176,7 +181,7 @@ const Dashboard = () => {
                     <ReasonCategoriesDialog />
                   </Typography>
                   <Typography variant="caption" sx={{
-                    color: '#aaaaaa',
+                    color: '#b3b3b3',
                     display: 'block',
                     mt: 1
                   }}>
@@ -189,10 +194,11 @@ const Dashboard = () => {
 
           {/* Row 3 */}
           <Stack
-            backgroundColor="#1a1a1aa3"
+            // backgroundColor="#ffffff"
             padding={2}
-            borderRadius={4}
+            borderRadius={2}
             direction={'column'}
+            sx={{ border: '1px solid #3d3d3d' }}
           >
             <Stack
               direction={isMediumScreen ? "column" : "row"}
@@ -207,14 +213,15 @@ const Dashboard = () => {
               </Box>
             </Stack>
             <Box sx={{
-              backgroundColor: '#1e1e1e',
+              backgroundColor: '#2d2d2d',
               p: 2,
               borderRadius: '8px',
-              border: '1px solid #444',
+              border: '1px solid #3d3d3d',
               mt: 2
             }}>
               <Typography variant="body2" sx={{
                 color: '#ffffff',
+                fontWeight: 500,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1
@@ -223,7 +230,7 @@ const Dashboard = () => {
                 <IssueCategoriesDialog />
               </Typography>
               <Typography variant="caption" sx={{
-                color: '#aaaaaa',
+                color: '#b3b3b3',
                 display: 'block',
                 mt: 1
               }}>
@@ -234,24 +241,43 @@ const Dashboard = () => {
         </Stack>
       </Box>
 
-      <Divider sx={{ margin: "20px 0", borderColor: "#444" }} />
+      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
 
       <Box sx={{ gap: "20px", display: "flex", flexDirection: "column" }}>
         {/* Tasks Overview */}
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
           <TaskTable tasks={tasks} />
+          <TeamViolationTracker tasks={tasks} initialFieldTeams={teamsData} />
+        </Suspense>
+      </Box >
+
+      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
+
+      {/* Weekly Summary Table */}
+      <Box sx={{ margin: "20px 0" }}>
+        <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
+          <WeeklySummaryTable tasks={tasks} fieldTeams={teamsData} />
         </Suspense>
       </Box>
 
-      {/* Team Violation Tracker */}
+      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
+
+      {/* Monthly Summary Table */}
       <Box sx={{ margin: "20px 0" }}>
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
-          <SnackbarProvider maxSnack={3}>
-            <TeamViolationTracker tasks={tasks} initialFieldTeams={teamsData} />
-          </SnackbarProvider>
+          <MonthlySummaryTable tasks={tasks} fieldTeams={teamsData} />
         </Suspense>
       </Box>
-    </div>
+
+      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
+
+      {/* Trend Statistics */}
+      <Box sx={{ margin: "20px 0" }}>
+        <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
+          <TrendStatistics tasks={tasks} />
+        </Suspense>
+      </Box>
+    </div >
   );
 };
 

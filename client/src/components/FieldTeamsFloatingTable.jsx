@@ -151,7 +151,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
     // <Box sx={{ width: '100%', height: '100%' }}>
     <div
       ref={tableRef}
-      className={`${isMobile ? 'absolute left-1/2 -translate-x-1/2' : 'fixed right-4'} bottom-20 bg-[#171717fa] border border-[#444] rounded-lg shadow-lg z-50 flex flex-col`}
+      className={`${isMobile ? 'absolute left-1/2 -translate-x-1/2' : 'fixed right-4'} bottom-20 bg-[#171717fa] border border-[#e5e7eb] rounded-lg shadow-lg z-50 flex flex-col`}
       style={{
         height: '400px', // Set a fixed height
         width: isMobile ? '90%' : '500px',
@@ -162,7 +162,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
       }}
     >
       {/* Fixed Header */}
-      <div className="flex justify-between items-center p-2 border-b border-[#444] flex-shrink-0">
+      <div className="flex justify-between items-center p-2 border-b border-[#e5e7eb] flex-shrink-0">
         <h3 className="text-white font-medium">
           {tabValue === 0 ? "Theoretical Assessment Scores" : "On-The-Job Assessment Scores"}
         </h3>
@@ -215,7 +215,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
       </Box>
 
       {/* Search Bar */}
-      <div className="border-b border-[#444]">
+      <div className="border-b border-[#e5e7eb]">
         <TextField
           fullWidth
           variant="outlined"
@@ -349,7 +349,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
         fullScreen
         PaperProps={{
           style: {
-            backgroundColor: '#121212',
+            backgroundColor: '#2d2d2d',
           }
         }}
       >
@@ -370,7 +370,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
         fullScreen
         PaperProps={{
           style: {
-            backgroundColor: '#121212',
+            backgroundColor: '#2d2d2d',
           }
         }}
       >

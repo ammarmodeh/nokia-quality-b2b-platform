@@ -102,11 +102,11 @@ const ChangePassword = () => {
       color: '#ffffff',
     },
     '& .MuiInputLabel-root': {
-      color: '#aaaaaa',
+      color: '#b3b3b3',
     },
     '& .MuiOutlinedInput-root': {
       '& fieldset': {
-        borderColor: '#444',
+        borderColor: '#3d3d3d',
       },
       '&:hover fieldset': {
         borderColor: '#666',
@@ -116,7 +116,7 @@ const ChangePassword = () => {
       },
     },
     '& .MuiFormHelperText-root': {
-      color: '#aaaaaa',
+      color: '#b3b3b3',
     },
   };
 
@@ -149,7 +149,7 @@ const ChangePassword = () => {
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        backgroundColor: '#121212',
+        backgroundColor: '#2d2d2d',
         p: isMobile ? 0 : 2
       }}
     >
@@ -177,10 +177,10 @@ const ChangePassword = () => {
           width: '100%',
           height: isMobile ? '100vh' : 'auto',
           maxWidth: isMobile ? '100%' : '450px',
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           borderRadius: isMobile ? 0 : '8px',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-          border: isMobile ? 'none' : '1px solid #333',
+          border: isMobile ? 'none' : '1px solid #f3f4f6',
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column'
@@ -212,13 +212,13 @@ const ChangePassword = () => {
             </Typography>
             <Typography
               variant={isMobile ? 'body2' : 'body1'}
-              sx={{ color: '#aaaaaa', mt: 1 }}
+              sx={{ color: '#b3b3b3', mt: 1 }}
             >
               Secure your account with a new password
             </Typography>
           </Box>
 
-          <Divider sx={{ borderColor: '#333', mb: 3 }} />
+          <Divider sx={{ borderColor: '#f3f4f6', mb: 3 }} />
 
           <Box
             component="form"

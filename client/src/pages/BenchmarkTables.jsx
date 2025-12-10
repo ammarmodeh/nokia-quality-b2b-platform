@@ -96,11 +96,11 @@ const BenchmarkTables = () => {
   return (
     <div style={{
       padding: "0px 20px",
-      backgroundColor: "#121212",
+      // backgroundColor: "#2d2d2d",
       maxWidth: "1100px",
       margin: "0 auto",
       minHeight: "calc(100vh - 55px)",
-      color: "#3ea6ff"
+      color: "#7b68ee"
     }}>
       {/* Reason Trends */}
       <Stack sx={{ margin: "20px 0" }}>

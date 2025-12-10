@@ -125,7 +125,7 @@ const TeamPage = () => {
           fontWeight: 500,
           textAlign: 'center',
           mb: 3,
-          color: '#3ea6ff'
+          color: '#7b68ee'
         }}
       >
         Quality Members
@@ -142,15 +142,15 @@ const TeamPage = () => {
           px: isMobile ? 1 : 2,
           gap: 1,
           borderRadius: '999px',
-          backgroundColor: '#1e1e1e',
-          border: '1px solid #444',
+          backgroundColor: '#2d2d2d',
+          border: '1px solid #3d3d3d',
           '&:focus-within': {
-            borderColor: '#3ea6ff',
+            borderColor: '#7b68ee',
           },
           margin: '0 auto 24px',
         }}
       >
-        <MdOutlineSearch style={{ color: '#9e9e9e', fontSize: isMobile ? '1rem' : '1.25rem' }} />
+        <MdOutlineSearch style={{ color: '#b3b3b3', fontSize: isMobile ? '1rem' : '1.25rem' }} />
         <TextField
           fullWidth
           variant="standard"
@@ -184,7 +184,7 @@ const TeamPage = () => {
               <IconButton
                 size="small"
                 onClick={handleClearSearch}
-                sx={{ color: '#9e9e9e', '&:hover': { color: '#ffffff' } }}
+                sx={{ color: '#b3b3b3', '&:hover': { color: '#ffffff' } }}
               >
                 <MdClose style={{ fontSize: isMobile ? '1rem' : '1.25rem' }} />
               </IconButton>
@@ -205,8 +205,8 @@ const TeamPage = () => {
                     p: isMobile ? 1.5 : 2,
                     transition: '0.3s',
                     '&:hover': { boxShadow: 6 },
-                    backgroundColor: '#272727',
-                    border: '1px solid #444',
+                    backgroundColor: '#2d2d2d',
+                    border: '1px solid #3d3d3d',
                     height: '100%',
                   }}
                 >
@@ -218,7 +218,7 @@ const TeamPage = () => {
                         position: 'absolute',
                         top: 8,
                         right: 8,
-                        color: '#3ea6ff',
+                        color: '#7b68ee',
                         '&:hover': { backgroundColor: 'rgba(62, 166, 255, 0.1)' },
                       }}
                     >
@@ -234,7 +234,7 @@ const TeamPage = () => {
                       width: isMobile ? 64 : 80,
                       height: isMobile ? 64 : 80,
                       margin: 'auto',
-                      border: '2px solid #3ea6ff'
+                      border: '2px solid #7b68ee'
                     }}
                   />
 
@@ -258,8 +258,8 @@ const TeamPage = () => {
                         sx={{
                           color: '#ffffff',
                           fontWeight: 500,
-                          backgroundColor: '#333',
-                          border: '1px solid #3ea6ff'
+                          backgroundColor: '#2d2d2d',
+                          border: '1px solid #7b68ee'
                         }}
                       />
                     </Box>
@@ -267,7 +267,7 @@ const TeamPage = () => {
                     <Typography
                       variant={isMobile ? "caption" : "body2"}
                       sx={{
-                        color: '#3ea6ff',
+                        color: '#7b68ee',
                         display: 'block',
                         mb: 1
                       }}
@@ -278,7 +278,7 @@ const TeamPage = () => {
                     <Typography
                       variant={isMobile ? "caption" : "body2"}
                       sx={{
-                        color: '#aaaaaa',
+                        color: '#b3b3b3',
                         display: 'block',
                         mt: 1
                       }}
@@ -295,7 +295,7 @@ const TeamPage = () => {
                       <Typography
                         variant={isMobile ? "caption" : "body2"}
                         sx={{
-                          color: '#aaaaaa',
+                          color: '#b3b3b3',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -310,9 +310,9 @@ const TeamPage = () => {
                           sx={{
                             ml: 0.5,
                             p: 0.5,
-                            color: '#aaaaaa',
+                            color: '#b3b3b3',
                             '&:hover': {
-                              color: '#3ea6ff'
+                              color: '#7b68ee'
                             }
                           }}
                           size={isMobile ? "small" : "medium"}

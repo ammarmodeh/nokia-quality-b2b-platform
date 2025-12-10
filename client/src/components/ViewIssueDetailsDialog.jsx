@@ -76,7 +76,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
       fullScreen={isMobile} // Makes dialog full screen on mobile
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           boxShadow: 'none',
           borderRadius: isMobile ? 0 : '8px', // Remove border radius on mobile
           width: isMobile ? '100%' : 'auto',
@@ -89,9 +89,9 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
-        borderBottom: '1px solid #444',
+        borderBottom: '1px solid #e5e7eb',
         padding: isMobile ? '12px 16px' : '16px 24px',
       }}>
         <Typography variant="h6" component="div">
@@ -140,10 +140,10 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
         </Box>
       </DialogTitle>
 
-      <Divider sx={{ backgroundColor: '#444' }} />
+      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogContent dividers sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
         padding: isMobile ? '16px' : '20px 24px',
         '&.MuiDialogContent-root': {
@@ -154,9 +154,9 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
           {/* Basic Information Section */}
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 2,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: 2,
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: '#ffffff' }}>
               Basic Information
@@ -171,9 +171,9 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
           {/* Reporter Information Section */}
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 2,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: 2,
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: '#ffffff' }}>
               Reporter Information
@@ -189,9 +189,9 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
           {/* Team Information Section */}
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 2,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: 2,
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: '#ffffff' }}>
               Team Information
@@ -206,9 +206,9 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
           {/* Issue Information Section */}
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 2,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: 2,
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: '#ffffff' }}>
               Issue Information
@@ -236,10 +236,10 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
                 <Typography variant="subtitle1" color="#ffffff">Resolution Details:</Typography>
                 <Typography sx={{
                   p: 1.5,
-                  backgroundColor: '#333',
+                  backgroundColor: '#2d2d2d',
                   color: '#ffffff',
                   borderRadius: 1,
-                  border: '1px solid #444'
+                  border: '1px solid #3d3d3d'
                 }}>
                   {issue.resolutionDetails || 'N/A'}
                 </Typography>
@@ -249,11 +249,11 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
         </Box>
       </DialogContent>
 
-      <Divider sx={{ backgroundColor: '#444' }} />
+      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogActions sx={{
-        backgroundColor: '#1e1e1e',
-        borderTop: '1px solid #444',
+        backgroundColor: '#2d2d2d',
+        borderTop: '1px solid #e5e7eb',
         padding: isMobile ? '8px 16px' : '12px 24px',
       }}>
         <Button
@@ -279,7 +279,7 @@ const DetailRow = ({ label, value, darkMode, isMobile }) => (
       variant="subtitle1"
       sx={{
         fontWeight: '500',
-        color: darkMode ? '#aaaaaa' : 'text.primary',
+        color: darkMode ? '#6b7280' : 'text.primary',
         fontSize: isMobile ? '0.875rem' : '1rem'
       }}
     >

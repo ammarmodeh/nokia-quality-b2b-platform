@@ -44,10 +44,10 @@ const ReasonCategoriesDialog = () => {
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             borderRadius: isMobile ? 0 : '8px',
-            border: '1px solid #444',
+            border: '1px solid #3d3d3d',
           },
         }}
       >
@@ -55,11 +55,11 @@ const ReasonCategoriesDialog = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FaFileAlt color="#3ea6ff" size={isMobile ? 16 : 20} />
+            <FaFileAlt color="#7b68ee" size={isMobile ? 16 : 20} />
             <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontSize: isMobile ? 13 : 20 }}>
               Reason Categories Guide
             </Typography>
@@ -84,7 +84,7 @@ const ReasonCategoriesDialog = () => {
             width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#444',
+            backgroundColor: '#e5e7eb',
             borderRadius: '2px',
           },
         }}>
@@ -97,7 +97,7 @@ const ReasonCategoriesDialog = () => {
           {/* Speed */}
           <Box sx={{ mb: 3 }}>
             <Chip label="Speed" sx={{
-              backgroundColor: '#3ea6ff',
+              backgroundColor: '#7b68ee',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
@@ -246,7 +246,7 @@ const ReasonCategoriesDialog = () => {
         </DialogContent>
 
         <DialogActions sx={{
-          borderTop: '1px solid #444',
+          borderTop: '1px solid #e5e7eb',
           padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button

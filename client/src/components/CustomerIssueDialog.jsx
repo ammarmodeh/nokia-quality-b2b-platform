@@ -86,24 +86,24 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
       cursor: isAdmin ? 'text' : 'not-allowed',
     },
     '& .MuiInputLabel-root': {
-      color: '#aaaaaa',
+      color: '#b3b3b3',
     },
     '& .MuiOutlinedInput-root': {
       '& fieldset': {
-        borderColor: '#444',
+        borderColor: '#3d3d3d',
       },
       '&:hover fieldset': {
-        borderColor: isAdmin ? '#666' : '#444',
+        borderColor: isAdmin ? '#666' : '#e5e7eb',
       },
       '&.Mui-focused fieldset': {
-        borderColor: isAdmin ? '#1976d2' : '#444',
+        borderColor: isAdmin ? '#1976d2' : '#e5e7eb',
       },
       '&.Mui-disabled': {
         cursor: 'not-allowed',
       }
     },
     '& .MuiFormHelperText-root': {
-      color: '#aaaaaa',
+      color: '#b3b3b3',
     },
   };
 
@@ -113,32 +113,32 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
       cursor: isAdmin ? 'pointer' : 'not-allowed',
     },
     '& .MuiOutlinedInput-notchedOutline': {
-      borderColor: '#444',
+      borderColor: '#3d3d3d',
     },
     '&:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: isAdmin ? '#666' : '#444',
+      borderColor: isAdmin ? '#666' : '#e5e7eb',
     },
     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-      borderColor: isAdmin ? '#1976d2' : '#444',
+      borderColor: isAdmin ? '#1976d2' : '#e5e7eb',
     },
   };
 
   const inputLabelStyles = {
-    color: '#aaaaaa',
+    color: '#b3b3b3',
     '&.Mui-focused': {
-      color: isAdmin ? '#1976d2' : '#aaaaaa',
+      color: isAdmin ? '#1976d2' : '#6b7280',
     },
   };
 
   const selectStyles = {
     '& .MuiSelect-icon': {
-      color: '#aaaaaa',
+      color: '#b3b3b3',
     },
   };
 
   const menuItemStyles = {
     color: '#ffffff',
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#2d2d2d',
     '&:hover': {
       backgroundColor: '#2a2a2a',
     },
@@ -176,16 +176,16 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
       fullScreen={fullScreen}
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           boxShadow: 'none',
           borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
         }
       }}
     >
       <DialogTitle sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
-        borderBottom: '1px solid #444',
+        borderBottom: '1px solid #e5e7eb',
         padding: '16px 24px',
       }}>
         <Typography variant="h6" component="div">
@@ -194,7 +194,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
       </DialogTitle>
 
       <DialogContent dividers sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
         padding: '20px 24px',
         '&.MuiDialogContent-root': {
@@ -239,7 +239,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
               MenuProps={{
                 PaperProps: {
                   sx: {
-                    backgroundColor: '#1e1e1e',
+                    backgroundColor: '#2d2d2d',
                     color: '#ffffff',
                     '& .MuiMenuItem-root': menuItemStyles,
                   },
@@ -289,7 +289,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
               MenuProps={{
                 PaperProps: {
                   sx: {
-                    backgroundColor: '#1e1e1e',
+                    backgroundColor: '#2d2d2d',
                     color: '#ffffff',
                     '& .MuiMenuItem-root': menuItemStyles,
                   },
@@ -316,7 +316,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
               MenuProps={{
                 PaperProps: {
                   sx: {
-                    backgroundColor: '#1e1e1e',
+                    backgroundColor: '#2d2d2d',
                     color: '#ffffff',
                     '& .MuiMenuItem-root': menuItemStyles,
                   },
@@ -368,7 +368,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
               MenuProps={{
                 PaperProps: {
                   sx: {
-                    backgroundColor: '#1e1e1e',
+                    backgroundColor: '#2d2d2d',
                     color: '#ffffff',
                     '& .MuiMenuItem-root': menuItemStyles,
                   },
@@ -419,8 +419,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
       </DialogContent>
 
       <DialogActions sx={{
-        backgroundColor: '#1e1e1e',
-        borderTop: '1px solid #444',
+        backgroundColor: '#2d2d2d',
+        borderTop: '1px solid #e5e7eb',
         padding: '12px 24px',
       }}>
         <Button

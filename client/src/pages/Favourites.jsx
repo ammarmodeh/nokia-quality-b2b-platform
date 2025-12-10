@@ -139,7 +139,7 @@ const Favourite = () => {
       px: isMobile ? 0 : undefined
     }}>
       <Typography variant="h5" gutterBottom sx={{
-        color: '#3ea6ff',
+        color: '#7b68ee',
         fontWeight: 'bold',
         mb: 2
       }}>
@@ -149,25 +149,25 @@ const Favourite = () => {
       {/* Favorites Table */}
       <TableContainer component={Paper} sx={{
         mt: 2,
-        backgroundColor: '#1e1e1e',
-        border: '1px solid #444',
+        backgroundColor: '#2d2d2d',
+        border: '1px solid #3d3d3d',
         "& .MuiTableHead-root": {
-          backgroundColor: "#333",
+          backgroundColor: "#2d2d2d",
           "& .MuiTableCell-root": {
-            color: "#9e9e9e",
+            color: "#b3b3b3",
             fontWeight: "bold",
-            borderBottom: "1px solid #444",
+            borderBottom: "1px solid #e5e7eb",
           }
         },
         "& .MuiTableBody-root": {
           "& .MuiTableCell-root": {
-            borderBottom: "1px solid #444",
+            borderBottom: "1px solid #e5e7eb",
             color: "#ffffff",
           },
           "& .MuiTableRow-root": {
-            backgroundColor: "#272727",
+            backgroundColor: "#2d2d2d",
             "&:hover": {
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
             },
           }
         },
@@ -221,7 +221,7 @@ const Favourite = () => {
                             size="small"
                             color="info"
                             onClick={() => handleViewTask(task)}
-                            sx={{ color: '#3ea6ff' }}
+                            sx={{ color: '#7b68ee' }}
                           >
                             <MdVisibility />
                           </IconButton>
@@ -240,7 +240,7 @@ const Favourite = () => {
                           <IconButton
                             size="small"
                             onClick={(e) => handleMenuOpen(e, task)}
-                            sx={{ color: '#aaaaaa' }}
+                            sx={{ color: '#b3b3b3' }}
                           >
                             <MdMoreVert />
                           </IconButton>
@@ -287,14 +287,14 @@ const Favourite = () => {
         onClose={handleMenuClose}
         sx={{
           "& .MuiPaper-root": {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
           }
         }}
       >
         <MenuItem onClick={() => currentTask && handleViewTask(currentTask)}>
           <ListItemIcon>
-            <MdVisibility fontSize="small" style={{ color: '#3ea6ff' }} />
+            <MdVisibility fontSize="small" style={{ color: '#7b68ee' }} />
           </ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>

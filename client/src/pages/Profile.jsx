@@ -180,11 +180,11 @@ const Profile = () => {
       color: '#ffffff',
     },
     '& .MuiInputLabel-root': {
-      color: '#aaaaaa',
+      color: '#b3b3b3',
     },
     '& .MuiOutlinedInput-root': {
       '& fieldset': {
-        borderColor: editMode ? '#444' : 'transparent',
+        borderColor: editMode ? '#e5e7eb' : 'transparent',
       },
       '&:hover fieldset': {
         borderColor: editMode ? '#666' : 'transparent',
@@ -196,7 +196,7 @@ const Profile = () => {
       borderRadius: '4px',
     },
     '& .MuiFormHelperText-root': {
-      color: '#aaaaaa',
+      color: '#b3b3b3',
     },
     '& .Mui-disabled': {
       WebkitTextFillColor: '#ffffff !important',
@@ -263,10 +263,10 @@ const Profile = () => {
           width: '100%',
           height: isMobile ? '100vh' : 'auto',
           maxWidth: isMobile ? '100%' : '600px',
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           borderRadius: isMobile ? 0 : '8px',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-          border: isMobile ? 'none' : '1px solid #333',
+          border: isMobile ? 'none' : '1px solid #f3f4f6',
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column'
@@ -336,12 +336,12 @@ const Profile = () => {
             <Typography variant={isMobile ? 'h6' : 'h5'} component="h1" sx={{ color: '#ffffff', fontWeight: 'bold' }}>
               {user?.name}
             </Typography>
-            <Typography variant={isMobile ? 'body2' : 'body1'} sx={{ color: '#aaaaaa' }}>
+            <Typography variant={isMobile ? 'body2' : 'body1'} sx={{ color: '#b3b3b3' }}>
               {user?.title}
             </Typography>
           </Box>
 
-          <Divider sx={{ borderColor: '#333', mb: 3 }} />
+          <Divider sx={{ borderColor: '#f3f4f6', mb: 3 }} />
 
           <Box
             component="form"

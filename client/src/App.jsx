@@ -1,12 +1,13 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useSelector } from "react-redux";
-import { Suspense, lazy } from "react";
+import React, { Suspense, lazy } from "react";
 import { FadeLoader } from "react-spinners";
-import { Box } from "@mui/material";
+import { Box, ThemeProvider } from "@mui/material";
 import NotFound from "./pages/NotFound";
 import TeamsPerformancePage from "./pages/TeamsPerformancePage";
 import MainStats from "./pages/MainStats";
+import clickUpDarkTheme from "./theme/clickUpDarkTheme";
 
 // Lazy load pages
 const Layout = lazy(() => import("./components/Layout"));
@@ -38,8 +39,9 @@ const OnTheJobAssessment = lazy(() => import("./pages/OnTheJobAssessment"));
 const FieldTeamPortal = lazy(() => import("./pages/FieldTeamPortal"));
 const AIPortal = lazy(() => import("./pages/AIPortal"));
 const AIIntegrationExample = lazy(() => import("./pages/AIIntegrationExample"));
+const DataManagement = lazy(() => import("./pages/DataManagement"));
+const DetractorAnalytics = lazy(() => import("./pages/DetractorAnalytics"));
 
-// Custom route handlers
 const QuizRouteHandler = ({ children }) => {
   const { user } = useSelector((state) => state?.auth);
   const location = useLocation();
@@ -79,14 +81,14 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 
 // Suspense Fallback
 const Loading = () => (
-  <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", backgroundColor: "#121212" }}>
-    <FadeLoader color="#0d73bc" speedMultiplier={2} />
+  <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", backgroundColor: "#1a1a1a" }}>
+    <FadeLoader color="#7b68ee" speedMultiplier={2} />
   </Box>
 );
 
 const App = () => {
   return (
-    <>
+    <ThemeProvider theme={clickUpDarkTheme}>
       <Suspense fallback={<Loading />}>
         <Routes>
           {/* Public Routes */}
@@ -149,6 +151,8 @@ const App = () => {
             <Route path="/trashed" element={<Trash />} />
             <Route path="/ai-portal" element={<AIPortal />} />
             <Route path="/ai-example" element={<AIIntegrationExample />} />
+            <Route path="/excel-portal" element={<DataManagement />} />
+            <Route path="/analytics" element={<DetractorAnalytics />} />
           </Route>
 
           {/* 404 Route - Updated to use the NotFound component */}
@@ -156,7 +160,7 @@ const App = () => {
         </Routes>
       </Suspense>
       <Toaster richColors />
-    </>
+    </ThemeProvider>
   );
 };
 

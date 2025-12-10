@@ -49,9 +49,9 @@ const SubtaskManager = ({
     primary: "#3b82f6",
     textPrimary: "#ffffff",
     textSecondary: "#9ca3af",
-    surface: "#1e1e1e",
+    // surface: "#ffffff",
     surfaceElevated: "#2a2a2a",
-    border: "#444",
+    border: "#e5e7eb",
     primaryHover: "#1d4ed8",
   };
 
@@ -811,12 +811,12 @@ const SubtaskManager = ({
                         mt: 2,
                         direction: "rtl",
                         textAlign: "right",
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": { borderColor: colors.border },
-                          "&:hover fieldset": { borderColor: colors.primary },
-                          "&.Mui-focused fieldset": { borderColor: colors.primary },
-                          backgroundColor: colors.surface,
-                        },
+                        // "& .MuiOutlinedInput-root": {
+                        //   "& fieldset": { borderColor: colors.border },
+                        //   "&:hover fieldset": { borderColor: colors.primary },
+                        //   "&.Mui-focused fieldset": { borderColor: colors.primary },
+                        //   backgroundColor: colors.surface,
+                        // },
                       }}
                     />
                   )}

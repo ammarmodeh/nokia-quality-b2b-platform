@@ -1,0 +1,92 @@
+/* ClickUp Dark Theme - Global Table and Dialog Styles */
+
+/* Override any white backgrounds in tables */
+table,
+.MuiTable-root,
+.MuiTableContainer-root {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+}
+
+/* Table headers */
+thead,
+.MuiTableHead-root,
+th,
+.MuiTableCell-head {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border-bottom: 2px solid #3d3d3d !important;
+}
+
+/* Table body cells */
+tbody,
+.MuiTableBody-root,
+td,
+.MuiTableCell-body,
+.MuiTableCell-root {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+  border-color: #3d3d3d !important;
+}
+
+/* Table rows */
+tr,
+.MuiTableRow-root {
+  background-color: #2d2d2d !important;
+}
+
+tr:hover,
+.MuiTableRow-root:hover {
+  background-color: #3d3d3d !important;
+}
+
+/* Any div with table-like styling */
+div[role="table"],
+div[class*="table"],
+div[class*="Table"] {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+}
+
+/* Headers in custom tables */
+div[class*="header"],
+div[class*="Header"] {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+}
+
+/* Ensure text in tables is white */
+table *,
+.MuiTable-root *,
+div[role="table"] * {
+  color: #ffffff !important;
+}
+
+/* Table borders */
+table,
+.MuiTable-root,
+.MuiTableContainer-root {
+  border: 1px solid #3d3d3d !important;
+  border-radius: 8px !important;
+}
+
+/* Force ALL dialogs to use dark backgrounds */
+.MuiDialog-paper,
+.MuiDialogTitle-root,
+.MuiDialogContent-root,
+.MuiDialogActions-root {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+}
+
+/* Ensure all text in dialogs is white */
+.MuiDialog-paper *,
+.MuiDialogContent-root * {
+  color: #ffffff !important;
+}
+
+/* Dialog borders */
+.MuiDialog-paper {
+  border: 1px solid #3d3d3d !important;
+}

@@ -89,21 +89,21 @@ const FieldTeamTicketsForPortalReview = ({ teamId, teamName }) => {
 
   // Colors for dark mode UI consistency
   const colors = {
-    background: '#121212',
-    surface: '#1e1e1e',
+    background: '#2d2d2d',
+    // surface: '#ffffff',
     surfaceElevated: '#252525',
-    border: '#444',
-    primary: '#3ea6ff',
+    border: '#e5e7eb',
+    primary: '#7b68ee',
     primaryHover: 'rgba(62, 166, 255, 0.08)',
     textPrimary: '#ffffff',
-    textSecondary: '#9e9e9e',
+    textSecondary: '#6b7280',
     success: '#4caf50',
     warning: '#ff9800',
     error: '#f44336',
-    tableBg: '#1a1a1a',
+    tableBg: '#2d2d2d',
     tableHeaderBg: '#252525',
     tableRowHover: '#2a2a2a',
-    chartGrid: '#333333',
+    chartGrid: '#f3f4f6333',
   };
 
   const handleClickOpen = (ticket) => {
@@ -414,7 +414,7 @@ const FieldTeamTicketsForPortalReview = ({ teamId, teamName }) => {
 
   return (
     <Box sx={{
-      backgroundColor: colors.background,
+      // backgroundColor: colors.background,
       color: colors.textPrimary,
       py: isMobile ? 1 : 2,
       mt: 2,

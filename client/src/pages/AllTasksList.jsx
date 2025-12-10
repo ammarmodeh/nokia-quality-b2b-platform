@@ -341,7 +341,7 @@ const AllTasksList = () => {
       px: isMobile ? 0 : undefined
     }}>
       <Typography variant="h5" gutterBottom sx={{
-        color: '#3ea6ff',
+        color: '#7b68ee',
         fontWeight: 'bold',
         fontSize: isMobile ? '1.2rem' : '1.5rem',
         mb: 2
@@ -351,10 +351,10 @@ const AllTasksList = () => {
 
       {/* Search and Export Bar */}
       <Box sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         p: 2,
         borderRadius: '8px',
-        border: '1px solid #444',
+        border: '1px solid #3d3d3d',
         mb: 2,
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
@@ -370,7 +370,7 @@ const AllTasksList = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <MdSearch style={{ color: '#aaaaaa' }} />
+                <MdSearch style={{ color: '#b3b3b3' }} />
               </InputAdornment>
             ),
             endAdornment: searchTerm && (
@@ -379,7 +379,7 @@ const AllTasksList = () => {
                 onClick={() => setSearchTerm('')}
                 sx={{
                   visibility: searchTerm ? 'visible' : 'hidden',
-                  color: '#aaaaaa',
+                  color: '#b3b3b3',
                   '&:hover': {
                     backgroundColor: '#2a2a2a',
                   }
@@ -390,7 +390,7 @@ const AllTasksList = () => {
             ),
             sx: {
               borderRadius: '20px',
-              backgroundColor: '#272727',
+              backgroundColor: '#2d2d2d',
               width: '100%',
               '& fieldset': {
                 border: 'none',
@@ -419,14 +419,14 @@ const AllTasksList = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused fieldset': {
-                border: '1px solid #3ea6ff !important',
+                border: '1px solid #7b68ee !important',
               },
             },
           }}
         />
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
-          <InputLabel id="filter-select-label" sx={{ color: '#aaaaaa' }}>
+          <InputLabel id="filter-select-label" sx={{ color: '#b3b3b3' }}>
             Eval Score
           </InputLabel>
           <Select
@@ -438,7 +438,7 @@ const AllTasksList = () => {
             sx={{
               color: '#ffffff',
               borderRadius: '20px',
-              backgroundColor: '#272727',
+              backgroundColor: '#2d2d2d',
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none',
               },
@@ -446,13 +446,13 @@ const AllTasksList = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #3ea6ff !important',
+                border: '1px solid #7b68ee !important',
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: '#272727',
+                  backgroundColor: '#2d2d2d',
                   color: '#ffffff',
                 },
               },
@@ -480,7 +480,7 @@ const AllTasksList = () => {
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
-          <InputLabel id="priority-filter-label" sx={{ color: '#aaaaaa' }}>
+          <InputLabel id="priority-filter-label" sx={{ color: '#b3b3b3' }}>
             Feedback Severity
           </InputLabel>
           <Select
@@ -492,7 +492,7 @@ const AllTasksList = () => {
             sx={{
               color: '#ffffff',
               borderRadius: '20px',
-              backgroundColor: '#272727',
+              backgroundColor: '#2d2d2d',
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none',
               },
@@ -500,13 +500,13 @@ const AllTasksList = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #3ea6ff !important',
+                border: '1px solid #7b68ee !important',
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: '#272727',
+                  backgroundColor: '#2d2d2d',
                   color: '#ffffff',
                 },
               },
@@ -541,7 +541,7 @@ const AllTasksList = () => {
           onClick={exportToExcel}
           startIcon={<MdFileDownload />}
           sx={{
-            borderColor: '#444',
+            borderColor: '#3d3d3d',
             color: '#1976d2',
             '&:hover': {
               backgroundColor: 'rgba(25, 118, 210, 0.08)',
@@ -563,7 +563,7 @@ const AllTasksList = () => {
             onClick={() => setOpenAddTask(true)}
             startIcon={<IoMdAdd />}
             sx={{
-              borderColor: '#444',
+              borderColor: '#3d3d3d',
               color: '#4caf50',
               '&:hover': {
                 backgroundColor: 'rgba(76, 175, 80, 0.08)',
@@ -587,30 +587,30 @@ const AllTasksList = () => {
           mt: 2,
           maxWidth: '100%',
           overflowX: 'auto',
-          backgroundColor: '#1e1e1e',
-          border: '1px solid #444',
+          backgroundColor: '#2d2d2d',
+          border: '1px solid #3d3d3d',
           borderRadius: '0px',
           "& .MuiTable-root": {
-            backgroundColor: "#272727",
+            backgroundColor: "#2d2d2d",
           },
           "& .MuiTableHead-root": {
-            backgroundColor: "#333",
+            backgroundColor: "#2d2d2d",
             "& .MuiTableCell-root": {
-              color: "#9e9e9e",
+              color: "#b3b3b3",
               fontSize: "0.875rem",
               fontWeight: "bold",
-              borderBottom: "1px solid #444",
+              borderBottom: "1px solid #e5e7eb",
             }
           },
           "& .MuiTableBody-root": {
             "& .MuiTableCell-root": {
-              borderBottom: "1px solid #444",
+              borderBottom: "1px solid #e5e7eb",
               color: "#ffffff",
             },
             // "& .MuiTableRow-root": {
-            //   backgroundColor: "#272727",
+            //   backgroundColor: "#2d2d2d",
             //   "&:hover": {
-            //     backgroundColor: "#333",
+            //     backgroundColor: "#2d2d2d",
             //   },
             // }
           },
@@ -623,7 +623,7 @@ const AllTasksList = () => {
             borderRadius: "4px",
           },
           "&::-webkit-scrollbar-track": {
-            backgroundColor: "#444",
+            backgroundColor: "#e5e7eb",
           },
         }}
       >
@@ -651,7 +651,7 @@ const AllTasksList = () => {
                       key={task._id}
                       onClick={() => handleRowClick(task._id)}
                       sx={{
-                        backgroundColor: task._id === selectedRowId ? '#333' : '#272727',
+                        backgroundColor: task._id === selectedRowId ? '#f3f4f6' : '#ffffff',
                         cursor: 'pointer',
                       }}
                     >
@@ -735,7 +735,7 @@ const AllTasksList = () => {
                                 toggleFavorite(task);
                               }}
                               sx={{
-                                color: isFavorited ? '#ffc107' : '#aaaaaa',
+                                color: isFavorited ? '#ffc107' : '#6b7280',
                                 '&:hover': {
                                   color: isFavorited ? '#ffd700' : '#ffffff'
                                 }
@@ -753,7 +753,7 @@ const AllTasksList = () => {
                                 setSelectedTask(task);
                                 setViewDialogOpen(true);
                               }}
-                              sx={{ color: '#3ea6ff' }}
+                              sx={{ color: '#7b68ee' }}
                             >
                               <MdVisibility />
                             </IconButton>
@@ -830,8 +830,8 @@ const AllTasksList = () => {
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
           sx={{
-            // borderTop: '1px solid #444',
-            backgroundColor: '#1e1e1e',
+            // borderTop: '1px solid #e5e7eb',
+            backgroundColor: '#2d2d2d',
             display: 'flex',
             justifyContent: 'flex-start',
             width: '100%',
@@ -893,7 +893,7 @@ const AllTasksList = () => {
         fullScreen={isMobile}
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             boxShadow: 'none',
             borderRadius: isMobile ? 0 : '8px',
           }
@@ -902,9 +902,9 @@ const AllTasksList = () => {
         <DialogTitle sx={{
           display: 'flex',
           alignItems: 'center',
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
           <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontWeight: 500 }}>
@@ -912,16 +912,16 @@ const AllTasksList = () => {
           </Typography>
         </DialogTitle>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogContent sx={{
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           padding: isMobile ? '16px' : '20px 24px',
           '&::-webkit-scrollbar': {
             width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#444',
+            backgroundColor: '#e5e7eb',
             borderRadius: '2px',
           },
         }}>
@@ -944,11 +944,11 @@ const AllTasksList = () => {
           </Typography>
         </DialogContent>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogActions sx={{
-          backgroundColor: '#1e1e1e',
-          borderTop: '1px solid #444',
+          backgroundColor: '#2d2d2d',
+          borderTop: '1px solid #e5e7eb',
           padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button

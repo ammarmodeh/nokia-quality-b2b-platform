@@ -30,7 +30,7 @@ const UserList = ({ setAssignedTo, assignedTo, users, loading, error, label, fil
 
   return (
     <div>
-      <p className="text-gray-700 mb-2">{label}</p>
+      <p className="text-gray-300 mb-2">{label}</p>
       <Autocomplete
         multiple
         disableCloseOnSelect

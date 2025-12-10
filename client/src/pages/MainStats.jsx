@@ -30,14 +30,14 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 
 const MainStats = () => {
   const colors = {
-    background: '#121212',
-    surface: '#1e1e1e',
+    background: '#2d2d2d',
+    surface: '#ffffff',
     surfaceElevated: '#252525',
-    border: '#444',
-    primary: '#3ea6ff',
+    border: '#e5e7eb',
+    primary: '#7b68ee',
     primaryHover: 'rgba(62, 166, 255, 0.08)',
     textPrimary: '#ffffff',
-    textSecondary: '#9e9e9e',
+    textSecondary: '#6b7280',
     success: '#4caf50',
     warning: '#ff9800',
     error: '#f44336',
@@ -849,25 +849,25 @@ const MainStats = () => {
 
 
   if (loading) return (
-    <Box sx={{ backgroundColor: colors.background, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <Typography sx={{ color: colors.textPrimary }}>Loading...</Typography>
     </Box>
   );
 
   if (error) return (
-    <Box sx={{ backgroundColor: colors.background, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <Typography sx={{ color: colors.error }}>Error: {error}</Typography>
     </Box>
   );
 
   return (
-    <Box sx={{ backgroundColor: colors.background, minHeight: '100vh', color: colors.textPrimary, p: 3 }}>
+    <Box sx={{ minHeight: '100vh', color: colors.textPrimary, p: 3 }}>
       <Typography variant="h4" gutterBottom sx={{ color: colors.primary, fontWeight: 'bold', mb: 3 }}>
         Tasks Performance Dashboard
       </Typography>
 
       {/* Reason Statistics */}
-      <Paper sx={{ p: 2, mb: 4, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+      <Paper sx={{ p: 2, mb: 4, border: `1px solid ${colors.border}` }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" gutterBottom sx={{ color: colors.textPrimary }}>
             Tasks by Reason
@@ -943,7 +943,7 @@ const MainStats = () => {
 
 
       {/* Governorate Statistics */}
-      <Paper sx={{ p: 2, mb: 4, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+      <Paper sx={{ p: 2, mb: 4, border: `1px solid ${colors.border}` }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" sx={{ color: colors.textPrimary }}>
             Performance by Governorate
@@ -986,7 +986,7 @@ const MainStats = () => {
       </Paper> */}
 
       {/* Responsibility Statistics */}
-      <Paper sx={{ p: 2, mb: 4, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+      <Paper sx={{ p: 2, mb: 4, border: `1px solid ${colors.border}` }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" sx={{ color: colors.textPrimary }}>
             Performance by Responsibility
@@ -1015,7 +1015,7 @@ const MainStats = () => {
       </Paper> */}
 
       {/* Satisfaction Score Distribution */}
-      <Paper sx={{ p: 2, mb: 4, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+      <Paper sx={{ p: 2, mb: 4, border: `1px solid ${colors.border}` }}>
         <Typography variant="h6" gutterBottom sx={{ color: colors.textPrimary }}>
           Satisfaction Score Distribution
         </Typography>
@@ -1098,7 +1098,7 @@ const MainStats = () => {
       </Paper> */}
 
       {/* Satisfaction Score Statistics */}
-      <Paper sx={{ p: 2, mb: 4, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+      <Paper sx={{ p: 2, mb: 4, border: `1px solid ${colors.border}` }}>
         <Typography variant="h6" gutterBottom sx={{ color: colors.textPrimary }}>
           Customer Satisfaction Scores
         </Typography>
@@ -1179,7 +1179,7 @@ const MainStats = () => {
                       {stats.evaluationScoreStats.average?.toFixed(1) || 'N/A'}
                     </TableCell>
                     <TableCell sx={{ color: colors.textSecondary }}>
-                      Average of all Satisfaction Scores (1-10 scale)
+                      Average of all Satisfaction Scores (1-8 scale)
                     </TableCell>
                   </TableRow>
                   <TableRow>

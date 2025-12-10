@@ -45,7 +45,7 @@ const Table = ({ tasks }) => {
   );
 
   const TableRow = ({ task }) => (
-    <tr className='border-b border-gray-200 text-gray-600 hover:bg-gray-300/10'>
+    <tr className='border-b border-gray-200 text-gray-400 hover:bg-gray-300/10'>
       <td className='py-2'>
         <div className='flex items-center gap-2'>
           <div
@@ -69,22 +69,22 @@ const Table = ({ tasks }) => {
       </td>
 
       <td className='py-2'>
-        <span className='text-sm text-gray-600'>
+        <span className='text-sm text-gray-400'>
           {formatDate(new Date(task?.date))}
         </span>
       </td>
 
       <td className='py-2'>
         <div className='flex items-center gap-3'>
-          <div className='flex gap-1 items-center text-sm text-gray-600'>
+          <div className='flex gap-1 items-center text-sm text-gray-400'>
             <BiMessageAltDetail />
             <span>{task?.activities?.length}</span>
           </div>
-          <div className='flex gap-1 items-center text-sm text-gray-600 dark:text-gray-400'>
+          <div className='flex gap-1 items-center text-sm text-gray-400 dark:text-gray-400'>
             <MdAttachFile />
             <span>{task?.assets?.length}</span>
           </div>
-          <div className='flex gap-1 items-center text-sm text-gray-600 dark:text-gray-400'>
+          <div className='flex gap-1 items-center text-sm text-gray-400 dark:text-gray-400'>
             <FaList />
             <span>0/{task?.subTasks?.length}</span>
           </div>
@@ -125,7 +125,7 @@ const Table = ({ tasks }) => {
   );
   return (
     <>
-      <div className='bg-white  px-2 md:px-4 pt-4 pb-9 shadow-md rounded'>
+      <div className='bg-[#2d2d2d]  px-2 md:px-4 pt-4 pb-9 shadow-md rounded'>
         <div className='overflow-x-auto'>
           <table className='w-full '>
             <TableHeader />

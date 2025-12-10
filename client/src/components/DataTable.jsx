@@ -107,7 +107,7 @@ export const DataTable = ({ groupedData }) => {
       <Paper sx={{
         height: 240,
         width: "100%",
-        backgroundColor: "#333",
+        backgroundColor: "#2d2d2d",
         overflow: "hidden" // Prevent double scrollbars
       }}>
         <DataGrid
@@ -134,7 +134,7 @@ export const DataTable = ({ groupedData }) => {
               background: 'none'
             },
             '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#333',
+              backgroundColor: '#2d2d2d',
               fontSize: '0.875rem',
               fontWeight: 'bold',
               overflow: 'hidden',
@@ -143,11 +143,11 @@ export const DataTable = ({ groupedData }) => {
               backgroundColor: '#454545',
             },
             '& .MuiDataGrid-cell': {
-              borderBottom: '1px solid #444',
+              borderBottom: '1px solid #e5e7eb',
             },
             '& .MuiDataGrid-footerContainer': {
               minHeight: '64px',
-              backgroundColor: '#333',
+              backgroundColor: '#2d2d2d',
               color: '#ffffff',
               '& .MuiTablePagination-root': {
                 color: '#ffffff',
@@ -164,11 +164,11 @@ export const DataTable = ({ groupedData }) => {
                 borderRadius: '4px',
               },
               '&::-webkit-scrollbar-track': {
-                backgroundColor: '#444',
+                backgroundColor: '#e5e7eb',
               },
             },
             '& .MuiDataGrid-scrollbarFiller': {
-              backgroundColor: '#333',
+              backgroundColor: '#2d2d2d',
             },
             '& .detractor-cell': { color: 'red' },
             '& .neutral-cell': { color: 'gray' },

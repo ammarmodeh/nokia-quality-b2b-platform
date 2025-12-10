@@ -50,10 +50,10 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
       maxWidth="md"
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           boxShadow: 'none',
           borderRadius: isMobile ? 0 : '8px',
-          border: isMobile ? 'none' : '1px solid #444',
+          border: isMobile ? 'none' : '1px solid #e5e7eb',
           margin: 0,
           width: isMobile ? '100%' : '70%',
           maxWidth: '100%'
@@ -62,9 +62,9 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
     >
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogTitle sx={{
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: isMobile ? '12px 16px' : '16px 24px',
           fontWeight: 500,
           position: 'sticky',
@@ -74,14 +74,14 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
           Edit Team Information
         </DialogTitle>
         <DialogContent sx={{
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
           padding: isMobile ? '12px 16px' : '20px 24px',
           '&::-webkit-scrollbar': {
             width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#444',
+            backgroundColor: '#e5e7eb',
             borderRadius: '2px',
           },
           height: '100%',
@@ -104,13 +104,13 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 flex: 1,
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
               }}
@@ -123,7 +123,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 style: { color: '#ffffff' },
               }}
               InputLabelProps={{
-                style: { color: '#aaaaaa' },
+                style: { color: '#b3b3b3' },
                 shrink: true
               }}
               size={isMobile ? "small" : "medium"}
@@ -136,13 +136,13 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 flex: 1,
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
               }}
@@ -155,7 +155,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 style: { color: '#ffffff' },
               }}
               InputLabelProps={{
-                style: { color: '#aaaaaa' },
+                style: { color: '#b3b3b3' },
                 shrink: true
               }}
               size={isMobile ? "small" : "medium"}
@@ -168,13 +168,13 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 flex: 1,
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
               }}
@@ -187,7 +187,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 style: { color: '#ffffff' },
               }}
               InputLabelProps={{
-                style: { color: '#aaaaaa' },
+                style: { color: '#b3b3b3' },
                 shrink: true
               }}
               size={isMobile ? "small" : "medium"}
@@ -200,13 +200,13 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 flex: 1,
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
               }}
@@ -219,7 +219,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 style: { color: '#ffffff' },
               }}
               InputLabelProps={{
-                style: { color: '#aaaaaa' },
+                style: { color: '#b3b3b3' },
                 shrink: true
               }}
               size={isMobile ? "small" : "medium"}
@@ -243,13 +243,13 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 flex: 1,
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
               }}
@@ -262,7 +262,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 style: { color: '#ffffff' },
               }}
               InputLabelProps={{
-                style: { color: '#aaaaaa' },
+                style: { color: '#b3b3b3' },
                 shrink: true
               }}
               size={isMobile ? "small" : "medium"}
@@ -270,9 +270,9 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
             <FormControl sx={{ flex: 1 }}>
               <InputLabel
                 sx={{
-                  color: '#aaaaaa',
+                  color: '#b3b3b3',
                   '&.Mui-focused': {
-                    color: '#3ea6ff',
+                    color: '#7b68ee',
                   }
                 }}
               >
@@ -287,21 +287,21 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                     padding: isMobile ? '8.5px 14px' : '14px',
                   },
                   '& .MuiNativeSelect-icon': {
-                    color: '#3ea6ff',
+                    color: '#7b68ee',
                   },
                   '&:before': {
-                    borderBottom: '1px solid #444',
+                    borderBottom: '1px solid #e5e7eb',
                   },
                   '&:hover:not(.Mui-disabled):before': {
-                    borderBottom: '1px solid #3ea6ff',
+                    borderBottom: '1px solid #7b68ee',
                   },
                   '&:after': {
-                    borderBottom: '1px solid #3ea6ff',
+                    borderBottom: '1px solid #7b68ee',
                   },
                 }}
               >
                 {FIELDTEAMSCOMPANY.map((list, index) => (
-                  <option key={index} value={list} style={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>
+                  <option key={index} value={list} style={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
                     {list}
                   </option>
                 ))}
@@ -324,13 +324,13 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 flex: 1,
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
               }}
@@ -343,7 +343,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 style: { color: '#ffffff' },
               }}
               InputLabelProps={{
-                style: { color: '#aaaaaa' },
+                style: { color: '#b3b3b3' },
                 shrink: true
               }}
               size={isMobile ? "small" : "medium"}
@@ -356,13 +356,13 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 flex: 1,
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
               }}
@@ -375,7 +375,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 style: { color: '#ffffff' },
               }}
               InputLabelProps={{
-                style: { color: '#aaaaaa' },
+                style: { color: '#b3b3b3' },
                 shrink: true
               }}
               size={isMobile ? "small" : "medium"}
@@ -396,8 +396,8 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
           )}
         </DialogContent>
         <DialogActions sx={{
-          backgroundColor: '#1e1e1e',
-          borderTop: '1px solid #444',
+          backgroundColor: '#2d2d2d',
+          borderTop: '1px solid #e5e7eb',
           padding: isMobile ? '8px 16px' : '12px 24px',
           position: 'sticky',
           bottom: 0
@@ -419,8 +419,8 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
             variant="contained"
             size={isMobile ? "small" : "medium"}
             sx={{
-              backgroundColor: '#3ea6ff',
-              color: '#121212',
+              backgroundColor: '#7b68ee',
+              color: '#f9fafb',
               '&:hover': {
                 backgroundColor: '#1d4ed8'
               }

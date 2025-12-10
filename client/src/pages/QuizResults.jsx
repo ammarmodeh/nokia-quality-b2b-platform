@@ -89,7 +89,7 @@ const QuizResults = () => {
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      backgroundColor: '#121212',
+      backgroundColor: '#2d2d2d',
       p: 2
     }}>
       <Box sx={{
@@ -97,10 +97,10 @@ const QuizResults = () => {
         maxWidth: '500px',
         mx: 'auto',
         p: 3,
-        bgcolor: '#1e1e1e',
+        bgcolor: '#ffffff',
         borderRadius: 2,
         boxShadow: 3,
-        border: '1px solid #444',
+        border: '1px solid #3d3d3d',
         textAlign: 'center',
         direction: 'rtl'
       }}>
@@ -120,14 +120,14 @@ const QuizResults = () => {
           justifyContent: 'center',
           my: 2,
           p: 1.5,
-          backgroundColor: '#121212',
+          backgroundColor: '#2d2d2d',
           borderRadius: 1
         }}>
           <QRCodeSVG
             value={generateQRData()}
             size={180}
             level="M"
-            bgColor="#121212"
+            bgColor="#f9fafb"
             fgColor="#ffffff"
           />
         </Box>
@@ -136,7 +136,7 @@ const QuizResults = () => {
           variant="contained"
           onClick={handleExit}
           sx={{
-            bgcolor: '#3ea6ff',
+            bgcolor: '#7b68ee',
             '&:hover': { bgcolor: '#1d4ed8' },
             width: '100%',
             py: 1.5,

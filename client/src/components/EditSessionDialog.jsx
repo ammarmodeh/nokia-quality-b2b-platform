@@ -77,25 +77,25 @@ const EditSessionDialog = ({ open, onClose, session, onSave }) => {
       fullWidth
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           boxShadow: 'none',
           borderRadius: '8px',
         }
       }}
     >
       <DialogTitle sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
-        borderBottom: '1px solid #444',
+        borderBottom: '1px solid #e5e7eb',
         padding: '16px 24px',
       }}>
         Edit Training Session
       </DialogTitle>
 
-      <Divider sx={{ backgroundColor: '#444' }} />
+      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogContent sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
         padding: '20px 24px',
         '&.MuiDialogContent-root': {
@@ -111,7 +111,7 @@ const EditSessionDialog = ({ open, onClose, session, onSave }) => {
           error={errors.sessionDate}
           InputLabelProps={{
             shrink: true,
-            style: { color: errors.sessionDate ? '#f44336' : '#aaaaaa' }
+            style: { color: errors.sessionDate ? '#f44336' : '#6b7280' }
           }}
           value={sessionDate}
           onChange={handleFieldChange('sessionDate')}
@@ -121,13 +121,13 @@ const EditSessionDialog = ({ open, onClose, session, onSave }) => {
             },
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
-                borderColor: errors.sessionDate ? '#f44336' : '#444',
+                borderColor: errors.sessionDate ? '#f44336' : '#e5e7eb',
               },
               '&:hover fieldset': {
                 borderColor: errors.sessionDate ? '#f44336' : '#666',
               },
               '&.Mui-focused fieldset': {
-                borderColor: errors.sessionDate ? '#f44336' : '#3ea6ff',
+                borderColor: errors.sessionDate ? '#f44336' : '#7b68ee',
               },
             },
           }}
@@ -151,17 +151,17 @@ const EditSessionDialog = ({ open, onClose, session, onSave }) => {
               color: '#ffffff',
             },
             '& .MuiInputLabel-root': {
-              color: errors.conductedBy ? '#f44336' : '#aaaaaa',
+              color: errors.conductedBy ? '#f44336' : '#6b7280',
             },
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
-                borderColor: errors.conductedBy ? '#f44336' : '#444',
+                borderColor: errors.conductedBy ? '#f44336' : '#e5e7eb',
               },
               '&:hover fieldset': {
                 borderColor: errors.conductedBy ? '#f44336' : '#666',
               },
               '&.Mui-focused fieldset': {
-                borderColor: errors.conductedBy ? '#f44336' : '#3ea6ff',
+                borderColor: errors.conductedBy ? '#f44336' : '#7b68ee',
               },
             },
           }}
@@ -185,17 +185,17 @@ const EditSessionDialog = ({ open, onClose, session, onSave }) => {
               color: '#ffffff',
             },
             '& .MuiInputLabel-root': {
-              color: errors.sessionTitle ? '#f44336' : '#aaaaaa',
+              color: errors.sessionTitle ? '#f44336' : '#6b7280',
             },
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
-                borderColor: errors.sessionTitle ? '#f44336' : '#444',
+                borderColor: errors.sessionTitle ? '#f44336' : '#e5e7eb',
               },
               '&:hover fieldset': {
                 borderColor: errors.sessionTitle ? '#f44336' : '#666',
               },
               '&.Mui-focused fieldset': {
-                borderColor: errors.sessionTitle ? '#f44336' : '#3ea6ff',
+                borderColor: errors.sessionTitle ? '#f44336' : '#7b68ee',
               },
             },
           }}
@@ -222,17 +222,17 @@ const EditSessionDialog = ({ open, onClose, session, onSave }) => {
               color: '#ffffff',
             },
             '& .MuiInputLabel-root': {
-              color: errors.outlines ? '#f44336' : '#aaaaaa',
+              color: errors.outlines ? '#f44336' : '#6b7280',
             },
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
-                borderColor: errors.outlines ? '#f44336' : '#444',
+                borderColor: errors.outlines ? '#f44336' : '#e5e7eb',
               },
               '&:hover fieldset': {
                 borderColor: errors.outlines ? '#f44336' : '#666',
               },
               '&.Mui-focused fieldset': {
-                borderColor: errors.outlines ? '#f44336' : '#3ea6ff',
+                borderColor: errors.outlines ? '#f44336' : '#7b68ee',
               },
             },
           }}
@@ -244,11 +244,11 @@ const EditSessionDialog = ({ open, onClose, session, onSave }) => {
         )}
       </DialogContent>
 
-      <Divider sx={{ backgroundColor: '#444' }} />
+      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogActions sx={{
-        backgroundColor: '#1e1e1e',
-        borderTop: '1px solid #444',
+        backgroundColor: '#2d2d2d',
+        borderTop: '1px solid #e5e7eb',
         padding: '12px 24px',
       }}>
         <Button

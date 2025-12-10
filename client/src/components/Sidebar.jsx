@@ -30,6 +30,18 @@ const SidebarLinks = () => {
       isNew: true,
     },
     {
+      label: "NPS Analytics",
+      link: "analytics",
+      icon: <img width={20} height={20} src="/statistics.png" />,
+      isNew: true,
+    },
+    {
+      label: "Excel Data Portal",
+      link: "excel-portal",
+      icon: <img width={20} height={20} src="/main-stats.png" />,
+      isNew: true,
+    },
+    {
       label: "Policies List",
       link: "policies",
       icon: <img width={20} height={20} src="/policy.png" />,

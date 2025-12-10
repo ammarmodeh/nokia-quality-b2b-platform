@@ -54,10 +54,10 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
       maxWidth="md"
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           boxShadow: 'none',
           borderRadius: isMobile ? 0 : '8px',
-          border: isMobile ? 'none' : '1px solid #444',
+          border: isMobile ? 'none' : '1px solid #e5e7eb',
           margin: 0,
           width: isMobile ? '100%' : '70%',
           maxWidth: '100%'
@@ -65,9 +65,9 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
       }}
     >
       <DialogTitle sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
-        borderBottom: '1px solid #444',
+        borderBottom: '1px solid #e5e7eb',
         padding: isMobile ? '12px 16px' : '16px 24px',
         fontWeight: 500,
         position: 'sticky',
@@ -77,14 +77,14 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
         Suspend Team
       </DialogTitle>
       <DialogContent sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
         padding: isMobile ? '12px 16px' : '20px 24px',
         '&::-webkit-scrollbar': {
           width: '4px',
         },
         '&::-webkit-scrollbar-thumb': {
-          backgroundColor: '#444',
+          backgroundColor: '#e5e7eb',
           borderRadius: '2px',
         },
         "&.MuiDialogContent-root": {
@@ -113,20 +113,20 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
-                      borderColor: '#444',
+                      borderColor: '#3d3d3d',
                     },
                     '&:hover fieldset': {
-                      borderColor: '#3ea6ff',
+                      borderColor: '#7b68ee',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#3ea6ff',
+                      borderColor: '#7b68ee',
                     },
                   },
                   '& .MuiInputBase-input': {
                     color: '#ffffff',
                   },
                   '& .MuiInputLabel-root': {
-                    color: '#aaaaaa',
+                    color: '#b3b3b3',
                   },
                   '& .MuiFormHelperText-root': {
                     color: '#f44336',
@@ -161,20 +161,20 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
-                      borderColor: '#444',
+                      borderColor: '#3d3d3d',
                     },
                     '&:hover fieldset': {
-                      borderColor: '#3ea6ff',
+                      borderColor: '#7b68ee',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#3ea6ff',
+                      borderColor: '#7b68ee',
                     },
                   },
                   '& .MuiInputBase-input': {
                     color: '#ffffff',
                   },
                   '& .MuiInputLabel-root': {
-                    color: '#aaaaaa',
+                    color: '#b3b3b3',
                   },
                   '& .MuiFormHelperText-root': {
                     color: '#f44336',
@@ -200,20 +200,20 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
-                      borderColor: '#444',
+                      borderColor: '#3d3d3d',
                     },
                     '&:hover fieldset': {
-                      borderColor: '#3ea6ff',
+                      borderColor: '#7b68ee',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#3ea6ff',
+                      borderColor: '#7b68ee',
                     },
                   },
                   '& .MuiInputBase-input': {
                     color: '#ffffff',
                   },
                   '& .MuiInputLabel-root': {
-                    color: '#aaaaaa',
+                    color: '#b3b3b3',
                   },
                   '& .MuiFormHelperText-root': {
                     color: '#f44336',
@@ -225,8 +225,8 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
         </form>
       </DialogContent>
       <DialogActions sx={{
-        backgroundColor: '#1e1e1e',
-        borderTop: '1px solid #444',
+        backgroundColor: '#2d2d2d',
+        borderTop: '1px solid #e5e7eb',
         padding: isMobile ? '8px 16px' : '12px 24px',
         position: 'sticky',
         bottom: 0
@@ -248,8 +248,8 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
           variant="contained"
           size={isMobile ? "small" : "medium"}
           sx={{
-            backgroundColor: '#3ea6ff',
-            color: '#121212',
+            backgroundColor: '#7b68ee',
+            color: '#f9fafb',
             '&:hover': {
               backgroundColor: '#1d4ed8'
             }

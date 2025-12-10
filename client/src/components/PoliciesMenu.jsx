@@ -30,8 +30,8 @@ const MenuHeader = ({ title, icon }) => (
     sx={{
       px: 3,
       py: 1.5,
-      backgroundColor: "#1e1e1e",
-      borderBottom: "1px solid #444",
+      backgroundColor: "#2d2d2d",
+      borderBottom: "1px solid #e5e7eb",
     }}
   >
     {icon}
@@ -51,7 +51,7 @@ const MenuLink = ({ title, tooltipTitle, onClick, onEdit, onDelete, isManager, s
       m: 1,
       "&:hover": {
         backgroundColor: "#FFFFFF0F",
-        color: "#3ea6ff",
+        color: "#7b68ee",
       },
     }}
   >
@@ -66,7 +66,7 @@ const MenuLink = ({ title, tooltipTitle, onClick, onEdit, onDelete, isManager, s
             <Pending sx={{ color: "gray", fontSize: 16 }} />
           )}
           <FaFileAlt style={{
-            color: "#3ea6ff",
+            color: "#7b68ee",
             fontSize: 16,
             flexShrink: 0
           }} />
@@ -86,7 +86,7 @@ const MenuLink = ({ title, tooltipTitle, onClick, onEdit, onDelete, isManager, s
         </Typography>
         {isManager && (
           <Box sx={{ display: "flex", marginLeft: 'auto' }}>
-            <IconButton onClick={(e) => { e.stopPropagation(); onEdit(); }} size="small" sx={{ color: "#3ea6ff" }}>
+            <IconButton onClick={(e) => { e.stopPropagation(); onEdit(); }} size="small" sx={{ color: "#7b68ee" }}>
               <Edit fontSize="small" />
             </IconButton>
             <IconButton onClick={(e) => { e.stopPropagation(); onDelete(); }} size="small" sx={{ color: "#ff4444" }}>
@@ -265,7 +265,7 @@ export const PoliciesMenu = () => {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <MenuHeader
         title="Company Policies"
-        icon={<FaFileAlt style={{ color: "#3ea6ff", fontSize: 16 }} />}
+        icon={<FaFileAlt style={{ color: "#7b68ee", fontSize: 16 }} />}
       />
 
       <Box sx={{
@@ -275,7 +275,7 @@ export const PoliciesMenu = () => {
           width: '6px',
         },
         '&::-webkit-scrollbar-thumb': {
-          backgroundColor: '#444',
+          backgroundColor: '#e5e7eb',
           borderRadius: '3px',
         },
       }}>
@@ -309,14 +309,14 @@ export const PoliciesMenu = () => {
 
       {(user?.role === 'Admin' || user?.isManager) && (
         <>
-          <Divider sx={{ backgroundColor: "#444" }} />
+          <Divider sx={{ backgroundColor: "#e5e7eb" }} />
           <Box sx={{ px: 2, py: 1.5 }}>
             <Button
               fullWidth
               variant="contained"
               onClick={() => handleDialogOpen()}
               sx={{
-                backgroundColor: "#3ea6ff",
+                backgroundColor: "#7b68ee",
                 color: "#ffffff",
                 "&:hover": {
                   backgroundColor: "#1c7fd6"
@@ -338,10 +338,10 @@ export const PoliciesMenu = () => {
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             borderRadius: isMobile ? 0 : '8px',
-            border: '1px solid #444',
+            border: '1px solid #3d3d3d',
           },
         }}
       >
@@ -349,11 +349,11 @@ export const PoliciesMenu = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FaFileAlt color="#3ea6ff" size={isMobile ? 16 : 20} />
+            <FaFileAlt color="#7b68ee" size={isMobile ? 16 : 20} />
             <Typography variant={isMobile ? "subtitle1" : "h6"}>
               {isEditMode ? "Edit Policy" : "Add New Policy"}
             </Typography>
@@ -378,7 +378,7 @@ export const PoliciesMenu = () => {
             width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#444',
+            backgroundColor: '#e5e7eb',
             borderRadius: '2px',
           },
         }}>
@@ -395,24 +395,24 @@ export const PoliciesMenu = () => {
                   color: '#ffffff',
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#aaaaaa',
+                  color: '#b3b3b3',
                 },
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
                     borderColor: '#666',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
               }}
             />
 
             <Box>
-              <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#aaaaaa', mb: 1 }}>
+              <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#b3b3b3', mb: 1 }}>
                 Policy Content
               </Typography>
               <TextField
@@ -427,13 +427,13 @@ export const PoliciesMenu = () => {
                   },
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
-                      borderColor: '#444',
+                      borderColor: '#3d3d3d',
                     },
                     '&:hover fieldset': {
                       borderColor: '#666',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#3ea6ff',
+                      borderColor: '#7b68ee',
                     },
                   },
                 }}
@@ -442,10 +442,10 @@ export const PoliciesMenu = () => {
 
             {user?.isManager && (
               <>
-                <Divider sx={{ backgroundColor: '#444' }} />
+                <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
                 <Box>
-                  <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#aaaaaa', mb: 1 }}>
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#b3b3b3', mb: 1 }}>
                     Action
                   </Typography>
                   <RadioGroup
@@ -523,17 +523,17 @@ export const PoliciesMenu = () => {
                       color: '#ffffff',
                     },
                     '& .MuiInputLabel-root': {
-                      color: '#aaaaaa',
+                      color: '#b3b3b3',
                     },
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': {
-                        borderColor: '#444',
+                        borderColor: '#3d3d3d',
                       },
                       '&:hover fieldset': {
                         borderColor: '#666',
                       },
                       '&.Mui-focused fieldset': {
-                        borderColor: '#3ea6ff',
+                        borderColor: '#7b68ee',
                       },
                     },
                   }}
@@ -544,7 +544,7 @@ export const PoliciesMenu = () => {
         </DialogContent>
 
         <DialogActions sx={{
-          borderTop: '1px solid #444',
+          borderTop: '1px solid #e5e7eb',
           padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button
@@ -565,13 +565,13 @@ export const PoliciesMenu = () => {
             disabled={!policyName || !policyContent || (user?.isManager && !password)}
             size={isMobile ? "small" : "medium"}
             sx={{
-              backgroundColor: "#3ea6ff",
+              backgroundColor: "#7b68ee",
               color: "#ffffff",
               "&:hover": {
                 backgroundColor: "#1c7fd6"
               },
               '&:disabled': {
-                backgroundColor: '#333',
+                backgroundColor: '#2d2d2d',
                 color: '#666',
               },
             }}
@@ -590,10 +590,10 @@ export const PoliciesMenu = () => {
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             borderRadius: isMobile ? 0 : '8px',
-            border: '1px solid #444',
+            border: '1px solid #3d3d3d',
           },
         }}
       >
@@ -601,11 +601,11 @@ export const PoliciesMenu = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FaFileAlt color="#3ea6ff" size={isMobile ? 16 : 20} />
+            <FaFileAlt color="#7b68ee" size={isMobile ? 16 : 20} />
             <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontSize: isMobile ? 13 : 20 }}>
               {selectedPolicy?.name}
             </Typography>
@@ -616,7 +616,7 @@ export const PoliciesMenu = () => {
                 onClick={copyToClipboard}
                 size={isMobile ? "small" : "medium"}
                 sx={{
-                  color: '#3ea6ff',
+                  color: '#7b68ee',
                   '&:hover': {
                     backgroundColor: 'rgba(62, 166, 255, 0.1)',
                   }
@@ -660,7 +660,7 @@ export const PoliciesMenu = () => {
             width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#444',
+            backgroundColor: '#e5e7eb',
             borderRadius: '2px',
           },
         }}>
@@ -668,7 +668,7 @@ export const PoliciesMenu = () => {
             {/* Policy Header */}
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
               <Avatar sx={{
-                bgcolor: '#3ea6ff',
+                bgcolor: '#7b68ee',
                 width: isMobile ? 40 : 48,
                 height: isMobile ? 40 : 48
               }}>
@@ -719,7 +719,7 @@ export const PoliciesMenu = () => {
               </Box>
             </Box>
 
-            <Divider sx={{ backgroundColor: '#444' }} />
+            <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
             {/* Policy Metadata */}
             <Box sx={{
@@ -728,7 +728,7 @@ export const PoliciesMenu = () => {
               gap: 2
             }}>
               <Box>
-                <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#aaaaaa' }}>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#b3b3b3' }}>
                   Created By
                 </Typography>
                 <Typography variant={isMobile ? "body2" : "body1"} sx={{ color: '#ffffff' }}>
@@ -737,7 +737,7 @@ export const PoliciesMenu = () => {
               </Box>
 
               <Box>
-                <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#aaaaaa' }}>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#b3b3b3' }}>
                   Created On
                 </Typography>
                 <Typography variant={isMobile ? "body2" : "body1"} sx={{ color: '#ffffff' }}>
@@ -746,7 +746,7 @@ export const PoliciesMenu = () => {
               </Box>
 
               <Box>
-                <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#aaaaaa' }}>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#b3b3b3' }}>
                   Last Updated
                 </Typography>
                 <Typography variant={isMobile ? "body2" : "body1"} sx={{ color: '#ffffff' }}>
@@ -755,7 +755,7 @@ export const PoliciesMenu = () => {
               </Box>
 
               <Box>
-                <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#aaaaaa' }}>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#b3b3b3' }}>
                   Approval Status
                 </Typography>
                 <Typography variant={isMobile ? "body2" : "body1"} sx={{ color: '#ffffff' }}>
@@ -765,18 +765,18 @@ export const PoliciesMenu = () => {
               </Box>
             </Box>
 
-            <Divider sx={{ backgroundColor: '#444' }} />
+            <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
             {/* Policy Content */}
             <Box>
-              <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#aaaaaa', mb: 1 }}>
+              <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#b3b3b3', mb: 1 }}>
                 Policy Content
               </Typography>
               <Box sx={{
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 p: isMobile ? 1.5 : 2,
                 borderRadius: 1,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
                 <Typography
                   variant={isMobile ? "body2" : "body1"}
@@ -800,17 +800,17 @@ export const PoliciesMenu = () => {
             {/* Policy History */}
             {selectedPolicy?.logs?.length > 0 && (
               <>
-                <Divider sx={{ backgroundColor: '#444' }} />
+                <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
                 <Box>
-                  <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#aaaaaa', mb: 1 }}>
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} sx={{ color: '#b3b3b3', mb: 1 }}>
                     Policy History
                   </Typography>
                   <Box sx={{
-                    backgroundColor: '#272727',
+                    backgroundColor: '#2d2d2d',
                     p: isMobile ? 1.5 : 2,
                     borderRadius: 1,
-                    border: '1px solid #444',
+                    border: '1px solid #3d3d3d',
                     maxHeight: 200,
                     overflowY: 'auto'
                   }}>
@@ -823,7 +823,7 @@ export const PoliciesMenu = () => {
                             sx={{
                               px: 0,
                               py: 1,
-                              borderBottom: index < selectedPolicy.logs.length - 1 ? '1px solid #444' : 'none'
+                              borderBottom: index < selectedPolicy.logs.length - 1 ? '1px solid #e5e7eb' : 'none'
                             }}
                           >
                             <ListItemText
@@ -833,7 +833,7 @@ export const PoliciesMenu = () => {
                                 </Typography>
                               }
                               secondary={
-                                <Typography variant="caption" sx={{ color: '#aaaaaa' }}>
+                                <Typography variant="caption" sx={{ color: '#b3b3b3' }}>
                                   {new Date(log.performedAt).toLocaleString()}
                                 </Typography>
                               }
@@ -849,7 +849,7 @@ export const PoliciesMenu = () => {
         </DialogContent>
 
         <DialogActions sx={{
-          borderTop: '1px solid #444',
+          borderTop: '1px solid #e5e7eb',
           padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button
@@ -878,9 +878,9 @@ export const PoliciesMenu = () => {
           severity={snackbarSeverity}
           sx={{
             width: '100%',
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}
         >
           {snackbarMessage}

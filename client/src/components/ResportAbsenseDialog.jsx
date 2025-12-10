@@ -70,25 +70,25 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
       fullScreen={fullScreen}
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           boxShadow: 'none',
           borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
         }
       }}
     >
       <DialogTitle sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
-        borderBottom: '1px solid #444',
+        borderBottom: '1px solid #e5e7eb',
         padding: '16px 24px',
       }}>
         Report Absence for {teamName}
       </DialogTitle>
 
-      <Divider sx={{ backgroundColor: '#444' }} />
+      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogContent sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
         padding: '20px 24px',
       }}>
@@ -109,7 +109,7 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
             type="date"
             InputLabelProps={{
               shrink: true,
-              style: { color: dateError ? '#f44336' : '#aaaaaa' }
+              style: { color: dateError ? '#f44336' : '#6b7280' }
             }}
             sx={{
               '& .MuiInputBase-root': {
@@ -117,13 +117,13 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
               },
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
-                  borderColor: dateError ? '#f44336' : '#444',
+                  borderColor: dateError ? '#f44336' : '#e5e7eb',
                 },
                 '&:hover fieldset': {
                   borderColor: dateError ? '#f44336' : '#666',
                 },
                 '&.Mui-focused fieldset': {
-                  borderColor: dateError ? '#f44336' : '#3ea6ff',
+                  borderColor: dateError ? '#f44336' : '#7b68ee',
                 },
               },
             }}
@@ -143,17 +143,17 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
                 color: '#ffffff',
               },
               '& .MuiInputLabel-root': {
-                color: '#aaaaaa',
+                color: '#b3b3b3',
               },
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
-                  borderColor: '#444',
+                  borderColor: '#3d3d3d',
                 },
                 '&:hover fieldset': {
                   borderColor: '#666',
                 },
                 '&.Mui-focused fieldset': {
-                  borderColor: '#3ea6ff',
+                  borderColor: '#7b68ee',
                 },
               },
             }}
@@ -161,11 +161,11 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
         </Box>
       </DialogContent>
 
-      <Divider sx={{ backgroundColor: '#444' }} />
+      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogActions sx={{
-        backgroundColor: '#1e1e1e',
-        borderTop: '1px solid #444',
+        backgroundColor: '#2d2d2d',
+        borderTop: '1px solid #e5e7eb',
         padding: '12px 24px',
       }}>
         <Button

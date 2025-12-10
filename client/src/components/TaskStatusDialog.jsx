@@ -324,17 +324,17 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               py: isMobile ? 0.5 : 1,
               px: isMobile ? 1 : 2,
               gap: 1,
-              backgroundColor: "#121212",
-              borderBottom: "1px solid #444",
+              backgroundColor: "#2d2d2d",
+              borderBottom: "1px solid #e5e7eb",
               "&:focus-within": {
-                borderColor: "#3ea6ff",
+                borderColor: "#7b68ee",
               },
               position: "sticky",
               top: 0,
               zIndex: 1,
             }}
           >
-            <Box sx={{ color: "#9e9e9e" }}>
+            <Box sx={{ color: "#b3b3b3" }}>
               <Search fontSize={isMobile ? "small" : "medium"} />
             </Box>
             <TextField
@@ -370,7 +370,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                   <IconButton
                     size="small"
                     onClick={handleClearSearch}
-                    sx={{ color: "#9e9e9e", "&:hover": { color: "#ffffff" } }}
+                    sx={{ color: "#b3b3b3", "&:hover": { color: "#ffffff" } }}
                   >
                     <Close fontSize={isMobile ? "small" : "medium"} />
                   </IconButton>
@@ -388,7 +388,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               width: '4px',
             },
             '&::-webkit-scrollbar-thumb': {
-              backgroundColor: '#444',
+              backgroundColor: '#e5e7eb',
               borderRadius: '2px',
             },
           }}>
@@ -400,9 +400,9 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                     elevation={0}
                     sx={{
                       p: isMobile ? 1 : 2,
-                      backgroundColor: '#1e1e1e',
+                      backgroundColor: '#2d2d2d',
                       borderRadius: 1,
-                      border: '1px solid #333',
+                      border: '1px solid #f3f4f6',
                     }}
                   >
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
@@ -424,7 +424,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                             label={task.assignedTo[0].name}
                             size="small"
                             sx={{
-                              color: '#fff',
+                              color: '#ffffff',
                               backgroundColor: 'primary.main', // or any color you prefer
                               fontSize: isMobile ? '0.75rem' : '0.8125rem'
                             }}
@@ -436,7 +436,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                           <IconButton
                             onClick={() => handleCopy(task)}
                             size={isMobile ? "small" : "medium"}
-                            sx={{ color: '#3ea6ff' }}
+                            sx={{ color: '#7b68ee' }}
                           >
                             <ContentCopy fontSize={isMobile ? "small" : "medium"} />
                           </IconButton>
@@ -499,8 +499,8 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
 
         {isMobile && (
           <DialogActions sx={{
-            backgroundColor: '#1e1e1e',
-            borderTop: '1px solid #444',
+            backgroundColor: '#2d2d2d',
+            borderTop: '1px solid #e5e7eb',
             px: 2,
             py: 1,
           }}>
@@ -530,16 +530,16 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
         // maxWidth="md"
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             boxShadow: 'none',
             borderRadius: isMobile ? 0 : '8px',
           }
         }}
       >
         <DialogTitle sx={{
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: isMobile ? '12px 16px' : '16px 24px',
           display: 'flex',
           justifyContent: 'space-between',
@@ -553,7 +553,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               <Typography
                 variant={isMobile ? "caption" : "subtitle1"}
                 sx={{
-                  color: '#3ea6ff',
+                  color: '#7b68ee',
                   fontStyle: 'italic'
                 }}
               >
@@ -592,17 +592,17 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
           </Box>
         </DialogTitle>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogContent dividers sx={{
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
           padding: isMobile ? '12px 16px' : '20px 24px',
           '&::-webkit-scrollbar': {
             width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#444',
+            backgroundColor: '#e5e7eb',
             borderRadius: '2px',
           },
         }}>
@@ -611,11 +611,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               {/* Basic Information Section */}
               <Paper elevation={0} sx={{
                 p: isMobile ? 1.5 : 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
                   Basic Info
                 </Typography>
                 <Box sx={{
@@ -637,11 +637,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               {/* Location Information Section */}
               <Paper elevation={0} sx={{
                 p: isMobile ? 1.5 : 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
                   Location
                 </Typography>
                 <Box sx={{
@@ -657,11 +657,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               {/* Team Information Section */}
               <Paper elevation={0} sx={{
                 p: isMobile ? 1.5 : 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
                   Team Info
                 </Typography>
                 <Box sx={{
@@ -677,11 +677,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               {/* Evaluation Section */}
               <Paper elevation={0} sx={{
                 p: isMobile ? 1.5 : 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
                   Evaluation
                 </Typography>
                 <Box sx={{
@@ -702,7 +702,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                             color: '#ffffff',
                             backgroundColor:
                               taskToView.evaluationScore >= 9 ? '#4caf50' :
-                                taskToView.evaluationScore >= 7 ? '#9e9e9e' : '#f44336',
+                                taskToView.evaluationScore >= 7 ? '#6b7280' : '#f44336',
                             fontWeight: 'bold'
                           }}
                         />
@@ -719,11 +719,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               {taskToView.subTasks[0].note && (
                 <Paper elevation={0} sx={{
                   p: isMobile ? 1.5 : 2,
-                  backgroundColor: '#272727',
+                  backgroundColor: '#2d2d2d',
                   borderRadius: 2,
-                  border: '1px solid #444'
+                  border: '1px solid #3d3d3d'
                 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
                     Progress
                   </Typography>
 
@@ -761,7 +761,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                         borderRadius: 5,
                         '& .MuiLinearProgress-bar': {
                           borderRadius: 5,
-                          backgroundColor: '#3ea6ff'
+                          backgroundColor: '#7b68ee'
                         }
                       }}
                     />
@@ -770,8 +770,8 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                   {/* Detailed Action Items */}
                   <Paper sx={{
                     p: isMobile ? 1 : 2,
-                    backgroundColor: '#333',
-                    border: '1px solid #444',
+                    backgroundColor: '#2d2d2d',
+                    border: '1px solid #3d3d3d',
                     borderRadius: '8px'
                   }}>
                     {taskToView.subTasks.map((subtask, index) => (
@@ -780,7 +780,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                         sx={{
                           mb: index < taskToView.subTasks.length - 1 ? 2 : 0,
                           pb: index < taskToView.subTasks.length - 1 ? 2 : 0,
-                          borderBottom: index < taskToView.subTasks.length - 1 ? '1px solid #444' : 'none'
+                          borderBottom: index < taskToView.subTasks.length - 1 ? '1px solid #e5e7eb' : 'none'
                         }}
                       >
                         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
@@ -802,7 +802,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                               avatar={
                                 <Avatar sx={{
                                   backgroundColor: taskToView.assignedTo.some(u => u._id === subtask.completedBy._id)
-                                    ? '#3ea6ff'
+                                    ? '#7b68ee'
                                     : '#f44336',
                                   width: isMobile ? 20 : 24,
                                   height: isMobile ? 20 : 24,
@@ -824,7 +824,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                           p: isMobile ? 1 : 2,
                           borderRadius: 1,
                           borderLeft: '3px solid',
-                          borderColor: subtask.note ? '#3ea6ff' : 'transparent'
+                          borderColor: subtask.note ? '#7b68ee' : 'transparent'
                         }}>
                           <Typography variant={isMobile ? "caption" : "body1"} sx={{
                             direction: 'rtl',
@@ -856,11 +856,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
           )}
         </DialogContent>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogActions sx={{
-          backgroundColor: '#1e1e1e',
-          borderTop: '1px solid #444',
+          backgroundColor: '#2d2d2d',
+          borderTop: '1px solid #e5e7eb',
           padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button
@@ -901,7 +901,7 @@ const DetailRow = ({ label, value, isMobile }) => (
       component="div"
       sx={{
         fontWeight: '500',
-        color: '#aaaaaa'
+        color: '#b3b3b3'
       }}
     >
       {label}

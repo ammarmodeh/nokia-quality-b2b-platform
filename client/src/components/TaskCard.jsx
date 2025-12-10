@@ -646,7 +646,7 @@ const statusConfig = {
   Todo: { icon: <HourglassEmpty fontSize="small" className="text-yellow-600" />, color: "bg-yellow-100 text-yellow-800" },
   "In Progress": { icon: <PlayCircle className="text-blue-600" />, color: "bg-blue-100 text-blue-800" },
   Closed: { icon: <CheckCircle className="text-green-600" />, color: "bg-green-100 text-green-800" },
-  Cancelled: { icon: <Cancel className="text-gray-500" />, color: "bg-gray-100 text-gray-700" },
+  Cancelled: { icon: <Cancel className="text-gray-500" />, color: "bg-[#2d2d2d] text-gray-300" },
 };
 
 const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, handleTaskDelete, handleFavoriteClick, handleTaskArchive }) => {
@@ -1331,7 +1331,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                   onClose={handleMenuClose}
                   PaperProps={{
                     sx: {
-                      backgroundColor: "#333",
+                      backgroundColor: "#2d2d2d",
                       color: "#ffffff",
                     },
                   }}
@@ -1376,7 +1376,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                   onClose={handleMenuClose}
                   PaperProps={{
                     sx: {
-                      backgroundColor: "#333",
+                      backgroundColor: "#2d2d2d",
                       color: "#ffffff",
                     },
                   }}
@@ -1496,7 +1496,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
         fullScreen
         PaperProps={{
           sx: {
-            backgroundColor: "#1e1e1e",
+            backgroundColor: "#2d2d2d",
             color: "#ffffff",
             width: "100%",
             maxWidth: "none",
@@ -1509,9 +1509,9 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            backgroundColor: "#272727",
+            backgroundColor: "#2d2d2d",
             color: "#ffffff",
-            borderBottom: "1px solid #444",
+            borderBottom: "1px solid #e5e7eb",
             padding: "16px 24px",
             position: "sticky",
             top: 0,
@@ -1579,8 +1579,8 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
             justifyContent: "space-between",
             alignItems: "center",
             p: 2,
-            backgroundColor: "#272727",
-            borderTop: "1px solid #444",
+            backgroundColor: "#2d2d2d",
+            borderTop: "1px solid #e5e7eb",
             position: "sticky",
             bottom: 0,
             zIndex: 1,

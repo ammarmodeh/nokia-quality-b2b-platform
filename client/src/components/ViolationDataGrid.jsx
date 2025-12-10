@@ -107,7 +107,7 @@ const ViolationDataGrid = ({
         <Button
           onClick={() => onTeamNameClick(params.value)}
           sx={{
-            color: '#3ea6ff',
+            color: '#7b68ee',
             textTransform: 'none',
             '&:hover': { backgroundColor: 'rgba(62, 166, 255, 0.1)' }
           }}
@@ -131,7 +131,7 @@ const ViolationDataGrid = ({
       headerName: "Detractors",
       width: 100,
       renderCell: (params) => (
-        <Box sx={{ color: params.value > 0 ? '#f44336' : '#aaaaaa' }}>
+        <Box sx={{ color: params.value > 0 ? '#f44336' : '#6b7280' }}>
           {params.value}
         </Box>
       )
@@ -141,7 +141,7 @@ const ViolationDataGrid = ({
       headerName: "Neutrals",
       width: 100,
       renderCell: (params) => (
-        <Box sx={{ color: params.value > 0 ? '#ff9800' : '#aaaaaa' }}>
+        <Box sx={{ color: params.value > 0 ? '#ff9800' : '#6b7280' }}>
           {params.value}
         </Box>
       )
@@ -167,7 +167,7 @@ const ViolationDataGrid = ({
       renderCell: (params) => (
         <Box sx={{
           fontWeight: 'bold',
-          color: params.value > 0 ? '#f44336' : '#aaaaaa',
+          color: params.value > 0 ? '#f44336' : '#6b7280',
           backgroundColor: '#383838',
           padding: '4px 8px'
         }}>
@@ -180,7 +180,7 @@ const ViolationDataGrid = ({
       headerName: "Low Impact",
       width: 100,
       renderCell: (params) => (
-        <Box sx={{ color: params.value > 0 ? '#4caf50' : '#aaaaaa' }}>
+        <Box sx={{ color: params.value > 0 ? '#4caf50' : '#6b7280' }}>
           {params.value}
         </Box>
       )
@@ -190,7 +190,7 @@ const ViolationDataGrid = ({
       headerName: "Medium Impact",
       width: 120,
       renderCell: (params) => (
-        <Box sx={{ color: params.value > 0 ? '#ff9800' : '#aaaaaa' }}>
+        <Box sx={{ color: params.value > 0 ? '#ff9800' : '#6b7280' }}>
           {params.value}
         </Box>
       )
@@ -200,7 +200,7 @@ const ViolationDataGrid = ({
       headerName: "High Impact",
       width: 100,
       renderCell: (params) => (
-        <Box sx={{ color: params.value > 0 ? '#f44336' : '#aaaaaa' }}>
+        <Box sx={{ color: params.value > 0 ? '#f44336' : '#6b7280' }}>
           {params.value}
         </Box>
       )
@@ -211,7 +211,7 @@ const ViolationDataGrid = ({
       width: 120,
       renderCell: (params) => (
         <Box sx={{
-          color: params.value ? '#f44336' : '#aaaaaa',
+          color: params.value ? '#f44336' : '#6b7280',
           fontWeight: params.value ? 'bold' : 'normal'
         }}>
           {params.value ? newFormatDate(params.value) : '--'}
@@ -276,7 +276,7 @@ const ViolationDataGrid = ({
       renderCell: (params) => (
         <Box sx={{
           fontWeight: 'bold',
-          color: params.value === 'N/A' ? '#aaaaaa' :
+          color: params.value === 'N/A' ? '#6b7280' :
             params.value >= 90 ? '#04970a' :
               params.value >= 75 ? '#4CAF50' :
                 params.value >= 55 ? '#FFC107' : '#f44336'
@@ -292,7 +292,7 @@ const ViolationDataGrid = ({
       renderCell: (params) => (
         <Box sx={{
           fontWeight: 'bold',
-          color: params.value === 'N/A' ? '#aaaaaa' :
+          color: params.value === 'N/A' ? '#6b7280' :
             params.value >= 90 ? '#04970a' :
               params.value >= 75 ? '#4CAF50' :
                 params.value >= 55 ? '#FFC107' : '#f44336'
@@ -307,7 +307,7 @@ const ViolationDataGrid = ({
       width: 120,
       renderCell: (params) => (
         <Box sx={{
-          color: params.value === 'N/A' ? '#aaaaaa' : '#ffffff',
+          color: params.value === 'N/A' ? '#6b7280' : '#ffffff',
           fontStyle: params.value === 'N/A' ? 'italic' : 'normal'
         }}>
           {params.value}
@@ -337,7 +337,7 @@ const ViolationDataGrid = ({
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              color: params.value === 'N/A' ? '#aaaaaa' : '#ffffff',
+              color: params.value === 'N/A' ? '#6b7280' : '#ffffff',
               height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'right', px: 1, textAlign: 'right'
             }}
           >
@@ -359,7 +359,7 @@ const ViolationDataGrid = ({
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              color: params.value === 'N/A' ? '#aaaaaa' : '#ffffff',
+              color: params.value === 'N/A' ? '#6b7280' : '#ffffff',
               height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1,
             }}
           >
@@ -383,7 +383,7 @@ const ViolationDataGrid = ({
       renderCell: (params) => (
         <Box sx={{
           fontStyle: params.value === "No completed sessions" ? "italic" : "normal",
-          color: params.value === "No completed sessions" ? '#aaaaaa' : '#4caf50',
+          color: params.value === "No completed sessions" ? '#6b7280' : '#4caf50',
           height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1, overflowX: 'auto'
         }}>
           <Typography sx={{ fontSize: '0.8rem', }}>
@@ -399,7 +399,7 @@ const ViolationDataGrid = ({
       renderCell: (params) => (
         <Box sx={{
           fontStyle: params.value === "No missed/canceled sessions" ? "italic" : "normal",
-          color: params.value === "No missed/canceled sessions" ? '#aaaaaa' :
+          color: params.value === "No missed/canceled sessions" ? '#6b7280' :
             params.value.includes("Missed") ? '#f44336' : '#ff9800',
           height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1, overflowX: 'auto'
         }}>
@@ -497,7 +497,7 @@ const ViolationDataGrid = ({
 
   return (
     <Box sx={{ width: "100%" }}>
-      <Paper sx={{ height: 400, width: "100%", backgroundColor: "#272727", mb: 2 }}>
+      <Paper sx={{ height: 400, width: "100%", backgroundColor: "#2d2d2d", mb: 2 }}>
         <DataGrid
           rows={enhancedRows}
           columns={columns}
@@ -509,26 +509,26 @@ const ViolationDataGrid = ({
           sx={{
             border: 0,
             color: "#ffffff",
-            "& .MuiDataGrid-main": { backgroundColor: "#272727" },
+            "& .MuiDataGrid-main": { backgroundColor: "#2d2d2d" },
             "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#333",
-              color: "#9e9e9e",
+              backgroundColor: "#2d2d2d",
+              color: "#b3b3b3",
               fontSize: "0.875rem",
               fontWeight: "bold",
-              borderBottom: "1px solid #444",
+              borderBottom: "1px solid #e5e7eb",
             },
             "& .MuiDataGrid-container--top [role=row]": {
               backgroundColor: '#3f3f3f'
             },
-            "& .MuiDataGrid-cell": { borderBottom: "1px solid #444" },
+            "& .MuiDataGrid-cell": { borderBottom: "1px solid #e5e7eb" },
             "& .MuiDataGrid-row": {
-              backgroundColor: "#272727",
-              "&:hover": { backgroundColor: "#333" },
+              backgroundColor: "#2d2d2d",
+              "&:hover": { backgroundColor: "#2d2d2d" },
             },
             "& .MuiDataGrid-footerContainer": {
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
               color: "#ffffff",
-              borderTop: "1px solid #444",
+              borderTop: "1px solid #e5e7eb",
             },
             "& .MuiTablePagination-root": { color: "#ffffff" },
             "& .MuiDataGrid-columnHeaderTitle": {
@@ -541,7 +541,7 @@ const ViolationDataGrid = ({
       {/* Statistics Section */}
       <Box sx={{ display: 'flex', gap: 3, mb: 2, flexDirection: isMobile ? 'column' : 'row' }}>
         {/* Training Status */}
-        <Box sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, width: '100%' }}>
+        {/* <Box sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, width: '100%' }}>
           <Typography variant="subtitle2" sx={{ mb: 1, color: '#5b5b5b', fontSize: '0.7rem', fontWeight: 600 }}>
             Training Status
           </Typography>
@@ -574,10 +574,10 @@ const ViolationDataGrid = ({
               }}
             />
           </Stack>
-        </Box>
+        </Box> */}
 
         {/* Violation Threshold */}
-        <Box sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, width: '100%' }}>
+        {/* <Box sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, width: '100%' }}>
           <Typography variant="subtitle2" sx={{ color: '#5b5b5b', fontSize: '0.7rem', fontWeight: 600, mb: 1 }}>
             Violation Threshold
           </Typography>
@@ -610,10 +610,10 @@ const ViolationDataGrid = ({
               }}
             />
           </Stack>
-        </Box>
+        </Box> */}
 
         {/* Overall Team Score */}
-        <Box sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, width: '100%' }}>
+        {/* <Box sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, width: '100%' }}>
           <Typography variant="subtitle2" sx={{ color: '#5b5b5b', fontSize: '0.7rem', fontWeight: 600, mb: 1 }}>
             Overall Team Score
           </Typography>
@@ -626,7 +626,7 @@ const ViolationDataGrid = ({
                   stats.avgSatisfactionScore >= 90 ? 'rgba(4, 151, 10, 0.1)' :
                     stats.avgSatisfactionScore >= 75 ? 'rgba(76, 175, 80, 0.1)' :
                       stats.avgSatisfactionScore >= 55 ? 'rgba(255, 193, 7, 0.1)' : 'rgba(244, 67, 54, 0.1)',
-                color: stats.avgSatisfactionScore === 'N/A' ? '#aaaaaa' :
+                color: stats.avgSatisfactionScore === 'N/A' ? '#6b7280' :
                   stats.avgSatisfactionScore >= 90 ? '#04970a' :
                     stats.avgSatisfactionScore >= 75 ? '#4CAF50' :
                       stats.avgSatisfactionScore >= 55 ? '#FFC107' : '#f44336',
@@ -634,7 +634,7 @@ const ViolationDataGrid = ({
               }}
             />
           </Stack>
-        </Box>
+        </Box> */}
       </Box>
     </Box>
   );

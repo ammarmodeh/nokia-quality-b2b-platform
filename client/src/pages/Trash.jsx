@@ -156,7 +156,7 @@ const Trash = () => {
       px: isMobile ? 0 : undefined
     }}>
       <Typography variant="h5" gutterBottom sx={{
-        color: '#3ea6ff',
+        color: '#7b68ee',
         fontWeight: 'bold',
         mb: 2
       }}>
@@ -166,25 +166,25 @@ const Trash = () => {
       {/* Trash Table */}
       <TableContainer component={Paper} sx={{
         mt: 2,
-        backgroundColor: '#1e1e1e',
-        border: '1px solid #444',
+        backgroundColor: '#2d2d2d',
+        border: '1px solid #3d3d3d',
         "& .MuiTableHead-root": {
-          backgroundColor: "#333",
+          backgroundColor: "#2d2d2d",
           "& .MuiTableCell-root": {
-            color: "#9e9e9e",
+            color: "#b3b3b3",
             fontWeight: "bold",
-            borderBottom: "1px solid #444",
+            borderBottom: "1px solid #e5e7eb",
           }
         },
         "& .MuiTableBody-root": {
           "& .MuiTableCell-root": {
-            borderBottom: "1px solid #444",
+            borderBottom: "1px solid #e5e7eb",
             color: "#ffffff",
           },
           "& .MuiTableRow-root": {
-            backgroundColor: "#272727",
+            backgroundColor: "#2d2d2d",
             "&:hover": {
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
             },
           }
         },
@@ -236,7 +236,7 @@ const Trash = () => {
                             size="small"
                             color="info"
                             onClick={() => restoreTask(trash._id)}
-                            sx={{ color: '#3ea6ff' }}
+                            sx={{ color: '#7b68ee' }}
                           >
                             <FaUndoAlt />
                           </IconButton>
@@ -293,14 +293,14 @@ const Trash = () => {
         onClose={handleMenuClose}
         sx={{
           "& .MuiPaper-root": {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
           }
         }}
       >
         <MenuItem onClick={() => currentTask && restoreTask(currentTask._id)}>
           <ListItemIcon>
-            <FaUndoAlt fontSize="small" style={{ color: '#3ea6ff' }} />
+            <FaUndoAlt fontSize="small" style={{ color: '#7b68ee' }} />
           </ListItemIcon>
           <ListItemText>Restore</ListItemText>
         </MenuItem>

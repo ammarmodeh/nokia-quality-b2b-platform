@@ -40,7 +40,7 @@ export default function ConfirmatioDialog({
             {msg ?? "Are you sure you want to delete the selected record?"}
           </p>
 
-          <div className='bg-gray-50 py-3 sm:flex sm:flex-row-reverse gap-4'>
+          <div className='bg-[#2d2d2d] py-3 sm:flex sm:flex-row-reverse gap-4'>
             <Button
               type='button'
               className={clsx(
@@ -55,7 +55,7 @@ export default function ConfirmatioDialog({
 
             <Button
               type='button'
-              className='bg-white px-8 text-sm font-semibold text-gray-900 sm:w-auto border'
+              className='bg-[#2d2d2d] px-8 text-sm font-semibold text-white sm:w-auto border'
               onClick={() => closeDialog()}
               label='Cancel'
             />
@@ -85,7 +85,7 @@ export function UserAction({ open, setOpen, onClick = () => { } }) {
             {"Are you sure you want to activate or deactive this account?"}
           </p>
 
-          <div className='bg-gray-50 py-3 sm:flex sm:flex-row-reverse gap-4'>
+          <div className='bg-[#2d2d2d] py-3 sm:flex sm:flex-row-reverse gap-4'>
             <Button
               type='button'
               className={clsx(
@@ -98,7 +98,7 @@ export function UserAction({ open, setOpen, onClick = () => { } }) {
 
             <Button
               type='button'
-              className='bg-white px-8 text-sm font-semibold text-gray-900 sm:w-auto border'
+              className='bg-[#2d2d2d] px-8 text-sm font-semibold text-white sm:w-auto border'
               onClick={() => closeDialog()}
               label='No'
             />

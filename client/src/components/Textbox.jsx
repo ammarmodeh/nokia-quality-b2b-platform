@@ -18,7 +18,7 @@ const Textbox = ({ type, placeholder, label, className, register, name, error })
           {...register}
           aria-invalid={error ? "true" : "false"}
           className={clsx(
-            "bg-transparent px-3 py-2.5 2xl:py-3 border border-gray-300 placeholder-gray-800 text-gray-200 outline-none text-base focus:ring-2 ring-blue-300",
+            "bg-transparent px-3 py-2.5 2xl:py-3 border border-gray-300 placeholder-gray-800 text-gray-300 outline-none text-base focus:ring-2 ring-blue-300",
             className
           )}
         />

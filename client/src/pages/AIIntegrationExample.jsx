@@ -37,15 +37,15 @@ const AIIntegrationExample = () => {
   };
 
   return (
-    <Box sx={{ p: 3, backgroundColor: '#121212', minHeight: '100vh', color: '#fff' }}>
+    <Box sx={{ p: 3, backgroundColor: '#2d2d2d', minHeight: '100vh', color: '#ffffff' }}>
       <Typography variant="h4" sx={{ mb: 4, color: '#90caf9' }}>
         AI Integration Example
       </Typography>
 
       {/* Example 1: Chart with AI Button */}
-      <Paper sx={{ p: 3, mb: 4, backgroundColor: '#1e1e1e' }}>
+      <Paper sx={{ p: 3, mb: 4, backgroundColor: '#2d2d2d' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ color: '#fff' }}>
+          <Typography variant="h6" sx={{ color: '#ffffff' }}>
             Tasks by Priority
           </Typography>
           <AIInsightButton
@@ -56,14 +56,14 @@ const AIIntegrationExample = () => {
           />
         </Box>
         <Box sx={{ height: 300 }}>
-          <Bar data={chartData} options={{ maintainAspectRatio: false, plugins: { legend: { labels: { color: '#fff' } } }, scales: { y: { ticks: { color: '#fff' } }, x: { ticks: { color: '#fff' } } } }} />
+          <Bar data={chartData} options={{ maintainAspectRatio: false, plugins: { legend: { labels: { color: '#ffffff' } } }, scales: { y: { ticks: { color: '#ffffff' } }, x: { ticks: { color: '#ffffff' } } } }} />
         </Box>
       </Paper>
 
       {/* Example 2: Table with AI Button */}
-      <Paper sx={{ p: 3, backgroundColor: '#1e1e1e' }}>
+      <Paper sx={{ p: 3, backgroundColor: '#2d2d2d' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ color: '#fff' }}>
+          <Typography variant="h6" sx={{ color: '#ffffff' }}>
             Recent Tasks
           </Typography>
           <AIInsightButton
@@ -76,7 +76,7 @@ const AIIntegrationExample = () => {
         <Box sx={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #444' }}>
+              <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
                 <th style={{ padding: '12px', textAlign: 'left', color: '#90caf9' }}>Title</th>
                 <th style={{ padding: '12px', textAlign: 'left', color: '#90caf9' }}>Priority</th>
                 <th style={{ padding: '12px', textAlign: 'left', color: '#90caf9' }}>Status</th>
@@ -84,7 +84,7 @@ const AIIntegrationExample = () => {
             </thead>
             <tbody>
               {tasks.slice(0, 10).map((task, index) => (
-                <tr key={index} style={{ borderBottom: '1px solid #333' }}>
+                <tr key={index} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '12px' }}>{task.title}</td>
                   <td style={{ padding: '12px' }}>{task.priority}</td>
                   <td style={{ padding: '12px' }}>{task.validationStatus}</td>
@@ -96,7 +96,7 @@ const AIIntegrationExample = () => {
       </Paper>
 
       {/* Instructions */}
-      <Paper sx={{ p: 3, mt: 4, backgroundColor: '#1e1e1e', border: '1px solid #3f51b5' }}>
+      <Paper sx={{ p: 3, mt: 4, backgroundColor: '#2d2d2d', border: '1px solid #3f51b5' }}>
         <Typography variant="h6" sx={{ mb: 2, color: '#90caf9' }}>
           How to Add AI to Your Pages
         </Typography>

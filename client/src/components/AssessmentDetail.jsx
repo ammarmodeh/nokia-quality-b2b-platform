@@ -508,7 +508,7 @@ const AssessmentDetail = ({
           onClick={() => onEdit(assessment)}
           sx={{
             backgroundColor: colors.primary,
-            color: '#fff',
+            color: '#ffffff',
             '&:hover': {
               backgroundColor: `${colors.primary}cc`
             }

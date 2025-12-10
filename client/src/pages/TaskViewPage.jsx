@@ -359,15 +359,15 @@ const TaskViewPage = () => {
 
   return (
     <Box sx={{
-      backgroundColor: '#1e1e1e',
+      backgroundColor: '#2d2d2d',
       minHeight: '100vh',
       p: isMobile ? 1 : 3,
       color: '#ffffff'
     }}>
       <Paper elevation={0} sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         borderRadius: '8px',
-        border: '1px solid #444',
+        border: '1px solid #3d3d3d',
         overflow: 'hidden'
       }}>
         {/* Header Section */}
@@ -376,12 +376,12 @@ const TaskViewPage = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           p: isMobile ? 1 : 2,
-          borderBottom: '1px solid #444',
-          backgroundColor: '#272727',
+          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: '#2d2d2d',
           gap: isMobile ? 1 : 0
         }}>
           <Link to={from} style={{ textDecoration: 'none' }}>
-            <Button variant="outlined" size={isMobile ? "small" : "medium"} sx={{ color: '#ffffff', borderColor: '#444' }}>
+            <Button variant="outlined" size={isMobile ? "small" : "medium"} sx={{ color: '#ffffff', borderColor: '#3d3d3d' }}>
               Back
             </Button>
           </Link>
@@ -420,9 +420,9 @@ const TaskViewPage = () => {
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 3,
             mb: 3,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: '8px',
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'cornflowerblue' }}>
               Basic Information
@@ -450,9 +450,9 @@ const TaskViewPage = () => {
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 3,
             mb: 3,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: '8px',
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'cornflowerblue' }}>
               Feedback Severity & Dates
@@ -491,9 +491,9 @@ const TaskViewPage = () => {
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 3,
             mb: 3,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: '8px',
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'cornflowerblue' }}>
               Customer Information
@@ -514,9 +514,9 @@ const TaskViewPage = () => {
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 3,
             mb: 3,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: '8px',
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'cornflowerblue' }}>
               Location & Team Information
@@ -534,9 +534,9 @@ const TaskViewPage = () => {
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 3,
             mb: 3,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: '8px',
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'cornflowerblue' }}>
               Task Details
@@ -554,9 +554,9 @@ const TaskViewPage = () => {
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 3,
             mb: 3,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: '8px',
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'cornflowerblue' }}>
               Assigned Users
@@ -594,9 +594,9 @@ const TaskViewPage = () => {
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 3,
             mb: 3,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: '8px',
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'cornflowerblue' }}>
               Whom It May Concern
@@ -634,9 +634,9 @@ const TaskViewPage = () => {
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 3,
             mb: 3,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: '8px',
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'cornflowerblue' }}>
               Progress
@@ -651,12 +651,12 @@ const TaskViewPage = () => {
 
             <Paper sx={{
               p: 2,
-              backgroundColor: '#333',
-              border: '1px solid #444',
+              backgroundColor: '#2d2d2d',
+              border: '1px solid #3d3d3d',
               borderRadius: '8px'
             }}>
               {subtasks.map((subtask, index) => (
-                <Box key={index} sx={{ mb: index < subtasks.length - 1 ? 3 : 0, pb: index < subtasks.length - 1 ? 3 : 0, borderBottom: index < subtasks.length - 1 ? '1px solid #444' : 'none' }}>
+                <Box key={index} sx={{ mb: index < subtasks.length - 1 ? 3 : 0, pb: index < subtasks.length - 1 ? 3 : 0, borderBottom: index < subtasks.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
                   <Typography variant={isMobile ? "body1" : "h6"} sx={{ mb: 1, color: '#eff5ff' }}>
                     {index + 1}. {subtask.title}
                   </Typography>
@@ -693,9 +693,9 @@ const TaskViewPage = () => {
           {/* Metadata Section */}
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 3,
-            backgroundColor: '#272727',
+            backgroundColor: '#2d2d2d',
             borderRadius: '8px',
-            border: '1px solid #444'
+            border: '1px solid #3d3d3d'
           }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#6495ED' }}>
               Metadata
@@ -724,11 +724,11 @@ const TaskViewPage = () => {
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            backgroundColor: "#1e1e1e",
+            backgroundColor: "#2d2d2d",
             color: "#ffffff",
             borderRadius: isMobile ? 0 : "8px",
             boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.5)",
-            border: '1px solid #444',
+            border: '1px solid #3d3d3d',
             width: isMobile ? '100%' : 'auto',
             maxWidth: isMobile ? '100%' : 'md'
           },
@@ -738,9 +738,9 @@ const TaskViewPage = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          backgroundColor: '#272727',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
           <Typography variant={isMobile ? "subtitle1" : "h6"} component="div">
@@ -780,8 +780,8 @@ const TaskViewPage = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           p: isMobile ? 1 : 2,
-          backgroundColor: '#272727',
-          borderTop: '1px solid #444'
+          backgroundColor: '#2d2d2d',
+          borderTop: '1px solid #e5e7eb'
         }}>
           <Button
             onClick={handleReset}
@@ -832,7 +832,7 @@ const TaskViewPage = () => {
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            backgroundColor: "#121212",
+            backgroundColor: "#2d2d2d",
             color: "#ffffff",
             borderRadius: isMobile ? 0 : "8px",
             boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.5)",
@@ -873,7 +873,7 @@ const TaskViewPage = () => {
             size={isMobile ? "small" : "medium"}
             sx={{
               color: "#ffffff",
-              "&:hover": { backgroundColor: "#333" },
+              "&:hover": { backgroundColor: "#2d2d2d" },
               "&:focus": { outline: "none" },
               transition: "background-color 0.2s ease",
             }}
@@ -909,7 +909,7 @@ const DetailRow = ({ label, value, isMobile }) => (
       variant={isMobile ? "body2" : "subtitle1"}
       sx={{
         fontWeight: '500',
-        color: '#aaaaaa'
+        color: '#b3b3b3'
       }}
     >
       {label}:

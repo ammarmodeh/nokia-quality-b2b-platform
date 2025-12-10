@@ -663,7 +663,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const handleViolationDialogClose = () => setViolationDialogOpen(false);
 
   return (
-    <Box sx={{ marginBottom: "20px" }}>
+    <Box sx={{ my: "40px" }}>
       <Stack direction="column" spacing={2}>
         <SearchAndExport
           searchText={searchText}

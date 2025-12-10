@@ -522,11 +522,11 @@ const NotificationPanel = () => {
 
   const menuStyles = {
     '& .MuiPaper-root': {
-      backgroundColor: '#121212',
-      color: '#A1A1A1',
+      backgroundColor: '#2d2d2d',
+      color: '#b3b3b3',
       width: '420px',
       borderRadius: '12px',
-      border: `1px solid #4f4f4f`,
+      border: `1px solid #e5e7eb`,
       padding: '8px 0',
       maxHeight: '80vh',
       overflow: 'hidden',
@@ -581,7 +581,7 @@ const NotificationPanel = () => {
           }}
         >
           <IoMdNotificationsOutline
-            color={unreadCount > 0 ? "#00efff" : "#A1A1A1"}
+            color={unreadCount > 0 ? "#00efff" : "#6b7280"}
             size={28}
           />
         </Badge>
@@ -610,14 +610,14 @@ const NotificationPanel = () => {
             px: 3,
             py: 1,
             borderBottom: `1px solid #FFFFFF24`,
-            backgroundColor: '#121212'
+            backgroundColor: '#2d2d2d'
           }}
         >
           <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#ffffff', fontSize: '24px' }}>
               Notifications
             </Typography>
-            <Typography variant="body2" sx={{ color: '#A1A1A1', mt: 0.5 }}>
+            <Typography variant="body2" sx={{ color: '#b3b3b3', mt: 0.5 }}>
               {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
             </Typography>
           </Box>
@@ -625,7 +625,7 @@ const NotificationPanel = () => {
             <Button
               onClick={fetchNotifications}
               sx={{
-                color: "#A1A1A1",
+                color: "#b3b3b3",
                 minWidth: 'auto',
                 padding: '4px 8px',
                 fontSize: '0.75rem',
@@ -641,7 +641,7 @@ const NotificationPanel = () => {
             <Button
               onClick={handleClose}
               sx={{
-                color: "#A1A1A1",
+                color: "#b3b3b3",
                 minWidth: 'auto',
                 padding: '4px',
                 "&:hover": {
@@ -683,7 +683,7 @@ const NotificationPanel = () => {
             }}>
               <IoMdNotificationsOutline size={48} color="#555" />
               <Typography variant="body1" sx={{
-                color: "#A1A1A1",
+                color: "#b3b3b3",
                 mt: 2,
                 fontSize: '0.95rem'
               }}>
@@ -717,7 +717,7 @@ const NotificationPanel = () => {
                       "&:hover": {
                         backgroundColor: isUnread ? '#00000042' : '#FFFFFF0F',
                       },
-                      backgroundColor: isUnread ? '#121212' : 'transparent',
+                      backgroundColor: isUnread ? '#f9fafb' : 'transparent',
                       borderLeft: isUnread ? '3px solid #666061' : '3px solid transparent',
                       transition: 'all 0.2s ease',
                       position: 'relative',
@@ -730,7 +730,7 @@ const NotificationPanel = () => {
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: '#2d2d2d',
                         animation: 'pulse 1.5s infinite',
                       } : {}
                     }}
@@ -747,7 +747,7 @@ const NotificationPanel = () => {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: isUnread ? "#ffffff" : "#A1A1A1",
+                        color: isUnread ? "#ffffff" : "#6b7280",
                         backgroundColor: isUnread ? '#5e5c5c33' : 'rgba(255, 255, 255, 0.1)',
                         borderRadius: '8px',
                         flexShrink: 0,
@@ -776,7 +776,7 @@ const NotificationPanel = () => {
                         <Typography
                           variant="body2"
                           sx={{
-                            color: isUnread ? "#D0D0D0" : "#A1A1A1",
+                            color: isUnread ? "#D0D0D0" : "#6b7280",
                             fontSize: '12px',
                             mb: 1
                           }}

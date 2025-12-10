@@ -346,7 +346,7 @@ const TaskTable = ({ tasks }) => {
           disableTouchRipple
           disableFocusRipple
           sx={{
-            color: '#3ea6ff',
+            color: '#7b68ee',
             textTransform: 'none',
             '&:hover': {
               backgroundColor: 'rgba(62, 166, 255, 0.1)'
@@ -369,7 +369,7 @@ const TaskTable = ({ tasks }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#333',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             borderRadius: '50%',
             width: 30,
@@ -513,7 +513,7 @@ const TaskTable = ({ tasks }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: lastSession ? '#3ea6ff' : '#9e9e9e',
+              color: lastSession ? '#7b68ee' : '#6b7280',
               fontStyle: lastSession ? 'normal' : 'italic'
             }}>
               {lastSession ? moment(lastSession.sessionDate).format('MMM D') : 'No sessions'}
@@ -574,7 +574,7 @@ const TaskTable = ({ tasks }) => {
         <Button
           onClick={() => navigate(`/tasks/view-task/${params.row.status}`)}
           sx={{
-            color: '#3ea6ff',
+            color: '#7b68ee',
             textTransform: 'none',
             '&:hover': {
               backgroundColor: 'rgba(62, 166, 255, 0.1)'
@@ -718,7 +718,7 @@ const TaskTable = ({ tasks }) => {
           </IconButton>
         </Tooltip>
       </Stack>
-      <Paper sx={{ height: 400, width: "100%", backgroundColor: "#272727" }}>
+      <Paper sx={{ height: 400, width: "100%", backgroundColor: "#2d2d2d" }}>
         <DataGrid
           rows={rows}
           columns={taskColumns}
@@ -732,35 +732,35 @@ const TaskTable = ({ tasks }) => {
             border: 0,
             color: "#ffffff",
             "& .MuiDataGrid-filler": {
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
             },
             "& .MuiDataGrid-main": {
-              backgroundColor: "#272727",
+              backgroundColor: "#2d2d2d",
             },
             "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#333",
-              color: "#9e9e9e",
+              backgroundColor: "#2d2d2d",
+              color: "#b3b3b3",
               fontSize: "0.875rem",
               fontWeight: "bold",
-              borderBottom: "1px solid #444",
+              borderBottom: "1px solid #e5e7eb",
             },
             "& .MuiDataGrid-columnHeader": {
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
             },
             "& .MuiDataGrid-cell": {
-              borderBottom: "1px solid #444",
+              borderBottom: "1px solid #e5e7eb",
             },
             "& .MuiDataGrid-row": {
-              backgroundColor: "#272727",
+              backgroundColor: "#2d2d2d",
               "&:hover": {
-                backgroundColor: "#333",
+                backgroundColor: "#2d2d2d",
               },
             },
             "& .MuiDataGrid-footerContainer": {
               minHeight: "64px",
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
               color: "#ffffff",
-              borderTop: "1px solid #444",
+              borderTop: "1px solid #e5e7eb",
               "& .MuiTablePagination-root": {
                 color: "#ffffff",
               },
@@ -776,11 +776,11 @@ const TaskTable = ({ tasks }) => {
                 borderRadius: "4px",
               },
               "&::-webkit-scrollbar-track": {
-                backgroundColor: "#444",
+                backgroundColor: "#e5e7eb",
               },
             },
             "& .MuiDataGrid-scrollbarFiller": {
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
             },
           }}
         />
@@ -793,7 +793,7 @@ const TaskTable = ({ tasks }) => {
         fullScreen
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             boxShadow: 'none',
             borderRadius: fullScreen ? '0px' : '8px',
           }
@@ -803,9 +803,9 @@ const TaskTable = ({ tasks }) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: '16px 24px',
         }}>
           <Typography variant="h6" component="div">
@@ -845,10 +845,10 @@ const TaskTable = ({ tasks }) => {
           </Box>
         </DialogTitle>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogContent dividers sx={{
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
           padding: '20px 24px',
         }}>
@@ -857,11 +857,11 @@ const TaskTable = ({ tasks }) => {
               {/* Basic Information Section */}
               <Paper elevation={0} sx={{
                 p: 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
                   Basic Information
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -879,11 +879,11 @@ const TaskTable = ({ tasks }) => {
               {/* Location Information Section */}
               <Paper elevation={0} sx={{
                 p: 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
                   Location Information
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -895,11 +895,11 @@ const TaskTable = ({ tasks }) => {
               {/* Team Information Section */}
               <Paper elevation={0} sx={{
                 p: 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
                   Team Information
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -911,11 +911,11 @@ const TaskTable = ({ tasks }) => {
               {/* Team Status Section */}
               <Paper elevation={0} sx={{
                 p: 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
                   Team Status
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -954,7 +954,7 @@ const TaskTable = ({ tasks }) => {
                           <Typography variant="body1" sx={{ color: '#ffffff' }}>
                             {selectedTask.teamData.sessionHistory[0].sessionTitle}
                           </Typography>
-                          <Typography variant="body2" sx={{ color: '#aaaaaa' }}>
+                          <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
                             {moment(selectedTask.teamData.sessionHistory[0].sessionDate).format('YYYY-MM-DD')}
                           </Typography>
                         </Box>
@@ -967,11 +967,11 @@ const TaskTable = ({ tasks }) => {
               {/* Evaluation Section */}
               <Paper elevation={0} sx={{
                 p: 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
                   Evaluation
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -987,7 +987,7 @@ const TaskTable = ({ tasks }) => {
                             color: '#ffffff',
                             backgroundColor:
                               selectedTask.evaluationScore >= 9 ? '#4caf50' :
-                                selectedTask.evaluationScore >= 7 ? '#9e9e9e' : '#f44336',
+                                selectedTask.evaluationScore >= 7 ? '#6b7280' : '#f44336',
                             fontWeight: 'bold'
                           }}
                         />
@@ -1003,11 +1003,11 @@ const TaskTable = ({ tasks }) => {
           )}
         </DialogContent>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogActions sx={{
-          backgroundColor: '#1e1e1e',
-          borderTop: '1px solid #444',
+          backgroundColor: '#2d2d2d',
+          borderTop: '1px solid #e5e7eb',
           padding: '12px 24px',
         }}>
           <Button
@@ -1035,7 +1035,7 @@ const DetailRow = ({ label, value }) => (
       component="div"
       sx={{
         fontWeight: '500',
-        color: '#aaaaaa'
+        color: '#b3b3b3'
       }}
     >
       {label}

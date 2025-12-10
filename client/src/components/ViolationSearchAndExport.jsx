@@ -173,15 +173,15 @@ const SearchAndExport = ({
             onChange={(e) => setSearchText(e.target.value)}
             width={isMobile ? "auto" : "auto"}
             sx={{
-              backgroundColor: '#333',
+              backgroundColor: '#2d2d2d',
               borderRadius: '4px',
               '& .MuiOutlinedInput-root': {
-                '& fieldset': { borderColor: '#444' },
+                '& fieldset': { borderColor: '#3d3d3d' },
                 '&:hover fieldset': { borderColor: '#555' },
-                '&.Mui-focused fieldset': { borderColor: '#3ea6ff' },
+                '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
               },
               '& .MuiInputBase-input': {
-                color: '#fff',
+                color: '#ffffff',
                 fontSize: '0.875rem',
                 padding: '8.5px 14px',
               },
@@ -191,7 +191,7 @@ const SearchAndExport = ({
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <MdSearch style={{ color: '#9e9e9e' }} />
+                  <MdSearch style={{ color: '#b3b3b3' }} />
                 </InputAdornment>
               ),
             }}
@@ -216,7 +216,7 @@ const SearchAndExport = ({
       <Stack direction={`${isMobile ? "column" : "row"}`} alignItems="center" justifyContent={"space-between"} gap={2} width={"100%"} sx={{ mt: 2 }}>
         {tasks.length > 0 && (
           <>
-            <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, flexDirection: 'column' }}>
+            {/* <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, flexDirection: 'column' }}>
               <Typography
                 variant="outlined"
                 size="small"
@@ -262,9 +262,9 @@ const SearchAndExport = ({
                   }}
                 />
               </Stack>
-            </Stack>
+            </Stack> */}
 
-            <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, flexDirection: 'column' }}>
+            {/* <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, flexDirection: 'column' }}>
               <Typography
                 variant="outlined"
                 size="small"
@@ -292,9 +292,9 @@ const SearchAndExport = ({
                   }}
                 />
               </Stack>
-            </Stack>
+            </Stack> */}
 
-            <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, flexDirection: 'column' }}>
+            {/* <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, flexDirection: 'column' }}>
               <Typography
                 variant="outlined"
                 size="small"
@@ -331,7 +331,7 @@ const SearchAndExport = ({
                   }}
                 />
               </Stack>
-            </Stack>
+            </Stack> */}
           </>
         )}
       </Stack>

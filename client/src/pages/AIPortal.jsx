@@ -50,7 +50,7 @@ const AIPortal = () => {
   };
 
   return (
-    <Box sx={{ p: 3, minHeight: '100vh', backgroundColor: '#121212', color: '#fff' }}>
+    <Box sx={{ p: 3, minHeight: '100vh', color: '#ffffff' }}>
       <Typography variant="h4" sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2, color: '#90caf9' }}>
         <MdPsychology size={40} /> AI Portal <Typography variant="caption" sx={{ color: 'gray' }}>(Powered by Gemini)</Typography>
       </Typography>
@@ -58,7 +58,7 @@ const AIPortal = () => {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
 
         {/* Insights Section */}
-        <Paper sx={{ p: 3, backgroundColor: '#1e1e1e', color: '#fff', borderRadius: 2 }}>
+        <Paper sx={{ p: 3, backgroundColor: '#2d2d2d', color: '#ffffff', borderRadius: 2 }}>
           <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
             <MdAutoAwesome color="#ffeb3b" /> Strategic Insights
           </Typography>
@@ -76,14 +76,14 @@ const AIPortal = () => {
           </Button>
 
           {insights && (
-            <Box sx={{ p: 2, backgroundColor: '#252525', borderRadius: 1, border: '1px solid #444' }}>
+            <Box sx={{ p: 2, backgroundColor: '#252525', borderRadius: 1, border: '1px solid #3d3d3d' }}>
               <Typography variant="body1" style={{ whiteSpace: 'pre-line' }}>{insights}</Typography>
             </Box>
           )}
         </Paper>
 
         {/* Chat Section */}
-        <Paper sx={{ p: 3, backgroundColor: '#1e1e1e', color: '#fff', borderRadius: 2, display: 'flex', flexDirection: 'column', height: '600px' }}>
+        <Paper sx={{ p: 3, backgroundColor: '#2d2d2d', color: '#ffffff', borderRadius: 2, display: 'flex', flexDirection: 'column', height: '600px' }}>
           <Typography variant="h6" sx={{ mb: 2 }}>AI Assistant Chat</Typography>
 
           <Box sx={{ flexGrow: 1, overflowY: 'auto', mb: 2, p: 2, backgroundColor: '#252525', borderRadius: 1 }}>
@@ -98,8 +98,8 @@ const AIPortal = () => {
                   maxWidth: '80%',
                   p: 2,
                   borderRadius: 2,
-                  backgroundColor: msg.role === 'user' ? '#3f51b5' : '#333',
-                  color: '#fff'
+                  backgroundColor: msg.role === 'user' ? '#3f51b5' : '#666',
+                  color: '#ffffff'
                 }}>
                   <Typography variant="body2">{msg.text}</Typography>
                 </Box>
@@ -107,7 +107,7 @@ const AIPortal = () => {
             ))}
             {loadingChat && (
               <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
-                <Box sx={{ p: 2, borderRadius: 2, backgroundColor: '#333' }}>
+                <Box sx={{ p: 2, borderRadius: 2, backgroundColor: '#2d2d2d' }}>
                   <CircularProgress size={20} />
                 </Box>
               </Box>
@@ -124,9 +124,9 @@ const AIPortal = () => {
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               sx={{
                 backgroundColor: '#252525',
-                input: { color: '#fff' },
+                input: { color: '#ffffff' },
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#444' },
+                  '& fieldset': { borderColor: '#3d3d3d' },
                   '&:hover fieldset': { borderColor: '#666' },
                 }
               }}

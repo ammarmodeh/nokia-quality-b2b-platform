@@ -109,16 +109,16 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       // fullWidth
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           boxShadow: 'none',
           borderRadius: isMobile ? 0 : '8px',
         }
       }}
     >
       <DialogTitle sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
-        borderBottom: '1px solid #444',
+        borderBottom: '1px solid #e5e7eb',
         padding: isMobile ? '12px 16px' : '16px 24px',
         display: 'flex',
         justifyContent: 'space-between',
@@ -175,31 +175,31 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
         </Box>
       </DialogTitle>
 
-      <Divider sx={{ backgroundColor: '#444' }} />
+      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogContent dividers sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
         padding: isMobile ? '12px 16px' : '20px 24px',
         '&::-webkit-scrollbar': {
           width: '4px',
         },
         '&::-webkit-scrollbar-thumb': {
-          backgroundColor: '#444',
+          backgroundColor: '#e5e7eb',
           borderRadius: '2px',
         },
       }}>
         <Stack spacing={isMobile ? 2 : 3}>
           {tasks.map((task, index) => (
-            <Box key={index} sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 2 : 3, backgroundColor: '#353535', padding: isMobile ? 1 : 2, border: '1px solid #444', borderRadius: 2 }}>
+            <Box key={index} sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 2 : 3, backgroundColor: '#353535', padding: isMobile ? 1 : 2, border: '1px solid #3d3d3d', borderRadius: 2 }}>
               {/* Basic Information Section */}
               <Paper elevation={0} sx={{
                 p: isMobile ? 1.5 : 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
                   Basic Info
                 </Typography>
                 <Box sx={{
@@ -221,11 +221,11 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
               {/* Location Information Section */}
               <Paper elevation={0} sx={{
                 p: isMobile ? 1.5 : 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
                   Location
                 </Typography>
                 <Box sx={{
@@ -241,11 +241,11 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
               {/* Team Information Section */}
               <Paper elevation={0} sx={{
                 p: isMobile ? 1.5 : 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
                   Team Info
                 </Typography>
                 <Box sx={{
@@ -261,11 +261,11 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
               {/* Evaluation Section */}
               <Paper elevation={0} sx={{
                 p: isMobile ? 1.5 : 2,
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 borderRadius: 2,
-                border: '1px solid #444'
+                border: '1px solid #3d3d3d'
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
                   Evaluation
                 </Typography>
                 <Box sx={{
@@ -286,7 +286,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                             color: '#ffffff',
                             backgroundColor:
                               task.evaluationScore >= 9 ? '#4caf50' :
-                                task.evaluationScore >= 7 ? '#9e9e9e' : '#f44336',
+                                task.evaluationScore >= 7 ? '#6b7280' : '#f44336',
                             fontWeight: 'bold'
                           }}
                         />
@@ -320,11 +320,11 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
               {task.subTasks[0].note && (
                 <Paper elevation={0} sx={{
                   p: isMobile ? 1.5 : 2,
-                  backgroundColor: '#272727',
+                  backgroundColor: '#2d2d2d',
                   borderRadius: 2,
-                  border: '1px solid #444'
+                  border: '1px solid #3d3d3d'
                 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#3ea6ff' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
                     Progress
                   </Typography>
 
@@ -362,7 +362,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                         borderRadius: 5,
                         '& .MuiLinearProgress-bar': {
                           borderRadius: 5,
-                          backgroundColor: '#3ea6ff'
+                          backgroundColor: '#7b68ee'
                         }
                       }}
                     />
@@ -371,8 +371,8 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                   {/* Detailed Action Items */}
                   <Paper sx={{
                     p: isMobile ? 1 : 2,
-                    backgroundColor: '#333',
-                    border: '1px solid #444',
+                    backgroundColor: '#2d2d2d',
+                    border: '1px solid #3d3d3d',
                     borderRadius: '8px'
                   }}>
                     {task.subTasks.map((subtask, index) => (
@@ -381,7 +381,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                         sx={{
                           mb: index < task.subTasks.length - 1 ? 2 : 0,
                           pb: index < task.subTasks.length - 1 ? 2 : 0,
-                          borderBottom: index < task.subTasks.length - 1 ? '1px solid #444' : 'none'
+                          borderBottom: index < task.subTasks.length - 1 ? '1px solid #e5e7eb' : 'none'
                         }}
                       >
                         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
@@ -403,7 +403,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                               avatar={
                                 <Avatar sx={{
                                   backgroundColor: task.assignedTo.some(u => u._id === subtask.completedBy._id)
-                                    ? '#3ea6ff'
+                                    ? '#7b68ee'
                                     : '#f44336',
                                   width: isMobile ? 20 : 24,
                                   height: isMobile ? 20 : 24,
@@ -425,7 +425,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                           p: isMobile ? 1 : 2,
                           borderRadius: 1,
                           borderLeft: '3px solid',
-                          borderColor: subtask.note ? '#3ea6ff' : 'transparent'
+                          borderColor: subtask.note ? '#7b68ee' : 'transparent'
                         }}>
                           <Typography variant={isMobile ? "caption" : "body1"} sx={{
                             direction: 'rtl',
@@ -458,11 +458,11 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
         </Stack>
       </DialogContent>
 
-      <Divider sx={{ backgroundColor: '#444' }} />
+      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogActions sx={{
-        backgroundColor: '#1e1e1e',
-        borderTop: '1px solid #444',
+        backgroundColor: '#2d2d2d',
+        borderTop: '1px solid #e5e7eb',
         padding: isMobile ? '8px 16px' : '12px 24px',
       }}>
         <Button
@@ -491,7 +491,7 @@ const DetailRow = ({ label, value, isMobile }) => (
       component="div"
       sx={{
         fontWeight: '500',
-        color: '#aaaaaa',
+        color: '#b3b3b3',
       }}
     >
       {label}

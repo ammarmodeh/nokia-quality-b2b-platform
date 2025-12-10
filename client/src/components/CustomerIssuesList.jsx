@@ -270,7 +270,7 @@ const CustomerIssuesList = () => {
       px: isMobile ? 0 : undefined
     }}>
       <Typography variant="h5" gutterBottom sx={{
-        color: '#3ea6ff',
+        color: '#7b68ee',
         fontWeight: 'bold',
         fontSize: isMobile ? '1.2rem' : '1.5rem',
         mb: 2
@@ -292,10 +292,10 @@ const CustomerIssuesList = () => {
           gap: 2,
           alignItems: 'center',
           // width: isMobile ? '100%' : 'auto',
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           p: 2,
           borderRadius: '8px',
-          border: '1px solid #444',
+          border: '1px solid #3d3d3d',
           width: '100%',
         }}>
           <TextField
@@ -307,7 +307,7 @@ const CustomerIssuesList = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <MdSearch style={{ color: '#aaaaaa' }} />
+                  <MdSearch style={{ color: '#b3b3b3' }} />
                 </InputAdornment>
               ),
               endAdornment: searchTerm && (
@@ -316,7 +316,7 @@ const CustomerIssuesList = () => {
                   onClick={() => setSearchTerm('')}
                   sx={{
                     visibility: searchTerm ? 'visible' : 'hidden',
-                    color: '#aaaaaa',
+                    color: '#b3b3b3',
                     '&:hover': {
                       backgroundColor: '#2a2a2a',
                     }
@@ -327,7 +327,7 @@ const CustomerIssuesList = () => {
               ),
               sx: {
                 borderRadius: '20px',
-                backgroundColor: '#272727',
+                backgroundColor: '#2d2d2d',
                 width: '100%',
                 '& fieldset': {
                   border: 'none',
@@ -351,7 +351,7 @@ const CustomerIssuesList = () => {
                   border: '1px solid #666 !important',
                 },
                 '&.Mui-focused fieldset': {
-                  border: '1px solid #3ea6ff !important',
+                  border: '1px solid #7b68ee !important',
                 },
               },
             }}
@@ -399,7 +399,7 @@ const CustomerIssuesList = () => {
               fullWidth={isMobile}
               size={isMobile ? 'small' : 'medium'}
               sx={{
-                borderColor: '#444',
+                borderColor: '#3d3d3d',
                 color: '#1976d2',
                 '&:hover': {
                   backgroundColor: 'rgba(25, 118, 210, 0.08)',
@@ -425,29 +425,29 @@ const CustomerIssuesList = () => {
         border: 0,
         color: "#ffffff",
         "&.MuiTableContainer-root": {
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
         },
         "& .MuiTable-root": {
-          backgroundColor: "#272727",
+          backgroundColor: "#2d2d2d",
         },
         "& .MuiTableHead-root": {
-          backgroundColor: "#333",
+          backgroundColor: "#2d2d2d",
           "& .MuiTableCell-root": {
-            color: "#9e9e9e",
+            color: "#b3b3b3",
             fontSize: "0.875rem",
             fontWeight: "bold",
-            borderBottom: "1px solid #444",
+            borderBottom: "1px solid #e5e7eb",
           }
         },
         "& .MuiTableBody-root": {
           "& .MuiTableCell-root": {
-            borderBottom: "1px solid #444",
+            borderBottom: "1px solid #e5e7eb",
             color: "#ffffff",
           },
           "& .MuiTableRow-root": {
-            backgroundColor: "#272727",
+            backgroundColor: "#2d2d2d",
             "&:hover": {
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
             },
           }
         },
@@ -464,7 +464,7 @@ const CustomerIssuesList = () => {
           borderRadius: "4px",
         },
         "&::-webkit-scrollbar-track": {
-          backgroundColor: "#444",
+          backgroundColor: "#e5e7eb",
         },
       }}>
         <Table size={isMobile ? 'small' : 'medium'}>
@@ -563,11 +563,11 @@ const CustomerIssuesList = () => {
         onClose={handleMenuClose}
         sx={{
           "& .MuiPaper-root": {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             boxShadow: 'none',
             borderRadius: '8px',
-            border: '1px solid #444',
+            border: '1px solid #3d3d3d',
             minWidth: '200px',
           },
           "& .MuiList-root": {
@@ -642,16 +642,16 @@ const CustomerIssuesList = () => {
         fullScreen={isMobile}
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             boxShadow: 'none',
             borderRadius: isMobile ? 0 : '8px',
           }
         }}
       >
         <DialogTitle sx={{
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: '16px 24px',
         }}>
           <Typography variant="h6" component="div">
@@ -659,10 +659,10 @@ const CustomerIssuesList = () => {
           </Typography>
         </DialogTitle>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogContent dividers sx={{
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
           padding: '20px 24px',
           '&.MuiDialogContent-root': {
@@ -683,11 +683,11 @@ const CustomerIssuesList = () => {
                   color: '#ffffff',
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#aaaaaa',
+                  color: '#b3b3b3',
                 },
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
                     borderColor: '#666',
@@ -734,11 +734,11 @@ const CustomerIssuesList = () => {
                     color: '#ffffff',
                   },
                   '& .MuiInputLabel-root': {
-                    color: '#aaaaaa',
+                    color: '#b3b3b3',
                   },
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
-                      borderColor: '#444',
+                      borderColor: '#3d3d3d',
                     },
                     '&:hover fieldset': {
                       borderColor: '#666',
@@ -748,7 +748,7 @@ const CustomerIssuesList = () => {
                     },
                   },
                   '& .MuiFormHelperText-root': {
-                    color: '#aaaaaa',
+                    color: '#b3b3b3',
                   },
                 }}
               />
@@ -768,12 +768,12 @@ const CustomerIssuesList = () => {
                 size={isMobile ? 'small' : 'medium'}
                 sx={{
                   '& .MuiInputLabel-root': {
-                    color: '#aaaaaa',
+                    color: '#b3b3b3',
                   },
                   '& .MuiOutlinedInput-root': {
                     color: '#ffffff',
                     '& fieldset': {
-                      borderColor: '#444',
+                      borderColor: '#3d3d3d',
                     },
                     '&:hover fieldset': {
                       borderColor: '#666',
@@ -783,7 +783,7 @@ const CustomerIssuesList = () => {
                     },
                   },
                   '& .MuiSvgIcon-root': {
-                    color: '#aaaaaa',
+                    color: '#b3b3b3',
                   },
                 }}
               >
@@ -796,7 +796,7 @@ const CustomerIssuesList = () => {
                   MenuProps={{
                     PaperProps: {
                       sx: {
-                        backgroundColor: '#1e1e1e',
+                        backgroundColor: '#2d2d2d',
                         color: '#ffffff',
                         "& .MuiMenuItem-root": {
                           "&:hover": {
@@ -813,7 +813,7 @@ const CustomerIssuesList = () => {
                       value={option}
                       sx={{
                         color: '#ffffff',
-                        backgroundColor: '#1e1e1e',
+                        backgroundColor: '#2d2d2d',
                         '&:hover': {
                           backgroundColor: '#2a2a2a',
                         },
@@ -828,11 +828,11 @@ const CustomerIssuesList = () => {
           </Box>
         </DialogContent>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogActions sx={{
-          backgroundColor: '#1e1e1e',
-          borderTop: '1px solid #444',
+          backgroundColor: '#2d2d2d',
+          borderTop: '1px solid #e5e7eb',
           padding: '12px 24px',
         }}>
           <Button

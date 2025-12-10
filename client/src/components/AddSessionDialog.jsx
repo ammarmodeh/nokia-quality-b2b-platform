@@ -73,28 +73,28 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
       fullScreen={fullScreen}
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           boxShadow: 'none',
           borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
         }
       }}
     >
       <DialogTitle sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
-        borderBottom: '1px solid #444',
+        borderBottom: '1px solid #e5e7eb',
         padding: '16px 24px',
       }}>
         Add Training Session for{" "}
-        <Typography component="span" sx={{ fontWeight: "bold", color: '#3ea6ff' }}>
+        <Typography component="span" sx={{ fontWeight: "bold", color: '#7b68ee' }}>
           {teamName}
         </Typography>
       </DialogTitle>
 
-      <Divider sx={{ backgroundColor: '#444' }} />
+      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogContent sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         color: '#ffffff',
         padding: '20px 24px',
         '&.MuiDialogContent-root': {
@@ -110,7 +110,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
           error={errors.sessionDate}
           InputLabelProps={{
             shrink: true,
-            style: { color: errors.sessionDate ? '#f44336' : '#aaaaaa' }
+            style: { color: errors.sessionDate ? '#f44336' : '#6b7280' }
           }}
           value={sessionDate}
           onChange={handleFieldChange('sessionDate')}
@@ -120,13 +120,13 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
             },
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
-                borderColor: errors.sessionDate ? '#f44336' : '#444',
+                borderColor: errors.sessionDate ? '#f44336' : '#e5e7eb',
               },
               '&:hover fieldset': {
                 borderColor: errors.sessionDate ? '#f44336' : '#666',
               },
               '&.Mui-focused fieldset': {
-                borderColor: errors.sessionDate ? '#f44336' : '#3ea6ff',
+                borderColor: errors.sessionDate ? '#f44336' : '#7b68ee',
               },
             },
           }}
@@ -150,17 +150,17 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
               color: '#ffffff',
             },
             '& .MuiInputLabel-root': {
-              color: errors.conductedBy ? '#f44336' : '#aaaaaa',
+              color: errors.conductedBy ? '#f44336' : '#6b7280',
             },
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
-                borderColor: errors.conductedBy ? '#f44336' : '#444',
+                borderColor: errors.conductedBy ? '#f44336' : '#e5e7eb',
               },
               '&:hover fieldset': {
                 borderColor: errors.conductedBy ? '#f44336' : '#666',
               },
               '&.Mui-focused fieldset': {
-                borderColor: errors.conductedBy ? '#f44336' : '#3ea6ff',
+                borderColor: errors.conductedBy ? '#f44336' : '#7b68ee',
               },
             },
           }}
@@ -184,17 +184,17 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
               color: '#ffffff',
             },
             '& .MuiInputLabel-root': {
-              color: errors.sessionTitle ? '#f44336' : '#aaaaaa',
+              color: errors.sessionTitle ? '#f44336' : '#6b7280',
             },
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
-                borderColor: errors.sessionTitle ? '#f44336' : '#444',
+                borderColor: errors.sessionTitle ? '#f44336' : '#e5e7eb',
               },
               '&:hover fieldset': {
                 borderColor: errors.sessionTitle ? '#f44336' : '#666',
               },
               '&.Mui-focused fieldset': {
-                borderColor: errors.sessionTitle ? '#f44336' : '#3ea6ff',
+                borderColor: errors.sessionTitle ? '#f44336' : '#7b68ee',
               },
             },
           }}
@@ -221,17 +221,17 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
               color: '#ffffff',
             },
             '& .MuiInputLabel-root': {
-              color: errors.outlines ? '#f44336' : '#aaaaaa',
+              color: errors.outlines ? '#f44336' : '#6b7280',
             },
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
-                borderColor: errors.outlines ? '#f44336' : '#444',
+                borderColor: errors.outlines ? '#f44336' : '#e5e7eb',
               },
               '&:hover fieldset': {
                 borderColor: errors.outlines ? '#f44336' : '#666',
               },
               '&.Mui-focused fieldset': {
-                borderColor: errors.outlines ? '#f44336' : '#3ea6ff',
+                borderColor: errors.outlines ? '#f44336' : '#7b68ee',
               },
             },
           }}
@@ -243,11 +243,11 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
         )}
       </DialogContent>
 
-      <Divider sx={{ backgroundColor: '#444' }} />
+      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogActions sx={{
-        backgroundColor: '#1e1e1e',
-        borderTop: '1px solid #444',
+        backgroundColor: '#2d2d2d',
+        borderTop: '1px solid #e5e7eb',
         padding: '12px 24px',
       }}>
         <Button

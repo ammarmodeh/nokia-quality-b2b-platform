@@ -16,6 +16,7 @@ import cookieParser from "cookie-parser";
 import customerIssueRoutes from "./routes/customerIssueRoutes.js";
 import onTheJobAssessmentRoutes from "./routes/onTheJobAssessmentRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
+import detractorRoutes from "./routes/detractorRoutes.js";
 
 dotenv.config();
 
@@ -72,6 +73,7 @@ app.use("/api/customer-issues-notifications", customerIssueRoutes);
 app.use("/api/suggestions", suggestionsRoutes);
 app.use("/api/policies", policyRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/detractors", detractorRoutes);
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

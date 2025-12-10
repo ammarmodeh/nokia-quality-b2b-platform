@@ -414,10 +414,10 @@ const NaturalTasks = () => {
             px: 2,
             gap: 1,
             borderRadius: "999px",
-            backgroundColor: "#121212",
-            border: "1px solid #444",
+            backgroundColor: "#2d2d2d",
+            border: "1px solid #3d3d3d",
             "&:focus-within": {
-              borderColor: "#3ea6ff",
+              borderColor: "#7b68ee",
             },
           }}
         >
@@ -454,7 +454,7 @@ const NaturalTasks = () => {
                 <IconButton
                   size="small"
                   onClick={handleClearSearch}
-                  sx={{ color: "#9e9e9e", "&:hover": { color: "#ffffff" } }}
+                  sx={{ color: "#b3b3b3", "&:hover": { color: "#ffffff" } }}
                 >
                   <MdClose className="text-xl" />
                 </IconButton>

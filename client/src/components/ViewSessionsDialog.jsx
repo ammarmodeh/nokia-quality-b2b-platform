@@ -80,7 +80,7 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
     return (
       <List sx={{ padding: 0 }}>
         {sessionList.length === 0 ? (
-          <Typography variant="body1" color="#aaaaaa" sx={{ p: 2 }}>
+          <Typography variant="body1" color="#6b7280" sx={{ p: 2 }}>
             No sessions found in this category.
           </Typography>
         ) : (
@@ -131,7 +131,7 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
                         <Typography
                           component="div"
                           variant="body2"
-                          color="#aaaaaa"
+                          color="#6b7280"
                           sx={{ mt: 1 }}
                         >
                           <strong>Conducted by:</strong> {session.conductedBy}
@@ -141,7 +141,7 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
                         <Typography
                           component="div"
                           variant="body2"
-                          color="#aaaaaa"
+                          color="#6b7280"
                           sx={{ mt: 1 }}
                         >
                           <strong>Outlines:</strong> {session.outlines}
@@ -151,7 +151,7 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
                         <Typography
                           component="div"
                           variant="body2"
-                          color="#aaaaaa"
+                          color="#6b7280"
                           sx={{ mt: 1 }}
                         >
                           <strong>Notes:</strong> {session.notes}
@@ -161,7 +161,7 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
                         <Typography
                           component="div"
                           variant="body2"
-                          color="#aaaaaa"
+                          color="#6b7280"
                           sx={{ mt: 1, fontStyle: 'italic' }}
                         >
                           <strong>Reason:</strong> {session.reason}
@@ -192,7 +192,7 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
                 )}
               </ListItem>
               {index < sessionList.length - 1 && (
-                <Divider sx={{ backgroundColor: '#444' }} />
+                <Divider sx={{ backgroundColor: '#e5e7eb' }} />
               )}
             </div>
           ))
@@ -211,40 +211,40 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
         fullScreen={fullScreen}
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             boxShadow: 'none',
             borderRadius: fullScreen ? '0px' : '8px',
           }
         }}
       >
         <DialogTitle sx={{
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: '16px 24px',
         }}>
           Training Session History
-          <Typography variant="body2" color="#aaaaaa">
+          <Typography variant="body2" color="#6b7280">
             {completedSessions.length} completed session(s) | {missedOrCanceledSessions.length} missed/canceled
           </Typography>
         </DialogTitle>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', backgroundColor: '#1e1e1e' }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', backgroundColor: '#2d2d2d' }}>
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
             sx={{
               '& .MuiTabs-indicator': {
-                backgroundColor: '#3ea6ff',
+                backgroundColor: '#7b68ee',
               },
             }}
           >
             <Tab
               label={`Completed (${completedSessions.length})`}
               sx={{
-                color: activeTab === 0 ? '#3ea6ff' : '#aaaaaa',
+                color: activeTab === 0 ? '#7b68ee' : '#6b7280',
                 textTransform: 'none',
                 minWidth: 'unset',
                 padding: '12px 16px',
@@ -253,7 +253,7 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
             <Tab
               label={`Missed/Canceled (${missedOrCanceledSessions.length})`}
               sx={{
-                color: activeTab === 1 ? '#3ea6ff' : '#aaaaaa',
+                color: activeTab === 1 ? '#7b68ee' : '#6b7280',
                 textTransform: 'none',
                 minWidth: 'unset',
                 padding: '12px 16px',
@@ -263,7 +263,7 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
         </Box>
 
         <DialogContent sx={{
-          backgroundColor: '#1e1e1e',
+          backgroundColor: '#2d2d2d',
           color: '#ffffff',
           '&.MuiDialogContent-root': {
             padding: '0',
@@ -278,11 +278,11 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
           )}
         </DialogContent>
 
-        <Divider sx={{ backgroundColor: '#444' }} />
+        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogActions sx={{
-          backgroundColor: '#1e1e1e',
-          borderTop: '1px solid #444',
+          backgroundColor: '#2d2d2d',
+          borderTop: '1px solid #e5e7eb',
           padding: '12px 24px',
         }}>
           <Button

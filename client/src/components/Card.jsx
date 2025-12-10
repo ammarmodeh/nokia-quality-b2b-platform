@@ -259,7 +259,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
       label: "TOTAL TASKS",
       total: tasks.length || 0,
       icon: <FaNewspaper />,
-      color: "#3ea6ff",
+      color: "#7b68ee",
       subStats: null,
     },
     {
@@ -311,7 +311,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
       gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
       gap: { xs: "0px", sm: "12px", md: "16px" },
       py: 2,
-      backgroundColor: "#121212",
+      // backgroundColor: "#2d2d2d",
       position: "relative"
     }}>
       {/* Refresh Button */}
@@ -323,7 +323,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
           right: 8,
           color: "#aaa",
           "&:hover": {
-            color: "#fff",
+            color: "#ffffff",
             backgroundColor: "rgba(255,255,255,0.1)"
           }
         }}
@@ -353,9 +353,9 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
             minWidth: 200,
             boxShadow: "none",
             overflow: "hidden",
-            background: "#1e1e1e",
+            background: "#2d2d2d",
             transition: "all 0.3s ease",
-            border: "1px solid #444",
+            border: "1px solid #3d3d3d",
             "&:hover": {
               borderColor: "#666",
             },
@@ -390,7 +390,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
                 <Box>
                   <Typography variant="subtitle2" sx={{
                     fontWeight: 500,
-                    color: "#aaaaaa",
+                    color: "#b3b3b3",
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
                     textAlign: "left"
@@ -418,7 +418,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
 
           {subStats && (
             <Collapse in={expandedCards[_id]} timeout="auto" unmountOnExit>
-              <Divider sx={{ borderColor: "#444" }} />
+              <Divider sx={{ borderColor: "#3d3d3d" }} />
               <CardContent sx={{
                 p: 2,
                 pt: 1,
@@ -437,7 +437,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
                       <Typography
                         variant="caption"
                         sx={{
-                          color: "#9e9e9e",
+                          color: "#b3b3b3",
                           cursor: "pointer",
                           "&:hover": {
                             color: "#ffffff",
@@ -451,7 +451,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
                       <Typography
                         variant="caption"
                         sx={{
-                          color: "#9e9e9e",
+                          color: "#b3b3b3",
                           cursor: "pointer",
                           "&:hover": {
                             color: "#ffffff",
@@ -465,7 +465,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
                       <Typography
                         variant="caption"
                         sx={{
-                          color: "#9e9e9e",
+                          color: "#b3b3b3",
                           cursor: "pointer",
                           "&:hover": {
                             color: "#ffffff",
@@ -492,7 +492,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
                           <Typography
                             variant="caption"
                             sx={{
-                              color: "#9e9e9e",
+                              color: "#b3b3b3",
                               cursor: "pointer",
                               "&:hover": {
                                 color: "#ffffff",

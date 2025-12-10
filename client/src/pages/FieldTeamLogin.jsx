@@ -80,14 +80,14 @@ const FieldTeamLogin = () => {
 
   const textFieldStyles = {
     '& .MuiOutlinedInput-root': {
-      '& fieldset': { borderColor: '#444' },
+      '& fieldset': { borderColor: '#3d3d3d' },
       '&:hover fieldset': { borderColor: '#555' },
-      '&.Mui-focused fieldset': { borderColor: '#3ea6ff' },
+      '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
       color: '#ffffff',
     },
     '& .MuiInputLabel-root': {
-      color: '#9e9e9e',
-      '&.Mui-focused': { color: '#3ea6ff' }
+      color: '#b3b3b3',
+      '&.Mui-focused': { color: '#7b68ee' }
     }
   };
 
@@ -97,7 +97,7 @@ const FieldTeamLogin = () => {
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      backgroundColor: '#121212',
+      backgroundColor: '#2d2d2d',
       p: 2
     }}>
       <Paper elevation={3} sx={{
@@ -107,25 +107,25 @@ const FieldTeamLogin = () => {
         display: 'flex',
         flexDirection: 'column',
         gap: 3,
-        backgroundColor: '#1e1e1e',
-        border: '1px solid #333'
+        backgroundColor: '#2d2d2d',
+        border: '1px solid #f3f4f6'
       }}>
         <Typography variant="h4" component="div" align="center" gutterBottom sx={{ color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0 }}>
           <img src="/images/nokia-new-logo-2023.svg" width={100} height={100} alt="Nokia Logo" />
           <img src="/images/Orange-Logo.png" width={40} height={40} alt="Orange Logo" />
         </Typography>
         <Typography variant="p" component="div" align="center" gutterBottom sx={{ color: '#ffffff', fontSize: '10px' }}>
-          <span style={{ fontWeight: 'bold', color: '#ff9800' }}>OrangeJo</span>-<span style={{ fontWeight: 'bold', color: '#3ea6ff' }}>Nokia</span> FTTH Project
+          <span style={{ fontWeight: 'bold', color: '#ff9800' }}>OrangeJo</span>-<span style={{ fontWeight: 'bold', color: '#7b68ee' }}>Nokia</span> FTTH Project
         </Typography>
 
-        <Divider sx={{ borderColor: '#333' }} />
+        <Divider sx={{ borderColor: '#f3f4f6' }} />
 
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
           <Typography variant="h4" component="h1" align="center" gutterBottom sx={{ color: '#ffffff' }}>
             Field Team Login
           </Typography>
 
-          <Typography variant="body1" align="center" sx={{ color: '#9e9e9e' }}>
+          <Typography variant="body1" align="center" sx={{ color: '#b3b3b3' }}>
             Enter your Team ID and Quiz Code
           </Typography>
         </Box>
@@ -165,7 +165,7 @@ const FieldTeamLogin = () => {
             sx={{
               mt: 2,
               height: 48,
-              backgroundColor: '#3ea6ff',
+              backgroundColor: '#7b68ee',
               '&:hover': { backgroundColor: '#1d4ed8' }
             }}
           >

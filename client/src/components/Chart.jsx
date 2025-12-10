@@ -196,7 +196,7 @@ const Chart = () => {
   };
 
   // if (loading) {
-  //   return <CircularProgress sx={{ color: "#3ea6ff" }} />;
+  //   return <CircularProgress sx={{ color: "#7b68ee" }} />;
   // }
 
   if (error) {
@@ -205,7 +205,7 @@ const Chart = () => {
 
   return (
     <Box sx={{
-      backgroundColor: "#121212",
+      // backgroundColor: "#2d2d2d",
       py: 2,
       borderRadius: "8px",
       maxWidth: '100%',
@@ -225,7 +225,7 @@ const Chart = () => {
               minWidth: isSmallScreen ? '100%' : 150,
             }}
           >
-            <InputLabel sx={{ color: "#9e9e9e" }}>Filter by Score</InputLabel>
+            <InputLabel sx={{ color: "#b3b3b3" }}>Filter by Score</InputLabel>
             <Select
               value={filter}
               onChange={(e) => applyFilter(e.target.value)}
@@ -233,15 +233,15 @@ const Chart = () => {
               sx={{
                 height: "100%",
                 color: "#ffffff",
-                "& .MuiSelect-icon": { color: "#9e9e9e" },
+                "& .MuiSelect-icon": { color: "#b3b3b3" },
                 "&::before": { borderBottom: "1px solid #666" },
-                "&:hover:not(.Mui-disabled)::before": { borderBottom: "1px solid #3ea6ff" },
-                "&::after": { borderBottom: "1px solid #3ea6ff" },
+                "&:hover:not(.Mui-disabled)::before": { borderBottom: "1px solid #7b68ee" },
+                "&::after": { borderBottom: "1px solid #7b68ee" },
               }}
               MenuProps={{
                 PaperProps: {
                   sx: {
-                    backgroundColor: "#333",
+                    backgroundColor: "#2d2d2d",
                     color: "#ffffff",
                   },
                 },
@@ -260,7 +260,7 @@ const Chart = () => {
             minWidth: isSmallScreen ? '100%' : 150,
           }}
         >
-          <InputLabel sx={{ color: "#9e9e9e" }}>Time Range</InputLabel>
+          <InputLabel sx={{ color: "#b3b3b3" }}>Time Range</InputLabel>
           <Select
             multiple
             value={timeRange}
@@ -268,10 +268,10 @@ const Chart = () => {
             label="Time Range"
             sx={{
               color: "#ffffff",
-              "& .MuiSelect-icon": { color: "#9e9e9e" },
+              "& .MuiSelect-icon": { color: "#b3b3b3" },
               "&::before": { borderBottom: "1px solid #666" },
-              "&:hover:not(.Mui-disabled)::before": { borderBottom: "1px solid #3ea6ff" },
-              "&::after": { borderBottom: "1px solid #3ea6ff" },
+              "&:hover:not(.Mui-disabled)::before": { borderBottom: "1px solid #7b68ee" },
+              "&::after": { borderBottom: "1px solid #7b68ee" },
               "& .MuiChip-root": {
                 backgroundColor: "#243d53",
                 color: "#ffffff",
@@ -281,7 +281,7 @@ const Chart = () => {
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: "#333",
+                  backgroundColor: "#2d2d2d",
                   color: "#ffffff",
                 },
               },
@@ -321,7 +321,7 @@ const Chart = () => {
             variant="outlined"
             size="medium"
             sx={{
-              color: "#3ea6ff",
+              color: "#7b68ee",
               width: isSmallScreen ? '50%' : 'auto'
             }}
             onClick={handleReset}

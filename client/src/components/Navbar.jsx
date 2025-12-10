@@ -44,22 +44,22 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
   const menuStyles = {
     '& .MuiPaper-root': {
-      backgroundColor: '#121212',
-      color: '#A1A1A1',
-      borderRadius: '12px',
-      border: `1px solid #4f4f4f`,
+      backgroundColor: '#2d2d2d',
+      color: '#ffffff',
+      borderRadius: '8px',
+      border: `1px solid #3d3d3d`,
       padding: '8px 0',
       overflow: 'hidden',
-      // boxShadow: theme.shadows[24],
     },
     '& .MuiMenuItem-root': {
       padding: '8px 16px',
-      borderRadius: '8px',
+      borderRadius: '6px',
       m: '4px',
       fontSize: '14px',
+      color: '#ffffff',
       '&:hover': {
-        backgroundColor: '#FFFFFF0F',
-        color: '#ffffff',
+        backgroundColor: '#3d3d3d',
+        color: '#7b68ee',
       },
     },
   };
@@ -174,7 +174,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
           <div
             ref={searchBarRef}
             className={`relative ${isMediumSize ? (showSearch ? 'w-[165px]' : 'w-0') : 'w-[300px]'
-              } flex items-center py-2 px-2 gap-1 rounded-full bg-[#121212] border border-[#444] focus-within:border-[#3ea6ff] transition-[width] duration-300 ease-in-out overflow-hidden`}
+              } flex items-center py-2 px-3 gap-2 rounded-lg bg-[#2d2d2d] border border-[#e5e7eb] focus-within:border-[#7b68ee] transition-[width] duration-300 ease-in-out overflow-hidden`}
             style={{
               transitionProperty: 'width, opacity',
               transitionDuration: '300ms',
@@ -182,11 +182,11 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               opacity: isMediumSize ? (showSearch ? 1 : 0) : 1
             }}
           >
-            <MdOutlineSearch className="text-gray-400 text-xl" />
+            <MdOutlineSearch className="text-gray-400 text-lg" />
             <input
               type="text"
               placeholder="Search by SLID..."
-              className="flex-1 w-full outline-none bg-transparent placeholder:text-gray-700 text-gray-100 text-xs"
+              className="flex-1 w-full outline-none bg-transparent placeholder:text-gray-400 text-white text-sm"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -196,7 +196,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="text-gray-400 absolute right-8 hover:text-gray-200"
+                className="text-gray-400 absolute right-8 hover:text-gray-300"
               >
                 <IoMdCloseCircle className="text-xl" />
               </button>
@@ -204,7 +204,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
             {isMediumSize && showSearch && (
               <button
                 onClick={toggleSearch}
-                className="text-gray-400 hover:text-gray-200 absolute right-2"
+                className="text-gray-400 hover:text-gray-300 absolute right-2"
               >
                 <IoIosArrowDropleftCircle className="text-xl" />
               </button>
@@ -216,7 +216,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
         {isMediumSize && !showSearch && (
           <button
             onClick={toggleSearch}
-            className="text-2xl text-gray-400 hover:text-gray-200 transition-colors duration-300"
+            className="text-2xl text-gray-400 hover:text-gray-300 transition-colors duration-300"
           >
             <MdOutlineSearch />
           </button>
@@ -237,7 +237,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#A1A1A1',
+                color: '#b3b3b3',
                 "&:hover": {
                   backgroundColor: "transparent",
                   color: '#ffffff'
@@ -265,8 +265,8 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 sx={{
                   px: 3,
                   py: 2,
-                  backgroundColor: "#333",
-                  borderBottom: "1px solid #444",
+                  backgroundColor: "#2d2d2d",
+                  borderBottom: "1px solid #e5e7eb",
                 }}
               >
                 <Typography variant="h6" sx={{ fontWeight: "bold", color: "#ffffff" }}>
@@ -275,7 +275,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 <Button
                   onClick={handleMobileMenuClose}
                   sx={{
-                    color: "#A1A1A1",
+                    color: "#b3b3b3",
                     minWidth: 0,
                     "&:hover": { color: "#ffffff" }
                   }}
@@ -338,7 +338,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#A1A1A1',
+                color: '#b3b3b3',
                 "&:hover": {
                   backgroundColor: "transparent",
                   color: '#ffffff'
@@ -353,7 +353,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               onClose={handleCloseDocsMenu}
             />
 
-            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#483c3c" }} orientation="vertical" />
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
             <Button
               id="policies-menu-anchor"
@@ -366,7 +366,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#A1A1A1',
+                color: '#b3b3b3',
                 "&:hover": {
                   backgroundColor: "transparent",
                   color: '#ffffff'
@@ -398,7 +398,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               <PoliciesMenu handleClosePoliciesMenu={handleClosePoliciesMenu} />
             </Menu>
 
-            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#483c3c" }} orientation="vertical" />
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
             <Button
               onClick={() => {
@@ -414,7 +414,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: user?.role === 'Admin' ? 'pointer' : 'not-allowed',
-                color: user?.role === 'Admin' ? '#A1A1A1' : '#666',
+                color: user?.role === 'Admin' ? '#6b7280' : '#666',
                 "&:hover": {
                   backgroundColor: "transparent",
                   color: user?.role === 'Admin' ? '#ffffff' : '#666'
@@ -424,7 +424,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               Report Issue
             </Button>
 
-            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#483c3c" }} orientation="vertical" />
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
             <Button
               component={Link}
@@ -437,7 +437,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#A1A1A1',
+                color: '#b3b3b3',
                 "&:hover": {
                   backgroundColor: "transparent",
                   color: '#ffffff'
@@ -449,11 +449,11 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
           </>
         )}
 
-        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#483c3c" }} orientation="vertical" />
+        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
         <NotificationPanel />
 
-        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#483c3c" }} orientation="vertical" />
+        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
         <UserAvatar />
 
@@ -465,7 +465,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
           PaperProps={{
             sx: {
               width: { xs: '100%', sm: '400px' },
-              backgroundColor: '#1e1e1e',
+              backgroundColor: '#2d2d2d',
               color: '#ffffff',
             }
           }}
@@ -476,13 +476,13 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               justifyContent: 'space-between',
               alignItems: 'center',
               p: 2,
-              backgroundColor: '#1e1e1e',
-              borderBottom: '1px solid #444'
+              backgroundColor: '#2d2d2d',
+              borderBottom: '1px solid #e5e7eb'
             }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                 Documentation
               </Typography>
-              <IconButton onClick={() => setDocsDrawerOpen(false)} sx={{ color: '#A1A1A1' }}>
+              <IconButton onClick={() => setDocsDrawerOpen(false)} sx={{ color: '#b3b3b3' }}>
                 <MdClose size={24} />
               </IconButton>
             </Box>
@@ -501,7 +501,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
           PaperProps={{
             sx: {
               width: { xs: '100%', sm: '450px' },
-              backgroundColor: '#1e1e1e',
+              backgroundColor: '#2d2d2d',
               color: '#ffffff',
               // boxShadow: '0 0 20px rgba(0,0,0,0.5)',
             }
@@ -513,13 +513,13 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               justifyContent: 'space-between',
               alignItems: 'center',
               p: 2,
-              backgroundColor: '#1e1e1e',
-              borderBottom: '1px solid #444'
+              backgroundColor: '#2d2d2d',
+              borderBottom: '1px solid #e5e7eb'
             }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                 Policies
               </Typography>
-              <IconButton onClick={() => setPoliciesDrawerOpen(false)} sx={{ color: '#A1A1A1' }}>
+              <IconButton onClick={() => setPoliciesDrawerOpen(false)} sx={{ color: '#b3b3b3' }}>
                 <MdClose size={24} />
               </IconButton>
             </Box>
@@ -533,26 +533,26 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
       {/* Search Results Dropdown */}
       {searchQuery && showResults && (
-        <div className="absolute top-[55px] left-4 w-full max-w-[300px] bg-[#272727] border border-[#444] rounded-lg z-50 overflow-hidden">
-          <div className="flex justify-between items-center p-3 bg-[#333] border-b border-[#444]">
-            <span className="text-sm font-medium text-gray-200">Search Results</span>
+        <div className="absolute top-[55px] left-4 w-full max-w-[300px] bg-[#ffffff] border border-[#e5e7eb] rounded-lg z-50 overflow-hidden">
+          <div className="flex justify-between items-center p-3 bg-[#f3f4f6] border-b border-[#e5e7eb]">
+            <span className="text-sm font-medium text-gray-300">Search Results</span>
             <button
               onClick={() => setShowResults(false)}
-              className="text-gray-400 hover:text-gray-200"
+              className="text-gray-400 hover:text-gray-300"
             >
               <MdClose />
             </button>
           </div>
-          <ul className="max-h-60 overflow-y-auto divide-y divide-[#444]">
+          <ul className="max-h-60 overflow-y-auto divide-y divide-[#e5e7eb]">
             {loading ? (
               <li className="p-4 flex justify-center">
-                <BeatLoader color="#3ea6ff" />
+                <BeatLoader color="#7b68ee" />
               </li>
             ) : searchResults.length > 0 ? (
               searchResults.map((task) => (
                 <li
                   key={task._id}
-                  className="p-3 hover:bg-[#333] cursor-pointer text-gray-100"
+                  className="p-3 hover:bg-[#f3f4f6] cursor-pointer text-white"
                   onClick={() => handleTaskClick(task._id)}
                 >
                   {task.slid}

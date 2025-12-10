@@ -160,7 +160,7 @@ const Archived = () => {
       px: isMobile ? 0 : undefined
     }}>
       <Typography variant="h5" gutterBottom sx={{
-        color: '#3ea6ff',
+        color: '#7b68ee',
         fontWeight: 'bold',
         fontSize: isMobile ? '1.2rem' : '1.5rem',
         mb: 2,
@@ -170,10 +170,10 @@ const Archived = () => {
 
       {/* Search Bar */}
       <Box sx={{
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#2d2d2d',
         p: 2,
         borderRadius: '8px',
-        border: '1px solid #444',
+        border: '1px solid #3d3d3d',
         mb: 2,
         width: '100%',
       }}>
@@ -187,7 +187,7 @@ const Archived = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <MdSearch style={{ color: '#aaaaaa' }} />
+                <MdSearch style={{ color: '#b3b3b3' }} />
               </InputAdornment>
             ),
             endAdornment: searchTerm && (
@@ -196,7 +196,7 @@ const Archived = () => {
                 onClick={() => setSearchTerm('')}
                 sx={{
                   visibility: searchTerm ? 'visible' : 'hidden',
-                  color: '#aaaaaa',
+                  color: '#b3b3b3',
                   '&:hover': {
                     backgroundColor: '#2a2a2a',
                   }
@@ -207,7 +207,7 @@ const Archived = () => {
             ),
             sx: {
               borderRadius: '20px',
-              backgroundColor: '#272727',
+              backgroundColor: '#2d2d2d',
               '& fieldset': {
                 border: 'none',
               },
@@ -218,12 +218,12 @@ const Archived = () => {
                   opacity: 1,
                 },
                 '&:-webkit-autofill': {
-                  WebkitBoxShadow: '0 0 0 100px #272727 inset !important',
+                  WebkitBoxShadow: '0 0 0 100px #ffffff inset !important',
                   WebkitTextFillColor: '#ffffff !important',
                 },
               },
               '& input:-webkit-autofill': {
-                WebkitBoxShadow: '0 0 0 100px #272727 inset !important',
+                WebkitBoxShadow: '0 0 0 100px #ffffff inset !important',
                 WebkitTextFillColor: '#ffffff !important',
               },
             },
@@ -234,12 +234,12 @@ const Archived = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused fieldset': {
-                border: '1px solid #3ea6ff !important',
+                border: '1px solid #7b68ee !important',
               },
             },
             '& .MuiInputBase-input': {
               '&:-webkit-autofill': {
-                WebkitBoxShadow: '0 0 0 100px #272727 inset !important',
+                WebkitBoxShadow: '0 0 0 100px #ffffff inset !important',
                 WebkitTextFillColor: '#ffffff !important',
               },
             },
@@ -255,29 +255,29 @@ const Archived = () => {
         mt: 2,
         maxWidth: '100%',
         overflowX: 'auto',
-        backgroundColor: '#1e1e1e',
-        border: '1px solid #444',
+        backgroundColor: '#2d2d2d',
+        border: '1px solid #3d3d3d',
         "& .MuiTable-root": {
-          backgroundColor: "#272727",
+          backgroundColor: "#2d2d2d",
         },
         "& .MuiTableHead-root": {
-          backgroundColor: "#333",
+          backgroundColor: "#2d2d2d",
           "& .MuiTableCell-root": {
-            color: "#9e9e9e",
+            color: "#b3b3b3",
             fontSize: "0.875rem",
             fontWeight: "bold",
-            borderBottom: "1px solid #444",
+            borderBottom: "1px solid #e5e7eb",
           }
         },
         "& .MuiTableBody-root": {
           "& .MuiTableCell-root": {
-            borderBottom: "1px solid #444",
+            borderBottom: "1px solid #e5e7eb",
             color: "#ffffff",
           },
           "& .MuiTableRow-root": {
-            backgroundColor: "#272727",
+            backgroundColor: "#2d2d2d",
             "&:hover": {
-              backgroundColor: "#333",
+              backgroundColor: "#2d2d2d",
             },
           }
         },
@@ -353,7 +353,7 @@ const Archived = () => {
                               setSelectedTask(archive);
                               setViewDialogOpen(true);
                             }}
-                            sx={{ color: '#3ea6ff' }}
+                            sx={{ color: '#7b68ee' }}
                           >
                             <MdVisibility />
                           </IconButton>
@@ -363,7 +363,7 @@ const Archived = () => {
                             size="small"
                             color="primary"
                             onClick={() => restoreFromArchivesToTasks(archive._id)}
-                            sx={{ color: '#3ea6ff' }}
+                            sx={{ color: '#7b68ee' }}
                           >
                             <FaUndoAlt />
                           </IconButton>

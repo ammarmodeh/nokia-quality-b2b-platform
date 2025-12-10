@@ -48,10 +48,10 @@ const ResponsibilityCategoriesDialog = () => {
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             borderRadius: isMobile ? 0 : '8px',
-            border: '1px solid #444',
+            border: '1px solid #3d3d3d',
           },
         }}
       >
@@ -59,11 +59,11 @@ const ResponsibilityCategoriesDialog = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FaFileAlt color="#3ea6ff" size={isMobile ? 16 : 20} />
+            <FaFileAlt color="#7b68ee" size={isMobile ? 16 : 20} />
             <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontSize: isMobile ? 13 : 20 }}>
               Responsibility Categories Guide
             </Typography>
@@ -88,7 +88,7 @@ const ResponsibilityCategoriesDialog = () => {
             width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#444',
+            backgroundColor: '#e5e7eb',
             borderRadius: '2px',
           },
         }}>
@@ -101,7 +101,7 @@ const ResponsibilityCategoriesDialog = () => {
           {/* Activation Team */}
           <Box sx={{ mb: 3 }}>
             <Chip label="Activation Team" sx={{
-              backgroundColor: '#3ea6ff',
+              backgroundColor: '#7b68ee',
               color: '#ffffff',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
@@ -235,15 +235,15 @@ const ResponsibilityCategoriesDialog = () => {
             </List>
           </Box>
 
-          <Divider sx={{ backgroundColor: '#444', my: 2 }} />
+          <Divider sx={{ backgroundColor: '#e5e7eb', my: 2 }} />
 
-          <Typography variant="body2" sx={{ color: '#aaaaaa', fontStyle: 'italic' }}>
+          <Typography variant="body2" sx={{ color: '#b3b3b3', fontStyle: 'italic' }}>
             Note: Responsibility assignment is based on thorough investigation and evidence. When in doubt, we default to &quot;Can&apos;t Detected&quot; to avoid incorrect attributions.
           </Typography>
         </DialogContent>
 
         <DialogActions sx={{
-          borderTop: '1px solid #444',
+          borderTop: '1px solid #e5e7eb',
           padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button

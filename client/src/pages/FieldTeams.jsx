@@ -786,11 +786,11 @@ const FieldTeamForm = () => {
         px: isMobile ? 0 : undefined
       }}
     >
-      <Box sx={{ backgroundColor: '#121212', minHeight: '100vh', py: 3, color: '#ffffff' }}>
+      <Box sx={{ minHeight: '100vh', py: 3, color: '#ffffff' }}>
         {loading && <Typography>Loading...</Typography>}
         {errorMessage && <Typography color="error">{errorMessage}</Typography>}
         <AddTeamForm onSubmit={handleAddTeam} errorMessage={errorMessage} user={user} />
-        <Divider sx={{ my: 4, backgroundColor: '#444' }} />
+        <Divider sx={{ my: 4, backgroundColor: '#e5e7eb' }} />
         <Box sx={{ mt: 4 }}>
           <Stack direction="row" flexDirection={'row'} justifyContent="space-between" gap={2} alignItems="center" sx={{ mb: 2 }}>
             <Box
@@ -803,10 +803,10 @@ const FieldTeamForm = () => {
                 px: 2,
                 gap: 1,
                 borderRadius: '999px',
-                backgroundColor: '#121212',
-                border: '1px solid #444',
+                backgroundColor: '#2d2d2d',
+                border: '1px solid #3d3d3d',
                 '&:focus-within': {
-                  borderColor: '#3ea6ff',
+                  borderColor: '#7b68ee',
                 },
               }}
             >
@@ -844,7 +844,7 @@ const FieldTeamForm = () => {
                     <IconButton
                       size="small"
                       onClick={() => setSearchText('')}
-                      sx={{ color: '#9e9e9e', '&:hover': { color: '#ffffff' } }}
+                      sx={{ color: '#b3b3b3', '&:hover': { color: '#ffffff' } }}
                     >
                       <MdClose className="text-xl" />
                     </IconButton>
@@ -872,7 +872,7 @@ const FieldTeamForm = () => {
               width: '100%',
               height: '400px',
               overflow: 'hidden',
-              backgroundColor: '#272727',
+              backgroundColor: '#2d2d2d',
               borderRadius: 1,
               display: 'flex',
               flexDirection: 'column',
@@ -893,17 +893,17 @@ const FieldTeamForm = () => {
                 border: 0,
                 color: '#ffffff',
                 '& .MuiDataGrid-main': {
-                  backgroundColor: '#272727',
+                  backgroundColor: '#2d2d2d',
                 },
                 '& .MuiDataGrid-columnHeaders': {
-                  backgroundColor: '#333',
-                  color: '#9e9e9e',
+                  backgroundColor: '#2d2d2d',
+                  color: '#b3b3b3',
                   fontSize: '0.875rem',
                   fontWeight: 'bold',
-                  borderBottom: '1px solid #444',
+                  borderBottom: '1px solid #e5e7eb',
                 },
                 '& .MuiDataGrid-columnHeader': {
-                  backgroundColor: '#333',
+                  backgroundColor: '#2d2d2d',
                   "& .MuiDataGrid-columnHeaderTitleContainerContent": {
                     "& span": {
                       color: '#848484',
@@ -911,22 +911,22 @@ const FieldTeamForm = () => {
                   }
                 },
                 '& .MuiDataGrid-cell': {
-                  borderBottom: '1px solid #444',
+                  borderBottom: '1px solid #e5e7eb',
                   "& span": {
                     color: '#ffffff99',
                   }
                 },
                 '& .MuiDataGrid-row': {
-                  backgroundColor: '#272727',
+                  backgroundColor: '#2d2d2d',
                   '&:hover': {
-                    backgroundColor: '#333',
+                    backgroundColor: '#2d2d2d',
                   },
                 },
                 '& .MuiDataGrid-footerContainer': {
                   minHeight: '64px',
-                  backgroundColor: '#333',
+                  backgroundColor: '#2d2d2d',
                   color: '#ffffff',
-                  borderTop: '1px solid #444',
+                  borderTop: '1px solid #e5e7eb',
                   '& .MuiTablePagination-root': {
                     color: '#ffffff',
                   },
@@ -942,11 +942,11 @@ const FieldTeamForm = () => {
                     borderRadius: '4px',
                   },
                   '&::-webkit-scrollbar-track': {
-                    backgroundColor: '#444',
+                    backgroundColor: '#e5e7eb',
                   },
                 },
                 '& .MuiDataGrid-scrollbarFiller': {
-                  backgroundColor: '#333',
+                  backgroundColor: '#2d2d2d',
                 },
               }}
             />
@@ -995,10 +995,10 @@ const FieldTeamForm = () => {
           maxWidth="md" // Reduced from lg to md since we're showing less information
           sx={{
             "& .MuiDialog-paper": {
-              backgroundColor: '#1e1e1e',
+              backgroundColor: '#2d2d2d',
               boxShadow: 'none',
               borderRadius: isMobile ? 0 : '8px',
-              border: isMobile ? 'none' : '1px solid #444',
+              border: isMobile ? 'none' : '1px solid #e5e7eb',
               margin: 0,
               width: isMobile ? '100%' : '60%', // Reduced width
               maxWidth: '100%'
@@ -1006,9 +1006,9 @@ const FieldTeamForm = () => {
           }}
         >
           <DialogTitle sx={{
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
-            borderBottom: '1px solid #444',
+            borderBottom: '1px solid #e5e7eb',
             padding: isMobile ? '12px 16px' : '16px 24px',
             fontWeight: 500,
             position: 'sticky',
@@ -1018,14 +1018,14 @@ const FieldTeamForm = () => {
             Evaluation History - {teams.find(team => team._id === selectedTeamId)?.teamName || 'Team'}
           </DialogTitle>
           <DialogContent sx={{
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             padding: isMobile ? '12px 16px' : '20px 24px',
             '&::-webkit-scrollbar': {
               width: '4px',
             },
             '&::-webkit-scrollbar-thumb': {
-              backgroundColor: '#444',
+              backgroundColor: '#e5e7eb',
               borderRadius: '2px',
             },
             "&.MuiDialogContent-root": {
@@ -1033,13 +1033,13 @@ const FieldTeamForm = () => {
             }
           }}>
             {evaluationHistory.length === 0 ? (
-              <Typography variant="body1" sx={{ color: '#aaaaaa' }}>No evaluation history available</Typography>
+              <Typography variant="body1" sx={{ color: '#b3b3b3' }}>No evaluation history available</Typography>
             ) : (
               <List sx={{ width: '100%' }}>
                 {evaluationHistory.map((quiz, index) => (
                   <ListItem key={quiz._id} sx={{
                     padding: isMobile ? '8px 0' : '12px 0',
-                    borderBottom: index < evaluationHistory.length - 1 ? '1px solid #444' : 'none',
+                    borderBottom: index < evaluationHistory.length - 1 ? '1px solid #e5e7eb' : 'none',
                     flexDirection: 'column',
                     alignItems: 'flex-start'
                   }}>
@@ -1054,7 +1054,7 @@ const FieldTeamForm = () => {
                           <Typography
                             variant={isMobile ? "caption" : "body2"}
                             component="span"
-                            sx={{ color: '#aaaaaa' }}
+                            sx={{ color: '#b3b3b3' }}
                           >
                             Score: <Chip
                               label={`${quiz.score} (${quiz.percentage}%)`}
@@ -1078,8 +1078,8 @@ const FieldTeamForm = () => {
             )}
           </DialogContent>
           <DialogActions sx={{
-            backgroundColor: '#1e1e1e',
-            borderTop: '1px solid #444',
+            backgroundColor: '#2d2d2d',
+            borderTop: '1px solid #e5e7eb',
             padding: isMobile ? '8px 16px' : '12px 24px',
             position: 'sticky',
             bottom: 0
@@ -1108,10 +1108,10 @@ const FieldTeamForm = () => {
           maxWidth="md"
           sx={{
             "& .MuiDialog-paper": {
-              backgroundColor: '#1e1e1e',
+              backgroundColor: '#2d2d2d',
               boxShadow: 'none',
               borderRadius: isMobile ? 0 : '8px',
-              border: isMobile ? 'none' : '1px solid #444',
+              border: isMobile ? 'none' : '1px solid #e5e7eb',
               margin: 0,
               width: isMobile ? '100%' : '70%',
               maxWidth: '100%'
@@ -1119,9 +1119,9 @@ const FieldTeamForm = () => {
           }}
         >
           <DialogTitle sx={{
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
-            borderBottom: '1px solid #444',
+            borderBottom: '1px solid #e5e7eb',
             padding: isMobile ? '12px 16px' : '16px 24px',
             fontWeight: 500,
             position: 'sticky',
@@ -1131,14 +1131,14 @@ const FieldTeamForm = () => {
             State Logs
           </DialogTitle>
           <DialogContent sx={{
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             padding: isMobile ? '12px 16px' : '20px 24px',
             '&::-webkit-scrollbar': {
               width: '4px',
             },
             '&::-webkit-scrollbar-thumb': {
-              backgroundColor: '#444',
+              backgroundColor: '#e5e7eb',
               borderRadius: '2px',
             },
             "&.MuiDialogContent-root": {
@@ -1146,42 +1146,42 @@ const FieldTeamForm = () => {
             }
           }}>
             {selectedLogs.length === 0 ? (
-              <Typography variant="body1" sx={{ color: '#aaaaaa' }}>No logs available</Typography>
+              <Typography variant="body1" sx={{ color: '#b3b3b3' }}>No logs available</Typography>
             ) : (
               <List>
                 {selectedLogs.map((log, index) => (
                   <Box key={log._id?.$oid || index} sx={{ mb: isMobile ? 2 : 3 }}>
                     <Box sx={{
-                      backgroundColor: '#272727',
+                      backgroundColor: '#2d2d2d',
                       p: isMobile ? 1.5 : 2,
                       borderRadius: '4px',
-                      borderLeft: '3px solid #3ea6ff'
+                      borderLeft: '3px solid #7b68ee'
                     }}>
-                      <Typography variant={isMobile ? "body2" : "subtitle1"} sx={{ color: '#3ea6ff', mb: 1 }}>
+                      <Typography variant={isMobile ? "body2" : "subtitle1"} sx={{ color: '#7b68ee', mb: 1 }}>
                         {log.state}
                       </Typography>
                       <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#ffffff', mb: 0.5 }}>
-                        <Box component="span" sx={{ color: '#aaaaaa' }}>Reason:</Box> {log.reason || 'N/A'}
+                        <Box component="span" sx={{ color: '#b3b3b3' }}>Reason:</Box> {log.reason || 'N/A'}
                       </Typography>
                       <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#ffffff', mb: 0.5 }}>
-                        <Box component="span" sx={{ color: '#aaaaaa' }}>Start Date:</Box> {log.startDate ? new Date(log.startDate).toLocaleString() : 'N/A'}
+                        <Box component="span" sx={{ color: '#b3b3b3' }}>Start Date:</Box> {log.startDate ? new Date(log.startDate).toLocaleString() : 'N/A'}
                       </Typography>
                       <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#ffffff', mb: 0.5 }}>
-                        <Box component="span" sx={{ color: '#aaaaaa' }}>End Date:</Box> {log.endDate ? new Date(log.endDate).toLocaleString() : 'N/A'}
+                        <Box component="span" sx={{ color: '#b3b3b3' }}>End Date:</Box> {log.endDate ? new Date(log.endDate).toLocaleString() : 'N/A'}
                       </Typography>
                       <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#ffffff' }}>
-                        <Box component="span" sx={{ color: '#aaaaaa' }}>Changed At:</Box> {new Date(log.changedAt).toLocaleString()}
+                        <Box component="span" sx={{ color: '#b3b3b3' }}>Changed At:</Box> {new Date(log.changedAt).toLocaleString()}
                       </Typography>
                     </Box>
-                    {index < selectedLogs.length - 1 && <Divider sx={{ mt: isMobile ? 1 : 2, backgroundColor: '#444' }} />}
+                    {index < selectedLogs.length - 1 && <Divider sx={{ mt: isMobile ? 1 : 2, backgroundColor: '#e5e7eb' }} />}
                   </Box>
                 ))}
               </List>
             )}
           </DialogContent>
           <DialogActions sx={{
-            backgroundColor: '#1e1e1e',
-            borderTop: '1px solid #444',
+            backgroundColor: '#2d2d2d',
+            borderTop: '1px solid #e5e7eb',
             padding: isMobile ? '8px 16px' : '12px 24px',
             position: 'sticky',
             bottom: 0
@@ -1210,10 +1210,10 @@ const FieldTeamForm = () => {
           maxWidth="sm"
           sx={{
             "& .MuiDialog-paper": {
-              backgroundColor: '#1e1e1e',
+              backgroundColor: '#2d2d2d',
               boxShadow: 'none',
               borderRadius: isMobile ? 0 : '8px',
-              border: isMobile ? 'none' : '1px solid #444',
+              border: isMobile ? 'none' : '1px solid #e5e7eb',
               margin: 0,
               width: isMobile ? '100%' : '70%',
               maxWidth: '100%'
@@ -1221,9 +1221,9 @@ const FieldTeamForm = () => {
           }}
         >
           <DialogTitle sx={{
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
-            borderBottom: '1px solid #444',
+            borderBottom: '1px solid #e5e7eb',
             padding: isMobile ? '12px 16px' : '16px 24px',
             fontWeight: 500,
             position: 'sticky',
@@ -1233,7 +1233,7 @@ const FieldTeamForm = () => {
             Mark Team as On Leave
           </DialogTitle>
           <DialogContent sx={{
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             padding: isMobile ? '12px 16px' : '20px 24px',
             "&.MuiDialogContent-root": {
@@ -1254,21 +1254,21 @@ const FieldTeamForm = () => {
                 },
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#aaaaaa',
+                  color: '#b3b3b3',
                   fontSize: isMobile ? '0.875rem' : '1rem'
                 },
                 '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#3ea6ff',
+                  color: '#7b68ee',
                 },
               }}
             />
@@ -1289,21 +1289,21 @@ const FieldTeamForm = () => {
                 },
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#aaaaaa',
+                  color: '#b3b3b3',
                   fontSize: isMobile ? '0.875rem' : '1rem'
                 },
                 '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#3ea6ff',
+                  color: '#7b68ee',
                 },
               }}
             />
@@ -1323,28 +1323,28 @@ const FieldTeamForm = () => {
                 },
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#aaaaaa',
+                  color: '#b3b3b3',
                   fontSize: isMobile ? '0.875rem' : '1rem'
                 },
                 '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#3ea6ff',
+                  color: '#7b68ee',
                 },
               }}
             />
           </DialogContent>
           <DialogActions sx={{
-            backgroundColor: '#1e1e1e',
-            borderTop: '1px solid #444',
+            backgroundColor: '#2d2d2d',
+            borderTop: '1px solid #e5e7eb',
             padding: isMobile ? '8px 16px' : '12px 24px',
             position: 'sticky',
             bottom: 0
@@ -1365,7 +1365,7 @@ const FieldTeamForm = () => {
               onClick={handleConfirmOnLeave}
               size={isMobile ? "small" : "medium"}
               sx={{
-                color: '#3ea6ff',
+                color: '#7b68ee',
                 '&:hover': {
                   backgroundColor: 'rgba(62, 166, 255, 0.1)',
                 }
@@ -1385,10 +1385,10 @@ const FieldTeamForm = () => {
           maxWidth="sm"
           sx={{
             "& .MuiDialog-paper": {
-              backgroundColor: '#1e1e1e',
+              backgroundColor: '#2d2d2d',
               boxShadow: 'none',
               borderRadius: isMobile ? 0 : '8px',
-              border: isMobile ? 'none' : '1px solid #444',
+              border: isMobile ? 'none' : '1px solid #e5e7eb',
               margin: 0,
               width: isMobile ? '100%' : '70%',
               maxWidth: '100%'
@@ -1396,9 +1396,9 @@ const FieldTeamForm = () => {
           }}
         >
           <DialogTitle sx={{
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
-            borderBottom: '1px solid #444',
+            borderBottom: '1px solid #e5e7eb',
             padding: isMobile ? '12px 16px' : '16px 24px',
             fontWeight: 500,
             position: 'sticky',
@@ -1408,7 +1408,7 @@ const FieldTeamForm = () => {
             Mark Team as Resigned
           </DialogTitle>
           <DialogContent sx={{
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             padding: isMobile ? '12px 16px' : '20px 24px',
             "&.MuiDialogContent-root": {
@@ -1428,28 +1428,28 @@ const FieldTeamForm = () => {
                 },
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#444',
+                    borderColor: '#3d3d3d',
                   },
                   '&:hover fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#3ea6ff',
+                    borderColor: '#7b68ee',
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#aaaaaa',
+                  color: '#b3b3b3',
                   fontSize: isMobile ? '0.875rem' : '1rem'
                 },
                 '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#3ea6ff',
+                  color: '#7b68ee',
                 },
               }}
             />
           </DialogContent>
           <DialogActions sx={{
-            backgroundColor: '#1e1e1e',
-            borderTop: '1px solid #444',
+            backgroundColor: '#2d2d2d',
+            borderTop: '1px solid #e5e7eb',
             padding: isMobile ? '8px 16px' : '12px 24px',
             position: 'sticky',
             bottom: 0
@@ -1470,7 +1470,7 @@ const FieldTeamForm = () => {
               onClick={handleConfirmResigned}
               size={isMobile ? "small" : "medium"}
               sx={{
-                color: '#3ea6ff',
+                color: '#7b68ee',
                 '&:hover': {
                   backgroundColor: 'rgba(62, 166, 255, 0.1)',
                 }

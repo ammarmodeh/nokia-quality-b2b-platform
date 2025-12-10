@@ -35,7 +35,7 @@ const Register = () => {
         {/* Left side branding */}
         <div className="flex flex-col items-center justify-center md:w-1/2">
           <div className="flex flex-col items-center justify-center gap-5 md:gap-y-10">
-            <span className="flex gap-1 py-1 px-3 border rounded-full text-sm md:text-base border-transparent text-gray-600">
+            <span className="flex gap-1 py-1 px-3 border rounded-full text-sm md:text-base border-transparent text-gray-400">
               Manage all your tasks in one place!
             </span>
             <p className="flex flex-col gap-0 md:gap-4 text-4xl md:text-6xl font-black text-center text-blue-700">
@@ -49,13 +49,13 @@ const Register = () => {
         <div className="w-full md:w-1/2 p-5 flex justify-center items-center">
           <form
             onSubmit={handleSubmit(submitHandler)}
-            className="form-container w-full max-w-md flex flex-col gap-y-6 bg-white p-8 rounded-lg shadow-md"
+            className="form-container w-full max-w-md flex flex-col gap-y-6 bg-[#2d2d2d] p-8 rounded-lg shadow-md"
           >
             <div>
               <p className="text-blue-600 text-3xl font-bold text-center">
                 Register
               </p>
-              <p className="text-center text-base text-gray-700">
+              <p className="text-center text-base text-gray-300">
                 Create your account.
               </p>
             </div>
@@ -116,7 +116,7 @@ const Register = () => {
                 <Button
                   type="button"
                   label="Back"
-                  className="w-full md:w-auto h-10 bg-gray-300 text-gray-700 rounded-md cursor-pointer"
+                  className="w-full md:w-auto h-10 bg-gray-300 text-gray-300 rounded-md cursor-pointer"
                   onClick={prevStep}
                 />
               )}

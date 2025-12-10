@@ -27,7 +27,7 @@ const statusConfig = {
   Todo: { icon: <HourglassEmpty className="text-yellow-600" />, color: "bg-yellow-100 text-yellow-800" },
   "In Progress": { icon: <PlayCircle className="text-blue-600" />, color: "bg-blue-100 text-blue-800" },
   Closed: { icon: <CheckCircle className="text-green-600" />, color: "bg-green-100 text-green-800" },
-  Cancelled: { icon: <Cancel className="text-gray-500" />, color: "bg-gray-100 text-gray-700" },
+  Cancelled: { icon: <Cancel className="text-gray-500" />, color: "bg-[#2d2d2d] text-gray-300" },
 };
 
 const AssignedToMeTaskCard = ({
@@ -210,7 +210,7 @@ const AssignedToMeTaskCard = ({
 
   return (
     <>
-      <Paper elevation={2} className="w-full p-5 rounded-lg border border-gray-400 hover:shadow-md transition-all duration-300" sx={{ backgroundColor: "#0200007d" }}>
+      <Paper elevation={2} className="w-full p-5 rounded-lg border hover:shadow-md transition-all duration-300" sx={{ backgroundColor: "#2d2d2d", borderColor: "#3d3d3d" }}>
         <Stack spacing={2} sx={{ height: "100%", justifyContent: "space-between" }}>
           <Stack>
             <div className="flex justify-between items-center">
@@ -242,7 +242,7 @@ const AssignedToMeTaskCard = ({
                   onClose={handleMenuClose}
                   PaperProps={{
                     sx: {
-                      backgroundColor: "#333",
+                      backgroundColor: "#2d2d2d",
                       color: "#ffffff",
                     },
                   }}
@@ -271,7 +271,7 @@ const AssignedToMeTaskCard = ({
                   onClose={handleMenuClose}
                   PaperProps={{
                     sx: {
-                      backgroundColor: "#333",
+                      backgroundColor: "#2d2d2d",
                       color: "#ffffff",
                     },
                   }}
@@ -298,7 +298,7 @@ const AssignedToMeTaskCard = ({
 
             <div className="flex items-center gap-2 mt-3">
               <h4 className="text-lg font-semibold text-[#bdb5b5]">{task?.slid}</h4>
-              {/* <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md ${statusConfig[task?.status]?.color || "bg-gray-200 text-gray-700"}`}> */}
+              {/* <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md ${statusConfig[task?.status]?.color || "bg-gray-200 text-gray-300"}`}> */}
               {activeStep === 0 ? <div>{statusConfig['Todo'].icon}</div> : activeStep === subtasks.length ? <div>{statusConfig['Closed'].icon}</div> : <div>{statusConfig['In Progress'].icon}</div>}
               {/* </div> */}
             </div>
@@ -317,7 +317,7 @@ const AssignedToMeTaskCard = ({
             <div className="mt-3 text-xs text-gray-400">
               <div>
                 <p className="text-sm text-[#bdb5b5] font-medium">Progress: ({(100 / subtasks.length) * activeStep}%)</p>
-                <LinearProgress variant="determinate" value={(100 / subtasks.length) * activeStep} sx={{ backgroundColor: "#333", "& .MuiLinearProgress-bar": { backgroundColor: "#3ea6ff" } }} />
+                <LinearProgress variant="determinate" value={(100 / subtasks.length) * activeStep} sx={{ backgroundColor: "#2d2d2d", "& .MuiLinearProgress-bar": { backgroundColor: "#7b68ee" } }} />
                 {user && (user._id === task.assignedTo[0]._id || user._id === task.assignedTo[0]) && (
                   <Button
                     variant="contained"
@@ -341,7 +341,7 @@ const AssignedToMeTaskCard = ({
         onClose={handleNoteDialogClose}
         PaperProps={{
           sx: {
-            backgroundColor: "#121212", // Darker background for better contrast
+            backgroundColor: "#2d2d2d", // Darker background for better contrast
             color: "#ffffff", // White text
             borderRadius: "8px", // Rounded corners
             boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.5)", // Subtle shadow
@@ -392,8 +392,8 @@ const AssignedToMeTaskCard = ({
                         "& .MuiInputBase-input": { color: "#ffffff" }, // White text for input
                         "& .MuiOutlinedInput-root": {
                           "& fieldset": { borderColor: "#555" }, // Border color
-                          "&:hover fieldset": { borderColor: "#3ea6ff" }, // Hover border color
-                          "&.Mui-focused fieldset": { borderColor: "#3ea6ff" }, // Focus border color
+                          "&:hover fieldset": { borderColor: "#7b68ee" }, // Hover border color
+                          "&.Mui-focused fieldset": { borderColor: "#7b68ee" }, // Focus border color
                         },
                       }}
                       InputLabelProps={{
@@ -427,7 +427,7 @@ const AssignedToMeTaskCard = ({
                             mt: 1,
                             mr: 1,
                             color: "#ffffff", // White text
-                            "&:hover": { backgroundColor: "#333" }, // Dark background on hover
+                            "&:hover": { backgroundColor: "#2d2d2d" }, // Dark background on hover
                             "&:focus": { outline: "none" }, // Remove focus outline
                             transition: "background-color 0.2s ease", // Smooth transition
                           }}
@@ -446,7 +446,7 @@ const AssignedToMeTaskCard = ({
                 elevation={0}
                 sx={{
                   p: 3,
-                  backgroundColor: "#1e1e1e", // Dark background
+                  backgroundColor: "#2d2d2d", // Dark background
                   color: "#ffffff", // White text
                   borderRadius: "8px", // Rounded corners
                   boxShadow: "0px 2px 10px rgba(0, 0, 0, 0.3)", // Subtle shadow
@@ -459,7 +459,7 @@ const AssignedToMeTaskCard = ({
                     mt: 1,
                     mr: 1,
                     color: "#ffffff", // White text
-                    "&:hover": { backgroundColor: "#333" }, // Dark background on hover
+                    "&:hover": { backgroundColor: "#2d2d2d" }, // Dark background on hover
                     "&:focus": { outline: "none" }, // Remove focus outline
                     transition: "background-color 0.2s ease", // Smooth transition
                   }}
@@ -475,7 +475,7 @@ const AssignedToMeTaskCard = ({
             onClick={handleNoteDialogClose}
             sx={{
               color: "#ffffff", // White text
-              "&:hover": { backgroundColor: "#333" }, // Dark background on hover
+              "&:hover": { backgroundColor: "#2d2d2d" }, // Dark background on hover
               "&:focus": { outline: "none" }, // Remove focus outline
               transition: "background-color 0.2s ease", // Smooth transition
             }}
@@ -486,7 +486,7 @@ const AssignedToMeTaskCard = ({
             onClick={handleSaveNote}
             sx={{
               color: "#ffffff", // White text
-              "&:hover": { backgroundColor: "#333" }, // Dark background on hover
+              "&:hover": { backgroundColor: "#2d2d2d" }, // Dark background on hover
               "&:focus": { outline: "none" }, // Remove focus outline
               transition: "background-color 0.2s ease", // Smooth transition
             }}

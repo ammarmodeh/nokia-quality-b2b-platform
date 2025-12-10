@@ -44,7 +44,7 @@ const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
     },
     '& .MuiInputBase-input.Mui-readOnly': {
       cursor: 'not-allowed',
-      color: '#b3b3b3 !important',
+      color: '#6b7280 !important',
     },
   };
 
@@ -55,7 +55,7 @@ const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)}>
-      <Typography variant="h4" fontWeight="bold" textAlign="left" mb={5} color="#3ea6ff">
+      <Typography variant="h4" fontWeight="bold" textAlign="left" mb={5} color="#7b68ee">
         Add Field Team Information
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: isMobileScreen ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 3 }}>
@@ -135,7 +135,7 @@ const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
             },
             '& .MuiInputBase-input.Mui-disabled': {
               cursor: 'not-allowed',
-              color: '#b3b3b3 !important',
+              color: '#6b7280 !important',
             },
           }}
         >
@@ -150,7 +150,7 @@ const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
             }}
           >
             {FIELDTEAMSCOMPANY.map((list, index) => (
-              <option key={index} value={list} style={{ backgroundColor: '#1e1e1e', color: '#ffffff' }}>
+              <option key={index} value={list} style={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
                 {list}
               </option>
             ))}
@@ -210,12 +210,12 @@ const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
         endIcon={<Add />}
         disabled={user.role !== 'Admin'}
         sx={{
-          backgroundColor: '#3ea6ff',
-          color: '#121212',
+          backgroundColor: '#7b68ee',
+          color: '#f9fafb',
           '&:hover': { backgroundColor: '#1d4ed8' },
           '&.Mui-disabled': {
             cursor: 'not-allowed',
-            backgroundColor: '#3ea6ff80',
+            backgroundColor: '#7b68ee80',
           }
         }}
       >

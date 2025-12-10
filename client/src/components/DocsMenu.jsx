@@ -11,8 +11,8 @@ const MenuHeader = ({ title, icon }) => (
     sx={{
       px: 3,
       py: 1.5,
-      backgroundColor: "#1e1e1e",
-      borderBottom: "1px solid #444",
+      backgroundColor: "#2d2d2d",
+      borderBottom: "1px solid #e5e7eb",
     }}
   >
     {icon}
@@ -32,14 +32,14 @@ const MenuLink = ({ title, tooltipTitle, onClick }) => (
       m: 1,
       "&:hover": {
         backgroundColor: "#FFFFFF0F",
-        color: "#3ea6ff",
+        color: "#7b68ee",
       },
     }}
   >
     <Tooltip title={tooltipTitle} arrow>
       <Stack direction="row" alignItems="center" spacing={2}>
         <FaFileAlt style={{
-          color: "#3ea6ff",
+          color: "#7b68ee",
           fontSize: 16,
           flexShrink: 0
         }} />
@@ -171,7 +171,7 @@ export const DocsMenu = ({ anchorEl, open, onClose, isDrawer = false }) => {
     <div>
       <MenuHeader
         title="Shared with Field Teams"
-        icon={<FaFileAlt style={{ color: "#3ea6ff", fontSize: 16 }} />}
+        icon={<FaFileAlt style={{ color: "#7b68ee", fontSize: 16 }} />}
       />
       <Box sx={{
         flex: 1,
@@ -181,7 +181,7 @@ export const DocsMenu = ({ anchorEl, open, onClose, isDrawer = false }) => {
           width: '6px',
         },
         '&::-webkit-scrollbar-thumb': {
-          backgroundColor: '#444',
+          backgroundColor: '#e5e7eb',
           borderRadius: '3px',
         },
       }}>
@@ -195,11 +195,11 @@ export const DocsMenu = ({ anchorEl, open, onClose, isDrawer = false }) => {
         ))}
       </Box>
 
-      <Divider sx={{ mt: 1, backgroundColor: "#444" }} />
+      <Divider sx={{ mt: 1, backgroundColor: "#e5e7eb" }} />
 
       <MenuHeader
         title="QoS-Related"
-        icon={<FaFileAlt style={{ color: "#3ea6ff", fontSize: 16 }} />}
+        icon={<FaFileAlt style={{ color: "#7b68ee", fontSize: 16 }} />}
       />
       <Box sx={{
         flex: 1,
@@ -209,7 +209,7 @@ export const DocsMenu = ({ anchorEl, open, onClose, isDrawer = false }) => {
           width: '6px',
         },
         '&::-webkit-scrollbar-thumb': {
-          backgroundColor: '#444',
+          backgroundColor: '#e5e7eb',
           borderRadius: '3px',
         },
       }}>
@@ -255,11 +255,11 @@ export const DocsMenu = ({ anchorEl, open, onClose, isDrawer = false }) => {
         }}
         sx={{
           '& .MuiPaper-root': {
-            backgroundColor: '#121212',
-            color: '#A1A1A1',
+            backgroundColor: '#2d2d2d',
+            color: '#b3b3b3',
             width: '300px',
             borderRadius: '12px',
-            border: '1px solid #444',
+            border: '1px solid #3d3d3d',
             padding: '0',
             maxHeight: 'calc(100vh - 100px)',
             overflow: 'hidden',

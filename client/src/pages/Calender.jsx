@@ -10,20 +10,42 @@ import {
 } from "date-fns";
 import { getCustomWeekNumber } from "../utils/helpers";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { Paper, Typography, Select, MenuItem, FormControl, InputLabel, useMediaQuery, Box } from "@mui/material";
+import { Paper, Typography, Select, MenuItem, FormControl, useMediaQuery, Box } from "@mui/material";
+import { CalendarToday, CheckCircle } from "@mui/icons-material";
 
-// Dark theme
-const darkTheme = createTheme({
+// ClickUp-inspired light theme
+const clickUpTheme = createTheme({
   palette: {
-    mode: "dark",
+    mode: "light",
     background: {
-      default: "#121212",
-      paper: "#1e1e1e",
+      default: "#f9fafb",
+      paper: "#ffffff",
+    },
+    primary: {
+      main: "#7b68ee",
+      light: "#9d8df1",
+      dark: "#5e4ecf",
     },
     text: {
-      primary: "#ffffff",
-      secondary: "#b3b3b3",
+      primary: "#1f2937",
+      secondary: "#6b7280",
     },
+    divider: "#e5e7eb",
+  },
+  typography: {
+    fontFamily: '"Inter", "Rubik", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    h5: {
+      fontWeight: 600,
+      fontSize: "1.5rem",
+      letterSpacing: "-0.01em",
+    },
+    body2: {
+      fontSize: "0.875rem",
+      lineHeight: 1.5,
+    },
+  },
+  shape: {
+    borderRadius: 8,
   },
 });
 
@@ -73,69 +95,164 @@ const CalendarPage = () => {
   }), [weeks, isWeekSpent, selectedYear, formatWeekRange, currentWeek]);
 
   return (
-    <ThemeProvider theme={darkTheme}>
+    // <ThemeProvider theme={clickUpTheme}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        backgroundColor: 'background.default',
+        py: 3,
+        px: isMobile ? 2 : 3,
+      }}
+    >
       <Box
         sx={{
-          maxWidth: '1100px',
+          maxWidth: '1000px',
           mx: 'auto',
-          p: 2,
-          px: isMobile ? 0 : undefined
         }}
-        style={{ backgroundColor: darkTheme.palette.background.default, color: "#3ea6ff" }}>
-        <Typography variant="h4" gutterBottom>
-          Yearly Calendar with Custom Weeks
-        </Typography>
-        <Typography variant="body2" color="textSecondary" gutterBottom>
-          This calendar follows the <strong>custom week standard</strong>. The first week of the year
-          is the one that contains <strong>January 1st</strong>, with weeks starting on <strong>Sunday</strong>.
-        </Typography>
+      >
+        {/* Header */}
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+            <CalendarToday sx={{ color: 'primary.main', fontSize: 28 }} />
+            <Typography
+              variant="h5"
+              sx={{
+                color: 'text.primary',
+                fontWeight: 600,
+              }}
+            >
+              Yearly Calendar
+            </Typography>
+          </Box>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              ml: 5,
+            }}
+          >
+            Custom week standard • Weeks start on Sunday • First week contains January 1st
+          </Typography>
+        </Box>
 
         {/* Year Selector */}
-        <FormControl variant="outlined" fullWidth margin="normal">
-          <InputLabel id="year-select-label">Select Year</InputLabel>
-          <Select
-            labelId="year-select-label"
-            id="year"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            label="Select Year"
+        <Box sx={{ mb: 3 }}>
+          <FormControl
+            size="small"
+            sx={{
+              minWidth: 140,
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'background.paper',
+                '&:hover': {
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                  },
+                },
+                '&.Mui-focused': {
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                    borderWidth: '2px',
+                  },
+                },
+              },
+            }}
           >
-            {yearOptions.map((year) => (
-              <MenuItem key={year} value={year}>{year}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            <Select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              sx={{
+                fontWeight: 500,
+                fontSize: '0.875rem',
+              }}
+            >
+              {yearOptions.map((year) => (
+                <MenuItem key={year} value={year}>{year}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
 
         {/* Weeks List */}
-        <div className="space-y-2">
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {memoizedWeeks.map((week, index) => (
             <Paper
               key={index}
-              elevation={2}
+              elevation={0}
               sx={{
-                p: 2,
-                borderRadius: "8px",
+                px: 2.5,
+                py: 1.5,
+                border: '1px solid',
+                borderColor: week.isCurrentWeek ? 'primary.main' : 'divider',
+                borderRadius: '6px',
                 backgroundColor: week.isCurrentWeek
-                  ? "#3232b66e"
-                  : week.isSpent
-                    ? "background.paper"
-                    : "background.default",
-                opacity: week.isSpent ? 0.5 : 1,
-                cursor: week.isSpent ? "not-allowed" : "pointer",
-                "&:hover": { boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.5)" },
-                transition: "box-shadow 0.3s ease",
+                  ? 'rgba(123, 104, 238, 0.04)'
+                  : 'background.paper',
+                opacity: week.isSpent ? 0.6 : 1,
+                cursor: week.isSpent ? 'default' : 'pointer',
+                transition: 'all 0.15s ease',
+                '&:hover': week.isSpent ? {} : {
+                  borderColor: 'primary.main',
+                  backgroundColor: 'rgba(123, 104, 238, 0.02)',
+                  transform: 'translateX(4px)',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
+                },
               }}
             >
-              <div className="flex items-center justify-between">
-                <Typography variant="body1" color={week.isSpent ? "textSecondary" : "textPrimary"}>
-                  Week {week.weekNumber} ({week.formattedRange})
-                </Typography>
-              </div>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 600,
+                      color: week.isCurrentWeek ? 'primary.main' : 'text.primary',
+                      minWidth: '60px',
+                    }}
+                  >
+                    Week {week.weekNumber}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      fontSize: '0.8125rem',
+                    }}
+                  >
+                    {week.formattedRange}
+                  </Typography>
+                </Box>
+                {week.isSpent && (
+                  <CheckCircle
+                    sx={{
+                      fontSize: 18,
+                      color: '#10b981',
+                      opacity: 0.7,
+                    }}
+                  />
+                )}
+                {week.isCurrentWeek && (
+                  <Box
+                    sx={{
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: '4px',
+                      backgroundColor: 'primary.main',
+                      color: 'white',
+                      fontSize: '0.6875rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}
+                  >
+                    Current
+                  </Box>
+                )}
+              </Box>
             </Paper>
           ))}
-        </div>
+        </Box>
       </Box>
-    </ThemeProvider>
+    </Box>
+    // </ThemeProvider>
   );
 };
 

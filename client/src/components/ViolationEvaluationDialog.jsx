@@ -32,10 +32,10 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             borderRadius: isMobile ? 0 : '8px',
-            border: '1px solid #444',
+            border: '1px solid #3d3d3d',
           },
         }}
       >
@@ -43,11 +43,11 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FaBalanceScale color="#3ea6ff" size={isMobile ? 16 : 20} />
+            <FaBalanceScale color="#7b68ee" size={isMobile ? 16 : 20} />
             <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontSize: isMobile ? 13 : 20 }}>
               Violation Evaluation Guide
             </Typography>
@@ -72,7 +72,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
             width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#444',
+            backgroundColor: '#e5e7eb',
             borderRadius: '2px',
           },
         }}>
@@ -94,14 +94,14 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
               }} />
             </Box>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Definition:
             </Typography>
             <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
               Customers who rate their experience between 1-6, indicating significant dissatisfaction with the service.
             </Typography>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Violation Consequences:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
@@ -117,7 +117,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
             </List>
           </Box>
 
-          <Divider sx={{ backgroundColor: '#444', my: 3 }} />
+          <Divider sx={{ backgroundColor: '#e5e7eb', my: 3 }} />
 
           {/* Passive Customers */}
           <Box sx={{ mb: 4 }}>
@@ -131,14 +131,14 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
               }} />
             </Box>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Definition:
             </Typography>
             <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
               Customers who rate their experience between 7-8, indicating they were satisfied but not delighted with the service.
             </Typography>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Violation Consequences:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
@@ -154,7 +154,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
             </List>
           </Box>
 
-          <Divider sx={{ backgroundColor: '#444', my: 3 }} />
+          <Divider sx={{ backgroundColor: '#e5e7eb', my: 3 }} />
 
           {/* Fairness Measures */}
           <Box sx={{ mb: 4 }}>
@@ -168,7 +168,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
               }} />
             </Box>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Considerations:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
@@ -180,7 +180,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
               </ListItem>
             </List>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Threshold Calculation:
             </Typography>
             <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
@@ -190,7 +190,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
         </DialogContent>
 
         <DialogActions sx={{
-          borderTop: '1px solid #444',
+          borderTop: '1px solid #e5e7eb',
           padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button

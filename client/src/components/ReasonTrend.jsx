@@ -112,7 +112,7 @@ const Card = ({ trend }) => {
         sx={{
           minWidth: 400,
           boxShadow: 1,
-          background: "#1e1e1e",
+          background: "#2d2d2d",
           color: "#e0e0e0",
         }}
       >
@@ -174,7 +174,7 @@ const Card = ({ trend }) => {
     <MUICard
       sx={{
         boxShadow: 1,
-        background: "#1e1e1e",
+        background: "#2d2d2d",
         color: "#e0e0e0",
         mx: '4px',
         transition: "transform 0.3s ease, box-shadow 0.3s ease",
@@ -188,7 +188,7 @@ const Card = ({ trend }) => {
             label={`Week ${week}`}
             sx={{ mb: 2, backgroundColor: "#ffffff29", color: "#e0e0e0" }}
           />
-          <Typography variant="body1" sx={{ color: "#9e9e9e", mb: 2, fontFamily: 'IBM Plex Mono', fontSize: '10px' }}>
+          <Typography variant="body1" sx={{ color: "#b3b3b3", mb: 2, fontFamily: 'IBM Plex Mono', fontSize: '10px' }}>
             {getWeekDateRange(week)}
           </Typography>
         </Stack>
@@ -198,7 +198,7 @@ const Card = ({ trend }) => {
             <Typography
               variant="body1"
               sx={{
-                color: "#9e9e9e",
+                color: "#b3b3b3",
                 mb: 2,
                 fontFamily: 'IBM Plex Mono',
                 fontSize: { xs: '11px', sm: '13px' },
@@ -216,7 +216,7 @@ const Card = ({ trend }) => {
             <Typography
               variant="body1"
               sx={{
-                color: "#9e9e9e",
+                color: "#b3b3b3",
                 mb: 2,
                 fontFamily: 'IBM Plex Mono',
                 fontSize: { xs: '11px', sm: '13px' },
@@ -234,7 +234,7 @@ const Card = ({ trend }) => {
             <Typography
               variant="body1"
               sx={{
-                color: "#9e9e9e",
+                color: "#b3b3b3",
                 mb: 2,
                 fontFamily: 'IBM Plex Mono',
                 fontSize: { xs: '11px', sm: '13px' },
@@ -255,7 +255,7 @@ const Card = ({ trend }) => {
             <div key={reason} style={{ padding: "0 8px" }}>
               <Box
                 sx={{
-                  border: "1px solid #333",
+                  border: "1px solid #f3f4f6",
                   borderRadius: "4px",
                   padding: "8px",
                   backgroundColor: "#2a2a2a",
@@ -310,7 +310,7 @@ const WeekSlider = ({ trends }) => {
       <MUICard
         sx={{
           boxShadow: 1,
-          background: "#1e1e1e",
+          // background: "#2d2d2d",
           color: "#e0e0e0",
         }}
       >
@@ -344,7 +344,7 @@ const WeeklyTrends = ({ tasks }) => {
         sx={{
           minWidth: 200,
           boxShadow: 1,
-          background: "#1e1e1e",
+          // background: "#2d2d2d",
           color: "#e0e0e0",
         }}
       >
@@ -369,7 +369,7 @@ const WeeklyTrends = ({ tasks }) => {
 
 const ReasonTrend = ({ tasks }) => {
   return (
-    <div style={{ padding: "8px 0 0", backgroundColor: "#121212" }}>
+    <div style={{ padding: "8px 0 0" }}>
       <WeeklyTrends tasks={tasks} />
     </div>
   );

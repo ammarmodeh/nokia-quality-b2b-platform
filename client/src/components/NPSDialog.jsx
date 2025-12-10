@@ -108,7 +108,7 @@ export default function NPSDialog({ open, handleClose, name }) {
         <DialogTitle
           sx={{ m: 0, p: 2 }}
           id="customized-dialog-title"
-          className="bg-[#a9a9a9] dark:text-gray-900"
+          className="bg-[#a9a9a9] dark:text-white"
         >
           Customer Satisfaction Violation Policy
         </DialogTitle>
@@ -126,7 +126,7 @@ export default function NPSDialog({ open, handleClose, name }) {
           <CloseIcon />
         </IconButton>
         <DialogContent dividers className="bg-[#302f2f] dark:text-gray-300">
-          <Typography variant="h6" gutterBottom className="dark:text-gray-100">
+          <Typography variant="h6" gutterBottom className="dark:text-white">
             1. Detractor Customers (Score 1-6)
           </Typography>
           <Typography gutterBottom className="dark:text-gray-300">
@@ -142,7 +142,7 @@ export default function NPSDialog({ open, handleClose, name }) {
             • Third-time offense (3+ occurrences within 6 months): Stronger penalties such as long-term suspension. Upon returning, the individual must attend a performance review meeting.
           </Typography>
 
-          <Typography variant="h6" gutterBottom sx={{ mt: 2 }} className="dark:text-gray-100">
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }} className="dark:text-white">
             2. Passive Customers (Score 7-8)
           </Typography>
           <Typography gutterBottom className="dark:text-gray-300">
@@ -158,7 +158,7 @@ export default function NPSDialog({ open, handleClose, name }) {
             • Third-time offense (3+ occurrences within 6 months): Closer monitoring. If another passive customer is recorded, it will be counted as one detractor in impact scaling, leading to the same consequence as a first-time detractor offense.
           </Typography>
 
-          <Typography variant="h6" gutterBottom sx={{ mt: 2 }} className="dark:text-gray-100">
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }} className="dark:text-white">
             Fairness Measures Considerations:
           </Typography>
           <Typography gutterBottom className="dark:text-gray-300">

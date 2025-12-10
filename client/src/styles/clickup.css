@@ -1,0 +1,183 @@
+/* ClickUp-inspired CSS Variables and Utility Classes */
+
+:root {
+  /* Colors */
+  --clickup-purple: #7b68ee;
+  --clickup-purple-light: #9d8df1;
+  --clickup-purple-dark: #5e4ecf;
+  --clickup-green: #10b981;
+  --clickup-red: #ef4444;
+  --clickup-orange: #f59e0b;
+  --clickup-blue: #3b82f6;
+
+  /* Backgrounds */
+  --bg-primary: #f9fafb;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f3f4f6;
+
+  /* Text Colors */
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+
+  /* Borders */
+  --border-color: #e5e7eb;
+  --border-color-hover: #d1d5db;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
+/* Utility Classes */
+.clickup-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  transition: all 0.15s ease;
+}
+
+.clickup-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--clickup-purple);
+}
+
+.clickup-button {
+  background: var(--clickup-purple);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clickup-button:hover {
+  background: var(--clickup-purple-dark);
+  box-shadow: var(--shadow-sm);
+}
+
+.clickup-button-outline {
+  background: transparent;
+  color: var(--clickup-purple);
+  border: 1.5px solid var(--clickup-purple);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clickup-button-outline:hover {
+  background: rgba(123, 104, 238, 0.04);
+}
+
+.clickup-input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+}
+
+.clickup-input:focus {
+  outline: none;
+  border-color: var(--clickup-purple);
+  box-shadow: 0 0 0 3px rgba(123, 104, 238, 0.1);
+}
+
+.clickup-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.clickup-badge-purple {
+  background: rgba(123, 104, 238, 0.1);
+  color: var(--clickup-purple-dark);
+}
+
+.clickup-badge-green {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.clickup-badge-red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.clickup-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: var(--spacing-md) 0;
+}
+
+/* Smooth transitions for all interactive elements */
+button,
+a,
+input,
+select,
+textarea {
+  transition: all 0.15s ease;
+}
+
+/* Compact spacing utilities */
+.compact-spacing {
+  padding: var(--spacing-sm);
+  gap: var(--spacing-sm);
+}
+
+.compact-spacing-md {
+  padding: var(--spacing-md);
+  gap: var(--spacing-md);
+}
+
+/* Text utilities */
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-purple {
+  color: var(--clickup-purple);
+}
+
+/* Background utilities */
+.bg-primary {
+  background-color: var(--bg-primary);
+}
+
+.bg-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.bg-purple-light {
+  background-color: rgba(123, 104, 238, 0.04);
+}

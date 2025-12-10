@@ -48,10 +48,10 @@ const IssueCategoriesDialog = () => {
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            backgroundColor: '#1e1e1e',
+            backgroundColor: '#2d2d2d',
             color: '#ffffff',
             borderRadius: isMobile ? 0 : '8px',
-            border: '1px solid #444',
+            border: '1px solid #3d3d3d',
           },
         }}
       >
@@ -59,11 +59,11 @@ const IssueCategoriesDialog = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #444',
+          borderBottom: '1px solid #e5e7eb',
           padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FaFileAlt color="#3ea6ff" size={isMobile ? 16 : 20} />
+            <FaFileAlt color="#7b68ee" size={isMobile ? 16 : 20} />
             <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontSize: isMobile ? 13 : 20 }}>
               Issue Categorization Guide
             </Typography>
@@ -88,7 +88,7 @@ const IssueCategoriesDialog = () => {
             width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#444',
+            backgroundColor: '#e5e7eb',
             borderRadius: '2px',
           },
         }}>
@@ -102,7 +102,7 @@ const IssueCategoriesDialog = () => {
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Chip label="Customer Education" sx={{
-                backgroundColor: '#3ea6ff',
+                backgroundColor: '#7b68ee',
                 color: '#ffffff',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
                 height: 'auto',
@@ -110,14 +110,14 @@ const IssueCategoriesDialog = () => {
               }} />
             </Box>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Definition:
             </Typography>
             <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
               When the customer is unaware of speed limitations, Wi-Fi bands (2.4G/5G), or basic troubleshooting, and no technical issues are found with the service.
             </Typography>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Examples:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
@@ -150,7 +150,7 @@ const IssueCategoriesDialog = () => {
               </ListItem>
             </List>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               When We Use This Category:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
@@ -163,7 +163,7 @@ const IssueCategoriesDialog = () => {
             </List>
           </Box>
 
-          <Divider sx={{ backgroundColor: '#444', my: 3 }} />
+          <Divider sx={{ backgroundColor: '#e5e7eb', my: 3 }} />
 
           {/* Lack of Technical Expertise */}
           <Box sx={{ mb: 4 }}>
@@ -177,14 +177,14 @@ const IssueCategoriesDialog = () => {
               }} />
             </Box>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Definition:
             </Typography>
             <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
               When the issue arises from installation mistakes, incorrect troubleshooting, or poor network setup by the technician.
             </Typography>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Examples:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
@@ -205,7 +205,7 @@ const IssueCategoriesDialog = () => {
               </ListItem>
             </List>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               When We Use This Category:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
@@ -221,7 +221,7 @@ const IssueCategoriesDialog = () => {
             </List>
           </Box>
 
-          <Divider sx={{ backgroundColor: '#444', my: 3 }} />
+          <Divider sx={{ backgroundColor: '#e5e7eb', my: 3 }} />
 
           {/* Knowledge Gap */}
           <Box sx={{ mb: 4 }}>
@@ -235,14 +235,14 @@ const IssueCategoriesDialog = () => {
               }} />
             </Box>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Definition:
             </Typography>
             <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
               When the issue could be due to either technical shortcomings or customer awareness, but the comment is unclear or lacks sufficient information.
             </Typography>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Examples:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
@@ -257,7 +257,7 @@ const IssueCategoriesDialog = () => {
               </ListItem>
             </List>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               When We Use This Category:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
@@ -272,7 +272,7 @@ const IssueCategoriesDialog = () => {
               </ListItem>
             </List>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa' }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3' }}>
               Note:
             </Typography>
             <ListItem sx={{ pl: 1, color: '#ffffff' }}>
@@ -281,7 +281,7 @@ const IssueCategoriesDialog = () => {
           </Box>
 
 
-          <Divider sx={{ backgroundColor: '#444', my: 3 }} />
+          <Divider sx={{ backgroundColor: '#e5e7eb', my: 3 }} />
 
           {/* Bad Team Behavior */}
           <Box sx={{ mb: 2 }}>
@@ -295,14 +295,14 @@ const IssueCategoriesDialog = () => {
               }} />
             </Box>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Definition:
             </Typography>
             <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
               When the customer reports issues with the technician&apos;s conduct rather than technical service.
             </Typography>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               Examples:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
@@ -314,7 +314,7 @@ const IssueCategoriesDialog = () => {
               </ListItem>
             </List>
 
-            <Typography variant="subtitle2" sx={{ color: '#aaaaaa', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
               When We Use This Category:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
@@ -329,7 +329,7 @@ const IssueCategoriesDialog = () => {
         </DialogContent>
 
         <DialogActions sx={{
-          borderTop: '1px solid #444',
+          borderTop: '1px solid #e5e7eb',
           padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button
