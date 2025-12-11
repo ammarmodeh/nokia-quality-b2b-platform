@@ -216,7 +216,7 @@ export const generateInsights = async (req, res) => {
 
     // 3. Execute with Retry
     const apiCall = async () => {
-      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       const result = await model.generateContent(prompt);
       return result.response.text();
     };
@@ -263,7 +263,7 @@ export const analyzeChartData = async (req, res) => {
 
     // Execute with Retry
     const apiCall = async () => {
-      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       const result = await model.generateContent(prompt);
       return result.response.text();
     };
@@ -325,11 +325,10 @@ export const handleChat = async (req, res) => {
 
     // Execute with Retry
     const apiCall = async () => {
-      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       // Send the entire history and context as a single request
       const result = await model.generateContent({
-        model: "gemini-flash-latest",
         contents: historyParts,
       });
 
@@ -1161,3 +1160,7 @@ export const getReportHistory = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch report history." });
   }
 };
+
+
+
+
