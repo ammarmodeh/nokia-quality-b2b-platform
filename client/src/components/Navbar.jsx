@@ -11,6 +11,7 @@ import { PoliciesMenu } from "./PoliciesMenu";
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { IoIosArrowDropleftCircle, IoIosCloseCircle, IoMdClose, IoMdCloseCircle } from "react-icons/io";
 import CustomerIssueDialog from "./CustomerIssueDialog";
+import CalendarDialog from "./CalendarDialog";
 import { useSelector } from "react-redux";
 import { useTheme } from "@mui/material/styles";
 
@@ -27,6 +28,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
   const [showSearch, setShowSearch] = useState(false);
   const searchBarRef = useRef(null);
   const [cinDialogOpen, setCinDialogOpen] = useState(false);
+  const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
 
   // Mobile menu state
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
@@ -303,6 +305,14 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
+                    setCalendarDialogOpen(true);
+                    handleMobileMenuClose();
+                  }}
+                >
+                  <Typography variant="body1">Calendar</Typography>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
                     setCinDialogOpen(true);
                     handleMobileMenuClose();
                   }}
@@ -451,6 +461,30 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
         <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
+        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+
+        <Button
+          onClick={() => setCalendarDialogOpen(true)}
+          disableRipple
+          sx={{
+            height: '55px',
+            minWidth: 0,
+            padding: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: '#b3b3b3',
+            "&:hover": {
+              backgroundColor: "transparent",
+              color: '#ffffff'
+            },
+          }}
+        >
+          Calendar
+        </Button>
+
+        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+
         <NotificationPanel />
 
         <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
@@ -533,8 +567,8 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
       {/* Search Results Dropdown */}
       {searchQuery && showResults && (
-        <div className="absolute top-[55px] left-4 w-full max-w-[300px] bg-[#ffffff] border border-[#e5e7eb] rounded-lg z-50 overflow-hidden">
-          <div className="flex justify-between items-center p-3 bg-[#f3f4f6] border-b border-[#e5e7eb]">
+        <div className="absolute top-[55px] left-4 w-full max-w-[300px] bg-[#2d2d2d] border border-[#e5e7eb] rounded-lg z-50 overflow-hidden">
+          <div className="flex justify-between items-center p-3 bg-[#3d3d3d] border-b border-[#e5e7eb]">
             <span className="text-sm font-medium text-gray-300">Search Results</span>
             <button
               onClick={() => setShowResults(false)}
@@ -552,7 +586,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               searchResults.map((task) => (
                 <li
                   key={task._id}
-                  className="p-3 hover:bg-[#f3f4f6] cursor-pointer text-white"
+                  className="p-3 hover:bg-[#3d3d3d] cursor-pointer text-white"
                   onClick={() => handleTaskClick(task._id)}
                 >
                   {task.slid}
@@ -570,6 +604,11 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
         open={cinDialogOpen}
         onClose={() => setCinDialogOpen(false)}
         onSubmit={handleCinSubmit}
+      />
+
+      <CalendarDialog
+        open={calendarDialogOpen}
+        onClose={() => setCalendarDialogOpen(false)}
       />
     </>
   );

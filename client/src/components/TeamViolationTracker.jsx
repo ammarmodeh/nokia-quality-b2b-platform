@@ -117,22 +117,26 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         'Team Name': row.teamName,
         'Team Company': row.teamCompany || 'N/A',
         'Trained': row.hasTraining ? 'Yes' : 'No',
-        'Completed Sessions': completedSessions.length > 0 ? completedSessions.join('\n\n') : 'None',
-        'Last Completed Session': row.mostRecentCompletedSession,
-        'Missed/Canceled Sessions': missedCanceledSessions.length > 0 ? missedCanceledSessions.join('\n\n') : 'None',
-        'Last Missed/Canceled Session': row.mostRecentMissedCanceledSession,
-        'Detractor Violations (1-6)': row.detractorCount,
-        'Neutral Violations (7-8)': row.neutralCount,
-        'Total Violations': row.totalViolations,
 
+        'Detractors': row.detractorCount,
+        'Neutrals': row.neutralCount,
+        'Total Violations': row.totalViolations,
         'Low Impact Tickets': row.lowPriorityCount,
         'Medium Impact Tickets': row.mediumPriorityCount,
         'High Impact Tickets': row.highPriorityCount,
 
-        'Date Reached Violation Limit': row.dateReachedLimit || 'N/A',
-        'How Threshold Was Reached': row.thresholdDescription,
-        'Consequence Applied': row.consequenceApplied,
-        'Notes/Comments': row.notes,
+        'Violation Status': row.equivalentDetractorCount >= 3 ? 'Violated' :
+          row.equivalentDetractorCount === 2 ? 'Warning' : 'OK',
+
+        'Completed Sessions': completedSessions.length > 0 ? completedSessions.join('\n\n') : 'None',
+        'Last Completed Session': row.mostRecentCompletedSession,
+        'Missed/Canceled Sessions': missedCanceledSessions.length > 0 ? missedCanceledSessions.join('\n\n') : 'None',
+        'Last Missed/Canceled Session': row.mostRecentMissedCanceledSession,
+
+        // 'Date Reached Violation Limit': row.dateReachedLimit || 'N/A',
+        // 'How Threshold Was Reached': row.thresholdDescription,
+        // 'Consequence Applied': row.consequenceApplied,
+        // 'Notes/Comments': row.notes,
         'Team Status': row.validationStatus,
 
         'Online Test Score': row.evaluationScore !== 'N/A' ? `${row.evaluationScore}%` : row.evaluationScore, // This will now have the actual score
@@ -142,8 +146,6 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         'OTJ Assessment Feedback': row.otjAssessmentFeedback,
         'Conducted By': row.otjAssessmentConductedBy,
 
-        'Violation Status': row.equivalentDetractorCount >= 3 ? 'Violated' :
-          row.equivalentDetractorCount === 2 ? 'Warning' : 'OK',
         'Exported Date': new Date().toLocaleDateString()
       };
     });

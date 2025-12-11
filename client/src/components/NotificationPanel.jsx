@@ -717,7 +717,7 @@ const NotificationPanel = () => {
                       "&:hover": {
                         backgroundColor: isUnread ? '#00000042' : '#FFFFFF0F',
                       },
-                      backgroundColor: isUnread ? '#f9fafb' : 'transparent',
+                      backgroundColor: isUnread ? '#39393aff' : 'transparent',
                       borderLeft: isUnread ? '3px solid #666061' : '3px solid transparent',
                       transition: 'all 0.2s ease',
                       position: 'relative',

@@ -10,14 +10,13 @@ const AIAnalysisButton = ({
   context = "",
   chartType = "Table/Chart",
   size = "medium",
-  color = "#ffffff"
+  color = "#ffffff",
+  endpoint = "/ai/analyze-chart" // Default to chart analysis
 }) => {
   const [loading, setLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [metadata, setMetadata] = useState(null);
-
-  const endpoint = '/ai/analyze-chart';
 
   const handleAnalyze = async () => {
     if (!data) return;

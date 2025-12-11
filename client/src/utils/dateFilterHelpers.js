@@ -35,12 +35,97 @@ export const filterTasksByWeek = (tasks, year, weekNumber) => {
  * @param {number} month - The month (0-11)
  * @returns {Array} Filtered tasks
  */
+// Custom 5-4-4 Week Pattern
+// Jan: 5 weeks (52, 1, 2, 3, 4) - Wk 52 is from previous year
+// Feb: 4 weeks (5, 6, 7, 8)
+// Mar: 4 weeks (9, 10, 11, 12)
+// Q2
+// Apr: 5 weeks (13, 14, 15, 16, 17)
+// May: 4 weeks (18, 19, 20, 21)
+// Jun: 4 weeks (22, 23, 24, 25)
+// Q3
+// Jul: 5 weeks (26, 27, 28, 29, 30)
+// Aug: 4 weeks (31, 32, 33, 34)
+// Sep: 4 weeks (35, 36, 37, 38)
+// Q4
+// Oct: 5 weeks (39, 40, 41, 42, 43)
+// Nov: 4 weeks (44, 45, 46, 47)
+// Dec: 4 weeks (48, 49, 50, 51) + 53 if exists?
+const CUSTOM_MONTH_WEEKS = [
+  { month: 0, weeks: [52, 1, 2, 3, 4] },
+  { month: 1, weeks: [5, 6, 7, 8] },
+  { month: 2, weeks: [9, 10, 11, 12] },
+  { month: 3, weeks: [13, 14, 15, 16, 17] },
+  { month: 4, weeks: [18, 19, 20, 21] },
+  { month: 5, weeks: [22, 23, 24, 25] },
+  { month: 6, weeks: [26, 27, 28, 29, 30] },
+  { month: 7, weeks: [31, 32, 33, 34] },
+  { month: 8, weeks: [35, 36, 37, 38] },
+  { month: 9, weeks: [39, 40, 41, 42, 43] },
+  { month: 10, weeks: [44, 45, 46, 47] },
+  { month: 11, weeks: [48, 49, 50, 51, 52] }, // Include 53 in Dec if it occurs
+];
+
+/**
+ * Filter tasks by a specific custom month
+ * @param {Array} tasks - Array of tasks
+ * @param {number} year - The "Customer Year" (e.g. 2025 for Jan which might start in Dec 2024)
+ * @param {number} month - The month index (0-11)
+ * @returns {Array} Filtered tasks
+ */
 export const filterTasksByMonth = (tasks, year, month) => {
+  const targetConfig = CUSTOM_MONTH_WEEKS.find(m => m.month === month);
+  if (!targetConfig) return [];
+
   return tasks.filter(task => {
     if (!task.interviewDate) return false;
-    const taskDate = new Date(task.interviewDate);
-    return taskDate.getFullYear() === year && taskDate.getMonth() === month;
+    const date = new Date(task.interviewDate);
+    const start = startOfWeek(date, { weekStartsOn: 0 });
+    const taskYear = start.getFullYear();
+    const weekNumber = getCustomWeekNumber(start, taskYear);
+
+    // Determine the "Custom Year" this task belongs to
+    // If Week 52, it belongs to NEXT year's January
+    // If Week 1-51, it belongs to THIS year (mostly)
+    // Wait, if we say Jan 2025 includes Wk 52 of 2024...
+
+    let customYear = taskYear;
+    if (weekNumber === 52 && month === 0) {
+      // Wk 52 belongs to Jan of NEXT year
+      // So if taskYear is 2024, it belongs to 2025 Jan
+      customYear = taskYear + 1;
+    }
+
+    if (customYear !== year) return false;
+    return targetConfig.weeks.includes(weekNumber);
   });
+};
+
+/**
+ * Helper to get the start and end date for a custom month
+ */
+const getCustomMonthDateRange = (year, monthIndex) => {
+  const config = CUSTOM_MONTH_WEEKS.find(m => m.month === monthIndex);
+  if (!config || !config.weeks.length) return null;
+
+  // Logic to find dates:
+  // We need to find the specific weeks for this year.
+  // Case Jan (Month 0): Weeks 52 (Year-1), 1 (Year), 2 (Year), 3 (Year), 4 (Year)
+  // Case others: Weeks X (Year) ...
+
+  // We can iterate weeks.
+  // Start Date = Start of first week
+  // End Date = End of last week
+
+  // To get date from week num:
+  // There isn't a cheap "get date from custom week" without reverse engineering getCustomWeekNumber
+  // But we can approximate using date-fns or moment if available.
+  // Since we don't have a direct helper, we'll try to scan.
+  // Actually, `getAvailableMonths` iterates tasks, so we can just grab min/max from actual data seen?
+  // User requested "Month (Date Range)". If no data, maybe fine? 
+  // BUT the label should ideally be theoretically correct even if gaps.
+  // Let's rely on data min/max for specific label in `getAvailableMonths` for now as it's safer than complex date math blindly.
+  return null;
 };
 
 /**
@@ -107,7 +192,7 @@ export const getAvailableWeeks = (tasks) => {
 };
 
 /**
- * Get list of available months with data
+ * Get list of available months with data (Custom Logic)
  * @param {Array} tasks - Array of tasks
  * @returns {Array} Array of {year, month, label}
  */
@@ -119,21 +204,62 @@ export const getAvailableMonths = (tasks) => {
   tasks.forEach(task => {
     if (!task.interviewDate) return;
     const date = new Date(task.interviewDate);
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const key = `${year}-${month}`;
+    const start = startOfWeek(date, { weekStartsOn: 0 });
+    const end = endOfWeek(date, { weekStartsOn: 0 });
+    const taskYear = start.getFullYear();
+    const weekNumber = getCustomWeekNumber(start, taskYear);
+
+    // Find which custom month this week belongs to
+    let foundMonthIndex = -1;
+    let customYear = taskYear;
+
+    // Special Check for Week 52: Belongs to Jan of NEXT year
+    if (weekNumber === 52) {
+      foundMonthIndex = 0; // Jan
+      customYear = taskYear + 1;
+    } else {
+      const config = CUSTOM_MONTH_WEEKS.find(c => c.weeks.includes(weekNumber));
+      if (config) {
+        foundMonthIndex = config.month;
+      }
+    }
+
+    if (foundMonthIndex === -1) return; // Should not happen if all weeks covered
+
+    const key = `${customYear}-${foundMonthIndex}`;
 
     if (!months.has(key)) {
+      const weeksConfig = CUSTOM_MONTH_WEEKS.find(m => m.month === foundMonthIndex);
+      const weekRangeStr = `Wk${weeksConfig.weeks[0]}-${weeksConfig.weeks[weeksConfig.weeks.length - 1]}`;
+
       months.set(key, {
-        year,
-        month,
+        year: customYear,
+        month: foundMonthIndex,
         key,
-        label: `${monthNames[month]} ${year}`
+        // Initial values, will update range below
+        minDate: start,
+        maxDate: end,
+        weekRangeLabel: weekRangeStr,
+        baseLabel: `${monthNames[foundMonthIndex]} ${customYear}`
       });
     }
+
+    // Update min/max dates for the label
+    const combined = months.get(key);
+    if (date < combined.minDate) combined.minDate = date; // Using actual task date or week start? Week start is better for period description
+    if (start < combined.minDate) combined.minDate = start;
+    if (end > combined.maxDate) combined.maxDate = end;
   });
 
-  return Array.from(months.values()).sort((a, b) => {
+  // Format labels
+  return Array.from(months.values()).map(m => {
+    const startStr = format(m.minDate, 'MMM d');
+    const endStr = format(m.maxDate, 'MMM d');
+    return {
+      ...m,
+      label: `${m.baseLabel} (${startStr} - ${endStr}) / ${m.weekRangeLabel}`
+    };
+  }).sort((a, b) => {
     if (a.year !== b.year) return b.year - a.year;
     return b.month - a.month;
   });

@@ -114,7 +114,8 @@ const AIHistoryButton = () => {
                     button
                     onClick={() => handleSelectReport(item)}
                     sx={{
-                      '&:hover': { backgroundColor: '#2d2d2d' }
+                      cursor: 'pointer',
+                      '&:hover': { backgroundColor: '#484848ff' }
                     }}
                   >
                     <ListItemText

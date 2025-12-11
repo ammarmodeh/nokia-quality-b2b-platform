@@ -359,13 +359,13 @@ const TaskViewPage = () => {
 
   return (
     <Box sx={{
-      backgroundColor: '#2d2d2d',
+      // backgroundColor: '#2d2d2d',
       minHeight: '100vh',
       p: isMobile ? 1 : 3,
       color: '#ffffff'
     }}>
       <Paper elevation={0} sx={{
-        backgroundColor: '#2d2d2d',
+        // backgroundColor: '#2d2d2d',
         borderRadius: '8px',
         border: '1px solid #3d3d3d',
         overflow: 'hidden'

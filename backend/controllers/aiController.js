@@ -625,12 +625,18 @@ export const deepWeeklyAnalysis = async (req, res) => {
       .sort((a, b) => b.totalYTD - a.totalYTD)
       .map(t => {
         const teamReasonCounts = t.reasons.reduce((acc, r) => { acc[r] = (acc[r] || 0) + 1; return acc; }, {});
-        const topReason = Object.entries(teamReasonCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Mixed";
-        return `| ${t._id} | ${t.totalYTD} | ${t.detractors} | ${t.neutrals} | ${topReason} |`;
+
+        // List all reasons with their counts
+        const allReasons = Object.entries(teamReasonCounts)
+          .sort((a, b) => b[1] - a[1])
+          .map(([r, c]) => `${r} (${c})`)
+          .join(', ');
+
+        return `| ${t._id} | ${t.totalYTD} | ${t.detractors} | ${t.neutrals} | ${allReasons} |`;
       }).join('\n');
 
     const allTeamsTable = `
-| Team Name | Total Cases | Detractors | Neutrals | Primary Failure |
+| Team Name | Total Cases | Detractors | Neutrals | Failure Breakdown |
 | :--- | :---: | :---: | :---: | :--- |
 ${allTeamsStatsText}
     `;
@@ -645,14 +651,12 @@ ${allTeamsStatsText}
 
     // Standard Prompt for YTD/Month (Detailed Structured Report)
     const standardPrompt = `
-        You are an ** AI Senior Quality Intelligence Advisor ** for the OrangeJO–Nokia FTTH Program. 
-        Your mission is to convert detractor / neutral cases(scores 1–8) into a ** high - authority, trend - driven, executive intelligence report ** with deep operational insights.
+        You are an ** AI Senior Quality Advisor ** for the OrangeJO–Nokia FTTH Project. 
+        Your mission is to convert detractor/neutral cases(scores 1–8) into a ** high - authority, trend - driven, executive report ** with deep operational insights.
         
         ** REPORT PERIOD: ${periodTitle} **
+        (Please explicitly mention "AI Model: Gemini 2.5 Flash" at the top of the report)
         (Note: "Total Cases" and statistics usually refer to YTD, but currently reflect the selected period: ${periodTitle}. Adapt your language accordingly.)
-
-        Audience: CTO, PMO Directors, Nokia Quality Managers
-        Tone: ** Executive, highly professional, direct, data - driven, and assertive.**
 
         ** STRICT FORMATTING RULES(MANDATORY):**
          1. ** Avoid excessive bullet points(* or -):** For interpretation sections, use ** structured paragraphs ** and ** bold key findings ** instead of simple lists.
@@ -719,10 +723,7 @@ ${allTeamsStatsText}
         ## 8. 🔍 Recurrence and Quality Gap
         Analyze the recurrence mechanism (Skill Gap, Process Non-Compliance).
 
-        ## 9. ✅ Immediate & Strategic Solutions
-        Provide actionable solutions referencing specific training materials.
-
-        ## 10. ⚠️ Strategic Risk Outlook
+        ## 9. ⚠️ Strategic Risk Outlook
         Predict high-risk teams for the upcoming weeks based on this period's data.
     `;
 
@@ -731,9 +732,10 @@ ${allTeamsStatsText}
     if (period === 'custom' || period === 'current_week' || period === 'last_week') {
       const endStr = endDate ? endDate.toLocaleDateString() : new Date().toLocaleDateString();
       customPrompt = `
-        You are an ** AI Senior Quality Intelligence Advisor ** for the OrangeJO–Nokia FTTH Program.
+        You are an ** AI Senior Quality Intelligence Advisor ** for the OrangeJO–Nokia FTTH Project.
         
         ** CUSTOM REPORT PERIOD: ${periodTitle} **
+        (Please explicitly mention "AI Model: Gemini 2.5 Flash" at the top of the report)
         ** DATA CONTEXT **: The statistics provided below are STRICTLY calculated for the custom range: ${startDate.toLocaleDateString()} to ${endStr}.
         
         ** Audience **: CTO, PMO Directors, Nokia Quality Managers
@@ -770,12 +772,12 @@ ${allTeamsStatsText}
         Analyze the failure drivers listed above, paying attention to both high-frequency issues and smaller recurring problems.
         
         ## 3. ⚠️ Team Performance & Risks
-        Highlight the teams with the most violations in this specific range.
-        Discuss the "Repeat Offenders" if any are listed.
-        Review the "Full Team Performance Breakdown" to provide a complete picture of all teams involved.
+        - List **EVERY TEAM** from the "Full Team Performance Breakdown" table that has recorded violations.
+        - For **EACH** team, explicitly state their Name and the specific **Failure Breakdown** (reasons and counts).
+        - Do not summarize or group them. I want a line item for each team with their specific issues.
+        - Discuss the "Repeat Offenders" if any are listed.
         
-        ## 4. ✅ Recommended Actions
-        Provide immediate corrective actions based on the failure modes observed in this period.
+
     `;
     }
 
@@ -836,6 +838,313 @@ ${allTeamsStatsText}
   } catch (error) {
     console.error("Error generating deep weekly analysis:", error);
     res.status(500).json({ error: "Failed to generate deep weekly analysis." });
+  }
+};
+
+export const analyzeTrendData = async (req, res) => {
+  try {
+    const {
+      period = 'week',
+      range = 8,
+      analysisType = 'team',
+      selectedEntities = [],
+      metric = 'totalViolations',
+      customStart,
+      customEnd
+    } = req.body;
+
+    // Determine date range based on filters
+    let startDate, endDate;
+    const now = new Date();
+
+    if (range === 'custom') {
+      if (!customStart || !customEnd) {
+        return res.status(400).json({ error: "Custom range requires start and end dates" });
+      }
+      startDate = new Date(customStart);
+      endDate = new Date(customEnd);
+    } else if (range === 'all') {
+      startDate = new Date(now.getFullYear(), 0, 1); // YTD
+      endDate = now;
+    } else {
+      // Last N periods
+      const periodsBack = typeof range === 'number' ? range : 8;
+      if (period === 'week') {
+        startDate = new Date(now.getTime() - (periodsBack * 7 * 24 * 60 * 60 * 1000));
+      } else {
+        startDate = new Date(now.getFullYear(), now.getMonth() - periodsBack, 1);
+      }
+      endDate = now;
+    }
+
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    // Build match criteria
+    const matchCriteria = {
+      evaluationScore: { $gte: 1, $lte: 8 },
+      interviewDate: { $gte: startDate, $lte: endDate },
+      teamName: { $nin: ["Unknown Team", "غير معروف"] }
+    };
+
+    // Filter by selected entities if specified
+    if (selectedEntities.length > 0) {
+      if (analysisType === 'team') {
+        matchCriteria.teamName = { $in: selectedEntities };
+      } else {
+        matchCriteria.reason = { $in: selectedEntities };
+      }
+    }
+
+    // Aggregate data
+    const aggregationResults = await TaskSchema.aggregate([
+      { $match: matchCriteria },
+      {
+        $facet: {
+          totalCases: [{ $count: "count" }],
+
+          byEntity: [
+            {
+              $group: {
+                _id: analysisType === 'team' ? "$teamName" : { $ifNull: ["$reason", "Unspecified"] },
+                totalViolations: { $sum: 1 },
+                detractors: { $sum: { $cond: [{ $lte: ["$evaluationScore", 6] }, 1, 0] } },
+                neutrals: { $sum: { $cond: [{ $and: [{ $gte: ["$evaluationScore", 7] }, { $lte: ["$evaluationScore", 8] }] }, 1, 0] } },
+                avgScore: { $avg: "$evaluationScore" },
+                reasons: { $push: { $ifNull: ["$reason", "Unspecified"] } },
+                teams: { $push: { $ifNull: ["$teamName", "Unknown"] } }
+              }
+            },
+            { $sort: { totalViolations: -1 } }
+          ],
+
+          closureStats: [
+            {
+              $group: {
+                _id: "$validationStatus",
+                count: { $sum: 1 }
+              }
+            }
+          ],
+
+          topReasons: [
+            {
+              $group: {
+                _id: { $ifNull: ["$reason", "Unspecified"] },
+                count: { $sum: 1 }
+              }
+            },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+          ]
+        }
+      }
+    ]);
+
+    const results = aggregationResults[0];
+    const totalCases = results.totalCases[0]?.count || 0;
+
+    if (totalCases === 0) {
+      return res.json({
+        analysis: `## 🟢 Trend Analysis Report — No Data\n\n**No violations found in the selected period and filters.**\n\nAll metrics are clear for the specified criteria.`,
+        metadata: {
+          totalCases: 0,
+          period,
+          range,
+          analysisType,
+          generatedAt: new Date().toLocaleString()
+        }
+      });
+    }
+
+    // Calculate closure rate
+    const fixedCount = results.closureStats.find(c => c._id === "Validated")?.count || 0;
+    const closureRate = ((fixedCount / totalCases) * 100).toFixed(1);
+
+    // Format entity data
+    const entityData = results.byEntity.map(entity => {
+      const equivalentDetractors = entity.detractors + Math.floor(entity.neutrals / 3);
+
+      let topIssue = "N/A";
+      if (analysisType === 'team') {
+        const reasonCounts = entity.reasons.reduce((acc, r) => {
+          acc[r] = (acc[r] || 0) + 1;
+          return acc;
+        }, {});
+        topIssue = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Mixed";
+      } else {
+        const teamCounts = entity.teams.reduce((acc, t) => {
+          acc[t] = (acc[t] || 0) + 1;
+          return acc;
+        }, {});
+        topIssue = Object.entries(teamCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Multiple";
+      }
+
+      return {
+        name: entity._id,
+        total: entity.totalViolations,
+        detractors: entity.detractors,
+        neutrals: entity.neutrals,
+        equivalentDetractors,
+        avgScore: entity.avgScore.toFixed(2),
+        topIssue
+      };
+    });
+
+    // Format top reasons
+    const topReasons = results.topReasons.map((r, i) =>
+      `${i + 1}. **${r._id}** — ${r.count} cases (${((r.count / totalCases) * 100).toFixed(1)}%)`
+    );
+
+    // Create entity table
+    const entityTable = entityData.map(e =>
+      `| ${e.name} | ${e.total} | ${e.detractors} | ${e.neutrals} | ${e.avgScore} | ${e.topIssue} |`
+    ).join('\n');
+
+    // Generate comprehensive prompt
+    const periodLabel = range === 'custom'
+      ? `Custom Range (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`
+      : range === 'all'
+        ? 'Year-to-Date (YTD)'
+        : `Last ${range} ${period}s`;
+
+    const entityTypeLabel = analysisType === 'team' ? 'Teams' : 'Failure Reasons';
+    const filterNote = selectedEntities.length > 0
+      ? `\n**FILTERED VIEW**: Analysis limited to selected ${analysisType}s: ${selectedEntities.join(', ')}`
+      : `\n**FULL VIEW**: Analysis includes all ${analysisType}s with violations in the period`;
+
+    const prompt = `
+You are an **AI Senior Quality Advisor** for the OrangeJO–Nokia FTTH Project.
+
+**TREND ANALYSIS REPORT**
+(Please explicitly mention "AI Model: Gemini 2.5 Flash" at the top of the report)
+
+**Analysis Period**: ${periodLabel}
+**Analysis Type**: ${entityTypeLabel}
+**Metric Focus**: ${metric === 'totalViolations' ? 'Total Violations' : 'Equivalent Detractors'}
+${filterNote}
+
+# 📊 Key Performance Indicators
+
+| Metric | Value |
+|:---|:---|
+| **Total Cases (Score 1-8)** | ${totalCases} |
+| **Closure Rate** | ${closureRate}% |
+| **${entityTypeLabel} Analyzed** | ${entityData.length} |
+| **Period Type** | ${period === 'week' ? 'Weekly' : 'Monthly'} Trend |
+
+# 🚩 Top Failure Drivers
+
+${topReasons.join('\n')}
+
+# 📋 ${entityTypeLabel} Performance Breakdown
+
+| ${analysisType === 'team' ? 'Team Name' : 'Failure Reason'} | Total | Detractors (1-6) | Neutrals (7-8) | Avg Score | ${analysisType === 'team' ? 'Top Issue' : 'Top Team'} |
+|:---|:---:|:---:|:---:|:---:|:---|
+${entityTable}
+
+# 🎯 REQUIRED OUTPUT FORMAT
+
+Generate a **comprehensive, data-driven trend analysis report** in Markdown format.
+
+## 1. 📈 Trend Overview
+Analyze the overall trend across the ${periodLabel}. Discuss the total volume (${totalCases} cases) and closure effectiveness (${closureRate}%).
+
+## 2. 🔍 ${entityTypeLabel} Performance Analysis
+**CRITICAL RANKING RULE**: When identifying "worst performers", prioritize **IMPACT over percentages**. A team with 17 cases and 8 detractors has MORE IMPACT than a team with 5 cases and 3 detractors, even if the latter has a higher percentage.
+
+**Ranking Criteria (in order of priority)**:
+1. **Primary**: Total Detractors (1-6 scores) - absolute impact on customers
+2. **Secondary**: Total Violations (volume)
+3. **Tertiary**: Detractor Percentage (only as a tiebreaker)
+4. **Minimum**: Only consider ${analysisType}s with **at least 3 total cases**
+
+Provide detailed analysis:
+- Identify the **top 3 worst performers** from ${analysisType}s with **3+ cases**, ranked by:
+  - **First**: Highest detractors count (scores 1-6) - most customer impact
+  - **Second**: Highest total violations (most volume)
+  - **Third**: Lowest average score / highest detractor % (severity)
+- For each worst performer, clearly state:
+  - Total cases
+  - Detractors (1-6) count (PRIMARY metric)
+  - Neutrals (7-8) count
+  - Detractor percentage
+  - Average score
+  - Top issue
+- Highlight any ${analysisType}s showing **improvement or deterioration**
+- Discuss the distribution of violations across ${analysisType}s
+- Mention high-percentage but low-volume ${analysisType}s separately as "high severity, low impact - monitor closely"
+- Mention low-volume ${analysisType}s (1-2 cases) separately as "insufficient data for ranking"
+
+## 3. 🚨 Critical Insights
+**STATISTICAL SIGNIFICANCE RULE**: Focus on ${analysisType}s with meaningful sample sizes (3+ cases) when identifying critical issues.
+
+- Which ${analysisType}s with **3+ cases** require **immediate intervention**?
+- Are there any **emerging patterns** or **recurring issues** among high-volume offenders?
+- What does the average score distribution tell us about quality trends?
+- Note: ${analysisType}s with only 1-2 cases should be monitored but not flagged as critical concerns yet
+
+## 4. 💡 Root Cause Analysis
+Based on the failure drivers and ${analysisType} breakdown:
+- What are the **primary systemic issues**?
+- Are problems concentrated in specific ${analysisType}s or widespread?
+- How do the top issues correlate with ${analysisType} performance?
+
+## 5. ⚠️ Risk Assessment
+- Which ${analysisType}s with **significant case volumes (3+)** are at **high risk** of continued poor performance?
+- What trends suggest **potential escalation**?
+- Are there any **positive trends** worth noting?
+
+## 6. 🎯 Strategic Recommendations
+Provide **3-5 actionable recommendations** based on this trend data:
+- Prioritize interventions by **both impact (volume) and urgency (severity)**
+- Suggest specific actions for worst-performing ${analysisType}s **with meaningful case counts**
+- Recommend preventive measures for emerging issues
+- Suggest monitoring protocols for low-volume ${analysisType}s
+
+**FORMATTING RULES**:
+- Use **bold** for key findings and metrics
+- Use tables where appropriate for comparisons
+- Keep paragraphs concise and data-driven
+- Avoid generic statements—tie everything to the specific data provided
+- **NEVER rank ${analysisType}s with fewer than 3 cases as "worst performers"**
+    `;
+
+    // Execute AI generation with retry
+    const apiCall = async () => {
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        temperature: 0.3,
+      });
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    };
+
+    const analysis = await retryApiCall(apiCall);
+
+    // Return response with metadata
+    res.json({
+      analysis,
+      metadata: {
+        totalCases,
+        closureRate: `${closureRate}%`,
+        period: periodLabel,
+        analysisType: entityTypeLabel,
+        entitiesAnalyzed: entityData.length,
+        generatedAt: new Date().toLocaleString("en-GB", {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      }
+    });
+
+  } catch (error) {
+    console.error("Error analyzing trend data:", error);
+    res.status(500).json({ error: "Failed to generate trend analysis." });
   }
 };
 

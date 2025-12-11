@@ -436,7 +436,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                             maxWidth: '80%',
                             p: 0.8, // Reduced padding
                             borderRadius: 1, // Reduced border radius
-                            bgcolor: message.sender === 'user' ? '#00e5ff20' : '#e5e7eb',
+                            bgcolor: message.sender === 'user' ? '#00e5ff20' : '#414142ff',
                             color: message.sender === 'user' ? '#fff' : '#ccc',
                             fontSize: '0.8rem', // Reduced font size
                           }}

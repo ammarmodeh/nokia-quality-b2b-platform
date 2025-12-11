@@ -43,7 +43,7 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
     },
     {
       field: 'interviewDate',
-      headerName: 'Date',
+      headerName: 'Interview Date',
       width: 120,
       valueFormatter: (value) => {
         if (!value) return 'N/A';
@@ -125,6 +125,12 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
           {params.value}
         </Typography>
       )
+    },
+    {
+      field: 'teamName',
+      headerName: 'Team Name',
+      width: 150,
+      valueGetter: (value, row) => row.teamName || teamName || 'N/A'
     }
   ];
 
@@ -148,13 +154,14 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
 
       return {
         'Week': weekStr,
-        'Date': dateStr,
+        'Interview Date': dateStr,
         'SLID': task.slid || 'N/A',
         'Score': task.evaluationScore,
         'Violation Reason': task.reason,
         'Customer Feedback': task.customerFeedback || '',
         'Impact': task.priority,
-        'Status': task.validationStatus || 'Not validated'
+        'Status': task.validationStatus || 'Not validated',
+        'Team Name': task.teamName || teamName || 'N/A'
       };
     });
 
@@ -165,12 +172,16 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
     // Auto-width columns
     const wscols = Object.keys(exportData[0]).map(k => ({ wch: 20 }));
     // Custom width adjustments
-    wscols[3] = { wch: 40 }; // Reason
-    wscols[4] = { wch: 50 }; // Feedback
+    wscols[0] = { wch: 10 }; // Week
+    wscols[1] = { wch: 20 }; // Interview Date
+    wscols[2] = { wch: 10 }; // SLID
+    wscols[3] = { wch: 10 }; // Score
+    wscols[3] = { wch: 10 }; // Score
+    wscols[7] = { wch: 20 }; // Team Name
     worksheet['!cols'] = wscols;
 
-    const namePrefix = teamName ? teamName : title;
-    const fileName = `${namePrefix.replace(/[^a-z0-9]/gi, '_')}_Violations_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const namePrefix = teamName || title || 'Detailed';
+    const fileName = `${namePrefix.replace(/[\\/:*?"<>|]/g, '_')}_Violations_${new Date().toISOString().slice(0, 10)}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
