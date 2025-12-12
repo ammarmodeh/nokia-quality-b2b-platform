@@ -24,10 +24,11 @@ import { getAvailableWeeks, filterTasksByWeek, filterTasksByDateRange } from '..
 import { format, startOfWeek } from 'date-fns';
 import { getCustomWeekNumber } from '../utils/helpers';
 import * as XLSX from 'xlsx';
-import { MdFileDownload } from 'react-icons/md';
+import { MdFileDownload, MdTrendingUp } from 'react-icons/md';
 import { IconButton, Tooltip } from '@mui/material';
 // import AIAnalysisButton from './AIAnalysisButton';
 import ViolationDetailsDialog from './ViolationDetailsDialog';
+import TrendsSummaryModal from './TrendsSummaryModal';
 import { MdVisibility } from 'react-icons/md';
 
 const CustomToolbar = () => {
@@ -76,6 +77,7 @@ const WeeklySummaryTable = ({ tasks, fieldTeams = [] }) => {
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedRowData, setSelectedRowData] = useState(null);
+  const [trendModalOpen, setTrendModalOpen] = useState(false);
 
   // Calculate violation data for each team
   const rows = useMemo(() => {
@@ -471,6 +473,18 @@ const WeeklySummaryTable = ({ tasks, fieldTeams = [] }) => {
             </IconButton>
           </Tooltip>
 
+          <Tooltip title="View Weekly Trends">
+            <IconButton
+              onClick={() => setTrendModalOpen(true)}
+              sx={{
+                color: '#7b68ee',
+                '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.1)' }
+              }}
+            >
+              <MdTrendingUp fontSize="20px" />
+            </IconButton>
+          </Tooltip>
+
           {/* <AIAnalysisButton
             data={rows}
             title={`Weekly Summary - ${selectedWeek ? availableWeeks.find(w => w.key === selectedWeek)?.label : 'Custom Range'}`}
@@ -529,6 +543,13 @@ const WeeklySummaryTable = ({ tasks, fieldTeams = [] }) => {
           tasks={selectedRowData.tasks}
         />
       )}
+
+      <TrendsSummaryModal
+        open={trendModalOpen}
+        onClose={() => setTrendModalOpen(false)}
+        tasks={tasks}
+        period="week"
+      />
     </Box>
   );
 };
