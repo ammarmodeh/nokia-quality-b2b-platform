@@ -26,6 +26,8 @@ const TaskTable = lazy(() => import("../components/TaskTable"));
 const TeamViolationTracker = lazy(() => import("../components/TeamViolationTracker"));
 const WeeklySummaryTable = lazy(() => import("../components/WeeklySummaryTable"));
 const MonthlySummaryTable = lazy(() => import("../components/MonthlySummaryTable"));
+const WeeklyReasonTable = lazy(() => import("../components/WeeklyReasonTable"));
+const MonthlyReasonTable = lazy(() => import("../components/MonthlyReasonTable"));
 const TrendStatistics = lazy(() => import("../components/TrendStatistics"));
 
 const Dashboard = () => {
@@ -259,6 +261,7 @@ const Dashboard = () => {
       <Box sx={{ margin: "20px 0" }}>
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
           <WeeklySummaryTable tasks={tasks} fieldTeams={teamsData} />
+          <WeeklyReasonTable tasks={tasks} />
         </Suspense>
       </Box>
 
@@ -268,6 +271,7 @@ const Dashboard = () => {
       <Box sx={{ margin: "20px 0" }}>
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
           <MonthlySummaryTable tasks={tasks} fieldTeams={teamsData} />
+          <MonthlyReasonTable tasks={tasks} />
         </Suspense>
       </Box>
 

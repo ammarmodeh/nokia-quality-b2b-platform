@@ -275,7 +275,7 @@ export const getAvailableMonths = (tasks) => {
  * @returns {Object} Trend data by group (team name or reason)
  */
 export const calculateTrendData = (tasks, period = 'week', periodsCount = 8, groupBy = 'team', dateRange = null) => {
-  const periods = period === 'week' ? getAvailableWeeks(tasks) : getAvailableMonths(tasks);
+  const allPeriods = period === 'week' ? getAvailableWeeks(tasks) : getAvailableMonths(tasks);
 
   let periodsToAnalyze = [];
 
@@ -286,91 +286,124 @@ export const calculateTrendData = (tasks, period = 'week', periodsCount = 8, gro
     const end = new Date(dateRange.end);
     end.setHours(23, 59, 59, 999);
 
-    periodsToAnalyze = periods.filter(p => {
-      // For weeks/months, we check if the period's "start" or representative date is in range
-      // The `periods` array from getAvailableWeeks/Months has `start` (date object) for weeks.
-      // For months, we can reconstruct the date.
-
+    periodsToAnalyze = allPeriods.filter(p => {
       let periodDate;
       if (period === 'week') {
         periodDate = p.start; // Week start date
       } else {
         periodDate = new Date(p.year, p.month, 1); // Month start date
       }
-
       return periodDate >= start && periodDate <= end;
     }).reverse(); // Chronological order
   } else {
     // Standard count-based logic
     periodsToAnalyze = periodsCount === 'all'
-      ? [...periods].reverse()
-      : periods.slice(0, periodsCount).reverse();
+      ? [...allPeriods].reverse()
+      : allPeriods.slice(0, periodsCount).reverse();
   }
 
   const trendData = {};
 
+  // 1. First, identify ALL unique keys (teams or reasons) that appear in these periods
+  // We need to check all tasks that fall into any of these periods.
+  // A simple way is to iterate periods, get tasks, and collect keys.
+  const relevantKeys = new Set();
+
   periodsToAnalyze.forEach(periodInfo => {
-    const filteredTasks = period === 'week'
+    const tasksInPeriod = period === 'week'
       ? filterTasksByWeek(tasks, periodInfo.year, periodInfo.week)
       : filterTasksByMonth(tasks, periodInfo.year, periodInfo.month);
 
-    // Group by team or reason
-    filteredTasks.forEach(task => {
-      // Determine group key
-      let groupKey;
+    tasksInPeriod.forEach(task => {
+      let key;
       if (groupBy === 'reason') {
-        groupKey = task.reason || 'Unspecified';
+        key = task.reason || 'Unspecified';
       } else {
-        groupKey = task.teamName;
+        key = task.teamName;
       }
-
-      if (!trendData[groupKey]) {
-        trendData[groupKey] = {
-          periods: [],
-          detractors: [],
-          neutrals: [],
-          totalViolations: [],
-          equivalentDetractors: []
-        };
-      }
-
-      const periodLabel = period === 'week'
-        ? `W${periodInfo.week}`
-        : periodInfo.label.split(' ')[0].substring(0, 3);
-
-      // Find or create period entry
-      let periodIndex = trendData[groupKey].periods.indexOf(periodLabel);
-      if (periodIndex === -1) {
-        trendData[groupKey].periods.push(periodLabel);
-        trendData[groupKey].detractors.push(0);
-        trendData[groupKey].neutrals.push(0);
-        trendData[groupKey].totalViolations.push(0);
-        trendData[groupKey].equivalentDetractors.push(0);
-        periodIndex = trendData[groupKey].periods.length - 1;
-      }
-
-      // Count violations
-      if (task.evaluationScore >= 1 && task.evaluationScore <= 6) {
-        trendData[groupKey].detractors[periodIndex]++;
-        trendData[groupKey].totalViolations[periodIndex]++;
-      } else if (task.evaluationScore >= 7 && task.evaluationScore <= 8) {
-        trendData[groupKey].neutrals[periodIndex]++;
-        trendData[groupKey].totalViolations[periodIndex]++;
-      }
-
-      // Note: totalViolations is incremented inside blocks to ensure we only count 
-      // relevant tickets (Detractors/Neutrals), not just any task in the period 
-      // if logic changes. Currently redundant but safe.
+      if (key) relevantKeys.add(key);
     });
   });
 
-  // Calculate equivalent detractors for each period
-  Object.keys(trendData).forEach(key => {
-    trendData[key].equivalentDetractors = trendData[key].periods.map((_, index) => {
-      const detractors = trendData[key].detractors[index] || 0;
-      const neutrals = trendData[key].neutrals[index] || 0;
-      return detractors + Math.floor(neutrals / 3);
+  // 2. Initialize trendData for all keys with ZERO-filled arrays
+  const periodLabels = periodsToAnalyze.map(p =>
+    period === 'week'
+      ? `W${p.week}`
+      : p.label.split(' ')[0].substring(0, 3)
+  );
+
+  relevantKeys.forEach(key => {
+    trendData[key] = {
+      periods: periodLabels,
+      detractors: new Array(periodsToAnalyze.length).fill(0),
+      neutrals: new Array(periodsToAnalyze.length).fill(0),
+      totalViolations: new Array(periodsToAnalyze.length).fill(0),
+      equivalentDetractors: new Array(periodsToAnalyze.length).fill(0)
+    };
+  });
+
+  // 3. Iterate periods and fill data
+  periodsToAnalyze.forEach((periodInfo, index) => {
+    const tasksInPeriod = period === 'week'
+      ? filterTasksByWeek(tasks, periodInfo.year, periodInfo.week)
+      : filterTasksByMonth(tasks, periodInfo.year, periodInfo.month);
+
+    tasksInPeriod.forEach(task => {
+      let key;
+      if (groupBy === 'reason') {
+        key = task.reason || 'Unspecified';
+      } else {
+        key = task.teamName;
+      }
+
+      if (!trendData[key]) return; // Should not happen given step 1
+
+      // Count violations
+      if (task.evaluationScore >= 1 && task.evaluationScore <= 6) {
+        trendData[key].detractors[index]++;
+        trendData[key].totalViolations[index]++;
+      } else if (task.evaluationScore >= 7 && task.evaluationScore <= 8) {
+        trendData[key].neutrals[index]++;
+        trendData[key].totalViolations[index]++;
+      }
+
+      // Track reason frequency (only if it's a violation)
+      if (task.evaluationScore <= 8) {
+        if (!trendData[key].reasonCounts) trendData[key].reasonCounts = {};
+        const reason = task.reason || 'Unspecified';
+        trendData[key].reasonCounts[reason] = (trendData[key].reasonCounts[reason] || 0) + 1;
+      }
     });
+  });
+
+  // 4. Calculate equivalent detractors and find top reason
+  Object.keys(trendData).forEach(key => {
+    // Equivalent Detractors
+    trendData[key].equivalentDetractors = trendData[key].detractors.map((det, idx) => {
+      const neut = trendData[key].neutrals[idx];
+      return det + Math.floor(neut / 3);
+    });
+
+    // Top Reason & All Reasons
+    let topReason = 'None';
+    let topReasonCount = 0;
+    let allReasons = [];
+
+    if (trendData[key].reasonCounts) {
+      allReasons = Object.entries(trendData[key].reasonCounts)
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => b.count - a.count);
+
+      if (allReasons.length > 0) {
+        topReason = allReasons[0].reason;
+        topReasonCount = allReasons[0].count;
+      }
+    }
+    trendData[key].allReasons = allReasons;
+    trendData[key].topReason = topReason;
+    trendData[key].topReasonCount = topReasonCount;
+    // Cleanup temporary count map
+    delete trendData[key].reasonCounts;
   });
 
   return trendData;

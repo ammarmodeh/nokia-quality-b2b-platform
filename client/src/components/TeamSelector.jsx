@@ -19,7 +19,7 @@ const TeamSelector = ({
     <Paper sx={{
       p: 3,
       mb: 3,
-      backgroundColor: colors.surface,
+      // backgroundColor: colors.surface,
       border: `1px solid ${colors.border}`,
       borderRadius: '8px',
     }}>

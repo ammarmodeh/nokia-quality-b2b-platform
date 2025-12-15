@@ -23,8 +23,8 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-import { calculateTrendData, calculatePercentageChange } from '../utils/dateFilterHelpers';
-import { MdTrendingFlat, MdFileDownload } from 'react-icons/md';
+import { calculateTrendData } from '../utils/dateFilterHelpers';
+import { MdFileDownload } from 'react-icons/md';
 import * as XLSX from 'xlsx';
 import AIAnalysisButton from './AIAnalysisButton';
 
@@ -167,37 +167,134 @@ const TrendStatistics = ({ tasks }) => {
   const trendAnalysis = useMemo(() => {
     const analysis = topEntities.map(name => {
       const dataObj = trendData[name];
-      // Be defensive against empty data
-      if (!dataObj || !dataObj[selectedMetric] || dataObj[selectedMetric].length < 2) {
+
+      // Default / Empty State
+      if (!dataObj || !dataObj[selectedMetric] || dataObj[selectedMetric].length === 0) {
         return {
           name,
           change: 0,
-          direction: 'flat',
-          current: dataObj && dataObj[selectedMetric] && dataObj[selectedMetric].length > 0 ? dataObj[selectedMetric][0] : 0,
-          previous: 0,
-          status: 'Stable'
+          current: 0,
+          average: 0,
+          peak: 0,
+          status: 'Excellent',
+          statusColor: '#4caf50',
+          trendDirection: 'flat'
         };
       }
 
       const data = dataObj[selectedMetric];
-      const current = data[data.length - 1];
-      const previous = data[data.length - 2];
-      const change = calculatePercentageChange(current, previous);
+      const current = data[data.length - 1] || 0;
+      const first = data[0] || 0;
+      // Previous point (if available, otherwise first)
+      const previous = data.length > 1 ? data[data.length - 2] : first;
 
-      let direction = 'flat';
+      // Calculate Overall Change (First vs Last)
+      let change = 0;
+      if (first === 0 && current === 0) change = 0;
+      else if (first === 0) change = 100;
+      else change = ((current - first) / first) * 100;
+      change = Math.round(change * 10) / 10;
+
+      // Stats
+      const sum = data.reduce((a, b) => a + b, 0);
+      const average = Math.round((sum / data.length) * 10) / 10;
+      const peak = Math.max(...data);
+
+      // Breakdown Trends (Detractors & Neutrals)
+      const detData = dataObj.detractors || [];
+      const neutData = dataObj.neutrals || [];
+
+      const currentDet = detData[detData.length - 1] || 0;
+      const firstDet = detData[0] || 0;
+      let detChange = 0;
+      if (firstDet === 0 && currentDet === 0) detChange = 0;
+      else if (firstDet === 0) detChange = 100;
+      else detChange = ((currentDet - firstDet) / firstDet) * 100;
+      detChange = Math.round(detChange * 10) / 10;
+
+      const currentNeut = neutData[neutData.length - 1] || 0;
+      const firstNeut = neutData[0] || 0;
+      let neutChange = 0;
+      if (firstNeut === 0 && currentNeut === 0) neutChange = 0;
+      else if (firstNeut === 0) neutChange = 100;
+      else neutChange = ((currentNeut - firstNeut) / firstNeut) * 100;
+      neutChange = Math.round(neutChange * 10) / 10;
+
+      // Top Reason
+      const topReason = dataObj.topReason || 'None';
+      const topReasonCount = dataObj.topReasonCount || 0;
+      const allReasons = dataObj.allReasons || [];
+
+
+      // --- Robust Status Logic ---
       let status = 'Stable';
-      if (change > 0) {
-        direction = 'up';
+      let statusColor = '#ff9800'; // Default Orange
+      let trendDirection = 'flat';
+
+      // 1. Excellent (0 violations)
+      if (current === 0) {
+        status = 'Excellent';
+        statusColor = '#4caf50'; // Green
+        trendDirection = 'flat';
+      }
+      // 2. Critical (At Peak and > 0)
+      else if (current === peak && peak > 0) {
+        status = 'Critical';
+        statusColor = '#f44336'; // Red
+        trendDirection = 'up';
+      }
+      // 3. Worsening (Above Avg + Increasing)
+      else if (current > average && current >= previous) {
         status = 'Worsening';
-      } else if (change < 0) {
-        direction = 'down';
+        statusColor = '#f44336'; // Red
+        trendDirection = 'up';
+      }
+      // 4. Improving (Below Avg + Decreasing)
+      else if (current < average && current <= previous) {
         status = 'Improving';
+        statusColor = '#4caf50'; // Green
+        trendDirection = 'down';
+      }
+      // 5. High Concern (Just High)
+      else if (current > average) {
+        status = 'High';
+        statusColor = '#ff5722'; // Deep Orange
+        trendDirection = 'flat';
+      }
+      // 6. Good (Just Low)
+      else if (current < average) {
+        status = 'Good';
+        statusColor = '#8bc34a'; // Light Green
+        trendDirection = 'flat';
+      }
+      // 7. Stable (Default Fallback)
+      else {
+        status = 'Stable';
+        statusColor = '#ff9800'; // Orange
+        trendDirection = 'flat';
       }
 
-      return { name, change, direction, current, previous, status };
+      return {
+        name,
+        change,
+        current,
+        first,
+        average,
+        peak,
+        status,
+        statusColor,
+        trendDirection,
+        currentDet,
+        detChange,
+        currentNeut,
+        neutChange,
+        topReason,
+        topReasonCount,
+        allReasons
+      };
     });
 
-    // Find biggest mover
+    // Find biggest mover (absolute change magnitude)
     const worsening = [...analysis].sort((a, b) => b.change - a.change)[0];
     const improving = [...analysis].sort((a, b) => a.change - b.change)[0];
 
@@ -345,8 +442,35 @@ const TrendStatistics = ({ tasks }) => {
             <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
               • <strong>Range:</strong> 'Last 8' shows recent trend, 'All Time' shows Year-To-Date. 'Custom' lets you pick dates.
             </Typography>
+
+            <Typography variant="subtitle2" sx={{ color: '#7b68ee', fontWeight: 'bold', mt: 1, mb: 0.5 }}>
+              Status Definitions:
+            </Typography>
+            <Stack spacing={0.5} pl={1}>
+              <Typography variant="body2" sx={{ color: '#ccc', fontSize: '0.8rem' }}>
+                <span style={{ color: '#4caf50' }}>● Excellent:</span> Zero violations in the current period.
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#ccc', fontSize: '0.8rem' }}>
+                <span style={{ color: '#4caf50' }}>● Improving:</span> Below average and decreasing.
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#ccc', fontSize: '0.8rem' }}>
+                <span style={{ color: '#f44336' }}>● Worsening:</span> Above average and increasing.
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#ccc', fontSize: '0.8rem' }}>
+                <span style={{ color: '#f44336' }}>● Critical:</span> Reached the highest peak of the period.
+              </Typography>
+            </Stack>
+
+            <Typography variant="subtitle2" sx={{ color: '#7b68ee', fontWeight: 'bold', mt: 1, mb: 0.5 }}>
+              Metrics:
+            </Typography>
             <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
-              • <strong>Custom Range:</strong> When selected, the chart will show all {period}s that fall within your dates.
+              • <strong>Overall Change:</strong> Comparison between the <em>First</em> period and the <em>Current</em> period of the range.
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+              • <strong>Breakdown (Detractors/Neutrals):</strong> Shows the specific trend for each type. <br />
+              &nbsp;&nbsp; - <span style={{ color: '#f44336' }}>▲ 100%</span> means it doubled since the start.<br />
+              &nbsp;&nbsp; - <span style={{ color: '#4caf50' }}>▼ 50%</span> means it halved since the start.
             </Typography>
           </Stack>
         </Paper>
@@ -573,7 +697,7 @@ const TrendStatistics = ({ tasks }) => {
         {/* Detailed Trend Cards */}
         <Box>
           <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 2, borderBottom: '1px solid #3d3d3d', pb: 1 }}>
-            {analysisType === 'team' ? 'Team' : 'Reason'} Performance Analysis (Last 2 Periods of Range)
+            {analysisType === 'team' ? 'Team' : 'Reason'} Performance Analysis (Selected Range)
           </Typography>
           <Stack direction={isMobile ? 'column' : 'row'} spacing={2} flexWrap="wrap" useFlexGap>
             {trendAnalysis.entities.map((indicator, index) => (
@@ -586,7 +710,7 @@ const TrendStatistics = ({ tasks }) => {
                   flex: '1 1 200px',
                   minWidth: '200px',
                   border: '1px solid',
-                  borderColor: indicator.status === 'Worsening' ? '#f44336' : indicator.status === 'Improving' ? '#4caf50' : '#3d3d3d',
+                  borderColor: indicator.statusColor || '#3d3d3d',
                   position: 'relative',
                   overflow: 'hidden'
                 }}
@@ -597,48 +721,86 @@ const TrendStatistics = ({ tasks }) => {
                   right: 0,
                   width: '4px',
                   height: '100%',
-                  bgcolor: indicator.status === 'Worsening' ? '#f44336' : indicator.status === 'Improving' ? '#4caf50' : '#ff9800'
+                  bgcolor: indicator.statusColor || '#ff9800'
                 }} />
 
                 <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 600, mb: 1, minHeight: '2.5em' }}>
                   {indicator.name}
                 </Typography>
 
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
                   <Chip
                     label={indicator.status}
                     size="small"
                     sx={{
                       height: 20,
                       fontSize: '0.7rem',
-                      bgcolor: indicator.status === 'Worsening' ? 'rgba(244, 67, 54, 0.2)' : indicator.status === 'Improving' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 152, 0, 0.2)',
-                      color: indicator.status === 'Worsening' ? '#f44336' : indicator.status === 'Improving' ? '#4caf50' : '#ff9800'
+                      bgcolor: (indicator.statusColor || '#ff9800') + '33',
+                      color: indicator.statusColor || '#ff9800'
                     }}
                   />
                 </Stack>
 
-                <Stack direction="row" justifyContent="space-between" alignItems="end">
-                  <Box>
-                    <Typography variant="caption" sx={{ color: '#888' }}>Previous</Typography>
-                    <Typography variant="body2" sx={{ color: '#aaa' }}>{indicator.previous}</Typography>
+                <Stack spacing={0.5} sx={{ mb: 2 }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="caption" sx={{ color: '#888' }}>Detractors:</Typography>
+                    <Typography variant="caption" sx={{ color: '#fff' }}>
+                      {indicator.currentDet}
+                      <span style={{ color: indicator.detChange > 0 ? '#f44336' : indicator.detChange < 0 ? '#4caf50' : '#888', marginLeft: 4 }}>
+                        ({indicator.detChange > 0 ? '▲' : indicator.detChange < 0 ? '▼' : ''}{Math.abs(indicator.detChange)}%)
+                      </span>
+                    </Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="caption" sx={{ color: '#888' }}>Neutrals:</Typography>
+                    <Typography variant="caption" sx={{ color: '#fff' }}>
+                      {indicator.currentNeut}
+                      <span style={{ color: indicator.neutChange > 0 ? '#f44336' : indicator.neutChange < 0 ? '#4caf50' : '#888', marginLeft: 4 }}>
+                        ({indicator.neutChange > 0 ? '▲' : indicator.neutChange < 0 ? '▼' : ''}{Math.abs(indicator.neutChange)}%)
+                      </span>
+                    </Typography>
+                  </Stack>
+                </Stack>
+
+                {/* Reason Breakdown */}
+                {indicator.allReasons && indicator.allReasons.length > 0 && (
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="caption" sx={{ color: '#666', mb: 0.5, display: 'block', fontSize: '0.65rem' }}>
+                      Reason Breakdown:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {indicator.allReasons.map((r, i) => (
+                        <Chip
+                          key={i}
+                          label={`${r.reason}: ${r.count}`}
+                          size="small"
+                          sx={{
+                            height: 16,
+                            fontSize: '0.65rem',
+                            bgcolor: '#252525',
+                            color: '#aaa',
+                            border: '1px solid #333'
+                          }}
+                        />
+                      ))}
+                    </Box>
                   </Box>
-                  <MdTrendingFlat style={{ color: '#555' }} />
+                )}
+
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-end" sx={{ mb: 1, borderTop: '1px solid #333', pt: 1 }}>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>Avg</Typography>
+                    <Typography variant="body2" sx={{ color: '#ccc' }}>{indicator.average}</Typography>
+                  </Box>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>Peak</Typography>
+                    <Typography variant="body2" sx={{ color: '#ccc' }}>{indicator.peak}</Typography>
+                  </Box>
                   <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="caption" sx={{ color: '#888' }}>Current</Typography>
+                    <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>Current</Typography>
                     <Typography variant="h6" sx={{ color: '#fff', lineHeight: 1 }}>{indicator.current}</Typography>
                   </Box>
                 </Stack>
-
-                {indicator.change !== 0 && (
-                  <Typography variant="caption" sx={{
-                    display: 'block',
-                    mt: 1,
-                    textAlign: 'right',
-                    color: indicator.change > 0 ? '#f44336' : '#4caf50'
-                  }}>
-                    {indicator.change > 0 ? '▲' : '▼'} {Math.abs(indicator.change)}% change
-                  </Typography>
-                )}
               </Box>
             ))}
           </Stack>
