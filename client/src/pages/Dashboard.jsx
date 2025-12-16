@@ -29,6 +29,7 @@ const MonthlySummaryTable = lazy(() => import("../components/MonthlySummaryTable
 const WeeklyReasonTable = lazy(() => import("../components/WeeklyReasonTable"));
 const MonthlyReasonTable = lazy(() => import("../components/MonthlyReasonTable"));
 const TrendStatistics = lazy(() => import("../components/TrendStatistics"));
+const SamplesTokenFloatingButton = lazy(() => import("../components/SamplesTokenFloatingButton"));
 
 const Dashboard = () => {
   const { user } = useSelector((state) => state?.auth);
@@ -283,6 +284,11 @@ const Dashboard = () => {
           <TrendStatistics tasks={tasks} />
         </Suspense>
       </Box>
+
+      {/* Samples Token Floating Button */}
+      <Suspense fallback={null}>
+        <SamplesTokenFloatingButton />
+      </Suspense>
     </div >
   );
 };

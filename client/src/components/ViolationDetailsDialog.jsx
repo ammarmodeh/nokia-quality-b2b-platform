@@ -55,6 +55,19 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
       }
     },
     {
+      field: 'pisDate',
+      headerName: 'PIS Date',
+      width: 120,
+      valueFormatter: (value) => {
+        if (!value) return 'N/A';
+        try {
+          return format(new Date(value), 'yyyy-MM-dd');
+        } catch (e) {
+          return value;
+        }
+      }
+    },
+    {
       field: 'evaluationScore',
       headerName: 'Score',
       width: 80,
@@ -140,6 +153,7 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
     const exportData = tasks.map(task => {
       let weekStr = 'N/A';
       let dateStr = 'N/A';
+      let pisDateStr = 'N/A';
 
       if (task.interviewDate) {
         try {
@@ -152,9 +166,18 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
         }
       }
 
+      if (task.pisDate) {
+        try {
+          pisDateStr = format(new Date(task.pisDate), 'yyyy-MM-dd');
+        } catch (e) {
+          // Keep defaults
+        }
+      }
+
       return {
         'Week': weekStr,
         'Interview Date': dateStr,
+        'PIS Date': pisDateStr,
         'SLID': task.slid || 'N/A',
         'Score': task.evaluationScore,
         'Violation Reason': task.reason,
@@ -174,10 +197,11 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
     // Custom width adjustments
     wscols[0] = { wch: 10 }; // Week
     wscols[1] = { wch: 20 }; // Interview Date
-    wscols[2] = { wch: 10 }; // SLID
-    wscols[3] = { wch: 10 }; // Score
-    wscols[3] = { wch: 10 }; // Score
-    wscols[7] = { wch: 20 }; // Team Name
+    wscols[2] = { wch: 20 }; // PIS Date
+    wscols[3] = { wch: 10 }; // SLID
+    wscols[4] = { wch: 10 }; // Score
+    wscols[5] = { wch: 30 }; // Reason
+    wscols[8] = { wch: 20 }; // Team Name
     worksheet['!cols'] = wscols;
 
     const namePrefix = teamName || title || 'Detailed';

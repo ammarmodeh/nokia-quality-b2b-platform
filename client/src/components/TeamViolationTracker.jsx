@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Box, Stack } from "@mui/material";
+import { Box, Paper, Stack, Typography } from "@mui/material";
+import { startOfWeek } from "date-fns";
+import { getCustomWeekNumber } from "../utils/helpers";
 import { useSelector } from "react-redux";
 import { useSnackbar } from "notistack";
 import ViolationDataGrid from "./ViolationDataGrid";
@@ -30,6 +32,120 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const [selectedTeamForSession, setSelectedTeamForSession] = useState(null);
   const [selectedTeamForAbsence, setSelectedTeamForAbsence] = useState(null);
   const [assessments, setAssessments] = useState([]);
+
+  const [samplesTokenData, setSamplesTokenData] = useState({});
+
+  // Fetch samples token data (replacing localStorage)
+  useEffect(() => {
+    const fetchSamplesData = async () => {
+      try {
+        const yearsToFetch = new Set();
+        const currentYear = new Date().getFullYear();
+        yearsToFetch.add(currentYear);
+
+        tasks.forEach(task => {
+          if (task.interviewDate) {
+            yearsToFetch.add(new Date(task.interviewDate).getFullYear());
+          }
+        });
+
+        const promises = Array.from(yearsToFetch).map(year =>
+          api.get(`/samples-token/${year}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+          }).then(res => ({ year, data: res.data || [] }))
+            .catch(err => {
+              console.error(`Error fetching samples for ${year}:`, err);
+              return { year, data: [] };
+            })
+        );
+
+        const results = await Promise.all(promises);
+        const newData = {};
+        results.forEach(({ year, data }) => {
+          newData[year] = {};
+          data.forEach(item => {
+            newData[year][`W${item.weekNumber}`] = item;
+          });
+        });
+
+        setSamplesTokenData(newData);
+      } catch (error) {
+        console.error("Error fetching samples token data:", error);
+      }
+    };
+
+    fetchSamplesData();
+  }, [tasks]);
+
+  // Calculate total samples from fetched state based on task weeks
+  const totalGlobalSamples = useMemo(() => {
+    try {
+      const uniqueWeeks = new Set();
+
+      tasks.forEach(task => {
+        if (task.interviewDate) {
+          const date = new Date(task.interviewDate);
+          const start = startOfWeek(date, { weekStartsOn: 0 });
+          const year = start.getFullYear();
+          const weekNum = getCustomWeekNumber(start, year);
+          uniqueWeeks.add(`${year}-W${weekNum}`);
+        }
+      });
+
+      let total = 0;
+      uniqueWeeks.forEach(key => {
+        const [year, weekKey] = key.split('-');
+        if (samplesTokenData[year] && samplesTokenData[year][weekKey]) {
+          total += parseFloat(samplesTokenData[year][weekKey].sampleSize) || 0;
+        }
+      });
+
+      return total;
+    } catch (error) {
+      console.error("Error calculating total samples:", error);
+      return 0;
+    }
+  }, [tasks, samplesTokenData]);
+
+  // Calculate YEAR-TO-DATE total samples for threshold calculation
+  const ytdTotalSamples = useMemo(() => {
+    try {
+      const currentYear = new Date().getFullYear();
+      const currentWeek = getCustomWeekNumber(new Date(), currentYear);
+      const yearData = samplesTokenData[currentYear] || {};
+
+      console.log('📊 YTD Calculation Debug:', {
+        currentYear,
+        currentWeek,
+        yearDataKeys: Object.keys(yearData)
+      });
+
+      let total = 0;
+      Object.keys(yearData).forEach(weekKey => {
+        // weekKey is like "W1", "W2"... or just "W" + number
+        const weekNum = parseInt(weekKey.replace('W', ''), 10);
+        // Sum samples for weeks <= current week
+        if (!isNaN(weekNum) && weekNum <= currentWeek) {
+          total += parseFloat(yearData[weekKey].sampleSize) || 0;
+        }
+      });
+
+      console.log('📊 YTD Total Samples:', total);
+
+      // Fallback: if no yearly data, use current view total but warn
+      // Logic adjusted: If YTD is 0, we might want to still show 0 or fallback depending on user preference. 
+      // Keeping fallback to totalGlobalSamples if 0 for continuity until data is entered.
+      if (total === 0 && totalGlobalSamples > 0) {
+        console.warn('⚠️ No YTD data found, using current view total as fallback:', totalGlobalSamples);
+        return totalGlobalSamples;
+      }
+
+      return total;
+    } catch (error) {
+      console.error("Error calculating YTD samples:", error);
+      return totalGlobalSamples; // Fallback
+    }
+  }, [tasks, totalGlobalSamples, samplesTokenData]);
 
   useEffect(() => {
     const fetchEvaluationData = async () => {
@@ -63,6 +179,37 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
 
     return 'N/A';
   };
+
+  const activeTeamsCount = useMemo(() => {
+    return fieldTeams.filter(t => !t.isTerminated).length || 1;
+  }, [fieldTeams]);
+
+  const { teamDetractorLimit, teamNeutralLimit, calculationBreakdown } = useMemo(() => {
+    // Step 1: Year-to-Date allowed violations (Global)
+    // 9% for Detractors, 16% for Neutrals based on YTD samples
+    const ytdDetractorLimitGlobal = ytdTotalSamples * 0.09;
+    const ytdNeutralLimitGlobal = ytdTotalSamples * 0.16;
+
+    // Step 2: Per-team YTD limits
+    // Distributed evenly among active teams
+    const ytdDetractorPerTeam = ytdDetractorLimitGlobal / activeTeamsCount;
+    const ytdNeutralPerTeam = ytdNeutralLimitGlobal / activeTeamsCount;
+
+    return {
+      // Use floor to be safe/strict, or round. Usually limits are integers.
+      teamDetractorLimit: Math.floor(ytdDetractorPerTeam),
+      teamNeutralLimit: Math.floor(ytdNeutralPerTeam),
+      calculationBreakdown: {
+        ytdTotal: ytdTotalSamples,
+        ytdDetractorLimitGlobal: ytdDetractorLimitGlobal.toFixed(1),
+        ytdNeutralLimitGlobal: ytdNeutralLimitGlobal.toFixed(1),
+        ytdDetractorPerTeam: ytdDetractorPerTeam.toFixed(2),
+        ytdNeutralPerTeam: ytdNeutralPerTeam.toFixed(2),
+        activeTeams: activeTeamsCount,
+        note: "Limits are dynamic based on accumulated Year-to-Date samples."
+      }
+    };
+  }, [ytdTotalSamples, activeTeamsCount]);
 
   useEffect(() => {
     const fetchAssessments = async () => {
@@ -119,14 +266,24 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         'Trained': row.hasTraining ? 'Yes' : 'No',
 
         'Detractors': row.detractorCount,
+        'Detractor Excess': row.detractorExcess > 0 ? `+${row.detractorExcess}` : '--',
+        // 'Detractor Rate (%)': `${row.detractorRate}%`,
         'Neutrals': row.neutralCount,
+        'Neutral Excess': row.neutralExcess > 0 ? `+${row.neutralExcess}` : '--',
+        // 'Neutral Rate (%)': `${row.neutralRate}%`,
+
         'Total Violations': row.totalViolations,
         'Low Impact Tickets': row.lowPriorityCount,
         'Medium Impact Tickets': row.mediumPriorityCount,
         'High Impact Tickets': row.highPriorityCount,
 
-        'Violation Status': row.equivalentDetractorCount >= 3 ? 'Violated' :
-          row.equivalentDetractorCount === 2 ? 'Warning' : 'OK',
+        'Detractor Status': row.violatesDetractorThreshold ? 'FAIL' : 'OK',
+        'Neutral Status': row.violatesNeutralThreshold ? 'FAIL' : 'OK',
+        // 'Review Status': row.detractorCount > teamDetractorLimit ? 'Violated' : 'OK',
+
+        'Notes': row.notes || 'None',
+        'Recovery Advice': row.advice || 'On Track',
+        'Consequence': row.consequenceApplied || 'None',
 
         'Completed Sessions': completedSessions.length > 0 ? completedSessions.join('\n\n') : 'None',
         'Last Completed Session': row.mostRecentCompletedSession,
@@ -135,11 +292,9 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
 
         // 'Date Reached Violation Limit': row.dateReachedLimit || 'N/A',
         // 'How Threshold Was Reached': row.thresholdDescription,
-        // 'Consequence Applied': row.consequenceApplied,
-        // 'Notes/Comments': row.notes,
         'Team Status': row.validationStatus,
 
-        'Online Test Score': row.evaluationScore !== 'N/A' ? `${row.evaluationScore}%` : row.evaluationScore, // This will now have the actual score
+        'Online Test Score': row.evaluationScore !== 'N/A' ? `${row.evaluationScore}%` : row.evaluationScore,
 
         'OTJ Assessment Result': row.otjAssessmentResult !== 'N/A' ? `${row.otjAssessmentResult}%` : row.otjAssessmentResult,
         'OTJ Assessment Date': row.otjAssessmentDate,
@@ -457,6 +612,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           equivalentDetractors
         });
 
+        // Note: usage of 3 here might need to be dynamic or kept as "soft" threshold for history
         if (equivalentDetractors >= 3 && !thresholdCrossed) {
           dateReachedLimit = violation.date;
           thresholdCrossed = true;
@@ -496,36 +652,87 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         }
       }
 
+      const curDate = new Date();
+      const currentWeek = getCustomWeekNumber(curDate, curDate.getFullYear());
+      const avgSamplesPerWeek = currentWeek > 0 && ytdTotalSamples > 0
+        ? ytdTotalSamples / currentWeek
+        : (totalGlobalSamples / 52); // fallback
+
+      // Use YTD Samples for accurate rate calculation relative to current time
+      // If YTD is 0, fall back to global or 1 to prevent division by zero
+      const sampleBase = ytdTotalSamples > 0 ? ytdTotalSamples : (totalGlobalSamples > 0 ? totalGlobalSamples : 1);
+
+      const detractorRate = ((totalDetractors / sampleBase) * 100).toFixed(1);
+      const neutralRate = ((totalNeutrals / sampleBase) * 100).toFixed(1);
+
+      // Violation checks against Dynamic Limits
+      const isDetractorViolated = totalDetractors > teamDetractorLimit;
+      const isNeutralViolated = totalNeutrals > teamNeutralLimit;
+
       let validationStatus = "Active";
       let notes = "";
-      let consequence = "";
+      let consequence = [];
+      let advice = "On Track";
+
+      // Advice Calculation
+      const activeTeamsCount = calculationBreakdown?.activeTeams || 1; // Default to 1 to prevent division by zero
+      if (isDetractorViolated || isNeutralViolated) {
+        let neededSamples = 0;
+
+        if (isDetractorViolated) {
+          // Formula: Count <= (NewTotal * 0.09) / Teams
+          // NewTotal >= (Count * Teams) / 0.09
+          const targetYTD = (totalDetractors * activeTeamsCount) / 0.09;
+          const requiredAdditional = Math.max(0, targetYTD - sampleBase);
+          neededSamples = Math.max(neededSamples, requiredAdditional);
+        }
+
+        if (isNeutralViolated) {
+          // Formula: Count <= (NewTotal * 0.16) / Teams
+          // NewTotal >= (Count * Teams) / 0.16
+          const targetYTD = (totalNeutrals * activeTeamsCount) / 0.16;
+          const requiredAdditional = Math.max(0, targetYTD - sampleBase);
+          neededSamples = Math.max(neededSamples, requiredAdditional);
+        }
+
+        const neededWeeks = avgSamplesPerWeek > 0
+          ? Math.ceil(neededSamples / avgSamplesPerWeek)
+          : 0;
+
+        advice = `Needs ~${Math.ceil(neededSamples).toLocaleString()} clean samples (~${neededWeeks} weeks)`;
+      }
 
       if (team?.isTerminated) {
         validationStatus = "Terminated";
         notes = `Terminated. Reason: ${team.terminationReason || "N/A"}`;
+        advice = "Terminated";
       } else if (team?.isSuspended) {
         validationStatus = "Suspended";
         notes = `Suspended until ${team.suspensionEndDate || "N/A"}. Reason: ${team.suspensionReason || "N/A"}`;
+        advice = "Suspended";
       } else if (team?.isResigned) {
         validationStatus = "Resigned";
         notes = `Resigned. Reason: ${team.resignationReason || "N/A"}`;
+        advice = "Resigned";
       } else if (team?.isOnLeave) {
         validationStatus = "On Leave";
         notes = "Team is currently on leave";
+        advice = "On Leave";
       } else {
         validationStatus = "Active";
 
-        if (currentEquivalent >= 3) {
-          consequence = "Immediate suspension pending review";
-          notes = `Violation limit reached (${currentEquivalent} equivalent detractors). ${thresholdDescription}`;
-        } else if (currentEquivalent === 2) {
-          consequence = "Formal warning";
-          notes = "Approaching violation limit (2 equivalent detractors)";
-        } else if (currentEquivalent === 1) {
-          consequence = "Verbal warning";
-          notes = "1 equivalent detractor recorded";
+        if (isDetractorViolated) {
+          consequence.push("Detractor Limit Exceeded");
+        }
+
+        if (isNeutralViolated) {
+          consequence.push("Neutral Limit Exceeded");
+        }
+
+        if (consequence.length > 0) {
+          notes = consequence.join(" & ");
         } else {
-          notes = "No violations recorded";
+          notes = "Within limits";
         }
       }
 
@@ -556,6 +763,17 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         neutralCount: totalNeutrals,
         totalViolations,
         equivalentDetractorCount: currentEquivalent,
+        detractorRate, // Now uses YTD or global as fallback
+        neutralRate,
+        promoterRate: sampleBase > 0 ? (75.0).toFixed(1) : '0.0', // Placeholder
+        nps: sampleBase > 0 ? (75.0 - ((totalDetractors / sampleBase) * 100)).toFixed(1) : '0.0',
+
+        // Critical: Status now driven by comparison to Dynamic Limit
+        violatesDetractorThreshold: isDetractorViolated,
+        violatesNeutralThreshold: isNeutralViolated,
+
+        detractorExcess: Math.max(0, totalDetractors - teamDetractorLimit),
+        neutralExcess: Math.max(0, totalNeutrals - teamNeutralLimit),
 
         lowPriorityCount: teamViolations.lowPriority,
         mediumPriorityCount: teamViolations.mediumPriority,
@@ -575,6 +793,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         thresholdDescription,
         consequenceApplied: consequence,
         notes,
+        advice,
         validationStatus,
         isEvaluated: team.isEvaluated,
         evaluationScore: team.evaluationScore || 'N/A',
@@ -588,12 +807,16 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     });
 
     return rowsData.sort((a, b) => {
+      // Sort logic prioritizing violations
+      if (a.violatesDetractorThreshold !== b.violatesDetractorThreshold) {
+        return a.violatesDetractorThreshold ? -1 : 1;
+      }
       if (b.totalViolations !== a.totalViolations) {
         return b.totalViolations - a.totalViolations;
       }
       return b.equivalentDetractorCount - a.equivalentDetractorCount;
     });
-  }, [fieldTeams, assessments, violationData]);
+  }, [fieldTeams, assessments, violationData, ytdTotalSamples, totalGlobalSamples, teamDetractorLimit, teamNeutralLimit]);
 
   const handleReportAbsence = async (absenceData) => {
     try {
@@ -674,7 +897,39 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
           onViolationInfoClick={handleViolationDialogOpen}
           tasks={tasks}
           fieldTeams={fieldTeams}
+          teamDetractorLimit={teamDetractorLimit}
+          teamNeutralLimit={teamNeutralLimit}
+          totalGlobalSamples={totalGlobalSamples}
+          calculationBreakdown={calculationBreakdown}
         />
+
+        {/* Info Card */}
+        <Paper sx={{ p: 2, backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
+          <Typography variant="h6" sx={{ color: '#fff', mb: 2, fontSize: '1rem', fontWeight: 600 }}>
+            📊 Year-to-Date Dynamic Limits
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+            <Box>
+              <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
+                <strong style={{ color: '#4caf50' }}>✓ Dynamic Limit:</strong> Limits grow as year progresses (Samples × Limit %) / Active Teams.
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
+                <strong style={{ color: '#f44336' }}>⚠ Violation:</strong> Total year-to-date violations exceed the current dynamic allowed limit.
+              </Typography>
+            </Box>
+            <Box sx={{ borderLeft: '1px solid #444', pl: 2 }}>
+              <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
+                Current YTD Total Samples: <strong style={{ color: '#fff' }}>{calculationBreakdown?.ytdTotal}</strong>
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
+                Global YTD Allowed: <strong style={{ color: '#f44336' }}>{calculationBreakdown?.ytdDetractorLimitGlobal} Detractors</strong> | <strong style={{ color: '#ff9800' }}>{calculationBreakdown?.ytdNeutralLimitGlobal} Neutrals</strong>
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                Per Team Limit (Active: {calculationBreakdown?.activeTeams}): <strong style={{ color: '#f44336' }}>{teamDetractorLimit} Detractors</strong> | <strong style={{ color: '#ff9800' }}>{teamNeutralLimit} Neutrals</strong>
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
 
         <ViolationDataGrid
           rows={filteredRows}

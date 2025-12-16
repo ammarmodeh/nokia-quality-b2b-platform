@@ -17,7 +17,11 @@ const SearchAndExport = ({
   exportToExcel,
   onViolationInfoClick,
   tasks = [],
-  fieldTeams = []
+  fieldTeams = [],
+  teamDetractorLimit = 0,
+  teamNeutralLimit = 0,
+  totalGlobalSamples = 0,
+  calculationBreakdown = null
 }) => {
   const isMobile = useMediaQuery('(max-width:503px)');
 
@@ -214,6 +218,43 @@ const SearchAndExport = ({
       </Stack>
 
       <Stack direction={`${isMobile ? "column" : "row"}`} alignItems="center" justifyContent={"space-between"} gap={2} width={"100%"} sx={{ mt: 2 }}>
+        {totalGlobalSamples > 0 && calculationBreakdown && (
+          <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, flexDirection: 'column' }}>
+            <Typography variant="caption" sx={{ color: '#5b5b5b', fontWeight: 600 }}>
+              📊 Monthly Per-Team Limits (Based on Yearly Calculation)
+            </Typography>
+            <Stack direction="row" gap={2} flexWrap="wrap">
+              <Chip
+                label={`Allow Max ${teamDetractorLimit} Detractors/Team/Month (≤9%)`}
+                size="small"
+                sx={{
+                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                  color: '#f44336',
+                  fontSize: '0.75rem',
+                  border: '1px solid rgba(244, 67, 54, 0.3)'
+                }}
+              />
+              <Chip
+                label={`Allow Max ${teamNeutralLimit} Neutrals/Team/Month (≤16%)`}
+                size="small"
+                sx={{
+                  backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                  color: '#ff9800',
+                  fontSize: '0.75rem',
+                  border: '1px solid rgba(255, 152, 0, 0.3)'
+                }}
+              />
+            </Stack>
+            <Typography variant="caption" sx={{ color: '#7b7b7b', fontSize: '0.65rem', mt: 0.5, fontFamily: 'monospace' }}>
+              📐 Calculation: Yearly Total ({calculationBreakdown.yearlyTotal}) × Threshold (9% or 16%) ÷ Teams ({calculationBreakdown.activeTeams}) ÷ 12 months
+              <br />
+              Detractors: {calculationBreakdown.yearlyTotal} × 0.09 = {calculationBreakdown.yearlyDetractorLimit} → ÷{calculationBreakdown.activeTeams} = {calculationBreakdown.yearlyDetractorPerTeam}/year → ÷12 = {calculationBreakdown.monthlyDetractorPerTeam}/month
+              <br />
+              Neutrals: {calculationBreakdown.yearlyTotal} × 0.16 = {calculationBreakdown.yearlyNeutralLimit} → ÷{calculationBreakdown.activeTeams} = {calculationBreakdown.yearlyNeutralPerTeam}/year → ÷12 = {calculationBreakdown.monthlyNeutralPerTeam}/month
+            </Typography>
+          </Stack>
+        )}
+
         {tasks.length > 0 && (
           <>
             {/* <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, flexDirection: 'column' }}>

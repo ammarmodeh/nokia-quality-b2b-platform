@@ -30,6 +30,7 @@ import { IconButton, Tooltip } from '@mui/material';
 import ViolationDetailsDialog from './ViolationDetailsDialog';
 import TrendsSummaryModal from './TrendsSummaryModal';
 import { MdVisibility } from 'react-icons/md';
+import api from '../api/api';
 
 const CustomToolbar = () => {
   return (
@@ -78,6 +79,82 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedRowData, setSelectedRowData] = useState(null);
   const [trendModalOpen, setTrendModalOpen] = useState(false);
+
+  const [samplesTokenData, setSamplesTokenData] = useState({});
+
+  // Fetch samples token data (same fix as TeamViolationTracker)
+  useEffect(() => {
+    const fetchSamplesData = async () => {
+      try {
+        const yearsToFetch = new Set();
+        const currentYear = new Date().getFullYear();
+        yearsToFetch.add(currentYear);
+
+        tasks.forEach(task => {
+          if (task.interviewDate) {
+            yearsToFetch.add(new Date(task.interviewDate).getFullYear());
+          }
+        });
+
+        const promises = Array.from(yearsToFetch).map(year =>
+          api.get(`/samples-token/${year}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+          }).then(res => ({ year, data: res.data || [] }))
+            .catch(err => {
+              console.error(`Error fetching samples for ${year}:`, err);
+              return { year, data: [] };
+            })
+        );
+
+        const results = await Promise.all(promises);
+        const newData = {};
+        results.forEach(({ year, data }) => {
+          newData[year] = {};
+          data.forEach(item => {
+            newData[year][`W${item.weekNumber}`] = item;
+          });
+        });
+
+        setSamplesTokenData(newData);
+      } catch (error) {
+        console.error("Error fetching samples token data:", error);
+      }
+    };
+
+    fetchSamplesData();
+  }, [tasks]);
+
+  // Calculate total samples from fetched state based on weeks in the current filtered view
+  const totalMonthlySamples = useMemo(() => {
+    if (!filteredTasks.length) return 0;
+
+    try {
+      const uniqueWeeks = new Set();
+
+      filteredTasks.forEach(task => {
+        if (task.interviewDate) {
+          const date = new Date(task.interviewDate);
+          const start = startOfWeek(date, { weekStartsOn: 0 });
+          const year = start.getFullYear();
+          const weekNum = getCustomWeekNumber(start, year); // Use existing helper
+          uniqueWeeks.add(`${year}-W${weekNum}`);
+        }
+      });
+
+      let total = 0;
+      uniqueWeeks.forEach(key => {
+        const [year, weekKey] = key.split('-');
+        if (samplesTokenData[year] && samplesTokenData[year][weekKey]) {
+          total += parseFloat(samplesTokenData[year][weekKey].sampleSize) || 0;
+        }
+      });
+
+      return total;
+    } catch (error) {
+      console.error("Error calculating total samples:", error);
+      return 0;
+    }
+  }, [filteredTasks, samplesTokenData]);
 
   // Calculate violation data for each team
   const rows = useMemo(() => {
@@ -135,18 +212,28 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
       }
     });
 
-    // Calculate totals and equivalent detractors
-    return Object.values(teamViolations).map(team => ({
-      ...team,
-      totalViolations: team.detractorCount + team.neutralCount,
-      equivalentDetractorCount: team.detractorCount + Math.floor(team.neutralCount / 3),
-    })).filter(team => team.totalViolations > 0).sort((a, b) => {
-      if (b.totalViolations !== a.totalViolations) {
-        return b.totalViolations - a.totalViolations;
-      }
-      return b.equivalentDetractorCount - a.equivalentDetractorCount;
+    // Calculate totals and rates
+    return Object.values(teamViolations).map(team => {
+      // Safe denominator to avoid NaN/Infinity
+      const denominator = totalMonthlySamples > 0 ? totalMonthlySamples : 1;
+
+      const detractorRate = totalMonthlySamples > 0 ? ((team.detractorCount / denominator) * 100).toFixed(1) : '0.0';
+      const neutralRate = totalMonthlySamples > 0 ? ((team.neutralCount / denominator) * 100).toFixed(1) : '0.0';
+
+      return {
+        ...team,
+        totalViolations: team.detractorCount + team.neutralCount,
+        detractorRate,
+        neutralRate
+      };
+    }).filter(team => team.totalViolations > 0).sort((a, b) => {
+      // Sort by Detractor Rate descending, then Neutral Rate descending
+      const detA = parseFloat(a.detractorRate);
+      const detB = parseFloat(b.detractorRate);
+      if (detB !== detA) return detB - detA;
+      return parseFloat(b.neutralRate) - parseFloat(a.neutralRate);
     });
-  }, [filteredTasks, fieldTeams]);
+  }, [filteredTasks, fieldTeams, totalMonthlySamples]);
 
   const handleViewDetails = (row) => {
     setSelectedRowData(row);
@@ -198,7 +285,7 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
     {
       field: 'detractorCount',
       headerName: 'Detractors',
-      width: 120,
+      width: 100,
       renderCell: (params) => (
         <Box sx={{ color: params.value > 0 ? '#f44336' : '#6b7280', fontWeight: 'bold' }}>
           {params.value}
@@ -206,29 +293,46 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
       ),
     },
     {
+      field: 'detractorRate',
+      headerName: 'Detractor %',
+      width: 120,
+      renderCell: (params) => {
+        const val = parseFloat(params.value);
+        const isHigh = val > 9;
+        return (
+          <Box sx={{
+            color: isHigh ? '#f44336' : '#4caf50',
+            fontWeight: 'bold',
+            border: isHigh ? '1px solid #f44336' : '1px solid transparent',
+            borderRadius: '4px',
+            padding: '2px 6px',
+            backgroundColor: isHigh ? 'rgba(244, 67, 54, 0.1)' : 'transparent'
+          }}>
+            {params.value}%
+          </Box>
+        );
+      },
+    },
+    {
       field: 'neutralCount',
       headerName: 'Neutrals',
-      width: 120,
+      width: 100,
       renderCell: (params) => (
         <Box sx={{ color: params.value > 0 ? '#ff9800' : '#6b7280', fontWeight: 'bold' }}>
           {params.value}
         </Box>
       ),
     },
-    // {
-    //   field: 'equivalentDetractorCount',
-    //   headerName: 'Eq. Detractors',
-    //   width: 140,
-    //   renderCell: (params) => (
-    //     <Box sx={{
-    //       fontWeight: 'bold',
-    //       color: params.value >= 3 ? '#f44336' :
-    //         params.value === 2 ? '#ff9800' : '#4caf50'
-    //     }}>
-    //       {params.value}
-    //     </Box>
-    //   ),
-    // },
+    {
+      field: 'neutralRate',
+      headerName: 'Neutral %',
+      width: 120,
+      renderCell: (params) => (
+        <Box sx={{ color: '#fff', fontWeight: '500' }}>
+          {params.value}%
+        </Box>
+      ),
+    },
     {
       field: 'totalViolations',
       headerName: 'Total Violations',
@@ -313,12 +417,14 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
         'Team Name': row.teamName,
         'Group': row.teamCompany,
         'Detractors (Count)': row.detractorCount,
+        'Detractor Rate (%)': `${row.detractorRate}%`,
         'Neutrals (Count)': row.neutralCount,
-        // 'Eq. Detractors': row.equivalentDetractorCount,
+        'Neutral Rate (%)': `${row.neutralRate}%`,
         'Total Violations': row.totalViolations,
         'Low Impact (Count)': row.lowPriorityCount,
         'Medium Impact (Count)': row.mediumPriorityCount,
         'High Impact (Count)': row.highPriorityCount,
+        'Global Sample Size': totalMonthlySamples
       };
 
       // Only export teams that have violations/tasks in the selected period
@@ -348,12 +454,14 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
             'Score': task.evaluationScore,
             'Impact': task.priority,
             'Detractors': teamSummary['Detractors (Count)'],
+            'Detractor Rate (%)': teamSummary['Detractor Rate (%)'],
             'Neutrals': teamSummary['Neutrals (Count)'],
-            // 'Eq. Detractors': teamSummary['Eq. Detractors'],
+            'Neutral Rate (%)': teamSummary['Neutral Rate (%)'],
             'Total Violations': teamSummary['Total Violations'],
             'Low Impact': teamSummary['Low Impact (Count)'],
             'Medium Impact': teamSummary['Medium Impact (Count)'],
             'High Impact': teamSummary['High Impact (Count)'],
+            'Global Sample Size': teamSummary['Global Sample Size']
           });
         });
       }

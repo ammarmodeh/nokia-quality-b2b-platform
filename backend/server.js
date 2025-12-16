@@ -17,6 +17,7 @@ import customerIssueRoutes from "./routes/customerIssueRoutes.js";
 import onTheJobAssessmentRoutes from "./routes/onTheJobAssessmentRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import detractorRoutes from "./routes/detractorRoutes.js";
+import samplesTokenRoutes from "./routes/samplesTokenRoutes.js";
 
 dotenv.config();
 
@@ -74,6 +75,7 @@ app.use("/api/suggestions", suggestionsRoutes);
 app.use("/api/policies", policyRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/detractors", detractorRoutes);
+app.use("/api/samples-token", samplesTokenRoutes);
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -146,19 +146,152 @@ const ViolationDataGrid = ({
         </Box>
       )
     },
+    // {
+    //   field: "detractorRate",
+    //   headerName: "Detractor %",
+    //   width: 120,
+    //   renderCell: (params) => {
+    //     const val = parseFloat(params.value);
+    //     const isHigh = val > 9;
+    //     return (
+    //       <Box sx={{
+    //         color: isHigh ? '#f44336' : '#4caf50',
+    //         fontWeight: 'bold',
+    //         border: isHigh ? '1px solid #f44336' : '1px solid transparent',
+    //         borderRadius: '4px',
+    //         padding: '2px 6px',
+    //         backgroundColor: isHigh ? 'rgba(244, 67, 54, 0.1)' : 'transparent'
+    //       }}>
+    //         {params.value}%
+    //       </Box>
+    //     );
+    //   },
+    // },
+    // {
+    //   field: "neutralRate",
+    //   headerName: "Neutral %",
+    //   width: 120,
+    //   renderCell: (params) => (
+    //     <Box sx={{ color: '#fff', fontWeight: '500' }}>
+    //       {params.value}%
+    //     </Box>
+    //   ),
+    // },
     {
-      field: "equivalentDetractorCount",
-      headerName: "Eq. Detractors",
-      width: 120,
-      renderCell: (params) => (
-        <Box sx={{
-          fontWeight: params.value >= 3 ? 'bold' : 'normal',
-          color: params.value >= 3 ? '#f44336' :
-            params.value === 2 ? '#ff9800' : '#4caf50'
-        }}>
-          {params.value}
-        </Box>
-      )
+      field: "detractorExcess",
+      headerName: "Detr. Excess",
+      width: 100,
+      renderCell: (params) => {
+        const val = params.value || 0;
+        return (
+          <Box sx={{
+            color: val > 0 ? '#f44336' : 'rgba(255,255,255,0.1)',
+            fontWeight: val > 0 ? 'bold' : 'normal'
+          }}>
+            {val > 0 ? `+${val}` : '--'}
+          </Box>
+        );
+      }
+    },
+    {
+      field: "neutralExcess",
+      headerName: "Neu. Excess",
+      width: 100,
+      renderCell: (params) => {
+        const val = params.value || 0;
+        return (
+          <Box sx={{
+            color: val > 0 ? '#ff9800' : 'rgba(255,255,255,0.1)',
+            fontWeight: val > 0 ? 'bold' : 'normal'
+          }}>
+            {val > 0 ? `+${val}` : '--'}
+          </Box>
+        );
+      }
+    },
+    // {
+    //   field: "nps",
+    //   headerName: "NPS",
+    //   width: 100,
+    //   renderCell: (params) => {
+    //     const val = parseFloat(params.value);
+    //     return (
+    //       <Box sx={{
+    //         color: val >= 0 ? '#4caf50' : '#f44336',
+    //         fontWeight: 'bold'
+    //       }}>
+    //         {params.value}
+    //       </Box>
+    //     );
+    //   },
+    // },
+    {
+      field: "detractorStatus", // Virtual field for display
+      headerName: "Det. Status",
+      width: 110,
+      renderCell: (params) => {
+        const isViolated = params.row.violatesDetractorThreshold;
+        if (isViolated) {
+          return (
+            <Box sx={{
+              backgroundColor: 'rgba(244, 67, 54, 0.2)',
+              color: '#f44336',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontWeight: 'bold',
+              fontSize: '0.75rem',
+            }}>
+              ⚠️ FAIL
+            </Box>
+          );
+        }
+        return (
+          <Box sx={{
+            backgroundColor: 'rgba(76, 175, 80, 0.2)',
+            color: '#4caf50',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontWeight: 'bold',
+            fontSize: '0.75rem'
+          }}>
+            ✓ OK
+          </Box>
+        );
+      },
+    },
+    {
+      field: "neutralStatus", // Virtual field for display
+      headerName: "Neu. Status",
+      width: 110,
+      renderCell: (params) => {
+        const isViolated = params.row.violatesNeutralThreshold;
+        if (isViolated) {
+          return (
+            <Box sx={{
+              backgroundColor: 'rgba(255, 152, 0, 0.2)',
+              color: '#ff9800',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontWeight: 'bold',
+              fontSize: '0.75rem',
+            }}>
+              ⚠️ FAIL
+            </Box>
+          );
+        }
+        return (
+          <Box sx={{
+            backgroundColor: 'rgba(76, 175, 80, 0.2)',
+            color: '#4caf50',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontWeight: 'bold',
+            fontSize: '0.75rem'
+          }}>
+            ✓ OK
+          </Box>
+        );
+      },
     },
     {
       field: "totalViolations",
@@ -246,6 +379,24 @@ const ViolationDataGrid = ({
       )
     },
     {
+      field: "advice",
+      headerName: "Recovery Advice",
+      width: 250,
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{
+          fontSize: '0.75rem',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          px: 1,
+          fontStyle: params.value === 'On Track' ? 'italic' : 'normal',
+          color: params.value === 'On Track' ? '#6b7280' : '#ffffff'
+        }}>
+          {params.value || 'On Track'}
+        </Typography>
+      )
+    },
+    {
       field: "notes",
       headerName: "Notes",
       width: 250,
@@ -255,14 +406,14 @@ const ViolationDataGrid = ({
         </Typography>
       )
     },
-    {
-      field: "violationStatus",
-      headerName: "Violation Threshold",
-      width: 120,
-      renderCell: (params) => (
-        <ViolationThresholdBadge count={params.row.equivalentDetractorCount} />
-      )
-    },
+    // {
+    //   field: "violationStatus",
+    //   headerName: "Violation Threshold",
+    //   width: 120,
+    //   renderCell: (params) => (
+    //     <ViolationThresholdBadge count={params.row.equivalentDetractorCount} />
+    //   )
+    // },
     {
       field: "validationStatus",
       headerName: "Team Status",
@@ -501,6 +652,7 @@ const ViolationDataGrid = ({
         <DataGrid
           rows={enhancedRows}
           columns={columns}
+          getRowId={(row) => row.teamId || row.id}
           pageSizeOptions={[5, 10, 25]}
           paginationModel={paginationModel}
           onPaginationModelChange={onPaginationModelChange}
