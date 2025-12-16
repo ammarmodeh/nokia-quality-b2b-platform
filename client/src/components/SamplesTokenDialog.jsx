@@ -25,7 +25,7 @@ import {
   endOfYear,
   eachWeekOfInterval,
 } from 'date-fns';
-import { getCustomWeekNumber } from '../utils/helpers';
+
 import api from '../api/api';
 
 // Memoized Row to prevent unnecessary re-renders of the entire table
@@ -161,8 +161,8 @@ const SamplesTokenDialog = ({ open, onClose }) => {
         const end = endOfYear(new Date(selectedYear, 11, 31));
         const weeksInYear = eachWeekOfInterval({ start, end }, { weekStartsOn: 0 });
 
-        const initializedData = weeksInYear.map(weekStart => {
-          const weekNum = getCustomWeekNumber(weekStart, selectedYear);
+        const initializedData = weeksInYear.map((weekStart, index) => {
+          const weekNum = index + 1;
           const savedWeek = savedSamples.find(s => s.weekNumber === weekNum) || {};
 
           return {
@@ -187,10 +187,10 @@ const SamplesTokenDialog = ({ open, onClose }) => {
         const start = startOfYear(new Date(selectedYear, 0, 1));
         const end = endOfYear(new Date(selectedYear, 11, 31));
         const weeksInYear = eachWeekOfInterval({ start, end }, { weekStartsOn: 0 });
-        const emptyData = weeksInYear.map(weekStart => ({
+        const emptyData = weeksInYear.map((weekStart, index) => ({
           weekStart,
-          weekNum: getCustomWeekNumber(weekStart, selectedYear),
-          weekKey: `W${getCustomWeekNumber(weekStart, selectedYear)}`,
+          weekNum: index + 1,
+          weekKey: `W${index + 1}`,
           promoters: '',
           detractors: '',
           nps: '',
