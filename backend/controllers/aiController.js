@@ -10,6 +10,7 @@ import { AIReport } from "../models/aiReportModel.js";
 
 import htmlPdfNode from 'html-pdf-node';
 import markdownit from 'markdown-it';
+import HTMLtoDOCX from 'html-to-docx';
 
 // Initialize markdown parser
 const md = markdownit();
@@ -107,6 +108,16 @@ export const generateReportFile = async (req, res) => {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${title.replace(/\s/g, '_')}_${Date.now()}.pdf"`);
       res.send(pdfBuffer);
+    } else if (format === 'docx') {
+      const docxBuffer = await HTMLtoDOCX(styledHtml, null, {
+        table: { row: { cantSplit: true } },
+        footer: true,
+        pageNumber: true,
+      });
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename="${title.replace(/\s/g, '_')}_${Date.now()}.docx"`);
+      res.send(docxBuffer);
     } else {
       res.status(400).json({ error: "Unsupported file format." });
     }
@@ -1160,6 +1171,9 @@ export const getReportHistory = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch report history." });
   }
 };
+
+
+
 
 
 

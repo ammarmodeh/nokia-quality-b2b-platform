@@ -10,6 +10,7 @@ router.post("/analyze-chart", protect, analyzeChartData);
 
 router.post("/report/download", protect, generateReportFile);
 router.post("/deep-weekly-analysis", protect, deepWeeklyAnalysis);
+
 router.post("/analyze-trend", protect, analyzeTrendData);
 router.get("/report/history", protect, getReportHistory);
 

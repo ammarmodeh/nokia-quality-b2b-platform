@@ -17,6 +17,7 @@ import ReasonCategoriesDialog from "../components/ReasonCategoriesDialog";
 // import { prepareWeeklyAnalyticsData } from "../utils/analyticsHelper";
 // import ResponsibilityCategoriesDialog from "../components/ResponsibilityCategoriesDialog";
 import AIInsightButton from "../components/AIInsightButton";
+import ActionPlanButton from "../components/ActionPlanButton";
 import AIHistoryButton from "../components/AIHistoryButton";
 
 // Lazy load components
@@ -135,6 +136,7 @@ const Dashboard = () => {
             Weekly Count of QoS-Related Detractor & Neutral Customers
           </Typography>
           <AIInsightButton />
+          <ActionPlanButton />
           <AIHistoryButton />
         </Box>
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
