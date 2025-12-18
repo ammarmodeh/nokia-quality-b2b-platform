@@ -62,7 +62,7 @@ const DataManagement = () => {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/field-teams/get-field-teams`, {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/field-teams/get-field-teams`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.data) {
@@ -81,7 +81,7 @@ const DataManagement = () => {
 
   const fetchHistory = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/history`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/history`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.status) setBatches(res.data.data);
@@ -622,7 +622,7 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
       // Check for duplicates
       try {
         const res = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/check-duplicates`,
+          `${import.meta.env.VITE_BACKEND_URL}/api/detractors/check-duplicates`,
           { fileName: file.name, newRecords: payloadRaw },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -650,7 +650,7 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
 
   const executeUpload = async (data, deleteIds) => {
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/upload`,
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/upload`,
         { data: data, fileName: file.name, deleteIds },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -790,7 +790,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
 
   const fetchHistory = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/history`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/history`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.status) setBatches(res.data.data);
@@ -803,7 +803,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
     setLoading(true);
     setSelectedBatch(fileName);
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/batch/${fileName}`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/batch/${fileName}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.status) {
@@ -875,7 +875,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
     try {
       // eslint-disable-next-line no-unused-vars
       const { id, _id, fileName, createdAt, updatedAt, __v, actions, ...updateData } = newRow;
-      await axios.put(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/${id}`, updateData, {
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/${id}`, updateData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Updated successfully");
@@ -889,7 +889,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this row?")) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -917,7 +917,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
 
     try {
       await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/batch/${encodeURIComponent(selectedBatch)}/column/${field}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/detractors/batch/${encodeURIComponent(selectedBatch)}/column/${field}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success(`Column ${field} deleted`);
@@ -932,7 +932,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
   const handleDeleteBatch = async () => {
     if (!batchToDelete) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/batch/${encodeURIComponent(batchToDelete)}`, {
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/batch/${encodeURIComponent(batchToDelete)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success(`Batch ${batchToDelete} deleted`);

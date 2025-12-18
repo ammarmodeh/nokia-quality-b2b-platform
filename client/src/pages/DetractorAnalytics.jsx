@@ -55,7 +55,7 @@ const DetractorAnalytics = () => {
 
   const fetchTableData = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/detractors`, {
         headers: { Authorization: `Bearer ${token || localStorage.getItem('accessToken')}` }
       });
 
@@ -127,7 +127,7 @@ const DetractorAnalytics = () => {
       if (filters.responsible) params.append('responsible', filters.responsible);
 
       const res = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/analytics/overview?${params}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/detractors/analytics/overview?${params}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -146,7 +146,7 @@ const DetractorAnalytics = () => {
       if (filters.endDate) params.append('endDate', filters.endDate);
 
       const res = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/analytics/team-violations?${params}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/detractors/analytics/team-violations?${params}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -166,7 +166,7 @@ const DetractorAnalytics = () => {
       if (filters.endDate) params.append('endDate', filters.endDate);
 
       const res = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/analytics/trends?${params}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/detractors/analytics/trends?${params}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -186,7 +186,7 @@ const DetractorAnalytics = () => {
       if (filters.teamName) params.append('teamName', filters.teamName);
 
       const res = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/detractors/analytics/root-cause?${params}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/detractors/analytics/root-cause?${params}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
