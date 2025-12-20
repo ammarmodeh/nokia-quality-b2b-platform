@@ -22,17 +22,13 @@ import { generateWeekRanges, getDesiredWeeks, groupDataByWeek } from "../utils/h
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend);
 
+// Removed redundant fetchData since tasks are passed from parent (Dashboard)
+/*
 const fetchData = async () => {
-  try {
-    const response = await api.get("/tasks/get-all-tasks", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-    });
-    return response.data;
-  } catch (error) {
-    // console.error("Error fetching data:", error);
-    return [];
-  }
+...
 };
+*/
+
 
 const prepareChartData = (groupedData, timeRange) => {
   const categories = ["Detractor", "Violations", "NeutralPassive"];
@@ -85,14 +81,14 @@ const prepareChartData = (groupedData, timeRange) => {
   };
 };
 
-const Chart = () => {
+const Chart = ({ tasks: initialTasks }) => {
   const theme = useTheme();
   const hideChart = useMediaQuery('(max-width:503px)');
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [chartData, setChartData] = useState({ labels: [], datasets: [] });
   const [filter, setFilter] = useState("All");
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState(initialTasks || []);
   const [weekRanges, setWeekRanges] = useState([]);
   const [timeRange, setTimeRange] = useState([]);
   const [groupedData, setGroupedData] = useState({});
@@ -100,37 +96,25 @@ const Chart = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const loadData = async () => {
-      // setLoading(true);
-      setError(null);
-      try {
-        const data = await fetchData();
-        setTasks(data);
+    if (initialTasks && initialTasks.length > 0) {
+      setTasks(initialTasks);
 
-        const ranges = generateWeekRanges(data);
-        setWeekRanges(ranges);
+      const ranges = generateWeekRanges(initialTasks);
+      setWeekRanges(ranges);
 
-        const individualWeeks = ranges
-          .filter(range => /^Wk-\d+$/.test(range))
-          .sort((a, b) => parseInt(a.replace("Wk-", "")) - parseInt(b.replace("Wk-", "")));
+      const individualWeeks = ranges
+        .filter(range => /^Wk-\d+$/.test(range))
+        .sort((a, b) => parseInt(a.replace("Wk-", "")) - parseInt(b.replace("Wk-", "")));
 
-        const defaultWeeks = individualWeeks.slice(-4);
-        setTimeRange(defaultWeeks);
+      const defaultWeeks = individualWeeks.slice(-4);
+      setTimeRange(defaultWeeks);
 
-        const filteredData = getDesiredWeeks(data, defaultWeeks);
-        const grouped = groupDataByWeek(filteredData, defaultWeeks);
-        setGroupedData(grouped);
-        setChartData(prepareChartData(grouped, defaultWeeks));
-      } catch (error) {
-        // console.log(error);
-        setError("Failed to fetch data. Please try again later.");
-      } finally {
-        // setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+      const filteredData = getDesiredWeeks(initialTasks, defaultWeeks);
+      const grouped = groupDataByWeek(filteredData, defaultWeeks);
+      setGroupedData(grouped);
+      setChartData(prepareChartData(grouped, defaultWeeks));
+    }
+  }, [initialTasks]);
 
   const exportChartData = () => {
     const csvRows = [];

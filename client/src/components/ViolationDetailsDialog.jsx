@@ -223,8 +223,8 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
         }
       }}
     >
-      <DialogTitle sx={{ borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>{title}</Typography>
+      <DialogTitle component="div" sx={{ borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
+        <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>{title}</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="Export to Excel">
             <IconButton onClick={exportToExcel} size="small" sx={{ color: '#4caf50', '&:hover': { bgcolor: 'rgba(76,175,80,0.1)' } }}>

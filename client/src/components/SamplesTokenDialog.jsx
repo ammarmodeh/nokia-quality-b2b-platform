@@ -349,9 +349,9 @@ const SamplesTokenDialog = ({ open, onClose }) => {
         }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333' }}>
+      <DialogTitle component="div" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="h6">Samples Token (Weekly)</Typography>
+          <Typography variant="h6" component="div">Samples Token (Weekly)</Typography>
           <FormControl size="small" variant="standard" sx={{ minWidth: 80 }}>
             <Select
               value={selectedYear}

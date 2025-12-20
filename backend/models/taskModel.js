@@ -376,5 +376,8 @@ taskSchema.index({ status: 1 });
 taskSchema.index({ priority: 1 });
 taskSchema.index({ createdBy: 1 });
 taskSchema.index({ assignedTo: 1 });
+taskSchema.index({ isDeleted: 1 });
+taskSchema.index({ interviewDate: -1 });
+taskSchema.index({ pisDate: -1 });
 
 export const TaskSchema = mongoose.model("Task", taskSchema);

@@ -3,7 +3,7 @@ import { Box, Button, Typography, Paper, Alert, Chip, Tabs, Tab, Card, CardConte
 import { DataGrid, GridToolbarContainer, GridToolbarColumnsButton, GridToolbarFilterButton, GridToolbarDensitySelector, GridToolbarExport, GridActionsCellItem, GridColumnMenu } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
-import axios from 'axios';
+import api from '../api/api';
 import { useSelector } from 'react-redux';
 import { CloudUpload as CloudUploadIcon, CheckCircle as CheckCircleIcon, Delete as DeleteIcon, Refresh as RefreshIcon, Edit as EditIcon, Save as SaveIcon, Add as AddIcon, History as HistoryIcon, PostAdd as PostAddIcon } from '@mui/icons-material';
 import { MenuItem } from '@mui/material';
@@ -62,9 +62,7 @@ const DataManagement = () => {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/field-teams/get-field-teams`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.get('/field-teams/get-field-teams');
         if (res.data) {
           const names = res.data.map(t => t.teamName).filter(Boolean);
           setTeamNames(names);
@@ -81,9 +79,7 @@ const DataManagement = () => {
 
   const fetchHistory = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/history`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/detractors/history');
       if (res.data.status) setBatches(res.data.data);
     } catch (error) {
       console.error(error);
@@ -139,7 +135,7 @@ const CustomToolbar = ({ onAddColumn }) => {
 };
 
 const CustomColumnMenu = (props) => {
-  const { hideMenu, colDef, onDeleteColumn, ...other } = props;
+  const { hideMenu, colDef, onDeleteColumn, onRenameColumn, ...other } = props;
 
   // Handler for deleting a column
   const handleDeleteColumn = () => {
@@ -149,16 +145,25 @@ const CustomColumnMenu = (props) => {
     hideMenu();
   };
 
+  const handleRenameColumn = () => {
+    if (onRenameColumn) {
+      onRenameColumn(colDef.field);
+    }
+    hideMenu();
+  };
+
   return (
     <GridColumnMenu
       {...other}
       hideMenu={hideMenu}
       colDef={colDef}
-      slots={{
-        // Add our custom item as a menu item slot if possible, or just append children
-        // In v7, simple children append should work if not overridden
-      }}
     >
+      <MenuItem onClick={handleRenameColumn}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#90caf9' }}>
+          <EditIcon fontSize="small" />
+          <Typography variant="body2">Rename Column</Typography>
+        </Box>
+      </MenuItem>
       <MenuItem onClick={handleDeleteColumn}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#f44336' }}>
           <DeleteIcon fontSize="small" />
@@ -267,6 +272,65 @@ const ResponsibleEditInputCell = ({ id, value, field, api, options }) => {
   );
 };
 
+// --- Mapping for Sub-Responsible Options ---
+const RESPONSIBLE_SUB_MAPPING = {
+  'Nokia/Quality': ['Splicing Team', 'Cabling Team', 'Maintenance Team', 'Installation Team', 'Other'],
+  'Nokia/FMC': ['Field Operations', 'Quality Control', 'Planning Team', 'Other'],
+  'OJO': ['OJO Field Team', 'OJO Quality', 'Other'],
+  'Other': ['External Contractor', 'Third Party', 'Other']
+};
+
+// --- Custom Edit Cell for Sub-Responsible (Specific Team) ---
+const SubResponsibleEditInputCell = ({ id, value, field, api, row }) => {
+  const responsibleKey = Object.keys(row).find(k => k.trim().toLowerCase() === "responsible");
+  const responsibleValue = responsibleKey ? row[responsibleKey] : null;
+  const options = RESPONSIBLE_SUB_MAPPING[responsibleValue] || [];
+
+  const handleChange = (event, newValue) => {
+    api.setEditCellValue({ id, field, value: newValue || '' });
+  };
+
+  return (
+    <Autocomplete
+      value={value || ''}
+      onChange={handleChange}
+      options={options}
+      freeSolo
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          fullWidth
+          autoFocus
+          placeholder="Select or type..."
+          sx={{
+            '& .MuiInputBase-root': { color: '#ffffff' },
+            '& .MuiInputBase-input': { color: '#ffffff' },
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
+          }}
+        />
+      )}
+      sx={{
+        width: '100%',
+        '& .MuiAutocomplete-popupIndicator': { color: '#aaa' },
+        '& .MuiAutocomplete-clearIndicator': { color: '#aaa' },
+      }}
+      componentsProps={{
+        paper: {
+          sx: {
+            bgcolor: '#2a2a2a',
+            color: '#ffffff',
+            '& .MuiAutocomplete-option': {
+              color: '#ffffff',
+              '&:hover': { bgcolor: '#3a3a3a' },
+              '&[aria-selected="true"]': { bgcolor: '#7b68ee !important' },
+            },
+          },
+        },
+      }}
+    />
+  );
+};
+
 // --- Dialog Component ---
 const AddColumnDialog = ({ open, onClose, onConfirm }) => {
   const [colName, setColName] = useState("");
@@ -310,11 +374,60 @@ const AddColumnDialog = ({ open, onClose, onConfirm }) => {
             clickable
             size="small"
           />
+          <Chip
+            label="Specific Team"
+            onClick={() => setColName("Specific Team")}
+            sx={{ borderColor: '#7b68ee', color: '#7b68ee' }}
+            variant="outlined"
+            clickable
+            size="small"
+          />
         </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} sx={{ color: '#aaa' }}>Cancel</Button>
         <Button onClick={handleConfirm} variant="contained">Add</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// --- Rename Column Dialog ---
+const RenameColumnDialog = ({ open, onClose, onConfirm, currentName }) => {
+  const [newName, setNewName] = useState("");
+
+  useEffect(() => {
+    if (open) setNewName(currentName || "");
+  }, [open, currentName]);
+
+  const handleConfirm = () => {
+    if (newName.trim() && newName.trim() !== currentName) {
+      onConfirm(currentName, newName.trim());
+      setNewName("");
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} PaperProps={{ sx: { color: 'white' } }}>
+      <DialogTitle>Rename Column</DialogTitle>
+      <DialogContent>
+        <Typography variant="caption" sx={{ color: '#aaa', mb: 1, display: 'block' }}>
+          Original: {currentName}
+        </Typography>
+        <TextField
+          autoFocus
+          margin="dense"
+          label="New Column Name"
+          fullWidth
+          variant="outlined"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          sx={{ input: { color: 'white' }, label: { color: '#aaa' }, fieldset: { borderColor: '#3d3d3d' } }}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} sx={{ color: '#aaa' }}>Cancel</Button>
+        <Button onClick={handleConfirm} variant="contained" color="primary">Rename</Button>
       </DialogActions>
     </Dialog>
   );
@@ -498,6 +611,8 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [columnToRename, setColumnToRename] = useState(null);
   const fileInputRef = useRef(null);
 
   // Notify parent of dirty state
@@ -532,7 +647,8 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
         const dynamicColumns = Object.keys(firstRow).map((key) => {
           const isTeamCol = key.trim().toLowerCase() === "team name";
           const isResponsibleCol = key.trim().toLowerCase() === "responsible";
-          const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'Other'];
+          const isSpecificTeamCol = key.trim().toLowerCase() === "specific team";
+          const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other'];
 
           return {
             field: key,
@@ -543,7 +659,8 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
             type: (isTeamCol || isResponsibleCol) ? 'singleSelect' : 'string',
             valueOptions: isTeamCol ? teamNames : (isResponsibleCol ? responsibleOptions : undefined),
             renderEditCell: isTeamCol ? (params) => <TeamEditInputCell {...params} options={teamNames} /> :
-              (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> : undefined),
+              (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> :
+                (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} /> : undefined)),
           };
         });
 
@@ -566,7 +683,8 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
   const handleAddColumn = (name) => {
     const isTeamCol = name.trim().toLowerCase() === "team name";
     const isResponsibleCol = name.trim().toLowerCase() === "responsible";
-    const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'Other'];
+    const isSpecificTeamCol = name.trim().toLowerCase() === "specific team";
+    const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other'];
 
     const newCol = {
       field: name,
@@ -577,7 +695,8 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
       type: (isTeamCol || isResponsibleCol) ? 'singleSelect' : 'string',
       valueOptions: isTeamCol ? teamNames : (isResponsibleCol ? responsibleOptions : undefined),
       renderEditCell: isTeamCol ? (params) => <TeamEditInputCell {...params} options={teamNames} /> :
-        (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> : undefined),
+        (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> :
+          (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} /> : undefined)),
     };
     // Insert before actions
     const newCols = [...columns];
@@ -597,7 +716,33 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
   const handleDeleteColumn = (field) => {
     if (field === 'actions') return;
     setColumns(prev => prev.filter(c => c.field !== field));
-    toast.success(`Column ${field} removed from view`);
+    setRows(prevRows => prevRows.map(row => {
+      // eslint-disable-next-line no-unused-vars
+      const { [field]: removed, ...rest } = row;
+      return rest;
+    }));
+    toast.success(`Column "${field}" deleted successfully`);
+  };
+
+  const handleRenameColumn = (oldName, newName) => {
+    // 1. Update Columns
+    setColumns(prev => prev.map(col => {
+      if (col.field === oldName) {
+        return { ...col, field: newName, headerName: newName };
+      }
+      return col;
+    }));
+
+    // 2. Update Rows
+    setRows(prevRows => prevRows.map(row => {
+      const newRow = { ...row };
+      newRow[newName] = row[oldName];
+      delete newRow[oldName];
+      return newRow;
+    }));
+
+    setRenameDialogOpen(false);
+    toast.success(`Renamed "${oldName}" to "${newName}"`);
   };
 
   const handleProcessRowUpdate = (newRow) => {
@@ -621,10 +766,9 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
     if (fileExists) {
       // Check for duplicates
       try {
-        const res = await axios.post(
-          `${import.meta.env.VITE_BACKEND_URL}/api/detractors/check-duplicates`,
-          { fileName: file.name, newRecords: payloadRaw },
-          { headers: { Authorization: `Bearer ${token}` } }
+        const res = await api.post(
+          '/detractors/check-duplicates',
+          { fileName: file.name, newRecords: payloadRaw }
         );
 
         if (res.data.status) {
@@ -650,9 +794,8 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
 
   const executeUpload = async (data, deleteIds) => {
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/upload`,
-        { data: data, fileName: file.name, deleteIds },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await api.post('/detractors/upload',
+        { data: data, fileName: file.name, deleteIds }
       );
       if (res.data.status) {
         toast.success(res.data.message);
@@ -716,6 +859,12 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
   return (
     <Box>
       <AddColumnDialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} onConfirm={handleAddColumn} />
+      <RenameColumnDialog
+        open={renameDialogOpen}
+        onClose={() => setRenameDialogOpen(false)}
+        onConfirm={handleRenameColumn}
+        currentName={columnToRename}
+      />
       <ConflictResolutionDialog
         open={conflictOpen}
         onClose={() => { setConflictOpen(false); setLoading(false); }}
@@ -754,7 +903,13 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
             slots={{ toolbar: CustomToolbar, columnMenu: CustomColumnMenu }}
             slotProps={{
               toolbar: { onAddColumn: () => setIsDialogOpen(true) },
-              columnMenu: { onDeleteColumn: handleDeleteColumn }
+              columnMenu: {
+                onDeleteColumn: handleDeleteColumn,
+                onRenameColumn: (field) => {
+                  setColumnToRename(field);
+                  setRenameDialogOpen(true);
+                }
+              }
             }}
             disableColumnReorder={false}
             sx={{
@@ -783,6 +938,8 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [columnToRename, setColumnToRename] = useState(null);
   const [deleteBatchOpen, setDeleteBatchOpen] = useState(false);
   const [batchToDelete, setBatchToDelete] = useState(null);
 
@@ -790,9 +947,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
 
   const fetchHistory = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/history`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/detractors/history');
       if (res.data.status) setBatches(res.data.data);
     } catch (error) {
       console.error(error);
@@ -803,9 +958,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
     setLoading(true);
     setSelectedBatch(fileName);
     try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/batch/${fileName}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get(`/detractors/batch/${fileName}`);
       if (res.data.status) {
         const data = res.data.data;
         setBatchData(data.map(d => ({ ...d, id: d._id })));
@@ -816,7 +969,8 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
           const cols = Object.keys(first).filter(k => !exclude.includes(k)).map(k => {
             const isTeamCol = k.trim().toLowerCase() === "team name";
             const isResponsibleCol = k.trim().toLowerCase() === "responsible";
-            const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'Other'];
+            const isSpecificTeamCol = k.trim().toLowerCase() === "specific team";
+            const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other'];
 
             return {
               field: k,
@@ -827,7 +981,8 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
               type: (isTeamCol || isResponsibleCol) ? 'singleSelect' : 'string',
               valueOptions: isTeamCol ? teamNames : (isResponsibleCol ? responsibleOptions : undefined),
               renderEditCell: isTeamCol ? (params) => <TeamEditInputCell {...params} options={teamNames} /> :
-                (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> : undefined),
+                (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> :
+                  (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} /> : undefined)),
             };
           });
 
@@ -850,7 +1005,8 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
   const handleAddColumn = (name) => {
     const isTeamCol = name.trim().toLowerCase() === "team name";
     const isResponsibleCol = name.trim().toLowerCase() === "responsible";
-    const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'Other'];
+    const isSpecificTeamCol = name.trim().toLowerCase() === "specific team";
+    const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other'];
 
     const newCol = {
       field: name,
@@ -861,7 +1017,8 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
       type: (isTeamCol || isResponsibleCol) ? 'singleSelect' : 'string',
       valueOptions: isTeamCol ? teamNames : (isResponsibleCol ? responsibleOptions : undefined),
       renderEditCell: isTeamCol ? (params) => <TeamEditInputCell {...params} options={teamNames} /> :
-        (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> : undefined),
+        (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> :
+          (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} /> : undefined)),
     };
     // Insert before actions
     const newCols = [...columns];
@@ -875,9 +1032,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
     try {
       // eslint-disable-next-line no-unused-vars
       const { id, _id, fileName, createdAt, updatedAt, __v, actions, ...updateData } = newRow;
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/${id}`, updateData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(`/detractors/${id}`, updateData);
       toast.success("Updated successfully");
       return newRow;
     } catch (error) {
@@ -889,9 +1044,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this row?")) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/detractors/${id}`);
 
       const updatedData = batchData.filter(row => row.id !== id);
       setBatchData(updatedData);
@@ -916,9 +1069,8 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
     if (!confirm(`Are you sure you want to delete column "${field}" from ALL records in this batch?`)) return;
 
     try {
-      await axios.delete(
-        `${import.meta.env.VITE_BACKEND_URL}/api/detractors/batch/${encodeURIComponent(selectedBatch)}/column/${field}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      await api.delete(
+        `/detractors/batch/${encodeURIComponent(selectedBatch)}/column/${field}`
       );
       toast.success(`Column ${field} deleted`);
       // Refresh data
@@ -929,12 +1081,24 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
     }
   };
 
+  const handleRenameColumn = async (oldName, newName) => {
+    try {
+      await api.put(
+        `/detractors/batch/${encodeURIComponent(selectedBatch)}/column/${oldName}/rename/${newName}`
+      );
+      toast.success(`Column "${oldName}" renamed to "${newName}"`);
+      setRenameDialogOpen(false);
+      loadBatch(selectedBatch);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to rename column");
+    }
+  };
+
   const handleDeleteBatch = async () => {
     if (!batchToDelete) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/detractors/batch/${encodeURIComponent(batchToDelete)}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/detractors/batch/${encodeURIComponent(batchToDelete)}`);
       toast.success(`Batch ${batchToDelete} deleted`);
       setDeleteBatchOpen(false);
       setBatchToDelete(null);
@@ -953,6 +1117,12 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
   return (
     <Box sx={{ display: 'flex', gap: 2, height: '100%' }}>
       <AddColumnDialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} onConfirm={handleAddColumn} />
+      <RenameColumnDialog
+        open={renameDialogOpen}
+        onClose={() => setRenameDialogOpen(false)}
+        onConfirm={handleRenameColumn}
+        currentName={columnToRename}
+      />
 
       <DeleteBatchDialog
         open={deleteBatchOpen}
@@ -1014,7 +1184,13 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
               slots={{ toolbar: CustomToolbar, columnMenu: CustomColumnMenu }}
               slotProps={{
                 toolbar: { onAddColumn: () => setIsDialogOpen(true) },
-                columnMenu: { onDeleteColumn: handleDeleteColumn }
+                columnMenu: {
+                  onDeleteColumn: handleDeleteColumn,
+                  onRenameColumn: (field) => {
+                    setColumnToRename(field);
+                    setRenameDialogOpen(true);
+                  }
+                }
               }}
               disableColumnReorder={false}
               loading={loading}

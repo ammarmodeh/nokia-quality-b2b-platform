@@ -50,6 +50,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchTasks = async () => {
+      console.time("fetchTasks Duration");
       try {
         const response = await api.get("/tasks/get-all-tasks", {
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
@@ -59,10 +60,12 @@ const Dashboard = () => {
         setTasksError(error);
       } finally {
         setTasksLoading(false);
+        console.timeEnd("fetchTasks Duration");
       }
     };
 
     const fetchTeams = async () => {
+      console.time("fetchTeams Duration");
       try {
         const response = await api.get('/field-teams/get-field-teams', {
           headers: {
@@ -79,6 +82,7 @@ const Dashboard = () => {
         setTeamsError(error);
       } finally {
         setTeamsLoading(false);
+        console.timeEnd("fetchTeams Duration");
       }
     };
 
@@ -253,7 +257,7 @@ const Dashboard = () => {
       <Box sx={{ gap: "20px", display: "flex", flexDirection: "column" }}>
         {/* Tasks Overview */}
         <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
-          <TaskTable tasks={tasks} />
+          <TaskTable tasks={tasks} fieldTeams={teamsData} />
           <TeamViolationTracker tasks={tasks} initialFieldTeams={teamsData} />
         </Suspense>
       </Box >

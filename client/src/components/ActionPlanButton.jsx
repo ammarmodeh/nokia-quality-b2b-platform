@@ -24,7 +24,7 @@ const ActionPlanButton = ({
   const [lastPeriod, setLastPeriod] = useState('last_week');
   const [lastCustomDates, setLastCustomDates] = useState(null);
 
-  const endpoint = `${import.meta.env.VITE_BACKEND_URL}/api/action-plan`;
+  const endpoint = `/action-plan`;
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -42,9 +42,7 @@ const ActionPlanButton = ({
 
     try {
       const payload = { period, ...customDates };
-      const { data } = await api.post(endpoint, payload, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
-      });
+      const { data } = await api.post(endpoint, payload);
 
       setData(data);
       setDialogOpen(true);

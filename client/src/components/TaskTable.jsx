@@ -62,7 +62,7 @@ const handleCopyTaskData = (taskData) => {
     });
 };
 
-const TaskTable = ({ tasks }) => {
+const TaskTable = ({ tasks, fieldTeams }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
@@ -71,31 +71,19 @@ const TaskTable = ({ tasks }) => {
     page: 0,
   });
   const [openDialog, setOpenDialog] = useState(false);
-  const [teamsData, setTeamsData] = useState([]);
+  const [teamsData, setTeamsData] = useState(fieldTeams || []);
   const [evaluationData, setEvaluationData] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
   const isMobile = useMediaQuery('(max-width:503px)');
 
-  // Fetch teams data when component mounts
+  // Sync teamsData with fieldTeams prop
   useEffect(() => {
-    const fetchTeamsData = async () => {
-      try {
-        const response = await api.get('/field-teams/get-field-teams', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-          },
-        });
-        setTeamsData(response.data);
-        setLoadingTeams(false);
-      } catch (error) {
-        console.error("Failed to fetch teams data:", error);
-        setLoadingTeams(false);
-      }
-    };
-
-    fetchTeamsData();
-  }, []);
+    if (fieldTeams) {
+      setTeamsData(fieldTeams);
+      setLoadingTeams(false);
+    }
+  }, [fieldTeams]);
 
   // Fetch evaluation data for theoretical satisfaction scores
   useEffect(() => {

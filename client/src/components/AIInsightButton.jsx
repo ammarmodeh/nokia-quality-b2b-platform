@@ -24,7 +24,7 @@ const AIInsightButton = ({
   const [lastPeriod, setLastPeriod] = useState('ytd');
   const [lastCustomDates, setLastCustomDates] = useState(null);
 
-  const endpoint = `${import.meta.env.VITE_BACKEND_URL}/api/ai/deep-weekly-analysis`
+  const endpoint = `/ai/deep-weekly-analysis`
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -44,9 +44,7 @@ const AIInsightButton = ({
     setLoading(true);
     try {
       const payload = { period, ...customDates };
-      const { data } = await api.post(endpoint, payload, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
-      });
+      const { data } = await api.post(endpoint, payload);
 
       setData(data); // Contains analysis + metadata
       setDialogOpen(true);

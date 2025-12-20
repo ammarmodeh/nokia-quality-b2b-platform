@@ -34,6 +34,7 @@ import {
 } from "react-icons/fa";
 import { format } from 'date-fns';
 import { RiFileExcel2Fill } from "react-icons/ri";
+import { MdClose } from "react-icons/md";
 
 export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName }) => {
   const [selectedIssue, setSelectedIssue] = useState(null);
@@ -135,7 +136,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
     >
       {detailView ? (
         <>
-          <DialogTitle sx={{
+          <DialogTitle component="div" sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -144,7 +145,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
             borderBottom: '1px solid #e5e7eb',
             padding: isMobile ? '12px 16px' : '16px 24px',
           }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
               <IconButton
                 onClick={handleBackToList}
                 size={isMobile ? "small" : "medium"}
@@ -163,7 +164,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                 <Box component="span">Customer Issue Details</Box>
               </Typography>
             </Box>
-            <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Tooltip title={copied ? "Copied!" : "Copy to clipboard"} arrow>
                 <IconButton
                   onClick={copyToClipboard}
@@ -172,8 +173,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                     color: '#7b68ee',
                     '&:hover': {
                       backgroundColor: 'rgba(62, 166, 255, 0.1)',
-                    },
-                    mr: 1
+                    }
                   }}
                 >
                   <FaCopy fontSize={isMobile ? "14px" : "16px"} />
@@ -193,6 +193,18 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                   <FaWhatsapp fontSize={isMobile ? "16px" : "18px"} />
                 </IconButton>
               </Tooltip>
+              <IconButton
+                onClick={onClose}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  color: '#ffffff',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  }
+                }}
+              >
+                <MdClose />
+              </IconButton>
             </Box>
           </DialogTitle>
 
@@ -357,7 +369,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
         </>
       ) : (
         <>
-          <DialogTitle sx={{
+          <DialogTitle component="div" sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -372,20 +384,34 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                 {teamName} - All Issues ({teamIssues.length})
               </Typography>
             </Box>
-            <Tooltip title="Export to Excel">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Tooltip title="Export to Excel">
+                <IconButton
+                  onClick={exportToExcel}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{
+                    color: '#4caf50',
+                    '&:hover': {
+                      backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    }
+                  }}
+                >
+                  <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
+                </IconButton>
+              </Tooltip>
               <IconButton
-                onClick={exportToExcel}
+                onClick={onClose}
                 size={isMobile ? "small" : "medium"}
                 sx={{
-                  color: '#4caf50',
+                  color: '#ffffff',
                   '&:hover': {
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
                   }
                 }}
               >
-                <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
+                <MdClose />
               </IconButton>
-            </Tooltip>
+            </Box>
           </DialogTitle>
 
           <DialogContent dividers sx={{

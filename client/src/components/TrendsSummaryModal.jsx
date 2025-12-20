@@ -245,8 +245,8 @@ const TrendsSummaryModal = ({ open, onClose, tasks, period = 'week' }) => {
         }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333' }}>
-        <Typography variant="h6" fontWeight="bold">
+      <DialogTitle component="div" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333' }}>
+        <Typography variant="h6" component="div" fontWeight="bold">
           {period === 'week' ? 'Weekly' : 'Monthly'} Trend Analysis
         </Typography>
         <Box>

@@ -1,4 +1,5 @@
 import Detractor from "../models/detractorModel.js";
+import SamplesToken from "../models/samplesTokenModel.js";
 
 // Upload with fileName support and optional deleteIds for merge
 export const uploadDetractors = async (req, res) => {
@@ -216,12 +217,32 @@ export const deleteBatchColumn = async (req, res) => {
   }
 };
 
+// Rename a specific column in a batch
+export const renameBatchColumn = async (req, res) => {
+  try {
+    const { fileName, oldColumnName, newColumnName } = req.params;
+    const decodedFileName = decodeURIComponent(fileName);
+
+    const result = await Detractor.updateMany(
+      { fileName: decodedFileName },
+      { $rename: { [oldColumnName]: newColumnName } }
+    );
+
+    res.status(200).json({
+      status: true,
+      message: `Column '${oldColumnName}' renamed to '${newColumnName}' in ${result.modifiedCount} records.`,
+    });
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
+  }
+};
+
 // ============ ADVANCED ANALYTICS ENDPOINTS ============
 
 // Get comprehensive analytics overview
 export const getAnalyticsOverview = async (req, res) => {
   try {
-    const { startDate, endDate, teamName, responsible } = req.query;
+    const { startDate, endDate, teamName, responsible, specificTeam } = req.query;
 
     // Build filter
     const filter = {};
@@ -232,6 +253,7 @@ export const getAnalyticsOverview = async (req, res) => {
     }
     if (teamName) filter['Team Name'] = teamName;
     if (responsible) filter.Responsible = responsible;
+    if (specificTeam) filter['Specific Team'] = specificTeam;
 
     const totalRecords = await Detractor.countDocuments(filter);
 
@@ -267,7 +289,7 @@ export const getAnalyticsOverview = async (req, res) => {
 // Get team violation analysis
 export const getTeamViolations = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, specificTeam } = req.query;
 
     const filter = {};
     if (startDate || endDate) {
@@ -275,6 +297,7 @@ export const getTeamViolations = async (req, res) => {
       if (startDate) filter.createdAt.$gte = new Date(startDate);
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
+    if (specificTeam) filter['Specific Team'] = specificTeam;
 
     const teamStats = await Detractor.aggregate([
       { $match: filter },
@@ -323,7 +346,7 @@ export const getTeamViolations = async (req, res) => {
 // Get trend analysis
 export const getTrendAnalysis = async (req, res) => {
   try {
-    const { period = 'daily', startDate, endDate } = req.query;
+    const { period = 'daily', startDate, endDate, specificTeam } = req.query;
 
     const filter = {};
     if (startDate || endDate) {
@@ -331,6 +354,7 @@ export const getTrendAnalysis = async (req, res) => {
       if (startDate) filter.createdAt.$gte = new Date(startDate);
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
+    if (specificTeam) filter['Specific Team'] = specificTeam;
 
     // Determine grouping format based on period
     let dateFormat;
@@ -379,7 +403,7 @@ export const getTrendAnalysis = async (req, res) => {
 // Get root cause analysis
 export const getRootCauseAnalysis = async (req, res) => {
   try {
-    const { startDate, endDate, teamName } = req.query;
+    const { startDate, endDate, teamName, specificTeam, studyColumns, compareBy } = req.query;
 
     const filter = {};
     if (startDate || endDate) {
@@ -388,25 +412,61 @@ export const getRootCauseAnalysis = async (req, res) => {
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
     if (teamName) filter['Team Name'] = teamName;
+    if (specificTeam) filter['Specific Team'] = specificTeam;
 
-    // Get all records to analyze dynamic fields
+    // Default fields to analyze if none provided
+    const defaultStudyFields = ['Main Reason', 'Sub-Reason', 'Responsible', 'Specific Team'];
+    const fieldsToAnalyze = studyColumns ? (Array.isArray(studyColumns) ? studyColumns : [studyColumns]) : defaultStudyFields;
+
     const records = await Detractor.find(filter).lean();
 
-    // Analyze common fields (excluding system fields)
-    const excludeFields = ['_id', '__v', 'createdAt', 'updatedAt', 'fileName', 'uploadDate', 'auditStatus', 'Team Name', 'Responsible'];
-    const fieldAnalysis = {};
+    if (compareBy) {
+      // Cross-tabulation logic: Compare studyColumns against compareBy field
+      const comparisonData = {};
 
+      fieldsToAnalyze.forEach(field => {
+        comparisonData[field] = {};
+        records.forEach(record => {
+          const groupVal = String(record[compareBy] || 'N/A');
+          const fieldVal = String(record[field] || 'N/A');
+
+          if (!comparisonData[field][groupVal]) {
+            comparisonData[field][groupVal] = {};
+          }
+          comparisonData[field][groupVal][fieldVal] = (comparisonData[field][groupVal][fieldVal] || 0) + 1;
+        });
+      });
+
+      // Format for frontend (e.g., for stacked bar charts)
+      const formattedComparison = Object.entries(comparisonData).map(([field, groups]) => ({
+        field,
+        compareBy,
+        data: Object.entries(groups).map(([groupName, values]) => ({
+          groupName,
+          ...values
+        })),
+        allValues: [...new Set(records.map(r => String(r[field] || 'N/A')))]
+      }));
+
+      return res.status(200).json({
+        status: true,
+        isComparison: true,
+        data: formattedComparison
+      });
+    }
+
+    // Standard analysis logic
+    const fieldAnalysis = {};
     records.forEach(record => {
-      Object.keys(record).forEach(key => {
-        if (!excludeFields.includes(key)) {
-          if (!fieldAnalysis[key]) fieldAnalysis[key] = {};
-          const value = String(record[key] || 'N/A');
-          fieldAnalysis[key][value] = (fieldAnalysis[key][value] || 0) + 1;
+      fieldsToAnalyze.forEach(field => {
+        if (record[field] !== undefined) {
+          if (!fieldAnalysis[field]) fieldAnalysis[field] = {};
+          const value = String(record[field] || 'N/A');
+          fieldAnalysis[field][value] = (fieldAnalysis[field][value] || 0) + 1;
         }
       });
     });
 
-    // Convert to array format
     const rootCauses = Object.entries(fieldAnalysis).map(([field, values]) => ({
       field,
       topValues: Object.entries(values)
@@ -417,10 +477,130 @@ export const getRootCauseAnalysis = async (req, res) => {
 
     res.status(200).json({
       status: true,
+      isComparison: false,
       data: rootCauses
     });
   } catch (error) {
     console.error("Root cause analysis error:", error);
+    res.status(500).json({ status: false, message: error.message });
+  }
+};
+
+// Get fixed RCA stats: Week vs Responsible, Week vs Q1, Week vs Comments, and NPS Density
+export const getFixedRCAStats = async (req, res) => {
+  try {
+    const { startDate, endDate, teamName, specificTeam } = req.query;
+
+    const filter = {};
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+    if (teamName) filter['Team Name'] = teamName;
+    if (specificTeam) filter['Specific Team'] = specificTeam;
+
+    // Get all records for analysis
+    const records = await Detractor.find(filter).lean();
+
+    // Grouping by ISO Week manually to match SamplesToken logic
+    const getWeek = (date) => {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+      const yearStart = new Date(d.getFullYear(), 0, 1);
+      return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    };
+
+    const weekStats = {};
+    const years = new Set();
+
+    records.forEach(record => {
+      const date = new Date(record.createdAt);
+      const year = date.getFullYear();
+      const week = getWeek(date);
+      const key = `${year}-W${week}`;
+      years.add(year);
+
+      if (!weekStats[key]) {
+        weekStats[key] = {
+          week,
+          year,
+          responsible: {},
+          q1: { detractors: 0, neutrals: 0 },
+          comments: 0,
+          totalViolations: 0
+        };
+      }
+
+      const weekObj = weekStats[key];
+      weekObj.totalViolations += 1;
+
+      // Week vs Responsible
+      const resp = record.Responsible || 'Unassigned';
+      weekObj.responsible[resp] = (weekObj.responsible[resp] || 0) + 1;
+
+      // Week vs Q1
+      const q1Score = parseInt(record.Q1);
+      if (q1Score >= 1 && q1Score <= 6) weekObj.q1.detractors += 1;
+      else if (q1Score >= 7 && q1Score <= 8) weekObj.q1.neutrals += 1;
+
+      // Week vs Comments
+      const commentKey = Object.keys(record).find(k => /comment|feedback/i.test(k));
+      if (commentKey && record[commentKey] && String(record[commentKey]).trim().length > 0) {
+        weekObj.comments += 1;
+      }
+    });
+
+    // Fetch SamplesToken data for NPS density
+    const samplesTokens = await SamplesToken.find({ year: { $in: Array.from(years) } }).lean();
+    const tokenMap = {};
+    samplesTokens.forEach(token => {
+      tokenMap[`${token.year}-W${token.weekNumber}`] = token.sampleSize;
+    });
+
+    // Format for frontend
+    const result = Object.entries(weekStats).sort().map(([key, stat]) => {
+      const sampleSize = tokenMap[key] || 0;
+      const density = sampleSize > 0 ? (stat.totalViolations / sampleSize) * 100 : 0;
+
+      // Get responsible breakdown for this specific week as an array
+      const respData = Object.entries(stat.responsible).map(([name, count]) => ({ name, count }));
+
+      return {
+        label: key,
+        ...stat,
+        sampleSize,
+        npsDensity: density.toFixed(2),
+        responsibleData: respData
+      };
+    });
+
+    // Trend Snapshots (Quick Snapshot for Each Part)
+    const topTeamsTrend = await Detractor.aggregate([
+      { $match: filter },
+      { $group: { _id: "$Team Name", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+
+    const topReasonsTrend = await Detractor.aggregate([
+      { $match: filter },
+      { $group: { _id: "$Main Reason", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+
+    res.status(200).json({
+      status: true,
+      data: result,
+      trends: {
+        topTeams: topTeamsTrend.map(t => ({ name: t._id || 'Unknown', value: t.count })),
+        topReasons: topReasonsTrend.map(r => ({ name: r._id || 'Unknown', value: r.count }))
+      }
+    });
+  } catch (error) {
+    console.error("Fixed RCA stats error:", error);
     res.status(500).json({ status: false, message: error.message });
   }
 };

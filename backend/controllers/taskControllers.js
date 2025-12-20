@@ -431,9 +431,17 @@ function getStatusFromCheckpoints(subtasks) {
 
 export const getAllTasks = async (req, res) => {
   try {
-    const tasks = await TaskSchema.find({ isDeleted: false })
+    const currentYear = new Date().getFullYear();
+    const startOfYear = new Date(currentYear, 0, 1);
+
+    const tasks = await TaskSchema.find({
+      isDeleted: false,
+      interviewDate: { $gte: startOfYear }
+    })
+      .select("-subTasks -taskLogs -notifications -readBy")
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email")
+      .sort({ interviewDate: -1 });
 
     if (!tasks.length) {
       return res.status(404).json({ message: "Tasks not found" });

@@ -8,12 +8,14 @@ import {
   deleteDetractor,
   createDetractor,
   deleteBatchColumn,
+  renameBatchColumn,
   deleteBatch,
   checkDuplicates,
   getAnalyticsOverview,
   getTeamViolations,
   getTrendAnalysis,
-  getRootCauseAnalysis
+  getRootCauseAnalysis,
+  getFixedRCAStats
 } from "../controllers/detractorController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
@@ -29,6 +31,7 @@ router.post("/create", protect, adminOnly, createDetractor);
 router.put("/:id", protect, adminOnly, updateDetractor);
 router.delete("/:id", protect, adminOnly, deleteDetractor);
 router.delete("/batch/:fileName/column/:columnName", protect, adminOnly, deleteBatchColumn);
+router.put("/batch/:fileName/column/:oldColumnName/rename/:newColumnName", protect, adminOnly, renameBatchColumn);
 router.delete("/batch/:fileName", protect, adminOnly, deleteBatch);
 router.post("/check-duplicates", protect, adminOnly, checkDuplicates);
 
@@ -37,5 +40,6 @@ router.get("/analytics/overview", protect, getAnalyticsOverview);
 router.get("/analytics/team-violations", protect, getTeamViolations);
 router.get("/analytics/trends", protect, getTrendAnalysis);
 router.get("/analytics/root-cause", protect, getRootCauseAnalysis);
+router.get("/analytics/fixed-rca", protect, getFixedRCAStats);
 
 export default router;

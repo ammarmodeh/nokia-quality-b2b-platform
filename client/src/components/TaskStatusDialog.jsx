@@ -39,6 +39,8 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [taskToView, setTaskToView] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [viewLoading, setViewLoading] = useState(false);
 
   useEffect(() => {
     if (initialTasks) {
@@ -48,18 +50,30 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
     }
   }, [initialTasks]);
 
+  // Debounce search term
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
   // Handle search term changes
   useEffect(() => {
-    if (searchTerm.trim() === "") {
+    if (debouncedSearchTerm.trim() === "") {
       setFilteredTasks(tasks);
     } else {
+      const lowerSearch = debouncedSearchTerm.toLowerCase();
       const filtered = tasks.filter(task =>
-        task.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.slid?.toLowerCase().includes(searchTerm.toLowerCase())
+        task.customerName?.toLowerCase().includes(lowerSearch) ||
+        task.slid?.toLowerCase().includes(lowerSearch)
       );
       setFilteredTasks(filtered);
     }
-  }, [searchTerm, tasks]);
+  }, [debouncedSearchTerm, tasks]);
 
   // Custom field display configuration
   const fieldDisplayConfig = {
@@ -173,9 +187,21 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
   };
 
   // Handle View button click - shows details in dialog
-  const handleView = (task) => {
-    setTaskToView(task);
+  const handleView = async (task) => {
     setViewDialogOpen(true);
+    setViewLoading(true);
+    try {
+      const { data } = await api.get(`/tasks/get-task/${task._id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      });
+      // Merge with task from list to ensure we have populated fields like assignedTo/createdBy if missing
+      setTaskToView({ ...task, ...data });
+    } catch (error) {
+      console.error("Error fetching task details:", error);
+      setTaskToView(task); // Fallback to list data
+    } finally {
+      setViewLoading(false);
+    }
   };
 
   // Handle Copy button click
@@ -279,7 +305,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
           },
         }}
       >
-        <DialogTitle sx={{
+        <DialogTitle component="div" sx={{
           backgroundColor: "#998e8e24",
           color: "white",
           display: 'flex',
@@ -288,23 +314,37 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
           py: isMobile ? 1 : 2,
           px: isMobile ? 1 : 3,
         }}>
-          <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontWeight: 500 }}>
+          <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontWeight: 500 }}>
             {title}
           </Typography>
-          <Tooltip title="Export to Excel">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Tooltip title="Export to Excel">
+              <IconButton
+                onClick={exportToExcel}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  color: '#4caf50',
+                  '&:hover': {
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                  }
+                }}
+              >
+                <RiFileExcel2Fill fontSize={isMobile ? "small" : "medium"} />
+              </IconButton>
+            </Tooltip>
             <IconButton
-              onClick={exportToExcel}
+              onClick={onClose}
               size={isMobile ? "small" : "medium"}
               sx={{
-                color: '#4caf50',
+                color: '#ffffff',
                 '&:hover': {
-                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 }
               }}
             >
-              <RiFileExcel2Fill fontSize={isMobile ? "small" : "medium"} />
+              <MdClose />
             </IconButton>
-          </Tooltip>
+          </Box>
         </DialogTitle>
 
         <DialogContent sx={{
@@ -421,11 +461,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                             <Box component="span">Assignee:</Box>
                           </Typography>
                           <Chip
-                            label={task.assignedTo[0].name}
+                            label={task.assignedTo?.[0]?.name || "Not Assigned"}
                             size="small"
                             sx={{
                               color: '#ffffff',
-                              backgroundColor: 'primary.main', // or any color you prefer
+                              backgroundColor: task.assignedTo?.[0] ? 'primary.main' : 'grey.600',
                               fontSize: isMobile ? '0.75rem' : '0.8125rem'
                             }}
                           />
@@ -536,7 +576,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
           }
         }}
       >
-        <DialogTitle sx={{
+        <DialogTitle component="div" sx={{
           backgroundColor: '#2d2d2d',
           color: '#ffffff',
           borderBottom: '1px solid #e5e7eb',
@@ -552,6 +592,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
             {taskToView?.customerName && (
               <Typography
                 variant={isMobile ? "caption" : "subtitle1"}
+                component="div"
                 sx={{
                   color: '#7b68ee',
                   fontStyle: 'italic'
@@ -598,6 +639,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
           backgroundColor: '#2d2d2d',
           color: '#ffffff',
           padding: isMobile ? '12px 16px' : '20px 24px',
+          minHeight: '200px',
           '&::-webkit-scrollbar': {
             width: '4px',
           },
@@ -606,7 +648,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
             borderRadius: '2px',
           },
         }}>
-          {taskToView && (
+          {viewLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '200px' }}>
+              <Typography sx={{ color: '#aaa' }}>Loading details...</Typography>
+            </Box>
+          ) : taskToView && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 2 : 3 }}>
               {/* Basic Information Section */}
               <Paper elevation={0} sx={{
@@ -716,7 +762,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               </Paper>
 
               {/* Progress Section */}
-              {taskToView.subTasks[0].note && (
+              {taskToView?.subTasks?.[0]?.note && (
                 <Paper elevation={0} sx={{
                   p: isMobile ? 1.5 : 2,
                   backgroundColor: '#2d2d2d',
@@ -731,7 +777,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                   <Box sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                       <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#eff5ff' }}>
-                        Progress: {Math.round((100 / taskToView.subTasks.length) * taskToView.subTasks.filter(t => t.note).length)}%
+                        Progress: {taskToView?.subTasks?.length > 0 ? Math.round((100 / taskToView.subTasks.length) * taskToView.subTasks.filter(t => t.note).length) : 0}%
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 0.5 }}>
                         {taskToView.assignedTo?.map((user, index) => (
@@ -742,7 +788,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                               fontSize: isMobile ? '0.7rem' : '0.8rem',
                               backgroundColor: '#3a4044',
                               border: '2px solid',
-                              borderColor: taskToView.subTasks.some(t => t.completedBy?._id === user._id) ? '#4caf50' : '#f44336'
+                              borderColor: taskToView?.subTasks?.some(t => t.completedBy?._id === user._id) ? '#4caf50' : '#f44336'
                             }}>
                               {user.name
                                 .split(' ')
@@ -755,7 +801,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                     </Box>
                     <LinearProgress
                       variant="determinate"
-                      value={Math.round((100 / taskToView.subTasks.length) * taskToView.subTasks.filter(t => t.note).length)}
+                      value={taskToView?.subTasks?.length > 0 ? Math.round((100 / taskToView.subTasks.length) * taskToView.subTasks.filter(t => t.note).length) : 0}
                       sx={{
                         height: isMobile ? 8 : 10,
                         borderRadius: 5,
@@ -774,7 +820,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                     border: '1px solid #3d3d3d',
                     borderRadius: '8px'
                   }}>
-                    {taskToView.subTasks.map((subtask, index) => (
+                    {taskToView?.subTasks?.map((subtask, index) => (
                       <Box
                         key={index}
                         sx={{

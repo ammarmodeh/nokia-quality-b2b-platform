@@ -39,7 +39,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
           },
         }}
       >
-        <DialogTitle sx={{
+        <DialogTitle component="div" sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -48,7 +48,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <FaBalanceScale color="#7b68ee" size={isMobile ? 16 : 20} />
-            <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontSize: isMobile ? 13 : 20 }}>
+            <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontSize: isMobile ? 13 : 20 }}>
               Violation Evaluation Guide
             </Typography>
           </Box>

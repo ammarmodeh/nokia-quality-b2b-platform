@@ -51,7 +51,7 @@ const ReasonCategoriesDialog = () => {
           },
         }}
       >
-        <DialogTitle sx={{
+        <DialogTitle component="div" sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -60,7 +60,7 @@ const ReasonCategoriesDialog = () => {
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <FaFileAlt color="#7b68ee" size={isMobile ? 16 : 20} />
-            <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontSize: isMobile ? 13 : 20 }}>
+            <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontSize: isMobile ? 13 : 20 }}>
               Reason Categories Guide
             </Typography>
           </Box>
