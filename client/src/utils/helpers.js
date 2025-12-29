@@ -350,8 +350,19 @@ export const getDesiredWeeks = (data, range) => {
 };
 
 export const getCustomWeekNumber = (date, year) => {
-  const startOfYear = moment(`${year}-01-01`);
-  return moment(date).isoWeek() - startOfYear.isoWeek() + 1;
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+
+  // Set the start date of the first week of the year
+  // Our system starts from Dec 29, 2024 for year 2025 based on previous logic
+  // But let's make it smarter: find the Sunday of the week containing Jan 1
+  const jan1 = new Date(year, 0, 1);
+  const startOfTime = new Date(jan1);
+  startOfTime.setDate(jan1.getDate() - jan1.getDay()); // Previous Sunday
+  startOfTime.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.floor((d - startOfTime) / 86400000);
+  return Math.floor(diffDays / 7) + 1;
 };
 
 export const getActivationTeamValidationData = (tasks) => {

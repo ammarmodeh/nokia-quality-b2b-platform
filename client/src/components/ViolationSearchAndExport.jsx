@@ -225,7 +225,7 @@ const SearchAndExport = ({
             </Typography>
             <Stack direction="row" gap={2} flexWrap="wrap">
               <Chip
-                label={`Allow Max ${teamDetractorLimit} Detractors/Team/Month (≤9%)`}
+                label={`Allow Max ${calculationBreakdown.monthlyDetractorPerTeam} Detractors/Team/Month (≤9%)`}
                 size="small"
                 sx={{
                   backgroundColor: 'rgba(244, 67, 54, 0.1)',
@@ -235,7 +235,7 @@ const SearchAndExport = ({
                 }}
               />
               <Chip
-                label={`Allow Max ${teamNeutralLimit} Neutrals/Team/Month (≤16%)`}
+                label={`Allow Max ${calculationBreakdown.monthlyNeutralPerTeam} Neutrals/Team/Month (≤16%)`}
                 size="small"
                 sx={{
                   backgroundColor: 'rgba(255, 152, 0, 0.1)',

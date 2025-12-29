@@ -114,38 +114,39 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       const currentWeek = getCustomWeekNumber(new Date(), currentYear);
       const yearData = samplesTokenData[currentYear] || {};
 
-      console.log('📊 YTD Calculation Debug:', {
-        currentYear,
-        currentWeek,
-        yearDataKeys: Object.keys(yearData)
-      });
-
       let total = 0;
       Object.keys(yearData).forEach(weekKey => {
-        // weekKey is like "W1", "W2"... or just "W" + number
         const weekNum = parseInt(weekKey.replace('W', ''), 10);
-        // Sum samples for weeks <= current week
         if (!isNaN(weekNum) && weekNum <= currentWeek) {
           total += parseFloat(yearData[weekKey].sampleSize) || 0;
         }
       });
 
-      console.log('📊 YTD Total Samples:', total);
-
-      // Fallback: if no yearly data, use current view total but warn
-      // Logic adjusted: If YTD is 0, we might want to still show 0 or fallback depending on user preference. 
-      // Keeping fallback to totalGlobalSamples if 0 for continuity until data is entered.
       if (total === 0 && totalGlobalSamples > 0) {
-        console.warn('⚠️ No YTD data found, using current view total as fallback:', totalGlobalSamples);
         return totalGlobalSamples;
       }
 
       return total;
     } catch (error) {
       console.error("Error calculating YTD samples:", error);
-      return totalGlobalSamples; // Fallback
+      return totalGlobalSamples;
     }
-  }, [tasks, totalGlobalSamples, samplesTokenData]);
+  }, [totalGlobalSamples, samplesTokenData]);
+
+  // Calculate FULL YEAR total samples (all entered weeks)
+  const yearlyTotalSamples = useMemo(() => {
+    try {
+      const currentYear = new Date().getFullYear();
+      const yearData = samplesTokenData[currentYear] || {};
+      let total = 0;
+      Object.keys(yearData).forEach(weekKey => {
+        total += parseFloat(yearData[weekKey].sampleSize) || 0;
+      });
+      return total || ytdTotalSamples;
+    } catch (error) {
+      return ytdTotalSamples;
+    }
+  }, [samplesTokenData, ytdTotalSamples]);
 
   useEffect(() => {
     const fetchEvaluationData = async () => {
@@ -186,17 +187,25 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
 
   const { teamDetractorLimit, teamNeutralLimit, calculationBreakdown } = useMemo(() => {
     // Step 1: Year-to-Date allowed violations (Global)
-    // 9% for Detractors, 16% for Neutrals based on YTD samples
     const ytdDetractorLimitGlobal = ytdTotalSamples * 0.09;
     const ytdNeutralLimitGlobal = ytdTotalSamples * 0.16;
 
-    // Step 2: Per-team YTD limits
-    // Distributed evenly among active teams
-    const ytdDetractorPerTeam = ytdDetractorLimitGlobal / activeTeamsCount;
-    const ytdNeutralPerTeam = ytdNeutralLimitGlobal / activeTeamsCount;
+    // Step 2: Per-team YTD limits (Used for compliance status)
+    const ytdDetractorPerTeam = activeTeamsCount > 0 ? ytdDetractorLimitGlobal / activeTeamsCount : 0;
+    const ytdNeutralPerTeam = activeTeamsCount > 0 ? ytdNeutralLimitGlobal / activeTeamsCount : 0;
+
+    // Step 3: Yearly Limits (Based on all entered samples)
+    const yearlyDetractorLimitGlobal = yearlyTotalSamples * 0.09;
+    const yearlyNeutralLimitGlobal = yearlyTotalSamples * 0.16;
+
+    const yearlyDetractorPerTeam = activeTeamsCount > 0 ? yearlyDetractorLimitGlobal / activeTeamsCount : 0;
+    const yearlyNeutralPerTeam = activeTeamsCount > 0 ? yearlyNeutralLimitGlobal / activeTeamsCount : 0;
+
+    // Step 4: Monthly Limits (Informative)
+    const monthlyDetractorPerTeam = yearlyDetractorPerTeam / 12;
+    const monthlyNeutralPerTeam = yearlyNeutralPerTeam / 12;
 
     return {
-      // Use floor to be safe/strict, or round. Usually limits are integers.
       teamDetractorLimit: Math.floor(ytdDetractorPerTeam),
       teamNeutralLimit: Math.floor(ytdNeutralPerTeam),
       calculationBreakdown: {
@@ -205,11 +214,21 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         ytdNeutralLimitGlobal: ytdNeutralLimitGlobal.toFixed(1),
         ytdDetractorPerTeam: ytdDetractorPerTeam.toFixed(2),
         ytdNeutralPerTeam: ytdNeutralPerTeam.toFixed(2),
+
+        yearlyTotal: yearlyTotalSamples,
+        yearlyDetractorLimit: yearlyDetractorLimitGlobal.toFixed(1),
+        yearlyNeutralLimit: yearlyNeutralLimitGlobal.toFixed(1),
+        yearlyDetractorPerTeam: yearlyDetractorPerTeam.toFixed(2),
+        yearlyNeutralPerTeam: yearlyNeutralPerTeam.toFixed(2),
+
+        monthlyDetractorPerTeam: monthlyDetractorPerTeam.toFixed(2),
+        monthlyNeutralPerTeam: monthlyNeutralPerTeam.toFixed(2),
+
         activeTeams: activeTeamsCount,
         note: "Limits are dynamic based on accumulated Year-to-Date samples."
       }
     };
-  }, [ytdTotalSamples, activeTeamsCount]);
+  }, [ytdTotalSamples, yearlyTotalSamples, activeTeamsCount]);
 
   useEffect(() => {
     const fetchAssessments = async () => {
