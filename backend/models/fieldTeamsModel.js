@@ -7,6 +7,22 @@ const fieldTeamsSchema = new mongoose.Schema(
       required: [true, "Team Name is required"],
       trim: true,
     },
+    firstName: {
+      type: String,
+      trim: true,
+    },
+    secondName: {
+      type: String,
+      trim: true,
+    },
+    thirdName: {
+      type: String,
+      trim: true,
+    },
+    surname: {
+      type: String,
+      trim: true,
+    },
     teamCompany: {
       type: String,
       required: [true, "Team Company is required"],
@@ -32,6 +48,7 @@ const fieldTeamsSchema = new mongoose.Schema(
       {
         score: String,
         date: { type: Date, default: Date.now },
+        quizCode: String,
       },
     ],
     isEvaluated: {

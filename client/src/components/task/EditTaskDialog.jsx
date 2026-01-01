@@ -7,19 +7,10 @@ import UserList from "./UserList";
 import api from "../../api/api";
 
 // const LISTS = ["Todo", "In Progress", "Closed"];
-const PRIORITY = ["High", "Medium", "Low"];
+// Initial fallback constants for safety (will be replaced by API data)
+// Fallback constants removed. Powered by dynamic API data.
+
 const DEPARTMENT = ["Quality", "Production"];
-const CATEGORIES = [
-  "Orange HC detractor", "Orange Closure", "Orange Joint", "Nokia MS detractor", "Nokia FAT", "Nokia Closure", "TRC", "TCRM", "Others"
-];
-const TEAMCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team', 'غير معروف']
-const EVALUATIONSCORE = [1, 2, 3, 4, 5, 6, 7, 8]
-const JORDANGOVERNORATES = ["عمَان", "الزرقاء", "إربد", "العقبة", "المفرق", "مادبا", "البلقاء", "جرش", "معان", "الكرك", "عجلون", "الطفيلة"]
-const CUSTOMERTYPE = ["CBU", "EBU"]
-const VALIDATIONSTATUS = ["Validated", "Not validated"]
-const VALIDATIONCATEGORY = ["Knowledge Gap", "Customer Education", "Customer Perception", "Incomplete Service Delivery", "Lack of Technical Expertise", "Safety/Installation Standards", "Unprofessional Conduct",
-  "Poor Time Management", "Technical Limitations", "Execution Delay", "Processing Delay", "External Factors", "Bad Team Behavior",
-  "Device limitations", "Misuse of Service", "Customer-Declined Solution / Unrealistic Expectation", "Others", "VOIP", "Can't Determine"]
 
 const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const user = useSelector((state) => state?.auth?.user);
@@ -29,9 +20,9 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   // console.log({ assignedTo });
   const [whomItMayConcern, setWhomItMayConcern] = useState([]);
   // const [status, setStatus] = useState(LISTS[0]);
-  const [priority, setPriority] = useState(PRIORITY[2]);
+  const [priority, setPriority] = useState("");
   const [department, setDepartment] = useState(DEPARTMENT[0]);
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState("");
   const [date, setDate] = useState("");
   const [pisDate, setPisDate] = useState(""); // State for PIS Date
   const [interviewDate, setInterviewDate] = useState("");
@@ -45,8 +36,49 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const [fieldTeams, setFieldTeams] = useState([]);
   const [teamInfo, setTeamInfo] = useState({ teamName: '', teamId: '' });
   const [customerType, setCustomerType] = useState('');
-  const [validationStatus, setValidationStatus] = useState(VALIDATIONSTATUS[1]);
-  const [validationCat, setValidationCat] = useState(VALIDATIONCATEGORY[0]);
+  const [validationStatus, setValidationStatus] = useState("");
+  const [validationCat, setValidationCat] = useState('');
+  const [reason, setReason] = useState("");
+  const [responsibility, setResponsibility] = useState("");
+  const [responsibilitySub, setResponsibilitySub] = useState("");
+
+  // Dynamic dropdown options
+  const [dropdownOptions, setDropdownOptions] = useState({
+    PRIORITY: [],
+    TASK_CATEGORIES: [],
+    TEAM_COMPANY: [],
+    EVALUATION_SCORE: [],
+    GOVERNORATES: [],
+    CUSTOMER_TYPE: [],
+    VALIDATION_STATUS: [],
+    VALIDATION_CATEGORY: [],
+    REASON: [],
+    RESPONSIBILITY: [],
+    RESPONSIBILITY_SUB: []
+  });
+
+  useEffect(() => {
+    const fetchDropdownOptions = async () => {
+      try {
+        const { data } = await api.get("/dropdown-options/all");
+        if (data && Object.keys(data).length > 0) {
+          const formatted = {};
+          Object.keys(data).forEach(key => {
+            if (key === "RESPONSIBILITY_SUB") {
+              formatted[key] = data[key]; // Store full objects for sub-options
+            } else {
+              formatted[key] = data[key].map(opt => opt.value);
+            }
+          });
+          setDropdownOptions(prev => ({ ...prev, ...formatted }));
+        }
+      } catch (err) {
+        console.error("Failed to load dropdown options", err);
+      }
+    };
+
+    fetchDropdownOptions();
+  }, []);
 
   // Fetch all users when the component mounts
   useEffect(() => {
@@ -110,6 +142,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
         date: formattedDate,
         interviewDate: formattedInterviewDate,
         responsibility: task.responsibility || "",
+        responsibilitySub: task.responsibilitySub || "",
       });
 
       setValue("date", formattedDate);
@@ -122,10 +155,11 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setValue("customerName", task.customerName);
       setValue("district", task.district);
       setValue("responsibility", task.responsibility);
+      setValue("responsibilitySub", task.responsibilitySub);
 
-      setPriority(PRIORITY.includes(task.priority) ? task.priority : PRIORITY[2]);
+      setPriority(dropdownOptions.PRIORITY.includes(task.priority) ? task.priority : dropdownOptions.PRIORITY[0]);
       setDepartment(DEPARTMENT.includes(task.department) ? task.department : DEPARTMENT[0]);
-      setCategory(CATEGORIES.includes(task.category) ? task.category : CATEGORIES[0]);
+      setCategory(dropdownOptions.TASK_CATEGORIES.includes(task.category) ? task.category : dropdownOptions.TASK_CATEGORIES[0]);
       setDate(formattedDate);
       setPisDate(formattedPISDate);
       setInterviewDate(formattedInterviewDate);
@@ -139,8 +173,29 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setCustomerType(task.customerType || '');
       setValidationStatus(task.validationStatus || '');
       setValidationCat(task.validationCat || '');
+      setReason(task.reason || (dropdownOptions.REASON.length > 0 ? dropdownOptions.REASON[0] : ""));
+
+      let mainResp = task.responsibility || "";
+      let subResp = task.responsibilitySub || "";
+
+      // Logic to handle existing data migration (Main vs Sub)
+      if (!subResp && mainResp) {
+        // If the value in 'responsibility' is actually a known sub-responsibility, shift it
+        const foundSub = dropdownOptions.RESPONSIBILITY_SUB.find(opt => opt.value === mainResp);
+        if (foundSub) {
+          subResp = mainResp;
+          mainResp = foundSub.parentValue;
+        } else if (!dropdownOptions.RESPONSIBILITY.includes(mainResp) && mainResp !== "") {
+          // If it's custom text and not a main category, move it to sub as per user request
+          subResp = mainResp;
+          mainResp = "";
+        }
+      }
+
+      setResponsibility(mainResp);
+      setResponsibilitySub(subResp);
     }
-  }, [task, open, reset, setValue, user]);
+  }, [task, open, reset, setValue, user, dropdownOptions]);
 
 
   useEffect(() => {
@@ -186,7 +241,10 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       governorate,
       customerType,
       validationStatus,
-      validationCat
+      validationCat,
+      reason,
+      responsibility,
+      responsibilitySub
     };
 
     // console.log({ formData });
@@ -284,7 +342,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Satisfaction Score</InputLabel>
               <Select value={evaluationScore} onChange={(e) => setEvaluationScore(e.target.value)} label="Satisfaction Score">
-                {EVALUATIONSCORE.map((score) => (
+                {dropdownOptions.EVALUATION_SCORE.map((score) => (
                   <MenuItem key={score} value={score}>
                     {score}
                   </MenuItem>
@@ -296,7 +354,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Governorate</InputLabel>
               <Select value={governorate} onChange={(e) => setGovernorate(e.target.value)} label="Governorate">
-                {JORDANGOVERNORATES.map((list) => (
+                {dropdownOptions.GOVERNORATES.map((list) => (
                   <MenuItem key={list} value={list}>
                     {list}
                   </MenuItem>
@@ -320,7 +378,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Customer Type</InputLabel>
               <Select value={customerType} onChange={(e) => setCustomerType(e.target.value)} label="Customer Type">
-                {CUSTOMERTYPE.map((list) => (
+                {dropdownOptions.CUSTOMER_TYPE.map((list) => (
                   <MenuItem key={list} value={list}>
                     {list}
                   </MenuItem>
@@ -356,17 +414,20 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             />
 
             <Stack direction="row" spacing={2}>
-              <TextField
-                label="Reason"
-                placeholder="Enter reason"
-                type='text'
+              <Autocomplete
+                freeSolo
+                options={dropdownOptions.REASON}
+                value={reason}
+                onChange={(event, newValue) => {
+                  setReason(newValue);
+                }}
+                onInputChange={(event, newInputValue) => {
+                  setReason(newInputValue);
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Reason" variant="outlined" />
+                )}
                 fullWidth
-                variant="outlined"
-                {...register('reason', {
-                  required: 'reason is required',
-                })}
-                error={!!errors.reason}
-                helperText={errors.reason ? errors.reason.message : ''}
               />
               <TextField
                 label="Interview Date"
@@ -413,7 +474,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Team Company</InputLabel>
               <Select value={teamCompany} onChange={(e) => setTeamCompany(e.target.value)} label="Team Company">
-                {TEAMCOMPANY.map((list) => (
+                {dropdownOptions.TEAM_COMPANY.map((list) => (
                   <MenuItem key={list} value={list}>
                     {list}
                   </MenuItem>
@@ -422,35 +483,45 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
             </FormControl>
 
-            <FormControl fullWidth variant="outlined" error={!!errors.status}>
-              <InputLabel>Validation Status</InputLabel>
-              <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
-                {VALIDATIONSTATUS.map((list) => (
-                  <MenuItem key={list} value={list}>
-                    {list}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-            </FormControl>
-
-            <TextField
-              label="responsibility"
-              placeholder="Responsibility"
-              type='text'
+            <Autocomplete
+              freeSolo
+              options={dropdownOptions.RESPONSIBILITY}
+              value={responsibility}
+              onChange={(event, newValue) => {
+                setResponsibility(newValue);
+                setResponsibilitySub(""); // Reset sub when main changes
+              }}
+              onInputChange={(event, newInputValue) => {
+                setResponsibility(newInputValue);
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Responsible 1 (Main)" variant="outlined" />
+              )}
               fullWidth
-              variant="outlined"
-              {...register('responsibility', {
-                required: 'responsibility is required',
-              })}
-              error={!!errors.responsibility}
-              helperText={errors.responsibility ? errors.responsibility.message : ''}
+            />
+
+            <Autocomplete
+              freeSolo
+              options={dropdownOptions.RESPONSIBILITY_SUB
+                .filter(opt => opt.parentValue === responsibility)
+                .map(opt => opt.value)}
+              value={responsibilitySub}
+              onChange={(event, newValue) => {
+                setResponsibilitySub(newValue);
+              }}
+              onInputChange={(event, newInputValue) => {
+                setResponsibilitySub(newInputValue);
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Responsible 2 (Sub/Team)" variant="outlined" />
+              )}
+              fullWidth
             />
 
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Validation Category</InputLabel>
-              <Select value={validationCat} onChange={(e) => setValidationCat(e.target.value)} label="Validation Status">
-                {VALIDATIONCATEGORY.map((list) => (
+              <Select value={validationCat} onChange={(e) => setValidationCat(e.target.value)} label="Validation Category">
+                {dropdownOptions.VALIDATION_CATEGORY.map((list) => (
                   <MenuItem key={list} value={list}>
                     {list}
                   </MenuItem>
@@ -500,8 +571,28 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             />
           </div>
           <div className="flex gap-4 mt-6">
-            <SelectList label="Feedback Severity" lists={PRIORITY} selected={priority} setSelected={setPriority} />
-            <SelectList label="Task Category" lists={CATEGORIES} selected={category} setSelected={setCategory} />
+            <SelectList label="Feedback Severity" lists={dropdownOptions.PRIORITY} selected={priority} setSelected={setPriority} />
+            <Autocomplete
+              freeSolo
+              options={dropdownOptions.TASK_CATEGORIES}
+              value={category}
+              onChange={(event, newValue) => {
+                setCategory(newValue);
+              }}
+              onInputChange={(event, newInputValue) => {
+                setCategory(newInputValue);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Task Category"
+                  variant="outlined"
+                  error={!!errors.category}
+                  helperText={errors.category ? errors.category.message : ''}
+                />
+              )}
+              fullWidth
+            />
           </div>
           <div className="bg-[#2d2d2d] py-6 sm:flex sm:flex-row-reverse gap-4">
             <Button type="submit" color="primary" className="bg-blue-600 px-8 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto">Save</Button>

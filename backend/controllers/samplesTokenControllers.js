@@ -4,12 +4,19 @@ import SamplesToken from '../models/samplesTokenModel.js';
 export const getSamplesByYear = async (req, res) => {
   try {
     const { year } = req.params;
+    console.log(`🔍 [Backend] Fetching samples for year: ${year}`);
 
     const samples = await SamplesToken.find({ year: parseInt(year) })
       .sort({ weekNumber: 1 });
 
+    console.log(`📊 [Backend] Found ${samples.length} samples for year ${year}`);
+    if (samples.length > 0) {
+      console.log(`📝 [Backend] Sample data (first item):`, samples[0]);
+    }
+
     res.status(200).json(samples);
   } catch (error) {
+    console.error(`❌ [Backend] Error fetching samples:`, error);
     res.status(500).json({
       message: 'Error fetching samples',
       error: error.message

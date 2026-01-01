@@ -242,7 +242,7 @@ export const renameBatchColumn = async (req, res) => {
 // Get comprehensive analytics overview
 export const getAnalyticsOverview = async (req, res) => {
   try {
-    const { startDate, endDate, teamName, responsible, specificTeam } = req.query;
+    const { startDate, endDate, teamName, responsible, specificTeam, responsibleSub } = req.query;
 
     // Build filter
     const filter = {};
@@ -254,6 +254,7 @@ export const getAnalyticsOverview = async (req, res) => {
     if (teamName) filter['Team Name'] = teamName;
     if (responsible) filter.Responsible = responsible;
     if (specificTeam) filter['Specific Team'] = specificTeam;
+    if (responsibleSub) filter.ResponsibleSub = responsibleSub;
 
     const totalRecords = await Detractor.countDocuments(filter);
 
@@ -289,7 +290,7 @@ export const getAnalyticsOverview = async (req, res) => {
 // Get team violation analysis
 export const getTeamViolations = async (req, res) => {
   try {
-    const { startDate, endDate, specificTeam } = req.query;
+    const { startDate, endDate, specificTeam, responsible, responsibleSub } = req.query;
 
     const filter = {};
     if (startDate || endDate) {
@@ -298,6 +299,8 @@ export const getTeamViolations = async (req, res) => {
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
     if (specificTeam) filter['Specific Team'] = specificTeam;
+    if (responsible) filter.Responsible = responsible;
+    if (responsibleSub) filter.ResponsibleSub = responsibleSub;
 
     const teamStats = await Detractor.aggregate([
       { $match: filter },
@@ -346,7 +349,7 @@ export const getTeamViolations = async (req, res) => {
 // Get trend analysis
 export const getTrendAnalysis = async (req, res) => {
   try {
-    const { period = 'daily', startDate, endDate, specificTeam } = req.query;
+    const { period = 'daily', startDate, endDate, specificTeam, responsible, responsibleSub } = req.query;
 
     const filter = {};
     if (startDate || endDate) {
@@ -355,6 +358,8 @@ export const getTrendAnalysis = async (req, res) => {
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
     if (specificTeam) filter['Specific Team'] = specificTeam;
+    if (responsible) filter.Responsible = responsible;
+    if (responsibleSub) filter.ResponsibleSub = responsibleSub;
 
     // Determine grouping format based on period
     let dateFormat;
@@ -403,7 +408,7 @@ export const getTrendAnalysis = async (req, res) => {
 // Get root cause analysis
 export const getRootCauseAnalysis = async (req, res) => {
   try {
-    const { startDate, endDate, teamName, specificTeam, studyColumns, compareBy } = req.query;
+    const { startDate, endDate, teamName, specificTeam, studyColumns, compareBy, responsible, responsibleSub } = req.query;
 
     const filter = {};
     if (startDate || endDate) {
@@ -413,6 +418,8 @@ export const getRootCauseAnalysis = async (req, res) => {
     }
     if (teamName) filter['Team Name'] = teamName;
     if (specificTeam) filter['Specific Team'] = specificTeam;
+    if (responsible) filter.Responsible = responsible;
+    if (responsibleSub) filter.ResponsibleSub = responsibleSub;
 
     // Default fields to analyze if none provided
     const defaultStudyFields = ['Main Reason', 'Sub-Reason', 'Responsible', 'Specific Team'];
@@ -489,7 +496,7 @@ export const getRootCauseAnalysis = async (req, res) => {
 // Get fixed RCA stats: Week vs Responsible, Week vs Q1, Week vs Comments, and NPS Density
 export const getFixedRCAStats = async (req, res) => {
   try {
-    const { startDate, endDate, teamName, specificTeam } = req.query;
+    const { startDate, endDate, teamName, specificTeam, responsible, responsibleSub } = req.query;
 
     const filter = {};
     if (startDate || endDate) {
@@ -499,6 +506,8 @@ export const getFixedRCAStats = async (req, res) => {
     }
     if (teamName) filter['Team Name'] = teamName;
     if (specificTeam) filter['Specific Team'] = specificTeam;
+    if (responsible) filter.Responsible = responsible;
+    if (responsibleSub) filter.ResponsibleSub = responsibleSub;
 
     // Get all records for analysis
     const records = await Detractor.find(filter).lean();

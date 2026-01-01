@@ -1,4 +1,5 @@
 import QuizResult from "../models/quizResultModel.js";
+import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
 import { updateTeamScore } from "../controllers/fieldTeamsControllers.js";
 
 export const saveQuizResults = async (req, res) => {
@@ -22,6 +23,7 @@ export const saveQuizResults = async (req, res) => {
       essayAnswer: answer.essayAnswer,
       score: answer.score || 0,
       isCorrect: answer.isCorrect,
+      isScored: (questions[index].type || 'options') !== 'essay',
       category: questions[index].category,
       type: questions[index].type || 'options'
     }));
@@ -195,8 +197,9 @@ export const updateEssayScore = async (req, res) => {
       });
     }
 
-    // Update the score for the specific question
+    // Update the score and mark as scored
     quizResult.userAnswers[questionIndex].score = parsedScore;
+    quizResult.userAnswers[questionIndex].isScored = true;
 
     // Recalculate correctAnswers (sum of options questions with isCorrect: true * 2 + essay question scores)
     const correctAnswers = quizResult.userAnswers.reduce((acc, answer) => {
@@ -295,4 +298,63 @@ export const getTeamsEvaluation = async (req, res) => {
       error: error.message
     });
   }
-}
+};
+
+export const deleteQuizResult = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Find the quiz result to get teamId and quizCode
+    const result = await QuizResult.findById(id);
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Quiz result not found'
+      });
+    }
+
+    const { teamId, quizCode } = result;
+
+    // 2. Delete the quiz result record
+    await QuizResult.findByIdAndDelete(id);
+
+    // 3. Update the FieldTeam document to remove this history entry and update summary scores
+    const team = await FieldTeamsSchema.findById(teamId);
+    if (team) {
+      // Remove from evaluationHistory
+      team.evaluationHistory = team.evaluationHistory.filter(h => h.quizCode !== quizCode);
+
+      // Fetch remaining history from QuizResult to find the latest
+      const remainingHistory = await QuizResult.find({ teamId })
+        .sort({ submittedAt: -1 })
+        .limit(1)
+        .lean();
+
+      if (remainingHistory.length > 0) {
+        const latest = remainingHistory[0];
+        team.evaluationScore = latest.score;
+        team.lastEvaluationDate = latest.submittedAt;
+        team.isEvaluated = true;
+      } else {
+        // No more evaluations left
+        team.evaluationScore = "N/A";
+        team.lastEvaluationDate = null;
+        team.isEvaluated = false;
+      }
+
+      await team.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Quiz result deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting quiz result:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete quiz result',
+      error: error.message
+    });
+  }
+};

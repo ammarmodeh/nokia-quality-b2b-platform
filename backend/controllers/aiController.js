@@ -105,8 +105,11 @@ export const generateReportFile = async (req, res) => {
 
       const pdfBuffer = await htmlPdfNode.generatePdf(file, options);
 
+      const safeTitle = title.replace(/[^\x00-\x7F]/g, "").replace(/\s+/g, "_");
+      const filename = `${safeTitle || 'Report'}_${Date.now()}.pdf`;
+
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${title.replace(/\s/g, '_')}_${Date.now()}.pdf"`);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(title)}_${Date.now()}.pdf`);
       res.send(pdfBuffer);
     } else if (format === 'docx') {
       const docxBuffer = await HTMLtoDOCX(styledHtml, null, {
@@ -115,8 +118,11 @@ export const generateReportFile = async (req, res) => {
         pageNumber: true,
       });
 
+      const safeTitle = title.replace(/[^\x00-\x7F]/g, "").replace(/\s+/g, "_");
+      const filename = `${safeTitle || 'Report'}_${Date.now()}.docx`;
+
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      res.setHeader('Content-Disposition', `attachment; filename="${title.replace(/\s/g, '_')}_${Date.now()}.docx"`);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(title)}_${Date.now()}.docx`);
       res.send(docxBuffer);
     } else {
       res.status(400).json({ error: "Unsupported file format." });

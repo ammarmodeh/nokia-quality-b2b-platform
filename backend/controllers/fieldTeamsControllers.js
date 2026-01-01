@@ -19,6 +19,10 @@ export const validateTeam = async (req, res) => {
       team: {
         _id: team._id,
         teamName: team.teamName,
+        firstName: team.firstName,
+        secondName: team.secondName,
+        thirdName: team.thirdName,
+        surname: team.surname,
         teamCompany: team.teamCompany,
         quizCode: team.quizCode,
         canTakeQuiz: team.canTakeQuiz
@@ -135,7 +139,7 @@ export const getFieldTeamByQuizCode = async (req, res) => {
 
 export const addFieldTeam = async (req, res) => {
   try {
-    const { teamName, teamCompany, contactNumber, fsmSerialNumber, laptopSerialNumber } = req.body;
+    const { teamName, firstName, secondName, thirdName, surname, teamCompany, contactNumber, fsmSerialNumber, laptopSerialNumber } = req.body;
 
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const quizCode = Array.from({ length: 10 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
@@ -146,6 +150,10 @@ export const addFieldTeam = async (req, res) => {
 
     const newFieldTeam = new FieldTeamsSchema({
       teamName,
+      firstName,
+      secondName,
+      thirdName,
+      surname,
       teamCompany,
       contactNumber,
       fsmSerialNumber: fsmSerialNumber || 'N/A',

@@ -25,17 +25,20 @@ const getResponsibilityViolations = (tasks) => {
   const responsibilityViolations = {};
 
   tasks.forEach((task) => {
-    const { responsibility, evaluationScore } = task;
+    const { responsibility, responsibilitySub, evaluationScore } = task;
 
     if (!responsibility) return;
 
-    if (!responsibilityViolations[responsibility]) {
-      responsibilityViolations[responsibility] = { total: 0, tasks: [] };
+    // Group by hierarchical responsibility
+    const groupKey = responsibilitySub ? `${responsibility} / ${responsibilitySub}` : responsibility;
+
+    if (!responsibilityViolations[groupKey]) {
+      responsibilityViolations[groupKey] = { total: 0, tasks: [] };
     }
 
     if (evaluationScore >= 1 && evaluationScore <= 8) {
-      responsibilityViolations[responsibility].total += 1;
-      responsibilityViolations[responsibility].tasks.push(task);
+      responsibilityViolations[groupKey].total += 1;
+      responsibilityViolations[groupKey].tasks.push(task);
     }
   });
 

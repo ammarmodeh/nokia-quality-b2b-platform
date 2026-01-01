@@ -8,7 +8,7 @@ import {
   PlayCircleOutline as PlayCircleOutlineIcon, BeachAccess as BeachAccessIcon, CheckCircleOutline as CheckCircleOutlineIcon,
   Cancel as CancelIcon, CancelOutlined as CancelOutlinedIcon, History as HistoryIcon, Phone as PhoneIcon,
   DeviceHub as DeviceHubIcon, Laptop as LaptopIcon, CheckCircle as CheckCircleIcon, TaskAlt as TaskAltIcon,
-  Pending as PendingIcon,
+  Pending as PendingIcon, Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
@@ -61,6 +61,10 @@ const FieldTeamForm = () => {
           .filter(Boolean)
           .join(' ')
           .trim(),
+        firstName: data.firstName,
+        secondName: data.secondName,
+        thirdName: data.thirdName,
+        surname: data.surname,
         teamCompany: data.teamCompany,
         contactNumber: data.contactNumber,
         fsmSerialNumber: data.fsmSerialNumber || 'N/A',
@@ -192,6 +196,10 @@ const FieldTeamForm = () => {
         .filter(Boolean)
         .join(' ')
         .trim(),
+      firstName: data.firstName,
+      secondName: data.secondName,
+      thirdName: data.thirdName,
+      surname: data.surname,
       teamCompany: data.teamCompany,
       contactNumber: data.contactNumber,
       fsmSerialNumber: data.fsmSerialNumber || 'N/A',
@@ -277,6 +285,29 @@ const FieldTeamForm = () => {
       alert('No evaluation history available for this team.');
     }
   }, [teams]);
+
+  // Handle delete evaluation
+  const handleDeleteEvaluation = useCallback(async (quizId) => {
+    if (!window.confirm('Are you sure you want to delete this evaluation result? This action cannot be undone.')) return;
+
+    try {
+      const response = await api.delete(`/quiz-results/${quizId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
+
+      if (response.status === 200) {
+        alert('Evaluation result deleted successfully!');
+        setUpdateState((prev) => !prev);
+        setEvaluationHistory(prev => prev.filter(q => q._id !== quizId));
+      } else {
+        alert('Failed to delete evaluation result.');
+      }
+    } catch (error) {
+      alert('An error occurred while deleting the evaluation result.');
+    }
+  }, []);
 
   // Handle suspend, terminate, reactivate, on leave, and resigned clicks
   const handleSuspendClick = useCallback((teamId) => {
@@ -852,6 +883,25 @@ const FieldTeamForm = () => {
                 }}
               />
             </Box>
+            <Tooltip title="Refresh Data">
+              <IconButton
+                onClick={() => setUpdateState(prev => !prev)}
+                disabled={loading}
+                sx={{
+                  color: '#7b68ee',
+                  '&:hover': {
+                    backgroundColor: 'rgba(123, 104, 238, 0.1)',
+                  },
+                  animation: loading ? 'spin 1s linear infinite' : 'none',
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' },
+                  },
+                }}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
             <Tooltip title="Export to Excel">
               <IconButton
                 onClick={handleExportToExcel}
@@ -1043,35 +1093,52 @@ const FieldTeamForm = () => {
                     flexDirection: 'column',
                     alignItems: 'flex-start'
                   }}>
-                    <ListItemText
-                      primary={
-                        <Typography variant={isMobile ? "body2" : "body1"} sx={{ color: '#ffffff' }}>
-                          {new Date(quiz.submittedAt).toLocaleString()}
-                        </Typography>
-                      }
-                      secondary={
-                        <Box sx={{ mt: 1 }}>
-                          <Typography
-                            variant={isMobile ? "caption" : "body2"}
-                            component="span"
-                            sx={{ color: '#b3b3b3' }}
-                          >
-                            Score: <Chip
-                              label={`${quiz.score} (${quiz.percentage}%)`}
-                              size={isMobile ? "small" : "medium"}
-                              sx={{
-                                backgroundColor: quiz.percentage >= 90 ? '#4caf50' :
-                                  quiz.percentage >= 70 ? '#ff9800' : '#f44336',
-                                color: '#ffffff',
-                                fontWeight: 'bold',
-                                ml: 1,
-                                fontSize: isMobile ? '0.75rem' : '0.875rem'
-                              }}
-                            />
+                    <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <ListItemText
+                        primary={
+                          <Typography variant={isMobile ? "body2" : "body1"} sx={{ color: '#ffffff' }}>
+                            {new Date(quiz.submittedAt).toLocaleString()}
                           </Typography>
-                        </Box>
-                      }
-                    />
+                        }
+                        secondary={
+                          <Box sx={{ mt: 1 }}>
+                            <Typography
+                              variant={isMobile ? "caption" : "body2"}
+                              component="span"
+                              sx={{ color: '#b3b3b3' }}
+                            >
+                              Score: <Chip
+                                label={`${quiz.score} (${quiz.percentage}%)`}
+                                size={isMobile ? "small" : "medium"}
+                                sx={{
+                                  backgroundColor: quiz.percentage >= 90 ? '#4caf50' :
+                                    quiz.percentage >= 70 ? '#ff9800' : '#f44336',
+                                  color: '#ffffff',
+                                  fontWeight: 'bold',
+                                  ml: 1,
+                                  fontSize: isMobile ? '0.75rem' : '0.875rem'
+                                }}
+                              />
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                      {user.role === 'Admin' && (
+                        <Tooltip title="Delete this evaluation">
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={() => handleDeleteEvaluation(quiz._id)}
+                            sx={{
+                              '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.1)' },
+                              ml: 1
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
                   </ListItem>
                 ))}
               </List>

@@ -20,10 +20,10 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 const TeamsPerformancePage = () => {
   const isMobile = false;
   const colors = {
-    background: '#2d2d2d',
-    surface: '#ffffff',
+    background: 'transparent',
+    surface: 'transparent',
     surfaceElevated: '#252525',
-    border: '#e5e7eb',
+    border: '#e5e7eb21',
     primary: '#7b68ee',
     primaryHover: 'rgba(62, 166, 255, 0.08)',
     textPrimary: '#ffffff',

@@ -1,13 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
 import { Menu, MenuItem, Button, Typography, Box, Badge, Stack, Divider, Chip } from "@mui/material";
 import { BiSolidMessageRounded } from "react-icons/bi";
-import { IoMdDocument, IoMdNotificationsOutline } from "react-icons/io";
-import { IoMdClose } from "react-icons/io";
+import { IoMdCheckmarkCircleOutline, IoMdClose, IoMdTrash, IoMdNotificationsOutline, IoMdDocument } from "react-icons/io";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import api from "../api/api";
 import { useTheme } from "@mui/material/styles";
+import { Tooltip, IconButton, CircularProgress } from "@mui/material";
 
 const NOTIFICATION_ICONS = {
   task: <IoMdNotificationsOutline className="h-5 w-5" />,
@@ -23,6 +23,7 @@ const NotificationPanel = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [loading, setLoading] = useState(false);
   const open = Boolean(anchorEl);
   const navigate = useNavigate();
 
@@ -104,6 +105,50 @@ const NotificationPanel = () => {
       // eslint-disable-next-line no-unused-vars
     } catch (error) {
       // Error handling
+    }
+  };
+
+  const markAllAsRead = async () => {
+    setLoading(true);
+    try {
+      const promises = notifications.map(async (notification) => {
+        if (notification.type === 'task-update' || notification.type === 'task-closed') {
+          return markTaskNotificationAsRead(notification._id, notification.notificationId);
+        } else if (notification.type === 'task') {
+          // Task assignments are typically marked read by viewing, but we can simulate it or if there's an API. 
+          // Current logic in handleViewNotification views the task. 
+          // Since there is no "mark assigned task as read" API without viewing, we might skip or view logic.
+          // However, for bulk "mark all read", users expect it to clear.
+          // Let's assume we can't mark 'task' type read without viewing OR we just remove it from local list.
+          // Actually, `viewTask` adds user to `readBy`. We can call `viewTask` API? simpler to just leave or if possible extend backend.
+          // But implementing frontend loop: 
+          return api.get(`/tasks/view-task/${notification._id}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          });
+        } else if (notification.type === 'suggestion-response') {
+          const suggestionId = notification._id.split('-')[0];
+          if (user.role === "Member") {
+            return markResponseAsRead(suggestionId, notification.responseId);
+          } else {
+            return markSuggestionAsRead(suggestionId);
+          }
+        } else if (notification.type === 'suggestion-admin') {
+          return markSuggestionAsRead(notification._id);
+        } else if (notification.type === 'policy-response') {
+          return markPolicyResponseAsRead(notification._id.split('-')[0], notification.logId);
+        } else if (notification.type === 'policy-admin') {
+          return markPolicyAsRead(notification._id.split('-')[0]);
+        }
+        return Promise.resolve();
+      });
+
+      await Promise.all(promises);
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error("Error marking all as read", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -602,59 +647,86 @@ const NotificationPanel = () => {
         }}
         sx={menuStyles}
       >
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          sx={{
-            px: 3,
-            py: 1,
-            borderBottom: `1px solid #FFFFFF24`,
-            backgroundColor: '#2d2d2d'
-          }}
-        >
-          <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#ffffff', fontSize: '24px' }}>
-              Notifications
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#b3b3b3', mt: 0.5 }}>
-              {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button
-              onClick={fetchNotifications}
-              sx={{
-                color: "#b3b3b3",
-                minWidth: 'auto',
-                padding: '4px 8px',
-                fontSize: '0.75rem',
-                "&:hover": {
-                  color: "#ffffff",
-                  backgroundColor: '#FFFFFF0F',
-                  borderRadius: '4px'
-                }
-              }}
-            >
-              Refresh
-            </Button>
-            <Button
+        <Box sx={{
+          px: 3,
+          py: 2,
+          borderBottom: `1px solid #FFFFFF24`,
+          backgroundColor: '#2d2d2d'
+        }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ mb: 1 }}
+          >
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#ffffff', fontSize: '20px' }}>
+                Notifications
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#b3b3b3', mt: 0.5, fontSize: '12px' }}>
+                {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+              </Typography>
+            </Box>
+            <IconButton
               onClick={handleClose}
               sx={{
                 color: "#b3b3b3",
-                minWidth: 'auto',
                 padding: '4px',
                 "&:hover": {
                   color: "#ffffff",
                   backgroundColor: '#FFFFFF0F',
-                  borderRadius: '50%'
                 }
               }}
             >
               <IoMdClose size={20} />
-            </Button>
-          </Box>
-        </Stack>
+            </IconButton>
+          </Stack>
+
+          {unreadCount > 0 && (
+            <Stack direction="row" spacing={1} justifyContent="flex-end">
+              <Tooltip title="Mark all as read">
+                <Button
+                  onClick={markAllAsRead}
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={16} /> : <IoMdCheckmarkCircleOutline />}
+                  sx={{
+                    color: "#b3b3b3",
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    padding: '4px 8px',
+                    minWidth: 'auto',
+                    "&:hover": {
+                      color: "#4ade80",
+                      backgroundColor: '#4ade801a',
+                    }
+                  }}
+                >
+                  Mark all read
+                </Button>
+              </Tooltip>
+              <Tooltip title="Remove all notifications">
+                <Button
+                  onClick={markAllAsRead}
+                  disabled={loading}
+                  startIcon={<IoMdTrash />}
+                  sx={{
+                    color: "#b3b3b3",
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    padding: '4px 8px',
+                    minWidth: 'auto',
+                    "&:hover": {
+                      color: "#ef4444",
+                      backgroundColor: '#ef44441a',
+                    }
+                  }}
+                >
+                  Clear all
+                </Button>
+              </Tooltip>
+            </Stack>
+          )}
+        </Box>
 
         <Box sx={{
           flex: 1,

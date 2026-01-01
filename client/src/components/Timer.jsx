@@ -93,26 +93,17 @@ export const Timer = ({ timeLimit = 60, onTimeUp, teamId }) => {
   const seconds = timeLeft % 60;
 
   return (
-    <div style={{ color: 'red', textAlign: 'end', position: 'relative' }}>
-      Time Left: {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
-      {/* Optional: Dynamic watermark */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: 0.2,
-          pointerEvents: 'none',
-          color: 'white',
-          textAlign: 'center',
-          fontSize: '20px',
-          transform: 'rotate(-45deg)',
-          userSelect: 'none'
-        }}
-      >
-        Quiz in Progress - {sessionStorage.getItem('teamName') || 'User'}
+    <div className="flex items-center gap-2">
+      <div className={`
+        px-3 py-1.5 border-2 transition-all duration-500 flex flex-col items-center
+        ${timeLeft < 60 ? 'bg-white border-white scale-105 shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'bg-black border-white'}
+      `}>
+        <span className={`text-[8px] uppercase tracking-tighter font-black leading-none mb-1 ${timeLeft < 60 ? 'text-black' : 'text-white/60'}`}>
+          Time Remaining
+        </span>
+        <span className={`text-xl font-black font-mono tracking-tighter leading-none ${timeLeft < 60 ? 'text-black underline' : 'text-white'}`}>
+          {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+        </span>
       </div>
     </div>
   );

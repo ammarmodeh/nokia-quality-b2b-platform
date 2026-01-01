@@ -22,7 +22,8 @@ import {
   Tab,
   useMediaQuery,
   Button,
-  Divider
+  Divider,
+  Grid
 } from "@mui/material";
 import {
   ArrowBack,
@@ -32,17 +33,29 @@ import {
 } from '@mui/icons-material';
 import api from "../api/api";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
   BarChart as RechartsBarChart,
   Bar,
-  ResponsiveContainer
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Cell,
+  PieChart,
+  Pie,
+  XAxis,
+  YAxis
 } from 'recharts';
+import {
+  TrendingUp,
+  TrendingDown,
+  TrendingFlat,
+  Assessment,
+  Timeline,
+  PieChart as PieChartIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon
+} from '@mui/icons-material';
 import FieldTeamTicketsForPortalReview from "../components/FieldTeamTicketsForPortalReview";
 
 const FieldTeamPortal = () => {
@@ -62,6 +75,11 @@ const FieldTeamPortal = () => {
   const [jobAssessments, setJobAssessments] = useState([]);
   const [jobPage, setJobPage] = useState(0);
   const [jobRowsPerPage, setJobRowsPerPage] = useState(10);
+
+  // Lab assessments state
+  const [labAssessments, setLabAssessments] = useState([]);
+  const [labPage, setLabPage] = useState(0);
+  const [labRowsPerPage, setLabRowsPerPage] = useState(10);
 
   const [activeTab, setActiveTab] = useState(0);
   const navigate = useNavigate();
@@ -160,6 +178,15 @@ const FieldTeamPortal = () => {
           // Correctly set the quizResults state
           setQuizResults(quizRes.data.data);
           setJobAssessments(jobRes.data);
+
+          // Fetch Lab Assessments
+          const labRes = await api.get(`/lab-assessments/team/${selectedTeam._id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            }
+          });
+          setLabAssessments(labRes.data);
+
         } catch (error) {
           console.error("Error fetching assessments:", error);
           setError("Failed to fetch assessments");
@@ -172,6 +199,7 @@ const FieldTeamPortal = () => {
     } else {
       setQuizResults([]);
       setJobAssessments([]);
+      setLabAssessments([]);
     }
   }, [selectedTeam]);
 
@@ -179,10 +207,15 @@ const FieldTeamPortal = () => {
     setActiveTab(newValue);
   };
 
+  const getAssessmentStatus = (score) => {
+    if (score === 100) return { label: "Excellent", color: "#2e7d32" }; // Dark Green
+    if (score >= 85) return { label: "Pass (Minor Comments)", color: "#66bb6a" }; // Light Green
+    if (score >= 50) return { label: "Pass (With Comments)", color: "#ffa726" }; // Orange
+    return { label: "Fail", color: "#d32f2f" }; // Red
+  };
+
   const getPerformanceColor = (score) => {
-    if (score >= 80) return 'success';
-    if (score >= 50) return 'warning';
-    return 'error';
+    return getAssessmentStatus(score).color;
   };
 
   const formatDate = (dateString) => {
@@ -258,34 +291,74 @@ const FieldTeamPortal = () => {
     return distribution;
   };
 
-  const renderLineChart = (data, dataKey) => (
+  const renderLineChart = (data, dataKey, color = colors.primary) => (
     <ResponsiveContainer width="100%" height={300}>
-      <LineChart data={data} style={{ backgroundColor: colors.surfaceElevated, borderRadius: '8px', padding: '10px' }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} />
-        <XAxis dataKey="date" stroke={colors.textSecondary} />
-        <YAxis stroke={colors.textSecondary} />
-        <Tooltip
-          contentStyle={{ backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }}
-          labelStyle={{ color: colors.textPrimary }}
+      <AreaChart data={data} style={{ backgroundColor: colors.surfaceElevated, borderRadius: '12px', padding: '10px' }}>
+        <defs>
+          <linearGradient id={`color${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+            <stop offset="95%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
+        <XAxis
+          dataKey="date"
+          stroke={colors.textSecondary}
+          fontSize={10}
+          tick={{ fill: colors.textSecondary }}
         />
-        <Legend wrapperStyle={{ color: colors.textPrimary }} />
-        <Line type="monotone" dataKey={dataKey} stroke={colors.primary} activeDot={{ r: 8 }} />
-      </LineChart>
+        <YAxis
+          stroke={colors.textSecondary}
+          fontSize={10}
+          tick={{ fill: colors.textSecondary }}
+          domain={[0, 100]}
+        />
+        <RechartsTooltip
+          contentStyle={{
+            backgroundColor: '#252525',
+            border: `1px solid ${colors.border}`,
+            borderRadius: '12px',
+            boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
+            color: colors.textPrimary
+          }}
+          itemStyle={{ color: color }}
+          cursor={{ stroke: color, strokeWidth: 1 }}
+        />
+        <Area
+          type="monotone"
+          dataKey={dataKey}
+          stroke={color}
+          strokeWidth={2}
+          fillOpacity={1}
+          fill={`url(#color${dataKey})`}
+        />
+      </AreaChart>
     </ResponsiveContainer>
   );
 
   const renderBarChart = (data) => (
     <ResponsiveContainer width="100%" height={300}>
-      <RechartsBarChart data={data} style={{ backgroundColor: colors.surfaceElevated, borderRadius: '8px', padding: '10px' }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} />
-        <XAxis dataKey="range" stroke={colors.textSecondary} />
-        <YAxis stroke={colors.textSecondary} />
-        <Tooltip
-          contentStyle={{ backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }}
-          labelStyle={{ color: colors.textPrimary }}
+      <RechartsBarChart data={data} style={{ backgroundColor: colors.surfaceElevated, borderRadius: '12px', padding: '10px' }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
+        <XAxis
+          dataKey="range"
+          stroke={colors.textSecondary}
+          fontSize={10}
         />
-        <Legend wrapperStyle={{ color: colors.textPrimary }} />
-        <Bar dataKey="count" fill={colors.primary} />
+        <YAxis
+          stroke={colors.textSecondary}
+          fontSize={10}
+        />
+        <RechartsTooltip
+          contentStyle={{
+            backgroundColor: '#252525',
+            border: `1px solid ${colors.border}`,
+            borderRadius: '12px',
+            boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
+            color: colors.textPrimary
+          }}
+        />
+        <Bar dataKey="count" fill={colors.primary} radius={[4, 4, 0, 0]} />
       </RechartsBarChart>
     </ResponsiveContainer>
   );
@@ -559,26 +632,128 @@ const FieldTeamPortal = () => {
             sx={{ mb: 3, ...darkThemeStyles.tabs, }}
           >
             <Tab
-              label="Theoretical Assessments"
+              label="Overview"
+              icon={<BarChart fontSize="small" />}
+              iconPosition="start"
+            />
+            <Tab
+              label="Theoretical"
               icon={<Quiz fontSize="small" />}
               iconPosition="start"
             />
             <Tab
-              label="Practical Assessments"
+              label="Practical"
               icon={<Assignment fontSize="small" />}
+              iconPosition="start"
+            />
+            <Tab
+              label="Lab"
+              icon={<Assessment fontSize="small" />}
               iconPosition="start"
             />
           </Tabs>
 
-          {/* Theoretical (Quiz) Assessments */}
+          {/* OVERVIEW TAB */}
           {activeTab === 0 && (
-            <Box>
-              <Typography variant="h5" gutterBottom sx={{
-                color: colors.primary,
-                mb: 2
-              }}>
-                Theoretical Assessments
-              </Typography>
+            <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+              <Grid container spacing={3}>
+                {/* Scorecards */}
+                {[
+                  { title: 'Theoretical Avg', score: calculateAverageScore(quizResults), icon: <Quiz />, color: colors.primary, data: quizResults },
+                  { title: 'Practical Avg', score: calculateAverageScore(jobAssessments), icon: <Assignment />, color: colors.success, data: jobAssessments },
+                  { title: 'Lab Avg', score: calculateAverageScore(labAssessments), icon: <Assessment />, color: colors.warning, data: labAssessments }
+                ].map((card, i) => (
+                  <Grid item xs={12} md={4} key={i}>
+                    <Paper sx={{
+                      p: 3,
+                      ...darkThemeStyles.paper,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '4px',
+                        height: '100%',
+                        bgcolor: card.color
+                      }
+                    }}>
+                      <Typography variant="overline" color={colors.textSecondary}>{card.title}</Typography>
+                      <Typography variant="h3" sx={{ fontWeight: 'bold', color: getAssessmentStatus(card.score).color, my: 1 }}>
+                        {Math.round(card.score)}%
+                      </Typography>
+                      <Chip
+                        label={getAssessmentStatus(card.score).label}
+                        size="small"
+                        sx={{ bgcolor: `${getAssessmentStatus(card.score).color}22`, color: getAssessmentStatus(card.score).color, border: `1px solid ${getAssessmentStatus(card.score).color}` }}
+                      />
+                      {card.data.length > 1 && (() => {
+                        const current = card.data[0]?.percentage || card.data[0]?.overallScore || card.data[0]?.totalScore || 0;
+                        const prev = card.data[1]?.percentage || card.data[1]?.overallScore || card.data[1]?.totalScore || 0;
+                        const diff = current - prev;
+                        return (
+                          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            {diff > 0 ? (
+                              <Typography variant="caption" sx={{ color: colors.success, display: 'flex', alignItems: 'center' }}>
+                                <TrendingUp fontSize="inherit" /> +{diff}% Improvement
+                              </Typography>
+                            ) : diff < 0 ? (
+                              <Typography variant="caption" sx={{ color: colors.error, display: 'flex', alignItems: 'center' }}>
+                                <TrendingDown fontSize="inherit" /> {diff}% Degradation
+                              </Typography>
+                            ) : (
+                              <Typography variant="caption" color={colors.textSecondary}>Stable</Typography>
+                            )}
+                          </Box>
+                        );
+                      })()}
+                    </Paper>
+                  </Grid>
+                ))}
+
+                {/* Combined Trend Chart */}
+                <Grid item xs={12}>
+                  <Paper sx={{ p: 3, ...darkThemeStyles.paper }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Performance Overview</Typography>
+                    <Box sx={{ height: 350 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={Array.from({ length: Math.max(quizResults.length, jobAssessments.length, labAssessments.length) }).map((_, i) => ({
+                          index: i,
+                          theoretical: quizResults[i]?.percentage || null,
+                          practical: jobAssessments[i]?.overallScore || null,
+                          lab: labAssessments[i]?.totalScore || null,
+                        })).reverse()}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
+                          <XAxis dataKey="index" hide />
+                          <YAxis domain={[0, 100]} stroke={colors.textSecondary} fontSize={10} />
+                          <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                          <Area type="monotone" dataKey="theoretical" stroke={colors.primary} fill={colors.primary} fillOpacity={0.1} strokeWidth={2} name="Theoretical" />
+                          <Area type="monotone" dataKey="practical" stroke={colors.success} fill={colors.success} fillOpacity={0.1} strokeWidth={2} name="Practical" />
+                          <Area type="monotone" dataKey="lab" stroke={colors.warning} fill={colors.warning} fillOpacity={0.1} strokeWidth={2} name="Lab" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </Box>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
+          {/* Theoretical (Quiz) Assessments */}
+          {activeTab === 1 && (
+            <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h5" sx={{ color: colors.primary }}>Theoretical Assessments</Typography>
+                <Chip
+                  label={`Avg: ${Math.round(calculateAverageScore(quizResults))}%`}
+                  variant="outlined"
+                  sx={{ borderColor: getPerformanceColor(calculateAverageScore(quizResults)), color: getPerformanceColor(calculateAverageScore(quizResults)) }}
+                />
+              </Box>
 
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -617,9 +792,13 @@ const FieldTeamPortal = () => {
                               <TableCell sx={darkThemeStyles.tableCell}>
                                 <Chip
                                   label={result.score}
-                                  color={getPerformanceColor(result.percentage)}
+                                  sx={{
+                                    bgcolor: `${getPerformanceColor(result.percentage)}22`,
+                                    color: getPerformanceColor(result.percentage),
+                                    borderColor: getPerformanceColor(result.percentage),
+                                    fontWeight: 'bold'
+                                  }}
                                   variant="outlined"
-                                  sx={darkThemeStyles.chip}
                                 />
                               </TableCell>
                               <TableCell sx={darkThemeStyles.tableCell}>{result.correctAnswers}/{result.totalQuestions}</TableCell>
@@ -666,14 +845,16 @@ const FieldTeamPortal = () => {
           )}
 
           {/* Practical (On-the-Job) Assessments */}
-          {activeTab === 1 && (
-            <Box>
-              <Typography variant="h5" gutterBottom sx={{
-                color: colors.primary,
-                mb: 2
-              }}>
-                Practical Assessments
-              </Typography>
+          {activeTab === 2 && (
+            <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h5" sx={{ color: colors.primary }}>Practical Assessments</Typography>
+                <Chip
+                  label={`Avg: ${Math.round(calculateAverageScore(jobAssessments))}%`}
+                  variant="outlined"
+                  sx={{ borderColor: getPerformanceColor(calculateAverageScore(jobAssessments)), color: getPerformanceColor(calculateAverageScore(jobAssessments)) }}
+                />
+              </Box>
 
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -711,9 +892,13 @@ const FieldTeamPortal = () => {
                               <TableCell sx={darkThemeStyles.tableCell}>
                                 <Chip
                                   label={`${assessment.overallScore}%`}
-                                  color={getPerformanceColor(assessment.overallScore)}
+                                  sx={{
+                                    bgcolor: `${getPerformanceColor(assessment.overallScore)}22`,
+                                    color: getPerformanceColor(assessment.overallScore),
+                                    borderColor: getPerformanceColor(assessment.overallScore),
+                                    fontWeight: 'bold'
+                                  }}
                                   variant="outlined"
-                                  sx={darkThemeStyles.chip}
                                 />
                               </TableCell>
                               <TableCell sx={darkThemeStyles.tableCell}>{assessment.status}</TableCell>
@@ -758,138 +943,173 @@ const FieldTeamPortal = () => {
             </Box>
           )}
 
-          {/* Performance Summary Card */}
-          {(quizResults.length > 0 || jobAssessments.length > 0) && (
-            <Card sx={{ mt: 3, ...darkThemeStyles.card }}>
-              <CardContent>
-                <Typography variant="h6" sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  color: colors.primary,
-                  mb: 2
-                }}>
-                  <BarChart /> Performance Summary
-                </Typography>
+          {/* Lab Assessments */}
+          {activeTab === 3 && (
+            <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h5" sx={{ color: colors.primary }}>Lab Assessments</Typography>
+                <Chip
+                  label={`Avg: ${Math.round(calculateAverageScore(labAssessments))}%`}
+                  variant="outlined"
+                  sx={{ borderColor: getPerformanceColor(calculateAverageScore(labAssessments)), color: getPerformanceColor(calculateAverageScore(labAssessments)) }}
+                />
+              </Box>
 
-                <Box sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                  gap: 2
-                }}>
-                  {/* Quiz Performance */}
-                  {quizResults.length > 0 && (
-                    <Box>
-                      <Typography variant="subtitle1" sx={{ color: colors.textSecondary }}>
-                        Theoretical Assessment Statistics
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Average Score: {Math.round(calculateAverageScore(quizResults))}%
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Median Score: {Math.round(calculateMedianScore(quizResults))}%
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Standard Deviation: {Math.round(calculateStandardDeviation(quizResults))}%
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Above 80%: {Math.round(calculatePercentageAboveThreshold(quizResults, 80))}%
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Highest Score: {calculateHighestScore(quizResults)}%
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Lowest Score: {calculateLowestScore(quizResults)}%
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                        Based on {quizResults.length} assessment(s)
-                      </Typography>
-                    </Box>
-                  )}
-
-                  {/* Job Performance */}
-                  {jobAssessments.length > 0 && (
-                    <Box>
-                      <Typography variant="subtitle1" sx={{ color: colors.textSecondary }}>
-                        Practical Assessment Statistics
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Average Score: {Math.round(calculateAverageScore(jobAssessments))}%
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Median Score: {Math.round(calculateMedianScore(jobAssessments))}%
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Standard Deviation: {Math.round(calculateStandardDeviation(jobAssessments))}%
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Above 80%: {Math.round(calculatePercentageAboveThreshold(jobAssessments, 80))}%
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Highest Score: {calculateHighestScore(jobAssessments)}%
-                      </Typography>
-                      <Typography sx={{ color: colors.textPrimary }}>
-                        Lowest Score: {calculateLowestScore(jobAssessments)}%
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                        Based on {jobAssessments.length} assessment(s)
-                      </Typography>
-                    </Box>
-                  )}
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                  <CircularProgress sx={{ color: colors.primary }} />
                 </Box>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Charts */}
-          {(quizResults.length > 0 || jobAssessments.length > 0) && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="h6" sx={{
-                color: colors.primary,
-                mb: 2
-              }}>
-                Performance Charts
-              </Typography>
-
-              {/* Average Scores Over Time */}
-              {quizResults.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ color: colors.textSecondary, mb: 1 }}>
-                    Theoretical Assessment Scores Over Time
+              ) : labAssessments.length > 0 ? (
+                <>
+                  <TableContainer component={Paper} sx={{
+                    mb: 2,
+                    ...darkThemeStyles.paper,
+                    "& .MuiTable-root": darkThemeStyles.table
+                  }}>
+                    <Table>
+                      <TableHead sx={darkThemeStyles.tableHead}>
+                        <TableRow>
+                          <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
+                          <TableCell sx={darkThemeStyles.tableCell}>ONT Type</TableCell>
+                          <TableCell sx={darkThemeStyles.tableCell}>Score</TableCell>
+                          <TableCell sx={darkThemeStyles.tableCell}>Comments</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {labAssessments
+                          .slice(labPage * labRowsPerPage, labPage * labRowsPerPage + labRowsPerPage)
+                          .map((assessment) => (
+                            <TableRow key={assessment._id}
+                              sx={{
+                                "&:hover": {
+                                  backgroundColor: colors.tableRowHover
+                                }
+                              }}
+                            >
+                              <TableCell sx={darkThemeStyles.tableCell}>{formatDate(assessment.createdAt)}</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>{assessment.ontType?.name || 'N/A'}</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>
+                                <Chip
+                                  label={`${assessment.totalScore}%`}
+                                  sx={{
+                                    bgcolor: `${getPerformanceColor(assessment.totalScore)}22`,
+                                    color: getPerformanceColor(assessment.totalScore),
+                                    borderColor: getPerformanceColor(assessment.totalScore),
+                                    fontWeight: 'bold'
+                                  }}
+                                  variant="outlined"
+                                />
+                              </TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>{assessment.comments || '-'}</TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  <TablePagination
+                    rowsPerPageOptions={[10, 25, 50]}
+                    component="div"
+                    count={labAssessments.length}
+                    rowsPerPage={labRowsPerPage}
+                    page={labPage}
+                    onPageChange={(e, newPage) => setLabPage(newPage)}
+                    onRowsPerPageChange={(e) => {
+                      setLabRowsPerPage(parseInt(e.target.value, 10));
+                      setLabPage(0);
+                    }}
+                    sx={{
+                      ...darkThemeStyles.tablePagination,
+                      color: colors.textPrimary,
+                      "& .MuiTablePagination-select": {
+                        color: colors.textPrimary
+                      },
+                      "& .MuiTablePagination-selectIcon": {
+                        color: colors.textPrimary
+                      }
+                    }}
+                    labelRowsPerPage={
+                      <Typography color={colors.textPrimary}>Rows per page:</Typography>
+                    }
+                  />
+                </>
+              ) : (
+                <Paper sx={{ p: 3, textAlign: 'center', ...darkThemeStyles.paper }}>
+                  <Typography variant="body1" sx={{ color: colors.textSecondary }}>
+                    No lab assessments found for this team
                   </Typography>
-                  {renderLineChart(quizData, 'score', 'Theoretical Assessment Scores Over Time')}
-                </Box>
-              )}
-
-              {jobAssessments.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ color: colors.textSecondary, mb: 1 }}>
-                    Practical Assessment Scores Over Time
-                  </Typography>
-                  {renderLineChart(jobData, 'score', 'Practical Assessment Scores Over Time')}
-                </Box>
-              )}
-
-              {/* Performance Distribution */}
-              {quizResults.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ color: colors.textSecondary, mb: 1 }}>
-                    Theoretical Assessment Score Distribution
-                  </Typography>
-                  {renderBarChart(quizDistributionData, 'Theoretical Assessment Score Distribution')}
-                </Box>
-              )}
-
-              {jobAssessments.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ color: colors.textSecondary, mb: 1 }}>
-                    Practical Assessment Score Distribution
-                  </Typography>
-                  {renderBarChart(jobDistributionData, 'Practical Assessment Score Distribution')}
-                </Box>
+                </Paper>
               )}
             </Box>
           )}
+
+          {/* Performance Summary Section */}
+          {(quizResults.length > 0 || jobAssessments.length > 0 || labAssessments.length > 0) && (
+            <Box sx={{ mt: 5 }}>
+              <Typography variant="h5" sx={{ color: colors.primary, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Assessment /> Advanced Analytics
+              </Typography>
+
+              <Grid container spacing={3}>
+                {[
+                  { name: 'Theoretical', data: quizResults, color: colors.primary },
+                  { name: 'Practical', data: jobAssessments, color: colors.success },
+                  { name: 'Lab', data: labAssessments, color: colors.warning }
+                ].filter(group => group.data.length > 0).map((group, idx) => (
+                  <Grid item xs={12} key={idx}>
+                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, position: 'relative' }}>
+                      <Typography variant="h6" sx={{ color: group.color, mb: 2 }}>{group.name} Analytics</Typography>
+                      <Grid container spacing={4}>
+                        <Grid item xs={12} md={4}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <Typography color={colors.textSecondary}>Median Score</Typography>
+                              <Typography fontWeight="bold">{Math.round(calculateMedianScore(group.data))}%</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <Typography color={colors.textSecondary}>Volatility (StdDev)</Typography>
+                              <Typography fontWeight="bold">{Math.round(calculateStandardDeviation(group.data))}%</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <Typography color={colors.textSecondary}>Top Score</Typography>
+                              <Typography sx={{ color: colors.success }} fontWeight="bold">{calculateHighestScore(group.data)}%</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <Typography color={colors.textSecondary}>Mastery Rate ({'>'}80%)</Typography>
+                              <Typography fontWeight="bold">{Math.round(calculatePercentageAboveThreshold(group.data, 80))}%</Typography>
+                            </Box>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} md={8}>
+                          <Box sx={{ height: 200 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={group.data.map(item => ({
+                                date: formatDate(item.submittedAt || item.assessmentDate || item.createdAt),
+                                score: item.percentage || item.overallScore || item.totalScore || 0
+                              })).reverse()}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
+                                <XAxis dataKey="date" hide />
+                                <YAxis domain={[0, 100]} hide />
+                                <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                                <Area
+                                  type="monotone"
+                                  dataKey="score"
+                                  stroke={group.color}
+                                  fill={group.color}
+                                  fillOpacity={0.1}
+                                  strokeWidth={2}
+                                />
+                              </AreaChart>
+                            </ResponsiveContainer>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
+
         </Box>
       )}
     </Box>

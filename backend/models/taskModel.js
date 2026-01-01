@@ -289,6 +289,10 @@ const taskSchema = new mongoose.Schema(
       type: String,
       required: [true, "Responsibility is required"],
     },
+    responsibilitySub: {
+      type: String,
+      default: null,
+    },
     readBy: [
       {
         type: mongoose.Schema.Types.ObjectId,

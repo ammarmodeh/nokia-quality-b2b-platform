@@ -1,5 +1,6 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import { useSelector } from 'react-redux';
 import {
   Dialog,
   DialogTitle,
@@ -18,25 +19,43 @@ import {
 } from '@mui/material';
 import { AccountCircle, Phone } from '@mui/icons-material';
 
-const FIELDTEAMSCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team', 'Others'];
+// Fallback constants removed. Powered by dynamic API data.
+import api from '../api/api';
+import { useEffect, useState } from 'react';
 
 const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { user } = useSelector((state) => state.auth);
   const { register, handleSubmit, reset } = useForm();
+  const [fieldTeamsCompany, setFieldTeamsCompany] = useState([]);
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const { data } = await api.get("/dropdown-options/category/TEAM_COMPANY");
+        if (data && data.length > 0) {
+          setFieldTeamsCompany(data.map(opt => opt.value));
+        }
+      } catch (err) {
+        console.error("Failed to load companies", err);
+      }
+    };
+    fetchCompanies();
+  }, []);
 
   // Reset form when team data changes
   React.useEffect(() => {
     if (team) {
       reset({
-        firstName: team.teamName.split(' ')[0],
-        secondName: team.teamName.split(' ')[1],
-        thirdName: team.teamName.split(' ')[2],
-        surname: team.teamName.split(' ')[3],
+        firstName: team.firstName || team.teamName.split(' ')[0] || '',
+        secondName: team.secondName || team.teamName.split(' ')[1] || '',
+        thirdName: team.thirdName || team.teamName.split(' ')[2] || '',
+        surname: team.surname || team.teamName.split(' ')[3] || '',
         contactNumber: team.contactNumber,
         fsmSerialNumber: team.fsmSerialNumber === 'N/A' ? '' : team.fsmSerialNumber,
         laptopSerialNumber: team.laptopSerialNumber === 'N/A' ? '' : team.laptopSerialNumber,
-        teamCompany: team.teamCompany || FIELDTEAMSCOMPANY[0],
+        teamCompany: team.teamCompany || (fieldTeamsCompany.length > 0 ? fieldTeamsCompany[0] : ''),
       });
     }
   }, [team, reset]);
@@ -280,7 +299,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
               </InputLabel>
               <NativeSelect
                 {...register('teamCompany')}
-                defaultValue={team?.teamCompany || FIELDTEAMSCOMPANY[0]}
+                disabled={user.role !== 'Admin'}
                 sx={{
                   color: '#ffffff',
                   '& .MuiNativeSelect-select': {
@@ -300,7 +319,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                   },
                 }}
               >
-                {FIELDTEAMSCOMPANY.map((list, index) => (
+                {fieldTeamsCompany.map((list, index) => (
                   <option key={index} value={list} style={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
                     {list}
                   </option>

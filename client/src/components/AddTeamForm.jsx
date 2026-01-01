@@ -13,11 +13,28 @@ import {
 } from '@mui/material';
 import { AccountCircle, Phone, Add } from '@mui/icons-material';
 
-const FIELDTEAMSCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team'];
+// Fallback constants removed. Powered by dynamic API data.
+import api from '../api/api';
+import { useEffect, useState } from 'react';
 
 const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
   const { register, handleSubmit, reset } = useForm();
   const isMobileScreen = useMediaQuery('(max-width: 503px)');
+  const [fieldTeamsCompany, setFieldTeamsCompany] = useState([]);
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const { data } = await api.get("/dropdown-options/category/TEAM_COMPANY");
+        if (data && data.length > 0) {
+          setFieldTeamsCompany(data.map(opt => opt.value));
+        }
+      } catch (err) {
+        console.error("Failed to load companies", err);
+      }
+    };
+    fetchCompanies();
+  }, []);
 
   const sharedTextFieldStyle = {
     flex: 1,
@@ -141,7 +158,6 @@ const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
         >
           <InputLabel sx={{ color: '#b3b3b3' }}>Company</InputLabel>
           <NativeSelect
-            defaultValue={FIELDTEAMSCOMPANY[0]}
             disabled={user.role !== 'Admin'}
             {...register('teamCompany')}
             sx={{ color: '#ffffff' }}
@@ -149,7 +165,7 @@ const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
               style: { cursor: user.role === 'Admin' ? 'pointer' : 'not-allowed' }
             }}
           >
-            {FIELDTEAMSCOMPANY.map((list, index) => (
+            {fieldTeamsCompany.map((list, index) => (
               <option key={index} value={list} style={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
                 {list}
               </option>

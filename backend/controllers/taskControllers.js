@@ -28,6 +28,7 @@ export const addTask = async (req, res) => {
       pisDate,
       validationStatus,
       responsibility,
+      responsibilitySub,
       validationCat,
     } = req.body;
 
@@ -85,6 +86,7 @@ export const addTask = async (req, res) => {
       createdBy: req.user._id,
       subTasks: predefinedSubtasks,
       responsibility,
+      responsibilitySub,
       validationCat,
       subtaskType: "original", // Set the default subtask type to "original"
     });
@@ -167,7 +169,7 @@ export const updateTask = async (req, res) => {
       'district', 'teamName', 'teamCompany', 'date', 'tarrifName',
       'customerType', 'customerFeedback', 'customerName', 'reason',
       'interviewDate', 'priority', 'status', 'assignedTo', 'whomItMayConcern',
-      'category', 'validationStatus', 'validationCat', 'responsibility',
+      'category', 'validationStatus', 'validationCat', 'responsibility', 'responsibilitySub',
       'subTasks', 'evaluationScore', 'isDeleted',
     ];
 
@@ -429,7 +431,7 @@ function getStatusFromCheckpoints(subtasks) {
 
 
 
-export const getAllTasks = async (req, res) => {
+export const getCurrentYearTasks = async (req, res) => {
   try {
     const currentYear = new Date().getFullYear();
     const startOfYear = new Date(currentYear, 0, 1);
@@ -981,6 +983,21 @@ export const clearNotifications = async (req, res) => {
     // Log the error for debugging purposes
     console.error(`Error clearing notifications for task ${taskId}:`, error);
 
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAllTasks = async (req, res) => {
+  try {
+    const tasks = await TaskSchema.find()
+      .populate("assignedTo", "name email role")
+      .populate("whomItMayConcern", "name email role")
+      .populate("createdBy", "name email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(tasks);
+  } catch (error) {
+    console.error("Error fetching all tasks:", error);
     res.status(500).json({ error: error.message });
   }
 };

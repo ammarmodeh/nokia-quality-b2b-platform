@@ -1,5 +1,6 @@
 import express from 'express';
-import { getAllTeams, getQuizResultById, getQuizResults, saveQuizResults, updateEssayScore, getTeamsEvaluation } from '../controllers/quizResultControllers.js';
+import { getAllTeams, getQuizResultById, getQuizResults, saveQuizResults, updateEssayScore, getTeamsEvaluation, deleteQuizResult } from '../controllers/quizResultControllers.js';
+import { protect, adminOnly } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -19,5 +20,8 @@ router.patch('/:id/score', updateEssayScore);
 router.get('/teams/all', getAllTeams);
 
 router.get('/teams/evaluation', getTeamsEvaluation);
+
+// Delete quiz result
+router.delete('/:id', protect, adminOnly, deleteQuizResult);
 
 export default router;

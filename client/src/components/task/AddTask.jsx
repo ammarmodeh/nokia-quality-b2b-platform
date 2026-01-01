@@ -23,17 +23,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useState } from 'react';
 import api from '../../api/api';
 
-// const LISTS = ['Todo', 'In Progress', 'Closed'];
-const PRIORIRY = ['High', 'Medium', 'Low'];
-const CATEGORIES = ['Orange HC detractor', 'Orange Closure', 'Orange Joint', 'Nokia MS detractor', 'Nokia FAT', 'Nokia Closure', 'TRC', 'TCRM', 'Others'];
-const TEAMCOMPANY = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team', 'غير معروف']
-const EVALUATIONSCORE = [1, 2, 3, 4, 5, 6, 7, 8]
-const JORDANGOVERNORATES = ["عمَان", "الزرقاء", "إربد", "العقبة", "المفرق", "مادبا", "البلقاء", "جرش", "معان", "الكرك", "عجلون", "الطفيلة"]
-const CUSTOMERTYPE = ["CBU", "EBU"]
-const VALIDATIONSTATUS = ["Validated", "Not validated"]
-const VALIDATIONCATEGORY = ["Knowledge Gap", "Customer Education", "Customer Perception", "Incomplete Service Delivery", "Lack of Technical Expertise", "Safety/Installation Standards", "Unprofessional Conduct",
-  "Poor Time Management", "Technical Limitations", "Execution Delay", "Processing Delay", "External Factors", "Bad Team Behavior",
-  "Device limitations", "Misuse of Service", "Customer-Declined Solution / Unrealistic Expectation", "Others", "VOIP", "Can't Determine"]
+// Fallback constants removed. Powered by dynamic API data.
 
 
 const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
@@ -43,9 +33,45 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fieldTeams, setFieldTeams] = useState([]);
-  // console.log({ fieldTeams });
   const [teamInfo, setTeamInfo] = useState({ teamName: '', teamId: '' });
-  // console.log({ fieldTeams, teamName });
+
+  // Dynamic dropdown options
+  const [dropdownOptions, setDropdownOptions] = useState({
+    PRIORITY: [],
+    TASK_CATEGORIES: [],
+    TEAM_COMPANY: [],
+    EVALUATION_SCORE: [],
+    GOVERNORATES: [],
+    CUSTOMER_TYPE: [],
+    VALIDATION_STATUS: [],
+    VALIDATION_CATEGORY: [],
+    REASON: [],
+    RESPONSIBILITY: [],
+    RESPONSIBILITY_SUB: []
+  });
+
+  useEffect(() => {
+    const fetchDropdownOptions = async () => {
+      try {
+        const { data } = await api.get("/dropdown-options/all");
+        if (data && Object.keys(data).length > 0) {
+          const formatted = {};
+          Object.keys(data).forEach(key => {
+            if (key === "RESPONSIBILITY_SUB") {
+              formatted[key] = data[key]; // Store full objects for sub-options
+            } else {
+              formatted[key] = data[key].map(opt => opt.value);
+            }
+          });
+          setDropdownOptions(prev => ({ ...prev, ...formatted }));
+        }
+      } catch (err) {
+        console.error("Failed to load dropdown options", err);
+      }
+    };
+
+    fetchDropdownOptions();
+  }, []);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -95,17 +121,18 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   } = useForm();
 
   const [assignedTo, setAssignedTo] = useState(task?.assignedTo || []);
-  // console.log({ assignedTo });
   const [whomItMayConcern, setWhomItMayConcern] = useState([]);
-  // const [status, setStatus] = useState(task?.status?.toUpperCase() || LISTS[0]);
-  const [priority, setPriority] = useState(task?.priority?.toUpperCase() || PRIORIRY[0]);
-  const [category, setCategory] = useState(CATEGORIES[0] || 'Others');
-  const [teamCompany, setTeamCompany] = useState(TEAMCOMPANY[0] || 'INH-1');
-  const [evaluationScore, setEvaluationScore] = useState(EVALUATIONSCORE[0] || 1);
-  const [governorate, setGovernorate] = useState(JORDANGOVERNORATES[0]);
-  const [customerType, setCustomerType] = useState(CUSTOMERTYPE[0]);
-  const [validationStatus, setValidationStatus] = useState(VALIDATIONSTATUS[1]);
-  const [validationCat, setValidationCat] = useState(VALIDATIONCATEGORY[0]);
+  const [priority, setPriority] = useState(task?.priority?.toUpperCase() || dropdownOptions.PRIORITY[0]);
+  const [category, setCategory] = useState(dropdownOptions.TASK_CATEGORIES[0]);
+  const [teamCompany, setTeamCompany] = useState(dropdownOptions.TEAM_COMPANY[0]);
+  const [evaluationScore, setEvaluationScore] = useState(dropdownOptions.EVALUATION_SCORE[0]);
+  const [governorate, setGovernorate] = useState(dropdownOptions.GOVERNORATES[0]);
+  const [customerType, setCustomerType] = useState(dropdownOptions.CUSTOMER_TYPE[0]);
+  const [validationStatus, setValidationStatus] = useState(dropdownOptions.VALIDATION_STATUS[1] || dropdownOptions.VALIDATION_STATUS[0]);
+  const [validationCat, setValidationCat] = useState(dropdownOptions.VALIDATION_CATEGORY[0]);
+  const [reason, setReason] = useState(dropdownOptions.REASON[0]);
+  const [responsibility, setResponsibility] = useState(dropdownOptions.RESPONSIBILITY[0]);
+  const [responsibilitySub, setResponsibilitySub] = useState("");
 
   // This watchTitle is used to get the value of the title field (registered in the form)
   const watchSLID = watch('slid', '');
@@ -152,7 +179,10 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       evaluationScore,
       customerType,
       validationStatus,
-      validationCat
+      validationCat,
+      reason,
+      responsibility,
+      responsibilitySub
     };
     // console.log({ formData });
 
@@ -285,8 +315,8 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
           <Stack direction={"row"} spacing={2}>
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Satisfaction Score</InputLabel>
-              <Select value={evaluationScore} onChange={(e) => setEvaluationScore(e.target.value)} label="Team Company">
-                {EVALUATIONSCORE.map((list) => (
+              <Select value={evaluationScore} onChange={(e) => setEvaluationScore(e.target.value)} label="Satisfaction Score">
+                {dropdownOptions.EVALUATION_SCORE.map((list) => (
                   <MenuItem key={list} value={list}>
                     {list}
                   </MenuItem>
@@ -313,7 +343,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Governorate</InputLabel>
               <Select value={governorate} onChange={(e) => setGovernorate(e.target.value)} label="Governorate">
-                {JORDANGOVERNORATES.map((list) => (
+                {dropdownOptions.GOVERNORATES.map((list) => (
                   <MenuItem key={list} value={list}>
                     {list}
                   </MenuItem>
@@ -337,7 +367,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Customer Type</InputLabel>
               <Select value={customerType} onChange={(e) => setCustomerType(e.target.value)} label="Customer Type">
-                {CUSTOMERTYPE.map((list) => (
+                {dropdownOptions.CUSTOMER_TYPE.map((list) => (
                   <MenuItem key={list} value={list}>
                     {list}
                   </MenuItem>
@@ -381,17 +411,20 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
           </Stack>
 
           <Stack direction={"row"} spacing={2}>
-            <TextField
-              label="Reason"
-              placeholder="Enter reason"
-              type='text'
+            <Autocomplete
+              freeSolo
+              options={dropdownOptions.REASON}
+              value={reason}
+              onChange={(event, newValue) => {
+                setReason(newValue);
+              }}
+              onInputChange={(event, newInputValue) => {
+                setReason(newInputValue);
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Reason" variant="outlined" />
+              )}
               fullWidth
-              variant="outlined"
-              {...register('reason', {
-                required: 'reason is required',
-              })}
-              error={!!errors.reason}
-              helperText={errors.reason ? errors.reason.message : ''}
             />
             <TextField
               label="Interview Date"
@@ -442,7 +475,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Team Company</InputLabel>
               <Select value={teamCompany} onChange={(e) => setTeamCompany(e.target.value)} label="Team Company">
-                {TEAMCOMPANY.map((list) => (
+                {dropdownOptions.TEAM_COMPANY.map((list) => (
                   <MenuItem key={list} value={list}>
                     {list}
                   </MenuItem>
@@ -457,7 +490,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Validation Status</InputLabel>
               <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
-                {VALIDATIONSTATUS.map((list) => (
+                {dropdownOptions.VALIDATION_STATUS.map((list) => (
                   <MenuItem key={list} value={list}>
                     {list}
                   </MenuItem>
@@ -469,23 +502,47 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
         </Stack>
 
         <Stack direction={"row"} spacing={2} sx={{ marginTop: '20px' }}>
-          <TextField
-            label="Responsibility"
-            placeholder="Responsibility"
-            type='text'
+          <Autocomplete
+            freeSolo
+            options={dropdownOptions.RESPONSIBILITY}
+            value={responsibility}
+            onChange={(event, newValue) => {
+              setResponsibility(newValue);
+              setResponsibilitySub(""); // Reset sub when main changes
+            }}
+            onInputChange={(event, newInputValue) => {
+              setResponsibility(newInputValue);
+            }}
+            renderInput={(params) => (
+              <TextField {...params} label="Responsible 1 (Main)" variant="outlined" />
+            )}
             fullWidth
-            variant="outlined"
-            {...register('responsibility', {
-              required: 'responsibility is required',
-            })}
-            error={!!errors.responsibility}
-            helperText={errors.responsibility ? errors.responsibility.message : ''}
           />
 
+          <Autocomplete
+            freeSolo
+            options={dropdownOptions.RESPONSIBILITY_SUB
+              .filter(opt => opt.parentValue === responsibility)
+              .map(opt => opt.value)}
+            value={responsibilitySub}
+            onChange={(event, newValue) => {
+              setResponsibilitySub(newValue);
+            }}
+            onInputChange={(event, newInputValue) => {
+              setResponsibilitySub(newInputValue);
+            }}
+            renderInput={(params) => (
+              <TextField {...params} label="Responsible 2 (Sub/Team)" variant="outlined" />
+            )}
+            fullWidth
+          />
+        </Stack>
+
+        <Stack direction={"row"} spacing={2} sx={{ marginTop: '20px' }}>
           <FormControl fullWidth variant="outlined" error={!!errors.status}>
             <InputLabel>Validation Category</InputLabel>
-            <Select value={validationCat} onChange={(e) => setValidationCat(e.target.value)} label="Validation Status">
-              {VALIDATIONCATEGORY.map((list) => (
+            <Select value={validationCat} onChange={(e) => setValidationCat(e.target.value)} label="Validation Category">
+              {dropdownOptions.VALIDATION_CATEGORY.map((list) => (
                 <MenuItem key={list} value={list}>
                   {list}
                 </MenuItem>
@@ -546,7 +603,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               onChange={(e) => setPriority(e.target.value)}
               label="Feedback Severity"
             >
-              {PRIORIRY.map((level) => (
+              {dropdownOptions.PRIORITY.map((level) => (
                 <MenuItem key={level} value={level}>
                   {level}
                 </MenuItem>
@@ -555,17 +612,27 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             <FormHelperText>{errors.priority ? errors.priority.message : ''}</FormHelperText>
           </FormControl>
 
-          <FormControl fullWidth variant="outlined" error={!!errors.category}>
-            <InputLabel>Task Category</InputLabel>
-            <Select value={category} onChange={(e) => setCategory(e.target.value)} label="Task Category">
-              {CATEGORIES.map((category) => (
-                <MenuItem key={category} value={category}>
-                  {category}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>{errors.category ? errors.category.message : ''}</FormHelperText>
-          </FormControl>
+          <Autocomplete
+            freeSolo
+            options={dropdownOptions.TASK_CATEGORIES}
+            value={category}
+            onChange={(event, newValue) => {
+              setCategory(newValue);
+            }}
+            onInputChange={(event, newInputValue) => {
+              setCategory(newInputValue);
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Task Category"
+                variant="outlined"
+                error={!!errors.category}
+                helperText={errors.category ? errors.category.message : ''}
+              />
+            )}
+            fullWidth
+          />
         </Stack>
 
         <Typography color='textSecondary' sx={{ opacity: 0.5 }}>End</Typography>

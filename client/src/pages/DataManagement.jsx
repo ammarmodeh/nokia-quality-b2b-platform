@@ -43,6 +43,37 @@ const DataManagement = () => {
   const [pendingTab, setPendingTab] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  // Dynamic dropdown options
+  const [dropdownOptions, setDropdownOptions] = useState({
+    RESPONSIBILITY: ['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other'],
+    RESPONSIBILITY_SUB: []
+  });
+
+  useEffect(() => {
+    const fetchDropdownOptions = async () => {
+      try {
+        const { data } = await api.get("/dropdown-options/all");
+        if (data && Object.keys(data).length > 0) {
+          const formatted = {};
+          Object.keys(data).forEach(key => {
+            if (key === "RESPONSIBILITY" || key === "RESPONSIBILITY_SUB") {
+              if (key === "RESPONSIBILITY_SUB") {
+                formatted[key] = data[key]; // Store full objects for sub-options
+              } else {
+                formatted[key] = data[key].map(opt => opt.value);
+              }
+            }
+          });
+          setDropdownOptions(prev => ({ ...prev, ...formatted }));
+        }
+      } catch (err) {
+        console.error("Failed to load dropdown options", err);
+      }
+    };
+
+    fetchDropdownOptions();
+  }, []);
+
   const handleTabChange = (e, newVal) => {
     if (tabValue === 0 && isUploadDirty) {
       setPendingTab(newVal);
@@ -109,11 +140,12 @@ const DataManagement = () => {
         <UploadTab
           token={token}
           teamNames={teamNames}
+          dropdownOptions={dropdownOptions}
           existingBatches={batches}
           onUploadSuccess={fetchHistory}
           onDirtyChange={setIsUploadDirty}
         /> :
-        <HistoryTab token={token} teamNames={teamNames} batches={batches} refreshHistory={fetchHistory} />
+        <HistoryTab token={token} teamNames={teamNames} dropdownOptions={dropdownOptions} batches={batches} refreshHistory={fetchHistory} />
       }
     </Box>
   );
@@ -273,18 +305,15 @@ const ResponsibleEditInputCell = ({ id, value, field, api, options }) => {
 };
 
 // --- Mapping for Sub-Responsible Options ---
-const RESPONSIBLE_SUB_MAPPING = {
-  'Nokia/Quality': ['Splicing Team', 'Cabling Team', 'Maintenance Team', 'Installation Team', 'Other'],
-  'Nokia/FMC': ['Field Operations', 'Quality Control', 'Planning Team', 'Other'],
-  'OJO': ['OJO Field Team', 'OJO Quality', 'Other'],
-  'Other': ['External Contractor', 'Third Party', 'Other']
-};
+// REMOVED: Now using dynamic dropdownOptions
 
 // --- Custom Edit Cell for Sub-Responsible (Specific Team) ---
-const SubResponsibleEditInputCell = ({ id, value, field, api, row }) => {
+const SubResponsibleEditInputCell = ({ id, value, field, api, row, dropdownOptions }) => {
   const responsibleKey = Object.keys(row).find(k => k.trim().toLowerCase() === "responsible");
   const responsibleValue = responsibleKey ? row[responsibleKey] : null;
-  const options = RESPONSIBLE_SUB_MAPPING[responsibleValue] || [];
+  const options = dropdownOptions.RESPONSIBILITY_SUB
+    .filter(opt => opt.parentValue === responsibleValue)
+    .map(opt => opt.value);
 
   const handleChange = (event, newValue) => {
     api.setEditCellValue({ id, field, value: newValue || '' });
@@ -605,7 +634,7 @@ const DeleteBatchDialog = ({ open, onClose, onConfirm, batchName }) => {
 };
 
 // --- Sub-component: New Upload ---
-const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirtyChange }) => {
+const UploadTab = ({ token, teamNames, dropdownOptions, existingBatches, onUploadSuccess, onDirtyChange }) => {
   const [file, setFile] = useState(null);
   const [rows, setRows] = useState([]);
   const [columns, setColumns] = useState([]);
@@ -648,7 +677,7 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
           const isTeamCol = key.trim().toLowerCase() === "team name";
           const isResponsibleCol = key.trim().toLowerCase() === "responsible";
           const isSpecificTeamCol = key.trim().toLowerCase() === "specific team";
-          const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other'];
+          const responsibleOptions = dropdownOptions.RESPONSIBILITY;
 
           return {
             field: key,
@@ -660,7 +689,7 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
             valueOptions: isTeamCol ? teamNames : (isResponsibleCol ? responsibleOptions : undefined),
             renderEditCell: isTeamCol ? (params) => <TeamEditInputCell {...params} options={teamNames} /> :
               (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> :
-                (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} /> : undefined)),
+                (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} dropdownOptions={dropdownOptions} /> : undefined)),
           };
         });
 
@@ -931,8 +960,8 @@ const UploadTab = ({ token, teamNames, existingBatches, onUploadSuccess, onDirty
   );
 };
 
-// --- Sub-component: History & Management ---
-const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
+// --- Sub-component: Manage History ---
+const HistoryTab = ({ token, teamNames, dropdownOptions, batches, refreshHistory }) => {
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [batchData, setBatchData] = useState([]);
   const [columns, setColumns] = useState([]);
@@ -970,7 +999,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
             const isTeamCol = k.trim().toLowerCase() === "team name";
             const isResponsibleCol = k.trim().toLowerCase() === "responsible";
             const isSpecificTeamCol = k.trim().toLowerCase() === "specific team";
-            const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other'];
+            const responsibleOptions = dropdownOptions.RESPONSIBILITY;
 
             return {
               field: k,
@@ -982,7 +1011,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
               valueOptions: isTeamCol ? teamNames : (isResponsibleCol ? responsibleOptions : undefined),
               renderEditCell: isTeamCol ? (params) => <TeamEditInputCell {...params} options={teamNames} /> :
                 (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> :
-                  (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} /> : undefined)),
+                  (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} dropdownOptions={dropdownOptions} /> : undefined)),
             };
           });
 
@@ -1006,7 +1035,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
     const isTeamCol = name.trim().toLowerCase() === "team name";
     const isResponsibleCol = name.trim().toLowerCase() === "responsible";
     const isSpecificTeamCol = name.trim().toLowerCase() === "specific team";
-    const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other'];
+    const responsibleOptions = dropdownOptions.RESPONSIBILITY;
 
     const newCol = {
       field: name,
@@ -1018,7 +1047,7 @@ const HistoryTab = ({ token, teamNames, batches, refreshHistory }) => {
       valueOptions: isTeamCol ? teamNames : (isResponsibleCol ? responsibleOptions : undefined),
       renderEditCell: isTeamCol ? (params) => <TeamEditInputCell {...params} options={teamNames} /> :
         (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> :
-          (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} /> : undefined)),
+          (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} dropdownOptions={dropdownOptions} /> : undefined)),
     };
     // Insert before actions
     const newCols = [...columns];

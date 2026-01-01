@@ -65,7 +65,7 @@ const Dashboard = () => {
     };
 
     const fetchTeams = async () => {
-      console.time("fetchTeams Duration");
+      // console.time("fetchTeams Duration");
       try {
         const response = await api.get('/field-teams/get-field-teams', {
           headers: {
@@ -82,7 +82,7 @@ const Dashboard = () => {
         setTeamsError(error);
       } finally {
         setTeamsLoading(false);
-        console.timeEnd("fetchTeams Duration");
+        // console.timeEnd("fetchTeams Duration");
       }
     };
 

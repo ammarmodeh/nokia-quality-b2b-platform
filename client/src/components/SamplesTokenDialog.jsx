@@ -150,20 +150,31 @@ const SamplesTokenDialog = ({ open, onClose }) => {
 
     const fetchSamples = async () => {
       try {
+        console.log(`🔍 Fetching samples for year: ${selectedYear}`);
         const response = await api.get(`/samples-token/${selectedYear}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('accessToken')}`
           }
         });
 
+        console.log('📦 API Response:', response);
+        console.log('📊 Saved Samples Data:', response.data);
+
         const savedSamples = response.data || [];
+        console.log(`✅ Found ${savedSamples.length} saved samples`);
+
         const start = startOfYear(new Date(selectedYear, 0, 1));
         const end = endOfYear(new Date(selectedYear, 11, 31));
         const weeksInYear = eachWeekOfInterval({ start, end }, { weekStartsOn: 0 });
+        console.log(`📅 Total weeks in ${selectedYear}: ${weeksInYear.length}`);
 
         const initializedData = weeksInYear.map((weekStart, index) => {
           const weekNum = index + 1;
           const savedWeek = savedSamples.find(s => s.weekNumber === weekNum) || {};
+
+          if (Object.keys(savedWeek).length > 0) {
+            console.log(`Week ${weekNum} data:`, savedWeek);
+          }
 
           return {
             weekStart,
@@ -179,10 +190,12 @@ const SamplesTokenDialog = ({ open, onClose }) => {
           };
         });
 
+        console.log('🎯 Initialized weeks data:', initializedData.slice(0, 3)); // Log first 3 weeks
         setWeeksData(initializedData);
         setMounted(true);
       } catch (error) {
-        console.error('Error fetching samples:', error);
+        console.error('❌ Error fetching samples:', error);
+        console.error('Error details:', error.response?.data || error.message);
         // Fallback to empty data
         const start = startOfYear(new Date(selectedYear, 0, 1));
         const end = endOfYear(new Date(selectedYear, 11, 31));
@@ -199,6 +212,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
           sampleSize: '',
           note: ''
         }));
+        console.log('📝 Using empty data fallback');
         setWeeksData(emptyData);
         setMounted(true);
       }

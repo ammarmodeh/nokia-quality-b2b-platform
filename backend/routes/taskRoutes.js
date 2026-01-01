@@ -12,6 +12,7 @@ import {
   notifications,
   searchTasks,
   getAllTasks,
+  getCurrentYearTasks,
   getTasksAssignedToMe,
   getDetractorTasks,
   getNeutralTasks,

@@ -7,12 +7,7 @@ import { toast } from 'sonner';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Warning, CheckCircle, FilterList } from '@mui/icons-material';
 
-const RESPONSIBLE_SUB_MAPPING = {
-  'Nokia/Quality': ['Splicing Team', 'Cabling Team', 'Maintenance Team', 'Installation Team', 'Other'],
-  'Nokia/FMC': ['Field Operations', 'Quality Control', 'Planning Team', 'Other'],
-  'OJO': ['OJO Field Team', 'OJO Quality', 'Other'],
-  'Other': ['External Contractor', 'Third Party', 'Other']
-};
+// Hierarchical mapping will be loaded dynamically from the API
 
 const DetractorAnalytics = () => {
   const [rows, setRows] = useState([]);
@@ -38,12 +33,33 @@ const DetractorAnalytics = () => {
     specificTeam: '',
     period: 'daily',
     studyColumns: ['Main Reason'],
-    compareBy: ''
+    compareBy: '',
+    responsibleSub: ''
   });
   const [teamNames, setTeamNames] = useState([]);
-  const [responsibleOptions] = useState(['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other']);
+  const [responsibleOptions, setResponsibleOptions] = useState(['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other']);
+  const [responsibleSubOptions, setResponsibleSubOptions] = useState([]);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7c7c'];
+
+  useEffect(() => {
+    const fetchRespOptions = async () => {
+      try {
+        const { data } = await api.get("/dropdown-options/all");
+        if (data) {
+          if (data.RESPONSIBILITY) {
+            setResponsibleOptions(data.RESPONSIBILITY.map(opt => opt.value));
+          }
+          if (data.RESPONSIBILITY_SUB) {
+            setResponsibleSubOptions(data.RESPONSIBILITY_SUB);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch responsibility options", err);
+      }
+    };
+    fetchRespOptions();
+  }, []);
 
   useEffect(() => {
     fetchAllData();
@@ -137,6 +153,7 @@ const DetractorAnalytics = () => {
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.teamName) params.append('teamName', filters.teamName);
       if (filters.responsible) params.append('responsible', filters.responsible);
+      if (filters.responsibleSub) params.append('responsibleSub', filters.responsibleSub);
       if (filters.specificTeam) params.append('specificTeam', filters.specificTeam);
 
       const res = await api.get(`/detractors/analytics/overview?${params}`);
@@ -155,6 +172,8 @@ const DetractorAnalytics = () => {
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.specificTeam) params.append('specificTeam', filters.specificTeam);
+      if (filters.responsible) params.append('responsible', filters.responsible);
+      if (filters.responsibleSub) params.append('responsibleSub', filters.responsibleSub);
 
       const res = await api.get(`/detractors/analytics/team-violations?${params}`);
 
@@ -173,6 +192,8 @@ const DetractorAnalytics = () => {
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.specificTeam) params.append('specificTeam', filters.specificTeam);
+      if (filters.responsible) params.append('responsible', filters.responsible);
+      if (filters.responsibleSub) params.append('responsibleSub', filters.responsibleSub);
 
       const res = await api.get(`/detractors/analytics/trends?${params}`);
 
@@ -191,6 +212,8 @@ const DetractorAnalytics = () => {
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.teamName) params.append('teamName', filters.teamName);
       if (filters.specificTeam) params.append('specificTeam', filters.specificTeam);
+      if (filters.responsible) params.append('responsible', filters.responsible);
+      if (filters.responsibleSub) params.append('responsibleSub', filters.responsibleSub);
 
       // Add RCA specific params
       if (filters.studyColumns && filters.studyColumns.length > 0) {
@@ -216,6 +239,8 @@ const DetractorAnalytics = () => {
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.teamName) params.append('teamName', filters.teamName);
       if (filters.specificTeam) params.append('specificTeam', filters.specificTeam);
+      if (filters.responsible) params.append('responsible', filters.responsible);
+      if (filters.responsibleSub) params.append('responsibleSub', filters.responsibleSub);
 
       const res = await api.get(`/detractors/analytics/fixed-rca?${params}`);
       if (res.data.status) {
@@ -240,7 +265,8 @@ const DetractorAnalytics = () => {
       specificTeam: '',
       period: 'daily',
       studyColumns: ['Main Reason'],
-      compareBy: ''
+      compareBy: '',
+      responsibleSub: ''
     });
   };
 
@@ -309,7 +335,7 @@ const DetractorAnalytics = () => {
               value={filters.responsible}
               onChange={(e, newValue) => {
                 handleFilterChange('responsible', newValue || '');
-                handleFilterChange('specificTeam', ''); // Reset specific team when responsible changes
+                handleFilterChange('responsibleSub', ''); // Reset sub when main changes
               }}
               renderInput={(params) => <TextField {...params} label="Responsible" sx={{ input: { color: 'white' }, label: { color: '#aaa' } }} />}
               sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: '#3d3d3d' } } }}
@@ -317,9 +343,11 @@ const DetractorAnalytics = () => {
           </Grid>
           <Grid item xs={12} md={2}>
             <Autocomplete
-              options={RESPONSIBLE_SUB_MAPPING[filters.responsible] || []}
-              value={filters.specificTeam}
-              onChange={(e, newValue) => handleFilterChange('specificTeam', newValue || '')}
+              options={responsibleSubOptions
+                .filter(opt => opt.parentValue === filters.responsible)
+                .map(opt => opt.value)}
+              value={filters.responsibleSub}
+              onChange={(e, newValue) => handleFilterChange('responsibleSub', newValue || '')}
               renderInput={(params) => <TextField {...params} label="Specific Team" sx={{ input: { color: 'white' }, label: { color: '#aaa' } }} />}
               sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: '#3d3d3d' } } }}
               disabled={!filters.responsible}

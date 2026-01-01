@@ -47,6 +47,10 @@ const quizResultSchema = new mongoose.Schema({
       default: 0 // Default score of 0 for essay questions
     },
     isCorrect: Boolean, // Optional, only for options-type questions
+    isScored: {
+      type: Boolean,
+      default: false
+    },
     category: {
       type: String,
       required: true

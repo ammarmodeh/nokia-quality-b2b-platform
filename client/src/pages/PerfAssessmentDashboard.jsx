@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
   Box,
   Typography,
@@ -26,7 +27,9 @@ import {
   ListItemText,
   useMediaQuery,
   Stack,
-  Autocomplete
+  Autocomplete,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   Search,
@@ -36,6 +39,7 @@ import {
   Save,
   Download
 } from '@mui/icons-material';
+import { MdPictureAsPdf } from 'react-icons/md';
 import api from '../api/api';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
@@ -56,6 +60,7 @@ const PerfAssessmentDashboard = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentResult, setCurrentResult] = useState(null);
   const [essayScores, setEssayScores] = useState({});
+  const [questionFilter, setQuestionFilter] = useState('all');
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:503px)');
   const [exporting, setExporting] = useState(false);
@@ -92,7 +97,7 @@ const PerfAssessmentDashboard = () => {
 
   const colors = {
     background: '#2d2d2d',
-    surface: '#ffffff',
+    surface: 'transparent',
     surfaceElevated: '#252525',
     border: '#e5e7eb',
     primary: '#7b68ee',
@@ -122,7 +127,7 @@ const PerfAssessmentDashboard = () => {
         },
       });
       setResults(response.data.data);
-      console.log('Quiz Results:', JSON.stringify(response.data.data, null, 2)); // Debug log
+      // console.log('Quiz Results:', JSON.stringify(response.data.data, null, 2)); // Debug log
       if (response.data.data.length === 0) {
         setError('No results found for this Team');
       }
@@ -156,13 +161,21 @@ const PerfAssessmentDashboard = () => {
     }
   };
 
-  const handleUpdateEssayScore = async (resultId, questionIndex) => {
+  const handleUpdateEssayScore = async (resultId, questionIndex, manualScore = null) => {
     try {
-      const score = essayScores[questionIndex] !== undefined ? parseFloat(essayScores[questionIndex]) : 0;
+      const scoreValue = manualScore !== null ? manualScore : essayScores[questionIndex];
+      const score = scoreValue !== undefined ? parseFloat(scoreValue) : 0;
+
       if (isNaN(score) || score < 0 || score > 2) {
-        setError('Score must be a number between 0 and 2');
+        toast.error('Score must be a number between 0 and 2');
         return;
       }
+
+      // Check if it was unscored before
+      const answer = selectedResult.userAnswers[questionIndex];
+      // A question is considered scored if isScored is true OR if it has a legacy score > 0
+      const isActuallyScored = answer.isScored || (answer.type === 'essay' && answer.score > 0);
+      const wasUnscored = answer.type === 'essay' && !isActuallyScored;
 
       const response = await api.patch(`/quiz-results/${resultId}/score`, {
         questionIndex,
@@ -176,8 +189,18 @@ const PerfAssessmentDashboard = () => {
       setSelectedResult(response.data.data);
       setResults(results.map(result => result._id === resultId ? response.data.data : result));
       setError(null);
+
+      if (wasUnscored && score > 0) {
+        toast.success(`Question ${questionIndex + 1} scored successfully!`, {
+          description: `Score: ${score}/2 points assigned.`,
+        });
+      } else {
+        toast.success(`Score updated for Question ${questionIndex + 1}`);
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update score');
+      const errorMsg = err.response?.data?.message || 'Failed to update score';
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -416,7 +439,7 @@ const PerfAssessmentDashboard = () => {
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Quiz Results');
 
       // Generate Excel file
-      const teamNameForFile = results[0].teamName.replace(/[^a-z0-9]/gi, '_');
+      const teamNameForFile = results[0].teamName.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_');
       const fileName = `Quiz_Results_${teamNameForFile}_${new Date().toISOString().slice(0, 10)}.xlsx`;
 
       // Download the file
@@ -467,7 +490,7 @@ const PerfAssessmentDashboard = () => {
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Detailed Results');
 
       // Generate Excel file
-      const teamNameForFile = result.teamName.replace(/[^a-z0-9]/gi, '_');
+      const teamNameForFile = result.teamName.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_');
       const fileName = `Detailed_Results_${teamNameForFile}_${new Date(result.submittedAt).toISOString().slice(0, 10)}.xlsx`;
 
       // Download the file
@@ -475,6 +498,79 @@ const PerfAssessmentDashboard = () => {
     } catch (error) {
       console.error('Error exporting detailed results:', error);
       setError('Failed to export detailed results to Excel');
+    }
+  };
+
+  const exportToPDF = async () => {
+    if (!selectedResult) return;
+
+    toast.info('Generating PDF Report...');
+    try {
+      const { strengths, improvements } = analyzeCategoryPerformance(selectedResult.userAnswers);
+
+      let markdown = `## Assessment Details\n\n`;
+      markdown += `| Metric | Value |\n`;
+      markdown += `| :--- | :--- |\n`;
+      markdown += `| **Team Name** | ${selectedResult.teamName} |\n`;
+      markdown += `| **Date Taken** | ${new Date(selectedResult.submittedAt).toLocaleString()} |\n`;
+      markdown += `| **Score** | ${selectedResult.correctAnswers}/${selectedResult.totalQuestions * 2} |\n`;
+      markdown += `| **Percentage** | ${selectedResult.percentage}% |\n\n`;
+
+      markdown += `## Category Performance Analytics\n\n`;
+
+      if (strengths.length > 0) {
+        markdown += `### Strongest Areas\n`;
+        strengths.forEach(s => {
+          markdown += `• **${s.category}**: ${s.percentage}% (${s.score}/${s.total})\n`;
+        });
+        markdown += `\n`;
+      }
+
+      if (improvements.length > 0) {
+        markdown += `### Areas for Improvement\n`;
+        improvements.forEach(i => {
+          markdown += `• **${i.category}**: ${i.percentage}% (${i.score}/${i.total})\n`;
+        });
+        markdown += `\n`;
+      }
+
+      markdown += `## Question-by-Question Analysis\n\n`;
+      markdown += `| # | Question | Type | Category | Result/Score |\n`;
+      markdown += `| :--- | :--- | :--- | :--- | :--- |\n`;
+
+      selectedResult.userAnswers.forEach((answer, index) => {
+        const score = answer.type === 'essay' ? (answer.score || 0) : (answer.isCorrect ? 2 : 0);
+        const resultText = answer.type === 'essay' ? `${score}/2` : (answer.isCorrect ? 'Correct (2/2)' : 'Incorrect (0/2)');
+        const sanitizedQuestion = (answer.question || "").replace(/\|/g, '\\|');
+        markdown += `| ${index + 1} | ${sanitizedQuestion} | ${answer.type} | ${answer.category} | ${resultText} |\n`;
+      });
+
+      const response = await api.post('/ai/report/download', {
+        reportContent: markdown,
+        format: 'pdf',
+        title: `Performance Assessment - ${selectedResult.teamName}`
+      }, {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const teamNameForFile = selectedResult.teamName.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_');
+      a.download = `Assessment_Report_${teamNameForFile}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success('PDF Report exported successfully!');
+    } catch (err) {
+      console.error('PDF Export failed:', err);
+      toast.error('Failed to generate PDF report');
     }
   };
 
@@ -678,7 +774,7 @@ const PerfAssessmentDashboard = () => {
                     borderColor: '#555',
                     color: '#999'
                   },
-                  minWidth: isMobile ? undefined : '140px',
+                  minWidth: isMobile ? undefined : '180px',
                   width: isMobile ? '100%' : undefined
                 }}
               >
@@ -876,6 +972,19 @@ const PerfAssessmentDashboard = () => {
               }}
             >
               Export Detailed Results
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<MdPictureAsPdf />}
+              onClick={exportToPDF}
+              sx={{
+                backgroundColor: '#dc3545',
+                '&:hover': {
+                  backgroundColor: '#c82333',
+                }
+              }}
+            >
+              Export PDF Report
             </Button>
           </Box>
 
@@ -1305,170 +1414,226 @@ const PerfAssessmentDashboard = () => {
             border: `1px solid ${colors.border}`,
             borderRadius: '8px'
           }}>
-            <Typography variant="h6" gutterBottom sx={{
-              color: colors.primary,
-              mb: 2
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 2,
+              flexWrap: 'wrap',
+              gap: 2
             }}>
-              Detailed Question Analysis
-            </Typography>
-            {selectedResult.userAnswers.map((answer, index) => (
-              <Box key={index} sx={{ mb: 3 }}>
-                <Box sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  mb: 1,
-                  flexWrap: 'wrap'
-                }}>
-                  <Typography variant="subtitle1" sx={{
-                    color: colors.textPrimary,
-                    fontWeight: '500'
-                  }}>
-                    Question {index + 1}:
-                  </Typography>
-                  <Chip
-                    label={answer.type === 'essay' ? (answer.score > 0 ? 'Scored' : 'Unscored') : (answer.isCorrect ? 'Correct' : 'Incorrect')}
-                    color={answer.type === 'essay' ? (answer.score > 0 ? 'success' : 'warning') : (answer.isCorrect ? 'success' : 'error')}
-                    size="small"
-                    variant="outlined"
-                  />
-                </Box>
-                <Typography sx={{ color: colors.textSecondary, direction: 'rtl', textAlign: 'right' }}>
-                  {answer.question}
-                </Typography>
-                <Box>
-                  {answer.type === 'essay' ? (
-                    <>
-                      <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                        <Typography variant="body2" sx={{
-                          color: colors.textPrimary,
-                          mb: 1,
-                          display: 'flex'
-                        }}>
-                          <strong style={{ color: colors.textSecondary, width: '200px' }}>Essay Answer:</strong>
-                          <span style={{ direction: 'rtl', textAlign: 'right', width: '100%' }}>
-                            {answer.essayAnswer || "No answer provided"}
-                          </span>
-                        </Typography>
-                      </Box>
-                      <Box sx={{ my: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <TextField
-                          label="Score (0-2)"
-                          value={essayScores[index] !== undefined ? essayScores[index] : answer.score?.toString() || '0'}
-                          onChange={(e) => setEssayScores({
-                            ...essayScores,
-                            [index]: e.target.value
-                          })}
-                          inputProps={{ step: '0.01', min: '0', max: '2' }}
-                          sx={{
-                            width: '100px',
-                            '& .MuiOutlinedInput-root': {
-                              '& fieldset': { borderColor: colors.border },
-                              '&:hover fieldset': { borderColor: colors.primary },
-                              '&.Mui-focused fieldset': { borderColor: colors.primary },
-                              color: colors.textPrimary
-                            },
-                            '& .MuiInputLabel-root': { color: colors.textSecondary },
-                            '& .MuiInputLabel-root.Mui-focused': { color: colors.primary }
-                          }}
-                        />
-                        <Button
-                          variant="contained"
-                          startIcon={<Save />}
-                          onClick={() => handleUpdateEssayScore(selectedResult._id, index)}
-                          sx={{
-                            backgroundColor: colors.primary,
-                            '&:hover': { backgroundColor: '#1d4ed8' }
-                          }}
-                        >
-                          Save Score
-                        </Button>
-                      </Box>
-                    </>
-                  ) : (
-                    <>
-                      <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                        <Typography variant="body2" sx={{
-                          color: colors.textPrimary,
-                          mb: 1
-                        }}>
-                          <strong style={{ color: colors.textSecondary }}>Options:</strong>
-                        </Typography>
-                        <ul style={{
-                          marginTop: 0,
-                          marginBottom: '8px',
-                          paddingLeft: '20px',
-                          direction: 'rtl',
-                          textAlign: 'right',
-                          listStyleType: 'disc',
-                          listStylePosition: 'inside',
-                        }}>
-                          {answer.options.map((option, optionIndex) => (
-                            <li key={optionIndex} style={{
-                              color: colors.textPrimary,
-                              marginBottom: '4px',
-                            }}>
-                              {option}
-                            </li>
-                          ))}
-                        </ul>
-                      </Box>
+              <Typography variant="h6" sx={{ color: colors.primary }}>
+                Detailed Question Analysis
+              </Typography>
 
-                      <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                        <Typography variant="body2" sx={{
-                          color: colors.textPrimary,
-                          mb: 1,
-                          display: 'flex',
-                        }}>
-                          <strong style={{ color: colors.textSecondary, width: '200px' }}>Selected Answer:</strong>
-                          <span style={{
-                            color: answer.selectedAnswer ?
-                              (answer.isCorrect ? colors.success : colors.error) :
-                              colors.error,
-                            width: '100%',
-                            direction: 'rtl', textAlign: 'right'
-                          }}>
-                            {answer.selectedAnswer || "No answer selected"}
-                          </span>
-                        </Typography>
-                      </Box>
+              <Tabs
+                value={questionFilter}
+                onChange={(e, newVal) => setQuestionFilter(newVal)}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{
+                  '& .MuiTabs-indicator': { backgroundColor: colors.primary },
+                  '& .MuiTab-root': {
+                    color: colors.textSecondary,
+                    '&.Mui-selected': { color: colors.primary }
+                  }
+                }}
+              >
+                <Tab label="All" value="all" />
+                <Tab label="Needs Scoring" value="needs-scoring" />
+                <Tab label="Scored" value="scored" />
+                <Tab label="Correct" value="correct" />
+                <Tab label="Incorrect" value="incorrect" />
+              </Tabs>
+            </Box>
 
-                      <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                        <Typography variant="body2" sx={{
-                          color: colors.textPrimary,
-                          mb: 1,
-                          display: 'flex'
-                        }}>
-                          <strong style={{ color: colors.textSecondary, width: '200px' }}>Correct Answer:</strong>
-                          <span style={{ color: colors.success, direction: 'rtl', textAlign: 'right', width: '100%' }}>
-                            {answer.correctAnswer}
-                          </span>
-                        </Typography>
-                      </Box>
-                    </>
-                  )}
-                  <Typography variant="body2" sx={{
-                    color: colors.textPrimary
-                  }}>
-                    <strong style={{ color: colors.textSecondary }}>Category:</strong> {answer.category}
-                  </Typography>
-                  {answer.type === 'essay' && (
-                    <Typography variant="body2" sx={{
-                      color: colors.textPrimary,
-                      mt: 1
+            {selectedResult.userAnswers
+              .filter(answer => {
+                const isActuallyScored = answer.isScored || (answer.type === 'essay' && answer.score > 0);
+                if (questionFilter === 'all') return true;
+                if (questionFilter === 'needs-scoring') return answer.type === 'essay' && !isActuallyScored;
+                if (questionFilter === 'scored') return answer.type === 'essay' && isActuallyScored;
+                if (questionFilter === 'correct') return answer.type === 'options' && answer.isCorrect;
+                if (questionFilter === 'incorrect') return answer.type === 'options' && !answer.isCorrect;
+                return true;
+              })
+              .map((answer, index) => {
+                // Find original index for question numbering
+                const originalIndex = selectedResult.userAnswers.findIndex(a => a === answer);
+
+                return (
+                  <Box key={originalIndex} sx={{ mb: 3 }}>
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      mb: 1,
+                      flexWrap: 'wrap'
                     }}>
-                      <strong style={{ color: colors.textSecondary }}>Score:</strong> {answer.score || 0}
+                      <Typography variant="subtitle1" sx={{
+                        color: colors.textPrimary,
+                        fontWeight: '500'
+                      }}>
+                        Question {originalIndex + 1}:
+                      </Typography>
+                      <Chip
+                        label={answer.type === 'essay' ? ((answer.isScored || answer.score > 0) ? 'Scored' : 'Unscored') : (answer.isCorrect ? 'Correct' : 'Incorrect')}
+                        color={answer.type === 'essay' ? ((answer.isScored || answer.score > 0) ? 'success' : 'warning') : (answer.isCorrect ? 'success' : 'error')}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Box>
+                    <Typography sx={{ color: colors.textSecondary, direction: 'rtl', textAlign: 'right' }}>
+                      {answer.question}
                     </Typography>
-                  )}
-                </Box>
-                {index < selectedResult.userAnswers.length - 1 && (
-                  <Divider sx={{
-                    mt: 2,
-                    backgroundColor: colors.border
-                  }} />
-                )}
-              </Box>
-            ))}
+                    <Box>
+                      {answer.type === 'essay' ? (
+                        <>
+                          <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
+                            <Typography variant="body2" sx={{
+                              color: colors.textPrimary,
+                              mb: 1,
+                              display: 'flex'
+                            }}>
+                              <strong style={{ color: colors.textSecondary, width: '200px' }}>Essay Answer:</strong>
+                              <span style={{ direction: 'rtl', textAlign: 'right', width: '100%' }}>
+                                {answer.essayAnswer || "No answer provided"}
+                              </span>
+                            </Typography>
+                          </Box>
+                          <Box sx={{ my: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <TextField
+                              label="Score (0-2)"
+                              value={essayScores[originalIndex] !== undefined ? essayScores[originalIndex] : answer.score?.toString() || '0'}
+                              onChange={(e) => setEssayScores({
+                                ...essayScores,
+                                [originalIndex]: e.target.value
+                              })}
+                              inputProps={{ step: '0.01', min: '0', max: '2' }}
+                              sx={{
+                                width: '100px',
+                                '& .MuiOutlinedInput-root': {
+                                  '& fieldset': { borderColor: colors.border },
+                                  '&:hover fieldset': { borderColor: colors.primary },
+                                  '&.Mui-focused fieldset': { borderColor: colors.primary },
+                                  color: colors.textPrimary
+                                },
+                                '& .MuiInputLabel-root': { color: colors.textSecondary },
+                                '& .MuiInputLabel-root.Mui-focused': { color: colors.primary }
+                              }}
+                            />
+                            <Button
+                              variant="contained"
+                              startIcon={<Save />}
+                              onClick={() => handleUpdateEssayScore(selectedResult._id, originalIndex)}
+                              sx={{
+                                backgroundColor: colors.primary,
+                                '&:hover': { backgroundColor: '#1d4ed8' }
+                              }}
+                            >
+                              Save Score
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              onClick={() => handleUpdateEssayScore(selectedResult._id, originalIndex, 0)}
+                              sx={{
+                                color: colors.error,
+                                borderColor: colors.error,
+                                '&:hover': {
+                                  backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                                  borderColor: colors.error
+                                }
+                              }}
+                            >
+                              Give Zero
+                            </Button>
+                          </Box>
+                        </>
+                      ) : (
+                        <>
+                          <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
+                            <Typography variant="body2" sx={{
+                              color: colors.textPrimary,
+                              mb: 1
+                            }}>
+                              <strong style={{ color: colors.textSecondary }}>Options:</strong>
+                            </Typography>
+                            <ul style={{
+                              marginTop: 0,
+                              marginBottom: '8px',
+                              paddingLeft: '20px',
+                              direction: 'rtl',
+                              textAlign: 'right',
+                              listStyleType: 'disc',
+                              listStylePosition: 'inside',
+                            }}>
+                              {answer.options.map((option, optionIndex) => (
+                                <li key={optionIndex} style={{
+                                  color: colors.textPrimary,
+                                  marginBottom: '4px',
+                                }}>
+                                  {option}
+                                </li>
+                              ))}
+                            </ul>
+                          </Box>
+
+                          <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
+                            <Typography variant="body2" sx={{
+                              color: colors.textPrimary,
+                              mb: 1,
+                              display: 'flex',
+                            }}>
+                              <strong style={{ color: colors.textSecondary, width: '200px' }}>Selected Answer:</strong>
+                              <span style={{
+                                color: answer.selectedAnswer ?
+                                  (answer.isCorrect ? colors.success : colors.error) :
+                                  colors.error,
+                                width: '100%',
+                                direction: 'rtl', textAlign: 'right'
+                              }}>
+                                {answer.selectedAnswer || "No answer selected"}
+                              </span>
+                            </Typography>
+                          </Box>
+
+                          <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
+                            <Typography variant="body2" sx={{
+                              color: colors.textPrimary,
+                              mb: 1,
+                              display: 'flex'
+                            }}>
+                              <strong style={{ color: colors.textSecondary, width: '200px' }}>Correct Answer:</strong>
+                              <span style={{ color: colors.success, direction: 'rtl', textAlign: 'right', width: '100%' }}>
+                                {answer.correctAnswer}
+                              </span>
+                            </Typography>
+                          </Box>
+                        </>
+                      )}
+                      <Typography variant="body2" sx={{
+                        color: colors.textPrimary
+                      }}>
+                        <strong style={{ color: colors.textSecondary }}>Category:</strong> {answer.category}
+                      </Typography>
+                      {answer.type === 'essay' && (
+                        <Typography variant="body2" sx={{
+                          color: colors.textPrimary,
+                          mt: 1
+                        }}>
+                          <strong style={{ color: colors.textSecondary }}>Score:</strong> {answer.score || 0}
+                        </Typography>
+                      )}
+                    </Box>
+                    {index < selectedResult.userAnswers.length - 1 && (
+                      <Divider sx={{
+                        mt: 2,
+                        backgroundColor: colors.border
+                      }} />
+                    )}
+                  </Box>
+                );
+              })}
           </Paper>
         </Box>
       )}

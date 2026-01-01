@@ -41,6 +41,8 @@ const AIPortal = lazy(() => import("./pages/AIPortal"));
 const AIIntegrationExample = lazy(() => import("./pages/AIIntegrationExample"));
 const DataManagement = lazy(() => import("./pages/DataManagement"));
 const DetractorAnalytics = lazy(() => import("./pages/DetractorAnalytics"));
+const DropdownManagement = lazy(() => import("./pages/DropdownManagement"));
+const LabAssessment = lazy(() => import("./pages/LabAssessment"));
 
 const QuizRouteHandler = ({ children }) => {
   const { user } = useSelector((state) => state?.auth);
@@ -153,6 +155,15 @@ const App = () => {
             <Route path="/ai-example" element={<AIIntegrationExample />} />
             <Route path="/excel-portal" element={<DataManagement />} />
             <Route path="/analytics" element={<DetractorAnalytics />} />
+            <Route
+              path="/dropdown-management"
+              element={
+                <ProtectedRoute adminOnly>
+                  <DropdownManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/lab-assessment" element={<LabAssessment />} />
           </Route>
 
           {/* 404 Route - Updated to use the NotFound component */}

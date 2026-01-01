@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { Box, Button, Typography } from '@mui/material';
 
 const QuizResults = () => {
   const navigate = useNavigate();
@@ -84,70 +83,51 @@ const QuizResults = () => {
   };
 
   return (
-    <Box sx={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100vh',
-      backgroundColor: '#2d2d2d',
-      p: 2
-    }}>
-      <Box sx={{
-        width: '100%',
-        maxWidth: '500px',
-        mx: 'auto',
-        p: 3,
-        bgcolor: '#ffffff',
-        borderRadius: 2,
-        boxShadow: 3,
-        border: '1px solid #3d3d3d',
-        textAlign: 'center',
-        direction: 'rtl'
-      }}>
-        <Typography variant="h5" sx={{ mb: 2, color: 'white', fontWeight: 'bold' }}>
+    <div
+      className="min-h-screen flex flex-col justify-center items-center p-6 bg-[#000000]"
+      dir="rtl"
+      style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
+    >
+      <div className="w-full max-w-md bg-[#111111] border-2 border-white p-8 shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] text-center">
+        <span className="inline-block px-2 py-0.5 bg-white text-black text-[10px] font-bold uppercase tracking-widest mb-4">
+          Quiz Completed
+        </span>
+
+        <h1 className="text-3xl font-black text-white mb-2 uppercase tracking-tight">
           انتهى الاختبار!
-        </Typography>
-        <Typography variant="subtitle1" sx={{ mb: 1.5, color: 'grey.300' }}>
-          نتيجتك:
-          {/* <span style={{ fontWeight: 'bold' }}>{maxScore}</span> */}
-          <span style={{ fontWeight: 'bold' }}>{results.percentage}%</span>
-        </Typography>
-        <Typography variant="body1" sx={{ mb: 2, color: '#ffca28', fontWeight: 'bold' }}>
-          هذه النتيجة غير مكتملة بسبب عدم تدقيق الأسئلة المقالية بعد. سيتم إرسال النتيجة النهائية بعد استكمال التدقيق خلال 24 ساعة عبر WhatsApp.
-        </Typography>
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          my: 2,
-          p: 1.5,
-          backgroundColor: '#2d2d2d',
-          borderRadius: 1
-        }}>
+        </h1>
+
+        <div className="mb-6 py-4 border-y border-white/10">
+          <p className="text-gray-400 text-xs uppercase font-bold tracking-widest mb-1">Final Score</p>
+          <div className="text-5xl font-black text-white italic">
+            {results.percentage}%
+          </div>
+        </div>
+
+        <div className="p-4 bg-white/5 border-l-4 border-white mb-8 text-right">
+          <p className="text-[13px] leading-relaxed text-gray-300">
+            <strong className="text-white">تنبيه:</strong> هذه النتيجة غير مكتملة بسبب عدم تدقيق الأسئلة المقالية بعد. سيتم إرسال النتيجة النهائية بعد استكمال التدقيق خلال 24 ساعة عبر WhatsApp.
+          </p>
+        </div>
+
+        <div className="flex justify-center mb-10 p-4 bg-white border-4 border-white shadow-[0_0_20px_rgba(255,255,255,0.1)]">
           <QRCodeSVG
             value={generateQRData()}
-            size={180}
-            level="M"
-            bgColor="#f9fafb"
-            fgColor="#ffffff"
+            size={160}
+            level="H"
+            bgColor="#ffffff"
+            fgColor="#000000"
           />
-        </Box>
+        </div>
 
-        <Button
-          variant="contained"
+        <button
           onClick={handleExit}
-          sx={{
-            bgcolor: '#7b68ee',
-            '&:hover': { bgcolor: '#1d4ed8' },
-            width: '100%',
-            py: 1.5,
-            mt: 2,
-            fontSize: '1rem'
-          }}
+          className="w-full py-4 bg-white text-black font-black uppercase text-sm tracking-widest hover:bg-gray-200 transition-colors shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] active:translate-y-0.5 active:shadow-none"
         >
           العودة إلى الصفحة الرئيسية
-        </Button>
-      </Box>
-    </Box>
+        </button>
+      </div>
+    </div>
   );
 };
 

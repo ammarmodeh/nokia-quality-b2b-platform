@@ -1,4 +1,4 @@
-import { ExpandMore } from "@mui/icons-material";
+import { ExpandMore, Assessment } from "@mui/icons-material";
 import { Accordion, AccordionDetails, AccordionSummary, Stack, useMediaQuery } from "@mui/material";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
@@ -122,12 +122,6 @@ const SidebarLinks = () => {
       isNew: false,
     },
     {
-      label: "Perf Assessment Dashboard",
-      link: "assessment-dashboard",
-      icon: <img width={20} height={20} src="/statistics.png" />,
-      isNew: false,
-    },
-    {
       label: "On-the-Job Assessment",
       link: "on-the-job-assessment",
       icon: <img width={20} height={20} src="/on-the-job-assessment.png" />,
@@ -137,6 +131,18 @@ const SidebarLinks = () => {
       label: "Teams Performance Page",
       link: "teams-performance-page",
       icon: <img width={20} height={20} src="/team-performance-page.png" />,
+      isNew: true,
+    },
+    {
+      label: "Perf Assessment Dashboard",
+      link: "assessment-dashboard",
+      icon: <img width={20} height={20} src="/statistics.png" />,
+      isNew: false,
+    },
+    {
+      label: "Lab Assessment",
+      link: "lab-assessment",
+      icon: <Assessment />,
       isNew: true,
     },
     {
@@ -158,6 +164,12 @@ const SidebarLinks = () => {
           link: "trashed",
           icon: <img width={20} height={20} src="/trash.png" />,
           isNew: false,
+        },
+        {
+          label: "Dropdown Settings",
+          link: "dropdown-management",
+          icon: <MdSettings size={20} />,
+          isNew: true,
         },
       ]
       : []),

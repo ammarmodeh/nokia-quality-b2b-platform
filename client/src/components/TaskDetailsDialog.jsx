@@ -48,7 +48,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       textToCopy += `Reason: ${task.reason}\n\n`;
 
       textToCopy += `Progress:\n`;
-      task.subTasks.forEach((subtask, subIndex) => {
+      task.subTasks?.forEach((subtask, subIndex) => {
         textToCopy += `${subIndex + 1}. ${subtask.title || `Step ${subIndex + 1}`}\n`;
         textToCopy += `Action: ${subtask.note || 'No action taken yet'}\n`;
         if (subtask.completedBy) {
@@ -86,7 +86,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       'Customer Type': task.customerType,
       'Governorate': task.governorate,
       'District': task.district,
-      'Action taken by assigned user': task.subTasks.map((sub, index) => `Step ${index + 1}: ${sub.note}`).join('\n'),
+      'Action taken by assigned user': task.subTasks?.map((sub, index) => `Step ${index + 1}: ${sub.note}`).join('\n') || '',
       'Team Name': task.teamName,
       'Team Company': task.teamCompany,
       'Interview Date': new Date(task.interviewDate).toLocaleString(),
@@ -317,7 +317,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
               </Paper>
 
               {/* Progress Section */}
-              {task.subTasks[0].note && (
+              {task.subTasks?.[0]?.note && (
                 <Paper elevation={0} sx={{
                   p: isMobile ? 1.5 : 2,
                   backgroundColor: '#2d2d2d',
