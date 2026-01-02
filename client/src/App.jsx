@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, createBrowserRouter, createRoutesFromElements, RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useSelector } from "react-redux";
 import React, { Suspense, lazy } from "react";
@@ -92,96 +92,102 @@ const Loading = () => (
 );
 
 const App = () => {
+  const router = React.useMemo(() => createBrowserRouter(
+    createRoutesFromElements(
+      <>
+        {/* Public Routes */}
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/fieldteam-login" element={<FieldTeamLogin />} />
+
+        {/* Quiz Routes */}
+        <Route
+          path="/quiz"
+          element={
+            <QuizRouteHandler>
+              <Quiz />
+            </QuizRouteHandler>
+          }
+        />
+        <Route
+          path="/quiz-results"
+          element={
+            <QuizResultsRouteHandler>
+              <QuizResults />
+            </QuizResultsRouteHandler>
+          }
+        />
+
+        {/* Default Route */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route
+            path="admin/suggestions"
+            element={
+              <ProtectedRoute adminOnly>
+                <AdminSuggestionsDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/main-stats" element={<MainStats />} />
+          <Route path="/my-suggestions" element={<MemberSuggestionsDashboard />} />
+          <Route path="/audit/tasks" element={<AllTasksList />} />
+          <Route path="/policies" element={<PoliciesList />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/customer-issues" element={<CustomerIssuesList />} />
+          <Route path="/change-password" element={<ChangePassword />} />
+          <Route path="/assigned-to-me" element={<AssignedToMe />} />
+          <Route path="/assigned-to-me/detractor" element={<AssignedDetractor />} />
+          <Route path="/assigned-to-me/neutrals" element={<AssignedNeutral />} />
+          <Route path="/benchmark-tables" element={<BenchmarkTables />} />
+          <Route path="/favourites" element={<Favourites />} />
+          <Route path="/calender" element={<Calender />} />
+          <Route path="/tasks/view-task/:id" element={<TaskViewPage />} />
+          <Route path="/team" element={<Users />} />
+          <Route path="/fieldTeams" element={<FieldTeamForm />} />
+          <Route path="/fieldTeams-portal" element={<FieldTeamPortal />} />
+          <Route path="/assessment-dashboard" element={<PerfAssessmentDashboard />} />
+          <Route path="/on-the-job-assessment" element={<OnTheJobAssessment />} />
+          <Route path="/teams-performance-page" element={<TeamsPerformancePage />} />
+          <Route path="/archived" element={<Archived />} />
+          <Route path="/trashed" element={<Trash />} />
+          <Route path="/ai-portal" element={<AIPortal />} />
+          <Route path="/ai-example" element={<AIIntegrationExample />} />
+          <Route path="/excel-portal" element={<DataManagement />} />
+          <Route path="/analytics" element={<DetractorAnalytics />} />
+          <Route
+            path="/dropdown-management"
+            element={
+              <ProtectedRoute adminOnly>
+                <DropdownManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage-quiz"
+            element={
+              <ProtectedRoute adminOnly>
+                <QuizManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/lab-assessment" element={<LabAssessment />} />
+          <Route path="/settings" element={<SettingsPage />} />
+
+        </Route>
+
+        {/* 404 Route - Updated to use the NotFound component */}
+        <Route path="*" element={<NotFound />} />
+      </>
+    )
+  ), []);
+
   return (
     <ThemeProvider theme={clickUpDarkTheme}>
       <Suspense fallback={<Loading />}>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/fieldteam-login" element={<FieldTeamLogin />} />
-
-          {/* Quiz Routes */}
-          <Route
-            path="/quiz"
-            element={
-              <QuizRouteHandler>
-                <Quiz />
-              </QuizRouteHandler>
-            }
-          />
-          <Route
-            path="/quiz-results"
-            element={
-              <QuizResultsRouteHandler>
-                <QuizResults />
-              </QuizResultsRouteHandler>
-            }
-          />
-
-          {/* Default Route */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route
-              path="admin/suggestions"
-              element={
-                <ProtectedRoute adminOnly>
-                  <AdminSuggestionsDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/main-stats" element={<MainStats />} />
-            <Route path="/my-suggestions" element={<MemberSuggestionsDashboard />} />
-            <Route path="/audit/tasks" element={<AllTasksList />} />
-            <Route path="/policies" element={<PoliciesList />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/customer-issues" element={<CustomerIssuesList />} />
-            <Route path="/change-password" element={<ChangePassword />} />
-            <Route path="/assigned-to-me" element={<AssignedToMe />} />
-            <Route path="/assigned-to-me/detractor" element={<AssignedDetractor />} />
-            <Route path="/assigned-to-me/neutrals" element={<AssignedNeutral />} />
-            <Route path="/benchmark-tables" element={<BenchmarkTables />} />
-            <Route path="/favourites" element={<Favourites />} />
-            <Route path="/calender" element={<Calender />} />
-            <Route path="/tasks/view-task/:id" element={<TaskViewPage />} />
-            <Route path="/team" element={<Users />} />
-            <Route path="/fieldTeams" element={<FieldTeamForm />} />
-            <Route path="/fieldTeams-portal" element={<FieldTeamPortal />} />
-            <Route path="/assessment-dashboard" element={<PerfAssessmentDashboard />} />
-            <Route path="/on-the-job-assessment" element={<OnTheJobAssessment />} />
-            <Route path="/teams-performance-page" element={<TeamsPerformancePage />} />
-            <Route path="/archived" element={<Archived />} />
-            <Route path="/trashed" element={<Trash />} />
-            <Route path="/ai-portal" element={<AIPortal />} />
-            <Route path="/ai-example" element={<AIIntegrationExample />} />
-            <Route path="/excel-portal" element={<DataManagement />} />
-            <Route path="/analytics" element={<DetractorAnalytics />} />
-            <Route
-              path="/dropdown-management"
-              element={
-                <ProtectedRoute adminOnly>
-                  <DropdownManagement />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/manage-quiz"
-              element={
-                <ProtectedRoute adminOnly>
-                  <QuizManagement />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/lab-assessment" element={<LabAssessment />} />
-            <Route path="/settings" element={<SettingsPage />} />
-
-          </Route>
-
-          {/* 404 Route - Updated to use the NotFound component */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <RouterProvider router={router} />
       </Suspense>
       <Toaster richColors />
     </ThemeProvider>

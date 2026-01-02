@@ -10,9 +10,7 @@ const queryClient = new QueryClient()
 createRoot(document.getElementById('root')).render(
   <QueryClientProvider client={queryClient}>
     <Provider store={store}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <App />
     </Provider>
   </QueryClientProvider>
 )

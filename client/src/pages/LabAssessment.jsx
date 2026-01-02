@@ -45,7 +45,6 @@ import {
 } from "@mui/icons-material";
 import { InputAdornment } from "@mui/material";
 import api from "../api/api";
-import { Timer } from "../components/Timer";
 import { toast } from "sonner";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -385,7 +384,7 @@ const LabAssessment = () => {
 
 
   return (
-    <Box sx={{ p: 4, minHeight: "100vh", bgcolor: colors.background }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: colors.background }}>
       <Typography variant="h4" sx={{ color: colors.primary, fontWeight: "bold", mb: 4 }}>
         Lab Assessment
       </Typography>
@@ -396,6 +395,9 @@ const LabAssessment = () => {
           onChange={handleTabChange}
           textColor="primary"
           indicatorColor="primary"
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{
             "& .MuiTab-root": { color: colors.textSecondary, fontSize: "1rem" },
             "& .Mui-selected": { color: colors.primary }
@@ -475,10 +477,6 @@ const LabAssessment = () => {
                   <>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, p: 2, bgcolor: colors.surfaceElevated, borderRadius: '8px', border: `1px solid ${colors.border}` }}>
                       <Typography variant="h6" sx={{ color: colors.primary }}>Assessment In Progress</Typography>
-                      <Timer
-                        timeLimit={(settings?.assessmentTimer || 45) * 60}
-                        onTimeUp={() => toast.error("Time is up! Please submit the assessment.")}
-                      />
                     </Box>
 
                     <Typography variant="subtitle1" sx={{ color: colors.primary }}>
@@ -595,6 +593,9 @@ const LabAssessment = () => {
                 onChange={(e, v) => setTrackingFilter(v)}
                 textColor="primary"
                 indicatorColor="primary"
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
                 sx={{ minHeight: 'auto', '& .MuiTab-root': { minHeight: 48, fontSize: '0.95rem' } }}
               >
                 <Tab label="All Teams" value="all" />

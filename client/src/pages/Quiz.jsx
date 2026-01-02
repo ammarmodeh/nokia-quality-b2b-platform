@@ -1,5 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useBlocker } from 'react-router-dom';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
+  Box,
+  Typography
+} from '@mui/material';
 import api from '../api/api';
 import { Timer } from '../components/Timer';
 
@@ -23,6 +33,12 @@ const Quiz = () => {
 
   const [settings, setSettings] = useState(null);
   const answersRef = useRef([]);
+
+  // Navigation Blocker
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      !quizState.hasSubmitted && currentLocation.pathname !== nextLocation.pathname
+  );
 
   useEffect(() => {
     answersRef.current = quizState.userAnswers;
@@ -253,15 +269,8 @@ const Quiz = () => {
 
     try {
       await api.post('/quiz-results', resultsData);
-      await api.post('/field-teams/update-score', {
-        teamId: quizState.teamId,
-        quizCode: quizState.quizCode,
-        correctAnswers: finalScore,
-        totalQuestions: totalQuestions,
-        percentage: percentage
-      });
 
-      sessionStorage.setItem('quizResultsFallback', JSON.stringify({
+      localStorage.setItem('quizResultsFallback', JSON.stringify({
         ...resultsData,
         isFieldTeam: true
       }));
@@ -491,6 +500,56 @@ const Quiz = () => {
           </div>
         </div>
       </div>
+      {/* Navigation Confirmation Dialog */}
+      <Dialog
+        open={blocker.state === "blocked"}
+        onClose={() => blocker.reset && blocker.reset()}
+        PaperProps={{
+          sx: {
+            bgcolor: '#111',
+            color: 'white',
+            border: '2px solid white',
+            borderRadius: 0,
+            boxShadow: '8px 8px 0px 0px rgba(255,255,255,1)',
+            minWidth: '320px'
+          }
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)', fontWeight: '900', textTransform: 'uppercase' }}>
+          Leave Quiz?
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <DialogContentText sx={{ color: 'rgba(255,255,255,0.7)', textAlign: 'right', direction: 'rtl' }}>
+            هل أنت متأكد أنك تريد مغادرة الاختبار؟ سيتم فقدان تقدمك الحالي وغير المسجل.
+            <br />
+            Are you sure you want to leave? Your unsaved progress will be lost.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, gap: 2 }}>
+          <Button
+            onClick={() => blocker.reset && blocker.reset()}
+            sx={{
+              color: 'white',
+              fontWeight: 'bold',
+              border: '1px solid rgba(255,255,255,0.2)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
+            }}
+          >
+            Stay (البقاء)
+          </Button>
+          <Button
+            onClick={() => blocker.proceed && blocker.proceed()}
+            sx={{
+              bgcolor: 'white',
+              color: 'black',
+              fontWeight: 'bold',
+              '&:hover': { bgcolor: '#eee' }
+            }}
+          >
+            Leave (المغادرة)
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

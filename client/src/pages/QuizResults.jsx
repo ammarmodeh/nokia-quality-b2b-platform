@@ -13,7 +13,7 @@ const QuizResults = () => {
     if (stateData) return stateData;
 
     try {
-      const fallback = sessionStorage.getItem('quizResultsFallback');
+      const fallback = localStorage.getItem('quizResultsFallback');
       if (fallback) return JSON.parse(fallback);
     } catch (e) { }
     return null;
@@ -40,7 +40,7 @@ const QuizResults = () => {
       }
 
       try {
-        const fallback = sessionStorage.getItem('quizResultsFallback');
+        const fallback = localStorage.getItem('quizResultsFallback');
         if (fallback) {
           setQuizData(JSON.parse(fallback));
           clearInterval(pollInterval);
