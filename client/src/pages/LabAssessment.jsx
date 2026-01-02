@@ -51,8 +51,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend
 } from 'recharts';
-import api from "../api/api";
 import ONTTypeManagement from "../components/ONTTypeManagement";
+
 
 const LabAssessment = () => {
   const [activeTab, setActiveTab] = useState(0);
