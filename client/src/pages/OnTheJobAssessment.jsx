@@ -19,6 +19,8 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import * as XLSX from 'xlsx';
 import api from "../api/api";
 import { useSelector } from "react-redux";
+import { Timer } from "../components/Timer";
+import { toast } from "sonner";
 import AssessmentDetail from "../components/AssessmentDetail";
 import AssessmentForm from "../components/AssessmentForm";
 import StatsOverview from "../components/StatsOverview";
@@ -55,13 +57,29 @@ const OnTheJobAssessment = () => {
   const [teamNameConfirmation, setTeamNameConfirmation] = useState("");
 
   // Consistent scoring labels function
-  const getScoreLabel = useCallback((score) => {
-    if (score >= 90) return 'Excellent';
-    if (score >= 75) return 'Good';
-    if (score >= 60) return 'Satisfactory';
-    if (score >= 40) return 'Needs Improvement';
-    return 'Poor';
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get('/settings');
+        setSettings(response.data);
+      } catch (err) {
+        console.error('Failed to fetch settings');
+      }
+    };
+    fetchSettings();
   }, []);
+
+  const getScoreLabel = useCallback((score) => {
+    const thresholds = settings?.thresholds || { pass: 85, average: 70, fail: 50 };
+
+    if (score >= thresholds.pass) return 'Excellent';
+    if (score >= thresholds.average) return 'Good';
+    if (score >= thresholds.fail) return 'Satisfactory';
+    if (score >= (thresholds.fail / 1.5)) return 'Needs Improvement';
+    return 'Poor';
+  }, [settings]);
 
   const getCheckpointScoreOptions = useCallback((checkpointName) => {
     // Equipment Condition (4 levels) - adjusted to match consistent labels
@@ -1168,6 +1186,13 @@ const OnTheJobAssessment = () => {
             New Assessment for {selectedTeam.teamName}
           </DialogTitle>
           <DialogContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, p: 2, bgcolor: colors.surfaceElevated, borderRadius: '8px', border: `1px solid ${colors.border}` }}>
+              <Typography variant="h6" sx={{ color: colors.primary }}>Assessment In Progress</Typography>
+              <Timer
+                timeLimit={(settings?.assessmentTimer || 45) * 60}
+                onTimeUp={() => toast.error("Time is up! Please submit the assessment.")}
+              />
+            </Box>
             <MemoizedAssessmentForm
               key={selectedTeam?._id || 'new-assessment'}
               initialAssessment={initialAssessmentData}

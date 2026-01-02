@@ -22,6 +22,8 @@ import actionPlanRoutes from "./routes/actionPlanRoutes.js";
 import dropdownOptionRoutes from "./routes/dropdownOptionRoutes.js";
 import ontTypeRoutes from "./routes/ontTypeRoutes.js";
 import labAssessmentRoutes from "./routes/labAssessmentRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+
 
 dotenv.config();
 
@@ -99,6 +101,8 @@ app.use("/api/action-plan", actionPlanRoutes);
 app.use("/api/dropdown-options", dropdownOptionRoutes);
 app.use("/api/ont-types", ontTypeRoutes);
 app.use("/api/lab-assessments", labAssessmentRoutes);
+app.use("/api/settings", settingsRoutes);
+
 
 // ------------------------------------------------------------------
 // 404 Handler

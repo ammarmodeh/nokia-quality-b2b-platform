@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/api';
 import {
@@ -24,7 +24,21 @@ const FieldTeamLogin = () => {
     message: '',
     severity: 'error'
   });
+  const [settings, setSettings] = useState(null);
   const navigate = useNavigate();
+
+  const fetchSettings = async () => {
+    try {
+      const response = await api.get('/settings');
+      setSettings(response.data);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -111,11 +125,11 @@ const FieldTeamLogin = () => {
         border: '1px solid #f3f4f6'
       }}>
         <Typography variant="h4" component="div" align="center" gutterBottom sx={{ color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0 }}>
-          <img src="/images/nokia-new-logo-2023.svg" width={100} height={100} alt="Nokia Logo" />
+          <img src="/images/reach_logo_new.svg" width={100} height={100} alt="ReachLogo" />
           <img src="/images/Orange-Logo.png" width={40} height={40} alt="Orange Logo" />
         </Typography>
-        <Typography variant="p" component="div" align="center" gutterBottom sx={{ color: '#ffffff', fontSize: '10px' }}>
-          <span style={{ fontWeight: 'bold', color: '#ff9800' }}>OrangeJo</span>-<span style={{ fontWeight: 'bold', color: '#7b68ee' }}>Nokia</span> FTTH Project
+        <Typography variant="p" component="div" align="center" gutterBottom sx={{ color: '#ffffff', fontSize: '12px' }}>
+          <span style={{ fontWeight: 'bold', color: '#ff9800' }}>{settings?.clientName || "OrangeJo"}</span> {settings?.projectName || "FTTH Project"}
         </Typography>
 
         <Divider sx={{ borderColor: '#f3f4f6' }} />

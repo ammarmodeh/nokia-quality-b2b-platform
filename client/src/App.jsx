@@ -43,6 +43,9 @@ const DataManagement = lazy(() => import("./pages/DataManagement"));
 const DetractorAnalytics = lazy(() => import("./pages/DetractorAnalytics"));
 const DropdownManagement = lazy(() => import("./pages/DropdownManagement"));
 const LabAssessment = lazy(() => import("./pages/LabAssessment"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const QuizManagement = lazy(() => import("./pages/QuizManagement"));
+
 
 const QuizRouteHandler = ({ children }) => {
   const { user } = useSelector((state) => state?.auth);
@@ -163,7 +166,17 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/manage-quiz"
+              element={
+                <ProtectedRoute adminOnly>
+                  <QuizManagement />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/lab-assessment" element={<LabAssessment />} />
+            <Route path="/settings" element={<SettingsPage />} />
+
           </Route>
 
           {/* 404 Route - Updated to use the NotFound component */}

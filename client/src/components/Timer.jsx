@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const environment = import.meta.env.VITE_ENVIRONMENT;
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 export const Timer = ({ timeLimit = 60, onTimeUp, teamId }) => {
   const [timeLeft, setTimeLeft] = useState(() => {
@@ -18,9 +18,11 @@ export const Timer = ({ timeLimit = 60, onTimeUp, teamId }) => {
       }
       // Use XMLHttpRequest for synchronous call in beforeunload
       const xhr = new XMLHttpRequest();
-      xhr.open('PUT', `${environment === 'development' ? 'http://localhost:5000' : 'https://nokia-quality-b2b-platform.vercel.app'}/api/field-teams/toggle-quiz-permission/${teamId}`, false); // false for synchronous
+      const url = `${backendUrl}/api/field-teams/toggle-quiz-permission/${teamId}`;
+      xhr.open('PUT', url, false); // false for synchronous
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send(JSON.stringify({ canTakeQuiz: false }));
+
       if (xhr.status !== 200) {
         console.error('Failed to toggle quiz permission:', xhr.statusText);
       } else {
@@ -47,7 +49,7 @@ export const Timer = ({ timeLimit = 60, onTimeUp, teamId }) => {
     if (timeLeft === 0) {
       onTimeUp();
       sessionStorage.removeItem('quizTimer'); // Clear timer on completion
-      toggleQuizPermission(); // Set canTakeQuiz to false on timeout
+      // REMOVED redundant toggleQuizPermission() here because it's handled by submitScore
       return;
     }
 

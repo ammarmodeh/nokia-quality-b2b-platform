@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/api';
 import { Timer } from '../components/Timer';
@@ -20,6 +20,13 @@ const Quiz = () => {
     error: null,
     hasSubmitted: false
   });
+
+  const [settings, setSettings] = useState(null);
+  const answersRef = useRef([]);
+
+  useEffect(() => {
+    answersRef.current = quizState.userAnswers;
+  }, [quizState.userAnswers]);
 
   useEffect(() => {
     // Security measures (unchanged)
@@ -74,10 +81,17 @@ const Quiz = () => {
 
     const loadQuestions = async () => {
       try {
-        const response = await api.get('/quiz/questions');
+        const [questionsRes, settingsRes] = await Promise.all([
+          api.get('/quiz/questions'),
+          api.get('/settings')
+        ]);
+
+        const responseData = questionsRes.data;
+        setSettings(settingsRes.data);
+
         const savedProgress = JSON.parse(sessionStorage.getItem('quizProgress') || '{}');
 
-        const initialUserAnswers = response.data.map((question, index) => {
+        const initialUserAnswers = responseData.map((question, index) => {
           if (savedProgress.userAnswers && savedProgress.userAnswers[index]) {
             return savedProgress.userAnswers[index];
           }
@@ -89,14 +103,14 @@ const Quiz = () => {
 
         setQuizState(prev => ({
           ...prev,
-          questions: response.data,
+          questions: responseData,
           userAnswers: initialUserAnswers,
           currentQuestion: savedProgress.currentQuestion || 0,
           selectedOption: initialUserAnswers[savedProgress.currentQuestion || 0]?.selectedAnswer || '',
           essayAnswer: initialUserAnswers[savedProgress.currentQuestion || 0]?.essayAnswer || ''
         }));
       } catch (err) {
-        setQuizState(prev => ({ ...prev, error: 'فشل تحميل الأسئلة' }));
+        setQuizState(prev => ({ ...prev, error: 'فشل تحميل الأسئلة أو الإعدادات' }));
       }
     };
 
@@ -174,7 +188,18 @@ const Quiz = () => {
         essayAnswer: prev.userAnswers[prev.currentQuestion + 1]?.essayAnswer || ''
       }));
     } else {
-      const confirmSubmit = window.confirm('هل أنت متأكد أنك تريد إنهاء الاختبار؟ لا يمكنك العودة بعد الإرسال.');
+      const unansweredCount = userAnswers.filter((a, i) => {
+        const q = questions[i];
+        if (q.type === 'essay') return !a.essayAnswer;
+        return !a.selectedAnswer;
+      }).length;
+
+      let message = 'هل أنت متأكد أنك تريد إنهاء الاختبار؟ لا يمكنك العودة بعد الإرسال.';
+      if (unansweredCount > 0) {
+        message = `لديك ${unansweredCount} أسئلة لم يتم الإجابة عليها. هل أنت متأكد أنك تريد إنهاء الاختبار؟`;
+      }
+
+      const confirmSubmit = window.confirm(message);
       if (confirmSubmit) {
         submitScore(userAnswers);
       }
@@ -219,30 +244,52 @@ const Quiz = () => {
       score: result
     };
 
+    const clearQuizSession = () => {
+      sessionStorage.removeItem('quizProgress');
+      sessionStorage.removeItem('quizTimer');
+      sessionStorage.removeItem('quizInProgress');
+      sessionStorage.removeItem('fieldTeamAuth'); // Force relogin on next attempt
+    };
+
     try {
       await api.post('/quiz-results', resultsData);
       await api.post('/field-teams/update-score', {
         teamId: quizState.teamId,
         quizCode: quizState.quizCode,
-        score: result
+        correctAnswers: finalScore,
+        totalQuestions: totalQuestions,
+        percentage: percentage
       });
 
+      sessionStorage.setItem('quizResultsFallback', JSON.stringify({
+        ...resultsData,
+        isFieldTeam: true
+      }));
+
+      clearQuizSession();
+
       navigate('/quiz-results', {
-        state: { quizResults: resultsData },
+        state: {
+          quizResults: resultsData,
+          isFieldTeam: true
+        },
         replace: true
       });
     } catch (error) {
       console.error('Error saving results:', error);
       sessionStorage.setItem('quizResultsFallback', JSON.stringify({
-        teamName: quizState.teamName,
-        correctAnswers: finalScore,
-        totalQuestions: totalQuestions,
-        userAnswers: userAnswers,
-        questions: quizState.questions,
-        percentage
+        ...resultsData,
+        isFieldTeam: true
       }));
 
-      navigate('/quiz-results', { replace: true });
+      clearQuizSession();
+      navigate('/quiz-results', {
+        state: {
+          quizResults: resultsData,
+          isFieldTeam: true
+        },
+        replace: true
+      });
     }
   };
 
@@ -250,7 +297,7 @@ const Quiz = () => {
     return <Navigate to="/fieldteam-login" replace />;
   }
 
-  if (quizState.loading || quizState.questions.length === 0) {
+  if (quizState.loading || quizState.questions.length === 0 || !settings) {
     return (
       <div className="p-4 bg-[#f9fafb] min-h-screen flex items-center justify-center text-white" dir="rtl">
         جار التحميل...
@@ -290,13 +337,42 @@ const Quiz = () => {
           </div>
           <Timer
             teamId={quizState.teamId}
-            timeLimit={3000}
+            timeLimit={(settings?.globalTimer || 60) * 60}
             onTimeUp={() => {
               if (!quizState.hasSubmitted) {
-                submitScore(userAnswers);
+                submitScore(answersRef.current);
               }
             }}
           />
+        </div>
+
+        {/* Question Navigator - New Feature */}
+        <div className="mt-4 flex flex-wrap gap-2 justify-center">
+          {questions.map((_, idx) => {
+            const isAnswered = userAnswers[idx]?.selectedAnswer || userAnswers[idx]?.essayAnswer;
+            const isCurrent = idx === currentQuestion;
+            return (
+              <button
+                key={idx}
+                onClick={() => {
+                  setQuizState(prev => ({
+                    ...prev,
+                    currentQuestion: idx,
+                    selectedOption: prev.userAnswers[idx]?.selectedAnswer || '',
+                    essayAnswer: prev.userAnswers[idx]?.essayAnswer || ''
+                  }));
+                }}
+                className={`
+                  w-8 h-8 text-[11px] font-black border-2 transition-all duration-300
+                  ${isCurrent ? 'bg-white text-black border-white shadow-[0_0_10px_rgba(255,255,255,0.5)] scale-110 z-10' :
+                    isAnswered ? 'bg-[#222] text-white border-white/40 hover:border-white' :
+                      'bg-transparent text-white/30 border-white/10 hover:border-white/40'}
+                `}
+              >
+                {idx + 1}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -313,9 +389,14 @@ const Quiz = () => {
               style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
             />
           </div>
+          <div className="mt-2 text-[10px] text-gray-500 text-center uppercase tracking-widest">
+            {userAnswers.filter(a => a.selectedAnswer || a.essayAnswer).length} of {questions.length} answered
+          </div>
         </div>
+      </div>
 
-        {/* Question Area - Classic Dark Card */}
+      {/* Question Area - Classic Dark Card */}
+      <div className="max-w-3xl mx-auto w-full">
         <div className="bg-[#111111] border-2 border-white p-6 md:p-10 shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]">
           <div className="mb-8">
             <span className="inline-block px-2 py-0.5 bg-white text-black text-[10px] font-bold uppercase tracking-tighter mb-4">

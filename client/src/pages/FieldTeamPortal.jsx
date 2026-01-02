@@ -207,11 +207,27 @@ const FieldTeamPortal = () => {
     setActiveTab(newValue);
   };
 
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Failed to fetch settings");
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const getAssessmentStatus = (score) => {
-    if (score === 100) return { label: "Excellent", color: "#2e7d32" }; // Dark Green
-    if (score >= 85) return { label: "Pass (Minor Comments)", color: "#66bb6a" }; // Light Green
-    if (score >= 50) return { label: "Pass (With Comments)", color: "#ffa726" }; // Orange
-    return { label: "Fail", color: "#d32f2f" }; // Red
+    const thresholds = settings?.thresholds || { pass: 85, average: 70, fail: 50 };
+
+    if (score >= thresholds.pass) return { label: "Excellent", color: "#2e7d32" };
+    if (score >= thresholds.average) return { label: "Pass (Minor Comments)", color: "#66bb6a" };
+    if (score >= thresholds.fail) return { label: "Pass (With Comments)", color: "#ffa726" };
+    return { label: "Fail", color: "#d32f2f" };
   };
 
   const getPerformanceColor = (score) => {

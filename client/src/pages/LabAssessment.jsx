@@ -44,6 +44,8 @@ import {
   Search as SearchIcon,
 } from "@mui/icons-material";
 import { InputAdornment } from "@mui/material";
+import api from "../api/api";
+import { Timer } from "../components/Timer";
 import { toast } from "sonner";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -93,18 +95,32 @@ const LabAssessment = () => {
     warning: "#ff9800",
   };
 
+  const [settings, setSettings] = useState(null);
+
   const getAssessmentStatus = (score) => {
-    if (score === 100) return { label: "Excellent", color: "#2e7d32" }; // Dark Green
-    if (score >= 85) return { label: "Pass (Minor Comments)", color: "#66bb6a" }; // Light Green
-    if (score >= 50) return { label: "Pass (With Comments)", color: "#ffa726" }; // Orange
-    return { label: "Fail", color: "#d32f2f" }; // Red
+    const thresholds = settings?.thresholds || { pass: 85, average: 70, fail: 50 };
+
+    if (score >= thresholds.pass) return { label: "Excellent", color: "#2e7d32" };
+    if (score >= thresholds.average) return { label: "Pass (Minor Comments)", color: "#66bb6a" };
+    if (score >= thresholds.fail) return { label: "Pass (With Comments)", color: "#ffa726" };
+    return { label: "Fail", color: "#d32f2f" };
   };
 
   useEffect(() => {
     fetchTeams();
     fetchONTTypes();
     fetchAssessments();
+    fetchSettings();
   }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await api.get("/settings");
+      setSettings(response.data);
+    } catch (error) {
+      console.error("Failed to fetch settings");
+    }
+  };
 
   const fetchTeams = async () => {
     try {
@@ -313,7 +329,7 @@ const LabAssessment = () => {
 
   // --- Advanced Statistics Logic ---
   const calculateCheckpointStats = (data) => {
-    if (!data || data.length === 0) return { strengths: [], weaknesses: [] };
+    if (!data || data.length === 0) return { strengths: [], weaknesses: [], ranking: [] };
 
     const checkpointMap = {};
 
@@ -359,7 +375,7 @@ const LabAssessment = () => {
   }, [assessments]);
 
 
-  const [historyStats, setHistoryStats] = useState({ strengths: [], weaknesses: [] });
+  const [historyStats, setHistoryStats] = useState({ strengths: [], weaknesses: [], ranking: [] });
   // Update stats when selectedHistoryTeam changes
   useEffect(() => {
     if (selectedHistoryTeam && teamHistory) {
@@ -457,6 +473,14 @@ const LabAssessment = () => {
 
                 {selectedTeam && selectedOntType && (
                   <>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, p: 2, bgcolor: colors.surfaceElevated, borderRadius: '8px', border: `1px solid ${colors.border}` }}>
+                      <Typography variant="h6" sx={{ color: colors.primary }}>Assessment In Progress</Typography>
+                      <Timer
+                        timeLimit={(settings?.assessmentTimer || 45) * 60}
+                        onTimeUp={() => toast.error("Time is up! Please submit the assessment.")}
+                      />
+                    </Box>
+
                     <Typography variant="subtitle1" sx={{ color: colors.primary }}>
                       Configuration Checks
                     </Typography>
@@ -553,314 +577,318 @@ const LabAssessment = () => {
                 )}
               </Stack>
             </Paper>
-          </Grid>
+          </Grid >
 
           <Grid item xs={12} md={4}>
             <ONTTypeManagement onTypeChange={fetchONTTypes} />
           </Grid>
-        </Grid>
+        </Grid >
       )}
 
       {/* TAB 2: TRACKING */}
-      {activeTab === 1 && (
-        <Stack spacing={3}>
-          <Paper sx={{ p: 2, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-            <Tabs
-              value={trackingFilter}
-              onChange={(e, v) => setTrackingFilter(v)}
-              textColor="primary"
-              indicatorColor="primary"
-              sx={{ minHeight: 'auto', '& .MuiTab-root': { minHeight: 48, fontSize: '0.95rem' } }}
-            >
-              <Tab label="All Teams" value="all" />
-              <Tab label="Evaluated" value="tested" />
-              <Tab label="Passed" value="passed" />
-              <Tab label="Failed" value="failed" />
-              <Tab label="Pending" value="pending" />
-            </Tabs>
+      {
+        activeTab === 1 && (
+          <Stack spacing={3}>
+            <Paper sx={{ p: 2, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+              <Tabs
+                value={trackingFilter}
+                onChange={(e, v) => setTrackingFilter(v)}
+                textColor="primary"
+                indicatorColor="primary"
+                sx={{ minHeight: 'auto', '& .MuiTab-root': { minHeight: 48, fontSize: '0.95rem' } }}
+              >
+                <Tab label="All Teams" value="all" />
+                <Tab label="Evaluated" value="tested" />
+                <Tab label="Pending" value="pending" />
+                <Tab label="Passed" value="passed" />
+                <Tab label="Failed" value="failed" />
+              </Tabs>
 
-            <TextField
-              placeholder="Search teams or companies..."
-              size="small"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: colors.textSecondary }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                width: { xs: '100%', sm: 300 },
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": { borderColor: colors.border },
-                  "&:hover fieldset": { borderColor: colors.primary },
-                  "&.Mui-focused fieldset": { borderColor: colors.primary },
-                },
-                input: { color: colors.textPrimary },
-              }}
-            />
-          </Paper>
+              <TextField
+                placeholder="Search teams or companies..."
+                size="small"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ color: colors.textSecondary }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  width: { xs: '100%', sm: 300 },
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": { borderColor: colors.border },
+                    "&:hover fieldset": { borderColor: colors.primary },
+                    "&.Mui-focused fieldset": { borderColor: colors.primary },
+                  },
+                  input: { color: colors.textPrimary },
+                }}
+              />
+            </Paper>
 
-          <Paper sx={{ width: '100%', height: 600, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px" }}>
-            <DataGrid
-              rows={trackingData}
-              getRowId={(row) => row._id}
-              columns={[
-                { field: 'teamName', headerName: 'Team Name', flex: 1, minWidth: 150 },
-                { field: 'teamCompany', headerName: 'Company', flex: 1, minWidth: 120 },
-                {
-                  field: 'statusText',
-                  headerName: 'Result',
-                  width: 180,
-                  valueGetter: (value, row) => row.isTested ? getAssessmentStatus(row.lastAssessment.totalScore).label : "-",
-                  renderCell: (params) => {
-                    if (params.row.isTested) {
-                      const status = getAssessmentStatus(params.row.lastAssessment.totalScore);
-                      return <Typography variant="body2" sx={{ color: status.color, fontWeight: 500 }}>{status.label}</Typography>
+            <Paper sx={{ width: '100%', height: 600, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px" }}>
+              <DataGrid
+                rows={trackingData}
+                getRowId={(row) => row._id}
+                columns={[
+                  { field: 'teamName', headerName: 'Team Name', flex: 1, minWidth: 150 },
+                  { field: 'teamCompany', headerName: 'Company', flex: 1, minWidth: 120 },
+                  {
+                    field: 'statusText',
+                    headerName: 'Result',
+                    width: 180,
+                    valueGetter: (value, row) => row.isTested ? getAssessmentStatus(row.lastAssessment.totalScore).label : "-",
+                    renderCell: (params) => {
+                      if (params.row.isTested) {
+                        const status = getAssessmentStatus(params.row.lastAssessment.totalScore);
+                        return <Typography variant="body2" sx={{ color: status.color, fontWeight: 500 }}>{status.label}</Typography>
+                      }
+                      return "-";
                     }
-                    return "-";
-                  }
-                },
-                { field: 'assessmentCount', headerName: 'Total Tests', type: 'number', width: 100, align: 'center', headerAlign: 'center' },
-                {
-                  field: 'lastAssessmentScore',
-                  headerName: 'Latest Score',
-                  width: 120,
-                  align: 'center',
-                  headerAlign: 'center',
-                  valueGetter: (value, row) => row.isTested ? row.lastAssessment.totalScore : null,
-                  renderCell: (params) => {
-                    if (params.value === null) return "-";
-                    const status = getAssessmentStatus(params.value);
-                    return (
-                      <Chip
-                        label={`${params.value}%`}
-                        size="small"
-                        sx={{
-                          bgcolor: `${status.color}22`,
-                          color: status.color,
-                          fontWeight: 'bold',
-                          border: `1px solid ${status.color}`
-                        }}
-                      />
-                    );
-                  }
-                },
-                {
-                  field: 'lastAssessmentDate',
-                  headerName: 'Latest Assessment',
-                  flex: 1,
-                  minWidth: 180,
-                  valueGetter: (value, row) => row.isTested ? row.lastAssessment.createdAt : null,
-                  valueFormatter: (value) => value ? new Date(value).toLocaleString() : "-"
-                },
-                {
-                  field: 'actions',
-                  headerName: 'Actions',
-                  width: 120,
-                  sortable: false,
-                  renderCell: (params) => (
-                    <Stack direction="row" spacing={1}>
-                      <Tooltip title="Start New Assessment">
-                        <IconButton onClick={() => handleNewAssessment(params.row)} sx={{ color: colors.success }}>
-                          <AssessmentIcon />
-                        </IconButton>
-                      </Tooltip>
-                      {params.row.isTested && (
-                        <Tooltip title="View History & Manage">
-                          <IconButton onClick={() => handleOpenHistory(params.row)} sx={{ color: colors.primary }}>
-                            <VisibilityIcon />
+                  },
+                  { field: 'assessmentCount', headerName: 'Total Tests', type: 'number', width: 100, align: 'center', headerAlign: 'center' },
+                  {
+                    field: 'lastAssessmentScore',
+                    headerName: 'Latest Score',
+                    width: 120,
+                    align: 'center',
+                    headerAlign: 'center',
+                    valueGetter: (value, row) => row.isTested ? row.lastAssessment.totalScore : null,
+                    renderCell: (params) => {
+                      if (params.value === null) return "-";
+                      const status = getAssessmentStatus(params.value);
+                      return (
+                        <Chip
+                          label={`${params.value}%`}
+                          size="small"
+                          sx={{
+                            bgcolor: `${status.color}22`,
+                            color: status.color,
+                            fontWeight: 'bold',
+                            border: `1px solid ${status.color}`
+                          }}
+                        />
+                      );
+                    }
+                  },
+                  {
+                    field: 'lastAssessmentDate',
+                    headerName: 'Latest Assessment',
+                    flex: 1,
+                    minWidth: 180,
+                    valueGetter: (value, row) => row.isTested ? row.lastAssessment.createdAt : null,
+                    valueFormatter: (value) => value ? new Date(value).toLocaleString() : "-"
+                  },
+                  {
+                    field: 'actions',
+                    headerName: 'Actions',
+                    width: 120,
+                    sortable: false,
+                    renderCell: (params) => (
+                      <Stack direction="row" spacing={1}>
+                        <Tooltip title="Start New Assessment">
+                          <IconButton onClick={() => handleNewAssessment(params.row)} sx={{ color: colors.success }}>
+                            <AssessmentIcon />
                           </IconButton>
                         </Tooltip>
-                      )}
-                    </Stack>
-                  )
-                }
-              ]}
-              loading={loading}
-              pageSizeOptions={[10, 25, 50]}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 10 } },
-              }}
-              sx={{
-                border: 'none',
-                color: colors.textPrimary,
-                "& .MuiDataGrid-cell": { borderBottom: `1px solid ${colors.border}` },
-                "& .MuiDataGrid-columnHeaders": { bgcolor: colors.surface, borderBottom: `1px solid ${colors.border}`, color: colors.textSecondary },
-                "& .MuiDataGrid-virtualScroller": { bgcolor: colors.background },
-                "& .MuiDataGrid-footerContainer": { borderTop: `1px solid ${colors.border}`, bgcolor: colors.surface, color: colors.textSecondary },
-                "& .MuiTablePagination-root": { color: colors.textSecondary },
-                "& .MuiButtonBase-root": { color: colors.textSecondary },
-              }}
-            />
-          </Paper>
-        </Stack>
-      )}
+                        {params.row.isTested && (
+                          <Tooltip title="View History & Manage">
+                            <IconButton onClick={() => handleOpenHistory(params.row)} sx={{ color: colors.primary }}>
+                              <VisibilityIcon />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Stack>
+                    )
+                  }
+                ]}
+                loading={loading}
+                pageSizeOptions={[10, 25, 50]}
+                initialState={{
+                  pagination: { paginationModel: { pageSize: 10 } },
+                }}
+                sx={{
+                  border: 'none',
+                  color: colors.textPrimary,
+                  "& .MuiDataGrid-cell": { borderBottom: `1px solid ${colors.border}` },
+                  "& .MuiDataGrid-columnHeaders": { bgcolor: colors.surface, borderBottom: `1px solid ${colors.border}`, color: colors.textSecondary },
+                  "& .MuiDataGrid-virtualScroller": { bgcolor: colors.background },
+                  "& .MuiDataGrid-footerContainer": { borderTop: `1px solid ${colors.border}`, bgcolor: colors.surface, color: colors.textSecondary },
+                  "& .MuiTablePagination-root": { color: colors.textSecondary },
+                  "& .MuiButtonBase-root": { color: colors.textSecondary },
+                }}
+              />
+            </Paper>
+          </Stack>
+        )
+      }
 
       {/* TAB 3: STATISTICS */}
-      {activeTab === 2 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}` }}>
-              <CardContent>
-                <Typography color={colors.textSecondary} gutterBottom>Total Teams</Typography>
-                <Typography variant="h3" color={colors.textPrimary}>{stats.totalTeams}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}` }}>
-              <CardContent>
-                <Typography color={colors.textSecondary} gutterBottom>Teams Tested</Typography>
-                <Typography variant="h3" color={colors.success}>{stats.testedTeams}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}` }}>
-              <CardContent>
-                <Typography color={colors.textSecondary} gutterBottom>Pending</Typography>
-                <Typography variant="h3" color={colors.error}>{stats.pendingTeams}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}` }}>
-              <CardContent>
-                <Typography color={colors.textSecondary} gutterBottom>Completion Rate</Typography>
-                <Typography variant="h3" color={colors.primary}>{stats.completionRate}%</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+      {
+        activeTab === 2 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}` }}>
+                <CardContent>
+                  <Typography color={colors.textSecondary} gutterBottom>Total Teams</Typography>
+                  <Typography variant="h3" color={colors.textPrimary}>{stats.totalTeams}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}` }}>
+                <CardContent>
+                  <Typography color={colors.textSecondary} gutterBottom>Teams Tested</Typography>
+                  <Typography variant="h3" color={colors.success}>{stats.testedTeams}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}` }}>
+                <CardContent>
+                  <Typography color={colors.textSecondary} gutterBottom>Pending</Typography>
+                  <Typography variant="h3" color={colors.error}>{stats.pendingTeams}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}` }}>
+                <CardContent>
+                  <Typography color={colors.textSecondary} gutterBottom>Completion Rate</Typography>
+                  <Typography variant="h3" color={colors.primary}>{stats.completionRate}%</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", height: '100%' }}>
-              <Typography variant="h6" color={colors.textPrimary} gutterBottom>Average Score (Latest Tests)</Typography>
-              <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', height: 250 }}>
-                <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                  <CircularProgress variant="determinate" value={stats.avgScore} size={160} thickness={4} sx={{ color: getAssessmentStatus(stats.avgScore).color }} />
-                  <Box sx={{ top: 0, left: 0, bottom: 0, right: 0, position: 'absolute', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Typography variant="h3" component="div" color={colors.textPrimary}>{stats.avgScore}%</Typography>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", height: '100%' }}>
+                <Typography variant="h6" color={colors.textPrimary} gutterBottom>Average Score (Latest Tests)</Typography>
+                <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', height: 250 }}>
+                  <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                    <CircularProgress variant="determinate" value={stats.avgScore} size={160} thickness={4} sx={{ color: getAssessmentStatus(stats.avgScore).color }} />
+                    <Box sx={{ top: 0, left: 0, bottom: 0, right: 0, position: 'absolute', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography variant="h3" component="div" color={colors.textPrimary}>{stats.avgScore}%</Typography>
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
-            </Paper>
-          </Grid>
+              </Paper>
+            </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", height: '100%' }}>
-              <Typography variant="h6" color={colors.textPrimary} gutterBottom>Recent Activity</Typography>
-              <Stack spacing={2} mt={2}>
-                {assessments.slice(0, 4).map(assess => {
-                  const status = getAssessmentStatus(assess.totalScore);
-                  return (
-                    <Box key={assess._id} sx={{ p: 2, border: `1px solid ${colors.border}`, borderRadius: "8px", display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box>
-                        <Typography color={colors.textPrimary} variant="subtitle1">{assess.fieldTeamId?.teamName}</Typography>
-                        <Typography color={colors.textSecondary} variant="caption">{new Date(assess.createdAt).toLocaleString()}</Typography>
-                        <Typography variant="caption" display="block" sx={{ color: status.color }}>{status.label}</Typography>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", height: '100%' }}>
+                <Typography variant="h6" color={colors.textPrimary} gutterBottom>Recent Activity</Typography>
+                <Stack spacing={2} mt={2}>
+                  {assessments.slice(0, 4).map(assess => {
+                    const status = getAssessmentStatus(assess.totalScore);
+                    return (
+                      <Box key={assess._id} sx={{ p: 2, border: `1px solid ${colors.border}`, borderRadius: "8px", display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box>
+                          <Typography color={colors.textPrimary} variant="subtitle1">{assess.fieldTeamId?.teamName}</Typography>
+                          <Typography color={colors.textSecondary} variant="caption">{new Date(assess.createdAt).toLocaleString()}</Typography>
+                          <Typography variant="caption" display="block" sx={{ color: status.color }}>{status.label}</Typography>
+                        </Box>
+                        <Chip label={`${assess.totalScore}%`} size="small" sx={{ bgcolor: `${status.color}22`, color: status.color, border: `1px solid ${status.color}` }} />
                       </Box>
-                      <Chip label={`${assess.totalScore}%`} size="small" sx={{ bgcolor: `${status.color}22`, color: status.color, border: `1px solid ${status.color}` }} />
-                    </Box>
-                  );
-                })}
-                {assessments.length === 0 && <Typography color={colors.textSecondary}>No assessments recorded yet.</Typography>}
-              </Stack>
-            </Paper>
-          </Grid>
+                    );
+                  })}
+                  {assessments.length === 0 && <Typography color={colors.textSecondary}>No assessments recorded yet.</Typography>}
+                </Stack>
+              </Paper>
+            </Grid>
 
-          {/* ADVANCED STATS: GLOBAL STRENGTHS & WEAKNESSES */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", height: '100%' }}>
-              <Typography variant="h6" color={colors.success} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CheckCircleIcon /> Top Strengths (Global)
-              </Typography>
-              <Stack spacing={2} mt={2}>
-                {globalCheckpointStats.strengths.map((s, i) => (
-                  <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${colors.border}`, pb: 1 }}>
-                    <Typography color={colors.textPrimary}>{s.name}</Typography>
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="subtitle2" color={colors.success}>{s.avgScore}/10</Typography>
-                      <Typography variant="caption" color={colors.textSecondary}>Pass Rate: {s.passRate}%</Typography>
+            {/* ADVANCED STATS: GLOBAL STRENGTHS & WEAKNESSES */}
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", height: '100%' }}>
+                <Typography variant="h6" color={colors.success} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CheckCircleIcon /> Top Strengths (Global)
+                </Typography>
+                <Stack spacing={2} mt={2}>
+                  {globalCheckpointStats.strengths.map((s, i) => (
+                    <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${colors.border}`, pb: 1 }}>
+                      <Typography color={colors.textPrimary}>{s.name}</Typography>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="subtitle2" color={colors.success}>{s.avgScore}/10</Typography>
+                        <Typography variant="caption" color={colors.textSecondary}>Pass Rate: {s.passRate}%</Typography>
+                      </Box>
                     </Box>
-                  </Box>
-                ))}
-                {globalCheckpointStats.strengths.length === 0 && <Typography color={colors.textSecondary}>Not enough data.</Typography>}
-              </Stack>
-            </Paper>
-          </Grid>
+                  ))}
+                  {globalCheckpointStats.strengths.length === 0 && <Typography color={colors.textSecondary}>Not enough data.</Typography>}
+                </Stack>
+              </Paper>
+            </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", height: '100%' }}>
-              <Typography variant="h6" color={colors.error} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CancelIcon /> Areas for Improvement (Global)
-              </Typography>
-              <Stack spacing={2} mt={2}>
-                {globalCheckpointStats.weaknesses.map((w, i) => (
-                  <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${colors.border}`, pb: 1 }}>
-                    <Typography color={colors.textPrimary}>{w.name}</Typography>
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="subtitle2" color={colors.error}>{w.avgScore}/10</Typography>
-                      <Typography variant="caption" color={colors.textSecondary}>Pass Rate: {w.passRate}%</Typography>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", height: '100%' }}>
+                <Typography variant="h6" color={colors.error} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CancelIcon /> Areas for Improvement (Global)
+                </Typography>
+                <Stack spacing={2} mt={2}>
+                  {globalCheckpointStats.weaknesses.map((w, i) => (
+                    <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${colors.border}`, pb: 1 }}>
+                      <Typography color={colors.textPrimary}>{w.name}</Typography>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="subtitle2" color={colors.error}>{w.avgScore}/10</Typography>
+                        <Typography variant="caption" color={colors.textSecondary}>Pass Rate: {w.passRate}%</Typography>
+                      </Box>
                     </Box>
-                  </Box>
-                ))}
-                {globalCheckpointStats.weaknesses.length === 0 && <Typography color={colors.textSecondary}>Not enough data.</Typography>}
-              </Stack>
-            </Paper>
-          </Grid>
+                  ))}
+                  {globalCheckpointStats.weaknesses.length === 0 && <Typography color={colors.textSecondary}>Not enough data.</Typography>}
+                </Stack>
+              </Paper>
+            </Grid>
 
-          {/* Detailed Checkpoint Statistics Table */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px" }}>
-              <Typography variant="h6" color={colors.textPrimary} gutterBottom>
-                Checkpoint Performance Details
-              </Typography>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ color: colors.textSecondary, borderBottom: `1px solid ${colors.border}` }}>Checkpoint Name</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, borderBottom: `1px solid ${colors.border}` }}>Avg Score</TableCell>
-                      <TableCell align="center" sx={{ color: colors.success, borderBottom: `1px solid ${colors.border}` }}>Pass (≥5)</TableCell>
-                      <TableCell align="center" sx={{ color: colors.error, borderBottom: `1px solid ${colors.border}` }}>Fail (&lt;5)</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, borderBottom: `1px solid ${colors.border}` }}>Pass Rate</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {globalCheckpointStats.ranking.map((row, index) => (
-                      <TableRow key={index}>
-                        <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{row.name}</TableCell>
-                        <TableCell align="center" sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{row.avgScore}</TableCell>
-                        <TableCell align="center" sx={{ color: colors.success, borderBottom: `1px solid ${colors.border}` }}>{row.passCount}</TableCell>
-                        <TableCell align="center" sx={{ color: colors.error, borderBottom: `1px solid ${colors.border}` }}>{row.failCount}</TableCell>
-                        <TableCell align="center" sx={{ borderBottom: `1px solid ${colors.border}` }}>
-                          <Chip
-                            label={`${row.passRate}%`}
-                            size="small"
-                            sx={{
-                              bgcolor: row.passRate >= 80 ? `${colors.success}22` : row.passRate >= 50 ? `${colors.warning}22` : `${colors.error}22`,
-                              color: row.passRate >= 80 ? colors.success : row.passRate >= 50 ? colors.warning : colors.error
-                            }}
-                          />
-                        </TableCell>
+            {/* Detailed Checkpoint Statistics Table */}
+            <Grid item xs={12}>
+              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px" }}>
+                <Typography variant="h6" color={colors.textPrimary} gutterBottom>
+                  Checkpoint Performance Details
+                </Typography>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ color: colors.textSecondary, borderBottom: `1px solid ${colors.border}` }}>Checkpoint Name</TableCell>
+                        <TableCell align="center" sx={{ color: colors.textSecondary, borderBottom: `1px solid ${colors.border}` }}>Avg Score</TableCell>
+                        <TableCell align="center" sx={{ color: colors.success, borderBottom: `1px solid ${colors.border}` }}>Pass (≥5)</TableCell>
+                        <TableCell align="center" sx={{ color: colors.error, borderBottom: `1px solid ${colors.border}` }}>Fail (&lt;5)</TableCell>
+                        <TableCell align="center" sx={{ color: colors.textSecondary, borderBottom: `1px solid ${colors.border}` }}>Pass Rate</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
+                    </TableHead>
+                    <TableBody>
+                      {globalCheckpointStats.ranking.map((row, index) => (
+                        <TableRow key={index}>
+                          <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{row.name}</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{row.avgScore}</TableCell>
+                          <TableCell align="center" sx={{ color: colors.success, borderBottom: `1px solid ${colors.border}` }}>{row.passCount}</TableCell>
+                          <TableCell align="center" sx={{ color: colors.error, borderBottom: `1px solid ${colors.border}` }}>{row.failCount}</TableCell>
+                          <TableCell align="center" sx={{ borderBottom: `1px solid ${colors.border}` }}>
+                            <Chip
+                              label={`${row.passRate}%`}
+                              size="small"
+                              sx={{
+                                bgcolor: row.passRate >= 80 ? `${colors.success}22` : row.passRate >= 50 ? `${colors.warning}22` : `${colors.error}22`,
+                                color: row.passRate >= 80 ? colors.success : row.passRate >= 50 ? colors.warning : colors.error
+                              }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            </Grid>
           </Grid>
-        </Grid>
-      )}
+        )
+      }
 
       {/* TEAM HISTORY DIALOG */}
       <Dialog
         fullScreen
         open={historyDialogOpen}
-        onClose={() => setHistoryStats({ strengths: [], weaknesses: [] }) || setHistoryDialogOpen(false)}
+        onClose={() => setHistoryStats({ strengths: [], weaknesses: [], ranking: [] }) || setHistoryDialogOpen(false)}
         PaperProps={{ sx: { bgcolor: colors.background, color: colors.textPrimary } }}
       >
         <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: colors.surface, borderBottom: `1px solid ${colors.border}` }}>
@@ -1064,7 +1092,7 @@ const LabAssessment = () => {
           <Button onClick={() => setHistoryDialogOpen(false)} sx={{ color: colors.textSecondary }}>Close</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Box >
   );
 };
 

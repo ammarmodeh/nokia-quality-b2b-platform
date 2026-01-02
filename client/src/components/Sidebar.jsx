@@ -7,175 +7,200 @@ import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 
 // Sidebar link data
+// Sidebar link data
 const SidebarLinks = () => {
   const user = useSelector((state) => state?.auth?.user);
 
-  const links = [
+  const categories = [
     {
-      label: "Dashboard",
-      link: "dashboard",
-      icon: <img width={20} height={20} src="/main-dashboard.png" />,
-      isNew: false,
-    },
-    {
-      label: "Main Stats",
-      link: "main-stats",
-      icon: <img width={20} height={20} src="/main-stats.png" />,
-      isNew: true, // Example of a new link
-    },
-    {
-      label: "AI Portal",
-      link: "ai-portal",
-      icon: <MdPsychology size={20} />,
-      isNew: true,
-    },
-    {
-      label: "NPS Analytics",
-      link: "analytics",
-      icon: <img width={20} height={20} src="/statistics.png" />,
-      isNew: true,
-    },
-    {
-      label: "Excel Data Portal",
-      link: "excel-portal",
-      icon: <img width={20} height={20} src="/main-stats.png" />,
-      isNew: true,
-    },
-    {
-      label: "Policies List",
-      link: "policies",
-      icon: <img width={20} height={20} src="/policy.png" />,
-      isNew: false,
-    },
-    ...(user?.role !== "Member"
-      ? [
+      title: "Overview & Insights",
+      links: [
         {
-          label: "Suggestions Dashboard",
-          link: "admin/suggestions",
-          icon: <img width={20} height={20} src="/suggestions.png" />,
+          label: "Dashboard",
+          link: "dashboard",
+          icon: <img width={20} height={20} src="/main-dashboard.png" />,
+          isNew: false,
+        },
+        {
+          label: "Main Stats",
+          link: "main-stats",
+          icon: <img width={20} height={20} src="/main-stats.png" />,
+          isNew: true,
+        },
+        {
+          label: "NPS Analytics",
+          icon: <img width={20} height={20} src="/statistics.png" />,
+          isNew: true,
+          subpaths: [
+            { label: "Insights", link: "analytics" },
+            { label: "Data Management", link: "excel-portal" },
+          ],
+        },
+      ]
+    },
+    {
+      title: "Audit & Tasks",
+      links: [
+        {
+          label: "All Tasks List",
+          link: "audit/tasks",
+          icon: <img width={20} height={20} src="/all-tasks.png" />,
+          isNew: false,
+        },
+        ...(user?.title === "Field Technical Support - QoS" ? [
+          {
+            label: "Assigned To Me",
+            icon: <img width={20} height={20} src="/assigned.png" />,
+            isNew: false,
+            subpaths: [
+              { label: "All Tasks", link: "assigned-to-me" },
+              { label: "Detractor", link: "assigned-to-me/detractor" },
+              { label: "Neutrals", link: "assigned-to-me/neutrals" },
+            ],
+          }
+        ] : []),
+      ]
+    },
+    {
+      title: "Team Management",
+      links: [
+        {
+          label: "Quality Team",
+          link: "team",
+          icon: <img width={20} height={20} src="/department-members-2.png" />,
+          isNew: false,
+        },
+        {
+          label: "Manage Field Teams",
+          link: "fieldTeams",
+          icon: <img width={20} height={20} src="/all-groups-members-2.png" />,
+          isNew: false,
+        },
+        {
+          label: "Field Teams Portal",
+          link: "fieldTeams-portal",
+          icon: <img width={20} height={20} src="/portal-2.svg" />,
           isNew: false,
         },
       ]
-      : []),
-    ...(user?.role !== "Admin"
-      ? [
+    },
+    {
+      title: "Performance & Assessments",
+      links: [
         {
-          label: "My Suggestions",
-          link: "my-suggestions",
-          icon: <img width={20} height={20} src="/suggestions.png" />,
+          label: "Teams Performance Page",
+          link: "teams-performance-page",
+          icon: <img width={20} height={20} src="/team-performance-page.png" />,
+          isNew: true,
+        },
+        {
+          label: "Performance Assessment",
+          icon: <img width={20} height={20} src="/perf-assessment.png" />,
+          isNew: false,
+          subpaths: [
+            { label: "Dashboard", link: "assessment-dashboard" },
+            { label: "Quiz Link", link: "quiz" },
+          ],
+        },
+        {
+          label: "Lab Assessment",
+          link: "lab-assessment",
+          icon: <Assessment />,
+          isNew: true,
+        },
+        {
+          label: "On-the-Job Assessment",
+          link: "on-the-job-assessment",
+          icon: <img width={20} height={20} src="/on-the-job-assessment.png" />,
           isNew: false,
         },
       ]
-      : []),
-    {
-      label: "All Tasks List",
-      link: "audit/tasks",
-      icon: <img width={20} height={20} src="/all-tasks.png" />,
-      isNew: false,
-    },
-    ...(user?.title === "Field Technical Support - QoS" ? [
-      {
-        label: "Assigned To Me",
-        icon: <img width={20} height={20} src="/assigned.png" />,
-        isNew: false,
-        subpaths: [
-          { label: "All Tasks", link: "assigned-to-me" },
-          { label: "Detractor", link: "assigned-to-me/detractor" },
-          { label: "Neutrals", link: "assigned-to-me/neutrals" },
-        ],
-      }
-    ] : []),
-    {
-      label: "Benchmark Tables",
-      link: "benchmark-tables",
-      icon: <img width={20} height={20} src="/benchmark-2.png" />,
-      isNew: false,
     },
     {
-      label: "Favorites",
-      link: "favourites",
-      icon: <img width={20} height={20} src="/favourite.png" />,
-      isNew: false,
-    },
-    {
-      label: "Calender",
-      link: "calender",
-      icon: <img width={20} height={20} src="/calendar.png" />,
-      isNew: false,
-    },
-    {
-      label: "Quality Team",
-      link: "team",
-      icon: <img width={20} height={20} src="/department-members-2.png" />,
-      isNew: false,
-    },
-    {
-      label: "Manage Field Teams",
-      link: "fieldTeams",
-      icon: <img width={20} height={20} src="/all-groups-members-2.png" />,
-      isNew: false,
-    },
-    {
-      label: "Field Teams Portal",
-      link: "fieldTeams-portal",
-      icon: <img width={20} height={20} src="/portal-2.svg" />,
-      isNew: false,
-    },
-    {
-      label: "On-the-Job Assessment",
-      link: "on-the-job-assessment",
-      icon: <img width={20} height={20} src="/on-the-job-assessment.png" />,
-      isNew: false,
-    },
-    {
-      label: "Teams Performance Page",
-      link: "teams-performance-page",
-      icon: <img width={20} height={20} src="/team-performance-page.png" />,
-      isNew: true,
-    },
-    {
-      label: "Perf Assessment Dashboard",
-      link: "assessment-dashboard",
-      icon: <img width={20} height={20} src="/statistics.png" />,
-      isNew: false,
-    },
-    {
-      label: "Lab Assessment",
-      link: "lab-assessment",
-      icon: <Assessment />,
-      isNew: true,
-    },
-    {
-      label: "Perf Assessment Link",
-      link: "quiz",
-      icon: <img width={20} height={20} src="/perf-assessment.png" />,
-      isNew: false,
+      title: "Resources & Suggestions",
+      links: [
+        {
+          label: "Policies List",
+          link: "policies",
+          icon: <img width={20} height={20} src="/policy.png" />,
+          isNew: false,
+        },
+        {
+          label: "Benchmark Tables",
+          link: "benchmark-tables",
+          icon: <img width={20} height={20} src="/benchmark-2.png" />,
+          isNew: false,
+        },
+        ...(user?.role !== "Member"
+          ? [
+            {
+              label: "Suggestions Dashboard",
+              link: "admin/suggestions",
+              icon: <img width={20} height={20} src="/suggestions.png" />,
+              isNew: false,
+            },
+          ]
+          : []),
+        ...(user?.role !== "Admin"
+          ? [
+            {
+              label: "My Suggestions",
+              link: "my-suggestions",
+              icon: <img width={20} height={20} src="/suggestions.png" />,
+              isNew: false,
+            },
+          ]
+          : []),
+        {
+          label: "Favorites",
+          link: "favourites",
+          icon: <img width={20} height={20} src="/favourite.png" />,
+          isNew: false,
+        },
+        {
+          label: "Calender",
+          link: "calender",
+          icon: <img width={20} height={20} src="/calendar.png" />,
+          isNew: false,
+        },
+      ]
     },
     ...(user?.role === "Admin"
       ? [
         {
-          label: "Archived",
-          link: "archived",
-          icon: <img width={20} height={20} src="/archived.png" />,
-          isNew: false,
-        },
-        {
-          label: "Trash",
-          link: "trashed",
-          icon: <img width={20} height={20} src="/trash.png" />,
-          isNew: false,
-        },
-        {
-          label: "Dropdown Settings",
-          link: "dropdown-management",
-          icon: <MdSettings size={20} />,
-          isNew: true,
+          title: "Administration",
+          links: [
+            {
+              label: "Archived",
+              link: "archived",
+              icon: <img width={20} height={20} src="/archived.png" />,
+              isNew: false,
+            },
+            {
+              label: "Trash",
+              link: "trashed",
+              icon: <img width={20} height={20} src="/trash.png" />,
+              isNew: false,
+            },
+            {
+              label: "Manage Quiz",
+              link: "manage-quiz",
+              icon: <MdPsychology size={20} />,
+              isNew: true,
+            },
+            {
+              label: "Dropdown Settings",
+              link: "dropdown-management",
+              icon: <MdSettings size={20} />,
+              isNew: true,
+            },
+          ]
         },
       ]
       : []),
   ];
 
-  return links;
+  return categories;
 };
 
 // NavLink Component
@@ -314,7 +339,7 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
 
 // Sidebar Component
 const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
-  const linkData = SidebarLinks();
+  const categories = SidebarLinks();
   const isMobileOrMediumScreen = useMediaQuery('(max-width:1024px)');
 
   const closeSidebar = () => {
@@ -348,32 +373,43 @@ const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
       </div>
 
       <Stack flexGrow={1} justifyContent={"space-between"} sx={{ overflow: "auto" }}>
-        <div className="flex-1 flex flex-col gap-y-2 p-4 overflow-y-auto">
-          {linkData.map((link) => (
-            <NavLink
-              key={link.label}
-              el={link}
-              onClick={closeSidebar}
-              isCollapsed={isCollapsed}
-            />
+        <div className="flex-1 flex flex-col gap-y-4 p-4 overflow-y-auto">
+          {categories.map((category) => (
+            <div key={category.title} className="flex flex-col gap-y-1">
+              {(!isCollapsed || isMobileOrMediumScreen) && (
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider px-3 mb-1">
+                  {category.title}
+                </span>
+              )}
+              <div className="flex flex-col gap-y-1">
+                {category.links.map((link) => (
+                  <NavLink
+                    key={link.label}
+                    el={link}
+                    onClick={closeSidebar}
+                    isCollapsed={isCollapsed}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
 
-        <div>
+        <div className="mt-auto">
           <hr className="mx-4 border-[#444]" />
           <div className="p-4">
-            <button
+            <Link
+              to="/settings"
               className={clsx(
                 "w-full flex gap-2 p-2 items-center text-lg text-gray-300 rounded-md transition-colors duration-200 hover:bg-[#333]",
                 isCollapsed && !isMobileOrMediumScreen ? "justify-center" : ""
               )}
               onClick={closeSidebar}
               aria-label="Settings"
-              role="button"
             >
               <MdSettings />
               {(!isCollapsed || isMobileOrMediumScreen) && <span>Settings</span>}
-            </button>
+            </Link>
           </div>
         </div>
       </Stack>
@@ -382,3 +418,4 @@ const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
 };
 
 export default Sidebar;
+
