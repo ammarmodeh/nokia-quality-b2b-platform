@@ -325,7 +325,7 @@ const OnTheJobAssessment = () => {
   }), []);
 
   const colors = useMemo(() => ({
-    background: '#2d2d2d',
+    // background: '#2d2d2d',
     // surface: '#ffffff',
     surfaceElevated: '#252525',
     border: '#e5e7eb',

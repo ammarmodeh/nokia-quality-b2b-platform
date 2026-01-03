@@ -65,6 +65,8 @@ const SettingsPage = () => {
         pass: 85,
         average: 70,
         fail: 50,
+        quizPassScore: 70,
+        labPassScore: 75,
       },
       notifications: {
         emailAlerts: true,
@@ -294,7 +296,7 @@ const SettingsPage = () => {
               <TextField
                 fullWidth
                 type="number"
-                label="Pass Threshold"
+                label="Global Pass Threshold"
                 disabled={!editMode}
                 {...register("thresholds.pass", { min: 0, max: 100 })}
                 error={!!errors.thresholds?.pass}
@@ -306,7 +308,7 @@ const SettingsPage = () => {
               <TextField
                 fullWidth
                 type="number"
-                label="Average Threshold"
+                label="Global Average Threshold"
                 disabled={!editMode}
                 {...register("thresholds.average", { min: 0, max: 100 })}
                 error={!!errors.thresholds?.average}
@@ -318,11 +320,35 @@ const SettingsPage = () => {
               <TextField
                 fullWidth
                 type="number"
-                label="Fail Threshold"
+                label="Global Fail Threshold"
                 disabled={!editMode}
                 {...register("thresholds.fail", { min: 0, max: 100 })}
                 error={!!errors.thresholds?.fail}
                 helperText={errors.thresholds?.fail ? "Value must be between 0 and 100" : ""}
+                sx={textFieldStyles}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                type="number"
+                label="Quiz Pass Score"
+                disabled={!editMode}
+                {...register("thresholds.quizPassScore", { min: 0, max: 100 })}
+                error={!!errors.thresholds?.quizPassScore}
+                helperText={errors.thresholds?.quizPassScore ? "Value must be between 0 and 100" : ""}
+                sx={textFieldStyles}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                type="number"
+                label="Lab Pass Score"
+                disabled={!editMode}
+                {...register("thresholds.labPassScore", { min: 0, max: 100 })}
+                error={!!errors.thresholds?.labPassScore}
+                helperText={errors.thresholds?.labPassScore ? "Value must be between 0 and 100" : ""}
                 sx={textFieldStyles}
               />
             </Grid>

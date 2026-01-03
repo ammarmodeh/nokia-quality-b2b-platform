@@ -42,6 +42,7 @@ import {
   History as HistoryIcon,
   Visibility as VisibilityIcon,
   Search as SearchIcon,
+  Note as NoteIcon,
 } from "@mui/icons-material";
 import { InputAdornment } from "@mui/material";
 import api from "../api/api";
@@ -70,16 +71,33 @@ const LabAssessment = () => {
   const [editingId, setEditingId] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState(null); // Changed to object for Autocomplete
   const [comments, setComments] = useState("");
-  const [checkpoints, setCheckpoints] = useState([
+  const [splicingMachineStatus, setSplicingMachineStatus] = useState("Good");
+  const [electrodeLifetime, setElectrodeLifetime] = useState(0);
+  const [assessmentType, setAssessmentType] = useState("Technical"); // Technical or Infrastructure
+
+  const technicalCheckpoints = [
     { name: "SSID Configuration", isCompleted: false, score: 0, notes: "" },
     { name: "Channel Selection", isCompleted: false, score: 0, notes: "" },
     { name: "Encryption Mode", isCompleted: false, score: 0, notes: "" },
-    { name: "IPv4 Support", isCompleted: false, score: 0, notes: "" },
-    { name: "IPv6 Support", isCompleted: false, score: 0, notes: "" },
+    { name: "ONT Labeling", isCompleted: false, score: 0, notes: "" },
+    { name: "OTO Labeling", isCompleted: false, score: 0, notes: "" },
     { name: "Repeater Location", isCompleted: false, score: 0, notes: "" },
     { name: "Repeater Configuration", isCompleted: false, score: 0, notes: "" },
     { name: "WiFi Signal Meter App Used", isCompleted: false, score: 0, notes: "" },
-  ]);
+  ];
+
+  const infrastructureCheckpoints = [
+    { name: "Fiber Organization at FDB", isCompleted: false, score: 0, notes: "" },
+    { name: "Fiber Organization at BEP", isCompleted: false, score: 0, notes: "" },
+    { name: "Fiber Organization at OTO", isCompleted: false, score: 0, notes: "" },
+    { name: "Outdoor Labeling cable at FDB", isCompleted: false, score: 0, notes: "" },
+    { name: "Pigtail Labeling at FDB", isCompleted: false, score: 0, notes: "" },
+    { name: "Outdoor labeling at BEP", isCompleted: false, score: 0, notes: "" },
+    { name: "Indoor labeling at BEP", isCompleted: false, score: 0, notes: "" },
+    { name: "Backcover labeling at BEP", isCompleted: false, score: 0, notes: "" },
+  ];
+
+  const [checkpoints, setCheckpoints] = useState(technicalCheckpoints);
   const [selectedOntType, setSelectedOntType] = useState("");
 
   const colors = {
@@ -97,9 +115,10 @@ const LabAssessment = () => {
   const [settings, setSettings] = useState(null);
 
   const getAssessmentStatus = (score) => {
-    const thresholds = settings?.thresholds || { pass: 85, average: 70, fail: 50 };
+    const thresholds = settings?.thresholds || { pass: 85, average: 70, fail: 50, labPassScore: 75 };
+    const passThreshold = thresholds.labPassScore || 75;
 
-    if (score >= thresholds.pass) return { label: "Excellent", color: "#2e7d32" };
+    if (score >= passThreshold) return { label: "Excellent", color: "#2e7d32" };
     if (score >= thresholds.average) return { label: "Pass (Minor Comments)", color: "#66bb6a" };
     if (score >= thresholds.fail) return { label: "Pass (With Comments)", color: "#ffa726" };
     return { label: "Fail", color: "#d32f2f" };
@@ -159,9 +178,9 @@ const LabAssessment = () => {
 
   // --- Assessment Form Handlers ---
   const handleCheckpointChange = (index, field, value) => {
-    // Validate score input to be within 0-10 range
+    // Validate score input to be within 0-5 range
     if (field === "score") {
-      if (value > 10) return;
+      if (value > 5) return;
       if (value < 0) value = 0;
     }
 
@@ -172,35 +191,36 @@ const LabAssessment = () => {
 
   const resetForm = () => {
     setComments("");
+    setSplicingMachineStatus("Good");
+    setElectrodeLifetime(0);
     setSelectedTeam(null);
     setSelectedOntType("");
-    setCheckpoints([
-      { name: "SSID Configuration", isCompleted: false, score: 0, notes: "" },
-      { name: "Channel Selection", isCompleted: false, score: 0, notes: "" },
-      { name: "Encryption Mode", isCompleted: false, score: 0, notes: "" },
-      { name: "IPv4 Support", isCompleted: false, score: 0, notes: "" },
-      { name: "IPv6 Support", isCompleted: false, score: 0, notes: "" },
-      { name: "Repeater Location", isCompleted: false, score: 0, notes: "" },
-      { name: "Repeater Configuration", isCompleted: false, score: 0, notes: "" },
-      { name: "WiFi Signal Meter App Used", isCompleted: false, score: 0, notes: "" },
-    ]);
+    setAssessmentType("Technical");
+    setCheckpoints(technicalCheckpoints);
     setIsEditing(false);
     setEditingId(null);
   };
 
   const handleSubmit = async () => {
-    if (!selectedTeam || !selectedOntType) {
-      toast.error("Please select a team and ONT type");
+    if (!selectedTeam) {
+      toast.error("Please select a team");
+      return;
+    }
+    if (assessmentType === "Technical" && !selectedOntType) {
+      toast.error("Please select an ONT type for Technical Assessment");
       return;
     }
 
-    const totalScore = (checkpoints.reduce((sum, cp) => sum + (Number(cp.score) || 0), 0) / (checkpoints.length * 10)) * 100;
+    const totalScore = (checkpoints.reduce((sum, cp) => sum + (Number(cp.score) || 0), 0) / (checkpoints.length * 5)) * 100;
 
     const payload = {
       fieldTeamId: selectedTeam._id,
-      ontType: selectedOntType,
+      ontType: assessmentType === "Technical" ? selectedOntType : undefined,
+      assessmentType: assessmentType,
       checkpoints: checkpoints,
       comments: comments,
+      splicingMachineStatus: assessmentType === "Infrastructure" ? splicingMachineStatus : undefined,
+      electrodeLifetime: assessmentType === "Infrastructure" ? Number(electrodeLifetime) : undefined,
       totalScore: Math.round(totalScore),
     };
 
@@ -252,9 +272,11 @@ const LabAssessment = () => {
     } else if (trackingFilter === "pending") {
       data = data.filter(t => !t.isTested);
     } else if (trackingFilter === "passed") {
-      data = data.filter(t => t.isTested && t.lastAssessment.totalScore >= 50);
+      const failThreshold = settings?.thresholds?.fail || 50;
+      data = data.filter(t => t.isTested && t.lastAssessment.totalScore >= failThreshold);
     } else if (trackingFilter === "failed") {
-      data = data.filter(t => t.isTested && t.lastAssessment.totalScore < 50);
+      const failThreshold = settings?.thresholds?.fail || 50;
+      data = data.filter(t => t.isTested && t.lastAssessment.totalScore < failThreshold);
     }
 
     // Apply Search
@@ -307,9 +329,12 @@ const LabAssessment = () => {
     // Populate form
     const team = fieldTeams.find(t => t._id === (assessment.fieldTeamId._id || assessment.fieldTeamId));
     setSelectedTeam(team);
+    setAssessmentType(assessment.assessmentType || "Technical");
     setSelectedOntType(assessment.ontType ? (assessment.ontType._id || assessment.ontType) : "");
     setCheckpoints(assessment.checkpoints);
     setComments(assessment.comments || "");
+    setSplicingMachineStatus(assessment.splicingMachineStatus || "Good");
+    setElectrodeLifetime(assessment.electrodeLifetime || 0);
     setIsEditing(true);
     setEditingId(assessment._id);
 
@@ -342,7 +367,7 @@ const LabAssessment = () => {
         checkpointMap[cp.name].count += 1;
         if (cp.isCompleted) checkpointMap[cp.name].completedCount += 1;
 
-        if (score >= 5) {
+        if (score >= 2.5) {
           checkpointMap[cp.name].passCount += 1;
         } else {
           checkpointMap[cp.name].failCount += 1;
@@ -426,6 +451,23 @@ const LabAssessment = () => {
                   )}
                 </Stack>
 
+                <Tabs
+                  value={assessmentType}
+                  onChange={(e, v) => {
+                    setAssessmentType(v);
+                    setCheckpoints(v === "Technical" ? technicalCheckpoints : infrastructureCheckpoints);
+                  }}
+                  sx={{
+                    mb: 2,
+                    '& .MuiTab-root': { color: colors.textSecondary },
+                    '& .Mui-selected': { color: colors.primary },
+                    '& .MuiTabs-indicator': { backgroundColor: colors.primary },
+                  }}
+                >
+                  <Tab label="Technical Assessment" value="Technical" />
+                  <Tab label="Infrastructure Assessment" value="Infrastructure" />
+                </Tabs>
+
                 <Autocomplete
                   options={fieldTeams}
                   getOptionLabel={(option) => `${option.teamName} (${option.teamCompany})`}
@@ -448,32 +490,76 @@ const LabAssessment = () => {
                   )}
                 />
 
-                <TextField
-                  select
-                  fullWidth
-                  label="Select ONT Type"
-                  value={selectedOntType}
-                  onChange={(e) => setSelectedOntType(e.target.value)}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      "& fieldset": { borderColor: colors.border },
-                      "&:hover fieldset": { borderColor: colors.primary },
-                      "&.Mui-focused fieldset": { borderColor: colors.primary },
-                    },
-                    "& .MuiInputLabel-root": { color: colors.textSecondary },
-                    select: { color: colors.textPrimary },
-                  }}
-                >
-                  {ontTypes.map((type) => (
-                    <MenuItem key={type._id} value={type._id}>
-                      {type.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                {assessmentType === "Technical" && (
+                  <TextField
+                    select
+                    fullWidth
+                    label="Select ONT Type"
+                    value={selectedOntType}
+                    onChange={(e) => setSelectedOntType(e.target.value)}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": { borderColor: colors.border },
+                        "&:hover fieldset": { borderColor: colors.primary },
+                        "&.Mui-focused fieldset": { borderColor: colors.primary },
+                      },
+                      "& .MuiInputLabel-root": { color: colors.textSecondary },
+                      select: { color: colors.textPrimary },
+                    }}
+                  >
+                    {ontTypes.map((type) => (
+                      <MenuItem key={type._id} value={type._id}>
+                        {type.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+
+                {assessmentType === "Infrastructure" && (
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Splicing Machine Status"
+                      value={splicingMachineStatus}
+                      onChange={(e) => setSplicingMachineStatus(e.target.value)}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": { borderColor: colors.border },
+                          "&:hover fieldset": { borderColor: colors.primary },
+                          "&.Mui-focused fieldset": { borderColor: colors.primary },
+                        },
+                        "& .MuiInputLabel-root": { color: colors.textSecondary },
+                        select: { color: colors.textPrimary },
+                      }}
+                    >
+                      <MenuItem value="Good">Good</MenuItem>
+                      <MenuItem value="Fair">Fair</MenuItem>
+                      <MenuItem value="Poor">Poor</MenuItem>
+                      <MenuItem value="Under Maintenance">Under Maintenance</MenuItem>
+                    </TextField>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Remaining Splices (Electrode Lifetime)"
+                      value={electrodeLifetime}
+                      onChange={(e) => setElectrodeLifetime(e.target.value)}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": { borderColor: colors.border },
+                          "&:hover fieldset": { borderColor: colors.primary },
+                          "&.Mui-focused fieldset": { borderColor: colors.primary },
+                        },
+                        "& .MuiInputLabel-root": { color: colors.textSecondary },
+                        input: { color: colors.textPrimary },
+                      }}
+                    />
+                  </Stack>
+                )}
 
                 <Divider sx={{ borderColor: colors.border }} />
 
-                {selectedTeam && selectedOntType && (
+                {selectedTeam && (assessmentType === "Infrastructure" || selectedOntType) && (
                   <>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, p: 2, bgcolor: colors.surfaceElevated, borderRadius: '8px', border: `1px solid ${colors.border}` }}>
                       <Typography variant="h6" sx={{ color: colors.primary }}>Assessment In Progress</Typography>
@@ -489,7 +575,7 @@ const LabAssessment = () => {
                           <TableRow>
                             <TableCell sx={{ color: colors.textSecondary, borderBottom: `1px solid ${colors.border}` }}>Checkpoint</TableCell>
                             <TableCell align="center" sx={{ color: colors.textSecondary, borderBottom: `1px solid ${colors.border}` }}>Completed</TableCell>
-                            <TableCell align="center" sx={{ color: colors.textSecondary, borderBottom: `1px solid ${colors.border}` }}>Score (0-10)</TableCell>
+                            <TableCell align="center" sx={{ color: colors.textSecondary, borderBottom: `1px solid ${colors.border}` }}>Score (0-5)</TableCell>
                             <TableCell sx={{ color: colors.textSecondary, borderBottom: `1px solid ${colors.border}` }}>Notes</TableCell>
                           </TableRow>
                         </TableHead>
@@ -510,7 +596,7 @@ const LabAssessment = () => {
                                   size="small"
                                   value={cp.score}
                                   onChange={(e) => handleCheckpointChange(index, "score", Number(e.target.value))}
-                                  inputProps={{ min: 0, max: 10 }}
+                                  inputProps={{ min: 0, max: 5 }}
                                   sx={{
                                     width: "80px",
                                     "& .MuiOutlinedInput-root": {
@@ -637,6 +723,12 @@ const LabAssessment = () => {
                   { field: 'teamName', headerName: 'Team Name', flex: 1, minWidth: 150 },
                   { field: 'teamCompany', headerName: 'Company', flex: 1, minWidth: 120 },
                   {
+                    field: 'lastAssessmentType',
+                    headerName: 'Last Test Type',
+                    width: 130,
+                    valueGetter: (value, row) => row.isTested ? row.lastAssessment.assessmentType : "-",
+                  },
+                  {
                     field: 'statusText',
                     headerName: 'Result',
                     width: 180,
@@ -650,6 +742,19 @@ const LabAssessment = () => {
                     }
                   },
                   { field: 'assessmentCount', headerName: 'Total Tests', type: 'number', width: 100, align: 'center', headerAlign: 'center' },
+                  {
+                    field: 'splicingMachineStatus',
+                    headerName: 'Splicing Status',
+                    width: 130,
+                    valueGetter: (value, row) => row.isTested ? row.lastAssessment.splicingMachineStatus : "-",
+                  },
+                  {
+                    field: 'electrodeLifetime',
+                    headerName: 'Splices Rem.',
+                    width: 100,
+                    type: 'number',
+                    valueGetter: (value, row) => row.isTested ? row.lastAssessment.electrodeLifetime : null,
+                  },
                   {
                     field: 'lastAssessmentScore',
                     headerName: 'Latest Score',
@@ -1022,7 +1127,10 @@ const LabAssessment = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ color: colors.textSecondary }}>Date</TableCell>
+                      <TableCell sx={{ color: colors.textSecondary }}>Type</TableCell>
                       <TableCell sx={{ color: colors.textSecondary }}>ONT Type</TableCell>
+                      <TableCell sx={{ color: colors.textSecondary }}>Splicing Status</TableCell>
+                      <TableCell sx={{ color: colors.textSecondary }}>Electrode Lifetime</TableCell>
                       <TableCell sx={{ color: colors.textSecondary }}>Score</TableCell>
                       <TableCell sx={{ color: colors.textSecondary }}>Actions</TableCell>
                     </TableRow>
@@ -1031,7 +1139,12 @@ const LabAssessment = () => {
                     {teamHistory.map((assess) => (
                       <TableRow key={assess._id}>
                         <TableCell sx={{ color: colors.textPrimary }}>{new Date(assess.createdAt).toLocaleString()}</TableCell>
+                        <TableCell sx={{ color: colors.textPrimary }}>
+                          <Chip label={assess.assessmentType || "Technical"} size="small" variant="outlined" sx={{ borderColor: colors.primary, color: colors.primary }} />
+                        </TableCell>
                         <TableCell sx={{ color: colors.textPrimary }}>{assess.ontType?.name || "-"}</TableCell>
+                        <TableCell sx={{ color: colors.textPrimary }}>{assess.splicingMachineStatus || "Good"}</TableCell>
+                        <TableCell sx={{ color: colors.textPrimary }}>{assess.electrodeLifetime || 0}</TableCell>
                         <TableCell sx={{ color: getAssessmentStatus(assess.totalScore).color, fontWeight: 'bold' }}>{assess.totalScore}%</TableCell>
                         <TableCell>
                           <IconButton size="small" onClick={() => handleEditAssessment(assess)} sx={{ color: colors.primary }}>
@@ -1046,6 +1159,41 @@ const LabAssessment = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
+            )}
+
+            {/* Checkpoint Notes Section */}
+            {teamHistory.some(a => a.checkpoints?.some(cp => cp.notes?.trim())) && (
+              <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(255, 167, 38, 0.05)', borderRadius: '12px', border: '1px dashed #ffa726' }}>
+                <Typography variant="h6" sx={{ color: "#ffa726", mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <NoteIcon fontSize="small" /> Checkpoint Observations (Notes)
+                </Typography>
+                <Stack spacing={2}>
+                  {teamHistory.map((assess) => {
+                    const notesWithContent = assess.checkpoints?.filter(cp => cp.notes?.trim());
+                    if (notesWithContent?.length === 0) return null;
+
+                    return (
+                      <Box key={`notes-${assess._id}`} sx={{ mb: 1 }}>
+                        <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                          {new Date(assess.createdAt).toLocaleDateString()} - {assess.ontType?.name || "N/A"}
+                        </Typography>
+                        <Stack spacing={0.5}>
+                          {notesWithContent.map((cp, idx) => (
+                            <Box key={idx} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                              <Typography variant="body2" sx={{ color: colors.primary, minWidth: '150px', fontWeight: 500 }}>
+                                • {cp.name}:
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: colors.textPrimary, fontStyle: 'italic' }}>
+                                "{cp.notes}"
+                              </Typography>
+                            </Box>
+                          ))}
+                        </Stack>
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              </Box>
             )}
 
             {/* Simple stats for this team */}

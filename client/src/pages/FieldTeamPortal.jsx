@@ -221,17 +221,21 @@ const FieldTeamPortal = () => {
     fetchSettings();
   }, []);
 
-  const getAssessmentStatus = (score) => {
-    const thresholds = settings?.thresholds || { pass: 85, average: 70, fail: 50 };
+  const getAssessmentStatus = (score, type = 'general') => {
+    const thresholds = settings?.thresholds || { pass: 85, average: 70, fail: 50, quizPassScore: 70, labPassScore: 75 };
 
-    if (score >= thresholds.pass) return { label: "Excellent", color: "#2e7d32" };
+    let passThreshold = thresholds.pass;
+    if (type === 'quiz') passThreshold = thresholds.quizPassScore || 70;
+    if (type === 'lab') passThreshold = thresholds.labPassScore || 75;
+
+    if (score >= passThreshold) return { label: "Excellent", color: "#2e7d32" };
     if (score >= thresholds.average) return { label: "Pass (Minor Comments)", color: "#66bb6a" };
     if (score >= thresholds.fail) return { label: "Pass (With Comments)", color: "#ffa726" };
     return { label: "Fail", color: "#d32f2f" };
   };
 
-  const getPerformanceColor = (score) => {
-    return getAssessmentStatus(score).color;
+  const getPerformanceColor = (score, type = 'general') => {
+    return getAssessmentStatus(score, type).color;
   };
 
   const formatDate = (dateString) => {
@@ -675,9 +679,9 @@ const FieldTeamPortal = () => {
               <Grid container spacing={3}>
                 {/* Scorecards */}
                 {[
-                  { title: 'Theoretical Avg', score: calculateAverageScore(quizResults), icon: <Quiz />, color: colors.primary, data: quizResults },
-                  { title: 'Practical Avg', score: calculateAverageScore(jobAssessments), icon: <Assignment />, color: colors.success, data: jobAssessments },
-                  { title: 'Lab Avg', score: calculateAverageScore(labAssessments), icon: <Assessment />, color: colors.warning, data: labAssessments }
+                  { title: 'Theoretical Avg', score: calculateAverageScore(quizResults), icon: <Quiz />, color: colors.primary, data: quizResults, type: 'quiz' },
+                  { title: 'Practical Avg', score: calculateAverageScore(jobAssessments), icon: <Assignment />, color: colors.success, data: jobAssessments, type: 'general' },
+                  { title: 'Lab Avg', score: calculateAverageScore(labAssessments), icon: <Assessment />, color: colors.warning, data: labAssessments, type: 'lab' }
                 ].map((card, i) => (
                   <Grid item xs={12} md={4} key={i}>
                     <Paper sx={{
@@ -699,13 +703,13 @@ const FieldTeamPortal = () => {
                       }
                     }}>
                       <Typography variant="overline" color={colors.textSecondary}>{card.title}</Typography>
-                      <Typography variant="h3" sx={{ fontWeight: 'bold', color: getAssessmentStatus(card.score).color, my: 1 }}>
+                      <Typography variant="h3" sx={{ fontWeight: 'bold', color: getAssessmentStatus(card.score, card.type).color, my: 1 }}>
                         {Math.round(card.score)}%
                       </Typography>
                       <Chip
-                        label={getAssessmentStatus(card.score).label}
+                        label={getAssessmentStatus(card.score, card.type).label}
                         size="small"
-                        sx={{ bgcolor: `${getAssessmentStatus(card.score).color}22`, color: getAssessmentStatus(card.score).color, border: `1px solid ${getAssessmentStatus(card.score).color}` }}
+                        sx={{ bgcolor: `${getAssessmentStatus(card.score, card.type).color}22`, color: getAssessmentStatus(card.score, card.type).color, border: `1px solid ${getAssessmentStatus(card.score, card.type).color}` }}
                       />
                       {card.data.length > 1 && (() => {
                         const current = card.data[0]?.percentage || card.data[0]?.overallScore || card.data[0]?.totalScore || 0;
@@ -767,7 +771,7 @@ const FieldTeamPortal = () => {
                 <Chip
                   label={`Avg: ${Math.round(calculateAverageScore(quizResults))}%`}
                   variant="outlined"
-                  sx={{ borderColor: getPerformanceColor(calculateAverageScore(quizResults)), color: getPerformanceColor(calculateAverageScore(quizResults)) }}
+                  sx={{ borderColor: getPerformanceColor(calculateAverageScore(quizResults), 'quiz'), color: getPerformanceColor(calculateAverageScore(quizResults), 'quiz') }}
                 />
               </Box>
 
@@ -986,7 +990,9 @@ const FieldTeamPortal = () => {
                       <TableHead sx={darkThemeStyles.tableHead}>
                         <TableRow>
                           <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
+                          <TableCell sx={darkThemeStyles.tableCell}>Type</TableCell>
                           <TableCell sx={darkThemeStyles.tableCell}>ONT Type</TableCell>
+                          <TableCell sx={darkThemeStyles.tableCell}>Splicing Status</TableCell>
                           <TableCell sx={darkThemeStyles.tableCell}>Score</TableCell>
                           <TableCell sx={darkThemeStyles.tableCell}>Comments</TableCell>
                         </TableRow>
@@ -1003,7 +1009,24 @@ const FieldTeamPortal = () => {
                               }}
                             >
                               <TableCell sx={darkThemeStyles.tableCell}>{formatDate(assessment.createdAt)}</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>
+                                <Chip label={assessment.assessmentType || 'Technical'} size="small" variant="outlined" sx={{ color: colors.primary, borderColor: colors.primary }} />
+                              </TableCell>
                               <TableCell sx={darkThemeStyles.tableCell}>{assessment.ontType?.name || 'N/A'}</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>
+                                {assessment.assessmentType === 'Infrastructure' ? (
+                                  <Chip
+                                    label={assessment.splicingMachineStatus || 'Good'}
+                                    size="small"
+                                    sx={{
+                                      bgcolor: assessment.splicingMachineStatus === 'Poor' ? `${colors.error}22` : assessment.splicingMachineStatus === 'Fair' ? `${colors.warning}22` : `${colors.success}22`,
+                                      color: assessment.splicingMachineStatus === 'Poor' ? colors.error : assessment.splicingMachineStatus === 'Fair' ? colors.warning : colors.success,
+                                      borderColor: assessment.splicingMachineStatus === 'Poor' ? colors.error : assessment.splicingMachineStatus === 'Fair' ? colors.warning : colors.success,
+                                    }}
+                                    variant="outlined"
+                                  />
+                                ) : 'N/A'}
+                              </TableCell>
                               <TableCell sx={darkThemeStyles.tableCell}>
                                 <Chip
                                   label={`${assessment.totalScore}%`}

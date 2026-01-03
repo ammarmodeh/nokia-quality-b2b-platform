@@ -61,6 +61,7 @@ const PerfAssessmentDashboard = () => {
   const [currentResult, setCurrentResult] = useState(null);
   const [essayScores, setEssayScores] = useState({});
   const [questionFilter, setQuestionFilter] = useState('all');
+  const [settings, setSettings] = useState(null);
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:503px)');
   const [exporting, setExporting] = useState(false);
@@ -80,6 +81,16 @@ const PerfAssessmentDashboard = () => {
     };
 
     fetchAllTeams();
+
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get('/settings');
+        setSettings(response.data);
+      } catch (err) {
+        console.error('Failed to fetch settings');
+      }
+    };
+    fetchSettings();
   }, []);
 
   useEffect(() => {
@@ -205,8 +216,11 @@ const PerfAssessmentDashboard = () => {
   };
 
   const getPerformanceColor = (percentage) => {
-    if (percentage >= 80) return 'success';
-    if (percentage >= 50) return 'warning';
+    const thresholds = settings?.thresholds || { pass: 85, average: 70, fail: 50, quizPassScore: 70 };
+    const passThreshold = thresholds.quizPassScore || 70;
+
+    if (percentage >= passThreshold) return 'success';
+    if (percentage >= thresholds.fail) return 'warning';
     return 'error';
   };
 

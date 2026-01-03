@@ -16,10 +16,15 @@ const labAssessmentSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    assessmentType: {
+      type: String,
+      enum: ["Technical", "Infrastructure"],
+      default: "Technical",
+    },
     ontType: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ONTType",
-      required: [true, "ONT Type is required"],
+      required: false,
     },
     checkpoints: [
       {
@@ -32,6 +37,14 @@ const labAssessmentSchema = new mongoose.Schema(
     comments: {
       type: String,
       trim: true,
+    },
+    splicingMachineStatus: {
+      type: String,
+      default: "Good",
+    },
+    electrodeLifetime: {
+      type: Number,
+      default: 0,
     },
     totalScore: {
       type: Number,

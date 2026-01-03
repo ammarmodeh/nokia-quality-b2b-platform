@@ -39,6 +39,8 @@ const settingsSchema = new mongoose.Schema(
       pass: { type: Number, default: 85 },
       average: { type: Number, default: 70 },
       fail: { type: Number, default: 50 },
+      quizPassScore: { type: Number, default: 70 },
+      labPassScore: { type: Number, default: 75 },
     },
     notifications: {
       emailAlerts: { type: Boolean, default: true },

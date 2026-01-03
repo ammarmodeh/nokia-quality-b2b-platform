@@ -5,8 +5,11 @@ export const createAssessment = async (req, res) => {
     const {
       fieldTeamId,
       ontType,
+      assessmentType,
       checkpoints,
       comments,
+      splicingMachineStatus,
+      electrodeLifetime,
       totalScore,
     } = req.body;
 
@@ -16,8 +19,11 @@ export const createAssessment = async (req, res) => {
       fieldTeamId,
       assessorId,
       ontType,
+      assessmentType,
       checkpoints,
-      comments, // Fixed spelling from implementation plan if needed
+      comments,
+      splicingMachineStatus,
+      electrodeLifetime,
       totalScore,
     });
 
@@ -64,8 +70,11 @@ export const updateAssessment = async (req, res) => {
     const {
       fieldTeamId,
       ontType,
+      assessmentType,
       checkpoints,
       comments,
+      splicingMachineStatus,
+      electrodeLifetime,
       totalScore,
     } = req.body;
 
@@ -76,9 +85,12 @@ export const updateAssessment = async (req, res) => {
     }
 
     assessment.fieldTeamId = fieldTeamId || assessment.fieldTeamId;
-    assessment.ontType = ontType || assessment.ontType;
+    assessment.ontType = ontType !== undefined ? ontType : assessment.ontType;
+    assessment.assessmentType = assessmentType || assessment.assessmentType;
     assessment.checkpoints = checkpoints || assessment.checkpoints;
     assessment.comments = comments !== undefined ? comments : assessment.comments;
+    assessment.splicingMachineStatus = splicingMachineStatus !== undefined ? splicingMachineStatus : assessment.splicingMachineStatus;
+    assessment.electrodeLifetime = electrodeLifetime !== undefined ? electrodeLifetime : assessment.electrodeLifetime;
     assessment.totalScore = totalScore !== undefined ? totalScore : assessment.totalScore;
 
     const updatedAssessment = await assessment.save();
