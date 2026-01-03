@@ -59,7 +59,6 @@ const SettingsPage = () => {
       clientName: "",
       projectManager: "",
       globalTimer: 60,
-      assessmentTimer: 45,
       sessionTimeout: 30,
       thresholds: {
         pass: 85,
@@ -135,7 +134,12 @@ const SettingsPage = () => {
 
   const textFieldStyles = {
     '& .MuiInputBase-root': { color: '#ffffff' },
-    '& .MuiInputLabel-root': { color: '#b3b3b3' },
+    '& .MuiInputLabel-root': {
+      color: '#b3b3b3',
+      '&.Mui-disabled': {
+        color: '#b3b3b3'
+      }
+    },
     '& .MuiOutlinedInput-root': {
       '& fieldset': { borderColor: editMode ? '#e5e7eb' : 'transparent' },
       '&:hover fieldset': { borderColor: editMode ? '#666' : 'transparent' },
@@ -143,7 +147,12 @@ const SettingsPage = () => {
       backgroundColor: editMode ? '#252525' : 'transparent',
       borderRadius: '4px',
     },
-    '& .Mui-disabled': { WebkitTextFillColor: '#ffffff !important' }
+    '& .Mui-disabled': {
+      WebkitTextFillColor: '#ffffff !important',
+      '& .MuiInputBase-input': {
+        WebkitTextFillColor: '#ffffff !important'
+      }
+    }
   };
 
   return (
@@ -194,6 +203,7 @@ const SettingsPage = () => {
                 label="Project Name"
                 disabled={!editMode}
                 {...register("projectName")}
+                InputLabelProps={{ shrink: true }}
                 sx={textFieldStyles}
               />
             </Grid>
@@ -203,6 +213,7 @@ const SettingsPage = () => {
                 label="Project ID / Code"
                 disabled={!editMode}
                 {...register("projectID")}
+                InputLabelProps={{ shrink: true }}
                 sx={textFieldStyles}
               />
             </Grid>
@@ -212,6 +223,7 @@ const SettingsPage = () => {
                 label="Client Name"
                 disabled={!editMode}
                 {...register("clientName")}
+                InputLabelProps={{ shrink: true }}
                 sx={textFieldStyles}
               />
             </Grid>
@@ -221,6 +233,7 @@ const SettingsPage = () => {
                 label="Project Manager"
                 disabled={!editMode}
                 {...register("projectManager")}
+                InputLabelProps={{ shrink: true }}
                 sx={textFieldStyles}
               />
             </Grid>
@@ -232,6 +245,7 @@ const SettingsPage = () => {
                 rows={3}
                 disabled={!editMode}
                 {...register("projectBrief")}
+                InputLabelProps={{ shrink: true }}
                 sx={textFieldStyles}
               />
             </Grid>
@@ -241,7 +255,7 @@ const SettingsPage = () => {
 
           <SectionHeader title="Timer Configuration" icon={TimerIcon} />
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 type="number"
@@ -256,22 +270,7 @@ const SettingsPage = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Assessment Timer (Min)"
-                disabled={!editMode}
-                {...register("assessmentTimer", { min: 1, max: 180 })}
-                error={!!errors.assessmentTimer}
-                helperText={errors.assessmentTimer ? "Value must be between 1 and 180" : ""}
-                sx={textFieldStyles}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start"><TimerIcon sx={{ color: '#666' }} /></InputAdornment>
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 type="number"

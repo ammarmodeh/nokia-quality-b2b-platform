@@ -19,7 +19,6 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import * as XLSX from 'xlsx';
 import api from "../api/api";
 import { useSelector } from "react-redux";
-import { Timer } from "../components/Timer";
 import { toast } from "sonner";
 import AssessmentDetail from "../components/AssessmentDetail";
 import AssessmentForm from "../components/AssessmentForm";
@@ -1186,12 +1185,8 @@ const OnTheJobAssessment = () => {
             New Assessment for {selectedTeam.teamName}
           </DialogTitle>
           <DialogContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, p: 2, bgcolor: colors.surfaceElevated, borderRadius: '8px', border: `1px solid ${colors.border}` }}>
+            <Box sx={{ mb: 2, p: 2, bgcolor: colors.surfaceElevated, borderRadius: '8px', border: `1px solid ${colors.border}` }}>
               <Typography variant="h6" sx={{ color: colors.primary }}>Assessment In Progress</Typography>
-              <Timer
-                timeLimit={(settings?.assessmentTimer || 45) * 60}
-                onTimeUp={() => toast.error("Time is up! Please submit the assessment.")}
-              />
             </Box>
             <MemoizedAssessmentForm
               key={selectedTeam?._id || 'new-assessment'}

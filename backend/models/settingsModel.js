@@ -15,10 +15,6 @@ const settingsSchema = new mongoose.Schema(
       type: Number,
       default: 60, // Default timer in minutes or seconds depending on implementation
     },
-    assessmentTimer: {
-      type: Number,
-      default: 45, // Default assessment timer in minutes
-    },
     sessionTimeout: {
       type: Number,
       default: 30, // Default session timeout in minutes

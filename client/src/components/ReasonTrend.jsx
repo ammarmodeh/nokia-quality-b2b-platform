@@ -1,377 +1,181 @@
-import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-import { Card as MUICard, CardContent, Typography, Box, Stack, Chip, CircularProgress, Tooltip } from "@mui/material";
+import { useMemo } from "react";
+import {
+  Box,
+  Stack,
+  Typography,
+  Chip,
+  Tooltip,
+  Paper,
+  Grid
+} from "@mui/material";
+import { DataGrid } from '@mui/x-data-grid';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Cell,
+  Legend
+} from 'recharts';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import RemoveIcon from '@mui/icons-material/Remove';
+import { groupTasksByWeek, calculateReasonTrends } from "../utils/benchmarkUtils";
 
-// Helper functions (unchanged)
-const groupTasksByWeek = (tasks) => {
-  const groupedTasks = {};
+const ReasonTrend = ({ tasks, selectedWeek }) => {
+  const trends = useMemo(() => {
+    if (!tasks || tasks.length === 0) return [];
+    const grouped = groupTasksByWeek(tasks);
+    return calculateReasonTrends(grouped);
+  }, [tasks]);
 
-  tasks.forEach((task) => {
-    if (!task.interviewDate) {
-      // console.warn("Task missing interviewDate:", task);
-      return; // Skip tasks without interviewDate
-    }
+  const currentTrend = useMemo(() => {
+    return trends.find(t => t.week === selectedWeek);
+  }, [trends, selectedWeek]);
 
-    const date = new Date(task.interviewDate); // Use interviewDate
-    const weekNumber = getWeekNumber(date);
+  const chartData = useMemo(() => {
+    if (!currentTrend) return [];
+    return Object.entries(currentTrend.reasons)
+      .map(([name, count]) => ({
+        name,
+        count,
+        change: currentTrend.comparison?.[name] || 0
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [currentTrend]);
 
-    if (!groupedTasks[weekNumber]) {
-      groupedTasks[weekNumber] = [];
-    }
-
-    groupedTasks[weekNumber].push(task);
-  });
-
-  return groupedTasks;
-};
-
-const getWeekNumber = (date) => {
-  const startDate = new Date("2025-01-05"); // Week 1 starts on 5th January 2025
-  const timeDifference = date - startDate;
-  const daysDifference = timeDifference / (1000 * 60 * 60 * 24);
-  return Math.floor(daysDifference / 7) + 1; // Calculate week number
-};
-
-const countReasonsAndCategories = (tasks) => {
-  const reasons = {};
-  const categories = {
-    detractor: 0,
-    neutral: 0,
-    promoter: 0,
-  };
-
-  tasks.forEach((task) => {
-    if (!task.reason) {
-      // console.warn("Task missing reason:", task);
-      return; // Skip tasks without reason
-    }
-
-    // Count reasons
-    if (!reasons[task.reason]) {
-      reasons[task.reason] = 0;
-    }
-    reasons[task.reason]++;
-
-    // Categorize tasks based on evaluationScore
-    if (task.evaluationScore >= 1 && task.evaluationScore <= 6) {
-      categories.detractor++;
-    } else if (task.evaluationScore >= 7 && task.evaluationScore <= 8) {
-      categories.neutral++;
-    } else if (task.evaluationScore >= 9 && task.evaluationScore <= 10) {
-      categories.promoter++;
-    }
-  });
-
-  return { reasons, categories };
-};
-
-const compareReasons = (currentReasons, previousReasons) => {
-  const comparison = {};
-
-  Object.keys(currentReasons).forEach((reason) => {
-    const currentCount = currentReasons[reason];
-    const previousCount = previousReasons[reason] || 0;
-    comparison[reason] = currentCount - previousCount;
-  });
-
-  return comparison;
-};
-
-const calculateReasonTrends = (groupedTasks) => {
-  const weeks = Object.keys(groupedTasks).sort((a, b) => a - b);
-  const trends = [];
-
-  weeks.forEach((week, index) => {
-    const currentWeekTasks = groupedTasks[week];
-    const previousWeekTasks = groupedTasks[weeks[index - 1]] || [];
-
-    const { reasons: currentWeekReasons, categories: currentWeekCategories } =
-      countReasonsAndCategories(currentWeekTasks);
-    const { reasons: previousWeekReasons } = countReasonsAndCategories(previousWeekTasks);
-
-    const trend = {
-      week,
-      totalTasks: currentWeekTasks.length, // Total tasks for the week
-      reasons: currentWeekReasons,
-      categories: currentWeekCategories, // Detractor, Neutral, Promoter counts
-      comparison: index === 0 ? null : compareReasons(currentWeekReasons, previousWeekReasons), // No comparison for the first week
-    };
-
-    trends.push(trend);
-  });
-
-  return trends;
-};
-
-// Card component to display weekly trends
-const Card = ({ trend }) => {
-  if (!trend) {
-    return (
-      <MUICard
-        sx={{
-          minWidth: 400,
-          boxShadow: 1,
-          background: "#2d2d2d",
-          color: "#e0e0e0",
-        }}
-      >
-        <CardContent>
-          <Typography variant="h6" sx={{ color: "#b0b0b0" }}>
-            No Data Available
-          </Typography>
-        </CardContent>
-      </MUICard>
-    );
-  }
-
-  const { week, totalTasks, reasons, categories, comparison } = trend;
-
-  const getWeekDateRange = (week) => {
-    const startDate = new Date(2025, 0, 5); // January 5, 2025 (month is 0-indexed)
-    const startOfWeek = new Date(startDate.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
-    const endOfWeek = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000);
-
-    const formatDate = (date) =>
-      date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-
-    return `${formatDate(startOfWeek)} - ${formatDate(endOfWeek)}`;
-  };
-
-  // Sort reasons in descending order based on their counts
-  const sortedReasons = Object.entries(reasons).sort((a, b) => b[1] - a[1]);
-
-  // Settings for the card slider
-  const cardSliderSettings = {
-    dots: true,
-    infinite: true,
-    speed: 500,
-    slidesToShow: 3,
-    slidesToScroll: 1,
-    responsive: [
-      {
-        breakpoint: 1024,
-        settings: {
-          slidesToShow: 1,
-          slidesToScroll: 1,
-        },
-      },
-      {
-        breakpoint: 768,
-        settings: {
-          slidesToShow: 1,
-          slidesToScroll: 1,
-        },
-      },
-    ],
-  };
-
-  return (
-    <MUICard
-      sx={{
-        boxShadow: 1,
-        background: "#2d2d2d",
-        color: "#e0e0e0",
-        mx: '4px',
-        transition: "transform 0.3s ease, box-shadow 0.3s ease",
-      }}
-    >
-      <CardContent sx={{
-        padding: '30px'
-      }}>
-        <Stack direction="row" justifyContent="space-between" sx={{ mb: 2 }}>
-          <Chip
-            label={`Week ${week}`}
-            sx={{ mb: 2, backgroundColor: "#ffffff29", color: "#e0e0e0" }}
-          />
-          <Typography variant="body1" sx={{ color: "#b3b3b3", mb: 2, fontFamily: 'IBM Plex Mono', fontSize: '10px' }}>
-            {getWeekDateRange(week)}
-          </Typography>
-        </Stack>
-
-        <Stack direction="row" gap={3} sx={{ overflow: 'hidden' }}>
-          <Tooltip title={`Total Tasks: ${totalTasks}`} arrow>
-            <Typography
-              variant="body1"
-              sx={{
-                color: "#b3b3b3",
-                mb: 2,
-                fontFamily: 'IBM Plex Mono',
-                fontSize: { xs: '11px', sm: '13px' },
-                fontWeight: 'bold',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}
-            >
-              Total Tasks: {totalTasks}
+  const columns = [
+    {
+      field: 'name',
+      headerName: 'Root Cause Reason',
+      flex: 1,
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{ fontWeight: 600, color: '#e0e0e0' }}>
+          {params.value}
+        </Typography>
+      )
+    },
+    {
+      field: 'count',
+      headerName: 'Occurrence',
+      width: 150,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Chip
+          label={params.value}
+          size="small"
+          sx={{ bgcolor: '#7b68ee22', color: '#7b68ee', fontWeight: 700, border: '1px solid #7b68ee44' }}
+        />
+      )
+    },
+    {
+      field: 'change',
+      headerName: 'vs Last Week',
+      width: 180,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const value = params.value;
+        if (value === 0) return <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: '#b0b0b0' }}><RemoveIcon fontSize="small" /><Typography variant="caption">No change</Typography></Stack>;
+        const isImprovement = value < 0;
+        return (
+          <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: isImprovement ? '#4caf50' : '#f44336' }}>
+            {isImprovement ? <TrendingDownIcon fontSize="small" /> : <TrendingUpIcon fontSize="small" />}
+            <Typography variant="caption" sx={{ fontWeight: 700 }}>
+              {Math.abs(value)} {isImprovement ? 'Fewer' : 'More'}
             </Typography>
-          </Tooltip>
+          </Stack>
+        );
+      }
+    }
+  ];
 
-          <Tooltip title={`Detractors: ${categories.detractor}`} arrow>
-            <Typography
-              variant="body1"
-              sx={{
-                color: "#b3b3b3",
-                mb: 2,
-                fontFamily: 'IBM Plex Mono',
-                fontSize: { xs: '11px', sm: '13px' },
-                fontWeight: 'bold',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}
-            >
-              Detractors: {categories.detractor}
-            </Typography>
-          </Tooltip>
-
-          <Tooltip title={`Neutrals: ${categories.neutral}`} arrow>
-            <Typography
-              variant="body1"
-              sx={{
-                color: "#b3b3b3",
-                mb: 2,
-                fontFamily: 'IBM Plex Mono',
-                fontSize: { xs: '11px', sm: '13px' },
-                fontWeight: 'bold',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}
-            >
-              Neutrals: {categories.neutral}
-            </Typography>
-          </Tooltip>
-        </Stack>
-
-        {/* Slider for reasons */}
-        <Slider {...cardSliderSettings}>
-          {sortedReasons.map(([reason, count]) => (
-            <div key={reason} style={{ padding: "0 8px" }}>
-              <Box
-                sx={{
-                  border: "1px solid #f3f4f6",
-                  borderRadius: "4px",
-                  padding: "8px",
-                  backgroundColor: "#2a2a2a",
-                }}
-              >
-                <Typography variant="body1" sx={{ color: "#e0e0e0" }}>
-                  {reason}: {count}
-                </Typography>
-                {comparison !== null && comparison[reason] !== undefined && (
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color:
-                        comparison[reason] > 0
-                          ? "#F44336" // Red for increase (issue)
-                          : comparison[reason] < 0
-                            ? "#4CAF50" // Green for decrease (improvement)
-                            : "#b0b0b0", // Gray for no change
-                    }}
-                  >
-                    {comparison[reason] >= 0 ? "+" : ""}
-                    {comparison[reason]} compared to last week
-                  </Typography>
-                )}
-              </Box>
-            </div>
-          ))}
-        </Slider>
-      </CardContent>
-    </MUICard>
+  if (!currentTrend) return (
+    <Box p={4} textAlign="center">
+      <Typography color="#b3b3b3">No data available for the selected week.</Typography>
+    </Box>
   );
-};
 
-// Slider component to navigate through weeks
-const WeekSlider = ({ trends }) => {
-  const settings = {
-    // infinite: true,
-    dots: true,
-    speed: 500,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-    rows: 1,
-    focusOnSelect: true,
-    swipe: false,          // Disable swipe gestures
-    draggable: false,      // Disable dragging
-    // arrows: false,         // Hide default arrows since we're using custom ones
-    touchMove: false
+  const colors = {
+    primary: "#7b68ee",
+    error: "#f44336",
+    success: "#4caf50",
+    textSecondary: "#b3b3b3",
+    border: "#3d3d3d",
+    surface: "#252525"
   };
 
-  if (!trends || trends.length === 0) {
-    return (
-      <MUICard
-        sx={{
-          boxShadow: 1,
-          // background: "#2d2d2d",
-          color: "#e0e0e0",
-        }}
-      >
-        <CardContent>
-          <Typography variant="h6" sx={{ color: "#b0b0b0" }}>
-            No Trends Available
-          </Typography>
-        </CardContent>
-      </MUICard>
-    );
-  }
-
   return (
-    <div style={{ height: "300px", padding: "0" }}>
-      <Slider {...settings}>
-        {trends.map((trend, index) => (
-          <div key={index}>
-            <Card trend={trend} />
-          </div>
-        ))}
-      </Slider>
-    </div>
-  );
-};
-
-// Main component to group tasks, calculate trends, and render the slider
-const WeeklyTrends = ({ tasks }) => {
-  if (!tasks || tasks.length === 0) {
-    return (
-      <MUICard
-        sx={{
-          minWidth: 200,
-          boxShadow: 1,
-          // background: "#2d2d2d",
-          color: "#e0e0e0",
-        }}
-      >
-        <CardContent
-          sx={{
-            padding: '30px'
-          }}
-        >
-          <Typography variant="h6" sx={{ color: "#b0b0b0" }}>
-            <CircularProgress size={24} />
+    <Box>
+      <Grid container spacing={0}>
+        <Grid item xs={12} lg={7} sx={{ borderRight: { lg: `1px solid ${colors.border}` }, p: 3 }}>
+          <Typography variant="subtitle2" sx={{ color: colors.textSecondary, mb: 3, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            Reason Frequency Distribution
           </Typography>
-        </CardContent>
-      </MUICard>
-    );
-  }
+          <Box sx={{ height: 400, width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#3d3d3d" horizontal={false} />
+                <XAxis type="number" hide />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  width={150}
+                  tick={{ fill: colors.textSecondary, fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <RechartsTooltip
+                  contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, color: '#fff' }}
+                  itemStyle={{ color: colors.primary }}
+                  cursor={{ fill: 'rgba(123, 104, 238, 0.1)' }}
+                />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.count > 5 ? colors.error : colors.primary} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </Box>
+        </Grid>
 
-  const groupedTasks = groupTasksByWeek(tasks);
-  const trends = calculateReasonTrends(groupedTasks);
-
-  return <WeekSlider trends={trends} />;
-};
-
-const ReasonTrend = ({ tasks }) => {
-  return (
-    <div style={{ padding: "8px 0 0" }}>
-      <WeeklyTrends tasks={tasks} />
-    </div>
+        <Grid item xs={12} lg={5} sx={{ p: 3 }}>
+          <Typography variant="subtitle2" sx={{ color: colors.textSecondary, mb: 3, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            Detailed Comparison
+          </Typography>
+          <Box sx={{ height: 400, width: '100%' }}>
+            <DataGrid
+              rows={chartData.map((d, i) => ({ id: i, ...d }))}
+              columns={columns}
+              hideFooter
+              density="compact"
+              sx={{
+                border: 'none',
+                '& .MuiDataGrid-columnHeaders': {
+                  bgcolor: 'transparent',
+                  color: colors.textSecondary,
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  borderBottom: `1px solid ${colors.border}`
+                },
+                '& .MuiDataGrid-cell': {
+                  borderBottom: `1px solid ${colors.border}`
+                },
+                '& .MuiDataGrid-row:hover': {
+                  bgcolor: 'rgba(123, 104, 238, 0.05)'
+                },
+                color: '#fff'
+              }}
+            />
+          </Box>
+        </Grid>
+      </Grid>
+    </Box>
   );
 };
 

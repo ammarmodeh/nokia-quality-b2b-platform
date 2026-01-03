@@ -1,372 +1,211 @@
-import { Card as MUICard, CardContent, Typography, Stack, Chip, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from "@mui/material";
-import Slider from "react-slick";
+import { useMemo } from "react";
+import {
+  Box,
+  Stack,
+  Typography,
+  Chip,
+  Button,
+  Grid,
+  Paper
+} from "@mui/material";
+import { DataGrid } from '@mui/x-data-grid';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Cell
+} from 'recharts';
+import DownloadIcon from '@mui/icons-material/Download';
 import * as XLSX from "xlsx";
+import { groupTasksByWeek, calculateTeamViolationTrends } from "../utils/benchmarkUtils";
 
-// Helper function to group tasks by week based on interviewDate
-const groupTasksByWeek = (tasks) => {
-  const groupedTasks = {};
+const TeamViolationTrend = ({ tasks, selectedWeek }) => {
+  const trends = useMemo(() => {
+    if (!tasks || tasks.length === 0) return [];
+    const grouped = groupTasksByWeek(tasks);
+    return calculateTeamViolationTrends(grouped);
+  }, [tasks]);
 
-  tasks.forEach((task) => {
-    if (!task.interviewDate) {
-      // console.warn("Task missing interviewDate:", task);
-      return; // Skip tasks without interviewDate
-    }
+  const currentTrend = useMemo(() => {
+    return trends.find(t => t.week === selectedWeek);
+  }, [trends, selectedWeek]);
 
-    const date = new Date(task.interviewDate); // Use interviewDate
-    const weekNumber = getWeekNumber(date);
+  const rows = useMemo(() => {
+    if (!currentTrend) return [];
+    return currentTrend.violations.map((v, i) => ({ id: i, ...v }));
+  }, [currentTrend]);
 
-    if (!groupedTasks[weekNumber]) {
-      groupedTasks[weekNumber] = [];
-    }
+  const chartData = useMemo(() => {
+    return rows
+      .sort((a, b) => b.currentWeekViolations - a.currentWeekViolations)
+      .slice(0, 5); // Top 5 offenders
+  }, [rows]);
 
-    groupedTasks[weekNumber].push(task);
-  });
+  const exportToExcel = () => {
+    if (!currentTrend) return;
+    const workbook = XLSX.utils.book_new();
+    const worksheetData = [
+      ["Team", "Current Week Violations", "Current Week Detractors", "Current Week Neutrals", "Total Violations", "Total Detractors", "Total Neutrals", "Violated Weeks"]
+    ];
 
-  return groupedTasks;
-};
-
-// Helper function to get the week number of a date relative to 5th January 2025
-const getWeekNumber = (date) => {
-  const startDate = new Date("2025-01-05"); // Week 1 starts on 5th January 2025
-  const timeDifference = date - startDate;
-  const daysDifference = timeDifference / (1000 * 60 * 60 * 24);
-  return Math.floor(daysDifference / 7) + 1; // Calculate week number
-};
-
-// Helper function to count violations per team and accumulate violated weeks up to the current week
-const countViolationsPerTeam = (groupedTasks, currentWeek) => {
-  const violations = {};
-
-  // Iterate through all weeks up to the current week
-  Object.keys(groupedTasks)
-    .filter((week) => parseInt(week) <= currentWeek) // Only include weeks up to the current week
-    .forEach((week) => {
-      const tasks = groupedTasks[week];
-
-      tasks.forEach((task) => {
-        if (!task.teamName) {
-          // console.warn("Task missing team:", task);
-          return; // Skip tasks without team
-        }
-
-        if (!violations[task.teamName]) {
-          violations[task.teamName] = {
-            totalViolations: 0,
-            currentWeekViolations: 0,
-            currentWeekDetractors: 0,
-            currentWeekNeutrals: 0,
-            totalDetractors: 0,
-            totalNeutrals: 0,
-            violatedWeeks: new Set(), // Use a Set to store unique weeks
-          };
-        }
-
-        // Count total violations
-        violations[task.teamName].totalViolations++;
-
-        // Count total detractors (evaluationScore 1-6)
-        if (task.evaluationScore >= 1 && task.evaluationScore <= 6) {
-          violations[task.teamName].totalDetractors++;
-        }
-
-        // Count total neutrals (evaluationScore 7-8)
-        if (task.evaluationScore >= 7 && task.evaluationScore <= 8) {
-          violations[task.teamName].totalNeutrals++;
-        }
-
-        // Add the violated week
-        const weekNumber = getWeekNumber(new Date(task.interviewDate));
-        violations[task.teamName].violatedWeeks.add(weekNumber);
-
-        // Count current week violations
-        if (weekNumber === currentWeek) {
-          violations[task.teamName].currentWeekViolations++;
-
-          // Count current week detractors (evaluationScore 1-6)
-          if (task.evaluationScore >= 1 && task.evaluationScore <= 6) {
-            violations[task.teamName].currentWeekDetractors++;
-          }
-
-          // Count current week neutrals (evaluationScore 7-8)
-          if (task.evaluationScore >= 7 && task.evaluationScore <= 8) {
-            violations[task.teamName].currentWeekNeutrals++;
-          }
-        }
-      });
+    rows.forEach(v => {
+      worksheetData.push([
+        v.teamName,
+        v.currentWeekViolations,
+        v.currentWeekDetractors,
+        v.currentWeekNeutrals,
+        v.totalViolations,
+        v.totalDetractors,
+        v.totalNeutrals,
+        v.violatedWeeks.map(w => `W${w}`).join(", ")
+      ]);
     });
 
-  // Convert the Set of violated weeks to a sorted array
-  Object.keys(violations).forEach((team) => {
-    violations[team].violatedWeeks = Array.from(violations[team].violatedWeeks)
-      .sort((a, b) => a - b)
-      .map((week) => `Wk${week}`); // Format as "Wk1, Wk2, ..."
-  });
-
-  return violations;
-};
-
-// Main function to calculate weekly trends
-const calculateTeamViolationTrends = (groupedTasks) => {
-  const weeks = Object.keys(groupedTasks).sort((a, b) => a - b);
-  const trends = [];
-
-  weeks.forEach((week) => {
-    // Calculate violations up to the current week
-    const allViolations = countViolationsPerTeam(groupedTasks, parseInt(week));
-
-    // Filter violations to include only teams that violated in the current week
-    const currentWeekTasks = groupedTasks[week] || [];
-    const currentWeekTeams = new Set(currentWeekTasks.map(task => task.teamName));
-    const violations = Object.keys(allViolations)
-      .filter(team => currentWeekTeams.has(team))
-      .reduce((obj, key) => {
-        obj[key] = allViolations[key];
-        return obj;
-      }, {});
-
-    const trend = {
-      week,
-      violations, // Use the filtered violations for the current week
-    };
-
-    trends.push(trend);
-  });
-
-  return trends;
-};
-
-// Helper function to convert table data to CSV
-const exportToExcel = (trend) => {
-  const { week, violations } = trend;
-
-  // Create a new workbook
-  const workbook = XLSX.utils.book_new();
-
-  // Create a new worksheet
-  const worksheetData = [];
-
-  // Headers
-  const headers = [
-    "Team",
-    "Current Week Violations",
-    "Current Week Detractors",
-    "Current Week Neutrals",
-    "Total Violations",
-    "Total Detractors",
-    "Total Neutrals",
-    "Violated Weeks",
-  ];
-  worksheetData.push(headers);
-
-  // Data rows
-  Object.entries(violations).forEach(([team, data]) => {
-    const row = [
-      team,
-      data.currentWeekViolations,
-      data.currentWeekDetractors,
-      data.currentWeekNeutrals,
-      data.totalViolations,
-      data.totalDetractors,
-      data.totalNeutrals,
-      data.violatedWeeks.join(", "),
-    ];
-    worksheetData.push(row);
-  });
-
-  // Convert the data to a worksheet
-  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-
-  // Add the worksheet to the workbook
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Violations Report");
-
-  // Write the workbook to a file
-  XLSX.writeFile(workbook, `violations_report_week_${week}.xlsx`);
-};
-
-// Table component to display weekly trends
-const TeamViolationTable = ({ trend }) => {
-  if (!trend) {
-    return (
-      <MUICard
-        sx={{
-          minWidth: 200,
-          boxShadow: 1,
-          background: "#2d2d2d",
-          color: "#e0e0e0",
-        }}
-      >
-        <CardContent>
-          <Typography variant="h6" sx={{ color: "#b0b0b0" }}>
-            No Data Available
-          </Typography>
-        </CardContent>
-      </MUICard>
-    );
-  }
-
-  const { week, violations } = trend;
-
-  const getWeekDateRange = (week) => {
-    const startDate = new Date(2025, 0, 5); // January 5, 2025 (month is 0-indexed)
-    const startOfWeek = new Date(startDate.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
-    const endOfWeek = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000);
-
-    const formatDate = (date) =>
-      date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-
-    return `${formatDate(startOfWeek)} - ${formatDate(endOfWeek)}`;
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Violations Report");
+    XLSX.writeFile(workbook, `violations_report_week_${selectedWeek}.xlsx`);
   };
 
-  const handleDownloadCSV = () => {
-    exportToExcel(trend);
-    // downloadCSV(csv, `weekly_trends_week_${week}.csv`);
-  };
-
-  return (
-    <MUICard
-      sx={{
-        boxShadow: 1,
-        background: "#2d2d2d",
-        color: "#e0e0e0",
-        mx: '4px',
-        transition: "transform 0.3s ease, box-shadow 0.3s ease",
-        // "&:hover": {
-        //   transform: "translateY(-2px)",
-        //   boxShadow: 3,
-        // },
-      }}
-    >
-      <CardContent>
-        <Stack direction="row" justifyContent="space-between" sx={{ mb: 2 }}>
-          <Chip
-            label={`Week ${week}`}
-            sx={{ backgroundColor: "#ffffff29", color: "#e0e0e0" }}
-          />
-          <Typography variant="body1" sx={{ color: "#b3b3b3", fontFamily: 'IBM Plex Mono', fontSize: '10px' }}>
-            {getWeekDateRange(week)}
-          </Typography>
+  const columns = [
+    { field: 'teamName', headerName: 'Team Name', flex: 1.5, minWidth: 150 },
+    {
+      field: 'currentWeekViolations',
+      headerName: 'CW Violations',
+      width: 130,
+      align: 'center',
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{ fontWeight: 700, color: params.value > 0 ? '#f44336' : '#4caf50' }}>
+          {params.value}
+        </Typography>
+      )
+    },
+    { field: 'currentWeekDetractors', headerName: 'CW Detractors', width: 130, align: 'center' },
+    { field: 'totalViolations', headerName: 'Cumulative Violations', width: 160, align: 'center' },
+    {
+      field: 'violatedWeeks',
+      headerName: 'Violation History',
+      flex: 2,
+      minWidth: 200,
+      renderCell: (params) => (
+        <Stack direction="row" spacing={0.5} sx={{ overflowX: 'auto', py: 1 }}>
+          {params.value.map(wk => (
+            <Chip
+              key={wk}
+              label={`W${wk}`}
+              size="small"
+              variant="outlined"
+              sx={{
+                borderColor: wk === selectedWeek ? '#7b68ee' : '#3d3d3d',
+                color: wk === selectedWeek ? '#7b68ee' : '#b3b3b3',
+                bgcolor: wk === selectedWeek ? '#7b68ee11' : 'transparent',
+                fontSize: '0.65rem',
+                height: 20
+              }}
+            />
+          ))}
         </Stack>
-        <Button variant="contained" onClick={handleDownloadCSV} sx={{ mb: 2, p: '0px 8px', float: 'right', backgroundColor: "#1D4ED8" }}>
-          Download CSV
-        </Button>
-        <TableContainer component={Paper} sx={{ backgroundColor: "#2a2a2a" }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ color: "#e0e0e0", borderRight: '1px solid #4a4a4a' }}>Team</TableCell>
-                <TableCell sx={{ color: "#e0e0e0", backgroundColor: "#3a3a3a" }} align="right">Current Week Violations</TableCell>
-                <TableCell sx={{ color: "#e0e0e0", backgroundColor: "#3a3a3a" }} align="right">Current Week Detractors</TableCell>
-                <TableCell sx={{ color: "#e0e0e0", backgroundColor: "#3a3a3a" }} align="right">Current Week Neutrals</TableCell>
-                <TableCell sx={{ color: "#e0e0e0", borderLeft: '1px solid #4a4a4a' }} align="right">Total Violations</TableCell>
-                <TableCell sx={{ color: "#e0e0e0" }} align="right">Total Detractors</TableCell>
-                <TableCell sx={{ color: "#e0e0e0" }} align="right">Total Neutrals</TableCell>
-                <TableCell sx={{ color: "#e0e0e0" }} align="right">Violated Weeks</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {Object.entries(violations).map(([team, data]) => (
-                <TableRow key={team}>
-                  <TableCell sx={{ color: "#e0e0e0", borderRight: '1px solid #4a4a4a' }}>{team}</TableCell>
-                  <TableCell sx={{ color: "#e0e0e0", backgroundColor: "#3a3a3a" }} align="right">{data.currentWeekViolations}</TableCell>
-                  <TableCell sx={{ color: "#e0e0e0", backgroundColor: "#3a3a3a" }} align="right">{data.currentWeekDetractors}</TableCell>
-                  <TableCell sx={{ color: "#e0e0e0", backgroundColor: "#3a3a3a" }} align="right">{data.currentWeekNeutrals}</TableCell>
-                  <TableCell sx={{ color: "#e0e0e0", borderLeft: '1px solid #4a4a4a' }} align="right">{data.totalViolations}</TableCell>
-                  <TableCell sx={{ color: "#e0e0e0" }} align="right">{data.totalDetractors}</TableCell>
-                  <TableCell sx={{ color: "#e0e0e0" }} align="right">{data.totalNeutrals}</TableCell>
-                  <TableCell sx={{ color: "#e0e0e0" }} align="right">
-                    {data.violatedWeeks.join(", ")}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </CardContent>
-    </MUICard>
-  );
-};
+      )
+    }
+  ];
 
-// Slider component to navigate through weeks
-const WeekSlider = ({ trends }) => {
-  const settings = {
-    infinite: true,
-    speed: 500,
-    slidesToShow: 1,
-    focusOnSelect: true,
-    rows: 1,
-    slidesToScroll: 1,
-    swipe: false,          // Disable swipe gestures
-    draggable: false,      // Disable dragging
-    // arrows: false,         // Hide default arrows since we're using custom ones
-    touchMove: false
+  if (!currentTrend) return (
+    <Box p={4} textAlign="center">
+      <Typography color="#b3b3b3">No violation data available for the selected week.</Typography>
+    </Box>
+  );
+
+  const colors = {
+    primary: "#7b68ee",
+    error: "#f44336",
+    success: "#4caf50",
+    textSecondary: "#b3b3b3",
+    border: "#3d3d3d",
+    surface: "#252525"
   };
 
-  if (!trends || trends.length === 0) {
-    return (
-      <MUICard
-        sx={{
-          boxShadow: 1,
-          background: "#2d2d2d",
-          color: "#e0e0e0",
-        }}
-      >
-        <CardContent>
-          <Typography variant="h6" sx={{ color: "#b0b0b0" }}>
-            No Trends Available
-          </Typography>
-        </CardContent>
-      </MUICard>
-    );
-  }
-
   return (
-    <Slider {...settings}>
-      {trends.map((trend, index) => (
-        <div className="card-div max-h-[500px] overflow-auto" key={index}>
-          <TeamViolationTable trend={trend} />
-        </div>
-      ))}
-    </Slider>
-  );
-};
-
-// Main component to group tasks, calculate trends, and render the slider
-const WeeklyTeamViolationTrends = ({ tasks }) => {
-  if (!tasks || tasks.length === 0) {
-    return (
-      <MUICard
-        sx={{
-          minWidth: 200,
-          boxShadow: 1,
-          background: "#2d2d2d",
-          color: "#e0e0e0",
-        }}
-      >
-        <CardContent>
-          <Typography variant="h6" sx={{ color: "#b0b0b0" }}>
-            <CircularProgress size={24} />
+    <Box>
+      <Grid container spacing={0}>
+        <Grid item xs={12} lg={4} sx={{ borderRight: { lg: `1px solid ${colors.border}` }, p: 3 }}>
+          <Typography variant="subtitle2" sx={{ color: colors.textSecondary, mb: 3, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            Top 5 Current Offenders
           </Typography>
-        </CardContent>
-      </MUICard>
-    );
-  }
+          <Box sx={{ height: 400, width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ left: -20, right: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#3d3d3d" vertical={false} />
+                <XAxis
+                  dataKey="teamName"
+                  tick={{ fill: colors.textSecondary, fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: colors.textSecondary }} />
+                <RechartsTooltip
+                  contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, color: '#fff' }}
+                  cursor={{ fill: 'rgba(123, 104, 238, 0.05)' }}
+                />
+                <Bar dataKey="currentWeekViolations" name="Violations" radius={[4, 4, 0, 0]} barSize={30}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.currentWeekViolations > 2 ? colors.error : colors.primary} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </Box>
+        </Grid>
 
-  const groupedTasks = groupTasksByWeek(tasks);
-  const trends = calculateTeamViolationTrends(groupedTasks);
-
-  return <WeekSlider trends={trends} />;
-};
-
-const TeamViolationTrend = ({ tasks }) => {
-  // console.log({ tasks });
-  return (
-    <div style={{ padding: "0" }}>
-      <WeeklyTeamViolationTrends tasks={tasks} />
-    </div>
+        <Grid item xs={12} lg={8} sx={{ p: 0 }}>
+          <Stack direction="row" justifyContent="flex-end" sx={{ p: 2 }}>
+            <Button
+              startIcon={<DownloadIcon />}
+              variant="outlined"
+              size="small"
+              onClick={exportToExcel}
+              sx={{
+                color: colors.primary,
+                borderColor: colors.primary,
+                '&:hover': { borderColor: colors.primary, bgcolor: `${colors.primary}11` }
+              }}
+            >
+              Export Weekly Audit
+            </Button>
+          </Stack>
+          <Box sx={{ height: 432, width: '100%' }}>
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              pageSize={10}
+              rowsPerPageOptions={[10]}
+              sx={{
+                border: 'none',
+                '& .MuiDataGrid-columnHeaders': {
+                  bgcolor: 'transparent',
+                  color: colors.textSecondary,
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  borderBottom: `1px solid ${colors.border}`
+                },
+                '& .MuiDataGrid-cell': {
+                  borderBottom: `1px solid ${colors.border}`
+                },
+                '& .MuiDataGrid-row:hover': {
+                  bgcolor: 'rgba(123, 104, 238, 0.05)'
+                },
+                '& .MuiDataGrid-footerContainer': {
+                  borderTop: `1px solid ${colors.border}`
+                },
+                color: '#fff'
+              }}
+            />
+          </Box>
+        </Grid>
+      </Grid>
+    </Box>
   );
 };
 
