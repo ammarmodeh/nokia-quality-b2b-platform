@@ -23,7 +23,7 @@ const trashSchema = new mongoose.Schema(
     },
     teamCompany: { type: String, required: [true, "Team company is required"] },
     date: { type: Date },
-    tarrifName: { type: String, trim: true, required: [true, "Tarrif Name is required"] },
+    tarrifName: { type: String, trim: true, required: [true, "Tariff Name is required"] },
     customerType: { type: String, trim: true, required: [true, "Customer Type is required"] },
     customerFeedback: { type: String, trim: true, required: [true, "Customer feedback is required"] },
     customerName: { type: String, trim: true, required: [true, "Customer name is required"] },

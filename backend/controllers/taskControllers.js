@@ -27,9 +27,15 @@ export const addTask = async (req, res) => {
       evaluationScore,
       pisDate,
       validationStatus,
-      responsibility,
-      responsibilitySub,
-      validationCat,
+      responsible,
+      subReason,
+      rootCause,
+      ontType,
+      freeExtender,
+      extenderType,
+      extenderNumber,
+      closureCallEvaluation,
+      closureCallFeedback,
     } = req.body;
 
     // Define the predefined subtasks with the desired structure
@@ -85,9 +91,15 @@ export const addTask = async (req, res) => {
       evaluationScore,
       createdBy: req.user._id,
       subTasks: predefinedSubtasks,
-      responsibility,
-      responsibilitySub,
-      validationCat,
+      responsible,
+      subReason,
+      rootCause,
+      ontType,
+      freeExtender,
+      extenderType,
+      extenderNumber,
+      closureCallEvaluation,
+      closureCallFeedback,
       subtaskType: "original", // Set the default subtask type to "original"
     });
 
@@ -167,9 +179,11 @@ export const updateTask = async (req, res) => {
     const syncFields = [
       'slid', 'pisDate', 'contactNumber', 'requestNumber', 'governorate',
       'district', 'teamName', 'teamCompany', 'date', 'tarrifName',
-      'customerType', 'customerFeedback', 'customerName', 'reason',
-      'interviewDate', 'priority', 'status', 'assignedTo', 'whomItMayConcern',
-      'category', 'validationStatus', 'validationCat', 'responsibility', 'responsibilitySub',
+      'customerType', 'customerFeedback', 'customerName', 'interviewDate',
+      'priority', 'status', 'assignedTo', 'whomItMayConcern',
+      'category', 'validationStatus', 'responsible', 'reason', 'subReason', 'rootCause',
+      'ontType', 'freeExtender', 'extenderType', 'extenderNumber',
+      'closureCallEvaluation', 'closureCallFeedback',
       'subTasks', 'evaluationScore', 'isDeleted',
     ];
 

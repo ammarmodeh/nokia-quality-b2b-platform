@@ -28,23 +28,115 @@ import {
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
   Save as SaveIcon,
+  DragIndicator as DragIcon,
+  Update as UpdateIcon,
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 import api from '../api/api';
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useRef, useCallback } from 'react';
+
+// Drag and Drop type
+const ItemTypes = {
+  OPTION: 'option',
+};
+
+// Draggable Row Component
+const DraggableRow = ({ option, index, moveRow, handleOpenDialog, handleDelete, colors, activeTab }) => {
+  const ref = useRef(null);
+  const [{ handlerId }, drop] = useDrop({
+    accept: ItemTypes.OPTION,
+    collect(monitor) {
+      return {
+        handlerId: monitor.getHandlerId(),
+      };
+    },
+    hover(item, monitor) {
+      if (!ref.current) return;
+      const dragIndex = item.index;
+      const hoverIndex = index;
+
+      if (dragIndex === hoverIndex) return;
+
+      const hoverBoundingRect = ref.current?.getBoundingClientRect();
+      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+      const clientOffset = monitor.getClientOffset();
+      const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+
+      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+
+      moveRow(dragIndex, hoverIndex);
+      item.index = hoverIndex;
+    },
+  });
+
+  const [{ isDragging }, drag] = useDrag({
+    type: ItemTypes.OPTION,
+    item: () => ({ id: option._id, index }),
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  drag(drop(ref));
+
+  return (
+    <TableRow
+      ref={ref}
+      data-handler-id={handlerId}
+      sx={{
+        bgcolor: isDragging ? 'rgba(255,255,255,0.05)' : 'inherit',
+        '&:hover': { bgcolor: '#2a2a2a' },
+        opacity: isDragging ? 0.5 : 1,
+        cursor: 'move'
+      }}
+    >
+      <TableCell sx={{ color: colors.textSecondary }}>
+        <DragIcon sx={{ cursor: 'move', color: colors.textSecondary }} />
+      </TableCell>
+      <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.value}</TableCell>
+      <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.label}</TableCell>
+      {activeTab === 'REASON_SUB' && (
+        <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.parentValue}</TableCell>
+      )}
+      {activeTab === 'ROOT_CAUSE' && (
+        <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.parentValue}</TableCell>
+      )}
+      {activeTab === 'REASON' && (
+        <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.parentValue}</TableCell>
+      )}
+      <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.border}` }}>
+        <Tooltip title="Edit">
+          <IconButton onClick={() => handleOpenDialog(option)} sx={{ color: colors.primary }}>
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Delete">
+          <IconButton onClick={() => handleDelete(option._id)} sx={{ color: colors.error }}>
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 const CATEGORY_MAP = {
   PRIORITY: "Task Priorities",
   TASK_CATEGORIES: "Task Categories",
   TEAM_COMPANY: "Team Companies (Add Task)",
-  FIELDTEAMSCOMPANY: "Team Companies (Add Field Team)",
   EVALUATION_SCORE: "Satisfaction Scores",
   GOVERNORATES: "Governorates",
   CUSTOMER_TYPE: "Customer Types",
   VALIDATION_STATUS: "Validation Statuses",
-  VALIDATION_CATEGORY: "Validation Categories",
-  REASON: "General Reasons",
-  RESPONSIBILITY: "Responsibilities (Main)",
-  RESPONSIBILITY_SUB: "Responsibilities (Sub/Team)",
+  REASON: "Reasons (Level 1)",
+  REASON_SUB: "Sub Reasons (Level 2)",
+  ROOT_CAUSE: "Root Causes (Level 3)",
+  RESPONSIBILITY: "Responsibilities",
+  ONT_TYPE: "ONT Types",
+  EXTENDER_TYPE: "Extender Types",
 };
 
 const DropdownManagement = () => {
@@ -97,8 +189,8 @@ const DropdownManagement = () => {
       setFormData({
         value: '',
         label: '',
-        order: (options[activeTab]?.length || 0) + 1,
-        parentCategory: activeTab === 'RESPONSIBILITY_SUB' ? 'RESPONSIBILITY' : null,
+
+        parentCategory: activeTab === 'REASON_SUB' ? 'REASON' : activeTab === 'ROOT_CAUSE' ? 'REASON_SUB' : activeTab === 'REASON' ? 'RESPONSIBILITY' : null,
         parentValue: null
       });
     }
@@ -138,7 +230,38 @@ const DropdownManagement = () => {
     }
   };
 
-  const currentOptions = useMemo(() => options[activeTab] || [], [options, activeTab]);
+  const [currentOptions, setCurrentOptions] = useState([]);
+
+  useEffect(() => {
+    if (options[activeTab]) {
+      // Sort by order initially
+      const sorted = [...options[activeTab]].sort((a, b) => (a.order || 0) - (b.order || 0));
+      setCurrentOptions(sorted);
+    } else {
+      setCurrentOptions([]);
+    }
+  }, [options, activeTab]);
+
+  const moveRow = useCallback((dragIndex, hoverIndex) => {
+    setCurrentOptions((prevOptions) => {
+      const updatedOptions = [...prevOptions];
+      const [movedRow] = updatedOptions.splice(dragIndex, 1);
+      updatedOptions.splice(hoverIndex, 0, movedRow);
+      return updatedOptions;
+    });
+  }, []);
+
+  const saveOrder = async () => {
+    try {
+      const orderPayload = currentOptions.map((opt, index) => ({ _id: opt._id, order: index + 1 }));
+      await api.put('/dropdown-options/reorder', { options: orderPayload });
+      toast.success('Order saved successfully');
+      // Optionally update local cache order
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to save order');
+    }
+  };
 
   if (loading && Object.keys(options).length === 0) {
     return (
@@ -149,107 +272,189 @@ const DropdownManagement = () => {
   }
 
   return (
-    <Box sx={{ p: 4, minHeight: '100vh', bgcolor: colors.background }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h4" sx={{ color: colors.primary, fontWeight: 'bold' }}>
-          Dropdown Management
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-          sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
-        >
-          Add New Option
-        </Button>
-      </Stack>
+    <DndProvider backend={HTML5Backend}>
+      <Box sx={{ p: 4, minHeight: '100vh', bgcolor: colors.background }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
+          <Typography variant="h4" sx={{ color: colors.primary, fontWeight: 'bold' }}>
+            Dropdown Management
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+            sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
+          >
+            Add New Option
+          </Button>
+        </Stack>
 
-      <Paper sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: '12px', overflow: 'hidden' }}>
-        <Tabs
-          value={activeTab}
-          onChange={(e, newVal) => setActiveTab(newVal)}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            borderBottom: `1px solid ${colors.border}`,
-            '& .MuiTabs-indicator': { bgcolor: colors.primary },
-            '& .MuiTab-root': { color: colors.textSecondary, py: 2 },
-            '& .Mui-selected': { color: colors.primary },
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<UpdateIcon />}
+            onClick={saveOrder}
+            sx={{
+              borderColor: colors.border,
+              color: colors.textSecondary,
+              '&:hover': { borderColor: colors.primary, color: colors.primary }
+            }}
+          >
+            Save Order
+          </Button>
+        </Box>
+
+
+        <Paper sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: '12px', overflow: 'hidden' }}>
+          <Tabs
+            value={activeTab}
+            onChange={(e, newVal) => setActiveTab(newVal)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              borderBottom: `1px solid ${colors.border}`,
+              '& .MuiTabs-indicator': { bgcolor: colors.primary },
+              '& .MuiTab-root': { color: colors.textSecondary, py: 2 },
+              '& .Mui-selected': { color: colors.primary },
+            }}
+          >
+            {Object.keys(CATEGORY_MAP).map((cat) => (
+              <Tab key={cat} label={CATEGORY_MAP[cat]} value={cat} />
+            ))}
+          </Tabs>
+
+          <TableContainer sx={{ maxHeight: '60vh' }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell width="50" sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}></TableCell>
+                  <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Value</TableCell>
+                  <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Label</TableCell>
+                  {activeTab === 'REASON_SUB' && (
+                    <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Reason)</TableCell>
+                  )}
+                  {activeTab === 'ROOT_CAUSE' && (
+                    <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Sub Reason)</TableCell>
+                  )}
+                  {activeTab === 'REASON' && (
+                    <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Responsibility)</TableCell>
+                  )}
+                  <TableCell align="right" sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {currentOptions.map((option, index) => (
+                  <DraggableRow
+                    key={option._id}
+                    index={index}
+                    option={option}
+                    moveRow={moveRow}
+                    handleOpenDialog={handleOpenDialog}
+                    handleDelete={handleDelete}
+                    colors={colors}
+                    activeTab={activeTab}
+                  />
+                ))}
+                {currentOptions.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4, color: colors.textSecondary }}>
+                      No options found for this category.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          PaperProps={{
+            sx: { bgcolor: colors.surface, color: colors.textPrimary, border: `1px solid ${colors.border}`, width: '400px' }
           }}
         >
-          {Object.keys(CATEGORY_MAP).map((cat) => (
-            <Tab key={cat} label={CATEGORY_MAP[cat]} value={cat} />
-          ))}
-        </Tabs>
-
-        <TableContainer sx={{ maxHeight: '60vh' }}>
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Value</TableCell>
-                <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Label</TableCell>
-                {activeTab === 'RESPONSIBILITY_SUB' && (
-                  <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Main)</TableCell>
-                )}
-                <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Order</TableCell>
-                <TableCell align="right" sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {currentOptions.map((option) => (
-                <TableRow key={option._id} sx={{ '&:hover': { bgcolor: '#2a2a2a' } }}>
-                  <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.value}</TableCell>
-                  <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.label}</TableCell>
-                  {activeTab === 'RESPONSIBILITY_SUB' && (
-                    <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.parentValue}</TableCell>
-                  )}
-                  <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.order}</TableCell>
-                  <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.border}` }}>
-                    <Tooltip title="Edit">
-                      <IconButton onClick={() => handleOpenDialog(option)} sx={{ color: colors.primary }}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton onClick={() => handleDelete(option._id)} sx={{ color: colors.error }}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {currentOptions.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 4, color: colors.textSecondary }}>
-                    No options found for this category.
-                  </TableCell>
-                </TableRow>
+          <DialogTitle sx={{ borderBottom: `1px solid ${colors.border}` }}>
+            {editingOption ? 'Edit Option' : 'Add New Option'}
+          </DialogTitle>
+          <DialogContent sx={{ pt: 3 }}>
+            <Stack spacing={3} mt={1}>
+              {activeTab === 'REASON_SUB' && (
+                <TextField
+                  select
+                  fullWidth
+                  label="Parent Reason"
+                  value={formData.parentValue || ''}
+                  onChange={(e) => setFormData({ ...formData, parentValue: e.target.value })}
+                  SelectProps={{ native: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': { borderColor: colors.border },
+                      '&:hover fieldset': { borderColor: colors.primary },
+                      '&.Mui-focused fieldset': { borderColor: colors.primary },
+                    },
+                    '& .MuiInputLabel-root': { color: colors.textSecondary },
+                    select: { color: colors.textPrimary, bgcolor: colors.surface },
+                  }}
+                >
+                  <option value="" disabled style={{ backgroundColor: colors.surface }}>Select Parent Reason</option>
+                  {(options['REASON'] || []).map(opt => (
+                    <option key={opt._id} value={opt.value} style={{ backgroundColor: colors.surface }}>{opt.label}</option>
+                  ))}
+                </TextField>
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
-
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        PaperProps={{
-          sx: { bgcolor: colors.surface, color: colors.textPrimary, border: `1px solid ${colors.border}`, width: '400px' }
-        }}
-      >
-        <DialogTitle sx={{ borderBottom: `1px solid ${colors.border}` }}>
-          {editingOption ? 'Edit Option' : 'Add New Option'}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Stack spacing={3} mt={1}>
-            {activeTab === 'RESPONSIBILITY_SUB' && (
+              {activeTab === 'ROOT_CAUSE' && (
+                <TextField
+                  select
+                  fullWidth
+                  label="Parent Sub Reason"
+                  value={formData.parentValue || ''}
+                  onChange={(e) => setFormData({ ...formData, parentValue: e.target.value })}
+                  SelectProps={{ native: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': { borderColor: colors.border },
+                      '&:hover fieldset': { borderColor: colors.primary },
+                      '&.Mui-focused fieldset': { borderColor: colors.primary },
+                    },
+                    '& .MuiInputLabel-root': { color: colors.textSecondary },
+                    select: { color: colors.textPrimary, bgcolor: colors.surface },
+                  }}
+                >
+                  <option value="" disabled style={{ backgroundColor: colors.surface }}>Select Parent Sub Reason</option>
+                  {(options['REASON_SUB'] || []).map(opt => (
+                    <option key={opt._id} value={opt.value} style={{ backgroundColor: colors.surface }}>{opt.label}</option>
+                  ))}
+                </TextField>
+              )}
+              {activeTab === 'REASON' && (
+                <TextField
+                  select
+                  fullWidth
+                  label="Parent Responsibility"
+                  value={formData.parentValue || ''}
+                  onChange={(e) => setFormData({ ...formData, parentValue: e.target.value })}
+                  SelectProps={{ native: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': { borderColor: colors.border },
+                      '&:hover fieldset': { borderColor: colors.primary },
+                      '&.Mui-focused fieldset': { borderColor: colors.primary },
+                    },
+                    '& .MuiInputLabel-root': { color: colors.textSecondary },
+                    select: { color: colors.textPrimary, bgcolor: colors.surface },
+                  }}
+                >
+                  <option value="" disabled style={{ backgroundColor: colors.surface }}>Select Parent Responsibility</option>
+                  {(options['RESPONSIBILITY'] || []).map(opt => (
+                    <option key={opt._id} value={opt.value} style={{ backgroundColor: colors.surface }}>{opt.label}</option>
+                  ))}
+                </TextField>
+              )}
               <TextField
-                select
                 fullWidth
-                label="Parent Responsibility"
-                value={formData.parentValue || ''}
-                onChange={(e) => setFormData({ ...formData, parentValue: e.target.value })}
-                SelectProps={{ native: true }}
+                label="Value"
+                value={formData.value}
+                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': { borderColor: colors.border },
@@ -257,78 +462,58 @@ const DropdownManagement = () => {
                     '&.Mui-focused fieldset': { borderColor: colors.primary },
                   },
                   '& .MuiInputLabel-root': { color: colors.textSecondary },
-                  select: { color: colors.textPrimary, bgcolor: colors.surface },
+                  input: { color: colors.textPrimary },
                 }}
-              >
-                <option value="" disabled style={{ backgroundColor: colors.surface }}>Select Parent</option>
-                {(options['RESPONSIBILITY'] || []).map(opt => (
-                  <option key={opt._id} value={opt.value} style={{ backgroundColor: colors.surface }}>{opt.label}</option>
-                ))}
-              </TextField>
-            )}
-            <TextField
-              fullWidth
-              label="Value"
-              value={formData.value}
-              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: colors.border },
-                  '&:hover fieldset': { borderColor: colors.primary },
-                  '&.Mui-focused fieldset': { borderColor: colors.primary },
-                },
-                '& .MuiInputLabel-root': { color: colors.textSecondary },
-                input: { color: colors.textPrimary },
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Label"
-              value={formData.label}
-              onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: colors.border },
-                  '&:hover fieldset': { borderColor: colors.primary },
-                  '&.Mui-focused fieldset': { borderColor: colors.primary },
-                },
-                '& .MuiInputLabel-root': { color: colors.textSecondary },
-                input: { color: colors.textPrimary },
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Display Order"
-              type="number"
-              value={formData.order}
-              onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: colors.border },
-                  '&:hover fieldset': { borderColor: colors.primary },
-                  '&.Mui-focused fieldset': { borderColor: colors.primary },
-                },
-                '& .MuiInputLabel-root': { color: colors.textSecondary },
-                input: { color: colors.textPrimary },
-              }}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, borderTop: `1px solid ${colors.border}` }}>
-          <Button onClick={handleCloseDialog} sx={{ color: colors.textSecondary }}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={!formData.value || !formData.label}
-            sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
-          >
-            {editingOption ? 'Update' : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+              />
+              <TextField
+                fullWidth
+                label="Label"
+                value={formData.label}
+                onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderColor: colors.border },
+                    '&:hover fieldset': { borderColor: colors.primary },
+                    '&.Mui-focused fieldset': { borderColor: colors.primary },
+                  },
+                  '& .MuiInputLabel-root': { color: colors.textSecondary },
+                  input: { color: colors.textPrimary },
+                }}
+              />
+              <TextField
+                fullWidth
+                label="Display Order"
+                type="number"
+                value={formData.order}
+                onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderColor: colors.border },
+                    '&:hover fieldset': { borderColor: colors.primary },
+                    '&.Mui-focused fieldset': { borderColor: colors.primary },
+                  },
+                  '& .MuiInputLabel-root': { color: colors.textSecondary },
+                  input: { color: colors.textPrimary },
+                }}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ p: 3, borderTop: `1px solid ${colors.border}` }}>
+            <Button onClick={handleCloseDialog} sx={{ color: colors.textSecondary }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              variant="contained"
+              disabled={!formData.value || !formData.label}
+              sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
+            >
+              {editingOption ? 'Update' : 'Add'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    </DndProvider>
   );
 };
 

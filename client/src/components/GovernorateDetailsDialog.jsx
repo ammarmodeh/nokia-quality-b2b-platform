@@ -79,20 +79,9 @@ const GovernorateDetailsDialog = ({ open, onClose, governorateData, colors, task
 
   if (!governorateData) return null;
 
-  const validationCats = Object.entries(governorateData.validationCats || {})
-    .sort((a, b) => b[1] - a[1]);
 
   const reasons = Object.entries(governorateData.reasons || {})
     .sort((a, b) => b[1].count - a[1].count);
-
-  const validationCatsChartData = {
-    labels: validationCats.map(([cat]) => cat),
-    datasets: [{
-      label: 'Count',
-      data: validationCats.map(([_, count]) => count),
-      backgroundColor: validationCats.map(() => `hsl(${Math.random() * 360}, 70%, 50%)`),
-    }]
-  };
 
   const reasonsChartData = {
     labels: reasons.map(([reason]) => reason),
@@ -329,12 +318,7 @@ const GovernorateDetailsDialog = ({ open, onClose, governorateData, colors, task
 
         <Divider sx={{ my: 8, backgroundColor: '#3c3b3b' }} />
 
-        <Box sx={{ height: '400px', my: 8 }}>
-          <Typography variant="h6" gutterBottom sx={{ color: colors.textPrimary }}>
-            Validation Categories
-          </Typography>
-          <Bar data={validationCatsChartData} options={chartOptions} />
-        </Box>
+
 
         <Divider sx={{ my: 2, backgroundColor: '#3c3b3b' }} />
 
@@ -347,30 +331,7 @@ const GovernorateDetailsDialog = ({ open, onClose, governorateData, colors, task
 
         <Divider sx={{ my: 8, backgroundColor: '#3c3b3b' }} />
 
-        <TableContainer component={Paper} sx={{ mt: 8, backgroundColor: colors.surfaceElevated }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ color: colors.textPrimary }}>Validation Category</TableCell>
-                <TableCell align="right" sx={{ color: colors.textPrimary }}>Count</TableCell>
-                <TableCell align="right" sx={{ color: colors.textPrimary }}>Percentage</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {validationCats.map(([cat, count]) => (
-                <TableRow key={cat}>
-                  <TableCell component="th" scope="row" sx={{ color: colors.textPrimary }}>
-                    {cat}
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: colors.textPrimary }}>{count}</TableCell>
-                  <TableCell align="right" sx={{ color: colors.textPrimary }}>
-                    {Math.round((count / governorateData.count) * 100)}%
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+
       </DialogContent>
       <DialogActions sx={{ backgroundColor: colors.surface }}>
         <Button onClick={onClose} sx={{ color: colors.textPrimary }}>

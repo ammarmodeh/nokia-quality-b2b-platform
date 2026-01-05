@@ -9,7 +9,8 @@ import {
   IconButton,
   Collapse,
   CardHeader,
-  Divider
+  Divider,
+  Grid
 } from "@mui/material";
 import {
   FaNewspaper,
@@ -17,7 +18,8 @@ import {
   FaExclamationTriangle,
   FaSyncAlt,
   FaChevronDown,
-  FaChevronUp
+  FaChevronUp,
+  FaMeh
 } from "react-icons/fa";
 import TaskStatusDialog from "./TaskStatusDialog";
 import api from "../api/api";
@@ -25,34 +27,11 @@ import { ReportedIssueCardDialog } from "./ReportedIssueCardDialog";
 
 // Helper function to count statuses with comprehensive null checks
 function countStatuses(tasks = [], customerIssues = []) {
-  // Initialize all counters with default values
-  const statusCount = {
-    Closed: 0,
-    "In Progress": 0,
-    Todo: 0,
-    Neutral: 0,
-    Detractor: 0
-  };
+  const statusCount = { Closed: 0, "In Progress": 0, Todo: 0, Neutral: 0, Detractor: 0 };
+  const taskStatusCounts = { Closed: 0, "In Progress": 0, Todo: 0 };
+  const detractorStatusCounts = { Closed: 0, "In Progress": 0, Todo: 0 };
+  const neutralStatusCounts = { Closed: 0, "In Progress": 0, Todo: 0 };
 
-  const taskStatusCounts = {
-    Closed: 0,
-    "In Progress": 0,
-    Todo: 0
-  };
-
-  const detractorStatusCounts = {
-    Closed: 0,
-    "In Progress": 0,
-    Todo: 0
-  };
-
-  const neutralStatusCounts = {
-    Closed: 0,
-    "In Progress": 0,
-    Todo: 0
-  };
-
-  // Initialize reported issues by source team
   const reportedIssuesBySource = {
     "Activation Team": { count: 0, percentage: 0 },
     "Nokia Quality Team": { count: 0, percentage: 0 },
@@ -60,85 +39,63 @@ function countStatuses(tasks = [], customerIssues = []) {
     "Nokia Closure Team": { count: 0, percentage: 0 }
   };
 
-  // Safely find tasks with matching SLIDs
   const reportedTasks = Array.isArray(tasks) && Array.isArray(customerIssues)
-    ? tasks.filter(task =>
-      customerIssues.some(issue => issue?.slid === task?.slid))
+    ? tasks.filter(task => customerIssues.some(issue => issue?.slid === task?.slid))
     : [];
 
-  // Calculate total tasks for percentage calculation
-  const totalTasks = tasks.length || 1; // Use 1 to avoid division by zero
+  const totalTasks = tasks.length || 1;
 
-  // Process customer issues by source team
   if (Array.isArray(customerIssues)) {
     customerIssues.forEach(issue => {
       const source = issue?.from || "Nokia Closure Team";
-      if (source === 'Activation Team') {
-        reportedIssuesBySource["Activation Team"].count++;
-      } else if (source === 'Nokia Quality Team') {
-        reportedIssuesBySource["Nokia Quality Team"].count++;
-      } else if (source === 'Orange Quality Team') {
-        reportedIssuesBySource["Orange Quality Team"].count++;
+      if (reportedIssuesBySource[source]) {
+        reportedIssuesBySource[source].count++;
       } else {
-        reportedIssuesBySource["Nokia Closure Team"].count++;
+        // Fallback if source allows others
+        if (reportedIssuesBySource["Nokia Closure Team"]) reportedIssuesBySource["Nokia Closure Team"].count++;
       }
     });
 
-    // Calculate percentages
     Object.keys(reportedIssuesBySource).forEach(team => {
-      reportedIssuesBySource[team].percentage = parseFloat(
-        ((reportedIssuesBySource[team].count / totalTasks) * 100
-        ).toFixed(2));
+      reportedIssuesBySource[team].percentage = parseFloat(((reportedIssuesBySource[team].count / totalTasks) * 100).toFixed(2));
     });
   }
 
-  // Process tasks if they exist
   if (Array.isArray(tasks)) {
     tasks.forEach((task) => {
       const subTasks = task.subTasks || [];
-      const totalProgress = subTasks.reduce((sum, subTask) => sum + (subTask.progress || 0), 0);
+      const totalProgress = subTasks.reduce((sum, subTask) => sum + (subTask.progress || 0), 0) / (subTasks.length || 1);
+      // Rough approximation if subtasks length > 1, or just check sum logic if it was 0-100 per task.
+      // Original logic seemed to sum progress. Assuming max 100 per subtask? Or just check 100 total?
+      // Reverting to original logic carefully:
+      const totalProgressSum = subTasks.reduce((sum, subTask) => sum + (subTask.progress || 0), 0);
+      // Assuming existing logic: if totalProgressSum === 100 means closed? 
+      // This depends on how progress is tracked. Keeping exactly as original for safety:
 
-      // Update status counts
-      if (totalProgress === 100) {
+      if (totalProgressSum === 100) {
         taskStatusCounts.Closed++;
-      } else if (totalProgress === 0) {
+      } else if (totalProgressSum === 0) {
         taskStatusCounts.Todo++;
       } else {
         taskStatusCounts["In Progress"]++;
       }
 
-      // Update detractor/neutral counts
       const score = task.evaluationScore || 0;
       if (score >= 1 && score <= 6) {
         statusCount.Detractor++;
-        if (totalProgress === 100) {
-          detractorStatusCounts.Closed++;
-        } else if (totalProgress === 0) {
-          detractorStatusCounts.Todo++;
-        } else {
-          detractorStatusCounts["In Progress"]++;
-        }
+        if (totalProgressSum === 100) detractorStatusCounts.Closed++;
+        else if (totalProgressSum === 0) detractorStatusCounts.Todo++;
+        else detractorStatusCounts["In Progress"]++;
       } else if (score >= 7 && score <= 8) {
         statusCount.Neutral++;
-        if (totalProgress === 100) {
-          neutralStatusCounts.Closed++;
-        } else if (totalProgress === 0) {
-          neutralStatusCounts.Todo++;
-        } else {
-          neutralStatusCounts["In Progress"]++;
-        }
+        if (totalProgressSum === 100) neutralStatusCounts.Closed++;
+        else if (totalProgressSum === 0) neutralStatusCounts.Todo++;
+        else neutralStatusCounts["In Progress"]++;
       }
     });
   }
 
-  return {
-    statusCount,
-    taskStatusCounts,
-    detractorStatusCounts,
-    neutralStatusCounts,
-    reportedTasksCount: reportedTasks.length,
-    reportedIssuesBySource
-  };
+  return { statusCount, taskStatusCounts, detractorStatusCounts, neutralStatusCounts, reportedTasksCount: reportedTasks.length, reportedIssuesBySource };
 }
 
 const Card = ({ tasks = [], setUpdateTasksList }) => {
@@ -150,19 +107,13 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
   const [issueDialogOpen, setIssueDialogOpen] = useState(false);
   const [expandedCards, setExpandedCards] = useState({});
 
-  // Destructure with default values
-  const {
-    statusCount = {},
-    detractorStatusCounts = {},
-    reportedIssuesBySource = {}
-  } = countStatuses(tasks, customerIssues);
+  const { statusCount = {}, detractorStatusCounts = {}, neutralStatusCounts = {}, reportedIssuesBySource = {} } = countStatuses(tasks, customerIssues);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState([]);
   const [dialogTitle, setDialogTitle] = useState("");
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
-  // Fetch customer issues
   useEffect(() => {
     const fetchCustomerIssues = async () => {
       try {
@@ -172,7 +123,6 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
         setCustomerIssues(response.data.data || []);
         setError(null);
       } catch (err) {
-        // console.error('Error fetching customer issues:', err);
         setError('Failed to load customer issues');
         setCustomerIssues([]);
       } finally {
@@ -180,7 +130,6 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
         setLastUpdated(new Date());
       }
     };
-
     fetchCustomerIssues();
   }, []);
 
@@ -193,7 +142,6 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
       setCustomerIssues(response.data.data || []);
       setError(null);
     } catch (err) {
-      // console.error('Error refreshing customer issues:', err);
       setError('Failed to refresh customer issues');
     } finally {
       setLoading(false);
@@ -202,21 +150,16 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
   };
 
   const toggleCardExpand = (cardId) => {
-    setExpandedCards(prev => ({
-      ...prev,
-      [cardId]: !prev[cardId]
-    }));
+    setExpandedCards(prev => ({ ...prev, [cardId]: !prev[cardId] }));
   };
 
   const handleClick = (cardLabel, status, team) => {
     let filteredTasks = [];
-
     if (cardLabel === "DETRACTORS") {
       filteredTasks = tasks.filter((task) => {
         const subTasks = task.subTasks || [];
         const totalProgress = subTasks.reduce((sum, subTask) => sum + (subTask.progress || 0), 0);
         const score = task.evaluationScore || 0;
-
         if (score >= 1 && score <= 6) {
           if (status === "Closed" && totalProgress === 100) return true;
           if (status === "Todo" && totalProgress === 0) return true;
@@ -224,8 +167,19 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
         }
         return false;
       });
+    } else if (cardLabel === "NEUTRALS") {
+      filteredTasks = tasks.filter((task) => {
+        const subTasks = task.subTasks || [];
+        const totalProgress = subTasks.reduce((sum, subTask) => sum + (subTask.progress || 0), 0);
+        const score = task.evaluationScore || 0;
+        if (score >= 7 && score <= 8) {
+          if (status === "Closed" && totalProgress === 100) return true;
+          if (status === "Todo" && totalProgress === 0) return true;
+          if (status === "In Progress" && totalProgress > 0 && totalProgress < 100) return true;
+        }
+        return false;
+      });
     }
-
     setSelectedTasks(filteredTasks);
     setDialogTitle(`${cardLabel}${team ? ` - ${team}` : ''}${status ? ` - ${status}` : ''} (${filteredTasks.length})`);
     setDialogOpen(true);
@@ -234,9 +188,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
   const handleIssueClick = (sourceTeam) => {
     const issuesForSource = customerIssues.filter(issue => {
       if (sourceTeam === 'Nokia Closure Team') {
-        return issue.from !== 'Activation Team' &&
-          issue.from !== 'Nokia Quality Team' &&
-          issue.from !== 'Orange Quality Team';
+        return issue.from !== 'Activation Team' && issue.from !== 'Nokia Quality Team' && issue.from !== 'Orange Quality Team';
       }
       return issue.from === sourceTeam;
     });
@@ -248,10 +200,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
     }
   };
 
-  const formatTeamName = (team) => {
-    if (!team) return "Nokia Closure Team";
-    return team;
-  };
+  const formatTeamName = (team) => (!team ? "Nokia Closure Team" : team);
 
   const stats = [
     {
@@ -259,7 +208,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
       label: "TOTAL TASKS",
       total: tasks.length || 0,
       icon: <FaNewspaper />,
-      color: "#7b68ee",
+      color: "#2563eb", // Blue
       subStats: null,
     },
     {
@@ -267,7 +216,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
       label: "DETRACTORS",
       total: statusCount.Detractor || 0,
       icon: <FaFrown />,
-      color: "#F44336",
+      color: "#ef4444", // Red
       subStats: {
         Todo: detractorStatusCounts.Todo || 0,
         Closed: detractorStatusCounts.Closed || 0,
@@ -275,246 +224,139 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
       },
     },
     {
+      _id: "3",
+      label: "NEUTRALS",
+      total: statusCount.Neutral || 0,
+      icon: <FaMeh />,
+      color: "#f59e0b", // Amber/Orange for Neutrals
+      subStats: {
+        Todo: neutralStatusCounts.Todo || 0,
+        Closed: neutralStatusCounts.Closed || 0,
+        "In Progress": neutralStatusCounts["In Progress"] || 0,
+      },
+    },
+    {
       _id: "4",
       label: "REPORTED ISSUES",
       total: customerIssues.length || 0,
       icon: <FaExclamationTriangle />,
-      color: "#FF9800",
+      color: "#f59e0b", // Orange
       subStats: reportedIssuesBySource,
       isTeamBased: true,
       isIssueCard: true
     }
   ];
 
-  if (loading) {
-    return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography>Loading statistics...</Typography>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography color="error">{error}</Typography>
-        <IconButton onClick={handleRefresh}>
-          <FaSyncAlt />
-        </IconButton>
-      </Box>
-    );
-  }
+  if (loading) return <Box sx={{ p: 3, textAlign: 'center' }}><Typography>Loading statistics...</Typography></Box>;
+  if (error) return (
+    <Box sx={{ p: 3, textAlign: 'center' }}>
+      <Typography color="error">{error}</Typography>
+      <IconButton onClick={handleRefresh}><FaSyncAlt /></IconButton>
+    </Box>
+  );
 
   return (
-    <Box sx={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-      gap: { xs: "0px", sm: "12px", md: "16px" },
-      py: 2,
-      // backgroundColor: "#2d2d2d",
-      position: "relative"
-    }}>
-      {/* Refresh Button */}
-      <IconButton
-        onClick={handleRefresh}
-        sx={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          color: "#aaa",
-          "&:hover": {
-            color: "#ffffff",
-            backgroundColor: "rgba(255,255,255,0.1)"
-          }
-        }}
-      >
-        <FaSyncAlt />
-      </IconButton>
+    <Box sx={{ position: "relative" }}>
+      <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2} mb={2}>
+        <Typography variant="caption" color="textSecondary">
+          Last updated: {lastUpdated.toLocaleTimeString()}
+        </Typography>
+        <Tooltip title="Refresh Stats">
+          <IconButton onClick={handleRefresh} size="small" sx={{ bgcolor: 'white', '&:hover': { bgcolor: '#f1f5f9' }, boxShadow: 1 }}>
+            <FaSyncAlt size={14} color="#64748b" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
 
-      {/* Last Updated Timestamp */}
-      <Typography
-        variant="caption"
-        sx={{
-          position: "absolute",
-          top: 16,
-          left: 16,
-          color: "#666",
-          fontSize: "0.7rem"
-        }}
-      >
-        Last updated: {lastUpdated.toLocaleTimeString()}
-      </Typography>
-
-      {/* Stats Cards */}
-      {stats.map(({ _id, label, total, icon, color, subStats, isTeamBased, isIssueCard }) => (
-        <MUICard
-          key={_id}
-          sx={{
-            minWidth: 200,
-            boxShadow: "none",
-            overflow: "hidden",
-            background: "#2d2d2d",
-            transition: "all 0.3s ease",
-            border: "1px solid #3d3d3d",
-            "&:hover": {
-              borderColor: "#666",
-            },
-            mt: 4
-          }}
-        >
-          <CardHeader
-            sx={{
-              p: 2,
-              cursor: subStats ? "pointer" : "default",
-              "&:hover": {
-                backgroundColor: subStats ? "rgba(255,255,255,0.05)" : "transparent"
-              }
-            }}
-            onClick={subStats ? () => toggleCardExpand(_id) : undefined}
-            title={
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Box sx={{
-                  backgroundColor: `${color}20`,
-                  borderRadius: "50%",
-                  p: 1.5,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 40,
-                  height: 40
-                }}>
-                  <Typography sx={{ color, fontSize: "1rem" }}>
+      <Grid container spacing={3}>
+        {stats.map(({ _id, label, total, icon, color, subStats, isTeamBased, isIssueCard }) => (
+          <Grid item xs={12} sm={6} md={3} key={_id}>
+            <MUICard
+              sx={{
+                height: '100%',
+                borderRadius: 3,
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                overflow: 'visible',
+                transition: 'transform 0.2s',
+                '&:hover': { transform: 'translateY(-4px)' }
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                  <Box>
+                    <Typography variant="subtitle2" color="textSecondary" fontWeight="600" gutterBottom>
+                      {label}
+                    </Typography>
+                    <Typography variant="h3" fontWeight="800" color="textPrimary">
+                      {total}
+                    </Typography>
+                  </Box>
+                  <Box sx={{
+                    bgcolor: `${color}15`,
+                    color: color,
+                    p: 1.5,
+                    borderRadius: 2,
+                    display: 'flex',
+                    fontSize: '1.5rem'
+                  }}>
                     {icon}
-                  </Typography>
+                  </Box>
                 </Box>
-                <Box>
-                  <Typography variant="subtitle2" sx={{
-                    fontWeight: 500,
-                    color: "#b3b3b3",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    textAlign: "left"
-                  }}>
-                    {label}
-                  </Typography>
-                  <Typography variant="h5" sx={{
-                    fontWeight: 700,
-                    color,
-                    fontSize: "1.5rem"
-                  }}>
-                    {total}
-                  </Typography>
-                </Box>
-              </Box>
-            }
-            action={
-              subStats && (
-                <IconButton>
-                  {expandedCards[_id] ? <FaChevronUp color={color} /> : <FaChevronDown color={color} />}
-                </IconButton>
-              )
-            }
-          />
 
-          {subStats && (
-            <Collapse in={expandedCards[_id]} timeout="auto" unmountOnExit>
-              <Divider sx={{ borderColor: "#3d3d3d" }} />
-              <CardContent sx={{
-                p: 2,
-                pt: 1,
-                "&:last-child": {
-                  pb: 2
-                }
-              }}>
-                <Stack spacing={1.5} sx={{ width: "100%" }}>
-                  {!isTeamBased ? (
-                    <Box sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 1
-                    }}>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: "#b3b3b3",
-                          cursor: "pointer",
-                          "&:hover": {
-                            color: "#ffffff",
-                            textDecoration: "underline"
-                          }
-                        }}
-                        onClick={() => handleClick(label, "Todo")}
-                      >
-                        Todo: {subStats.Todo || 0}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: "#b3b3b3",
-                          cursor: "pointer",
-                          "&:hover": {
-                            color: "#ffffff",
-                            textDecoration: "underline"
-                          }
-                        }}
-                        onClick={() => handleClick(label, "Closed")}
-                      >
-                        Closed: {subStats.Closed || 0}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: "#b3b3b3",
-                          cursor: "pointer",
-                          "&:hover": {
-                            color: "#ffffff",
-                            textDecoration: "underline"
-                          }
-                        }}
-                        onClick={() => handleClick(label, "In Progress")}
-                      >
-                        In Prog: {subStats["In Progress"] || 0}
-                      </Typography>
-                    </Box>
-                  ) : (
-                    Object.entries(subStats).map(([team, { count, percentage }]) => (
-                      <Box
-                        key={team}
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          gap: 1
-                        }}
-                      >
-                        <Tooltip title={`Click to view ${isIssueCard ? 'issues' : 'tasks'} from ${team}`}>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: "#b3b3b3",
-                              cursor: "pointer",
-                              "&:hover": {
-                                color: "#ffffff",
-                                textDecoration: "underline"
-                              }
-                            }}
-                            onClick={() => isIssueCard ? handleIssueClick(team) : handleClick(label, null, team)}
-                          >
-                            {formatTeamName(team)}: {count || 0} ({percentage}%)
-                          </Typography>
-                        </Tooltip>
-                      </Box>
-                    ))
-                  )}
-                </Stack>
+                {subStats && (
+                  <Box sx={{ mt: 2 }}>
+                    <Divider sx={{ mb: 2 }} />
+                    <Stack spacing={1}>
+                      {isTeamBased ? (
+                        Object.entries(subStats).map(([team, { count, percentage }]) => (
+                          <Box key={team} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>
+                              {formatTeamName(team)}
+                            </Typography>
+                            <Tooltip title={isIssueCard ? "View Issues" : "View Tasks"}>
+                              <Typography
+                                variant="caption"
+                                sx={{ fontWeight: 'bold', color: color, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                                onClick={() => isIssueCard ? handleIssueClick(team) : handleClick(label, null, team)}
+                              >
+                                {count} ({percentage}%)
+                              </Typography>
+                            </Tooltip>
+                          </Box>
+                        ))
+                      ) : (
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Stack alignItems="center">
+                            <Typography variant="caption" color="textSecondary">Todo</Typography>
+                            <Typography variant="h6" color="textPrimary" sx={{ cursor: 'pointer', '&:hover': { color: color } }} onClick={() => handleClick(label, "Todo")}>
+                              {subStats.Todo}
+                            </Typography>
+                          </Stack>
+
+                          <Stack alignItems="center">
+                            <Typography variant="caption" color="textSecondary">In Progress</Typography>
+                            <Typography variant="h6" color="#3b82f6" sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => handleClick(label, "In Progress")}>
+                              {subStats["In Progress"]}
+                            </Typography>
+                          </Stack>
+
+                          <Stack alignItems="center">
+                            <Typography variant="caption" color="textSecondary">Closed</Typography>
+                            <Typography variant="h6" color="#10b981" sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => handleClick(label, "Closed")}>
+                              {subStats.Closed}
+                            </Typography>
+                          </Stack>
+                        </Box>
+                      )}
+                    </Stack>
+                  </Box>
+                )}
               </CardContent>
-            </Collapse>
-          )}
-        </MUICard>
-      ))}
+            </MUICard>
+          </Grid>
+        ))}
+      </Grid>
 
-      {/* Task Status (Detractors Card) Dialog */}
       <TaskStatusDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -523,7 +365,6 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
         setUpdateTasksList={setUpdateTasksList}
       />
 
-      {/* Customer Issue Dialog */}
       <ReportedIssueCardDialog
         open={issueDialogOpen}
         onClose={() => setIssueDialogOpen(false)}

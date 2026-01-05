@@ -1,21 +1,17 @@
 // src/Dashboard.js
 import { useState, useEffect, Suspense, lazy } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Typography, Box, Divider, Snackbar, Alert, Stack, useMediaQuery } from "@mui/material";
+import { Typography, Box, Divider, Snackbar, Alert, Stack, useMediaQuery, Breadcrumbs, Link, Container, Paper } from "@mui/material";
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import api from "../api/api";
 import { useSelector } from "react-redux";
 import { MoonLoader } from "react-spinners";
-import { SnackbarProvider } from "notistack";
+// import { SnackbarProvider } from "notistack";
 // import { CompanyViolationTable } from "../components/CompanyViolationTable";
-import { ActivationTeamRespTable } from "../components/ActivationTeamRespTable";
 import { AllReasonsTable } from "../components/AllReasonsTable";
-// import { AllResponsiblesTable } from "../components/AllResponsiblesTable";
-import { KnowledgeGapReasonsTable } from "../components/KnowledgeGapReasonsTable";
-import { CustomerEducationReasonsTable } from "../components/CustomerEducationReasonsTable";
 import IssueCategoriesDialog from "../components/IssueCategoriesDialog";
 import ReasonCategoriesDialog from "../components/ReasonCategoriesDialog";
-// import { prepareWeeklyAnalyticsData } from "../utils/analyticsHelper";
-// import ResponsibilityCategoriesDialog from "../components/ResponsibilityCategoriesDialog";
 import AIInsightButton from "../components/AIInsightButton";
 import ActionPlanButton from "../components/ActionPlanButton";
 import AIHistoryButton from "../components/AIHistoryButton";
@@ -46,11 +42,12 @@ const Dashboard = () => {
   const [tasksError, setTasksError] = useState(null);
   const [teamsError, setTeamsError] = useState(null);
 
-  const isMediumScreen = useMediaQuery('(max-width: 760px)');
+  const isMediumScreen = useMediaQuery('(max-width: 900px)');
+  const isMobile = useMediaQuery('(max-width: 600px)');
 
   useEffect(() => {
     const fetchTasks = async () => {
-      console.time("fetchTasks Duration");
+      // console.time("fetchTasks Duration");
       try {
         const response = await api.get("/tasks/get-all-tasks", {
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
@@ -60,12 +57,11 @@ const Dashboard = () => {
         setTasksError(error);
       } finally {
         setTasksLoading(false);
-        console.timeEnd("fetchTasks Duration");
+        // console.timeEnd("fetchTasks Duration");
       }
     };
 
     const fetchTeams = async () => {
-      // console.time("fetchTeams Duration");
       try {
         const response = await api.get('/field-teams/get-field-teams', {
           headers: {
@@ -82,7 +78,6 @@ const Dashboard = () => {
         setTeamsError(error);
       } finally {
         setTeamsLoading(false);
-        // console.timeEnd("fetchTeams Duration");
       }
     };
 
@@ -106,196 +101,143 @@ const Dashboard = () => {
 
   if (tasksLoading || teamsLoading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: '100%' }}>
-        <MoonLoader color="#959595" size={50} />
-      </div>
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: '100vh' }}>
+        <MoonLoader color="#3b82f6" size={50} />
+      </Box>
     );
   }
 
-  if (tasksError || teamsError) return <div>Error fetching data</div>;
+  if (tasksError || teamsError) return <Box p={4}><Typography color="error">Error fetching data</Typography></Box>;
 
   return (
-    <div style={{ padding: "0", backgroundColor: "#1a1a1a", maxWidth: "1100px", margin: "0 auto", minHeight: "calc(100vh - 55px)", color: "#ffffff" }}>
-      {/* Welcome Snackbar */}
-      <Snackbar open={snackbarOpen} autoHideDuration={5000} onClose={handleSnackbarClose}>
-        <Alert onClose={handleSnackbarClose} severity="success" variant="filled">
-          Hello, {user?.name}!
-        </Alert>
-      </Snackbar>
+    <Box sx={{ pb: 4, minHeight: "100vh" }}>
+      <Container maxWidth="xl" sx={{ pt: 3, px: { xs: 2, md: 4 } }}>
+        {/* Welcome Snackbar */}
+        <Snackbar open={snackbarOpen} autoHideDuration={5000} onClose={handleSnackbarClose}>
+          <Alert onClose={handleSnackbarClose} severity="success" variant="filled">
+            Hello, {user?.name}!
+          </Alert>
+        </Snackbar>
 
-      {/* Card Section */}
-      <Typography variant="h6" align="center" gutterBottom sx={{ fontWeight: 600, color: "#b3b3b3", textAlign: "left", fontSize: "0.75rem" }}>
-        These statistics, which are for QoS-related tickets, are recorded from the beginning of {currentYear} until {todayDate}.
-      </Typography>
-      <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
-        <Card tasks={tasks} setUpdateTasksList={setUpdateTasksList} />
-      </Suspense>
+        {/* Header Section */}
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'start', sm: 'center' }} mb={4} spacing={2}>
+          <Box>
+            <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb" sx={{ mb: 1 }}>
+              <Link underline="hover" key="1" color="inherit" href="/" sx={{ display: 'flex', alignItems: 'center' }}>
+                <DashboardIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+                Home
+              </Link>
+              <Typography key="3" color="text.primary">
+                Dashboard
+              </Typography>
+            </Breadcrumbs>
+            <Typography variant={isMobile ? "h5" : "h4"} fontWeight="800" color="#1e293b" gutterBottom>
+              Overview
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              QoS-related tickets statistics from {currentYear} until {todayDate}.
+            </Typography>
+          </Box>
+        </Stack>
 
-      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
-
-      {/* Weekly Count of QoS-Related Detractor & Neutral Customers Section */}
-      <Box sx={{ margin: "20px 0" }}>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: 1, mb: isMediumScreen ? "4px" : "20px" }}>
-          <Typography sx={{ color: "#b3b3b3", fontSize: isMediumScreen ? "12px" : "15px" }}>
-            Weekly Count of QoS-Related Detractor & Neutral Customers
-          </Typography>
-          <AIInsightButton />
-          <ActionPlanButton />
-          <AIHistoryButton />
+        {/* Key Metrics Cards */}
+        <Box mb={5}>
+          <Suspense fallback={<MoonLoader color="#3b82f6" size={30} />}>
+            <Card tasks={tasks} setUpdateTasksList={setUpdateTasksList} />
+          </Suspense>
         </Box>
-        <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
-          <Chart tasks={tasks} />
-        </Suspense>
-      </Box>
 
-      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
-
-      {/* Responsive Tables Section */}
-      <Box sx={{ margin: "40px 0" }}>
-        <Stack spacing={4}>
-          {/* Row 1 */}
-          <Stack
-            direction={isMediumScreen ? "column" : "row"}
-            spacing={2}
-            alignItems="stretch"
-          >
-            {/* <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
-              <CompanyViolationTable tasks={tasks} />
-              </Box> */}
-            <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
-              <ActivationTeamRespTable tasks={tasks} />
+        {/* Charts & Analytics Section */}
+        <Box mb={5}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="h6" fontWeight="700" color="#334155">
+              Weekly QoS Trends
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <AIInsightButton />
+              <ActionPlanButton />
+              <AIHistoryButton />
+            </Stack>
+          </Box>
+          <Paper sx={{ p: 0, overflow: 'hidden', borderRadius: 3, bgcolor: '#1a1a1a', border: '1px solid #e2e8f0' }} elevation={0}>
+            <Box p={3}>
+              <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
+                <Chart tasks={tasks} />
+              </Suspense>
             </Box>
-            <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
-              <Stack
-                // backgroundColor="#ffffff"
-                padding={2}
-                borderRadius={2}
-                direction={'column'}
-                sx={{ border: '1px solid #3d3d3d' }}
-              >
-                <AllReasonsTable tasks={tasks} />
-                <Box sx={{
-                  backgroundColor: '#2d2d2d',
-                  p: 2,
-                  borderRadius: '8px',
-                  border: '1px solid #3d3d3d',
-                  mt: 2
-                }}>
-                  <Typography variant="body2" sx={{
-                    color: '#ffffff',
-                    fontWeight: 500,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
-                  }}>
-                    How we categorize feedback reasons
-                    <ReasonCategoriesDialog />
-                  </Typography>
-                  <Typography variant="caption" sx={{
-                    color: '#b3b3b3',
-                    display: 'block',
-                    mt: 1
-                  }}>
-                    Click the info icon to understand our reason categorization methodology.
-                  </Typography>
+          </Paper>
+        </Box>
+
+        {/* Categories Analysis Tables */}
+        <Box mb={5}>
+          <Typography variant="h6" fontWeight="700" color="#334155" mb={3}>
+            Violation & Reason Analysis
+          </Typography>
+
+          <Stack spacing={4}>
+            {/* Row 1: Reasons */}
+            <Stack direction={isMediumScreen ? "column" : "row"} spacing={3}>
+              <Box flex={1}>
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <AllReasonsTable tasks={tasks} />
                 </Box>
-              </Stack>
-            </Box>
-          </Stack>
-
-          {/* Row 3 */}
-          <Stack
-            // backgroundColor="#ffffff"
-            padding={2}
-            borderRadius={2}
-            direction={'column'}
-            sx={{ border: '1px solid #3d3d3d' }}
-          >
-            <Stack
-              direction={isMediumScreen ? "column" : "row"}
-              spacing={2}
-              alignItems="stretch"
-            >
-              <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
-                <KnowledgeGapReasonsTable tasks={tasks} />
-              </Box>
-              <Box sx={{ width: isMediumScreen ? "100%" : "50%" }}>
-                <CustomerEducationReasonsTable tasks={tasks} />
               </Box>
             </Stack>
-            <Box sx={{
-              backgroundColor: '#2d2d2d',
-              p: 2,
-              borderRadius: '8px',
-              border: '1px solid #3d3d3d',
-              mt: 2
-            }}>
-              <Typography variant="body2" sx={{
-                color: '#ffffff',
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}>
-                How we categorize issues
-                <IssueCategoriesDialog />
-              </Typography>
-              <Typography variant="caption" sx={{
-                color: '#b3b3b3',
-                display: 'block',
-                mt: 1
-              }}>
-                Click the info icon to understand our categorization methodology for customer education vs. technical skills issues.
-              </Typography>
-            </Box>
+
+
           </Stack>
+        </Box>
+
+        {/* Detailed Task Management */}
+        <Box mb={5}>
+          <Typography variant="h6" fontWeight="700" color="#334155" mb={3}>
+            Recent Activity & Violations
+          </Typography>
+          <Stack spacing={4}>
+            <Suspense fallback={<MoonLoader color="#3b82f6" size={30} />}>
+              <TaskTable tasks={tasks} fieldTeams={teamsData} />
+              <TeamViolationTracker tasks={tasks} initialFieldTeams={teamsData} />
+            </Suspense>
+          </Stack>
+        </Box>
+
+        {/* Weekly & Monthly Reports */}
+        <Stack spacing={5} mb={5}>
+          <Box>
+            <Typography variant="h6" fontWeight="700" color="#334155" mb={2}>Weekly Reports</Typography>
+            <Suspense fallback={<MoonLoader color="#3b82f6" size={30} />}>
+              <WeeklySummaryTable tasks={tasks} fieldTeams={teamsData} />
+              <Box mt={3}>
+                <WeeklyReasonTable tasks={tasks} />
+              </Box>
+            </Suspense>
+          </Box>
+
+          <Box>
+            <Typography variant="h6" fontWeight="700" color="#334155" mb={2}>Monthly Reports</Typography>
+            <Suspense fallback={<MoonLoader color="#3b82f6" size={30} />}>
+              <MonthlySummaryTable tasks={tasks} fieldTeams={teamsData} />
+              <Box mt={3}>
+                <MonthlyReasonTable tasks={tasks} />
+              </Box>
+            </Suspense>
+          </Box>
         </Stack>
-      </Box>
 
-      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
+        {/* Trend Statistics */}
+        <Box mb={10}>
+          <Typography variant="h6" fontWeight="700" color="#334155" mb={2}>Long-term Trends</Typography>
+          <Suspense fallback={<MoonLoader color="#3b82f6" size={30} />}>
+            <TrendStatistics tasks={tasks} />
+          </Suspense>
+        </Box>
 
-      <Box sx={{ gap: "20px", display: "flex", flexDirection: "column" }}>
-        {/* Tasks Overview */}
-        <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
-          <TaskTable tasks={tasks} fieldTeams={teamsData} />
-          <TeamViolationTracker tasks={tasks} initialFieldTeams={teamsData} />
+        {/* Floating Action Button */}
+        <Suspense fallback={null}>
+          <SamplesTokenFloatingButton />
         </Suspense>
-      </Box >
-
-      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
-
-      {/* Weekly Summary Table */}
-      <Box sx={{ margin: "20px 0" }}>
-        <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
-          <WeeklySummaryTable tasks={tasks} fieldTeams={teamsData} />
-          <WeeklyReasonTable tasks={tasks} />
-        </Suspense>
-      </Box>
-
-      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
-
-      {/* Monthly Summary Table */}
-      <Box sx={{ margin: "20px 0" }}>
-        <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
-          <MonthlySummaryTable tasks={tasks} fieldTeams={teamsData} />
-          <MonthlyReasonTable tasks={tasks} />
-        </Suspense>
-      </Box>
-
-      <Divider sx={{ margin: "20px 0", borderColor: "#3d3d3d" }} />
-
-      {/* Trend Statistics */}
-      <Box sx={{ margin: "20px 0" }}>
-        <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
-          <TrendStatistics tasks={tasks} />
-        </Suspense>
-      </Box>
-
-      {/* Samples Token Floating Button */}
-      <Suspense fallback={null}>
-        <SamplesTokenFloatingButton />
-      </Suspense>
-    </div >
+      </Container>
+    </Box>
   );
 };
 

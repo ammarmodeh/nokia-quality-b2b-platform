@@ -192,11 +192,20 @@ const taskSchema = new mongoose.Schema(
     date: {
       type: Date,
     },
-    tarrifName: { type: String, trim: true, required: [true, "Tarrif Name is required"] },
+    tarrifName: { type: String, trim: true, required: [true, "Tariff Name is required"] },
     customerType: { type: String, trim: true, required: [true, "Customer Type is required"] },
     customerFeedback: { type: String, trim: true, required: [true, "Customer feedback is required"] },
     customerName: { type: String, trim: true, required: [true, "Customer name is required"] },
+    responsible: { type: String, trim: true, default: null },
     reason: { type: String, trim: true, required: [true, "Reason is required"] },
+    subReason: { type: String, trim: true, default: null },
+    rootCause: { type: String, trim: true, default: null },
+    ontType: { type: String, trim: true, default: null },
+    freeExtender: { type: String, enum: ["Yes", "No"], default: "No" },
+    extenderType: { type: String, trim: true, default: null },
+    extenderNumber: { type: Number, default: 0 },
+    closureCallEvaluation: { type: Number, min: 1, max: 10, default: null },
+    closureCallFeedback: { type: String, trim: true, default: null },
     interviewDate: {
       type: Date,
       required: [true, "Interview Date is required"],
@@ -280,18 +289,6 @@ const taskSchema = new mongoose.Schema(
         values: ["Validated", "Not validated"],
         message: "Validation status must be either Validated or Not validated",
       },
-    },
-    validationCat: {
-      type: String,
-      required: [true, "Validation category is required"],
-    },
-    responsibility: {
-      type: String,
-      required: [true, "Responsibility is required"],
-    },
-    responsibilitySub: {
-      type: String,
-      default: null,
     },
     readBy: [
       {

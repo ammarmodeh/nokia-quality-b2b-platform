@@ -148,9 +148,9 @@ export const DataTable = ({ groupedData }) => {
             '& .MuiDataGrid-footerContainer': {
               minHeight: '64px',
               backgroundColor: '#2d2d2d',
-              color: '#ffffff',
+              // color: '#ffffff',
               '& .MuiTablePagination-root': {
-                color: '#ffffff',
+                // color: '#ffffff',
               },
             },
             '& .MuiDataGrid-virtualScroller': {

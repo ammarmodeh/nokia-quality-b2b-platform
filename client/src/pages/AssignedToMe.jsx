@@ -1,9 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { IoMdAdd } from "react-icons/io";
-import { FaList } from "react-icons/fa";
-import { MdClose, MdGridView, MdOutlineSearch } from "react-icons/md";
-import { Tabs, Tab, Stack, Typography, TextField, IconButton, Box, Button, CircularProgress, useMediaQuery } from "@mui/material";
-import { HourglassEmpty, PlayCircle, CheckCircle } from "@mui/icons-material";
+import { FaList, FaUserClock, FaRegCalendarAlt, FaSortAmountDown } from "react-icons/fa";
+import { MdClose, MdGridView, MdOutlineSearch, MdFilterList } from "react-icons/md";
+import {
+  Tabs, Tab, Stack, Typography, TextField, IconButton, Box, Button,
+  CircularProgress, useMediaQuery, Card, CardContent, Grid, LinearProgress,
+  MenuItem, Select, InputAdornment, Chip, Tooltip, Avatar,
+  Paper
+} from "@mui/material";
+import { HourglassEmpty, PlayCircle, CheckCircle, Cancel } from "@mui/icons-material";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import AddTask from "../components/task/AddTask";
 import api from "../api/api";
 import { PulseLoader } from "react-spinners";
@@ -11,6 +17,61 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import TaskCard from "../components/TaskCard";
 import { useSelector } from "react-redux";
+import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
+
+// --- Components ---
+
+const StatCard = ({ title, count, total, color, icon, percentage }) => (
+  <Card sx={{ height: '100%', position: 'relative', overflow: 'visible', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+    <CardContent sx={{ p: 3 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="start" mb={2}>
+        <Box>
+          <Typography variant="subtitle2" color="textSecondary" fontWeight="600" gutterBottom>
+            {title}
+          </Typography>
+          <Typography variant="h4" fontWeight="800" color="textPrimary">
+            {count}
+          </Typography>
+        </Box>
+        <Avatar
+          variant="rounded"
+          sx={{
+            bgcolor: `${color}15`, // Light opacity background
+            color: color,
+            width: 48,
+            height: 48,
+            borderRadius: 2
+          }}
+        >
+          {icon}
+        </Avatar>
+      </Stack>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <LinearProgress
+          variant="determinate"
+          value={percentage || 0}
+          sx={{
+            flexGrow: 1,
+            height: 6,
+            borderRadius: 5,
+            bgcolor: `${color}20`,
+            '& .MuiLinearProgress-bar': {
+              bgcolor: color,
+              borderRadius: 5,
+            }
+          }}
+        />
+        <Typography variant="caption" sx={{ ml: 2, fontWeight: 'bold', color: color }}>
+          {percentage.toFixed(0)}%
+        </Typography>
+      </Box>
+      <Typography variant="caption" color="textSecondary">
+        {count} of {total} tasks
+      </Typography>
+    </CardContent>
+  </Card>
+);
 
 const TABS = [
   { title: "Board View", icon: <MdGridView /> },
@@ -19,13 +80,15 @@ const TABS = [
 
 const AssignedToMe = () => {
   const user = useSelector((state) => state?.auth?.user);
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
-  const [selected, setSelected] = useState(0);
+  const [selected, setSelected] = useState(0); // 0 = Board, 1 = List
   const [open, setOpen] = useState(false);
   const [updateRefetchTasks, setUpdateRefetchTasks] = useState(false);
   const [updateStateDuringSave, setUpdateStateDuringSave] = useState(false);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
   const [allTasks, setAllTasks] = useState([]);
   const searchInputRef = useRef(null);
   const { ref, inView } = useInView();
@@ -37,6 +100,8 @@ const AssignedToMe = () => {
 
   const isSmallScreen = useMediaQuery('(max-width:600px)');
   const isMediumScreen = useMediaQuery('(max-width:900px)');
+
+  // --- Data Fetching ---
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -59,6 +124,7 @@ const AssignedToMe = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         });
         setAllTasks(data);
+        setFilteredTasks(data); // Initial set
       } catch (error) {
         // console.error("Error fetching all tasks:", error);
       }
@@ -75,7 +141,6 @@ const AssignedToMe = () => {
       });
       return data;
     } catch (error) {
-      // console.error("Error fetching tasks:", error);
       throw error;
     }
   };
@@ -93,18 +158,22 @@ const AssignedToMe = () => {
   });
 
   useEffect(() => {
-    if (inView && hasNextPage && !searchTerm) {
+    if (inView && hasNextPage && !searchTerm && selected === 0) {
       fetchNextPage();
     }
-  }, [inView, hasNextPage, fetchNextPage, searchTerm]);
+  }, [inView, hasNextPage, fetchNextPage, searchTerm, selected]);
 
-  const tasks = useMemo(() => (data ? data.pages.flat() : []), [data]);
+  const infiniteTasks = useMemo(() => (data ? data.pages.flat() : []), [data]);
 
+  // Sync filtered tasks with infinite scroll data ONLY in Board View and when NOT searching
   useEffect(() => {
-    if (tasks.length > 0 && !searchTerm) {
-      setFilteredTasks(tasks);
+    if (selected === 0 && !searchTerm && infiniteTasks.length > 0) {
+      setFilteredTasks(infiniteTasks);
     }
-  }, [tasks, searchTerm]);
+  }, [infiniteTasks, searchTerm, selected]);
+
+
+  // --- Logic & Handlers ---
 
   const calculateStatusStats = () => {
     const totalTasks = allTasks.length;
@@ -112,10 +181,27 @@ const AssignedToMe = () => {
 
     let todo = 0, inProgress = 0, closed = 0;
     allTasks.forEach(task => {
-      const totalProgress = task.subTasks.reduce((sum, subtask) => sum + subtask.progress, 0);
-      if (totalProgress === 0) todo++;
-      else if (totalProgress === 100) closed++;
-      else inProgress++;
+      const subtasks = task.subTasks || [];
+      // Calculate progress safely
+      const totalProgress = subtasks.length > 0
+        ? subtasks.reduce((sum, subtask) => sum + (subtask.progress || 0), 0) / subtasks.length
+        : 0; // Or determine status by other means if no subtasks
+
+      // NOTE: Using the same logic as previous code for consistency, relying on subtask progress Sum?
+      // Re-reading previous logic: sum + subtask.progress. IF sum is 0 -> todo. If sum is 100 -> closed (implies 1 subtask? or avg?).
+      // Let's stick to status field if available, or fallback to the previous logic.
+      // Previous logic: totalProgress = sum of all subtask progress.
+      // if totalProgress === 0 -> todo.
+      // if totalProgress === 100 -> closed. (This seems buggy if multiple subtasks, but keeping logic)
+
+      // Better logic: Check main task status or average progress
+      if (task.status === "Done" || task.status === "Closed") {
+        closed++;
+      } else if (task.status === "In Progress" || (task.subTasks && task.subTasks.some(st => st.progress > 0))) {
+        inProgress++;
+      } else {
+        todo++;
+      }
     });
 
     return {
@@ -127,105 +213,75 @@ const AssignedToMe = () => {
 
   const statusStats = calculateStatusStats();
 
-  const handleSearchClick = () => {
-    const term = searchInputRef.current.value.trim().toLowerCase();
+  const handleSearch = (term) => {
     setSearchTerm(term);
-    if (term === "") {
-      setFilteredTasks(tasks);
-    } else {
-      const filtered = allTasks.filter((task) =>
-        task.slid.toLowerCase().includes(term)
+
+    // Sort logic
+    let source = searchTerm || selected === 1 ? allTasks : infiniteTasks; // If searching or list view, use allTasks
+    if (selected === 1) source = allTasks; // Always use all data for DataGrid for now to enable client-side sort/filter
+
+    let filtered = source;
+
+    if (term) {
+      filtered = source.filter((task) =>
+        task.slid?.toLowerCase().includes(term.toLowerCase()) ||
+        task.customerName?.toLowerCase().includes(term.toLowerCase()) ||
+        task.governorate?.toLowerCase().includes(term.toLowerCase())
       );
-      setFilteredTasks(filtered);
     }
+
+    // Apply Sort
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.date);
+      const dateB = new Date(b.createdAt || b.date);
+      if (sortBy === "newest") return dateB - dateA;
+      if (sortBy === "oldest") return dateA - dateB;
+      // Add more sort options if needed
+      return 0;
+    });
+
+    setFilteredTasks(filtered);
   };
+
+  useEffect(() => {
+    handleSearch(searchTerm);
+  }, [sortBy, allTasks]); // Re-run when sort changes or data updates
 
   const handleClearSearch = () => {
     setSearchTerm("");
-    searchInputRef.current.value = "";
-    setFilteredTasks(tasks);
+    if (searchInputRef.current) searchInputRef.current.value = "";
+    handleSearch("");
   };
 
-  if (status === "pending") {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (status === "error") {
-    return (
-      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100vh">
-        <Typography variant="h6" color="error" gutterBottom>
-          Oops! Something went wrong.
-        </Typography>
-        <Typography variant="body2" color="textSecondary">
-          {error.message}
-        </Typography>
-        <Button variant="contained" color="primary" onClick={() => fetchNextPage()}>
-          Retry
-        </Button>
-      </Box>
-    );
-  }
-
-  const handleTaskUpdate = (updatedTask) => {
-    setFilteredTasks((prevTasks) =>
-      prevTasks.map((task) => (task._id === updatedTask._id ? updatedTask : task))
-    );
-  };
-
-  const handleTaskDelete = async (taskId) => {
-    const confirmDelete = window.confirm("Are you sure you want to move this task to trash?");
-    if (!confirmDelete) return;
-    setTrashActionState({ loading: true, error: null, success: false });
-
-    try {
-      // First get the complete task data
-      const { data: taskData } = await api.get(`/tasks/get-task/${taskId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
-      });
-
-      if (!taskData) {
-        throw new Error("Task not found");
-      }
-
-      // Move to trash with additional metadata
-      const trashResponse = await api.post('/trash/add-trash', {
-        ...taskData, // Spread all task fields
-        deletedBy: user._id,
-        deletionReason: 'Deleted by user',
-        deletedAt: new Date()
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
-      });
-
-      if (trashResponse.status === 201) {
-        // Only delete from main collection if trash operation succeeded
-        await api.delete(`/tasks/delete-task/${taskId}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
-        });
-
-        // Update UI state
-        setFilteredTasks(prev => prev.filter(task => task._id !== taskId));
-        setAllTasks(prev => prev.filter(task => task._id !== taskId));
-
-        alert("Task moved to trash successfully");
+  const handleTabChange = (event, newValue) => {
+    setSelected(newValue);
+    // When switching to List view, show all tasks (client side paging)
+    // When switching to Board view, show infinite scroll tasks or filtered result
+    if (newValue === 1) {
+      setFilteredTasks(allTasks);
+    } else {
+      if (searchTerm) {
+        handleSearch(searchTerm);
       } else {
-        throw new Error("Failed to move task to trash");
+        setFilteredTasks(infiniteTasks);
       }
-      setTrashActionState({ loading: false, error: null, success: true });
-    } catch (error) {
-      // console.error("Error in handleTaskDelete:", error);
-      alert(`Error: ${error.message}`);
-      setTrashActionState({ loading: false, error: error.message, success: false });
     }
   };
 
-  const handleTaskArchive = async (taskId) => {
-    const confirmArchive = window.confirm("Are you sure you want to archive this task?");
-    if (!confirmArchive) return;
+  // --- Actions ---
+
+  const handleTaskUpdate = (updatedTask) => {
+    setFilteredTasks((prev) => prev.map((t) => (t._id === updatedTask._id ? updatedTask : t)));
+    setAllTasks((prev) => prev.map((t) => (t._id === updatedTask._id ? updatedTask : t)));
+  };
+
+  const executeTaskAction = async (actionType, taskId) => {
+    const confirmMessage = actionType === 'delete'
+      ? "Are you sure you want to move this task to trash?"
+      : "Are you sure you want to archive this task?";
+
+    if (!window.confirm(confirmMessage)) return;
+
     setTrashActionState({ loading: true, error: null, success: false });
 
     try {
@@ -233,37 +289,33 @@ const AssignedToMe = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
       });
 
-      if (!taskData) {
-        throw new Error("Task not found");
-      }
+      if (!taskData) throw new Error("Task not found");
 
-      // Archive the task
-      const archiveResponse = await api.post('/archive/add-archive', {
-        taskData,
-        archivedBy: user._id,
-        archivedAt: new Date(),
-        archiveReason: 'Archived by user'
-      }, {
+      const endpoint = actionType === 'delete' ? '/trash/add-trash' : '/archive/add-archive';
+      const payload = actionType === 'delete'
+        ? { ...taskData, deletedBy: user._id, deletionReason: 'Deleted by user', deletedAt: new Date() }
+        : { taskData, archivedBy: user._id, archivedAt: new Date(), archiveReason: 'Archived by user' };
+
+      const response = await api.post(endpoint, payload, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
       });
 
-      if (archiveResponse.status === 201) {
-        // Delete from main collection
+      if (response.status === 201) {
         await api.delete(`/tasks/delete-task/${taskId}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
         });
 
-        // Update UI state
-        setFilteredTasks(prev => prev.filter(task => task._id !== taskId));
-        setAllTasks(prev => prev.filter(task => task._id !== taskId));
+        // Update UI
+        const updateFilter = (prev) => prev.filter(t => t._id !== taskId);
+        setFilteredTasks(updateFilter);
+        setAllTasks(updateFilter);
 
-        alert("Task archived successfully");
+        alert(`Task ${actionType === 'delete' ? 'moved to trash' : 'archived'} successfully`);
       } else {
-        throw new Error("Failed to archive task");
+        throw new Error(`Failed to ${actionType} task`);
       }
       setTrashActionState({ loading: false, error: null, success: true });
     } catch (error) {
-      // console.error("Error in handleTaskArchive:", error);
       alert(`Error: ${error.message}`);
       setTrashActionState({ loading: false, error: error.message, success: false });
     }
@@ -271,275 +323,210 @@ const AssignedToMe = () => {
 
   const handleFavoriteClick = async (task) => {
     try {
-      const response = await api.post("/favourites/add-favourite", {
-        task,
-        userId: user._id,
-      }, {
+      const response = await api.post("/favourites/add-favourite", { task, userId: user._id }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
-
-      if (response.status === 201) {
-        alert("Task added to favorites successfully!");
-      } else if (response.data?.isAlreadyFavorited) {
-        alert("This task is already in your favorites list!");
-      }
+      if (response.status === 201) alert("Task added to favorites!");
+      else if (response.data?.isAlreadyFavorited) alert("Already in favorites!");
     } catch (error) {
-      if (error.response && error.response.data && error.response.data.isAlreadyFavorited) {
-        alert("This task is already in your favorites list!");
-      } else {
-        // console.error("Error updating favorite status:", error);
-        alert("Failed to add to favorites. Please try again.");
-      }
+      alert("Failed to add to favorites.");
     }
   };
 
-  const handleTabChange = (event, newValue) => {
-    setSelected(newValue);
-  };
+  // --- Columns for DataGrid ---
+  const columns = [
+    { field: 'slid', headerName: 'SLID', width: 120, renderCell: (params) => <Typography fontWeight="bold" color="primary">{params.value}</Typography> },
+    { field: 'customerName', headerName: 'Customer Name', flex: 1, minWidth: 150 },
+    { field: 'governorate', headerName: 'Governorate', width: 130 },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 130,
+      renderCell: (params) => {
+        let color = 'default';
+        if (params.value === 'Done' || params.value === 'Closed') color = 'success';
+        else if (params.value === 'In Progress') color = 'primary';
+        else if (params.value === 'Todo' || params.value === 'Open') color = 'warning';
+        return <Chip label={params.value || 'Open'} color={color} size="small" variant="outlined" />;
+      }
+    },
+    {
+      field: 'priority',
+      headerName: 'Priority',
+      width: 100,
+      renderCell: (params) => (
+        <Chip
+          label={params.value || 'Medium'}
+          size="small"
+          sx={{
+            bgcolor: params.value === 'High' ? '#fee2e2' : params.value === 'Low' ? '#dcfce7' : '#fef3c7',
+            color: params.value === 'High' ? '#ef4444' : params.value === 'Low' ? '#16a34a' : '#d97706',
+            fontWeight: 'bold'
+          }}
+        />
+      )
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created At',
+      width: 160,
+      valueFormatter: (params) => params.value ? format(new Date(params.value), "MMM dd, yyyy") : 'N/A'
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      sortable: false,
+      renderCell: (params) => (
+        <Button variant="contained" size="small" onClick={() => navigate(`/task-view/${params.row._id}`)}>
+          View
+        </Button>
+      )
+    }
+  ];
 
   return (
-    <Box sx={{ padding: isSmallScreen ? 1 : 2 }}>
-      <Typography variant="h5" sx={{ fontWeight: "bold", color: "#727272", fontSize: isSmallScreen ? '1rem' : '1.5rem', mb: 2 }} gutterBottom>
-        Assigned To Me &gt; All Tasks
-      </Typography>
-      <Stack
-        direction={isSmallScreen ? "column" : "row"}
-        justifyContent="space-between"
-        alignItems={isSmallScreen ? "flex-start" : "center"}
-        spacing={isSmallScreen ? 2 : 0}
-        sx={{ mb: 2 }}
-      >
-        <Tabs
-          value={selected}
-          onChange={handleTabChange}
-          aria-label="task tabs"
-          TabIndicatorProps={{
-            style: {
-              height: "2px",
-              backgroundColor: "#2196f3",
-            },
-          }}
-          variant={isSmallScreen ? "scrollable" : "standard"}
-          scrollButtons="auto"
-          sx={{
-            maxWidth: '100%',
-            display: 'none' // This will hide the Tabs for all screen sizes
-          }}
-        >
-          {TABS.map((tab, index) => (
-            <Tab
-              key={index}
-              icon={tab.icon}
-              disabled={index !== 0}
-              label={isSmallScreen ? null : tab.title}
-              iconPosition="start"
-              sx={{ minWidth: 'unset', px: isSmallScreen ? 1 : 2 }}
-            />
-          ))}
-        </Tabs>
+    <Box sx={{ p: isSmallScreen ? 1 : 3, minHeight: '100vh' }}>
+
+      {/* Header */}
+      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'start', md: 'center' }} mb={4} spacing={2}>
+        <Box>
+          <Typography variant="h4" fontWeight="800" color="#647897ff">
+            Assigned To Me
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Manage and track your assigned tasks efficiently.
+          </Typography>
+        </Box>
         {user && user.role === "Admin" && (
           <Button
-            sx={{
-              gap: 1,
-              ml: isSmallScreen ? 0 : 2,
-              width: isSmallScreen ? '100%' : 'auto'
-            }}
-            variant="outlined"
+            variant="contained"
+            startIcon={<IoMdAdd />}
             onClick={() => setOpen(true)}
+            sx={{
+              bgcolor: '#2563eb',
+              '&:hover': { bgcolor: '#1d4ed8' },
+              borderRadius: 2,
+              textTransform: 'none',
+              px: 3,
+              py: 1
+            }}
           >
-            <IoMdAdd size={20} className="text-lg text-[#1976D2]" />
-            <Typography variant="caption" sx={{ fontWeight: "bold", fontSize: "15px" }} className="text-[#1976D2]">
-              Create Task
-            </Typography>
+            Create New Task
           </Button>
         )}
       </Stack>
 
-      <Stack
-        direction={isSmallScreen ? "column" : "row"}
-        alignItems={isSmallScreen ? "flex-start" : "center"}
-        justifyContent="space-between"
-        spacing={isSmallScreen ? 2 : 0}
-        sx={{ mb: 2 }}
-      >
-        <Box sx={{
-          width: '100%',
-          overflowX: 'auto',
-          whiteSpace: 'nowrap',
-          py: 1,
-          scrollbarWidth: 'none',
-          '&::-webkit-scrollbar': {
-            display: 'none'
-          }
-        }}>
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={0.5}
-              sx={{
-                backgroundColor: "#fef9c2",
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                color: "#d08700",
-                fontSize: "12px",
-                minWidth: 'max-content'
-              }}
-            >
-              <HourglassEmpty sx={{ fontSize: "16px" }} />
-              <Typography variant="caption" fontWeight="bold">
-                {isSmallScreen ? (
-                  `${statusStats.todo.count} (${statusStats.todo.percentage.toFixed(0)}%)`
-                ) : (
-                  `Todo (${statusStats.todo.count} | ${statusStats.todo.percentage.toFixed(0)}%)`
-                )}
-              </Typography>
-            </Stack>
-
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={0.5}
-              sx={{
-                backgroundColor: "#dbeafe",
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                color: "#155dfc",
-                fontSize: "12px",
-                minWidth: 'max-content'
-              }}
-            >
-              <PlayCircle sx={{ fontSize: "16px" }} />
-              <Typography variant="caption" fontWeight="bold">
-                {isSmallScreen ? (
-                  `${statusStats.inProgress.count} (${statusStats.inProgress.percentage.toFixed(0)}%)`
-                ) : (
-                  `In Progress (${statusStats.inProgress.count} | ${statusStats.inProgress.percentage.toFixed(0)}%)`
-                )}
-              </Typography>
-            </Stack>
-
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={0.5}
-              sx={{
-                backgroundColor: "#dcfce7",
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                color: "#00a63e",
-                fontSize: "12px",
-                minWidth: 'max-content'
-              }}
-            >
-              <CheckCircle sx={{ fontSize: "16px" }} />
-              <Typography variant="caption" fontWeight="bold">
-                {isSmallScreen ? (
-                  `${statusStats.closed.count} (${statusStats.closed.percentage.toFixed(0)}%)`
-                ) : (
-                  `Closed (${statusStats.closed.count} | ${statusStats.closed.percentage.toFixed(0)}%)`
-                )}
-              </Typography>
-            </Stack>
-          </Stack>
-        </Box>
-
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            width: "100%",
-            maxWidth: "600px",
-            py: 1,
-            px: 2,
-            gap: 1,
-            borderRadius: "999px",
-            backgroundColor: "#2d2d2d",
-            border: "1px solid #3d3d3d",
-            "&:focus-within": {
-              borderColor: "#7b68ee",
-            },
-          }}
-        >
-          <MdOutlineSearch className="text-gray-400 text-xl" />
-          <TextField
-            fullWidth
-            variant="standard"
-            placeholder="Search tasks by SLID..."
-            inputRef={searchInputRef}
-            sx={{
-              "& .MuiInputBase-root": {
-                backgroundColor: "transparent",
-                color: "#ffffff",
-              },
-              "& .MuiInputBase-input": {
-                fontSize: "14px",
-                color: "#ffffff",
-                padding: 0,
-              },
-              "& .MuiInput-root:before": {
-                borderBottom: "none",
-              },
-              "& .MuiInput-root:after": {
-                borderBottom: "none",
-              },
-              "& .MuiInput-root:hover:not(.Mui-disabled):before": {
-                borderBottom: "none",
-              },
-            }}
-            InputProps={{
-              disableUnderline: true,
-              style: { color: "#ffffff" },
-              endAdornment: searchTerm && (
-                <IconButton
-                  size="small"
-                  onClick={handleClearSearch}
-                  sx={{ color: "#b3b3b3", "&:hover": { color: "#ffffff" } }}
-                >
-                  <MdClose className="text-xl" />
-                </IconButton>
-              ),
-            }}
+      {/* Stats Cards */}
+      <Grid container spacing={3} mb={4}>
+        <Grid item xs={12} sm={6} md={4}>
+          <StatCard
+            title="To Do"
+            count={statusStats.todo.count}
+            total={allTasks.length}
+            percentage={statusStats.todo.percentage}
+            color="#f59e0b" // Amber
+            icon={<HourglassEmpty />}
           />
-          <Button
-            variant="contained"
-            onClick={handleSearchClick}
-            size="small"
+        </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+          <StatCard
+            title="In Progress"
+            count={statusStats.inProgress.count}
+            total={allTasks.length}
+            percentage={statusStats.inProgress.percentage}
+            color="#3b82f6" // Blue
+            icon={<PlayCircle />}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+          <StatCard
+            title="Completed"
+            count={statusStats.closed.count}
+            total={allTasks.length}
+            percentage={statusStats.closed.percentage}
+            color="#10b981" // Emerald
+            icon={<CheckCircle />}
+          />
+        </Grid>
+      </Grid>
+
+      {/* Toolbar & Tabs */}
+      <Paper sx={{ mb: 3, borderRadius: 3, p: 2, overflow: 'hidden' }} elevation={0}>
+        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems="center" spacing={2}>
+
+          <Tabs
+            value={selected}
+            onChange={handleTabChange}
             sx={{
-              backgroundColor: "#323232",
-              color: "#ffffff",
-              borderRadius: "999px",
-              "&:hover": {
-                backgroundColor: "#1d4ed8",
-              },
-              fontSize: "14px",
-              textTransform: "none",
-              px: 2,
+              '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 48 },
+              '& .Mui-selected': { color: '#2563eb' }
             }}
           >
-            Search
-          </Button>
-        </Box>
-      </Stack>
+            <Tab icon={<MdGridView />} iconPosition="start" label="Board View" />
+            <Tab icon={<FaList />} iconPosition="start" label="List View" />
+          </Tabs>
 
+          <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', md: 'auto' } }}>
+            <TextField
+              placeholder="Search tasks..."
+              size="small"
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              inputRef={searchInputRef}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <MdOutlineSearch color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={handleClearSearch}><MdClose /></IconButton>
+                  </InputAdornment>
+                )
+              }}
+              sx={{ width: { xs: '100%', md: 240 }, bgcolor: '#f1f5f9', borderRadius: 2, '& fieldset': { border: 'none' } }}
+            />
+
+            <TextField
+              select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+              }}
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <FaSortAmountDown color="action" size={14} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ minWidth: 150, bgcolor: '#f1f5f9', borderRadius: 2, '& fieldset': { border: 'none' } }}
+            >
+              <MenuItem value="newest">Newest First</MenuItem>
+              <MenuItem value="oldest">Oldest First</MenuItem>
+            </TextField>
+          </Stack>
+        </Stack>
+      </Paper>
+
+      {/* Content Area */}
       {selected === 0 ? (
+        // Board View
         <Box>
           {filteredTasks.length === 0 ? (
-            <Typography align="center" color="textSecondary" sx={{ mt: 3, color: "antiquewhite" }}>
-              No tasks found.
-            </Typography>
+            <Box textAlign="center" py={10}>
+              <Typography variant="h6" color="textSecondary">No tasks found</Typography>
+            </Box>
           ) : (
             <>
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: isSmallScreen ? '1fr' :
-                    isMediumScreen ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(300px, 1fr))',
-                  gap: 2,
-                  mt: 3
+                  gridTemplateColumns: isSmallScreen ? '1fr' : isMediumScreen ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(320px, 1fr))',
+                  gap: 3
                 }}
               >
                 {filteredTasks.map((task, index) => (
@@ -548,32 +535,45 @@ const AssignedToMe = () => {
                     task={task}
                     users={users}
                     handleTaskUpdate={handleTaskUpdate}
-                    handleTaskDelete={handleTaskDelete}
-                    handleTaskArchive={handleTaskArchive}
+                    handleTaskDelete={(id) => executeTaskAction('delete', id)}
+                    handleTaskArchive={(id) => executeTaskAction('archive', id)}
                     handleFavoriteClick={handleFavoriteClick}
                     setUpdateStateDuringSave={setUpdateStateDuringSave}
                     trashActionState={trashActionState}
                   />
                 ))}
               </Box>
-              <Box sx={{ my: 2, display: 'flex', justifyContent: 'center' }} ref={ref}>
-                {isFetchingNextPage ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: "50px" }}>
-                    <PulseLoader speedMultiplier={2} size={15} color="#e5e5e5" />
-                  </Box>
-                ) : (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: "50px" }}></Box>
-                )}
+
+              {/* Infinite Scroll Loader for Board View */}
+              <Box sx={{ my: 4, display: 'flex', justifyContent: 'center' }} ref={ref}>
+                {isFetchingNextPage && <PulseLoader speedMultiplier={2} size={10} color="#2563eb" />}
               </Box>
             </>
           )}
         </Box>
       ) : (
-        <Box sx={{ width: '100%', textAlign: 'center', mt: 3 }}>
-          <Typography variant="body1">
-            Currently, the list view is not implemented
-          </Typography>
-        </Box>
+        // List View (DataGrid)
+        <Paper sx={{ height: 600, width: '100%', borderRadius: 3, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+          <DataGrid
+            rows={filteredTasks} // Use filteredTasks for full sorting/filtering capability on client side for now
+            columns={columns}
+            getRowId={(row) => row._id}
+            initialState={{
+              pagination: {
+                paginationModel: { page: 0, pageSize: 10 },
+              },
+            }}
+            pageSizeOptions={[5, 10, 25]}
+            checkboxSelection
+            disableRowSelectionOnClick
+            slots={{ toolbar: GridToolbar }}
+            sx={{
+              border: 'none',
+              '& .MuiDataGrid-cell': { borderBottom: '1px solid #f1f5f9' },
+              '& .MuiDataGrid-columnHeaders': { bgcolor: '#f8fafc', fontWeight: 'bold' }
+            }}
+          />
+        </Paper>
       )}
 
       <AddTask open={open} setOpen={setOpen} setUpdateRefetchTasks={setUpdateRefetchTasks} />

@@ -30,36 +30,15 @@ const DetractorAnalytics = () => {
     endDate: '',
     teamName: '',
     responsible: '',
-    specificTeam: '',
     period: 'daily',
     studyColumns: ['Main Reason'],
     compareBy: '',
-    responsibleSub: ''
   });
   const [teamNames, setTeamNames] = useState([]);
-  const [responsibleOptions, setResponsibleOptions] = useState(['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other']);
-  const [responsibleSubOptions, setResponsibleSubOptions] = useState([]);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7c7c'];
 
-  useEffect(() => {
-    const fetchRespOptions = async () => {
-      try {
-        const { data } = await api.get("/dropdown-options/all");
-        if (data) {
-          if (data.RESPONSIBILITY) {
-            setResponsibleOptions(data.RESPONSIBILITY.map(opt => opt.value));
-          }
-          if (data.RESPONSIBILITY_SUB) {
-            setResponsibleSubOptions(data.RESPONSIBILITY_SUB);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch responsibility options", err);
-      }
-    };
-    fetchRespOptions();
-  }, []);
+
 
   useEffect(() => {
     fetchAllData();
@@ -153,8 +132,6 @@ const DetractorAnalytics = () => {
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.teamName) params.append('teamName', filters.teamName);
       if (filters.responsible) params.append('responsible', filters.responsible);
-      if (filters.responsibleSub) params.append('responsibleSub', filters.responsibleSub);
-      if (filters.specificTeam) params.append('specificTeam', filters.specificTeam);
 
       const res = await api.get(`/detractors/analytics/overview?${params}`);
 
@@ -171,9 +148,7 @@ const DetractorAnalytics = () => {
       const params = new URLSearchParams();
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
-      if (filters.specificTeam) params.append('specificTeam', filters.specificTeam);
       if (filters.responsible) params.append('responsible', filters.responsible);
-      if (filters.responsibleSub) params.append('responsibleSub', filters.responsibleSub);
 
       const res = await api.get(`/detractors/analytics/team-violations?${params}`);
 
@@ -191,9 +166,8 @@ const DetractorAnalytics = () => {
       params.append('period', filters.period);
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
-      if (filters.specificTeam) params.append('specificTeam', filters.specificTeam);
+      if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.responsible) params.append('responsible', filters.responsible);
-      if (filters.responsibleSub) params.append('responsibleSub', filters.responsibleSub);
 
       const res = await api.get(`/detractors/analytics/trends?${params}`);
 
@@ -211,9 +185,7 @@ const DetractorAnalytics = () => {
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.teamName) params.append('teamName', filters.teamName);
-      if (filters.specificTeam) params.append('specificTeam', filters.specificTeam);
       if (filters.responsible) params.append('responsible', filters.responsible);
-      if (filters.responsibleSub) params.append('responsibleSub', filters.responsibleSub);
 
       // Add RCA specific params
       if (filters.studyColumns && filters.studyColumns.length > 0) {
@@ -238,9 +210,7 @@ const DetractorAnalytics = () => {
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.teamName) params.append('teamName', filters.teamName);
-      if (filters.specificTeam) params.append('specificTeam', filters.specificTeam);
       if (filters.responsible) params.append('responsible', filters.responsible);
-      if (filters.responsibleSub) params.append('responsibleSub', filters.responsibleSub);
 
       const res = await api.get(`/detractors/analytics/fixed-rca?${params}`);
       if (res.data.status) {
@@ -262,11 +232,9 @@ const DetractorAnalytics = () => {
       endDate: '',
       teamName: '',
       responsible: '',
-      specificTeam: '',
       period: 'daily',
       studyColumns: ['Main Reason'],
       compareBy: '',
-      responsibleSub: ''
     });
   };
 
@@ -330,29 +298,25 @@ const DetractorAnalytics = () => {
             />
           </Grid>
           <Grid item xs={12} md={2}>
-            <Autocomplete
-              options={responsibleOptions}
-              value={filters.responsible}
-              onChange={(e, newValue) => {
-                handleFilterChange('responsible', newValue || '');
-                handleFilterChange('responsibleSub', ''); // Reset sub when main changes
-              }}
-              renderInput={(params) => <TextField {...params} label="Responsible" sx={{ input: { color: 'white' }, label: { color: '#aaa' } }} />}
-              sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: '#3d3d3d' } } }}
-            />
+            <FormControl fullWidth>
+              <InputLabel sx={{ color: '#aaa' }}>Responsibility</InputLabel>
+              <Select
+                value={filters.responsible}
+                onChange={(e) => handleFilterChange('responsible', e.target.value)}
+                label="Responsibility"
+                sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' } }}
+              >
+                <MenuItem value="">All</MenuItem>
+                <MenuItem value="Field Team">Field Team</MenuItem>
+                <MenuItem value="Call Center">Call Center</MenuItem>
+                <MenuItem value="Sales">Sales</MenuItem>
+                <MenuItem value="Technical Team">Technical Team</MenuItem>
+                <MenuItem value="Customer">Customer</MenuItem>
+                <MenuItem value="Others">Others</MenuItem>
+              </Select>
+            </FormControl>
           </Grid>
-          <Grid item xs={12} md={2}>
-            <Autocomplete
-              options={responsibleSubOptions
-                .filter(opt => opt.parentValue === filters.responsible)
-                .map(opt => opt.value)}
-              value={filters.responsibleSub}
-              onChange={(e, newValue) => handleFilterChange('responsibleSub', newValue || '')}
-              renderInput={(params) => <TextField {...params} label="Specific Team" sx={{ input: { color: 'white' }, label: { color: '#aaa' } }} />}
-              sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: '#3d3d3d' } } }}
-              disabled={!filters.responsible}
-            />
-          </Grid>
+
           <Grid item xs={12} md={2}>
             <FormControl fullWidth>
               <InputLabel sx={{ color: '#aaa' }}>Period</InputLabel>
@@ -427,7 +391,7 @@ const DetractorAnalytics = () => {
         <Grid item xs={12} md={6}>
           <Card sx={{ color: 'white' }}>
             <CardContent sx={{ height: 350 }}>
-              <Typography variant="h6" gutterBottom>Violations by Responsible</Typography>
+              <Typography variant="h6" gutterBottom>Responsibility Breakdown (Main)</Typography>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -439,7 +403,7 @@ const DetractorAnalytics = () => {
                     outerRadius={100}
                     label
                   >
-                    {overview.responsibleBreakdown.map((entry, index) => (
+                    {overview.responsibleBreakdown?.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -461,7 +425,7 @@ const DetractorAnalytics = () => {
                   <YAxis stroke="#fff" />
                   <Tooltip contentStyle={{ backgroundColor: '#2d2d2d', border: 'none' }} />
                   <Bar dataKey="value" fill="#7b68ee">
-                    {overview.teamBreakdown.map((entry, index) => (
+                    {overview.teamBreakdown?.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Bar>
@@ -544,14 +508,14 @@ const DetractorAnalytics = () => {
           <Grid item xs={12} md={6}>
             <Autocomplete
               multiple
-              options={columns.map(c => c.field).filter(f => !['id', 'auditStatus', 'Team Name', 'Responsible', 'Specific Team'].includes(f))}
+              options={columns.map(c => c.field).filter(f => !['id', 'auditStatus', 'Team Name'].includes(f))}
               value={filters.studyColumns}
               onChange={(e, newValue) => handleFilterChange('studyColumns', newValue)}
               renderInput={(params) => <TextField {...params} label="Dynamic Study Columns" sx={{ input: { color: 'white' }, label: { color: '#aaa' } }} />}
               sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: '#444' } } }}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
-                  <Chip variant="outlined" label={option} {...getTagProps({ index })} sx={{ color: '#7b68ee', borderColor: '#7b68ee', bgcolor: 'rgba(123, 104, 238, 0.05)' }} />
+                  <Chip key={index} variant="outlined" label={option} {...getTagProps({ index })} sx={{ color: '#7b68ee', borderColor: '#7b68ee', bgcolor: 'rgba(123, 104, 238, 0.05)' }} />
                 ))
               }
             />
@@ -570,26 +534,7 @@ const DetractorAnalytics = () => {
         <Grid container spacing={3}>
           {/* Main Content Area */}
           <Grid item xs={12} lg={9}>
-            {/* 1. Week vs Responsible */}
-            <Card sx={{ mb: 3, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <CardContent>
-                <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 'bold', color: '#7b68ee' }}>📅 Week # vs Responsible Breakdown</Typography>
-                <Box sx={{ height: 350 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={fixedStats}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
-                      <XAxis dataKey="label" stroke="#aaa" />
-                      <YAxis stroke="#aaa" />
-                      <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: 'none', borderRadius: 8 }} />
-                      <Legend />
-                      {responsibleOptions.map((resp, i) => (
-                        <Bar key={resp} dataKey={`responsible.${resp}`} name={resp} stackId="a" fill={COLORS[i % COLORS.length]} radius={[2, 2, 0, 0]} />
-                      ))}
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Box>
-              </CardContent>
-            </Card>
+
 
             {/* 2. Week vs Q1 (Detractor/Neutral) & NPS Density */}
             <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -664,7 +609,7 @@ const DetractorAnalytics = () => {
                           <YAxis type="category" dataKey="groupName" stroke="#aaa" width={120} />
                           <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: 'none' }} />
                           <Legend />
-                          {cause.allValues.map((val, i) => (
+                          {cause.allValues?.map((val, i) => (
                             <Bar key={val} dataKey={val} stackId="a" fill={COLORS[i % COLORS.length]} />
                           ))}
                         </BarChart>
@@ -677,7 +622,7 @@ const DetractorAnalytics = () => {
                           <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                               <Pie data={cause.topValues} dataKey="count" nameKey="value" cx="50%" cy="50%" innerRadius={60} outerRadius={80}>
-                                {cause.topValues.map((entry, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
+                                {cause.topValues?.map((entry, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
                               </Pie>
                               <Tooltip />
                             </PieChart>
@@ -685,14 +630,14 @@ const DetractorAnalytics = () => {
                         </Box>
                       </Grid>
                       <Grid item xs={12} md={6}>
-                        {cause.topValues.slice(0, 5).map((val, i) => (
+                        {cause.topValues?.slice(0, 5).map((val, i) => (
                           <Box key={i} sx={{ mb: 1 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                               <Typography variant="caption" color="gray">{val.value}</Typography>
                               <Typography variant="caption" sx={{ fontWeight: 'bold' }}>{val.count}</Typography>
                             </Box>
                             <Box sx={{ height: 4, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
-                              <Box sx={{ width: `${(val.count / Math.max(...cause.topValues.map(v => v.count))) * 100}%`, height: '100%', bgcolor: COLORS[i % COLORS.length] }} />
+                              <Box sx={{ width: `${(val.count / Math.max(...(cause.topValues?.map(v => v.count) || [1]))) * 100}%`, height: '100%', bgcolor: COLORS[i % COLORS.length] }} />
                             </Box>
                           </Box>
                         ))}
@@ -713,7 +658,7 @@ const DetractorAnalytics = () => {
                     <TrendingUp fontSize="small" color="primary" /> Top Offending Teams
                   </Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {trendSnapshots.topTeams.map((team, idx) => (
+                    {trendSnapshots.topTeams?.map((team, idx) => (
                       <Box key={idx} sx={{ p: 1.5, borderRadius: 1.5, bgcolor: 'rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>{team.name}</Typography>
                         <Chip label={team.value} size="small" sx={{ height: 20, fontSize: '0.7rem', bgcolor: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d' }} />
@@ -729,7 +674,7 @@ const DetractorAnalytics = () => {
                     <FilterList fontSize="small" color="secondary" /> Top Root Causes
                   </Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {trendSnapshots.topReasons.map((reason, idx) => (
+                    {trendSnapshots.topReasons?.map((reason, idx) => (
                       <Box key={idx} sx={{ p: 1.5, borderRadius: 1.5, bgcolor: 'rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{reason.name}</Typography>
                         <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#ffcc00' }}>{reason.value}</Typography>

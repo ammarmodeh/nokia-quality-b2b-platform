@@ -44,35 +44,9 @@ const DataManagement = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Dynamic dropdown options
-  const [dropdownOptions, setDropdownOptions] = useState({
-    RESPONSIBILITY: ['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other'],
-    RESPONSIBILITY_SUB: []
-  });
+  const [dropdownOptions, setDropdownOptions] = useState({});
 
-  useEffect(() => {
-    const fetchDropdownOptions = async () => {
-      try {
-        const { data } = await api.get("/dropdown-options/all");
-        if (data && Object.keys(data).length > 0) {
-          const formatted = {};
-          Object.keys(data).forEach(key => {
-            if (key === "RESPONSIBILITY" || key === "RESPONSIBILITY_SUB") {
-              if (key === "RESPONSIBILITY_SUB") {
-                formatted[key] = data[key]; // Store full objects for sub-options
-              } else {
-                formatted[key] = data[key].map(opt => opt.value);
-              }
-            }
-          });
-          setDropdownOptions(prev => ({ ...prev, ...formatted }));
-        }
-      } catch (err) {
-        console.error("Failed to load dropdown options", err);
-      }
-    };
 
-    fetchDropdownOptions();
-  }, []);
 
   const handleTabChange = (e, newVal) => {
     if (tabValue === 0 && isUploadDirty) {
@@ -104,8 +78,18 @@ const DataManagement = () => {
       }
     };
 
+    const fetchDropdownOptions = async () => {
+      try {
+        const res = await api.get('/dropdown-options');
+        setDropdownOptions(res.data);
+      } catch (error) {
+        console.error("Failed to fetch dropdown options", error);
+      }
+    };
+
     fetchTeams();
     fetchHistory();
+    fetchDropdownOptions();
   }, [token]);
 
   const fetchHistory = async () => {
@@ -254,111 +238,7 @@ const TeamEditInputCell = ({ id, value, field, api, options }) => {
   );
 };
 
-// --- Custom Edit Cell for Responsible Field ---
-const ResponsibleEditInputCell = ({ id, value, field, api, options }) => {
-  const handleChange = (event, newValue) => {
-    api.setEditCellValue({ id, field, value: newValue || '' });
-  };
 
-  return (
-    <Autocomplete
-      value={value}
-      onChange={handleChange}
-      options={options || []}
-      freeSolo
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          fullWidth
-          autoFocus
-          placeholder="Select or type..."
-          sx={{
-            '& .MuiInputBase-root': {
-              color: '#ffffff',
-
-            },
-            '& .MuiInputBase-input': { color: '#ffffff' },
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
-          }}
-        />
-      )}
-      sx={{
-        width: '100%',
-        '& .MuiAutocomplete-popupIndicator': { color: '#aaa' },
-        '& .MuiAutocomplete-clearIndicator': { color: '#aaa' },
-      }}
-      componentsProps={{
-        paper: {
-          sx: {
-            bgcolor: '#2a2a2a',
-            color: '#ffffff',
-            '& .MuiAutocomplete-option': {
-              color: '#ffffff',
-              '&:hover': { bgcolor: '#3a3a3a' },
-              '&[aria-selected="true"]': { bgcolor: '#7b68ee !important' },
-            },
-          },
-        },
-      }}
-    />
-  );
-};
-
-// --- Mapping for Sub-Responsible Options ---
-// REMOVED: Now using dynamic dropdownOptions
-
-// --- Custom Edit Cell for Sub-Responsible (Specific Team) ---
-const SubResponsibleEditInputCell = ({ id, value, field, api, row, dropdownOptions }) => {
-  const responsibleKey = Object.keys(row).find(k => k.trim().toLowerCase() === "responsible");
-  const responsibleValue = responsibleKey ? row[responsibleKey] : null;
-  const options = dropdownOptions.RESPONSIBILITY_SUB
-    .filter(opt => opt.parentValue === responsibleValue)
-    .map(opt => opt.value);
-
-  const handleChange = (event, newValue) => {
-    api.setEditCellValue({ id, field, value: newValue || '' });
-  };
-
-  return (
-    <Autocomplete
-      value={value || ''}
-      onChange={handleChange}
-      options={options}
-      freeSolo
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          fullWidth
-          autoFocus
-          placeholder="Select or type..."
-          sx={{
-            '& .MuiInputBase-root': { color: '#ffffff' },
-            '& .MuiInputBase-input': { color: '#ffffff' },
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
-          }}
-        />
-      )}
-      sx={{
-        width: '100%',
-        '& .MuiAutocomplete-popupIndicator': { color: '#aaa' },
-        '& .MuiAutocomplete-clearIndicator': { color: '#aaa' },
-      }}
-      componentsProps={{
-        paper: {
-          sx: {
-            bgcolor: '#2a2a2a',
-            color: '#ffffff',
-            '& .MuiAutocomplete-option': {
-              color: '#ffffff',
-              '&:hover': { bgcolor: '#3a3a3a' },
-              '&[aria-selected="true"]': { bgcolor: '#7b68ee !important' },
-            },
-          },
-        },
-      }}
-    />
-  );
-};
 
 // --- Dialog Component ---
 const AddColumnDialog = ({ open, onClose, onConfirm }) => {
@@ -403,14 +283,7 @@ const AddColumnDialog = ({ open, onClose, onConfirm }) => {
             clickable
             size="small"
           />
-          <Chip
-            label="Specific Team"
-            onClick={() => setColName("Specific Team")}
-            sx={{ borderColor: '#7b68ee', color: '#7b68ee' }}
-            variant="outlined"
-            clickable
-            size="small"
-          />
+
         </Box>
       </DialogContent>
       <DialogActions>
@@ -675,9 +548,8 @@ const UploadTab = ({ token, teamNames, dropdownOptions, existingBatches, onUploa
         const firstRow = allRawData[0];
         const dynamicColumns = Object.keys(firstRow).map((key) => {
           const isTeamCol = key.trim().toLowerCase() === "team name";
-          const isResponsibleCol = key.trim().toLowerCase() === "responsible";
-          const isSpecificTeamCol = key.trim().toLowerCase() === "specific team";
-          const responsibleOptions = dropdownOptions.RESPONSIBILITY;
+          const isRespCol = key.trim().toLowerCase() === "responsible";
+          const options = isTeamCol ? teamNames : (isRespCol ? dropdownOptions.RESPONSIBILITY?.map(o => o.value) : undefined);
 
           return {
             field: key,
@@ -685,11 +557,9 @@ const UploadTab = ({ token, teamNames, dropdownOptions, existingBatches, onUploa
             flex: 1,
             editable: true,
             minWidth: 150,
-            type: (isTeamCol || isResponsibleCol) ? 'singleSelect' : 'string',
-            valueOptions: isTeamCol ? teamNames : (isResponsibleCol ? responsibleOptions : undefined),
-            renderEditCell: isTeamCol ? (params) => <TeamEditInputCell {...params} options={teamNames} /> :
-              (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> :
-                (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} dropdownOptions={dropdownOptions} /> : undefined)),
+            type: (isTeamCol || isRespCol) ? 'singleSelect' : 'string',
+            valueOptions: options,
+            renderEditCell: (isTeamCol || isRespCol) ? (params) => <TeamEditInputCell {...params} options={options} /> : undefined,
           };
         });
 
@@ -711,9 +581,8 @@ const UploadTab = ({ token, teamNames, dropdownOptions, existingBatches, onUploa
 
   const handleAddColumn = (name) => {
     const isTeamCol = name.trim().toLowerCase() === "team name";
-    const isResponsibleCol = name.trim().toLowerCase() === "responsible";
-    const isSpecificTeamCol = name.trim().toLowerCase() === "specific team";
-    const responsibleOptions = ['Nokia/Quality', 'Nokia/FMC', 'OJO', 'Other'];
+    const isRespCol = name.trim().toLowerCase() === "responsible";
+    const options = isTeamCol ? teamNames : (isRespCol ? dropdownOptions.RESPONSIBILITY?.map(o => o.value) : undefined);
 
     const newCol = {
       field: name,
@@ -721,11 +590,9 @@ const UploadTab = ({ token, teamNames, dropdownOptions, existingBatches, onUploa
       flex: 1,
       editable: true,
       minWidth: 150,
-      type: (isTeamCol || isResponsibleCol) ? 'singleSelect' : 'string',
-      valueOptions: isTeamCol ? teamNames : (isResponsibleCol ? responsibleOptions : undefined),
-      renderEditCell: isTeamCol ? (params) => <TeamEditInputCell {...params} options={teamNames} /> :
-        (isResponsibleCol ? (params) => <ResponsibleEditInputCell {...params} options={responsibleOptions} /> :
-          (isSpecificTeamCol ? (params) => <SubResponsibleEditInputCell {...params} /> : undefined)),
+      type: (isTeamCol || isRespCol) ? 'singleSelect' : 'string',
+      valueOptions: options,
+      renderEditCell: (isTeamCol || isRespCol) ? (params) => <TeamEditInputCell {...params} options={options} /> : undefined,
     };
     // Insert before actions
     const newCols = [...columns];

@@ -17,7 +17,7 @@ import {
   useMediaQuery,
   useTheme
 } from "@mui/material";
-import { DataGrid } from "@mui/x-data-grid";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import { useNavigate } from "react-router-dom";
 import { getWeekNumberForTaksTable, newFormatDate } from "../utils/helpers";
 import { useEffect, useState } from "react";
@@ -42,6 +42,8 @@ const handleCopyTaskData = (taskData) => {
     Customer Type: ${taskData.customerType}
     Customer Feedback: ${taskData.customerFeedback}
     Reason: ${taskData.reason}
+    Sub Reason: ${taskData.subReason || 'N/A'}
+    Root Cause: ${taskData.rootCause || 'N/A'}
     Satisfaction Score: ${taskData.evaluationScore}
     Feedback Severity: ${taskData.impactLevel || taskData.priority || 'Not specified'}
     Interview Date: ${new Date(taskData.interviewDate).toLocaleDateString()}
@@ -357,11 +359,13 @@ const TaskTable = ({ tasks, fieldTeams }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)', // Translucent light
+            color: '#cbd5e1', // Light gray
             borderRadius: '50%',
             width: 30,
-            height: 30
+            height: 30,
+            fontWeight: 'bold',
+            fontSize: '0.75rem'
           }}>
             {params.value}
           </Box>
@@ -383,6 +387,30 @@ const TaskTable = ({ tasks, fieldTeams }) => {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => params.value,
+    },
+    {
+      field: "subReason",
+      headerName: "Sub Reason",
+      minWidth: 150,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Tooltip title={params.value || 'N/A'}>
+          <span>{params.value || 'N/A'}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      field: "rootCause",
+      headerName: "Root Cause",
+      minWidth: 150,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Tooltip title={params.value || 'N/A'}>
+          <span>{params.value || 'N/A'}</span>
+        </Tooltip>
+      ),
     },
     {
       field: "evaluationScore",
@@ -544,7 +572,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#ffffff',
+            color: '#cbd5e1', // Light gray for dark theme
             fontWeight: 'bold'
           }}>
             {teamEvaluationScore}
@@ -600,6 +628,8 @@ const TaskTable = ({ tasks, fieldTeams }) => {
             Customer Type: ${params.row.customerType}
             Customer Feedback: ${params.row.customerFeedback}
             Reason: ${params.row.reason}
+            Sub Reason: ${params.row.subReason || 'N/A'}
+            Root Cause: ${params.row.rootCause || 'N/A'}
             Satisfaction Score: ${params.row.evaluationScore}
             Feedback Severity: ${params.row.impactLevel || params.row.priority || 'Not specified'}
             Interview Date: ${moment(params.row.interviewDate).format("YYYY-MM-DD")}
@@ -608,7 +638,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
 
           navigator.clipboard.writeText(formattedData);
           setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
+          setCopied(true);
         };
 
         return (
@@ -685,8 +715,9 @@ const TaskTable = ({ tasks, fieldTeams }) => {
           variant="h6"
           fontWeight="bold"
           sx={{
-            color: "#c2c2c2",
+            color: "#475569",
             fontSize: isMobile ? "0.9rem" : "1rem",
+            fontWeight: "600"
           }}
         >
           Recent Violations Overview
@@ -706,7 +737,14 @@ const TaskTable = ({ tasks, fieldTeams }) => {
           </IconButton>
         </Tooltip>
       </Stack>
-      <Paper sx={{ height: 400, width: "100%", backgroundColor: "#2d2d2d" }}>
+      <Paper sx={{
+        height: 400,
+        width: "100%",
+        // backgroundColor: "#ffffff",
+        borderRadius: "12px",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+        overflow: "hidden"
+      }}>
         <DataGrid
           rows={rows}
           columns={taskColumns}
@@ -715,61 +753,58 @@ const TaskTable = ({ tasks, fieldTeams }) => {
           pageSizeOptions={[5, 10, 25]}
           paginationModel={paginationModel}
           onPaginationModelChange={setPaginationModel}
-          disableVirtualization={true}
+          slots={{ toolbar: GridToolbar }}
+          slotProps={{
+            toolbar: {
+              showQuickFilter: true,
+              quickFilterProps: { debounceMs: 500 },
+            },
+          }}
           sx={{
             border: 0,
-            color: "#ffffff",
-            "& .MuiDataGrid-filler": {
-              backgroundColor: "#2d2d2d",
-            },
-            "& .MuiDataGrid-main": {
-              backgroundColor: "#2d2d2d",
+            color: "#cbd5e1", // Light gray for dark theme
+            fontFamily: "'Inter', sans-serif",
+            "& .MuiDataGrid-overlay": {
+              color: "#64748b",
             },
             "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#2d2d2d",
-              color: "#b3b3b3",
-              fontSize: "0.875rem",
-              fontWeight: "bold",
-              borderBottom: "1px solid #e5e7eb",
+              backgroundColor: "#f8fafc",
+              color: "#475569",
+              fontSize: "0.75rem",
+              fontWeight: "600",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              borderBottom: "1px solid #e2e8f0",
             },
             "& .MuiDataGrid-columnHeader": {
-              backgroundColor: "#2d2d2d",
+              backgroundColor: "#f8fafc",
             },
             "& .MuiDataGrid-cell": {
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: "1px solid #f1f5f9",
             },
             "& .MuiDataGrid-row": {
-              backgroundColor: "#2d2d2d",
               "&:hover": {
-                backgroundColor: "#2d2d2d",
+                backgroundColor: "#f8fafc",
               },
             },
             "& .MuiDataGrid-footerContainer": {
-              minHeight: "64px",
-              backgroundColor: "#2d2d2d",
-              color: "#ffffff",
-              borderTop: "1px solid #e5e7eb",
-              "& .MuiTablePagination-root": {
-                color: "#ffffff",
-              },
+              borderTop: "1px solid #e2e8f0",
+              // backgroundColor: "#ffffff",
+              color: "#475569",
             },
-            "& .MuiDataGrid-virtualScroller": {
-              overflow: "auto",
-              "&::-webkit-scrollbar": {
-                width: "8px",
-                height: "8px",
-              },
-              "&::-webkit-scrollbar-thumb": {
-                backgroundColor: "#666",
-                borderRadius: "4px",
-              },
-              "&::-webkit-scrollbar-track": {
-                backgroundColor: "#e5e7eb",
-              },
+            "& .MuiTablePagination-root": {
+              color: "#475569",
             },
-            "& .MuiDataGrid-scrollbarFiller": {
-              backgroundColor: "#2d2d2d",
-            },
+            "& .MuiDataGrid-toolbarContainer": {
+              padding: "12px",
+              borderBottom: "1px solid #e2e8f0",
+              // backgroundColor: "#ffffff",
+              gap: 2,
+              "& .MuiButton-root": {
+                color: "#64748b",
+                fontSize: "0.80rem",
+              }
+            }
           }}
         />
       </Paper>

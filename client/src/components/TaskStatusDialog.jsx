@@ -39,7 +39,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [taskToView, setTaskToView] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  // const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [viewLoading, setViewLoading] = useState(false);
 
   useEffect(() => {
@@ -51,29 +51,21 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
   }, [initialTasks]);
 
   // Debounce search term
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 300);
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [searchTerm]);
 
   // Handle search term changes
   useEffect(() => {
-    if (debouncedSearchTerm.trim() === "") {
+    if (searchTerm.trim() === "") {
       setFilteredTasks(tasks);
     } else {
-      const lowerSearch = debouncedSearchTerm.toLowerCase();
+      const lowerSearch = searchTerm.toLowerCase();
       const filtered = tasks.filter(task =>
         task.customerName?.toLowerCase().includes(lowerSearch) ||
         task.slid?.toLowerCase().includes(lowerSearch)
       );
       setFilteredTasks(filtered);
     }
-  }, [debouncedSearchTerm, tasks]);
+  }, [searchTerm, tasks]);
 
   // Custom field display configuration
   const fieldDisplayConfig = {
@@ -95,7 +87,10 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
     tarrifName: { displayName: "Tariff Name" },
     customerType: { displayName: "Customer Type" },
     customerFeedback: { displayName: "Customer Feedback" },
-    reason: { displayName: "Reason" },
+    reason: { displayName: "Reason (Level 1)" },
+    subReason: { displayName: "Sub Reason (Level 2)" },
+    rootCause: { displayName: "Root Cause (Level 3)" },
+    responsible: { displayName: "Responsibility" },
     priority: { displayName: "Priority" },
     assignedTo: {
       displayName: "Assigned To",
@@ -110,7 +105,12 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
       displayName: "Subtasks",
       format: (value) => value?.map ? value.map(sub => `• ${sub.title}: ${sub.note || 'No note'}`).join('\n') : 'N/A'
     },
-    validationCat: { displayName: "Validation Category" },
+    ontType: { displayName: "ONT Type" },
+    freeExtender: { displayName: "Free Extender" },
+    extenderType: { displayName: "Extender Type" },
+    extenderNumber: { displayName: "Number of Extenders" },
+    closureCallEvaluation: { displayName: "Closure Call Evaluation" },
+    closureCallFeedback: { displayName: "Closure Call Feedback" },
     teamId: { displayName: "Team ID" }
   };
 
@@ -128,9 +128,18 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
     'tarrifName',
     'customerType',
     'customerFeedback',
+    'responsible',
     'reason',
+    'subReason',
+    'rootCause',
     'assignedTo',
     'evaluationScore',
+    'ontType',
+    'freeExtender',
+    'extenderType',
+    'extenderNumber',
+    'closureCallEvaluation',
+    'closureCallFeedback',
     'subTasks'
   ];
 
@@ -168,9 +177,18 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
       'District': task.district,
       'Tariff Name': task.tarrifName,
       'Customer Feedback': task.customerFeedback || 'N/A',
-      'Reason': task.reason,
+      'Responsibility': task.responsible,
+      'Reason (Level 1)': task.reason,
+      'Sub Reason (Level 2)': task.subReason,
+      'Root Cause (Level 3)': task.rootCause,
       'Team Name': task.teamName,
       'Team Company': task.teamCompany,
+      'ONT Type': task.ontType || 'N/A',
+      'Free Extender': task.freeExtender || 'No',
+      'Extender Type': task.extenderType || 'N/A',
+      'Extender Number': task.extenderNumber || 0,
+      'Closure Call Evaluation': task.closureCallEvaluation || 'N/A',
+      'Closure Call Feedback': task.closureCallFeedback || 'N/A',
       'Assigned To': task.assignedTo?.map ? task.assignedTo.map(item => item.name).join(', ') : 'N/A',
       'Assignee Feedback': task.subTasks?.map ? task.subTasks.map(sub => `${sub.title}: ${sub.note || 'No note'}`).join('; ') : 'N/A',
     }));

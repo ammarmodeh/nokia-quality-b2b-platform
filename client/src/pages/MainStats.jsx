@@ -54,7 +54,6 @@ const MainStats = () => {
     evaluationStats: {},
     reasonStats: {},
     governorateStats: {},
-    responsibilityStats: {}
   });
   // console.log('stats.governorateStats:', stats.governorateStats);
 
@@ -261,45 +260,36 @@ const MainStats = () => {
     // In the processTasksData function, update the governorateStats section:
     const governorateStats = tasks.reduce((acc, task) => {
       const governorate = task.governorate || 'Not specified';
-      const validationCat = task.validationCat || 'Not specified';
 
       if (!acc[governorate]) {
         acc[governorate] = {
           count: 0,
           completed: 0,
           totalEvaluation: 0,
-          validationCats: {} // Track validation categories within governorate
         };
       }
 
       acc[governorate].count++;
-      acc[governorate].totalEvaluation += task.evaluationScore || 0;
       if (task.status === 'Done') acc[governorate].completed++;
-
-      // Track validation categories
-      if (!acc[governorate].validationCats[validationCat]) {
-        acc[governorate].validationCats[validationCat] = 0;
-      }
-      acc[governorate].validationCats[validationCat]++;
 
       return acc;
     }, {});
 
     // Calculate responsibility statistics
-    const responsibilityStats = tasks.reduce((acc, task) => {
-      const responsibility = task.responsibility || 'Not specified';
-      if (!acc[responsibility]) {
-        acc[responsibility] = {
+    const responsibleStats = tasks.reduce((acc, task) => {
+      const resp = task.responsible || 'Not specified';
+      if (!acc[resp]) {
+        acc[resp] = {
           count: 0,
-          completed: 0,
-          totalEvaluation: 0
+          completed: 0
         };
       }
-      acc[responsibility].count++;
-      acc[responsibility].totalEvaluation += task.evaluationScore || 0;
-      if (task.status === 'Done') acc[responsibility].completed++;
+      acc[resp].count++;
+      if (task.status === 'Done') acc[resp].completed++;
       return acc;
     }, {});
+
+
 
     return {
       teamStats,
@@ -311,12 +301,17 @@ const MainStats = () => {
       scoreReasons,
       reasonStats,
       governorateStats,
-      responsibilityStats
+      responsibleStats,
     };
   };
 
   const prepareEvaluationScoreData = (stats) => {
-    if (!stats || stats.total === 0) return null;
+    if (!stats || stats.total === 0) {
+      return {
+        labels: [],
+        datasets: []
+      };
+    }
 
     return {
       labels: ['Detractors (1-6)', 'Neutrals (7-8)'],
@@ -329,57 +324,9 @@ const MainStats = () => {
     };
   };
 
-  // const prepareScoreReasonsData = (scoreReasons) => {
-  //   return Object.entries(scoreReasons).map(([score, data]) => {
-  //     const reasons = Object.entries(data.reasons).map(([reason, details]) => {
-  //       const mostCommonTeam = Object.entries(details.teams).sort((a, b) => b[1] - a[1])[0] || ['Unknown', 0];
-  //       const mostCommonGovernorate = Object.entries(details.governorates).sort((a, b) => b[1] - a[1])[0] || ['Unknown', 0];
-
-  //       return {
-  //         reason,
-  //         count: details.count,
-  //         percentage: ((details.count / data.total) * 100).toFixed(1),
-  //         mostCommonTeam: mostCommonTeam[0],
-  //         teamCount: mostCommonTeam[1],
-  //         mostCommonGovernorate: mostCommonGovernorate[0],
-  //         governorateCount: mostCommonGovernorate[1]
-  //       };
-  //     }).sort((a, b) => b.count - a.count); // Sort by count
-
-  //     return {
-  //       score,
-  //       total: data.total,
-  //       reasons
-  //     };
-  //   }).sort((a, b) => b.total - a.total); // Sort scores by total count
-  // };
 
 
-  // const prepareChartData = (reasons) => {
-  //   return {
-  //     labels: reasons.map(r => r.reason),
-  //     datasets: [{
-  //       label: 'Count',
-  //       data: reasons.map(r => r.count),
-  //       backgroundColor: reasons.map(r => `hsl(${Math.random() * 360}, 70%, 50%)`),
-  //     }]
-  //   };
-  // };
 
-  // const preparePriorityChartData = () => {
-  //   return {
-  //     labels: Object.keys(stats.priorityStats),
-  //     datasets: [{
-  //       label: 'Tasks by Priority',
-  //       data: Object.values(stats.priorityStats),
-  //       backgroundColor: [
-  //         colors.error,    // High
-  //         colors.warning,  // Medium
-  //         colors.success   // Low
-  //       ]
-  //     }]
-  //   };
-  // };
 
   const prepareEvaluationChartData = () => {
     // Initialize an array with zeros for scores from 1 to 8
@@ -461,6 +408,26 @@ const MainStats = () => {
           label: 'Count',
           data: governorates.map(g => g.count),
           backgroundColor: governorates.map(g => colors.primary),
+        }
+      ]
+    };
+  };
+
+  const prepareResponsibleChartData = () => {
+    const data = Object.entries(stats.responsibleStats || {})
+      .map(([resp, s]) => ({
+        responsible: resp,
+        count: s.count,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      labels: data.map(d => d.responsible),
+      datasets: [
+        {
+          label: 'Task Count',
+          data: data.map(d => d.count),
+          backgroundColor: colors.success,
         }
       ]
     };
@@ -572,75 +539,6 @@ const MainStats = () => {
     };
   };
 
-  // Prepare chart data for responsibilities
-  const prepareResponsibilityChartData = () => {
-    const responsibilities = Object.entries(stats.responsibilityStats)
-      .map(([responsibility, data]) => ({
-        responsibility,
-        count: data.count,
-      }))
-      .sort((a, b) => b.count - a.count); // Sort by count
-
-    return {
-      labels: responsibilities.map(r => r.responsibility),
-      datasets: [
-        {
-          label: 'Count',
-          data: responsibilities.map(r => r.count),
-          backgroundColor: responsibilities.map(r => colors.primary),
-        }
-      ]
-    };
-  };
-
-  const responsibilityChartOptions = {
-    ...chartOptions,
-    plugins: {
-      legend: {
-        position: 'top',
-        labels: {
-          color: colors.textPrimary
-        }
-      },
-      datalabels: {
-        anchor: 'end',
-        align: 'top',
-        formatter: (value, context) => {
-          const total = context.chart.data.datasets[0].data.reduce((acc, data) => acc + data, 0);
-          const percentage = Math.round((value / total) * 100);
-          return `${value} (${percentage}%)`;
-        },
-        color: colors.textPrimary,
-        font: {
-          weight: 'bold',
-        },
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        title: {
-          display: true,
-          text: 'Count',
-          color: colors.textSecondary
-        },
-        ticks: {
-          color: colors.textSecondary
-        },
-        grid: {
-          color: colors.border
-        }
-      },
-      x: {
-        ticks: {
-          color: colors.textSecondary
-        },
-        grid: {
-          color: colors.border
-        }
-      }
-    }
-  };
 
   // Function to prepare data for all reasons
   const prepareAllReasonsChartData = () => {
@@ -745,33 +643,7 @@ const MainStats = () => {
     },
   };
 
-  // const prepareGovernorateReasonsChartData = () => {
-  //   const governorates = Object.entries(stats.governorateStats)
-  //     .sort((a, b) => b[1].count - a[1].count);
 
-  //   // Get all unique validation categories across all governorates
-  //   const allValidationCats = new Set();
-  //   governorates.forEach(([_, govData]) => {
-  //     Object.keys(govData.validationCats || {}).forEach(cat => allValidationCats.add(cat));
-  //   });
-
-  //   // Prepare dataset for each validation category
-  //   const validationCatDatasets = Array.from(allValidationCats).map(cat => ({
-  //     label: cat,
-  //     data: governorates.map(([govName, govData]) => {
-  //       const totalTasks = govData.count;
-  //       const catCount = (govData.validationCats || {})[cat] || 0;
-  //       return Math.round((catCount / totalTasks) * 100); // Percentage
-  //     }),
-  //     backgroundColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
-  //     stack: 'stack',
-  //   }));
-
-  //   return {
-  //     labels: governorates.map(([govName]) => govName),
-  //     datasets: validationCatDatasets
-  //   };
-  // };
 
   // const governorateReasonsOptions = {
   //   responsive: true,
@@ -961,30 +833,6 @@ const MainStats = () => {
         </Box>
       </Paper>
 
-      {/* Governorate Validation Categories Breakdown */}
-      {/* <Paper sx={{ p: 2, mb: 4, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ color: colors.textPrimary }}>
-            Validation Categories by Governorate
-          </Typography>
-        </Box>
-        <Box sx={{ height: '500px' }}>
-          <Bar
-            data={prepareGovernorateReasonsChartData()}
-            options={{
-              ...governorateReasonsOptions,
-              onClick: (event, elements) => {
-                if (elements.length > 0) {
-                  const index = elements[0].index;
-                  handleGovernorateClick(index);
-                }
-              }
-            }}
-          />
-
-        </Box>
-      </Paper> */}
-
       {/* Responsibility Statistics */}
       <Paper sx={{ p: 2, mb: 4, border: `1px solid ${colors.border}` }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -993,26 +841,33 @@ const MainStats = () => {
           </Typography>
           <Button
             variant="outlined"
-            onClick={() => handleOpenAdvancedStats('responsibility')}
+            onClick={() => handleOpenAdvancedStats('responsible')}
             sx={{ color: colors.primary }}
           >
             View Trends
           </Button>
         </Box>
-        <Box sx={{ height: '500px' }}>
-          <Bar data={prepareResponsibilityChartData()} options={responsibilityChartOptions} />
+        <Box sx={{ height: '400px' }}>
+          <Bar
+            data={prepareResponsibleChartData()}
+            options={{
+              ...chartOptions,
+              plugins: {
+                ...chartOptions.plugins,
+                title: {
+                  display: true,
+                  text: 'Tasks by Responsibility',
+                  color: colors.textPrimary
+                }
+              }
+            }}
+          />
         </Box>
       </Paper>
 
-      {/* Tasks by Priority */}
-      {/* <Paper sx={{ p: 2, mb: 4, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
-        <Typography variant="h6" gutterBottom sx={{ color: colors.textPrimary }}>
-          Tasks by Priority
-        </Typography>
-        <Box sx={{ height: '300px' }}>
-          <Bar data={preparePriorityChartData()} options={chartOptions} />
-        </Box>
-      </Paper> */}
+
+
+
 
       {/* Satisfaction Score Distribution */}
       <Paper sx={{ p: 2, mb: 4, border: `1px solid ${colors.border}` }}>
@@ -1024,78 +879,7 @@ const MainStats = () => {
         </Box>
       </Paper>
 
-      {/* Score Reasons Distribution */}
-      {/* <Paper sx={{ p: 2, mb: 4, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
-        <Typography variant="h6" gutterBottom sx={{ color: colors.textPrimary }}>
-          Satisfaction Score Reasons Distribution
-        </Typography>
-        {prepareScoreReasonsData(stats.scoreReasons).map((scoreData, index) => (
-          <Accordion key={index} sx={{ backgroundColor: colors.surfaceElevated, mb: 2 }}>
-            <AccordionSummary expandIcon={<ExpandMore sx={{ color: colors.textPrimary }} />}>
-              <Typography sx={{ color: colors.textPrimary }}>
-                Score {scoreData.score} (Total: {scoreData.total} tasks)
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Box sx={{ height: '300px', mb: 2 }}>
-                <Bar
-                  data={prepareChartData(scoreData.reasons)}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        display: false,
-                      },
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        ticks: {
-                          color: colors.textSecondary,
-                        },
-                      },
-                      x: {
-                        ticks: {
-                          color: colors.textSecondary,
-                        },
-                      },
-                    },
-                  }}
-                />
-              </Box>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ color: colors.textPrimary }}>Reason</TableCell>
-                      <TableCell sx={{ color: colors.textPrimary }} align="right">Count</TableCell>
-                      <TableCell sx={{ color: colors.textPrimary }} align="right">Percentage</TableCell>
-                      <TableCell sx={{ color: colors.textPrimary }} align="right">Most Common Team</TableCell>
-                      <TableCell sx={{ color: colors.textPrimary }} align="right">Team Count</TableCell>
-                      <TableCell sx={{ color: colors.textPrimary }} align="right">Most Common Governorate</TableCell>
-                      <TableCell sx={{ color: colors.textPrimary }} align="right">Governorate Count</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {scoreData.reasons.map((reasonData, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell sx={{ color: colors.textPrimary }}>{reasonData.reason}</TableCell>
-                        <TableCell align="right" sx={{ color: colors.textPrimary }}>{reasonData.count}</TableCell>
-                        <TableCell align="right" sx={{ color: colors.textPrimary }}>{reasonData.percentage}%</TableCell>
-                        <TableCell align="right" sx={{ color: colors.textPrimary }}>{reasonData.mostCommonTeam}</TableCell>
-                        <TableCell align="right" sx={{ color: colors.textPrimary }}>{reasonData.teamCount}</TableCell>
-                        <TableCell align="right" sx={{ color: colors.textPrimary }}>{reasonData.mostCommonGovernorate}</TableCell>
-                        <TableCell align="right" sx={{ color: colors.textPrimary }}>{reasonData.governorateCount}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </AccordionDetails>
-          </Accordion>
-        ))}
-      </Paper> */}
+
 
       {/* Satisfaction Score Statistics */}
       <Paper sx={{ p: 2, mb: 4, border: `1px solid ${colors.border}` }}>

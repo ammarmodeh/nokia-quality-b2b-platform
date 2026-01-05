@@ -491,15 +491,13 @@ const AdvancedStatsDialog = ({
             <Typography variant="h6" gutterBottom sx={{ color: colors.textPrimary }}>
               Select {selectedDimension === 'reason' ? 'Reasons' :
                 selectedDimension === 'governorate' ? 'Governorates' :
-                  selectedDimension === 'responsibility' ? 'Responsibilities' :
-                    'Items'} to Compare
+                  'Items'} to Compare
             </Typography>
             <FormControl fullWidth sx={{ mb: 2 }}>
               <InputLabel sx={{ color: colors.textSecondary, '&.Mui-focused': { color: colors.primary } }}>
                 {selectedDimension === 'reason' ? 'Reasons' :
                   selectedDimension === 'governorate' ? 'Governorates' :
-                    selectedDimension === 'responsibility' ? 'Responsibilities' :
-                      'Items'}
+                    'Items'}
               </InputLabel>
               <Select
                 multiple

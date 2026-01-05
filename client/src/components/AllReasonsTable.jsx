@@ -14,7 +14,7 @@ import {
   Divider,
   Chip
 } from "@mui/material";
-import { DataGrid } from '@mui/x-data-grid';
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
 import { getReasonViolations2 } from "../utils/helpers";
 import { RiFileExcel2Fill } from "react-icons/ri";
@@ -102,8 +102,9 @@ export const AllReasonsTable = ({ tasks }) => {
           }}
           sx={{
             textTransform: 'none',
-            color: '#ffffff',
+            color: '#3b82f6',
             padding: 0,
+            justifyContent: "flex-start",
             minWidth: 0,
             '&:hover': {
               textDecoration: 'underline',
@@ -161,7 +162,11 @@ export const AllReasonsTable = ({ tasks }) => {
       'Contact Number': task.contactNumber,
       'Tariff Name': task.tarrifName,
       'Customer Feedback': task.customerFeedback,
+      'Customer Feedback': task.customerFeedback,
       'Reason': task.reason,
+      'Sub Reason': task.subReason || 'N/A',
+      'Root Cause': task.rootCause || 'N/A',
+      'Customer Type': task.customerType,
       'Customer Type': task.customerType,
       'Governorate': task.governorate,
       'District': task.district,
@@ -196,11 +201,12 @@ export const AllReasonsTable = ({ tasks }) => {
           variant="h6"
           // fontWeight="bold"
           sx={{
-            color: "#c2c2c2",
+            color: "#475569",
             fontSize: isMobile ? "0.9rem" : "1rem",
+            fontWeight: "600"
           }}
         >
-          Reason Overview ( <span style={{ color: "#03a9f4" }}>{netTotal}</span> )
+          Reason Overview ( <span style={{ color: "#0ea5e9" }}>{netTotal}</span> )
         </Typography>
         <Tooltip title="Export to Excel">
           <IconButton
@@ -218,9 +224,11 @@ export const AllReasonsTable = ({ tasks }) => {
         </Tooltip>
       </Stack>
       <Paper sx={{
-        height: 420,
+        height: 400,
         width: "100%",
-        backgroundColor: "#2d2d2d",
+        // backgroundColor: "#ffffff",
+        borderRadius: "12px",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
         overflow: "hidden"
       }}>
         <DataGrid
@@ -231,50 +239,58 @@ export const AllReasonsTable = ({ tasks }) => {
           pageSizeOptions={[5, 10, 25]}
           paginationModel={paginationModel}
           onPaginationModelChange={setPaginationModel}
+          slots={{ toolbar: GridToolbar }}
+          slotProps={{
+            toolbar: {
+              showQuickFilter: true,
+              quickFilterProps: { debounceMs: 500 },
+            },
+          }}
           sx={{
             border: 0,
-            color: "#ffffff",
+            color: "#cbd5e1", // Light gray for dark theme
+            fontFamily: "'Inter', sans-serif",
+            "& .MuiDataGrid-overlay": {
+              color: "#64748b",
+            },
             "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#2d2d2d",
-              color: "#b3b3b3",
-              fontSize: "0.875rem",
-              fontWeight: "bold",
+              backgroundColor: "#f8fafc",
+              color: "#475569",
+              fontSize: "0.75rem",
+              fontWeight: "600",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              borderBottom: "1px solid #e2e8f0",
             },
             "& .MuiDataGrid-columnHeader": {
-              backgroundColor: "#2d2d2d",
+              backgroundColor: "#f8fafc",
             },
             "& .MuiDataGrid-cell": {
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: "1px solid #f1f5f9",
             },
             "& .MuiDataGrid-row": {
               "&:hover": {
-                backgroundColor: "#2d2d2d",
+                backgroundColor: "#f8fafc",
               },
             },
             "& .MuiDataGrid-footerContainer": {
-              minHeight: "64px",
-              backgroundColor: "#2d2d2d",
-              color: "#ffffff",
-              "& .MuiTablePagination-root": {
-                color: "#ffffff",
-              },
+              borderTop: "1px solid #e2e8f0",
+              // backgroundColor: "#ffffff",
+              color: "#475569",
             },
-            "& .MuiDataGrid-virtualScroller": {
-              "&::-webkit-scrollbar": {
-                width: "8px",
-                height: "8px",
-              },
-              "&::-webkit-scrollbar-thumb": {
-                backgroundColor: "#666",
-                borderRadius: "4px",
-              },
-              "&::-webkit-scrollbar-track": {
-                backgroundColor: "#e5e7eb",
-              },
+            "& .MuiTablePagination-root": {
+              color: "#475569",
             },
-            "& .MuiDataGrid-scrollbarFiller": {
-              backgroundColor: "#2d2d2d",
-            },
+            "& .MuiDataGrid-toolbarContainer": {
+              padding: "12px",
+              borderBottom: "1px solid #e2e8f0",
+              // backgroundColor: "#ffffff",
+              gap: 2,
+              "& .MuiButton-root": {
+                color: "#64748b",
+                fontSize: "0.80rem",
+              }
+            }
           }}
         />
       </Paper>
@@ -376,6 +392,9 @@ export const AllReasonsTable = ({ tasks }) => {
                     <DetailRow label="Tariff Name" value={task.tarrifName} />
                     <DetailRow label="Customer Feedback" value={task.customerFeedback} />
                     <DetailRow label="Reason" value={task.reason} />
+                    <DetailRow label="Sub Reason" value={task.subReason || 'N/A'} />
+                    <DetailRow label="Root Cause" value={task.rootCause || 'N/A'} />
+                    <DetailRow label="Customer Type" value={task.customerType} />
                     <DetailRow label="Customer Type" value={task.customerType} />
                     <DetailRow label="Governorate" value={task.governorate} />
                     <DetailRow label="District" value={task.district} />

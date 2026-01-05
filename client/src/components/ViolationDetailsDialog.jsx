@@ -89,7 +89,20 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
       field: 'reason',
       headerName: 'Violation Reason',
       width: 200,
+      width: 200,
       flex: 1,
+    },
+    {
+      field: 'subReason',
+      headerName: 'Sub Reason',
+      width: 150,
+      valueFormatter: (value) => value || 'N/A'
+    },
+    {
+      field: 'rootCause',
+      headerName: 'Root Cause',
+      width: 150,
+      valueFormatter: (value) => value || 'N/A'
     },
     {
       field: 'customerFeedback',
@@ -181,6 +194,8 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
         'SLID': task.slid || 'N/A',
         'Score': task.evaluationScore,
         'Violation Reason': task.reason,
+        'Sub Reason': task.subReason || 'N/A',
+        'Root Cause': task.rootCause || 'N/A',
         'Customer Feedback': task.customerFeedback || '',
         'Impact': task.priority,
         'Status': task.validationStatus || 'Not validated',

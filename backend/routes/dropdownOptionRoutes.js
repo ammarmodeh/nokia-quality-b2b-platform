@@ -5,6 +5,7 @@ import {
   addOption,
   updateOption,
   deleteOption,
+  reorderOptions,
   seedOptions,
 } from "../controllers/dropdownOptionControllers.js";
 
@@ -18,6 +19,7 @@ router.get("/category/:category", getOptionsByCategory);
 router.post("/add", addOption);
 router.patch("/update/:id", updateOption);
 router.delete("/delete/:id", deleteOption);
+router.put("/reorder", reorderOptions);
 router.post("/seed", seedOptions);
 
 export default router;

@@ -37,10 +37,15 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const [teamInfo, setTeamInfo] = useState({ teamName: '', teamId: '' });
   const [customerType, setCustomerType] = useState('');
   const [validationStatus, setValidationStatus] = useState("");
-  const [validationCat, setValidationCat] = useState('');
-  const [reason, setReason] = useState("");
-  const [responsibility, setResponsibility] = useState("");
-  const [responsibilitySub, setResponsibilitySub] = useState("");
+  const [responsible, setResponsible] = useState("");
+  const [subReason, setSubReason] = useState("");
+  const [rootCause, setRootCause] = useState("");
+  const [ontType, setOntType] = useState("");
+  const [freeExtender, setFreeExtender] = useState("No");
+  const [extenderType, setExtenderType] = useState("");
+  const [extenderNumber, setExtenderNumber] = useState(0);
+  const [closureCallEvaluation, setClosureCallEvaluation] = useState("");
+  const [closureCallFeedback, setClosureCallFeedback] = useState("");
 
   // Dynamic dropdown options
   const [dropdownOptions, setDropdownOptions] = useState({
@@ -51,10 +56,12 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
     GOVERNORATES: [],
     CUSTOMER_TYPE: [],
     VALIDATION_STATUS: [],
-    VALIDATION_CATEGORY: [],
     REASON: [],
+    REASON_SUB: [],
+    ROOT_CAUSE: [],
     RESPONSIBILITY: [],
-    RESPONSIBILITY_SUB: []
+    ONT_TYPE: [],
+    EXTENDER_TYPE: [],
   });
 
   useEffect(() => {
@@ -64,8 +71,8 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
         if (data && Object.keys(data).length > 0) {
           const formatted = {};
           Object.keys(data).forEach(key => {
-            if (key === "RESPONSIBILITY_SUB") {
-              formatted[key] = data[key]; // Store full objects for sub-options
+            if (key === "REASON_SUB" || key === "ROOT_CAUSE" || key === "REASON" || key === "RESPONSIBILITY") {
+              formatted[key] = data[key]; // Store full objects for hierarchical options
             } else {
               formatted[key] = data[key].map(opt => opt.value);
             }
@@ -137,12 +144,11 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
         tarrifName: task.tarrifName || "",
         customerFeedback: task.customerFeedback || "",
         reason: task.reason || "",
+        responsible: task.responsible || "",
         customerName: task.customerName || "",
         district: task.district || "",
         date: formattedDate,
         interviewDate: formattedInterviewDate,
-        responsibility: task.responsibility || "",
-        responsibilitySub: task.responsibilitySub || "",
       });
 
       setValue("date", formattedDate);
@@ -152,10 +158,9 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setValue("requestNumber", task.requestNumber);
       setValue("customerFeedback", task.customerFeedback);
       setValue("reason", task.reason);
+      setValue("responsible", task.responsible);
       setValue("customerName", task.customerName);
       setValue("district", task.district);
-      setValue("responsibility", task.responsibility);
-      setValue("responsibilitySub", task.responsibilitySub);
 
       setPriority(dropdownOptions.PRIORITY.includes(task.priority) ? task.priority : dropdownOptions.PRIORITY[0]);
       setDepartment(DEPARTMENT.includes(task.department) ? task.department : DEPARTMENT[0]);
@@ -171,29 +176,17 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
         teamId: task.teamId || ''
       });
       setCustomerType(task.customerType || '');
-      setValidationStatus(task.validationStatus || '');
-      setValidationCat(task.validationCat || '');
-      setReason(task.reason || (dropdownOptions.REASON.length > 0 ? dropdownOptions.REASON[0] : ""));
-
-      let mainResp = task.responsibility || "";
-      let subResp = task.responsibilitySub || "";
-
-      // Logic to handle existing data migration (Main vs Sub)
-      if (!subResp && mainResp) {
-        // If the value in 'responsibility' is actually a known sub-responsibility, shift it
-        const foundSub = dropdownOptions.RESPONSIBILITY_SUB.find(opt => opt.value === mainResp);
-        if (foundSub) {
-          subResp = mainResp;
-          mainResp = foundSub.parentValue;
-        } else if (!dropdownOptions.RESPONSIBILITY.includes(mainResp) && mainResp !== "") {
-          // If it's custom text and not a main category, move it to sub as per user request
-          subResp = mainResp;
-          mainResp = "";
-        }
-      }
-
-      setResponsibility(mainResp);
-      setResponsibilitySub(subResp);
+      setValidationStatus(task.validationStatus || "");
+      setResponsible(task.responsible || "");
+      setReason(task.reason || "");
+      setSubReason(task.subReason || "");
+      setRootCause(task.rootCause || "");
+      setOntType(task.ontType || "");
+      setFreeExtender(task.freeExtender || "No");
+      setExtenderType(task.extenderType || "");
+      setExtenderNumber(task.extenderNumber || 0);
+      setClosureCallEvaluation(task.closureCallEvaluation || "");
+      setClosureCallFeedback(task.closureCallFeedback || "");
     }
   }, [task, open, reset, setValue, user, dropdownOptions]);
 
@@ -241,10 +234,16 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       governorate,
       customerType,
       validationStatus,
-      validationCat,
+      responsible,
       reason,
-      responsibility,
-      responsibilitySub
+      subReason,
+      rootCause,
+      ontType,
+      freeExtender,
+      extenderType: freeExtender === 'Yes' ? extenderType : null,
+      extenderNumber: freeExtender === 'Yes' ? extenderNumber : 0,
+      closureCallEvaluation,
+      closureCallFeedback,
     };
 
     // console.log({ formData });
@@ -272,160 +271,300 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       <DialogContent>
         <form onSubmit={handleSubmit(handleSubmitForm)} className="overflow-y-auto">
           <Stack spacing={2} className="mt-4">
-            <TextField
-              label="SLID"
-              placeholder="Enter 7 digits (e.g., 0123456)"
-              fullWidth
-              variant="outlined"
-              value={watch("slid")}
-              onChange={(e) => setValue("slid", e.target.value.replace(/\D/g, "").slice(0, 7))}
-              inputProps={{ maxLength: 7 }}
-              {...register("slid", { required: "SLID is required", pattern: { value: /^\d{7}$/, message: "Task SLID must be exactly 7 digits." } })}
-              error={!!errors.slid}
-              helperText={errors.slid ? errors.slid.message : ""}
-              className="mb-4"
-            />
-
-            <TextField
-              label="Customer Name"
-              placeholder="Customer Name"
-              fullWidth
-              variant="outlined"
-              // inputProps={{ maxLength: 7 }}
-              {...register("customerName", { required: "Customer name is required" })}
-              error={!!errors.customerName}
-              helperText={errors.customerName ? errors.customerName.message : ""}
-              className="mb-4"
-            />
-
-            <TextField
-              label="PIS Date"
-              type="datetime-local"
-              fullWidth
-              variant="outlined"
-              {...register('pisDate', { required: 'PIS Date is required!' })}
-              error={!!errors.pisDate}
-              helperText={errors.pisDate ? errors.pisDate.message : ''}
-              value={pisDate}
-              onChange={(e) => setPisDate(e.target.value)}
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
-
-            <TextField
-              label="Contact number"
-              placeholder="Enter contact number"
-              type='number'
-              fullWidth
-              variant="outlined"
-              {...register('contactNumber', {
-                required: 'Contact number is required',
-              })}
-              error={!!errors.contactNumber}
-              helperText={errors.contactNumber ? errors.contactNumber.message : ''}
-            />
-
-            <TextField
-              label="Request number"
-              placeholder="Enter request number"
-              type='number'
-              fullWidth
-              variant="outlined"
-              {...register('requestNumber', {
-                required: 'request number is required',
-              })}
-              error={!!errors.requestNumber}
-              helperText={errors.requestNumber ? errors.requestNumber.message : ''}
-            />
-
-            <FormControl fullWidth variant="outlined" error={!!errors.status}>
-              <InputLabel>Satisfaction Score</InputLabel>
-              <Select value={evaluationScore} onChange={(e) => setEvaluationScore(e.target.value)} label="Satisfaction Score">
-                {dropdownOptions.EVALUATION_SCORE.map((score) => (
-                  <MenuItem key={score} value={score}>
-                    {score}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-            </FormControl>
-
-            <FormControl fullWidth variant="outlined" error={!!errors.status}>
-              <InputLabel>Governorate</InputLabel>
-              <Select value={governorate} onChange={(e) => setGovernorate(e.target.value)} label="Governorate">
-                {dropdownOptions.GOVERNORATES.map((list) => (
-                  <MenuItem key={list} value={list}>
-                    {list}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-            </FormControl>
-            <TextField
-              label="District"
-              type="text"
-              fullWidth
-              variant="outlined"
-              {...register('district', { required: 'District is required!' })}
-              error={!!errors.district}
-              helperText={errors.district ? errors.district.message : ''}
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
-
-            <FormControl fullWidth variant="outlined" error={!!errors.status}>
-              <InputLabel>Customer Type</InputLabel>
-              <Select value={customerType} onChange={(e) => setCustomerType(e.target.value)} label="Customer Type">
-                {dropdownOptions.CUSTOMER_TYPE.map((list) => (
-                  <MenuItem key={list} value={list}>
-                    {list}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-            </FormControl>
-
-            <TextField
-              label="Tarrif Name"
-              placeholder="Tarrif Name"
-              fullWidth
-              variant="outlined"
-              multiline
-              rows={4}
-              {...register("tarrifName", { required: "Tarrif name is required" })}
-              error={!!errors.tarrifName}
-              helperText={errors.tarrifName ? errors.tarrifName.message : ""}
-              className="mb-4"
-            />
-
-            <TextField
-              label="Customer Feedback"
-              placeholder="Enter the customer feedback"
-              fullWidth
-              variant="outlined"
-              multiline
-              rows={4}
-              {...register("customerFeedback", { required: "Customer feedback is required" })}
-              error={!!errors.customerFeedback}
-              helperText={errors.customerFeedback ? errors.customerFeedback.message : ""}
-              className="mb-4"
-            />
+            <Stack direction="row" spacing={2}>
+              <TextField
+                label="SLID"
+                placeholder="Enter 7 digits (e.g., 0123456)"
+                fullWidth
+                variant="outlined"
+                value={watch("slid")}
+                onChange={(e) => setValue("slid", e.target.value.replace(/\D/g, "").slice(0, 7))}
+                inputProps={{ maxLength: 7 }}
+                {...register("slid", { required: "SLID is required", pattern: { value: /^\d{7}$/, message: "Task SLID must be exactly 7 digits." } })}
+                error={!!errors.slid}
+                helperText={errors.slid ? errors.slid.message : ""}
+              />
+              <TextField
+                label="Request number"
+                placeholder="Enter request number"
+                type='number'
+                fullWidth
+                variant="outlined"
+                {...register('requestNumber', {
+                  required: 'request number is required',
+                })}
+                error={!!errors.requestNumber}
+                helperText={errors.requestNumber ? errors.requestNumber.message : ''}
+              />
+            </Stack>
 
             <Stack direction="row" spacing={2}>
+              <TextField
+                label="Customer Name"
+                placeholder="Customer Name"
+                fullWidth
+                variant="outlined"
+                {...register("customerName", { required: "Customer name is required" })}
+                error={!!errors.customerName}
+                helperText={errors.customerName ? errors.customerName.message : ""}
+              />
+              <TextField
+                label="Contact number"
+                placeholder="Enter contact number"
+                type='number'
+                fullWidth
+                variant="outlined"
+                {...register('contactNumber', {
+                  required: 'Contact number is required',
+                })}
+                error={!!errors.contactNumber}
+                helperText={errors.contactNumber ? errors.contactNumber.message : ''}
+              />
+            </Stack>
+
+            <Stack direction="row" spacing={2}>
+              <FormControl fullWidth variant="outlined" error={!!errors.status}>
+                <InputLabel>Satisfaction Score</InputLabel>
+                <Select value={evaluationScore} onChange={(e) => setEvaluationScore(e.target.value)} label="Satisfaction Score">
+                  {dropdownOptions.EVALUATION_SCORE.map((score) => (
+                    <MenuItem key={score} value={score}>
+                      {score}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
+              </FormControl>
+
+              <TextField
+                label="PIS Date"
+                type="datetime-local"
+                fullWidth
+                variant="outlined"
+                {...register('pisDate', { required: 'PIS Date is required!' })}
+                error={!!errors.pisDate}
+                helperText={errors.pisDate ? errors.pisDate.message : ''}
+                value={pisDate}
+                onChange={(e) => setPisDate(e.target.value)}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+            </Stack>
+
+            <Stack direction="row" spacing={2}>
+              <FormControl fullWidth variant="outlined" error={!!errors.status}>
+                <InputLabel>Governorate</InputLabel>
+                <Select value={governorate} onChange={(e) => setGovernorate(e.target.value)} label="Governorate">
+                  {dropdownOptions.GOVERNORATES.map((list) => (
+                    <MenuItem key={list} value={list}>
+                      {list}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
+              </FormControl>
+              <TextField
+                label="District"
+                type="text"
+                fullWidth
+                variant="outlined"
+                {...register('district', { required: 'District is required!' })}
+                error={!!errors.district}
+                helperText={errors.district ? errors.district.message : ''}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+              <FormControl fullWidth variant="outlined" error={!!errors.status}>
+                <InputLabel>Customer Type</InputLabel>
+                <Select value={customerType} onChange={(e) => setCustomerType(e.target.value)} label="Customer Type">
+                  {dropdownOptions.CUSTOMER_TYPE.map((list) => (
+                    <MenuItem key={list} value={list}>
+                      {list}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
+              </FormControl>
+            </Stack>
+            <Stack direction="row" spacing={2}>
+              <TextField
+                label="Tariff Name"
+                placeholder="Tariff Name"
+                fullWidth
+                variant="outlined"
+                multiline
+                rows={4}
+                {...register("tarrifName", { required: "Tariff Name is required" })}
+                error={!!errors.tarrifName}
+                helperText={errors.tarrifName ? errors.tarrifName.message : ""}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                label="Customer Feedback"
+                placeholder="Enter the customer feedback"
+                fullWidth
+                variant="outlined"
+                multiline
+                rows={4}
+                {...register("customerFeedback", { required: "Customer feedback is required" })}
+                error={!!errors.customerFeedback}
+                helperText={errors.customerFeedback ? errors.customerFeedback.message : ""}
+                inputProps={{ dir: 'rtl' }}
+                sx={{ '& .MuiInputBase-input': { textAlign: 'right' } }}
+              />
+            </Stack>
+
+            {/* New Fields Section */}
+            <Divider sx={{ my: 3 }} />
+            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+              Equipment & Verification Details
+            </Typography>
+
+            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
               <Autocomplete
                 freeSolo
-                options={dropdownOptions.REASON}
+                options={dropdownOptions.ONT_TYPE}
+                value={ontType}
+                onChange={(e, v) => setOntType(v)}
+                onInputChange={(e, v) => setOntType(v)}
+                renderInput={(params) => <TextField {...params} label="ONT Type" />}
+                fullWidth
+              />
+              <FormControl fullWidth>
+                <InputLabel>Free Extender?</InputLabel>
+                <Select
+                  value={freeExtender}
+                  onChange={(e) => setFreeExtender(e.target.value)}
+                  label="Free Extender?"
+                >
+                  <MenuItem value="No">No</MenuItem>
+                  <MenuItem value="Yes">Yes</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
+
+            {freeExtender === 'Yes' && (
+              <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                <Autocomplete
+                  freeSolo
+                  options={dropdownOptions.EXTENDER_TYPE}
+                  value={extenderType}
+                  onChange={(e, v) => setExtenderType(v)}
+                  onInputChange={(e, v) => setExtenderType(v)}
+                  renderInput={(params) => <TextField {...params} label="Extender Type" />}
+                  fullWidth
+                />
+                <TextField
+                  label="Number of Extenders"
+                  type="number"
+                  value={extenderNumber}
+                  onChange={(e) => setExtenderNumber(e.target.value)}
+                  fullWidth
+                />
+              </Stack>
+            )}
+
+            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
+                <Select
+                  value={closureCallEvaluation}
+                  onChange={(e) => setClosureCallEvaluation(e.target.value)}
+                  label="Closure Call Evaluation (1-10)"
+                >
+                  {[...Array(10)].map((_, i) => (
+                    <MenuItem key={i + 1} value={i + 1}>
+                      {i + 1}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                label="Closure Call Feedback"
+                value={closureCallFeedback}
+                onChange={(e) => setClosureCallFeedback(e.target.value)}
+                fullWidth
+                multiline
+                rows={1}
+                inputProps={{ dir: 'rtl' }}
+                sx={{ '& .MuiInputBase-input': { textAlign: 'right' } }}
+              />
+            </Stack>
+
+            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+              <Autocomplete
+                freeSolo
+                options={dropdownOptions.RESPONSIBILITY.map(opt => opt.value)}
+                value={responsible}
+                onChange={(event, newValue) => {
+                  setResponsible(newValue);
+                  setReason("");
+                  setSubReason("");
+                  setRootCause("");
+                }}
+                onInputChange={(event, newInputValue) => {
+                  setResponsible(newInputValue);
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Responsibility" variant="outlined" />
+                )}
+                fullWidth
+              />
+              <Autocomplete
+                freeSolo
+                options={dropdownOptions.REASON
+                  .filter(opt => !responsible ? !opt.parentValue : opt.parentValue === responsible)
+                  .map(opt => opt.value)}
                 value={reason}
                 onChange={(event, newValue) => {
                   setReason(newValue);
+                  setSubReason("");
+                  setRootCause("");
                 }}
                 onInputChange={(event, newInputValue) => {
                   setReason(newInputValue);
                 }}
                 renderInput={(params) => (
-                  <TextField {...params} label="Reason" variant="outlined" />
+                  <TextField {...params} label="Reason (Level 1)" variant="outlined" />
+                )}
+                fullWidth
+              />
+              <Autocomplete
+                freeSolo
+                options={dropdownOptions.REASON_SUB
+                  .filter(opt => !reason ? !opt.parentValue : opt.parentValue === reason)
+                  .map(opt => opt.value)}
+                value={subReason}
+                onChange={(event, newValue) => {
+                  setSubReason(newValue);
+                  setRootCause("");
+                }}
+                onInputChange={(event, newInputValue) => {
+                  setSubReason(newInputValue);
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Sub Reason (Level 2)" variant="outlined" />
+                )}
+                fullWidth
+              />
+            </Stack>
+
+            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+              <Autocomplete
+                freeSolo
+                options={dropdownOptions.ROOT_CAUSE
+                  .filter(opt => !subReason ? !opt.parentValue : opt.parentValue === subReason)
+                  .map(opt => opt.value)}
+                value={rootCause}
+                onChange={(event, newValue) => {
+                  setRootCause(newValue);
+                }}
+                onInputChange={(event, newInputValue) => {
+                  setRootCause(newInputValue);
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Root Cause (Level 3)" variant="outlined" />
                 )}
                 fullWidth
               />
@@ -483,52 +622,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
             </FormControl>
 
-            <Autocomplete
-              freeSolo
-              options={dropdownOptions.RESPONSIBILITY}
-              value={responsibility}
-              onChange={(event, newValue) => {
-                setResponsibility(newValue);
-                setResponsibilitySub(""); // Reset sub when main changes
-              }}
-              onInputChange={(event, newInputValue) => {
-                setResponsibility(newInputValue);
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="Responsible 1 (Main)" variant="outlined" />
-              )}
-              fullWidth
-            />
-
-            <Autocomplete
-              freeSolo
-              options={dropdownOptions.RESPONSIBILITY_SUB
-                .filter(opt => opt.parentValue === responsibility)
-                .map(opt => opt.value)}
-              value={responsibilitySub}
-              onChange={(event, newValue) => {
-                setResponsibilitySub(newValue);
-              }}
-              onInputChange={(event, newInputValue) => {
-                setResponsibilitySub(newInputValue);
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="Responsible 2 (Sub/Team)" variant="outlined" />
-              )}
-              fullWidth
-            />
-
-            <FormControl fullWidth variant="outlined" error={!!errors.status}>
-              <InputLabel>Validation Category</InputLabel>
-              <Select value={validationCat} onChange={(e) => setValidationCat(e.target.value)} label="Validation Category">
-                {dropdownOptions.VALIDATION_CATEGORY.map((list) => (
-                  <MenuItem key={list} value={list}>
-                    {list}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-            </FormControl>
           </Stack>
 
           <Stack>
@@ -600,7 +693,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
           </div>
         </form>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 };
 

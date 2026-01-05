@@ -31,8 +31,8 @@ export const getOptionsByCategory = async (req, res) => {
 // Add a new option
 export const addOption = async (req, res) => {
   try {
-    const { category, value, label, order } = req.body;
-    const newOption = new DropdownOption({ category, value, label, order });
+    const { category, value, label, order, parentCategory, parentValue } = req.body;
+    const newOption = new DropdownOption({ category, value, label, order, parentCategory, parentValue });
     await newOption.save();
     res.status(201).json(newOption);
   } catch (error) {
@@ -59,6 +59,29 @@ export const deleteOption = async (req, res) => {
     const deletedOption = await DropdownOption.findByIdAndDelete(id);
     if (!deletedOption) return res.status(404).json({ message: "Option not found" });
     res.status(200).json({ message: "Option deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Reorder options
+export const reorderOptions = async (req, res) => {
+  try {
+    const { options } = req.body;
+
+    // Use bulkWrite for efficient updates
+    const bulkOps = options.map((option, index) => ({
+      updateOne: {
+        filter: { _id: option._id },
+        update: { $set: { order: index + 1 } }
+      }
+    }));
+
+    if (bulkOps.length > 0) {
+      await DropdownOption.bulkWrite(bulkOps);
+    }
+
+    res.status(200).json({ message: "Options reordered successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -132,26 +155,7 @@ export const seedOptions = async (req, res) => {
       { category: "VALIDATION_STATUS", value: "Validated", label: "Validated", order: 1 },
       { category: "VALIDATION_STATUS", value: "Not validated", label: "Not validated", order: 2 },
 
-      // Validation Category
-      { category: "VALIDATION_CATEGORY", value: "Knowledge Gap", label: "Knowledge Gap", order: 1 },
-      { category: "VALIDATION_CATEGORY", value: "Customer Education", label: "Customer Education", order: 2 },
-      { category: "VALIDATION_CATEGORY", value: "Customer Perception", label: "Customer Perception", order: 3 },
-      { category: "VALIDATION_CATEGORY", value: "Incomplete Service Delivery", label: "Incomplete Service Delivery", order: 4 },
-      { category: "VALIDATION_CATEGORY", value: "Lack of Technical Expertise", label: "Lack of Technical Expertise", order: 5 },
-      { category: "VALIDATION_CATEGORY", value: "Safety/Installation Standards", label: "Safety/Installation Standards", order: 6 },
-      { category: "VALIDATION_CATEGORY", value: "Unprofessional Conduct", label: "Unprofessional Conduct", order: 7 },
-      { category: "VALIDATION_CATEGORY", value: "Poor Time Management", label: "Poor Time Management", order: 8 },
-      { category: "VALIDATION_CATEGORY", value: "Technical Limitations", label: "Technical Limitations", order: 9 },
-      { category: "VALIDATION_CATEGORY", value: "Execution Delay", label: "Execution Delay", order: 10 },
-      { category: "VALIDATION_CATEGORY", value: "Processing Delay", label: "Processing Delay", order: 11 },
-      { category: "VALIDATION_CATEGORY", value: "External Factors", label: "External Factors", order: 12 },
-      { category: "VALIDATION_CATEGORY", value: "Bad Team Behavior", label: "Bad Team Behavior", order: 13 },
-      { category: "VALIDATION_CATEGORY", value: "Device limitations", label: "Device limitations", order: 14 },
-      { category: "VALIDATION_CATEGORY", value: "Misuse of Service", label: "Misuse of Service", order: 15 },
-      { category: "VALIDATION_CATEGORY", value: "Customer-Declined Solution / Unrealistic Expectation", label: "Customer-Declined Solution / Unrealistic Expectation", order: 16 },
-      { category: "VALIDATION_CATEGORY", value: "Others", label: "Others", order: 17 },
-      { category: "VALIDATION_CATEGORY", value: "VOIP", label: "VOIP", order: 18 },
-      { category: "VALIDATION_CATEGORY", value: "Can't Determine", label: "Can't Determine", order: 19 },
+
 
       // Reason
       { category: "REASON", value: "Technical Issue", label: "Technical Issue", order: 1 },
@@ -162,28 +166,12 @@ export const seedOptions = async (req, res) => {
       { category: "REASON", value: "Others", label: "Others", order: 6 },
 
       // Responsibility
-      { category: "RESPONSIBILITY", value: "Nokia/Quality", label: "Nokia/Quality", order: 1 },
-      { category: "RESPONSIBILITY", value: "Nokia/FMC", label: "Nokia/FMC", order: 2 },
-      { category: "RESPONSIBILITY", value: "OJO", label: "OJO", order: 3 },
-      { category: "RESPONSIBILITY", value: "Other", label: "Other", order: 4 },
-
-      // Responsibility Sub (Hierarchical)
-      { category: "RESPONSIBILITY_SUB", value: "Activation Team", label: "Activation Team", parentCategory: "RESPONSIBILITY", parentValue: "Nokia/Quality", order: 1 },
-      { category: "RESPONSIBILITY_SUB", value: "Cabling Team", label: "Cabling Team", parentCategory: "RESPONSIBILITY", parentValue: "Nokia/Quality", order: 2 },
-      { category: "RESPONSIBILITY_SUB", value: "Splicing Team", label: "Splicing Team", parentCategory: "RESPONSIBILITY", parentValue: "Nokia/Quality", order: 3 },
-      { category: "RESPONSIBILITY_SUB", value: "Maintenance Team", label: "Maintenance Team", parentCategory: "RESPONSIBILITY", parentValue: "Nokia/Quality", order: 4 },
-      { category: "RESPONSIBILITY_SUB", value: "Installation Team", label: "Installation Team", parentCategory: "RESPONSIBILITY", parentValue: "Nokia/Quality", order: 5 },
-
-      { category: "RESPONSIBILITY_SUB", value: "Field Operations", label: "Field Operations", parentCategory: "RESPONSIBILITY", parentValue: "Nokia/FMC", order: 1 },
-      { category: "RESPONSIBILITY_SUB", value: "Quality Control", label: "Quality Control", parentCategory: "RESPONSIBILITY", parentValue: "Nokia/FMC", order: 2 },
-      { category: "RESPONSIBILITY_SUB", value: "Planning Team", label: "Planning Team", parentCategory: "RESPONSIBILITY", parentValue: "Nokia/FMC", order: 3 },
-
-      { category: "RESPONSIBILITY_SUB", value: "OJO Field Team", label: "OJO Field Team", parentCategory: "RESPONSIBILITY", parentValue: "OJO", order: 1 },
-      { category: "RESPONSIBILITY_SUB", value: "OJO Quality", label: "OJO Quality", parentCategory: "RESPONSIBILITY", parentValue: "OJO", order: 2 },
-
-      { category: "RESPONSIBILITY_SUB", value: "External Contractor", label: "External Contractor", parentCategory: "RESPONSIBILITY", parentValue: "Other", order: 1 },
-      { category: "RESPONSIBILITY_SUB", value: "Third Party", label: "Third Party", parentCategory: "RESPONSIBILITY", parentValue: "Other", order: 2 },
-      { category: "RESPONSIBILITY_SUB", value: "Others", label: "Others", parentCategory: "RESPONSIBILITY", parentValue: "Other", order: 3 },
+      { category: "RESPONSIBILITY", value: "Field Team", label: "Field Team", order: 1 },
+      { category: "RESPONSIBILITY", value: "Call Center", label: "Call Center", order: 2 },
+      { category: "RESPONSIBILITY", value: "Sales", label: "Sales", order: 3 },
+      { category: "RESPONSIBILITY", value: "Technical Team", label: "Technical Team", order: 4 },
+      { category: "RESPONSIBILITY", value: "Customer", label: "Customer", order: 5 },
+      { category: "RESPONSIBILITY", value: "Others", label: "Others", order: 6 },
     ];
 
     await DropdownOption.insertMany(initialOptions);

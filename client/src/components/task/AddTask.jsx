@@ -44,10 +44,12 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
     GOVERNORATES: [],
     CUSTOMER_TYPE: [],
     VALIDATION_STATUS: [],
-    VALIDATION_CATEGORY: [],
     REASON: [],
+    REASON_SUB: [],
+    ROOT_CAUSE: [],
     RESPONSIBILITY: [],
-    RESPONSIBILITY_SUB: []
+    ONT_TYPE: [],
+    EXTENDER_TYPE: [],
   });
 
   useEffect(() => {
@@ -57,8 +59,8 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
         if (data && Object.keys(data).length > 0) {
           const formatted = {};
           Object.keys(data).forEach(key => {
-            if (key === "RESPONSIBILITY_SUB") {
-              formatted[key] = data[key]; // Store full objects for sub-options
+            if (key === "REASON_SUB" || key === "ROOT_CAUSE" || key === "REASON" || key === "RESPONSIBILITY") {
+              formatted[key] = data[key]; // Store full objects for hierarchical options
             } else {
               formatted[key] = data[key].map(opt => opt.value);
             }
@@ -129,10 +131,17 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [governorate, setGovernorate] = useState(dropdownOptions.GOVERNORATES[0]);
   const [customerType, setCustomerType] = useState(dropdownOptions.CUSTOMER_TYPE[0]);
   const [validationStatus, setValidationStatus] = useState(dropdownOptions.VALIDATION_STATUS[1] || dropdownOptions.VALIDATION_STATUS[0]);
-  const [validationCat, setValidationCat] = useState(dropdownOptions.VALIDATION_CATEGORY[0]);
-  const [reason, setReason] = useState(dropdownOptions.REASON[0]);
-  const [responsibility, setResponsibility] = useState(dropdownOptions.RESPONSIBILITY[0]);
-  const [responsibilitySub, setResponsibilitySub] = useState("");
+  const [responsible, setResponsible] = useState("");
+  const [reason, setReason] = useState("");
+  const [subReason, setSubReason] = useState("");
+  const [rootCause, setRootCause] = useState("");
+  const [ontType, setOntType] = useState("");
+  const [freeExtender, setFreeExtender] = useState("No");
+  const [extenderType, setExtenderType] = useState("");
+  const [extenderNumber, setExtenderNumber] = useState(0);
+  const [closureCallEvaluation, setClosureCallEvaluation] = useState("");
+  const [closureCallFeedback, setClosureCallFeedback] = useState("");
+  // const [rootCause, setRootCause] = useState("");
 
   // This watchTitle is used to get the value of the title field (registered in the form)
   const watchSLID = watch('slid', '');
@@ -179,12 +188,19 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       evaluationScore,
       customerType,
       validationStatus,
-      validationCat,
+      responsible,
       reason,
-      responsibility,
-      responsibilitySub
+      subReason,
+      rootCause,
+      ontType,
+      freeExtender,
+      extenderType: freeExtender === 'Yes' ? extenderType : null,
+      extenderNumber: freeExtender === 'Yes' ? extenderNumber : 0,
+      closureCallEvaluation,
+      closureCallFeedback,
     };
-    // console.log({ formData });
+
+    console.log('Sending Task Data:', formData);
 
 
     if (formData.whomItMayConcern.length === 0 || formData.assignedTo.length === 0) {
@@ -339,7 +355,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             />
           </Stack>
 
-          <Stack direction={"row"} spacing={2} >
+          <Stack direction={"row"} spacing={2}>
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Governorate</InputLabel>
               <Select value={governorate} onChange={(e) => setGovernorate(e.target.value)} label="Governorate">
@@ -363,7 +379,6 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
                 shrink: true,
               }}
             />
-
             <FormControl fullWidth variant="outlined" error={!!errors.status}>
               <InputLabel>Customer Type</InputLabel>
               <Select value={customerType} onChange={(e) => setCustomerType(e.target.value)} label="Customer Type">
@@ -380,20 +395,19 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
 
           <Stack direction={"row"} spacing={2}>
             <TextField
-              label="Tarrif Name"
-              placeholder="Tarrif Name"
+              label="Tariff Name"
+              placeholder="Tariff Name"
               fullWidth
               variant="outlined"
               multiline
               rows={4}
               {...register('tarrifName', {
-                required: 'Tarrif name is required',
+                required: 'Tariff Name is required',
               })}
               error={!!errors.tarrifName}
               helperText={errors.tarrifName ? errors.tarrifName.message : ''}
               sx={{ marginTop: '20px' }}
             />
-
             <TextField
               label="Customer Feedback"
               placeholder="Enter the customer feedback"
@@ -406,23 +420,161 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               })}
               error={!!errors.customerFeedback}
               helperText={errors.customerFeedback ? errors.customerFeedback.message : ''}
-              sx={{ marginTop: '20px' }}
+              inputProps={{ dir: 'rtl' }}
+              sx={{ marginTop: '20px', '& .MuiInputBase-input': { textAlign: 'right' } }}
+            />
+          </Stack>
+
+          {/* New Fields Section */}
+          <Divider sx={{ my: 3 }} />
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+            Equipment & Verification Details
+          </Typography>
+
+          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+            <Autocomplete
+              freeSolo
+              options={dropdownOptions.ONT_TYPE}
+              value={ontType}
+              onChange={(e, v) => setOntType(v)}
+              onInputChange={(e, v) => setOntType(v)}
+              renderInput={(params) => <TextField {...params} label="ONT Type" />}
+              fullWidth
+            />
+            <FormControl fullWidth>
+              <InputLabel>Free Extender?</InputLabel>
+              <Select
+                value={freeExtender}
+                onChange={(e) => setFreeExtender(e.target.value)}
+                label="Free Extender?"
+              >
+                <MenuItem value="No">No</MenuItem>
+                <MenuItem value="Yes">Yes</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+
+          {freeExtender === 'Yes' && (
+            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+              <Autocomplete
+                freeSolo
+                options={dropdownOptions.EXTENDER_TYPE}
+                value={extenderType}
+                onChange={(e, v) => setExtenderType(v)}
+                onInputChange={(e, v) => setExtenderType(v)}
+                renderInput={(params) => <TextField {...params} label="Extender Type" />}
+                fullWidth
+              />
+              <TextField
+                label="Number of Extenders"
+                type="number"
+                value={extenderNumber}
+                onChange={(e) => setExtenderNumber(e.target.value)}
+                fullWidth
+              />
+            </Stack>
+          )}
+
+          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
+              <Select
+                value={closureCallEvaluation}
+                onChange={(e) => setClosureCallEvaluation(e.target.value)}
+                label="Closure Call Evaluation (1-10)"
+              >
+                {[...Array(10)].map((_, i) => (
+                  <MenuItem key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label="Closure Call Feedback"
+              value={closureCallFeedback}
+              onChange={(e) => setClosureCallFeedback(e.target.value)}
+              fullWidth
+              multiline
+              rows={1}
+              inputProps={{ dir: 'rtl' }}
+              sx={{ '& .MuiInputBase-input': { textAlign: 'right' } }}
             />
           </Stack>
 
           <Stack direction={"row"} spacing={2}>
             <Autocomplete
               freeSolo
-              options={dropdownOptions.REASON}
+              options={dropdownOptions.RESPONSIBILITY.map(opt => opt.value)}
+              value={responsible}
+              onChange={(event, newValue) => {
+                setResponsible(newValue);
+                setReason("");
+                setSubReason("");
+                setRootCause("");
+              }}
+              onInputChange={(event, newInputValue) => {
+                setResponsible(newInputValue);
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Responsibility" variant="outlined" />
+              )}
+              fullWidth
+            />
+            <Autocomplete
+              freeSolo
+              options={dropdownOptions.REASON
+                .filter(opt => !responsible ? !opt.parentValue : opt.parentValue === responsible)
+                .map(opt => opt.value)}
               value={reason}
               onChange={(event, newValue) => {
                 setReason(newValue);
+                setSubReason(""); // Reset sub reason
+                setRootCause(""); // Reset root cause
               }}
               onInputChange={(event, newInputValue) => {
                 setReason(newInputValue);
               }}
               renderInput={(params) => (
-                <TextField {...params} label="Reason" variant="outlined" />
+                <TextField {...params} label="Reason (Level 1)" variant="outlined" />
+              )}
+              fullWidth
+            />
+          </Stack>
+
+          <Stack direction={"row"} spacing={2}>
+            <Autocomplete
+              freeSolo
+              options={dropdownOptions.REASON_SUB
+                .filter(opt => !reason ? !opt.parentValue : opt.parentValue === reason)
+                .map(opt => opt.value)}
+              value={subReason}
+              onChange={(event, newValue) => {
+                setSubReason(newValue);
+                setRootCause(""); // Reset root cause
+              }}
+              onInputChange={(event, newInputValue) => {
+                setSubReason(newInputValue);
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Sub Reason (Level 2)" variant="outlined" />
+              )}
+              fullWidth
+            />
+            <Autocomplete
+              freeSolo
+              options={dropdownOptions.ROOT_CAUSE
+                .filter(opt => !subReason ? !opt.parentValue : opt.parentValue === subReason)
+                .map(opt => opt.value)}
+              value={rootCause}
+              onChange={(event, newValue) => {
+                setRootCause(newValue);
+              }}
+              onInputChange={(event, newInputValue) => {
+                setRootCause(newInputValue);
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Root Cause (Level 3)" variant="outlined" />
               )}
               fullWidth
             />
@@ -499,57 +651,6 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
             </FormControl>
           </Box>
-        </Stack>
-
-        <Stack direction={"row"} spacing={2} sx={{ marginTop: '20px' }}>
-          <Autocomplete
-            freeSolo
-            options={dropdownOptions.RESPONSIBILITY}
-            value={responsibility}
-            onChange={(event, newValue) => {
-              setResponsibility(newValue);
-              setResponsibilitySub(""); // Reset sub when main changes
-            }}
-            onInputChange={(event, newInputValue) => {
-              setResponsibility(newInputValue);
-            }}
-            renderInput={(params) => (
-              <TextField {...params} label="Responsible 1 (Main)" variant="outlined" />
-            )}
-            fullWidth
-          />
-
-          <Autocomplete
-            freeSolo
-            options={dropdownOptions.RESPONSIBILITY_SUB
-              .filter(opt => opt.parentValue === responsibility)
-              .map(opt => opt.value)}
-            value={responsibilitySub}
-            onChange={(event, newValue) => {
-              setResponsibilitySub(newValue);
-            }}
-            onInputChange={(event, newInputValue) => {
-              setResponsibilitySub(newInputValue);
-            }}
-            renderInput={(params) => (
-              <TextField {...params} label="Responsible 2 (Sub/Team)" variant="outlined" />
-            )}
-            fullWidth
-          />
-        </Stack>
-
-        <Stack direction={"row"} spacing={2} sx={{ marginTop: '20px' }}>
-          <FormControl fullWidth variant="outlined" error={!!errors.status}>
-            <InputLabel>Validation Category</InputLabel>
-            <Select value={validationCat} onChange={(e) => setValidationCat(e.target.value)} label="Validation Category">
-              {dropdownOptions.VALIDATION_CATEGORY.map((list) => (
-                <MenuItem key={list} value={list}>
-                  {list}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-          </FormControl>
         </Stack>
 
         <Divider sx={{ my: 4 }} />
@@ -637,8 +738,8 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
 
         <Typography color='textSecondary' sx={{ opacity: 0.5 }}>End</Typography>
 
-      </form>
-    </Dialog>
+      </form >
+    </Dialog >
   );
 };
 

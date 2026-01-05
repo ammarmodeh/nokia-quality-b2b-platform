@@ -242,7 +242,7 @@ export const renameBatchColumn = async (req, res) => {
 // Get comprehensive analytics overview
 export const getAnalyticsOverview = async (req, res) => {
   try {
-    const { startDate, endDate, teamName, responsible, specificTeam, responsibleSub } = req.query;
+    const { startDate, endDate, teamName } = req.query;
 
     // Build filter
     const filter = {};
@@ -252,18 +252,18 @@ export const getAnalyticsOverview = async (req, res) => {
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
     if (teamName) filter['Team Name'] = teamName;
-    if (responsible) filter.Responsible = responsible;
-    if (specificTeam) filter['Specific Team'] = specificTeam;
-    if (responsibleSub) filter.ResponsibleSub = responsibleSub;
+    if (req.query.responsible) filter['Responsible'] = req.query.responsible;
 
     const totalRecords = await Detractor.countDocuments(filter);
 
-    // Get distribution by responsible
-    const responsibleBreakdown = await Detractor.aggregate([
+    // Get responsibility breakdown
+    const responsibilityBreakdown = await Detractor.aggregate([
       { $match: filter },
       { $group: { _id: "$Responsible", count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
+
+
 
     // Get team breakdown
     const teamBreakdown = await Detractor.aggregate([
@@ -277,7 +277,7 @@ export const getAnalyticsOverview = async (req, res) => {
       status: true,
       data: {
         totalRecords,
-        responsibleBreakdown: responsibleBreakdown.map(r => ({ name: r._id || 'Unassigned', value: r.count })),
+        responsibilityBreakdown: responsibilityBreakdown.map(r => ({ name: r._id || 'Others', value: r.count })),
         teamBreakdown: teamBreakdown.map(t => ({ name: t._id || 'Unknown', value: t.count }))
       }
     });
@@ -290,7 +290,7 @@ export const getAnalyticsOverview = async (req, res) => {
 // Get team violation analysis
 export const getTeamViolations = async (req, res) => {
   try {
-    const { startDate, endDate, specificTeam, responsible, responsibleSub } = req.query;
+    const { startDate, endDate, teamName } = req.query;
 
     const filter = {};
     if (startDate || endDate) {
@@ -298,9 +298,8 @@ export const getTeamViolations = async (req, res) => {
       if (startDate) filter.createdAt.$gte = new Date(startDate);
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
-    if (specificTeam) filter['Specific Team'] = specificTeam;
-    if (responsible) filter.Responsible = responsible;
-    if (responsibleSub) filter.ResponsibleSub = responsibleSub;
+    if (teamName) filter['Team Name'] = teamName;
+    if (req.query.responsible) filter['Responsible'] = req.query.responsible;
 
     const teamStats = await Detractor.aggregate([
       { $match: filter },
@@ -308,28 +307,18 @@ export const getTeamViolations = async (req, res) => {
         $group: {
           _id: "$Team Name",
           totalViolations: { $sum: 1 },
-          responsibleBreakdown: {
-            $push: "$Responsible"
-          },
+
           latestViolation: { $max: "$createdAt" },
           oldestViolation: { $min: "$createdAt" }
         }
       },
       { $sort: { totalViolations: -1 } }
     ]);
-
-    // Process responsible breakdown
+    // Process team stats
     const processedStats = teamStats.map(team => {
-      const responsibleCounts = team.responsibleBreakdown.reduce((acc, r) => {
-        const key = r || 'Unassigned';
-        acc[key] = (acc[key] || 0) + 1;
-        return acc;
-      }, {});
-
       return {
         teamName: team._id || 'Unknown',
         totalViolations: team.totalViolations,
-        responsibleBreakdown: Object.entries(responsibleCounts).map(([name, count]) => ({ name, count })),
         latestViolation: team.latestViolation,
         oldestViolation: team.oldestViolation,
         avgViolationsPerDay: team.totalViolations / Math.max(1, Math.ceil((team.latestViolation - team.oldestViolation) / (1000 * 60 * 60 * 24)))
@@ -349,7 +338,7 @@ export const getTeamViolations = async (req, res) => {
 // Get trend analysis
 export const getTrendAnalysis = async (req, res) => {
   try {
-    const { period = 'daily', startDate, endDate, specificTeam, responsible, responsibleSub } = req.query;
+    const { period = 'daily', startDate, endDate, teamName } = req.query;
 
     const filter = {};
     if (startDate || endDate) {
@@ -357,9 +346,8 @@ export const getTrendAnalysis = async (req, res) => {
       if (startDate) filter.createdAt.$gte = new Date(startDate);
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
-    if (specificTeam) filter['Specific Team'] = specificTeam;
-    if (responsible) filter.Responsible = responsible;
-    if (responsibleSub) filter.ResponsibleSub = responsibleSub;
+    if (teamName) filter['Team Name'] = teamName;
+    if (req.query.responsible) filter['Responsible'] = req.query.responsible;
 
     // Determine grouping format based on period
     let dateFormat;
@@ -383,8 +371,7 @@ export const getTrendAnalysis = async (req, res) => {
         $group: {
           _id: dateFormat,
           count: { $sum: 1 },
-          teams: { $addToSet: "$Team Name" },
-          responsibles: { $addToSet: "$Responsible" }
+          teams: { $addToSet: "$Team Name" }
         }
       },
       { $sort: { _id: 1 } }
@@ -396,7 +383,6 @@ export const getTrendAnalysis = async (req, res) => {
         date: t._id,
         count: t.count,
         uniqueTeams: t.teams.length,
-        uniqueResponsibles: t.responsibles.length
       }))
     });
   } catch (error) {
@@ -408,7 +394,7 @@ export const getTrendAnalysis = async (req, res) => {
 // Get root cause analysis
 export const getRootCauseAnalysis = async (req, res) => {
   try {
-    const { startDate, endDate, teamName, specificTeam, studyColumns, compareBy, responsible, responsibleSub } = req.query;
+    const { startDate, endDate, teamName, studyColumns, compareBy } = req.query;
 
     const filter = {};
     if (startDate || endDate) {
@@ -417,12 +403,11 @@ export const getRootCauseAnalysis = async (req, res) => {
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
     if (teamName) filter['Team Name'] = teamName;
-    if (specificTeam) filter['Specific Team'] = specificTeam;
-    if (responsible) filter.Responsible = responsible;
-    if (responsibleSub) filter.ResponsibleSub = responsibleSub;
+    if (req.query.responsible) filter['Responsible'] = req.query.responsible;
+
 
     // Default fields to analyze if none provided
-    const defaultStudyFields = ['Main Reason', 'Sub-Reason', 'Responsible', 'Specific Team'];
+    const defaultStudyFields = ['Main Reason', 'Sub-Reason'];
     const fieldsToAnalyze = studyColumns ? (Array.isArray(studyColumns) ? studyColumns : [studyColumns]) : defaultStudyFields;
 
     const records = await Detractor.find(filter).lean();
@@ -496,7 +481,7 @@ export const getRootCauseAnalysis = async (req, res) => {
 // Get fixed RCA stats: Week vs Responsible, Week vs Q1, Week vs Comments, and NPS Density
 export const getFixedRCAStats = async (req, res) => {
   try {
-    const { startDate, endDate, teamName, specificTeam, responsible, responsibleSub } = req.query;
+    const { startDate, endDate, teamName } = req.query;
 
     const filter = {};
     if (startDate || endDate) {
@@ -505,9 +490,8 @@ export const getFixedRCAStats = async (req, res) => {
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
     if (teamName) filter['Team Name'] = teamName;
-    if (specificTeam) filter['Specific Team'] = specificTeam;
-    if (responsible) filter.Responsible = responsible;
-    if (responsibleSub) filter.ResponsibleSub = responsibleSub;
+    if (req.query.responsible) filter['Responsible'] = req.query.responsible;
+
 
     // Get all records for analysis
     const records = await Detractor.find(filter).lean();
@@ -535,10 +519,10 @@ export const getFixedRCAStats = async (req, res) => {
         weekStats[key] = {
           week,
           year,
-          responsible: {},
           q1: { detractors: 0, neutrals: 0 },
           comments: 0,
-          totalViolations: 0
+          totalViolations: 0,
+          responsible: {}
         };
       }
 
@@ -546,8 +530,11 @@ export const getFixedRCAStats = async (req, res) => {
       weekObj.totalViolations += 1;
 
       // Week vs Responsible
-      const resp = record.Responsible || 'Unassigned';
-      weekObj.responsible[resp] = (weekObj.responsible[resp] || 0) + 1;
+      const resp = record.Responsible || 'Others';
+      if (!weekObj.responsible[resp]) weekObj.responsible[resp] = 0;
+      weekObj.responsible[resp] += 1;
+
+
 
       // Week vs Q1
       const q1Score = parseInt(record.Q1);
@@ -573,15 +560,13 @@ export const getFixedRCAStats = async (req, res) => {
       const sampleSize = tokenMap[key] || 0;
       const density = sampleSize > 0 ? (stat.totalViolations / sampleSize) * 100 : 0;
 
-      // Get responsible breakdown for this specific week as an array
-      const respData = Object.entries(stat.responsible).map(([name, count]) => ({ name, count }));
+
 
       return {
         label: key,
         ...stat,
         sampleSize,
-        npsDensity: density.toFixed(2),
-        responsibleData: respData
+        npsDensity: density.toFixed(2)
       };
     });
 

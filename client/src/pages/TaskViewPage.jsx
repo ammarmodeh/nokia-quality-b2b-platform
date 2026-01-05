@@ -329,7 +329,7 @@ const TaskViewPage = () => {
       ID: ${task._id}
       Request Number: ${task.requestNumber}
       SLID: ${task.slid}
-      Tarrif Name: ${task.tarrifName}
+      Tariff Name: ${task.tarrifName}
       Satisfaction Score: ${task.evaluationScore}
       PIS Date: ${formattedPISDate}
       Due Date: ${formattedDate}
@@ -432,7 +432,7 @@ const TaskViewPage = () => {
               <DetailRow label="Issue ID" value={task._id} isMobile={isMobile} />
               <DetailRow label="Request Number" value={task.requestNumber} isMobile={isMobile} />
               <DetailRow label="SLID" value={task.slid} isMobile={isMobile} />
-              <DetailRow label="Tarrif Name" value={task.tarrifName} isMobile={isMobile} />
+              <DetailRow label="Tariff Name" value={task.tarrifName} isMobile={isMobile} />
               <DetailRow label="Satisfaction Score" value={
                 <Chip
                   size={isMobile ? "small" : "medium"}
@@ -543,10 +543,37 @@ const TaskViewPage = () => {
             </Typography>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
-              <DetailRow label="Reason" value={task.reason || "N/A"} isMobile={isMobile} />
-              <DetailRow label="Validation Category" value={task.validationCat || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Responsibility" value={task.responsible || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Reason (Level 1)" value={task.reason || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Sub Reason (Level 2)" value={task.subReason || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Root Cause (Level 3)" value={task.rootCause || "N/A"} isMobile={isMobile} />
               <DetailRow label="Validation Status" value={task.validationStatus || "N/A"} isMobile={isMobile} />
-              <DetailRow label="Responsibility" value={task.responsibility || "N/A"} isMobile={isMobile} />
+            </Box>
+          </Paper>
+
+          {/* Equipment & Verification Section */}
+          <Paper elevation={0} sx={{
+            p: isMobile ? 1.5 : 3,
+            mb: 3,
+            backgroundColor: '#2d2d2d',
+            borderRadius: '8px',
+            border: '1px solid #3d3d3d'
+          }}>
+            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'cornflowerblue' }}>
+              Equipment & Verification
+            </Typography>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
+              <DetailRow label="ONT Type" value={task.ontType || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Free Extender" value={task.freeExtender || "No"} isMobile={isMobile} />
+              {task.freeExtender === 'Yes' && (
+                <>
+                  <DetailRow label="Extender Type" value={task.extenderType || "N/A"} isMobile={isMobile} />
+                  <DetailRow label="Number of Extenders" value={task.extenderNumber || 0} isMobile={isMobile} />
+                </>
+              )}
+              <DetailRow label="Closure Call Evaluation" value={task.closureCallEvaluation || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Closure Call Feedback" value={task.closureCallFeedback || "N/A"} isMobile={isMobile} />
             </Box>
           </Paper>
 

@@ -28,6 +28,14 @@ ChartJS.register(
 export const ChartComponent = ({ chartData }) => {
   const [chartType, setChartType] = useState("bar"); // Default to 'bar'
 
+  // Guard clause to prevent crash if data is missing
+  if (!chartData || !chartData.datasets) {
+    return null;
+  }
+
+  const allData = chartData.datasets.flatMap(dataset => dataset.data);
+  const maxVal = allData.length > 0 ? Math.max(...allData) : 0;
+
   const options = {
     responsive: true,
     plugins: {
@@ -68,7 +76,7 @@ export const ChartComponent = ({ chartData }) => {
       },
       y: {
         beginAtZero: true,
-        max: Math.max(...chartData.datasets.flatMap(dataset => dataset.data)) + 10,
+        max: maxVal + 10,
         grid: {
           color: "rgba(255, 255, 255, 0.1)"
         },

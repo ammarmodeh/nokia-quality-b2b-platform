@@ -221,43 +221,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
     fetchSamples();
   }, [open, selectedYear]);
 
-  // Save data to API
-  useEffect(() => {
-    if (!mounted || weeksData.length === 0) return;
 
-    const timer = setTimeout(async () => {
-      try {
-        const samples = weeksData
-          .filter(row => row.promoters !== '' || row.detractors !== '' || row.sampleSize !== '')
-          .map(row => ({
-            year: selectedYear,
-            weekNumber: row.weekNum,
-            weekRange: `Week ${row.weekNum}`,
-            sampleSize: parseFloat(row.sampleSize) || 0,
-            promoters: parseFloat(row.promoters) || 0,
-            detractors: parseFloat(row.detractors) || 0,
-            npsRelated: parseFloat(row.nps) || 0,
-            itnRelated: parseFloat(row.itnRelated) || 0
-          }));
-
-        if (samples.length > 0) {
-          await api.post('/samples-token/bulk',
-            { samples },
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-              }
-            }
-          );
-          console.log('✅ Samples saved to database');
-        }
-      } catch (error) {
-        console.error('Error saving samples:', error);
-      }
-    }, 500); // Debounce save
-
-    return () => clearTimeout(timer);
-  }, [weeksData, mounted, selectedYear]);
 
   const handleCellChange = useCallback((index, field, value) => {
     setWeeksData(prevData => {

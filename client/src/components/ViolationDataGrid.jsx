@@ -1,9 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import {
   DataGrid,
-  GridToolbarContainer,
-  GridToolbarColumnsButton,
-  GridToolbarDensitySelector
+  GridToolbar
 } from "@mui/x-data-grid";
 import {
   Paper,
@@ -26,14 +24,7 @@ import TeamStatusBadge from "./ViolationTeamStatusBadge";
 import ViolationThresholdBadge from "./ViolationThresholdBadge";
 import api from "../api/api"; // Import your API instance
 
-const CustomToolbar = () => {
-  return (
-    <GridToolbarContainer>
-      <GridToolbarColumnsButton />
-      <GridToolbarDensitySelector />
-    </GridToolbarContainer>
-  );
-};
+
 
 const ViolationDataGrid = ({
   rows,
@@ -185,7 +176,7 @@ const ViolationDataGrid = ({
         const val = params.value || 0;
         return (
           <Box sx={{
-            color: val > 0 ? '#f44336' : 'rgba(255,255,255,0.1)',
+            color: val > 0 ? '#f44336' : '#cbd5e1',
             fontWeight: val > 0 ? 'bold' : 'normal'
           }}>
             {val > 0 ? `+${val}` : '--'}
@@ -201,7 +192,7 @@ const ViolationDataGrid = ({
         const val = params.value || 0;
         return (
           <Box sx={{
-            color: val > 0 ? '#ff9800' : 'rgba(255,255,255,0.1)',
+            color: val > 0 ? '#ff9800' : '#cbd5e1',
             fontWeight: val > 0 ? 'bold' : 'normal'
           }}>
             {val > 0 ? `+${val}` : '--'}
@@ -209,22 +200,6 @@ const ViolationDataGrid = ({
         );
       }
     },
-    // {
-    //   field: "nps",
-    //   headerName: "NPS",
-    //   width: 100,
-    //   renderCell: (params) => {
-    //     const val = parseFloat(params.value);
-    //     return (
-    //       <Box sx={{
-    //         color: val >= 0 ? '#4caf50' : '#f44336',
-    //         fontWeight: 'bold'
-    //       }}>
-    //         {params.value}
-    //       </Box>
-    //     );
-    //   },
-    // },
     {
       field: "detractorStatus", // Virtual field for display
       headerName: "Det. Status",
@@ -234,8 +209,8 @@ const ViolationDataGrid = ({
         if (isViolated) {
           return (
             <Box sx={{
-              backgroundColor: 'rgba(244, 67, 54, 0.2)',
-              color: '#f44336',
+              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+              color: '#d32f2f',
               padding: '4px 8px',
               borderRadius: '4px',
               fontWeight: 'bold',
@@ -247,8 +222,8 @@ const ViolationDataGrid = ({
         }
         return (
           <Box sx={{
-            backgroundColor: 'rgba(76, 175, 80, 0.2)',
-            color: '#4caf50',
+            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+            color: '#1b5e20',
             padding: '4px 8px',
             borderRadius: '4px',
             fontWeight: 'bold',
@@ -268,8 +243,8 @@ const ViolationDataGrid = ({
         if (isViolated) {
           return (
             <Box sx={{
-              backgroundColor: 'rgba(255, 152, 0, 0.2)',
-              color: '#ff9800',
+              backgroundColor: 'rgba(255, 152, 0, 0.1)',
+              color: '#ed6c02',
               padding: '4px 8px',
               borderRadius: '4px',
               fontWeight: 'bold',
@@ -281,8 +256,8 @@ const ViolationDataGrid = ({
         }
         return (
           <Box sx={{
-            backgroundColor: 'rgba(76, 175, 80, 0.2)',
-            color: '#4caf50',
+            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+            color: '#1b5e20',
             padding: '4px 8px',
             borderRadius: '4px',
             fontWeight: 'bold',
@@ -300,9 +275,11 @@ const ViolationDataGrid = ({
       renderCell: (params) => (
         <Box sx={{
           fontWeight: 'bold',
-          color: params.value > 0 ? '#f44336' : '#6b7280',
-          backgroundColor: '#383838',
-          padding: '4px 8px'
+          color: params.value > 0 ? '#d32f2f' : '#64748b',
+          backgroundColor: '#86202039',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          textAlign: 'center'
         }}>
           {params.value}
         </Box>
@@ -313,7 +290,7 @@ const ViolationDataGrid = ({
       headerName: "Low Impact",
       width: 100,
       renderCell: (params) => (
-        <Box sx={{ color: params.value > 0 ? '#4caf50' : '#6b7280' }}>
+        <Box sx={{ color: params.value > 0 ? '#2e7d32' : '#cbd5e1' }}>
           {params.value}
         </Box>
       )
@@ -323,7 +300,7 @@ const ViolationDataGrid = ({
       headerName: "Medium Impact",
       width: 120,
       renderCell: (params) => (
-        <Box sx={{ color: params.value > 0 ? '#ff9800' : '#6b7280' }}>
+        <Box sx={{ color: params.value > 0 ? '#ed6c02' : '#cbd5e1' }}>
           {params.value}
         </Box>
       )
@@ -333,7 +310,7 @@ const ViolationDataGrid = ({
       headerName: "High Impact",
       width: 100,
       renderCell: (params) => (
-        <Box sx={{ color: params.value > 0 ? '#f44336' : '#6b7280' }}>
+        <Box sx={{ color: params.value > 0 ? '#d32f2f' : '#cbd5e1' }}>
           {params.value}
         </Box>
       )
@@ -344,7 +321,7 @@ const ViolationDataGrid = ({
       width: 120,
       renderCell: (params) => (
         <Box sx={{
-          color: params.value ? '#f44336' : '#6b7280',
+          color: params.value ? '#d32f2f' : '#cbd5e1',
           fontWeight: params.value ? 'bold' : 'normal'
         }}>
           {params.value ? newFormatDate(params.value) : '--'}
@@ -356,7 +333,7 @@ const ViolationDataGrid = ({
       headerName: "How Reached",
       width: 200,
       renderCell: (params) => (
-        <Typography variant="body2" sx={{ fontSize: '0.8rem', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1, overflowX: 'auto' }}>
+        <Typography variant="body2" sx={{ fontSize: '0.8rem', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1, overflowX: 'auto', color: '#cbd5e1' }}>
           {params.value}
         </Typography>
       )
@@ -367,8 +344,8 @@ const ViolationDataGrid = ({
       width: 200,
       renderCell: (params) => (
         <Box sx={{
-          color: params.value?.includes('suspension') ? '#f44336' :
-            params.value?.includes('warning') ? '#ff9800' : '#4caf50',
+          color: params.value?.includes('suspension') ? '#d32f2f' :
+            params.value?.includes('warning') ? '#ed6c02' : '#2e7d32',
           fontWeight: 'bold',
           height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1, overflowX: 'auto'
         }}>
@@ -390,7 +367,7 @@ const ViolationDataGrid = ({
           alignItems: 'center',
           px: 1,
           fontStyle: params.value === 'On Track' ? 'italic' : 'normal',
-          color: params.value === 'On Track' ? '#6b7280' : '#ffffff'
+          color: params.value === 'On Track' ? '#64748b' : '#cbd5e1'
         }}>
           {params.value || 'On Track'}
         </Typography>
@@ -401,7 +378,7 @@ const ViolationDataGrid = ({
       headerName: "Notes",
       width: 250,
       renderCell: (params) => (
-        <Typography variant="body2" sx={{ fontSize: '0.8rem', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1, overflowX: 'auto' }}>
+        <Typography variant="body2" sx={{ fontSize: '0.8rem', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1, overflowX: 'auto', color: '#cbd5e1' }}>
           {params.value}
         </Typography>
       )
@@ -427,10 +404,10 @@ const ViolationDataGrid = ({
       renderCell: (params) => (
         <Box sx={{
           fontWeight: 'bold',
-          color: params.value === 'N/A' ? '#6b7280' :
-            params.value >= 90 ? '#04970a' :
-              params.value >= 75 ? '#4CAF50' :
-                params.value >= 55 ? '#FFC107' : '#f44336'
+          color: params.value === 'N/A' ? '#64748b' :
+            params.value >= 90 ? '#1b5e20' :
+              params.value >= 75 ? '#2e7d32' :
+                params.value >= 55 ? '#ed6c02' : '#d32f2f'
         }}>
           {params.value !== 'N/A' ? `${params.value}%` : params.value}
         </Box>
@@ -443,10 +420,10 @@ const ViolationDataGrid = ({
       renderCell: (params) => (
         <Box sx={{
           fontWeight: 'bold',
-          color: params.value === 'N/A' ? '#6b7280' :
-            params.value >= 90 ? '#04970a' :
-              params.value >= 75 ? '#4CAF50' :
-                params.value >= 55 ? '#FFC107' : '#f44336'
+          color: params.value === 'N/A' ? '#64748b' :
+            params.value >= 90 ? '#1b5e20' :
+              params.value >= 75 ? '#2e7d32' :
+                params.value >= 55 ? '#ed6c02' : '#d32f2f'
         }}>
           {params.value !== 'N/A' ? `${params.value}%` : params.value}
         </Box>
@@ -458,7 +435,7 @@ const ViolationDataGrid = ({
       width: 120,
       renderCell: (params) => (
         <Box sx={{
-          color: params.value === 'N/A' ? '#6b7280' : '#ffffff',
+          color: params.value === 'N/A' ? '#64748b' : '#cbd5e1',
           fontStyle: params.value === 'N/A' ? 'italic' : 'normal'
         }}>
           {params.value}
@@ -488,7 +465,7 @@ const ViolationDataGrid = ({
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              color: params.value === 'N/A' ? '#6b7280' : '#ffffff',
+              color: params.value === 'N/A' ? '#64748b' : '#cbd5e1',
               height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'right', px: 1, textAlign: 'right'
             }}
           >
@@ -510,7 +487,7 @@ const ViolationDataGrid = ({
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              color: params.value === 'N/A' ? '#6b7280' : '#ffffff',
+              color: params.value === 'N/A' ? '#64748b' : '#cbd5e1',
               height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1,
             }}
           >
@@ -648,7 +625,15 @@ const ViolationDataGrid = ({
 
   return (
     <Box sx={{ width: "100%" }}>
-      <Paper sx={{ height: 400, width: "100%", backgroundColor: "#2d2d2d", mb: 2 }}>
+      <Paper sx={{
+        height: 400,
+        width: "100%",
+        // backgroundColor: "#ffffff",
+        borderRadius: "12px",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+        overflow: "hidden",
+        mb: 2
+      }}>
         <DataGrid
           rows={enhancedRows}
           columns={columns}
@@ -657,35 +642,58 @@ const ViolationDataGrid = ({
           paginationModel={paginationModel}
           onPaginationModelChange={onPaginationModelChange}
           disableSelectionOnClick
-          slots={{ toolbar: CustomToolbar }}
+          slots={{ toolbar: GridToolbar }}
+          slotProps={{
+            toolbar: {
+              showQuickFilter: true,
+              quickFilterProps: { debounceMs: 500 },
+            },
+          }}
           sx={{
             border: 0,
-            color: "#ffffff",
-            "& .MuiDataGrid-main": { backgroundColor: "#2d2d2d" },
+            color: "#cbd5e1", // Light gray for dark theme
+            fontFamily: "'Inter', sans-serif",
+            "& .MuiDataGrid-overlay": {
+              color: "#64748b",
+            },
             "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#2d2d2d",
-              color: "#b3b3b3",
-              fontSize: "0.875rem",
-              fontWeight: "bold",
-              borderBottom: "1px solid #e5e7eb",
+              backgroundColor: "#f8fafc",
+              color: "#475569",
+              fontSize: "0.75rem",
+              fontWeight: "600",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              borderBottom: "1px solid #e2e8f0",
             },
-            "& .MuiDataGrid-container--top [role=row]": {
-              backgroundColor: '#3f3f3f'
+            "& .MuiDataGrid-columnHeader": {
+              backgroundColor: "#f8fafc",
             },
-            "& .MuiDataGrid-cell": { borderBottom: "1px solid #e5e7eb" },
+            "& .MuiDataGrid-cell": {
+              borderBottom: "1px solid #f1f5f9",
+            },
             "& .MuiDataGrid-row": {
-              backgroundColor: "#2d2d2d",
-              "&:hover": { backgroundColor: "#2d2d2d" },
+              "&:hover": {
+                // backgroundColor: "#f8fafc",
+              },
             },
             "& .MuiDataGrid-footerContainer": {
-              backgroundColor: "#2d2d2d",
-              color: "#ffffff",
-              borderTop: "1px solid #e5e7eb",
+              borderTop: "1px solid #e2e8f0",
+              // backgroundColor: "#ffffff",
+              color: "#475569",
             },
-            "& .MuiTablePagination-root": { color: "#ffffff" },
-            "& .MuiDataGrid-columnHeaderTitle": {
-              fontWeight: "bold",
+            "& .MuiTablePagination-root": {
+              color: "#475569",
             },
+            "& .MuiDataGrid-toolbarContainer": {
+              padding: "12px",
+              borderBottom: "1px solid #e2e8f0",
+              // backgroundColor: "#ffffff",
+              gap: 2,
+              "& .MuiButton-root": {
+                color: "#64748b",
+                fontSize: "0.80rem",
+              }
+            }
           }}
         />
       </Paper>

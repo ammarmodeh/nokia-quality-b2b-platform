@@ -10,7 +10,6 @@ const CopyMUICell = ({ value }) => {
     if (value) {
       navigator.clipboard.writeText(value);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     }
   };
 

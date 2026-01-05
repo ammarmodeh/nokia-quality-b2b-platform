@@ -45,7 +45,9 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
         task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'})\n`;
       textToCopy += `Feedback Severity: ${task.priority || 'Not specified'}\n`;
       textToCopy += `Customer Feedback: ${task.customerFeedback}\n`;
-      textToCopy += `Reason: ${task.reason}\n\n`;
+      textToCopy += `Reason: ${task.reason}\n`;
+      textToCopy += `Sub Reason: ${task.subReason || 'N/A'}\n`;
+      textToCopy += `Root Cause: ${task.rootCause || 'N/A'}\n\n`;
 
       textToCopy += `Progress:\n`;
       task.subTasks?.forEach((subtask, subIndex) => {
@@ -83,6 +85,8 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       'Contact Number': task.contactNumber,
       'Tariff Name': task.tarrifName,
       'Reason': task.reason,
+      'Sub Reason': task.subReason || 'N/A',
+      'Root Cause': task.rootCause || 'N/A',
       'Customer Type': task.customerType,
       'Governorate': task.governorate,
       'District': task.district,
@@ -296,6 +300,8 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                   />
                   <DetailRow label="Customer Feedback" value={task.customerFeedback} isMobile={isMobile} />
                   <DetailRow label="Reason" value={task.reason} isMobile={isMobile} />
+                  <DetailRow label="Sub Reason" value={task.subReason} isMobile={isMobile} />
+                  <DetailRow label="Root Cause" value={task.rootCause} isMobile={isMobile} />
                   <DetailRow
                     label="Feedback Severity"
                     value={
