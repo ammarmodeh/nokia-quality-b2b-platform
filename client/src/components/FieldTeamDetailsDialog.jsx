@@ -163,23 +163,33 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
             <Typography variant="subtitle2" sx={{ color: '#7b68ee', fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
               <History fontSize="small" /> PERFORMANCE SNAPSHOT
             </Typography>
-            <Box sx={{ bgcolor: '#111', p: 3, borderRadius: 2, border: '1px solid #222', display: 'flex', alignItems: 'center', gap: 3 }}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" sx={{ color: team.evaluationScore >= 90 ? '#4caf50' : team.evaluationScore >= 70 ? '#ff9800' : '#f44336', fontWeight: 800 }}>
-                  {team.evaluationScore || 0}%
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#666' }}>Quiz Score</Typography>
-              </Box>
-              <Box sx={{ height: 40, width: 1, bgcolor: '#222' }} />
-              <Box>
-                <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>
-                  {team.isEvaluated ? 'Evaluated' : 'Not Evaluated'}
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#666' }}>
-                  Last: {team.lastEvaluationDate ? new Date(team.lastEvaluationDate).toLocaleDateString() : 'Never'}
-                </Typography>
-              </Box>
-            </Box>
+            {(() => {
+              const latestEval = team.evaluationHistory && team.evaluationHistory.length > 0 ? team.evaluationHistory[0] : null;
+              // Use percentage from history if available, otherwise parse from string or default to 0
+              const score = latestEval ? latestEval.percentage : (typeof team.evaluationScore === 'string' ? parseFloat(team.evaluationScore) : (team.evaluationScore || 0));
+              const isEvaluated = latestEval ? true : team.isEvaluated;
+              const lastDate = latestEval ? (latestEval.submittedAt || latestEval.date) : team.lastEvaluationDate;
+
+              return (
+                <Box sx={{ bgcolor: '#111', p: 3, borderRadius: 2, border: '1px solid #222', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h4" sx={{ color: score >= 90 ? '#4caf50' : score >= 70 ? '#ff9800' : '#f44336', fontWeight: 800 }}>
+                      {score}%
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666' }}>Quiz Score</Typography>
+                  </Box>
+                  <Box sx={{ height: 40, width: 1, bgcolor: '#222' }} />
+                  <Box>
+                    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>
+                      {isEvaluated ? 'Evaluated' : 'Not Evaluated'}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666' }}>
+                      Last: {lastDate ? new Date(lastDate).toLocaleDateString() : 'Never'}
+                    </Typography>
+                  </Box>
+                </Box>
+              );
+            })()}
           </Grid>
         </Grid>
       </DialogContent>

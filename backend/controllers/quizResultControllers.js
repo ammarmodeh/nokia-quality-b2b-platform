@@ -323,9 +323,6 @@ export const deleteQuizResult = async (req, res) => {
     // 3. Update the FieldTeam document to remove this history entry and update summary scores
     const team = await FieldTeamsSchema.findById(teamId);
     if (team) {
-      // Remove from evaluationHistory
-      team.evaluationHistory = team.evaluationHistory.filter(h => h.quizCode !== quizCode);
-
       // Fetch remaining history from QuizResult to find the latest
       const remainingHistory = await QuizResult.find({ teamId })
         .sort({ submittedAt: -1 })
@@ -337,11 +334,29 @@ export const deleteQuizResult = async (req, res) => {
         team.evaluationScore = latest.score;
         team.lastEvaluationDate = latest.submittedAt;
         team.isEvaluated = true;
+
+        // Update evaluationHistory: Find the entry for this quizCode and update it to the previous latest
+        const historyIndex = team.evaluationHistory.findIndex(h => h.quizCode === quizCode);
+        if (historyIndex !== -1) {
+          team.evaluationHistory[historyIndex].score = latest.score;
+          team.evaluationHistory[historyIndex].date = latest.submittedAt;
+        } else {
+          // Should not happen if data is consistent, but just in case
+          team.evaluationHistory.push({
+            score: latest.score,
+            date: latest.submittedAt,
+            quizCode: quizCode
+          });
+        }
+
       } else {
         // No more evaluations left
         team.evaluationScore = "N/A";
         team.lastEvaluationDate = null;
         team.isEvaluated = false;
+
+        // Remove from evaluationHistory since no results remain for this team (assuming quizCode is unique to team)
+        team.evaluationHistory = team.evaluationHistory.filter(h => h.quizCode !== quizCode);
       }
 
       await team.save();
