@@ -7,6 +7,12 @@ const fieldTeamsSchema = new mongoose.Schema(
       required: [true, "Team Name is required"],
       trim: true,
     },
+    teamCode: {
+      type: String,
+      required: [true, "Team Code is required"],
+      unique: true,
+      trim: true,
+    },
     firstName: {
       type: String,
       trim: true,

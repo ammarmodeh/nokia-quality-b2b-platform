@@ -28,7 +28,7 @@ export const saveQuizResults = async (req, res) => {
       type: questions[index].type || 'options'
     }));
 
-    // Calculate initial score (points-based)
+    // Calculate initial score (points-based: 2 points per correct MCQ)
     const calculatedScore = detailedAnswers.reduce((acc, answer) => {
       if (answer.type === 'essay') {
         return acc + (answer.score || 0);
@@ -36,9 +36,10 @@ export const saveQuizResults = async (req, res) => {
       return answer.isCorrect ? acc + 2 : acc;
     }, 0);
 
-    const maxScore = totalQuestions * 2;
+    const totalQuestionsCount = userAnswers.length;
+    const maxScore = totalQuestionsCount * 2;
     const calculatedPercentage = maxScore > 0 ? Math.round((calculatedScore / maxScore) * 100) : 0;
-    const scoreString = `${calculatedScore}/${maxScore} ${calculatedPercentage}%`;
+    const scoreString = `${calculatedPercentage}/100`;
 
     // Create new quiz result
     const quizResult = new QuizResult({
@@ -49,7 +50,7 @@ export const saveQuizResults = async (req, res) => {
       score: scoreString,
       percentage: calculatedPercentage,
       correctAnswers: calculatedScore,
-      totalQuestions,
+      totalQuestions: totalQuestionsCount,
       userAnswers: detailedAnswers
     });
 
@@ -58,7 +59,7 @@ export const saveQuizResults = async (req, res) => {
 
     // Update FieldTeamsSchema with the quiz score
     await updateTeamScore({
-      body: { teamId, quizCode, correctAnswers: calculatedScore, totalQuestions, percentage: calculatedPercentage }
+      body: { teamId, quizCode, correctAnswers: calculatedScore, totalQuestions: totalQuestionsCount, percentage: calculatedPercentage }
     }, { json: () => { }, status: () => ({ json: () => { } }) });
 
     res.status(201).json({
@@ -209,13 +210,14 @@ export const updateEssayScore = async (req, res) => {
       return answer.isCorrect ? acc + 2 : acc;
     }, 0);
 
-    // Recalculate percentage and score string
+    // Recalculate percentage and score string (using 2-point scale)
     const totalQuestions = quizResult.userAnswers.length;
     const maxScore = totalQuestions * 2;
     const percentage = maxScore > 0 ? Math.round((correctAnswers / maxScore) * 100) : 0;
     quizResult.correctAnswers = correctAnswers;
+    quizResult.totalQuestions = totalQuestions;
     quizResult.percentage = percentage;
-    quizResult.score = `${correctAnswers}/${maxScore} ${percentage}%`;
+    quizResult.score = `${percentage}/100`;
 
     // Save the updated quiz result
     await quizResult.save();

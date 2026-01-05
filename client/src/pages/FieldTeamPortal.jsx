@@ -44,7 +44,12 @@ import {
   PieChart,
   Pie,
   XAxis,
-  YAxis
+  YAxis,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis
 } from 'recharts';
 import {
   TrendingUp,
@@ -54,8 +59,11 @@ import {
   Timeline,
   PieChart as PieChartIcon,
   CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon
+  Cancel as CancelIcon,
+  PictureAsPdf as PictureAsPdfIcon,
+  TableChart as TableChartIcon,
 } from '@mui/icons-material';
+import * as XLSX from 'xlsx';
 import FieldTeamTicketsForPortalReview from "../components/FieldTeamTicketsForPortalReview";
 
 const FieldTeamPortal = () => {
@@ -82,6 +90,7 @@ const FieldTeamPortal = () => {
   const [labRowsPerPage, setLabRowsPerPage] = useState(10);
 
   const [activeTab, setActiveTab] = useState(0);
+  const [generatingReport, setGeneratingReport] = useState(false);
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -224,6 +233,15 @@ const FieldTeamPortal = () => {
   const getAssessmentStatus = (score, type = 'general') => {
     const thresholds = settings?.thresholds || { pass: 85, average: 70, fail: 50, quizPassScore: 70, labPassScore: 75 };
 
+    if (type === 'practical') {
+      // 1-5 Scale
+      if (score >= 4.5) return { label: "Excellent", color: "#2e7d32" };
+      if (score >= 3.5) return { label: "Good", color: "#66bb6a" };
+      if (score >= 2.5) return { label: "Satisfactory", color: "#ffa726" };
+      if (score >= 1.5) return { label: "Needs Improvement", color: "#ff9800" };
+      return { label: "Poor", color: "#d32f2f" };
+    }
+
     let passThreshold = thresholds.pass;
     if (type === 'quiz') passThreshold = thresholds.quizPassScore || 70;
     if (type === 'lab') passThreshold = thresholds.labPassScore || 75;
@@ -310,6 +328,242 @@ const FieldTeamPortal = () => {
 
     return distribution;
   };
+
+  const identifyStrengthsAndWeaknesses = () => {
+    const categories = {};
+
+    // Aggregate from quizzes
+    quizResults.forEach(res => {
+      res.userAnswers?.forEach(ans => {
+        if (!ans.category) return;
+        if (!categories[ans.category]) categories[ans.category] = { total: 0, count: 0, type: 'theoretical' };
+        categories[ans.category].total += (ans.score || 0);
+        categories[ans.category].count += 2; // Each MCQ is 2 points
+      });
+    });
+
+    // Aggregate from practicals
+    jobAssessments.forEach(res => {
+      res.checkpoints?.forEach(cp => {
+        if (!cp.category) return;
+        if (!categories[cp.category]) categories[cp.category] = { total: 0, count: 0, type: 'practical' };
+        categories[cp.category].total += (cp.score || 0);
+        categories[cp.category].count += 5; // practical scale 0-5
+      });
+    });
+
+    const analysis = Object.keys(categories).map(cat => ({
+      name: cat,
+      score: (categories[cat].total / categories[cat].count) * 100,
+      type: categories[cat].type
+    })).sort((a, b) => b.score - a.score);
+
+    return {
+      strengths: analysis.slice(0, 3).filter(a => a.score >= 75),
+      weaknesses: analysis.slice(-3).reverse().filter(a => a.score < 60)
+    };
+  };
+
+  const handleGenerateFullReport = async () => {
+    try {
+      setGeneratingReport(true);
+      const { strengths, weaknesses } = identifyStrengthsAndWeaknesses();
+      const theoreticalAvg = quizResults.length > 0 ? calculateAverageScore(quizResults) : null;
+      const practicalAvg = jobAssessments.length > 0 ? calculateAverageScore(jobAssessments) : null;
+      const labAvg = labAssessments.length > 0 ? calculateAverageScore(labAssessments) : null;
+
+      const assessedCount = [theoreticalAvg, practicalAvg, labAvg].filter(v => v !== null).length;
+      if (assessedCount === 0) {
+        alert('No assessments available for this team.');
+        setGeneratingReport(false);
+        return;
+      }
+
+      const markdown = `
+# HOLISTIC PERFORMANCE EVALUATION - FINAL REPORT
+**Team Name:** ${selectedTeam.teamName}
+**Company:** ${selectedTeam.teamCompany}
+**Date:** ${new Date().toLocaleDateString()}
+
+---
+
+## 1. PERFORMANCE SUMMARY
+This report provides a comprehensive analysis of the team's proficiency across Theoretical knowledge, Practical field application, and Lab environments.
+
+| Assessment Type | Average Score | Status |
+| :--- | :--- | :--- |
+| **Theoretical (Quiz)** | ${theoreticalAvg !== null ? `${Math.round(theoreticalAvg)}%` : 'Not Assessed'} | ${theoreticalAvg !== null ? getAssessmentStatus(theoreticalAvg, 'quiz').label : 'N/A'} |
+| **Practical (Field)** | ${practicalAvg !== null ? `${Number(practicalAvg).toFixed(1)}/5` : 'Not Assessed'} | ${practicalAvg !== null ? getAssessmentStatus(practicalAvg, 'practical').label : 'N/A'} |
+| **Lab Assessment** | ${labAvg !== null ? `${Math.round(labAvg)}%` : 'Not Assessed'} | ${labAvg !== null ? getAssessmentStatus(labAvg, 'lab').label : 'N/A'} |
+
+---
+
+## 2. ADVANCED ANALYTICS
+**Mastery Level:** ${Math.round(([theoreticalAvg, practicalAvg ? practicalAvg * 20 : null, labAvg].filter(v => v !== null).reduce((a, b) => a + b, 0)) / assessedCount)}%
+
+### Key Strengths
+${strengths.map(s => `- **${s.name}**: Demonstrating mastery with ${Math.round(s.score)}% proficiency.`).join('\n') || 'N/A'}
+
+### Areas for Improvement
+${weaknesses.map(w => `- **${w.name}**: Scoring ${Math.round(w.score)}%. Focused training recommended.`).join('\n') || 'N/A'}
+
+---
+
+## 3. TREND ANALYSIS
+- **Theoretical Trend:** ${quizResults.length > 1 ? (quizResults[0].percentage > quizResults[1].percentage ? 'Improving' : 'Declining') : theoreticalAvg !== null ? 'Stable' : 'Not Assessed'}
+- **Practical Consistency:** ${jobAssessments.length > 0 ? (calculateStandardDeviation(jobAssessments) < 10 ? 'High (Low Variance)' : 'Variable (High Variance)') : 'Not Assessed'}
+
+---
+
+## 4. FINAL RECOMMENDATIONS
+${([theoreticalAvg, practicalAvg ? practicalAvg * 20 : null, labAvg].filter(v => v !== null).reduce((a, b) => a + b, 0)) / assessedCount > 85
+          ? "The team shows excellent alignment with quality standards. Recommend for high-complexity projects."
+          : "Focused technical workshops and practical drills are recommended to bridge identified gaps."}
+
+---
+*Report generated automatically by Nokia Quality Management System*
+      `;
+
+      const response = await api.post("/ai/report/download", { reportContent: markdown }, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Final_Evaluation_${selectedTeam.teamName.replace(/\s+/g, '_')}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Report generation failed:", err);
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  // Export functions for individual test types
+  const exportTheoreticalToExcel = () => {
+    const data = quizResults.map(r => ({
+      'Date': formatDate(r.submittedAt),
+      'Quiz Code': r.quizCode,
+      'Score': r.score,
+      'Correct Answers': `${r.correctAnswers}/${r.totalQuestions}`,
+      'Percentage': `${r.percentage}%`
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Theoretical");
+    XLSX.writeFile(wb, `${selectedTeam.teamName}_Theoretical_Assessments.xlsx`);
+  };
+
+  const exportPracticalToExcel = () => {
+    const data = jobAssessments.map(a => ({
+      'Date': formatDate(a.assessmentDate),
+      'Conducted By': a.conductedBy,
+      'Score': `${Number(a.overallScore).toFixed(1)}/5`,
+      'Status': getAssessmentStatus(a.overallScore, 'practical').label
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Practical");
+    XLSX.writeFile(wb, `${selectedTeam.teamName}_Practical_Assessments.xlsx`);
+  };
+
+  const exportLabToExcel = () => {
+    const data = labAssessments.map(a => ({
+      'Date': formatDate(a.createdAt),
+      'Type': a.assessmentType || 'Technical',
+      'ONT Type': a.ontType?.name || 'N/A',
+      'Score': `${a.totalScore}%`,
+      'Comments': a.comments || '-'
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Lab");
+    XLSX.writeFile(wb, `${selectedTeam.teamName}_Lab_Assessments.xlsx`);
+  };
+
+  const exportTestToPDF = async (testType, data) => {
+    try {
+      let markdown = '';
+      if (testType === 'theoretical') {
+        markdown = `
+# THEORETICAL ASSESSMENT REPORT
+**Team:** ${selectedTeam.teamName}
+**Company:** ${selectedTeam.teamCompany}
+**Date:** ${new Date().toLocaleDateString()}
+
+## Summary
+- **Total Assessments:** ${data.length}
+- **Average Score:** ${Math.round(calculateAverageScore(data))}%
+- **Highest Score:** ${calculateHighestScore(data)}%
+- **Lowest Score:** ${calculateLowestScore(data)}%
+
+## Assessment History
+${data.map((r, i) => `
+### ${i + 1}. ${formatDate(r.submittedAt)}
+- **Quiz Code:** ${r.quizCode}
+- **Score:** ${r.score}
+- **Percentage:** ${r.percentage}%
+`).join('\n')}
+        `;
+      } else if (testType === 'practical') {
+        markdown = `
+# PRACTICAL ASSESSMENT REPORT
+**Team:** ${selectedTeam.teamName}
+**Company:** ${selectedTeam.teamCompany}
+**Date:** ${new Date().toLocaleDateString()}
+
+## Summary
+- **Total Assessments:** ${data.length}
+- **Average Score:** ${Number(calculateAverageScore(data)).toFixed(1)}/5
+- **Highest Score:** ${Number(calculateHighestScore(data)).toFixed(1)}/5
+- **Lowest Score:** ${Number(calculateLowestScore(data)).toFixed(1)}/5
+
+## Assessment History
+${data.map((a, i) => `
+### ${i + 1}. ${formatDate(a.assessmentDate)}
+- **Conducted By:** ${a.conductedBy}
+- **Score:** ${Number(a.overallScore).toFixed(1)}/5
+- **Status:** ${getAssessmentStatus(a.overallScore, 'practical').label}
+`).join('\n')}
+        `;
+      } else if (testType === 'lab') {
+        markdown = `
+# LAB ASSESSMENT REPORT
+**Team:** ${selectedTeam.teamName}
+**Company:** ${selectedTeam.teamCompany}
+**Date:** ${new Date().toLocaleDateString()}
+
+## Summary
+- **Total Assessments:** ${data.length}
+- **Average Score:** ${Math.round(calculateAverageScore(data))}%
+- **Highest Score:** ${calculateHighestScore(data)}%
+- **Lowest Score:** ${calculateLowestScore(data)}%
+
+## Assessment History
+${data.map((a, i) => `
+### ${i + 1}. ${formatDate(a.createdAt)}
+- **Type:** ${a.assessmentType || 'Technical'}
+- **ONT Type:** ${a.ontType?.name || 'N/A'}
+- **Score:** ${a.totalScore}%
+- **Comments:** ${a.comments || 'N/A'}
+`).join('\n')}
+        `;
+      }
+
+      const response = await api.post("/ai/report/download", { reportContent: markdown }, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${selectedTeam.teamName}_${testType.charAt(0).toUpperCase() + testType.slice(1)}_Report.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error(`${testType} PDF export failed:`, err);
+    }
+  };
+
+
 
   const renderLineChart = (data, dataKey, color = colors.primary) => (
     <ResponsiveContainer width="100%" height={300}>
@@ -493,19 +747,35 @@ const FieldTeamPortal = () => {
       </Button>
 
       {/* Header */}
-      <Typography variant="h4" gutterBottom sx={{
-        color: colors.primary,
-        fontWeight: 'bold',
-        mb: 4
+      <Box sx={{
+        mb: 4,
+        p: 3,
+        background: `linear-gradient(135deg, ${colors.primary}22 0%, ${colors.surfaceElevated} 100%)`,
+        borderRadius: '16px',
+        border: `1px solid ${colors.border}`
       }}>
-        Field Team Assessment Portal
-      </Typography>
+        <Typography variant="h4" sx={{
+          color: colors.primary,
+          fontWeight: 'bold',
+          mb: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
+          <Assessment /> Field Team Assessment Portal
+        </Typography>
+        <Typography variant="body2" sx={{ color: colors.textSecondary }}>
+          Comprehensive performance analytics and evaluation reporting
+        </Typography>
+      </Box>
 
       {/* Team Selection */}
       <Paper sx={{
         p: 3,
         mb: 3,
         ...darkThemeStyles.paper,
+        borderRadius: '12px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
       }}>
         <Autocomplete
           options={fieldTeams}
@@ -671,6 +941,11 @@ const FieldTeamPortal = () => {
               icon={<Assessment fontSize="small" />}
               iconPosition="start"
             />
+            <Tab
+              label="Advanced Analytics"
+              icon={<Timeline fontSize="small" />}
+              iconPosition="start"
+            />
           </Tabs>
 
           {/* OVERVIEW TAB */}
@@ -680,7 +955,7 @@ const FieldTeamPortal = () => {
                 {/* Scorecards */}
                 {[
                   { title: 'Theoretical Avg', score: calculateAverageScore(quizResults), icon: <Quiz />, color: colors.primary, data: quizResults, type: 'quiz' },
-                  { title: 'Practical Avg', score: calculateAverageScore(jobAssessments), icon: <Assignment />, color: colors.success, data: jobAssessments, type: 'general' },
+                  { title: 'Practical Avg', score: calculateAverageScore(jobAssessments), icon: <Assignment />, color: colors.success, data: jobAssessments, type: 'practical', suffix: '/5' },
                   { title: 'Lab Avg', score: calculateAverageScore(labAssessments), icon: <Assessment />, color: colors.warning, data: labAssessments, type: 'lab' }
                 ].map((card, i) => (
                   <Grid item xs={12} md={4} key={i}>
@@ -692,6 +967,13 @@ const FieldTeamPortal = () => {
                       alignItems: 'center',
                       position: 'relative',
                       overflow: 'hidden',
+                      borderRadius: '16px',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 8px 30px rgba(0,0,0,0.2)'
+                      },
                       '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -703,14 +985,29 @@ const FieldTeamPortal = () => {
                       }
                     }}>
                       <Typography variant="overline" color={colors.textSecondary}>{card.title}</Typography>
-                      <Typography variant="h3" sx={{ fontWeight: 'bold', color: getAssessmentStatus(card.score, card.type).color, my: 1 }}>
-                        {Math.round(card.score)}%
-                      </Typography>
-                      <Chip
-                        label={getAssessmentStatus(card.score, card.type).label}
-                        size="small"
-                        sx={{ bgcolor: `${getAssessmentStatus(card.score, card.type).color}22`, color: getAssessmentStatus(card.score, card.type).color, border: `1px solid ${getAssessmentStatus(card.score, card.type).color}` }}
-                      />
+                      {card.data.length > 0 ? (
+                        <>
+                          <Typography variant="h3" sx={{ fontWeight: 'bold', color: getAssessmentStatus(card.score, card.type).color, my: 1 }}>
+                            {card.type === 'practical' ? Number(card.score).toFixed(1) : Math.round(card.score)}{card.suffix || '%'}
+                          </Typography>
+                          <Chip
+                            label={getAssessmentStatus(card.score, card.type).label}
+                            size="small"
+                            sx={{ bgcolor: `${getAssessmentStatus(card.score, card.type).color}22`, color: getAssessmentStatus(card.score, card.type).color, border: `1px solid ${getAssessmentStatus(card.score, card.type).color}` }}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <Typography variant="h5" sx={{ fontWeight: 'bold', color: colors.textSecondary, my: 1 }}>
+                            Not Assessed
+                          </Typography>
+                          <Chip
+                            label="No Data"
+                            size="small"
+                            sx={{ bgcolor: `${colors.textSecondary}22`, color: colors.textSecondary, border: `1px solid ${colors.textSecondary}` }}
+                          />
+                        </>
+                      )}
                       {card.data.length > 1 && (() => {
                         const current = card.data[0]?.percentage || card.data[0]?.overallScore || card.data[0]?.totalScore || 0;
                         const prev = card.data[1]?.percentage || card.data[1]?.overallScore || card.data[1]?.totalScore || 0;
@@ -719,11 +1016,11 @@ const FieldTeamPortal = () => {
                           <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             {diff > 0 ? (
                               <Typography variant="caption" sx={{ color: colors.success, display: 'flex', alignItems: 'center' }}>
-                                <TrendingUp fontSize="inherit" /> +{diff}% Improvement
+                                <TrendingUp fontSize="inherit" /> +{card.type === 'practical' ? diff.toFixed(1) : diff}{card.type === 'practical' ? ' pts' : '%'} Improvement
                               </Typography>
                             ) : diff < 0 ? (
                               <Typography variant="caption" sx={{ color: colors.error, display: 'flex', alignItems: 'center' }}>
-                                <TrendingDown fontSize="inherit" /> {diff}% Degradation
+                                <TrendingDown fontSize="inherit" /> {card.type === 'practical' ? diff.toFixed(1) : diff}{card.type === 'practical' ? ' pts' : '%'} {card.type === 'practical' ? 'Decrease' : 'Degradation'}
                               </Typography>
                             ) : (
                               <Typography variant="caption" color={colors.textSecondary}>Stable</Typography>
@@ -744,13 +1041,19 @@ const FieldTeamPortal = () => {
                         <AreaChart data={Array.from({ length: Math.max(quizResults.length, jobAssessments.length, labAssessments.length) }).map((_, i) => ({
                           index: i,
                           theoretical: quizResults[i]?.percentage || null,
-                          practical: jobAssessments[i]?.overallScore || null,
+                          practical: jobAssessments[i]?.overallScore ? (jobAssessments[i].overallScore <= 5 ? jobAssessments[i].overallScore * 20 : jobAssessments[i].overallScore) : null,
                           lab: labAssessments[i]?.totalScore || null,
                         })).reverse()}>
                           <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
                           <XAxis dataKey="index" hide />
                           <YAxis domain={[0, 100]} stroke={colors.textSecondary} fontSize={10} />
-                          <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                          <RechartsTooltip
+                            contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }}
+                            formatter={(value, name) => {
+                              if (name === "Practical") return [`${(value / 20).toFixed(1)}/5`, name];
+                              return [`${Math.round(value)}%`, name];
+                            }}
+                          />
                           <Area type="monotone" dataKey="theoretical" stroke={colors.primary} fill={colors.primary} fillOpacity={0.1} strokeWidth={2} name="Theoretical" />
                           <Area type="monotone" dataKey="practical" stroke={colors.success} fill={colors.success} fillOpacity={0.1} strokeWidth={2} name="Practical" />
                           <Area type="monotone" dataKey="lab" stroke={colors.warning} fill={colors.warning} fillOpacity={0.1} strokeWidth={2} name="Lab" />
@@ -767,7 +1070,31 @@ const FieldTeamPortal = () => {
           {activeTab === 1 && (
             <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h5" sx={{ color: colors.primary }}>Theoretical Assessments</Typography>
+                <Box>
+                  <Typography variant="h5" sx={{ color: colors.primary }}>Theoretical Assessments</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<TableChartIcon />}
+                      onClick={exportTheoreticalToExcel}
+                      disabled={quizResults.length === 0}
+                      sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
+                    >
+                      Pro Excel
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<PictureAsPdfIcon />}
+                      onClick={() => exportTestToPDF('theoretical', quizResults)}
+                      disabled={quizResults.length === 0}
+                      sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
+                    >
+                      Pro PDF Report
+                    </Button>
+                  </Box>
+                </Box>
                 <Chip
                   label={`Avg: ${Math.round(calculateAverageScore(quizResults))}%`}
                   variant="outlined"
@@ -868,11 +1195,35 @@ const FieldTeamPortal = () => {
           {activeTab === 2 && (
             <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h5" sx={{ color: colors.primary }}>Practical Assessments</Typography>
+                <Box>
+                  <Typography variant="h5" sx={{ color: colors.primary }}>Practical Assessments</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<TableChartIcon />}
+                      onClick={exportPracticalToExcel}
+                      disabled={jobAssessments.length === 0}
+                      sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
+                    >
+                      Pro Excel
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<PictureAsPdfIcon />}
+                      onClick={() => exportTestToPDF('practical', jobAssessments)}
+                      disabled={jobAssessments.length === 0}
+                      sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
+                    >
+                      Pro PDF Report
+                    </Button>
+                  </Box>
+                </Box>
                 <Chip
-                  label={`Avg: ${Math.round(calculateAverageScore(jobAssessments))}%`}
+                  label={`Avg: ${Number(calculateAverageScore(jobAssessments)).toFixed(1)}/5`}
                   variant="outlined"
-                  sx={{ borderColor: getPerformanceColor(calculateAverageScore(jobAssessments)), color: getPerformanceColor(calculateAverageScore(jobAssessments)) }}
+                  sx={{ borderColor: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical'), color: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical') }}
                 />
               </Box>
 
@@ -911,17 +1262,29 @@ const FieldTeamPortal = () => {
                               <TableCell sx={darkThemeStyles.tableCell}>{assessment.conductedBy}</TableCell>
                               <TableCell sx={darkThemeStyles.tableCell}>
                                 <Chip
-                                  label={`${assessment.overallScore}%`}
+                                  label={`${Number(assessment.overallScore).toFixed(1)}/5`}
                                   sx={{
-                                    bgcolor: `${getPerformanceColor(assessment.overallScore)}22`,
-                                    color: getPerformanceColor(assessment.overallScore),
-                                    borderColor: getPerformanceColor(assessment.overallScore),
+                                    bgcolor: `${getAssessmentStatus(assessment.overallScore, 'practical').color}22`,
+                                    color: getAssessmentStatus(assessment.overallScore, 'practical').color,
+                                    borderColor: getAssessmentStatus(assessment.overallScore, 'practical').color,
+                                    border: '1px solid',
                                     fontWeight: 'bold'
                                   }}
                                   variant="outlined"
                                 />
                               </TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>{assessment.status}</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>
+                                <Chip
+                                  label={getAssessmentStatus(assessment.overallScore, 'practical').label}
+                                  size="small"
+                                  sx={{
+                                    borderColor: getAssessmentStatus(assessment.overallScore, 'practical').color,
+                                    color: getAssessmentStatus(assessment.overallScore, 'practical').color,
+                                    border: '1px solid'
+                                  }}
+                                  variant="outlined"
+                                />
+                              </TableCell>
                             </TableRow>
                           ))}
                       </TableBody>
@@ -967,7 +1330,31 @@ const FieldTeamPortal = () => {
           {activeTab === 3 && (
             <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h5" sx={{ color: colors.primary }}>Lab Assessments</Typography>
+                <Box>
+                  <Typography variant="h5" sx={{ color: colors.primary }}>Lab Assessments</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<TableChartIcon />}
+                      onClick={exportLabToExcel}
+                      disabled={labAssessments.length === 0}
+                      sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
+                    >
+                      Pro Excel
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<PictureAsPdfIcon />}
+                      onClick={() => exportTestToPDF('lab', labAssessments)}
+                      disabled={labAssessments.length === 0}
+                      sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
+                    >
+                      Pro PDF Report
+                    </Button>
+                  </Box>
+                </Box>
                 <Chip
                   label={`Avg: ${Math.round(calculateAverageScore(labAssessments))}%`}
                   variant="outlined"
@@ -1080,6 +1467,141 @@ const FieldTeamPortal = () => {
               )}
             </Box>
           )}
+
+          {/* ADVANCED ANALYTICS TAB */}
+          {activeTab === 4 && (
+            <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h5" sx={{ color: colors.primary }}>Advanced Analytics & Reporting</Typography>
+                <Button
+                  variant="contained"
+                  startIcon={generatingReport ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <PictureAsPdfIcon />}
+                  onClick={handleGenerateFullReport}
+                  disabled={generatingReport || (quizResults.length === 0 && jobAssessments.length === 0 && labAssessments.length === 0)}
+                  sx={{
+                    bgcolor: colors.primary,
+                    '&:hover': { bgcolor: colors.primary, opacity: 0.9 },
+                    '&:disabled': { bgcolor: colors.textSecondary }
+                  }}
+                >
+                  {generatingReport ? 'Generating...' : 'Generate Full Evaluation'}
+                </Button>
+              </Box>
+
+              <Grid container spacing={3}>
+                {/* Radar Chart for Multi-Test Comparison */}
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3, ...darkThemeStyles.paper }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Performance Balance</Typography>
+                    <ResponsiveContainer width="100%" height={350}>
+                      <RadarChart data={[
+                        {
+                          subject: 'Theoretical',
+                          score: calculateAverageScore(quizResults),
+                          fullMark: 100
+                        },
+                        {
+                          subject: 'Practical',
+                          score: calculateAverageScore(jobAssessments) * 20, // Scale to 100
+                          fullMark: 100
+                        },
+                        {
+                          subject: 'Lab',
+                          score: calculateAverageScore(labAssessments),
+                          fullMark: 100
+                        }
+                      ]}>
+                        <PolarGrid stroke={colors.border} />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: colors.textPrimary, fontSize: 12 }} />
+                        <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: colors.textSecondary, fontSize: 10 }} />
+                        <Radar name="Score" dataKey="score" stroke={colors.primary} fill={colors.primary} fillOpacity={0.3} />
+                        <RechartsTooltip
+                          contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }}
+                          formatter={(value) => `${Math.round(value)}%`}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </Paper>
+                </Grid>
+
+                {/* Strengths & Weaknesses */}
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Strengths & Weaknesses</Typography>
+                    {(() => {
+                      const { strengths, weaknesses } = identifyStrengthsAndWeaknesses();
+                      return (
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ color: colors.success, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <CheckCircleIcon fontSize="small" /> Top Strengths
+                          </Typography>
+                          {strengths.length > 0 ? (
+                            <Box sx={{ mb: 3 }}>
+                              {strengths.map((s, i) => (
+                                <Chip
+                                  key={i}
+                                  label={`${s.name}: ${Math.round(s.score)}%`}
+                                  size="small"
+                                  sx={{ m: 0.5, bgcolor: `${colors.success}22`, color: colors.success, borderColor: colors.success }}
+                                  variant="outlined"
+                                />
+                              ))}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color={colors.textSecondary} sx={{ mb: 3 }}>No data available</Typography>
+                          )}
+
+                          <Typography variant="subtitle2" sx={{ color: colors.error, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <CancelIcon fontSize="small" /> Areas for Improvement
+                          </Typography>
+                          {weaknesses.length > 0 ? (
+                            <Box>
+                              {weaknesses.map((w, i) => (
+                                <Chip
+                                  key={i}
+                                  label={`${w.name}: ${Math.round(w.score)}%`}
+                                  size="small"
+                                  sx={{ m: 0.5, bgcolor: `${colors.error}22`, color: colors.error, borderColor: colors.error }}
+                                  variant="outlined"
+                                />
+                              ))}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color={colors.textSecondary}>No data available</Typography>
+                          )}
+                        </Box>
+                      );
+                    })()}
+                  </Paper>
+                </Grid>
+
+                {/* Mastery & Consistency Metrics */}
+                <Grid item xs={12}>
+                  <Paper sx={{ p: 3, ...darkThemeStyles.paper }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Consistency & Mastery Analysis</Typography>
+                    <Grid container spacing={2}>
+                      {[
+                        { label: 'Overall Mastery', value: `${Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3)}%`, color: colors.primary },
+                        { label: 'Theoretical Volatility', value: `${Math.round(calculateStandardDeviation(quizResults))}%`, color: colors.warning },
+                        { label: 'Practical Consistency', value: calculateStandardDeviation(jobAssessments) < 10 ? 'High' : 'Variable', color: colors.success },
+                        { label: 'Lab Mastery Rate', value: `${Math.round(calculatePercentageAboveThreshold(labAssessments, 80))}%`, color: colors.primary }
+                      ].map((metric, i) => (
+                        <Grid item xs={6} md={3} key={i}>
+                          <Card sx={{ bgcolor: colors.surfaceElevated, border: `1px solid ${colors.border}` }}>
+                            <CardContent>
+                              <Typography variant="caption" color={colors.textSecondary}>{metric.label}</Typography>
+                              <Typography variant="h5" sx={{ color: metric.color, fontWeight: 'bold' }}>{metric.value}</Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
 
           {/* Performance Summary Section */}
           {(quizResults.length > 0 || jobAssessments.length > 0 || labAssessments.length > 0) && (

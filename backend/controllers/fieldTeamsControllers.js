@@ -1,9 +1,52 @@
 import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
 import dotenv from "dotenv";
+import bcrypt from "bcryptjs";
 dotenv.config();
 
+export const loginFieldTeam = async (req, res) => {
+  const { teamCode, quizCode } = req.body;
+  try {
+    const team = await FieldTeamsSchema.findOne({ teamCode });
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found or invalid team code' });
+    }
+
+    if (!team.canTakeQuiz) {
+      return res.status(403).json({ message: 'This team is not authorized to take the quiz' });
+    }
+
+    // Direct comparison of quizCode
+    if (team.quizCode !== quizCode) {
+      return res.status(401).json({ message: 'Invalid Quiz Code' });
+    }
+
+    res.json({
+      isValid: true,
+      team: {
+        _id: team._id,
+        teamName: team.teamName,
+        firstName: team.firstName,
+        secondName: team.secondName,
+        thirdName: team.thirdName,
+        surname: team.surname,
+        teamCompany: team.teamCompany,
+        quizCode: team.quizCode,
+        teamCode: team.teamCode,
+        canTakeQuiz: team.canTakeQuiz
+      }
+    });
+
+  } catch (error) {
+    console.error(`Error in loginFieldTeam:`, error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const validateTeam = async (req, res) => {
+  // Keeping this for backward compatibility if needed, but client should switch to loginFieldTeam
+  // Or redirect logic here
   const { teamId, quizCode } = req.body;
+  // ... existing implementation if needed or deprecate
   try {
     const team = await FieldTeamsSchema.findOne({ _id: teamId, quizCode });
     if (!team) {
@@ -19,17 +62,11 @@ export const validateTeam = async (req, res) => {
       team: {
         _id: team._id,
         teamName: team.teamName,
-        firstName: team.firstName,
-        secondName: team.secondName,
-        thirdName: team.thirdName,
-        surname: team.surname,
-        teamCompany: team.teamCompany,
-        quizCode: team.quizCode,
+        // ...
         canTakeQuiz: team.canTakeQuiz
       }
     });
   } catch (error) {
-    console.error(`Error in validateTeam for team ${teamId}:`, error);
     res.status(500).json({ message: error.message });
   }
 }
@@ -139,14 +176,20 @@ export const getFieldTeamByQuizCode = async (req, res) => {
 
 export const addFieldTeam = async (req, res) => {
   try {
-    const { teamName, firstName, secondName, thirdName, surname, teamCompany, contactNumber, fsmSerialNumber, laptopSerialNumber } = req.body;
+    const { teamName, firstName, secondName, thirdName, surname, teamCompany, contactNumber, fsmSerialNumber, laptopSerialNumber, teamCode } = req.body;
 
-    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    const quizCode = Array.from({ length: 10 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const randomLetters = Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
+    const quizCode = `${randomLetters}${teamCode}`;
 
-    if (!teamName || !teamCompany || !contactNumber) {
-      return res.status(400).json({ error: "Missing required fields: teamName, teamCompany, or contactNumber" });
+    if (!teamName || !teamCompany || !contactNumber || !teamCode) {
+      return res.status(400).json({ error: "Missing required fields: teamName, teamCompany, contactNumber, or teamCode" });
     }
+
+    // Generate Password: FirstName + Surname + TeamCode
+    const rawPassword = `${firstName.trim()}${surname.trim()}${teamCode.trim()}`;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(rawPassword, salt);
 
     const newFieldTeam = new FieldTeamsSchema({
       teamName,
@@ -159,6 +202,8 @@ export const addFieldTeam = async (req, res) => {
       fsmSerialNumber: fsmSerialNumber || 'N/A',
       laptopSerialNumber: laptopSerialNumber || 'N/A',
       quizCode,
+      teamCode,
+      password: hashedPassword,
       canTakeQuiz: false,
       isActive: true,
       isSuspended: false,
@@ -168,7 +213,10 @@ export const addFieldTeam = async (req, res) => {
     await newFieldTeam.save();
     res.status(201).json(newFieldTeam);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    if (error.code === 11000) { // Duplicate key error
+      return res.status(400).json({ error: "Team Code must be unique." });
+    }
+    res.status(500).json({ error: "Internal server error: " + error.message });
   }
 };
 
@@ -363,17 +411,38 @@ export const deleteFieldTeam = async (req, res) => {
 export const updateFieldTeam = async (req, res) => {
   try {
     const teamId = req.params.id;
+    const { teamCode } = req.body;
 
-    const updatedFieldTeam = await FieldTeamsSchema.findByIdAndUpdate(teamId, req.body, {
-      new: true,
-    });
-
-    if (!updatedFieldTeam) {
+    const team = await FieldTeamsSchema.findById(teamId);
+    if (!team) {
       return res.status(404).json({ message: "Field Team not found" });
     }
 
+    const updates = { ...req.body };
+
+    // Check if teamCode is being updated and is different
+    if (teamCode && teamCode !== team.teamCode) {
+      // Check for uniqueness
+      const existingTeam = await FieldTeamsSchema.findOne({ teamCode });
+      if (existingTeam) {
+        return res.status(400).json({ message: "Team Code already exists." });
+      }
+
+      // Regenerate Quiz Code: 4 random letters + new teamCode
+      const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const randomLetters = Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
+      updates.quizCode = `${randomLetters}${teamCode}`;
+    }
+
+    const updatedFieldTeam = await FieldTeamsSchema.findByIdAndUpdate(teamId, updates, {
+      new: true,
+    });
+
     res.status(200).json(updatedFieldTeam);
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Team Code must be unique." });
+    }
     res.status(500).json({ error: error.message });
   }
 };
@@ -410,8 +479,7 @@ export const updateTeamScore = async (req, res) => {
 
   try {
     const currentDate = new Date();
-    const maxScore = parsedTotalQuestions * 2;
-    const scoreString = `${parsedCorrectAnswers}/${maxScore} ${parsedPercentage}%`;
+    const scoreString = `${parsedPercentage}/100`;
 
     // Verify team exists and quiz code matches
     const team = await FieldTeamsSchema.findOne({

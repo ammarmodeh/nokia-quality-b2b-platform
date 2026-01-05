@@ -495,7 +495,13 @@ const AssessmentResultDialog = ({ teamId, teamName, onClose }) => {
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Correct Answers</Typography>
                   <Typography sx={{ color: "white" }}>
-                    {selectedResult.correctAnswers}/{selectedResult.totalQuestions}
+                    {selectedResult.percentage}/100
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Questions Scored</Typography>
+                  <Typography sx={{ color: "white" }}>
+                    {selectedResult.userAnswers.filter(a => a.type === 'options' || a.isScored || a.score > 0).length}/{selectedResult.userAnswers.length}
                   </Typography>
                 </Box>
               </Box>

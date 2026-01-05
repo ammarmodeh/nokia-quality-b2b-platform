@@ -1,5 +1,6 @@
 // AddTeamForm.js
 import { useForm } from 'react-hook-form';
+import { useSelector } from 'react-redux';
 import {
   TextField,
   FormControl,
@@ -10,6 +11,9 @@ import {
   Typography,
   InputAdornment,
   useMediaQuery,
+  useTheme,
+  Stack,
+  Divider
 } from '@mui/material';
 import { AccountCircle, Phone, Add } from '@mui/icons-material';
 
@@ -17,10 +21,12 @@ import { AccountCircle, Phone, Add } from '@mui/icons-material';
 import api from '../api/api';
 import { useEffect, useState } from 'react';
 
-const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
-  const { register, handleSubmit, reset } = useForm();
-  const isMobileScreen = useMediaQuery('(max-width: 503px)');
+const AddTeamForm = ({ onAddTeam, loading }) => {
+  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [fieldTeamsCompany, setFieldTeamsCompany] = useState([]);
+  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -36,208 +42,130 @@ const AddTeamForm = ({ onSubmit, errorMessage, user }) => {
     fetchCompanies();
   }, []);
 
-  const sharedTextFieldStyle = {
-    flex: 1,
-    backgroundColor: 'transparent',
-    borderRadius: 1,
-    '& .MuiOutlinedInput-root': {
-      '& fieldset': {
-        borderColor: 'dimgray',
-      },
-      '&:hover fieldset': {
-        borderColor: user.role === 'Admin' ? 'white' : 'dimgray',
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: user.role === 'Admin' ? '#00bcd4' : 'dimgray',
-      },
-      '&.Mui-readOnly': {
-        '& fieldset': {
-          borderColor: 'dimgray',
-        },
-        '&:hover fieldset': {
-          borderColor: 'dimgray',
-        },
-      },
-    },
-    '& .MuiInputBase-input.Mui-readOnly': {
-      cursor: 'not-allowed',
-      color: '#6b7280 !important',
-    },
-  };
-
-  const handleFormSubmit = (data) => {
-    onSubmit(data);
+  const onSubmit = (data) => {
+    onAddTeam(data);
     reset();
   };
 
-  return (
-    <form onSubmit={handleSubmit(handleFormSubmit)}>
-      <Typography variant="h4" fontWeight="bold" textAlign="left" mb={5} color="#7b68ee">
-        Add Field Team Information
-      </Typography>
-      <Box sx={{ display: 'flex', flexDirection: isMobileScreen ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 3 }}>
-        {/* Name Fields */}
-        {['firstName', 'secondName', 'thirdName', 'surname'].map((field, index) => (
-          <TextField
-            key={index}
-            label={field.replace(/([A-Z])/g, ' $1').trim()}
-            variant="outlined"
-            fullWidth={isMobileScreen ? true : false}
-            readOnly={user.role !== 'Admin'}
-            {...register(field)}
-            sx={sharedTextFieldStyle}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <AccountCircle sx={{ color: '#ffffff' }} />
-                </InputAdornment>
-              ),
-              style: { color: '#ffffff' },
-              readOnly: user.role !== 'Admin',
-            }}
-            InputLabelProps={{ style: { color: '#b3b3b3' } }}
-          />
-        ))}
-      </Box>
+  const sharedInputSx = {
+    '& .MuiOutlinedInput-root': {
+      bgcolor: '#1a1a1a',
+      '& fieldset': { borderColor: '#333' },
+      '&:hover fieldset': { borderColor: '#7b68ee' },
+      '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+      '& input': { color: '#fff' }
+    },
+    '& .MuiInputLabel-root': { color: '#888' },
+    '& .MuiInputLabel-root.Mui-focused': { color: '#7b68ee' }
+  };
 
-      <Box sx={{ display: 'flex', flexDirection: isMobileScreen ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 3 }}>
-        {/* Contact Number */}
+  return (
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmit)}
+      sx={{
+        bgcolor: '#111',
+        p: 3,
+        borderRadius: 3,
+        border: '1px solid #333',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
+      <Typography variant="h6" sx={{ color: '#fff', mb: 1, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ width: 4, height: 20, bgcolor: '#7b68ee', borderRadius: 1 }} />
+        Add New Team
+      </Typography>
+      <Typography variant="caption" sx={{ color: '#888', mb: 3 }}>
+        Enter team details to create a new field team account.
+      </Typography>
+
+      <Stack spacing={2.5}>
+        {/* Section 1: Team Name Members */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+          <TextField label="First Name" size="small" {...register('firstName', { required: true })} sx={sharedInputSx} />
+          <TextField label="Second Name" size="small" {...register('secondName')} sx={sharedInputSx} />
+          <TextField label="Third Name" size="small" {...register('thirdName')} sx={sharedInputSx} />
+          <TextField label="Surname" size="small" {...register('surname', { required: true })} sx={sharedInputSx} />
+        </Box>
+
+        <Divider sx={{ borderColor: '#222' }} />
+
+        {/* Section 2: Contact & Company */}
         <TextField
           label="Contact Number"
-          variant="outlined"
-          readOnly={user.role !== 'Admin'}
+          size="small"
           type="tel"
           placeholder="+962"
-          {...register('contactNumber', { required: 'Contact number is required' })}
-          fullWidth={isMobileScreen ? true : false}
-          sx={sharedTextFieldStyle}
+          {...register('contactNumber', { required: true })}
+          sx={sharedInputSx}
           InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Phone sx={{ color: '#ffffff' }} />
-              </InputAdornment>
-            ),
-            style: { color: '#ffffff' },
-            readOnly: user.role !== 'Admin',
+            startAdornment: <InputAdornment position="start"><Phone sx={{ color: '#666', fontSize: 18 }} /></InputAdornment>
           }}
-          InputLabelProps={{ style: { color: '#b3b3b3' } }}
         />
 
-        {/* Company Dropdown */}
-        <FormControl
-          variant="outlined"
-          fullWidth={isMobileScreen ? true : false}
-          sx={{
-            flex: 1,
-            backgroundColor: 'transparent',
-            borderRadius: 1,
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderColor: 'dimgray',
-              },
-              '&:hover fieldset': {
-                borderColor: user.role === 'Admin' ? 'white' : 'dimgray',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: user.role === 'Admin' ? '#00bcd4' : 'dimgray',
-              },
-              '&.Mui-disabled': {
-                '& fieldset': {
-                  borderColor: 'dimgray',
-                },
-                '&:hover fieldset': {
-                  borderColor: 'dimgray',
-                },
-              },
-            },
-            '& .MuiInputBase-input.Mui-disabled': {
-              cursor: 'not-allowed',
-              color: '#6b7280 !important',
-            },
-          }}
-        >
-          <InputLabel sx={{ color: '#b3b3b3' }}>Company</InputLabel>
+        <FormControl fullWidth size="small">
+          <InputLabel sx={{ color: '#888', '&.Mui-focused': { color: '#7b68ee' } }}>Company</InputLabel>
           <NativeSelect
-            disabled={user.role !== 'Admin'}
-            {...register('teamCompany')}
-            sx={{ color: '#ffffff' }}
-            inputProps={{
-              style: { cursor: user.role === 'Admin' ? 'pointer' : 'not-allowed' }
+            {...register('teamCompany', { required: true })}
+            sx={{
+              color: '#fff',
+              bgcolor: '#1a1a1a',
+              border: '1px solid #333',
+              borderRadius: 1,
+              pl: 1.5,
+              py: 0.5,
+              '&:before': { display: 'none' },
+              '&:after': { display: 'none' },
+              '& select': { paddingLeft: 1 },
+              '& .MuiNativeSelect-icon': { color: '#7b68ee' }
             }}
           >
-            {fieldTeamsCompany.map((list, index) => (
-              <option key={index} value={list} style={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
-                {list}
-              </option>
+            <option value="" style={{ backgroundColor: '#111' }}>Select Company</option>
+            {fieldTeamsCompany.map((opt, i) => (
+              <option key={i} value={opt} style={{ backgroundColor: '#111', color: '#fff' }}>{opt}</option>
             ))}
           </NativeSelect>
         </FormControl>
-      </Box>
 
-      <Box sx={{ display: 'flex', flexDirection: isMobileScreen ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 3 }}>
-        {/* FSM Serial Number */}
+        <Divider sx={{ borderColor: '#222' }} />
+
+        {/* Section 3: Tech Info */}
         <TextField
-          label="FSM Serial Number"
-          variant="outlined"
-          readOnly={user.role !== 'Admin'}
-          {...register('fsmSerialNumber')}
-          fullWidth={isMobileScreen ? true : false}
-          sx={sharedTextFieldStyle}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <AccountCircle sx={{ color: '#ffffff' }} />
-              </InputAdornment>
-            ),
-            style: { color: '#ffffff' },
-            readOnly: user.role !== 'Admin',
-          }}
-          InputLabelProps={{ style: { color: '#b3b3b3' } }}
+          label="Team Code / ID"
+          size="small"
+          {...register('teamCode', { required: true })}
+          sx={sharedInputSx}
+          helperText="Auto-generates Quiz Code"
+          FormHelperTextProps={{ sx: { color: '#555', fontSize: '0.7rem' } }}
         />
 
-        {/* Laptop Serial Number */}
-        <TextField
-          label="Laptop Serial Number"
-          variant="outlined"
-          readOnly={user.role !== 'Admin'}
-          {...register('laptopSerialNumber')}
-          sx={sharedTextFieldStyle}
-          fullWidth={isMobileScreen ? true : false}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <AccountCircle sx={{ color: '#ffffff' }} />
-              </InputAdornment>
-            ),
-            style: { color: '#ffffff' },
-            readOnly: user.role !== 'Admin',
-          }}
-          InputLabelProps={{ style: { color: '#b3b3b3' } }}
-        />
-      </Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+          <TextField label="FSM Serial" size="small" {...register('fsmSerialNumber')} sx={sharedInputSx} />
+          <TextField label="Laptop Serial" size="small" {...register('laptopSerialNumber')} sx={sharedInputSx} />
+        </Box>
+      </Stack>
 
-      {/* Error Message */}
-      {errorMessage && <Typography color="error" sx={{ mb: 2 }}>{errorMessage}</Typography>}
-
-      {/* Submit Button */}
       <Button
         type="submit"
         variant="contained"
-        endIcon={<Add />}
-        disabled={user.role !== 'Admin'}
+        disabled={loading || user.role !== 'Admin'}
+        startIcon={loading ? null : <Add />}
+        disableElevation
         sx={{
-          backgroundColor: '#7b68ee',
-          color: '#f9fafb',
-          '&:hover': { backgroundColor: '#1d4ed8' },
-          '&.Mui-disabled': {
-            cursor: 'not-allowed',
-            backgroundColor: '#7b68ee80',
-          }
+          mt: 4,
+          bgcolor: '#7b68ee',
+          color: '#fff',
+          py: 1.2,
+          fontWeight: 'bold',
+          '&:hover': { bgcolor: '#6652e0' },
+          '&.Mui-disabled': { bgcolor: '#333', color: '#666' }
         }}
       >
-        Add
+        {loading ? 'Adding...' : 'Create Team'}
       </Button>
-    </form>
+    </Box>
   );
 };
 

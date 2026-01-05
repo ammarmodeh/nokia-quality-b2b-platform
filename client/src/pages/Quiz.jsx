@@ -25,6 +25,7 @@ const Quiz = () => {
     teamName: '',
     teamCompany: '',
     quizCode: '',
+    teamCode: '',
     teamId: '',
     loading: true,
     error: null,
@@ -92,6 +93,7 @@ const Quiz = () => {
       teamName: authData.teamName,
       teamCompany: authData.teamCompany,
       quizCode: authData.quizCode,
+      teamCode: authData.teamCode,
       loading: false
     }));
 
@@ -226,24 +228,30 @@ const Quiz = () => {
     if (quizState.hasSubmitted) return;
     setQuizState(prev => ({ ...prev, hasSubmitted: true }));
 
-    // Calculate score only for options-type questions
+    // Calculate score: 2 points for correct MCQ, essay initialized to 0
     const finalScore = userAnswers.reduce((score, answer, index) => {
-      if (quizState.questions[index].type === 'essay') return score; // Essay questions contribute 0 to score
-      return answer.isCorrect ? score + 1 : score;
+      if (quizState.questions[index].type === 'essay') return score;
+      return answer.isCorrect ? score + 2 : score;
     }, 0);
 
-    // Count all questions (options and essay)
-    const totalQuestions = quizState.questions.length;
-    const percentage = totalQuestions > 0 ? Math.round((finalScore / totalQuestions) * 100) : 0;
-    const result = `${finalScore}/${totalQuestions} ${percentage}%`;
+    // Count total questions and calculate max score (2 points per question)
+    const totalQuestionsCount = quizState.questions.length;
+    const maxScore = totalQuestionsCount * 2;
+
+    // Calculate percentage based on all questions (max score = total * 2)
+    const percentage = maxScore > 0 ? Math.round((finalScore / maxScore) * 100) : 0;
+
+    // Result string shows score normalized to 100% scale
+    const result = `${percentage}/100`;
 
     const resultsData = {
       teamId: quizState.teamId,
       teamName: quizState.teamName,
       teamCompany: quizState.teamCompany,
       quizCode: quizState.quizCode,
+      teamCode: quizState.teamCode,
       correctAnswers: finalScore,
-      totalQuestions: totalQuestions,
+      totalQuestions: totalQuestionsCount,
       userAnswers: userAnswers.map((answer, index) => ({
         question: quizState.questions[index].question,
         options: quizState.questions[index].options,
@@ -251,6 +259,7 @@ const Quiz = () => {
         selectedAnswer: answer.selectedAnswer,
         essayAnswer: answer.essayAnswer,
         score: answer.score || 0,
+        isScored: quizState.questions[index].type === 'options',
         isCorrect: answer.isCorrect,
         category: quizState.questions[index].category,
         type: quizState.questions[index].type || 'options'
@@ -411,9 +420,18 @@ const Quiz = () => {
             <span className="inline-block px-2 py-0.5 bg-white text-black text-[10px] font-bold uppercase tracking-tighter mb-4">
               {currentQ.category || 'General'}
             </span>
-            <h3 className="text-xl md:text-2xl font-black text-white leading-tight">
+            <h3 className="text-xl md:text-2xl font-black text-white leading-tight mb-4">
               {currentQ.question}
             </h3>
+            {currentQ.questionImage && (
+              <div className="mb-6 rounded-lg overflow-hidden border border-white/20">
+                <img
+                  src={currentQ.questionImage}
+                  alt="Question"
+                  className="w-full max-h-[400px] object-contain bg-black"
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -439,35 +457,47 @@ const Quiz = () => {
                   <label
                     key={index}
                     className={`
-                      group relative flex items-center p-4 border-2 transition-all cursor-pointer
+                      group relative flex flex-col sm:flex-row items-center p-4 border-2 transition-all cursor-pointer gap-4
                       ${selectedOption === option
                         ? 'bg-white border-white shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]'
                         : 'bg-transparent border-white/10 hover:border-white'}
                     `}
                   >
-                    <input
-                      type="radio"
-                      value={option}
-                      checked={selectedOption === option}
-                      onChange={handleOptionChange}
-                      className="hidden"
-                    />
-                    <div className={`
-                      w-4 h-4 rounded-full border-2 mr-3 shrink-0 flex items-center justify-center
-                      ${selectedOption === option ? 'border-black bg-black' : 'border-white/20'}
-                    `}>
-                      {selectedOption === option && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                    <div className="flex items-center w-full">
+                      <input
+                        type="radio"
+                        value={option}
+                        checked={selectedOption === option}
+                        onChange={handleOptionChange}
+                        className="hidden"
+                      />
+                      <div className={`
+                        w-4 h-4 rounded-full border-2 mr-3 shrink-0 flex items-center justify-center
+                        ${selectedOption === option ? 'border-black bg-black' : 'border-white/20'}
+                      `}>
+                        {selectedOption === option && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                      </div>
+                      <span className={`text-base font-bold transition-colors ${selectedOption === option ? 'text-black' : 'text-white/70 group-hover:text-white'}`}>
+                        {option}
+                      </span>
                     </div>
-                    <span className={`text-base font-bold transition-colors ${selectedOption === option ? 'text-black' : 'text-white/70 group-hover:text-white'}`}>
-                      {option}
-                    </span>
+
+                    {currentQ.optionsImages && currentQ.optionsImages[index] && (
+                      <div className="mt-2 sm:mt-0 sm:ml-auto shrink-0">
+                        <img
+                          src={currentQ.optionsImages[index]}
+                          alt={`Option ${index + 1}`}
+                          className="max-h-[120px] max-w-full sm:max-w-[150px] rounded border border-gray-500 object-cover"
+                        />
+                      </div>
+                    )}
                   </label>
                 ))}
               </div>
             )}
           </div>
-
           {/* Navigation - Distinct Dark */}
+
           <div className="flex flex-row-reverse justify-between items-center mt-10 pt-6 border-t border-white/10">
             <button
               className="px-6 py-3 bg-white text-black font-black uppercase text-sm tracking-widest hover:bg-gray-200 transition-colors flex items-center gap-2 group shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] active:translate-y-0.5 active:shadow-none font-bold"

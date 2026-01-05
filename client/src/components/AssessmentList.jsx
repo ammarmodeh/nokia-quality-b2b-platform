@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import {
   Typography,
   Paper,
@@ -8,209 +9,241 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Button,
+  IconButton,
   TablePagination,
   Box,
+  TextField,
+  Avatar,
+  LinearProgress,
+  Tooltip
 } from "@mui/material";
+import {
+  Visibility,
+  Edit,
+  Delete,
+  Search,
+  CalendarMonth,
+  Person,
+  BarChart
+} from "@mui/icons-material";
 
 const AssessmentList = ({
   assessments,
   colors,
-  getPerformanceColor,
   onSelectAssessment,
   onEditAssessment,
   onDeleteAssessment,
-  onNewAssessment,
+  getPerformanceColor,
+  getScoreLabel,
   user,
   page,
   rowsPerPage,
   onPageChange,
-  onRowsPerPageChange,
+  onRowsPerPageChange
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filtered = (assessments || []).filter(a =>
+    (a.conductedBy || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (getScoreLabel(a.overallScore) || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const glassStyle = {
+    background: colors.surface,
+    backdropFilter: 'blur(16px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '24px',
+    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+  };
+
+  const formatLocalDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   return (
-    <>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" sx={{
-          color: colors.primary,
-          fontWeight: 'bold',
-        }}>
-          Previous Assessments
-        </Typography>
-        {onNewAssessment && (
-          <Button
-            variant="contained"
-            onClick={onNewAssessment}
-            sx={{
-              backgroundColor: colors.primary,
+    <Box sx={{ mb: 6 }}>
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        mb: 3,
+        flexDirection: { xs: 'column', md: 'row' },
+        gap: 2
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <BarChart sx={{ color: colors.primary }} />
+          <Typography variant="h5" sx={{ fontWeight: 800, color: colors.textPrimary }}>
+            Assessment History
+          </Typography>
+        </Box>
+        <TextField
+          placeholder="Filter by supervisor or label..."
+          size="small"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: <Search sx={{ color: colors.textSecondary, mr: 1, fontSize: 20 }} />,
+            sx: {
+              borderRadius: '12px',
+              backgroundColor: 'rgba(255,255,255,0.03)',
+              border: `1px solid ${colors.border}`,
               color: colors.textPrimary,
-              '&:hover': {
-                backgroundColor: '#1d4ed8',
-              }
-            }}
-          >
-            New Assessment
-          </Button>
-        )}
+              width: { xs: '100%', md: 320 },
+              '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+            }
+          }}
+        />
       </Box>
 
-      {assessments && assessments.length > 0 ? (
-        <>
-          <TableContainer component={Paper} sx={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderTopLeftRadius: '8px',
-            borderTopRightRadius: '8px',
-            borderBottomLeftRadius: '0px',
-            borderBottomRightRadius: '0px',
-            "& .MuiTableHead-root": {
-              backgroundColor: colors.surfaceElevated,
-              "& .MuiTableCell-root": {
-                color: colors.textSecondary,
-                fontWeight: "bold",
-                borderBottom: `1px solid ${colors.border}`,
-              }
-            },
-            "& .MuiTableBody-root": {
-              "& .MuiTableCell-root": {
-                borderBottom: `1px solid ${colors.border}`,
-                color: colors.textPrimary,
-              },
-              "& .MuiTableRow-root": {
-                backgroundColor: colors.surface,
-                "&:hover": {
-                  backgroundColor: colors.surfaceElevated,
-                },
-              }
-            },
-          }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Conducted By</TableCell>
-                  <TableCell>Score</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {assessments
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((assessment) => (
-                    <TableRow key={assessment._id} hover>
-                      <TableCell>
-                        {new Date(assessment.assessmentDate).toLocaleString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: true
-                        })}
-                      </TableCell>
-                      <TableCell>{assessment.conductedBy}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={`${assessment.overallScore}%`}
-                          color={getPerformanceColor(assessment.overallScore)}
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>{assessment.status}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => onSelectAssessment(assessment)}
-                          sx={{
-                            color: colors.primary,
-                            borderColor: colors.primary,
-                            '&:hover': {
-                              backgroundColor: colors.primaryHover,
-                              borderColor: colors.primary,
-                            }
-                          }}
-                        >
-                          View Details
-                        </Button>
-                        {user.role === 'Admin' && (
-                          <Button
-                            variant="outlined"
+      {filtered.length > 0 ? (
+        <TableContainer component={Paper} sx={glassStyle}>
+          <Table sx={{ minWidth: 650 }}>
+            <TableHead sx={{ bgcolor: 'rgba(99, 102, 241, 0.05)' }}>
+              <TableRow>
+                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Timeline</TableCell>
+                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Supervisor</TableCell>
+                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Skill Level</TableCell>
+                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Performance</TableCell>
+                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}`, textAlign: 'right' }}>Management</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filtered
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((assessment) => (
+                  <TableRow
+                    key={assessment._id}
+                    sx={{
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' },
+                      transition: 'background-color 0.2s',
+                    }}
+                  >
+                    <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <CalendarMonth sx={{ fontSize: 18, color: colors.primary }} />
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: colors.textPrimary }}>
+                          {formatLocalDate(assessment.assessmentDate)}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar sx={{
+                          bgcolor: `${colors.primary}15`,
+                          color: colors.primary,
+                          width: 32,
+                          height: 32,
+                          fontSize: '0.8rem',
+                          fontWeight: 700
+                        }}>
+                          {assessment.conductedBy.split(' ').map(n => n[0]).join('')}
+                        </Avatar>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: colors.textPrimary }}>
+                          {assessment.conductedBy}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 800, color: colors.textPrimary, minWidth: 40 }}>
+                          {Math.round(assessment.overallScore || 0)}%
+                        </Typography>
+                        <Box sx={{ flex: 1, minWidth: 80 }}>
+                          <LinearProgress
+                            variant="determinate"
+                            value={assessment.overallScore || 0}
+                            sx={{
+                              height: 4,
+                              borderRadius: 2,
+                              bgcolor: 'rgba(255,255,255,0.05)',
+                              '& .MuiLinearProgress-bar': {
+                                bgcolor: colors[getPerformanceColor(assessment.overallScore)] || colors.primary
+                              }
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
+                      <Chip
+                        label={getScoreLabel(assessment.overallScore)}
+                        size="small"
+                        sx={{
+                          bgcolor: `${colors[getPerformanceColor(assessment.overallScore)]}15`,
+                          color: colors[getPerformanceColor(assessment.overallScore)],
+                          borderColor: `${colors[getPerformanceColor(assessment.overallScore)]}30`,
+                          fontWeight: 700,
+                          borderRadius: '8px'
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell sx={{ borderBottom: `1px solid ${colors.border}`, textAlign: 'right' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                        <Tooltip title="View Detailed Report">
+                          <IconButton
+                            size="small"
+                            onClick={() => onSelectAssessment(assessment)}
+                            sx={{ color: colors.primary, '&:hover': { bgcolor: `${colors.primary}15` } }}
+                          >
+                            <Visibility fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Modify Assessment">
+                          <IconButton
                             size="small"
                             onClick={() => onEditAssessment(assessment)}
-                            sx={{
-                              ml: 1,
-                              color: colors.warning,
-                              borderColor: colors.warning,
-                              '&:hover': {
-                                backgroundColor: `${colors.warning}22`,
-                                borderColor: colors.warning,
-                              }
-                            }}
+                            sx={{ color: colors.warning, '&:hover': { bgcolor: `${colors.warning}15` } }}
                           >
-                            Edit
-                          </Button>
-                        )}
+                            <Edit fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                         {user.role === 'Admin' && (
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => onDeleteAssessment(assessment._id)}
-                            sx={{
-                              ml: 1,
-                              color: colors.error,
-                              borderColor: colors.error,
-                              '&:hover': {
-                                backgroundColor: `${colors.error}22`,
-                                borderColor: colors.error,
-                              }
-                            }}
-                          >
-                            Delete
-                          </Button>
+                          <Tooltip title="Delete Permanently">
+                            <IconButton
+                              size="small"
+                              onClick={() => onDeleteAssessment(assessment._id)}
+                              sx={{ color: colors.error, '&:hover': { bgcolor: `${colors.error}15` } }}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
           <TablePagination
-            rowsPerPageOptions={[10, 25, 50]}
+            rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={assessments.length}
+            count={filtered.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={onPageChange}
             onRowsPerPageChange={onRowsPerPageChange}
             sx={{
-              color: colors.textPrimary,
-              '& .MuiTablePagination-selectIcon': { color: colors.textPrimary },
-              '& .MuiSvgIcon-root': { color: colors.textPrimary },
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderTop: 'none',
-              borderBottomLeftRadius: '8px',
-              borderBottomRightRadius: '8px',
-              mb: 6
+              color: colors.textSecondary,
+              borderTop: `1px solid ${colors.border}`,
+              '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
+              '& .MuiTablePagination-actions': { color: colors.textSecondary }
             }}
           />
-        </>
+        </TableContainer>
       ) : (
-        <Paper sx={{
-          p: 3,
-          backgroundColor: colors.surface,
-          border: `1px solid ${colors.border}`,
-          borderRadius: '8px',
-          textAlign: 'center'
-        }}>
-          <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-            No assessments found for this team
+        <Paper sx={{ ...glassStyle, p: 6, textAlign: 'center' }}>
+          <Typography variant="h6" sx={{ color: colors.textSecondary }}>
+            No assessments registered for this team yet.
           </Typography>
         </Paper>
       )}
-    </>
+    </Box>
   );
 };
 

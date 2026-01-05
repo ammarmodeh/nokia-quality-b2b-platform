@@ -461,8 +461,6 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
         <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
-        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
-
         <Button
           onClick={() => setCalendarDialogOpen(true)}
           disableRipple

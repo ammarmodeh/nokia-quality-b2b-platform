@@ -56,6 +56,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
         fsmSerialNumber: team.fsmSerialNumber === 'N/A' ? '' : team.fsmSerialNumber,
         laptopSerialNumber: team.laptopSerialNumber === 'N/A' ? '' : team.laptopSerialNumber,
         teamCompany: team.teamCompany || (fieldTeamsCompany.length > 0 ? fieldTeamsCompany[0] : ''),
+        teamCode: team.teamCode || '',
       });
     }
   }, [team, reset]);
@@ -69,10 +70,10 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
       maxWidth="md"
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#2d2d2d',
-          boxShadow: 'none',
-          borderRadius: isMobile ? 0 : '8px',
-          border: isMobile ? 'none' : '1px solid #e5e7eb',
+          backgroundColor: '#000000',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          borderRadius: isMobile ? 0 : '16px',
+          border: '1px solid #333',
           margin: 0,
           width: isMobile ? '100%' : '70%',
           maxWidth: '100%'
@@ -81,176 +82,119 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
     >
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogTitle sx={{
-          backgroundColor: '#2d2d2d',
+          backgroundColor: '#111',
           color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: isMobile ? '12px 16px' : '16px 24px',
-          fontWeight: 500,
+          borderBottom: '1px solid #333',
+          padding: isMobile ? '16px 20px' : '20px 32px',
+          fontWeight: 700,
+          letterSpacing: '-0.5px',
           position: 'sticky',
           top: 0,
-          zIndex: 1
+          zIndex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2
         }}>
+          <AccountCircle sx={{ color: '#7b68ee' }} />
           Edit Team Information
         </DialogTitle>
         <DialogContent sx={{
-          backgroundColor: '#2d2d2d',
+          backgroundColor: '#111',
           color: '#ffffff',
-          padding: isMobile ? '12px 16px' : '20px 24px',
+          padding: isMobile ? '20px' : '32px',
           '&::-webkit-scrollbar': {
             width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#e5e7eb',
+            backgroundColor: '#333',
             borderRadius: '2px',
           },
           height: '100%',
           "&.MuiDialogContent-root": {
-            paddingTop: 3,
+            paddingTop: 4,
           }
         }}>
-          {/* Name Fields */}
+          {/* Section: Personal Info */}
+          <Typography variant="overline" sx={{ color: '#666', fontWeight: 'bold', mb: 2, display: 'block' }}>
+            Personal Details
+          </Typography>
           <Box sx={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: 2,
-            my: isMobile ? 2 : 4
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+            gap: 3,
+            mb: 4
           }}>
             <TextField
               label="First Name"
               variant="outlined"
               {...register('firstName', { required: 'First name is required' })}
               sx={{
-                flex: 1,
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#3d3d3d',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#7b68ee',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7b68ee',
-                  },
+                  bgcolor: '#1a1a1a',
+                  '& fieldset': { borderColor: '#333' },
+                  '&:hover fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
                 },
               }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <AccountCircle sx={{ color: '#ffffff' }} />
-                  </InputAdornment>
-                ),
-                style: { color: '#ffffff' },
-              }}
-              InputLabelProps={{
-                style: { color: '#b3b3b3' },
-                shrink: true
-              }}
-              size={isMobile ? "small" : "medium"}
+              InputProps={{ style: { color: '#ffffff' } }}
+              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
             />
             <TextField
               label="Second Name"
               variant="outlined"
               {...register('secondName')}
               sx={{
-                flex: 1,
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#3d3d3d',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#7b68ee',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7b68ee',
-                  },
+                  bgcolor: '#1a1a1a',
+                  '& fieldset': { borderColor: '#333' },
+                  '&:hover fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
                 },
               }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <AccountCircle sx={{ color: '#ffffff' }} />
-                  </InputAdornment>
-                ),
-                style: { color: '#ffffff' },
-              }}
-              InputLabelProps={{
-                style: { color: '#b3b3b3' },
-                shrink: true
-              }}
-              size={isMobile ? "small" : "medium"}
+              InputProps={{ style: { color: '#ffffff' } }}
+              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
             />
             <TextField
               label="Third Name"
               variant="outlined"
               {...register('thirdName')}
               sx={{
-                flex: 1,
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#3d3d3d',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#7b68ee',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7b68ee',
-                  },
+                  bgcolor: '#1a1a1a',
+                  '& fieldset': { borderColor: '#333' },
+                  '&:hover fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
                 },
               }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <AccountCircle sx={{ color: '#ffffff' }} />
-                  </InputAdornment>
-                ),
-                style: { color: '#ffffff' },
-              }}
-              InputLabelProps={{
-                style: { color: '#b3b3b3' },
-                shrink: true
-              }}
-              size={isMobile ? "small" : "medium"}
+              InputProps={{ style: { color: '#ffffff' } }}
+              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
             />
             <TextField
               label="Surname"
               variant="outlined"
               {...register('surname')}
               sx={{
-                flex: 1,
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#3d3d3d',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#7b68ee',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7b68ee',
-                  },
+                  bgcolor: '#1a1a1a',
+                  '& fieldset': { borderColor: '#333' },
+                  '&:hover fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
                 },
               }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <AccountCircle sx={{ color: '#ffffff' }} />
-                  </InputAdornment>
-                ),
-                style: { color: '#ffffff' },
-              }}
-              InputLabelProps={{
-                style: { color: '#b3b3b3' },
-                shrink: true
-              }}
-              size={isMobile ? "small" : "medium"}
+              InputProps={{ style: { color: '#ffffff' } }}
+              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
             />
           </Box>
 
-          {/* Contact Number and Company */}
+          {/* Section: Professional Info */}
+          <Typography variant="overline" sx={{ color: '#666', fontWeight: 'bold', mb: 2, display: 'block' }}>
+            Professional Details
+          </Typography>
           <Box sx={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: 2,
-            my: isMobile ? 2 : 4
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+            gap: 3,
+            mb: 4
           }}>
             <TextField
               label="Contact Number"
@@ -259,42 +203,40 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
               placeholder="+962"
               {...register('contactNumber', { required: 'Contact number is required' })}
               sx={{
-                flex: 1,
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#3d3d3d',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#7b68ee',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7b68ee',
-                  },
+                  bgcolor: '#1a1a1a',
+                  '& fieldset': { borderColor: '#333' },
+                  '&:hover fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
                 },
               }}
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Phone sx={{ color: '#ffffff' }} />
-                  </InputAdornment>
-                ),
-                style: { color: '#ffffff' },
+                startAdornment: <InputAdornment position="start"><Phone sx={{ color: '#666' }} /></InputAdornment>,
+                style: { color: '#ffffff' }
               }}
-              InputLabelProps={{
-                style: { color: '#b3b3b3' },
-                shrink: true
-              }}
-              size={isMobile ? "small" : "medium"}
+              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
             />
-            <FormControl sx={{ flex: 1 }}>
-              <InputLabel
-                sx={{
-                  color: '#b3b3b3',
-                  '&.Mui-focused': {
-                    color: '#7b68ee',
-                  }
-                }}
-              >
+
+            <TextField
+              label="Team Code / Team ID"
+              variant="outlined"
+              {...register('teamCode')}
+              helperText="Changing this will regenerate the Quiz Code"
+              FormHelperTextProps={{ sx: { color: '#666' } }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: '#1a1a1a',
+                  '& fieldset': { borderColor: '#333' },
+                  '&:hover fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                },
+              }}
+              InputProps={{ style: { color: '#ffffff' } }}
+              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+            />
+
+            <FormControl fullWidth>
+              <InputLabel shrink sx={{ color: '#888', '&.Mui-focused': { color: '#7b68ee' } }}>
                 Company
               </InputLabel>
               <NativeSelect
@@ -302,25 +244,19 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
                 disabled={user.role !== 'Admin'}
                 sx={{
                   color: '#ffffff',
-                  '& .MuiNativeSelect-select': {
-                    padding: isMobile ? '8.5px 14px' : '14px',
-                  },
-                  '& .MuiNativeSelect-icon': {
-                    color: '#7b68ee',
-                  },
-                  '&:before': {
-                    borderBottom: '1px solid #e5e7eb',
-                  },
-                  '&:hover:not(.Mui-disabled):before': {
-                    borderBottom: '1px solid #7b68ee',
-                  },
-                  '&:after': {
-                    borderBottom: '1px solid #7b68ee',
-                  },
+                  bgcolor: '#1a1a1a',
+                  border: '1px solid #333',
+                  borderRadius: '4px',
+                  pl: 2,
+                  py: 0.5,
+                  '&:hover': { border: '1px solid #7b68ee' },
+                  '&:before': { display: 'none' },
+                  '&:after': { display: 'none' },
+                  '& .MuiNativeSelect-icon': { color: '#7b68ee' },
                 }}
               >
                 {fieldTeamsCompany.map((list, index) => (
-                  <option key={index} value={list} style={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
+                  <option key={index} value={list} style={{ backgroundColor: '#111', color: '#fff' }}>
                     {list}
                   </option>
                 ))}
@@ -328,107 +264,67 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
             </FormControl>
           </Box>
 
-          {/* FSM and Laptop Serial Numbers */}
+          {/* Section: Device Info */}
+          <Typography variant="overline" sx={{ color: '#666', fontWeight: 'bold', mb: 2, display: 'block' }}>
+            Device Information
+          </Typography>
           <Box sx={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: 2,
-            my: isMobile ? 2 : 4
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+            gap: 3
           }}>
             <TextField
               label="FSM Serial Number"
               variant="outlined"
               {...register('fsmSerialNumber')}
               sx={{
-                flex: 1,
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#3d3d3d',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#7b68ee',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7b68ee',
-                  },
+                  bgcolor: '#1a1a1a',
+                  '& fieldset': { borderColor: '#333' },
+                  '&:hover fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
                 },
               }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <AccountCircle sx={{ color: '#ffffff' }} />
-                  </InputAdornment>
-                ),
-                style: { color: '#ffffff' },
-              }}
-              InputLabelProps={{
-                style: { color: '#b3b3b3' },
-                shrink: true
-              }}
-              size={isMobile ? "small" : "medium"}
+              InputProps={{ style: { color: '#ffffff' } }}
+              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
             />
             <TextField
               label="Laptop Serial Number"
               variant="outlined"
               {...register('laptopSerialNumber')}
               sx={{
-                flex: 1,
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#3d3d3d',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#7b68ee',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7b68ee',
-                  },
+                  bgcolor: '#1a1a1a',
+                  '& fieldset': { borderColor: '#333' },
+                  '&:hover fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
                 },
               }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <AccountCircle sx={{ color: '#ffffff' }} />
-                  </InputAdornment>
-                ),
-                style: { color: '#ffffff' },
-              }}
-              InputLabelProps={{
-                style: { color: '#b3b3b3' },
-                shrink: true
-              }}
-              size={isMobile ? "small" : "medium"}
+              InputProps={{ style: { color: '#ffffff' } }}
+              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
             />
           </Box>
 
-          {/* Error Message */}
           {errorMessage && (
-            <Typography
-              sx={{
-                color: '#f44336',
-                mb: 2,
-                fontSize: isMobile ? '0.875rem' : '1rem'
-              }}
-            >
+            <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(244, 67, 54, 0.1)', border: '1px solid #f44336', borderRadius: '8px', color: '#f44336' }}>
               {errorMessage}
-            </Typography>
+            </Box>
           )}
+
         </DialogContent>
         <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
-          padding: isMobile ? '8px 16px' : '12px 24px',
+          backgroundColor: '#111',
+          borderTop: '1px solid #333',
+          padding: isMobile ? '16px' : '20px 32px',
           position: 'sticky',
-          bottom: 0
+          bottom: 0,
+          gap: 2
         }}>
           <Button
             onClick={onClose}
-            size={isMobile ? "small" : "medium"}
             sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              }
+              color: '#888',
+              '&:hover': { color: '#fff', bgcolor: '#ffffff10' }
             }}
           >
             Cancel
@@ -436,16 +332,16 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
           <Button
             type="submit"
             variant="contained"
-            size={isMobile ? "small" : "medium"}
+            disableElevation
             sx={{
               backgroundColor: '#7b68ee',
-              color: '#f9fafb',
-              '&:hover': {
-                backgroundColor: '#1d4ed8'
-              }
+              color: '#fff',
+              px: 4,
+              py: 1,
+              '&:hover': { backgroundColor: '#6652e0' }
             }}
           >
-            Save
+            Save Changes
           </Button>
         </DialogActions>
       </form>

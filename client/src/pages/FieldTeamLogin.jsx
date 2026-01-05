@@ -15,7 +15,7 @@ import {
 
 const FieldTeamLogin = () => {
   const [formData, setFormData] = useState({
-    teamId: '',
+    teamCode: '',
     quizCode: ''
   });
   const [loading, setLoading] = useState(false);
@@ -49,15 +49,15 @@ const FieldTeamLogin = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      const { teamId, quizCode } = formData;
+      const { teamCode, quizCode } = formData;
 
-      const response = await api.post('/field-teams/validate-team', {
-        teamId,
+      const response = await api.post('/field-teams/login', {
+        teamCode,
         quizCode
       });
 
       if (!response.data.isValid) {
-        throw new Error(response.data.message || 'Invalid team ID or quiz code');
+        throw new Error(response.data.message || 'Invalid credentials');
       }
 
       const team = response.data.team;
@@ -70,7 +70,8 @@ const FieldTeamLogin = () => {
         teamId: team._id,
         teamName: team.teamName,
         teamCompany: team.teamCompany,
-        quizCode,
+        quizCode: team.quizCode,
+        teamCode: team.teamCode,
         isFieldTeam: true
       };
 
@@ -147,11 +148,11 @@ const FieldTeamLogin = () => {
         <Box component="form" onSubmit={handleSubmit}>
           <TextField
             fullWidth
-            name="teamId"
+            name="teamCode"
             label="Team ID"
             variant="outlined"
             margin="normal"
-            value={formData.teamId}
+            value={formData.teamCode}
             onChange={handleChange}
             disabled={loading}
             sx={textFieldStyles}
@@ -175,7 +176,7 @@ const FieldTeamLogin = () => {
             fullWidth
             variant="contained"
             type="submit"
-            disabled={loading || !formData.teamId || !formData.quizCode}
+            disabled={loading || !formData.teamCode || !formData.quizCode}
             sx={{
               mt: 2,
               height: 48,

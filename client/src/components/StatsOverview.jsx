@@ -17,381 +17,229 @@ import { Person, Assessment, EmojiEvents } from '@mui/icons-material';
 import React from "react";
 
 const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
-  // console.log({ stats });
   const theme = useTheme();
 
   if (!stats) return null;
 
-  // Calculate total assessments across all supervisors
+  const glassStyle = {
+    background: colors.surface,
+    backdropFilter: 'blur(16px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '24px',
+    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+    transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease',
+    '&:hover': {
+      transform: 'translateY(-8px)',
+      boxShadow: `0 12px 40px 0 ${colors.primary}30`,
+      borderColor: `${colors.primary}40`,
+    }
+  };
+
   const totalSupervisorAssessments = Object.values(supervisorStats || {})
     .reduce((sum, supervisor) => sum + supervisor.assessmentCount, 0);
 
-  // Calculate total assessments from field teams
   const totalFieldTeamAssessments = stats.fieldTeamStats?.reduce((sum, team) =>
     sum + (team.assessmentCount || 1), 0) || 0;
 
-  // Use the most accurate total count available
   const totalAssessments = Math.max(
     stats.overallStats.totalAssessments || 0,
     totalSupervisorAssessments,
     totalFieldTeamAssessments
   );
 
-  // Sort supervisors by assessment count (descending)
   const sortedSupervisors = Object.values(supervisorStats || {})
     .sort((a, b) => b.assessmentCount - a.assessmentCount);
 
-  // Calculate score distribution - properly accounting for multiple assessments per team
   const scoreDistribution = {
-    '0-19': 0,
-    '20-39': 0,
-    '40-59': 0,
-    '60-79': 0,
-    '80-100': 0
+    '90%+ (Excel)': 0,
+    '75-89% (Good)': 0,
+    '60-74% (Fair)': 0,
+    '40-59% (Needs Imp)': 0,
+    '<40% (Poor)': 0
   };
 
   stats.fieldTeamStats?.forEach(team => {
     const score = team.averageScore || 0;
-    const count = team.assessmentCount || 1; // Default to 1 if count missing
+    const count = team.assessmentCount || 1;
 
-    if (score <= 19) {
-      scoreDistribution['0-19'] += count;
-    } else if (score <= 39) {
-      scoreDistribution['20-39'] += count;
-    } else if (score <= 59) {
-      scoreDistribution['40-59'] += count;
-    } else if (score <= 79) {
-      scoreDistribution['60-79'] += count;
-    } else {
-      scoreDistribution['80-100'] += count;
-    }
+    if (score >= 90) scoreDistribution['90%+ (Excel)'] += count;
+    else if (score >= 75) scoreDistribution['75-89% (Good)'] += count;
+    else if (score >= 60) scoreDistribution['60-74% (Fair)'] += count;
+    else if (score >= 40) scoreDistribution['40-59% (Needs Imp)'] += count;
+    else scoreDistribution['<40% (Poor)'] += count;
   });
 
-  // console.log({ scoreDistribution, totalAssessments });
-
-  // Sort teams to find top and bottom performers
   const sortedTeamsByScore = [...(stats.fieldTeamStats || [])].sort((a, b) =>
     (b.averageScore || 0) - (a.averageScore || 0)
   );
   const topTeam = sortedTeamsByScore[0];
   const bottomTeam = sortedTeamsByScore[sortedTeamsByScore.length - 1];
 
-  const cards = [
-    // Combined Assessments and Average Score card
-    {
-      title: "Assessments Overview",
-      icon: <Assessment fontSize="medium" sx={{ color: colors.primary }} />,
-      flexContent: (
-        <Box sx={{ mt: 1, flex: 1 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Box>
-              <Typography component="div" variant="caption" sx={{
-                color: colors.textSecondary,
-                fontSize: '0.7rem'
-              }}>
-                Total Assessments
-              </Typography>
-              <Typography component="div" variant="h6" sx={{
-                color: colors.textPrimary,
-                fontWeight: 'bold',
-                fontSize: isMobile ? '1.25rem' : '1.5rem'
-              }}>
-                {totalAssessments}
-              </Typography>
-            </Box>
-
-            <Box sx={{ textAlign: 'right' }}>
-              <Typography component="div" variant="caption" sx={{
-                color: colors.textSecondary,
-                fontSize: '0.7rem'
-              }}>
-                Average Score
-              </Typography>
-              <Typography component="div" variant="h6" sx={{
-                color: colors.textPrimary,
-                fontWeight: 'bold',
-                fontSize: isMobile ? '1.25rem' : '1.5rem'
-              }}>
-                {stats.overallStats.averageScore || 0}%
-              </Typography>
-            </Box>
-          </Box>
-
-          <Typography component="div" variant="caption" sx={{
-            color: colors.textSecondary,
-            display: 'block',
-            mb: 0.5,
-            fontSize: '0.65rem'
-          }}>
-            Score Distribution:
-          </Typography>
-          {Object.entries(scoreDistribution).map(([range, count]) => (
-            <Box key={range} sx={{
-              display: 'flex',
-              alignItems: 'center',
-              mb: 0.5,
-              gap: 0.5
-            }}>
-              <Typography component="span" variant="caption" sx={{
-                color: colors.textPrimary,
-                minWidth: 40,
-                fontSize: '0.6rem',
-                lineHeight: '1.2'
-              }}>
-                {range}
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={(count / totalAssessments) * 100}
-                sx={{
-                  flexGrow: 1,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: `${colors.border}30`,
-                  '& .MuiLinearProgress-bar': {
-                    borderRadius: 3,
-                    backgroundColor:
-                      range === '80-100' ? colors.success :
-                        range === '60-79' ? colors.info :
-                          range === '40-59' ? colors.warning :
-                            range === '20-39' ? colors.error :
-                              colors.error
-                  }
-                }}
-              />
-              <Typography component="span" variant="caption" sx={{
-                color: colors.textSecondary,
-                minWidth: 24,
-                textAlign: 'right',
-                fontSize: '0.6rem',
-                lineHeight: '1.2'
-              }}>
-                {count} ({Math.round((count / totalAssessments) * 100)}%)
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      )
-    },
-    // Team Performance card
-    {
-      title: "Team Performance",
-      icon: <EmojiEvents fontSize="medium" sx={{ color: colors.warning }} />,
-      flexContent: (
-        <Box sx={{ mt: 2, flex: 1 }}>
-          <Box sx={{ mb: 2 }}>
-            <Typography component="div" variant="caption" sx={{
-              color: colors.success,
-              fontWeight: 'bold',
-              display: 'block',
-              mb: 0.5,
-              fontSize: '0.7rem'
-            }}>
-              Highest-Scoring Team
-            </Typography>
-            <Typography component="div" variant="body1" sx={{
-              color: colors.textPrimary,
-              fontWeight: 'bold',
-              fontSize: isMobile ? '0.9rem' : '1rem'
-            }}>
-              {topTeam?.teamName || "N/A"}
-            </Typography>
-            <Typography component="div" variant="body2" sx={{
-              color: colors.textSecondary,
-              fontSize: isMobile ? '0.75rem' : '0.875rem'
-            }}>
-              Score: {topTeam?.averageScore || 0}%
-            </Typography>
-          </Box>
-
-          <Divider sx={{ borderColor: colors.border, my: 1 }} />
-
-          <Box>
-            <Typography component="div" variant="caption" sx={{
-              color: colors.error,
-              fontWeight: 'bold',
-              display: 'block',
-              mb: 0.5,
-              fontSize: '0.7rem'
-            }}>
-              Lowest-Scoring Team
-            </Typography>
-            <Typography component="div" variant="body1" sx={{
-              color: colors.textPrimary,
-              fontWeight: 'bold',
-              fontSize: isMobile ? '0.9rem' : '1rem'
-            }}>
-              {bottomTeam?.teamName || "N/A"}
-            </Typography>
-            <Typography component="div" variant="body2" sx={{
-              color: colors.textSecondary,
-              fontSize: isMobile ? '0.75rem' : '0.875rem'
-            }}>
-              Score: {bottomTeam?.averageScore || 0}%
-            </Typography>
-          </Box>
-        </Box>
-      )
-    }
-  ];
-
   return (
-    <div key={JSON.stringify(stats) + JSON.stringify(supervisorStats)}>
-      <Divider sx={{ my: 4, borderColor: colors.border }} />
+    <Box sx={{ mt: 2 }}>
+      <Grid container spacing={3} sx={{ mb: 6 }}>
+        {/* Main Stats Card */}
+        <Grid item xs={12} md={6}>
+          <Card sx={glassStyle}>
+            <CardContent sx={{ p: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+                <Typography variant="h6" sx={{ color: colors.primary, fontWeight: 700 }}>
+                  Network Performance
+                </Typography>
+                <Assessment sx={{ color: colors.primary }} />
+              </Box>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {cards.map((stat, index) => (
-          <Grid item xs={12} md={6} key={index}>
-            <Card sx={{
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              transition: 'transform 0.2s',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: `0 4px 20px 0 ${colors.primary}20`
-              }
-            }}>
-              <CardContent sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                pb: '16px !important'
-              }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography component="div" variant="subtitle1" sx={{
-                    color: colors.textSecondary,
-                    fontSize: isMobile ? '0.875rem' : '1rem'
-                  }}>
-                    {stat.title}
+              <Box sx={{ display: 'flex', gap: 4, mb: 4 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 0.5, display: 'block' }}>
+                    Global Average
                   </Typography>
-                  {stat.icon}
+                  <Typography variant="h3" sx={{ fontWeight: 800, color: colors.textPrimary }}>
+                    {Math.round(stats.overallStats.averageScore || 0)}%
+                  </Typography>
                 </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 0.5, display: 'block' }}>
+                    Total Depth
+                  </Typography>
+                  <Typography variant="h3" sx={{ fontWeight: 800, color: colors.textPrimary }}>
+                    {totalAssessments}
+                  </Typography>
+                </Box>
+              </Box>
 
-                {stat.flexContent}
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-
-        {/* Enhanced Supervisor Stats Card */}
-        <Grid item xs={12}>
-          <Card sx={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '8px',
-            boxShadow: `0 2px 10px ${colors.primary}10`
-          }}>
-            <CardContent>
-              <Typography component="div" variant="h6" sx={{
-                color: colors.primary,
-                mb: 2,
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: isMobile ? '1rem' : '1.25rem'
-              }}>
-                <Person sx={{ mr: 1, fontSize: 'inherit' }} />
-                Assessments Conducted by Supervisors
-                <Typography component="span" sx={{
-                  ml: 'auto',
-                  color: colors.textSecondary,
-                  fontSize: '0.875rem'
-                }}>
-                  Total: {totalSupervisorAssessments}
-                </Typography>
+              <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 1, display: 'block' }}>
+                Distribution of Team Scores:
               </Typography>
+              {Object.entries(scoreDistribution).map(([range, count]) => (
+                <Box key={range} sx={{ mb: 1.5 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="caption" sx={{ color: colors.textPrimary, fontSize: '0.7rem' }}>{range}</Typography>
+                    <Typography variant="caption" sx={{ color: colors.textSecondary }}>{count} Teams</Typography>
+                  </Box>
+                  <LinearProgress
+                    variant="determinate"
+                    value={(count / (totalAssessments || 1)) * 100}
+                    sx={{
+                      height: 6,
+                      borderRadius: 3,
+                      bgcolor: 'rgba(255,255,255,0.05)',
+                      '& .MuiLinearProgress-bar': {
+                        borderRadius: 3,
+                        backgroundColor: range.includes('Excel') ? colors.success :
+                          range.includes('Good') ? colors.success :
+                            range.includes('Fair') ? colors.primary :
+                              range.includes('Needs') ? colors.warning : colors.error
+                      }
+                    }}
+                  />
+                </Box>
+              ))}
+            </CardContent>
+          </Card>
+        </Grid>
 
-              {sortedSupervisors.length > 0 ? (
-                <List sx={{ py: 0 }}>
-                  {sortedSupervisors.map((supervisor, idx) => {
-                    const percentage = (supervisor.assessmentCount / totalSupervisorAssessments) * 100;
-                    return (
-                      <React.Fragment key={idx}>
-                        <ListItem sx={{ px: 0, py: 1.5 }}>
-                          <ListItemAvatar>
-                            <Avatar sx={{
-                              bgcolor: theme.palette.mode === 'dark' ? colors.primary : `${colors.primary}20`,
-                              color: theme.palette.mode === 'dark' ? '#fff' : colors.primary,
-                              width: 36,
-                              height: 36,
-                              fontSize: '0.875rem'
-                            }}>
-                              {supervisor.name.split(' ').map(n => n[0]).join('')}
-                            </Avatar>
-                          </ListItemAvatar>
-
-                          <ListItemText
-                            primary={
-                              <Typography component="div" variant="body1" sx={{ color: colors.textPrimary }}>
-                                {supervisor.name}
-                              </Typography>
-                            }
-                            secondary={
-                              <Typography component="div">
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <Typography component="span" variant="body2" sx={{
-                                    color: colors.textPrimary,
-                                    fontWeight: 'bold',
-                                    mr: 2,
-                                    minWidth: 150
-                                  }}>
-                                    {supervisor.assessmentCount} assessments
-                                  </Typography>
-
-                                  <Box sx={{ width: '100%', mr: 2 }}>
-                                    <LinearProgress
-                                      variant="determinate"
-                                      value={percentage}
-                                      sx={{
-                                        height: 8,
-                                        borderRadius: 4,
-                                        backgroundColor: `${colors.border}30`,
-                                        '& .MuiLinearProgress-bar': {
-                                          borderRadius: 4,
-                                          backgroundColor: colors.primary
-                                        }
-                                      }}
-                                    />
-                                  </Box>
-
-                                  <Typography component="span" variant="caption" sx={{
-                                    color: colors.textSecondary,
-                                    minWidth: 40,
-                                    textAlign: 'right'
-                                  }}>
-                                    {percentage.toFixed(1)}%
-                                  </Typography>
-                                </Box>
-                              </Typography>
-                            }
-                            sx={{ my: 0 }}
-                          />
-                        </ListItem>
-                        {idx < sortedSupervisors.length - 1 && (
-                          <Divider sx={{ backgroundColor: colors.border }} />
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </List>
-              ) : (
-                <Typography component="div" sx={{
-                  color: colors.textSecondary,
-                  fontSize: '0.875rem',
-                  textAlign: 'center',
-                  py: 2
-                }}>
-                  No assessment data available for supervisors.
+        {/* Performance Leaders Card */}
+        <Grid item xs={12} md={6}>
+          <Card sx={glassStyle}>
+            <CardContent sx={{ p: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+                <Typography variant="h6" sx={{ color: colors.warning, fontWeight: 700 }}>
+                  Performance Leaders
                 </Typography>
-              )}
+                <EmojiEvents sx={{ color: colors.warning }} />
+              </Box>
+
+              <Box sx={{
+                p: 2.5,
+                borderRadius: '16px',
+                bgcolor: 'rgba(16, 185, 129, 0.08)',
+                border: '1px solid rgba(16, 185, 129, 0.1)',
+                mb: 3
+              }}>
+                <Typography variant="caption" sx={{ color: colors.success, fontWeight: 700, mb: 0.5, display: 'block' }}>
+                  Top Performer
+                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: colors.textPrimary }}>{topTeam?.teamName || "N/A"}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 800, color: colors.success }}>{Math.round(topTeam?.averageScore || 0)}%</Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{
+                p: 2.5,
+                borderRadius: '16px',
+                bgcolor: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.1)'
+              }}>
+                <Typography variant="caption" sx={{ color: colors.error, fontWeight: 700, mb: 0.5, display: 'block' }}>
+                  Attention Required
+                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: colors.textPrimary }}>{bottomTeam?.teamName || "N/A"}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 800, color: colors.error }}>{Math.round(bottomTeam?.averageScore || 0)}%</Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Supervisor Contributions Card */}
+        <Grid item xs={12}>
+          <Card sx={{ ...glassStyle, '&:hover': { ...glassStyle['&:hover'], transform: 'none' } }}>
+            <CardContent sx={{ p: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Person sx={{ color: colors.primary }} />
+                  <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 700 }}>
+                    Supervisory Oversight
+                  </Typography>
+                </Box>
+                <Typography variant="body2" sx={{ color: colors.textSecondary }}>
+                  Total Audits: <strong>{totalSupervisorAssessments}</strong>
+                </Typography>
+              </Box>
+
+              <Grid container spacing={4}>
+                {sortedSupervisors.map((supervisor, idx) => {
+                  const percentage = (supervisor.assessmentCount / (totalSupervisorAssessments || 1)) * 100;
+                  return (
+                    <Grid item xs={12} sm={6} md={4} key={idx}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar sx={{
+                          bgcolor: colors.primary,
+                          fontWeight: 700,
+                          boxShadow: `0 0 12px ${colors.primary}40`
+                        }}>
+                          {supervisor.name.split(' ').map(n => n[0]).join('')}
+                        </Avatar>
+                        <Box sx={{ flex: 1 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: colors.textPrimary }}>{supervisor.name}</Typography>
+                            <Typography variant="caption" sx={{ color: colors.textSecondary }}>{supervisor.assessmentCount}</Typography>
+                          </Box>
+                          <LinearProgress
+                            variant="determinate"
+                            value={percentage}
+                            sx={{
+                              height: 4,
+                              borderRadius: 2,
+                              bgcolor: 'rgba(255,255,255,0.05)',
+                              '& .MuiLinearProgress-bar': { bgcolor: colors.primary }
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    </Grid>
+                  );
+                })}
+              </Grid>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
-    </div>
+    </Box>
   );
 };
 

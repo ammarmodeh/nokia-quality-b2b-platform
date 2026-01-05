@@ -57,7 +57,7 @@ const assessmentSchema = new mongoose.Schema(
         score: {
           type: Number,
           min: 0,
-          max: 100,
+          max: 5,
           default: 0,
         },
         notes: {
@@ -75,7 +75,7 @@ const assessmentSchema = new mongoose.Schema(
     overallScore: {
       type: Number,
       min: 0,
-      max: 100,
+      max: 100, // Total score as percentage
       default: 0,
     },
     categoryScores: {
@@ -116,105 +116,51 @@ const assessmentSchema = new mongoose.Schema(
 
 // Calculate overall score and category scores before saving
 assessmentSchema.pre("save", function (next) {
-  if (this.isModified('overallScore') && this.overallScore !== null) {
+  // If overallScore is manually provided as 0-100, we skip
+  if (this.isModified('overallScore') && this.overallScore > 5) {
     return next();
   }
 
   if (this.checkPoints && this.checkPoints.length > 0) {
-    // Calculate weighted scores
-    let totalWeightedScore = 0;
-    let totalPossibleWeight = 0;
-
-    const categoryScores = {};
+    let totalScore = 0;
+    const categoryTotals = {};
     const categoryCounts = {};
 
-    // First pass: Calculate category averages
     this.checkPoints.forEach(checkpoint => {
       const category = checkpoint.category;
-
-      if (!categoryScores[category]) {
-        categoryScores[category] = 0;
+      if (!categoryTotals[category]) {
+        categoryTotals[category] = 0;
         categoryCounts[category] = 0;
       }
-
-      categoryScores[category] += checkpoint.score;
+      categoryTotals[category] += checkpoint.score;
       categoryCounts[category]++;
+      totalScore += checkpoint.score;
     });
 
-    // Second pass: Apply weights and calculate overall
-    for (const category in categoryScores) {
-      const averageScore = categoryScores[category] / categoryCounts[category];
-      const weight = this.categoryWeights[category] || 1;
-
-      totalWeightedScore += averageScore * weight;
-      totalPossibleWeight += 100 * weight; // 100 is max score per category
-
-      this.categoryScores[category] = Math.round(averageScore);
+    // Update category averages (as percentages)
+    for (const category in categoryTotals) {
+      const averagePercent = (categoryTotals[category] / (categoryCounts[category] * 5)) * 100;
+      this.categoryScores[category] = Math.round(averagePercent);
     }
 
-    this.overallScore = Math.round((totalWeightedScore / totalPossibleWeight) * 100);
+    // Update overall average (as percentage)
+    const overallAvgPercent = (totalScore / (this.checkPoints.length * 5)) * 100;
+    this.overallScore = Math.round(overallAvgPercent);
   }
 
   next();
 });
 
+// Remove the old validate hook entirely as it contains strict percentage logic
 assessmentSchema.pre("validate", function (next) {
   if (this.checkPoints) {
     for (const checkpoint of this.checkPoints) {
-      // If equipment is marked as not available, score must be 0
-      if (checkpoint.isAvailable === false && checkpoint.score !== 0) {
-        checkpoint.score = 0;
-      }
-
-      // Splicing Equipment Condition (4 levels)
-      if (checkpoint.name === "Splicing Equipment Condition (FSM)" ||
-        checkpoint.name === "Testing Tools Condition (OPM and VFL)") {
-        if (![0, 50, 75, 100].includes(checkpoint.score)) {
-          this.invalidate(
-            `checkPoints.${this.checkPoints.indexOf(checkpoint)}.score`,
-            'Equipment score must be 0, 50, 75, or 100'
-          );
-        }
-      }
-
-      if (checkpoint.category === "Customer Service Skills") {
-        if (checkpoint.name === "Appearance" && ![0, 30, 70, 100].includes(checkpoint.score)) {
-          this.invalidate(
-            `checkPoints.${this.checkPoints.indexOf(checkpoint)}.score`,
-            'Appearance score must be 0, 30, 70, or 100'
-          );
-        }
-        else if (checkpoint.name === "Communication" && ![0, 40, 80, 100].includes(checkpoint.score)) {
-          this.invalidate(
-            `checkPoints.${this.checkPoints.indexOf(checkpoint)}.score`,
-            'Communication score must be 0, 40, 80, or 100'
-          );
-        }
-        else if (checkpoint.name === "Patience and Precision" && ![0, 50, 85, 100].includes(checkpoint.score)) {
-          this.invalidate(
-            `checkPoints.${this.checkPoints.indexOf(checkpoint)}.score`,
-            'Patience score must be 0, 50, 85, or 100'
-          );
-        }
-      }
-
-      // Consumables Availability (3 levels)
-      else if (checkpoint.name === "Consumables Availability") {
-        if (![0, 50, 100].includes(checkpoint.score)) {
-          this.invalidate(
-            `checkPoints.${this.checkPoints.indexOf(checkpoint)}.score`,
-            'Availability score must be 0, 50, or 100'
-          );
-        }
-      }
-      // Other checkpoints (percentage-based)
-      else {
-        if (checkpoint.score < 0 || checkpoint.score > 100) {
-          this.invalidate(
-            `checkPoints.${this.checkPoints.indexOf(checkpoint)}.score`,
-            'Score must be between 0 and 100'
-          );
-        }
+      // Simple validation: scores must be between 0 and 5
+      if (checkpoint.score < 0 || checkpoint.score > 5) {
+        this.invalidate(
+          `checkPoints.${this.checkPoints.indexOf(checkpoint)}.score`,
+          'Score must be between 0 and 5'
+        );
       }
     }
   }

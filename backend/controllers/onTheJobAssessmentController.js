@@ -120,25 +120,16 @@ export const deleteAssessment = async (req, res) => {
       return res.status(403).json({ message: "Only admins can delete assessments" });
     }
 
-    // Perform soft delete instead of hard delete
-    const assessment = await OnTheJobAssessment.findByIdAndUpdate(
-      id,
-      {
-        isDeleted: true,
-        deletedAt: new Date(),
-        deletedBy: req.user._id
-      },
-      { new: true }
-    );
+    // Perform hard delete as requested
+    const assessment = await OnTheJobAssessment.findByIdAndDelete(id);
 
     if (!assessment) {
       return res.status(404).json({ message: "Assessment not found" });
     }
 
     res.status(200).json({
-      message: "Assessment marked as deleted (soft delete)",
-      assessment,
-      undoAvailableUntil: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours to undo
+      message: "Assessment permanently deleted from database",
+      assessment
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

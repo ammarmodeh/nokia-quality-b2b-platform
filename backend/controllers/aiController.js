@@ -87,6 +87,7 @@ export const generateReportFile = async (req, res) => {
                     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
                     th { background-color: #f2f2f2; font-weight: bold; }
                     strong { font-weight: 700; }
+                    img { max-width: 100%; height: auto; display: block; margin: 20px 0; border-radius: 8px; }
                 </style>
             </head>
             <body>

@@ -138,11 +138,11 @@ const QuizResults = () => {
     try {
       return [
         `فريق: ${quizData.teamName || 'N/A'}`,
+        `كود: ${quizData.teamCode || 'N/A'}`,
         `النتيجة: ${stats.percentage}%`,
         `صح: ${stats.correctMC}/${stats.totalMC}`,
         `خطأ: ${stats.incorrectMC}`,
         `مقالي: ${stats.answeredEssay}/${stats.totalEssay}`,
-        `كود: ${quizData.quizCode || 'N/A'}`
       ].join('\n');
     } catch (e) {
       return 'Data error';
