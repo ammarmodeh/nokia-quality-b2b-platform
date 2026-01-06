@@ -424,14 +424,23 @@ ${([theoreticalAvg, practicalAvg ? practicalAvg * 20 : null, labAvg].filter(v =>
 *Report generated automatically by Nokia Quality Management System*
       `;
 
-      const response = await api.post("/ai/report/download", { reportContent: markdown }, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const response = await api.post("/ai/report/download", {
+        reportContent: markdown,
+        format: 'pdf',
+        title: `Full Evaluation - ${selectedTeam.teamName}`
+      }, {
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `Final_Evaluation_${selectedTeam.teamName.replace(/\s+/g, '_')}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Report generation failed:", err);
     } finally {
@@ -550,14 +559,26 @@ ${data.map((a, i) => `
         `;
       }
 
-      const response = await api.post("/ai/report/download", { reportContent: markdown }, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const response = await api.post("/ai/report/download", {
+        reportContent: markdown,
+        format: 'pdf',
+        title: `${testType.toUpperCase()} ASSESSMENT - ${selectedTeam.teamName}`
+      }, {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        }
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `${selectedTeam.teamName}_${testType.charAt(0).toUpperCase() + testType.slice(1)}_Report.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error(`${testType} PDF export failed:`, err);
     }
@@ -919,7 +940,12 @@ ${data.map((a, i) => `
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
-            sx={{ mb: 3, ...darkThemeStyles.tabs, }}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              mb: 3,
+              ...darkThemeStyles.tabs,
+            }}
           >
             <Tab
               label="Overview"

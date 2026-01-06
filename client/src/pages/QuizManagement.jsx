@@ -434,8 +434,8 @@ const QuizManagement = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <Box sx={{ p: { xs: 2, md: 4 }, minHeight: '100vh', bgcolor: colors.background }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
+      <Box sx={{ minHeight: '100vh', bgcolor: colors.background }}>
+        <Stack direction={"row"} justifyContent="space-between" alignItems="center" mb={4}>
           <Box>
             <Typography variant="h4" sx={{ color: colors.textPrimary, fontWeight: '900', letterSpacing: '-1px' }}>
               QUIZ <span style={{ color: colors.primary }}>MANAGEMENT</span>
@@ -566,7 +566,7 @@ const QuizManagement = () => {
           backgroundImage: 'none',
           border: `1px solid ${colors.border}`,
           borderRadius: '16px',
-          overflow: 'hidden',
+          overflow: 'auto',
           boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
         }}>
           <Table>

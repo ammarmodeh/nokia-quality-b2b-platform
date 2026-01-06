@@ -102,7 +102,7 @@ const DataManagement = () => {
   };
 
   return (
-    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%', minHeight: '90vh' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '90vh' }}>
       <Typography variant="h4" gutterBottom sx={{ color: 'white', mb: 3 }}>
         Data Management Portal
       </Typography>
@@ -768,27 +768,29 @@ const UploadTab = ({ token, teamNames, dropdownOptions, existingBatches, onUploa
         onResolve={handleConflictResolve}
       />
 
-      <Paper sx={{ p: 3, mb: 3, color: 'white', display: 'flex', gap: 2, alignItems: 'center' }}>
-        <Button component="label" variant="contained" startIcon={<CloudUploadIcon />}>
-          Select Excel
-          <input type="file" hidden accept=".xlsx, .xls" onChange={handleFileChange} />
-        </Button>
-        <Typography sx={{ color: '#aaa' }}>{file ? file.name : "No file selected"}</Typography>
-        {rows.length > 0 && (
-          <>
-            <Button
-              variant="outlined"
-              color="warning"
-              onClick={() => { setRows([]); setFile(null); setColumns([]); }}
-              sx={{ ml: 'auto', mr: 2 }}
-            >
-              Reset
-            </Button>
-            <Button variant="contained" color="success" onClick={handleUpload} disabled={loading}>
-              {loading ? "Uploading..." : "Confirm Upload"}
-            </Button>
-          </>
-        )}
+      <Paper sx={{ p: 3, mb: 3, color: 'white' }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: { xs: 'stretch', sm: 'center' } }}>
+          <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} fullWidth={{ xs: true, sm: false }}>
+            Select Excel
+            <input type="file" hidden accept=".xlsx, .xls" onChange={handleFileChange} />
+          </Button>
+          <Typography sx={{ color: '#aaa', textAlign: { xs: 'center', sm: 'left' } }}>{file ? file.name : "No file selected"}</Typography>
+          {rows.length > 0 && (
+            <Box sx={{ display: 'flex', gap: 2, ml: { xs: 0, sm: 'auto' }, flexDirection: { xs: 'column', sm: 'row' } }}>
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={() => { setRows([]); setFile(null); setColumns([]); }}
+                fullWidth={{ xs: true, sm: false }}
+              >
+                Reset
+              </Button>
+              <Button variant="contained" color="success" onClick={handleUpload} disabled={loading} fullWidth={{ xs: true, sm: false }}>
+                {loading ? "Uploading..." : "Confirm Upload"}
+              </Button>
+            </Box>
+          )}
+        </Box>
       </Paper>
       {rows.length > 0 && (
         <Paper sx={{ height: 600, width: '100%', }}>
@@ -1011,7 +1013,7 @@ const HistoryTab = ({ token, teamNames, dropdownOptions, batches, refreshHistory
   };
 
   return (
-    <Box sx={{ display: 'flex', gap: 2, height: '100%' }}>
+    <Box sx={{ display: 'flex', gap: 2, height: '100%', flexDirection: { xs: 'column', md: 'row' } }}>
       <AddColumnDialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} onConfirm={handleAddColumn} />
       <RenameColumnDialog
         open={renameDialogOpen}
@@ -1028,7 +1030,7 @@ const HistoryTab = ({ token, teamNames, dropdownOptions, batches, refreshHistory
       />
 
       {/* Sidebar List */}
-      <Paper sx={{ width: 250, p: 2, overflowY: 'auto', maxHeight: '80vh' }}>
+      <Paper sx={{ width: { xs: '100%', md: 250 }, p: 2, overflowY: 'auto', maxHeight: { xs: '40vh', md: '80vh' } }}>
         <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>Upload History</Typography>
         {batches.map((batch) => (
           <Card

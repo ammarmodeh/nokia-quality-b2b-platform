@@ -101,37 +101,55 @@ export const generateReportFile = async (req, res) => {
         `;
 
     if (format === 'pdf') {
-      const file = { content: styledHtml };
-      const options = { format: 'A4', printBackground: true };
+      try {
+        console.log(`[PDF Gen] Starting PDF generation for: ${title}`);
+        const file = { content: styledHtml };
+        const options = { format: 'A4', printBackground: true };
 
-      const pdfBuffer = await htmlPdfNode.generatePdf(file, options);
+        const pdfBuffer = await htmlPdfNode.generatePdf(file, options);
+        console.log(`[PDF Gen] PDF generation successful. Buffer size: ${pdfBuffer.length}`);
 
-      const safeTitle = title.replace(/[^\x00-\x7F]/g, "").replace(/\s+/g, "_");
-      const filename = `${safeTitle || 'Report'}_${Date.now()}.pdf`;
+        const safeTitle = title.replace(/[^\x00-\x7F]/g, "").replace(/\s+/g, "_");
+        const filename = `${safeTitle || 'Report'}_${Date.now()}.pdf`;
 
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(title)}_${Date.now()}.pdf`);
-      res.send(pdfBuffer);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Length', pdfBuffer.length);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(title)}_${Date.now()}.pdf`);
+        res.status(200).send(pdfBuffer);
+      } catch (pdfError) {
+        console.error("[PDF Gen] html-pdf-node failed:", pdfError);
+        throw pdfError;
+      }
     } else if (format === 'docx') {
-      const docxBuffer = await HTMLtoDOCX(styledHtml, null, {
-        table: { row: { cantSplit: true } },
-        footer: true,
-        pageNumber: true,
-      });
+      try {
+        console.log(`[DOCX Gen] Starting DOCX generation for: ${title}`);
+        const docxBuffer = await HTMLtoDOCX(styledHtml, null, {
+          table: { row: { cantSplit: true } },
+          footer: true,
+          pageNumber: true,
+        });
+        console.log(`[DOCX Gen] DOCX generation successful. Buffer size: ${docxBuffer.length}`);
 
-      const safeTitle = title.replace(/[^\x00-\x7F]/g, "").replace(/\s+/g, "_");
-      const filename = `${safeTitle || 'Report'}_${Date.now()}.docx`;
+        const safeTitle = title.replace(/[^\x00-\x7F]/g, "").replace(/\s+/g, "_");
+        const filename = `${safeTitle || 'Report'}_${Date.now()}.docx`;
 
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(title)}_${Date.now()}.docx`);
-      res.send(docxBuffer);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(title)}_${Date.now()}.docx`);
+        res.status(200).send(docxBuffer);
+      } catch (docxError) {
+        console.error("[DOCX Gen] HTMLtoDOCX failed:", docxError);
+        throw docxError;
+      }
     } else {
       res.status(400).json({ error: "Unsupported file format." });
     }
 
   } catch (error) {
-    console.error("PDF Generation Failed:", error);
-    res.status(500).json({ error: "Failed to generate report file." });
+    console.error("Report Generation Overall Failure:", error);
+    res.status(500).json({
+      error: "Failed to generate report file.",
+      details: error.message
+    });
   }
 }
 

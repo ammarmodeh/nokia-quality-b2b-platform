@@ -375,7 +375,7 @@ const AssignedNeutral = () => {
   ];
 
   return (
-    <Box sx={{ p: isSmallScreen ? 1 : 3, minHeight: '100vh' }}>
+    <Box sx={{ p: isSmallScreen ? 0 : 3, minHeight: '100vh' }}>
 
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'start', md: 'center' }} mb={4} spacing={2}>
         <Box>

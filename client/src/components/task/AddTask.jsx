@@ -261,58 +261,44 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
           </Button>
         </Toolbar>
       </AppBar>
-      <form id="task-form" onSubmit={handleSubmit(submitHandler)} className="p-6">
-        <Stack spacing={2}>
-
-          <Stack direction={"row"} spacing={2}>
+      <form id="task-form" onSubmit={handleSubmit(submitHandler)} style={{ padding: '24px' }}>
+        <Stack spacing={3}>
+          {/* Row 1: Request Number, SLID, Customer Name, Contact Number */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               label="Request number"
               placeholder="Enter request number"
               type='number'
               fullWidth
               variant="outlined"
-              {...register('requestNumber', {
-                required: 'request number is required',
-              })}
+              {...register('requestNumber', { required: 'request number is required' })}
               error={!!errors.requestNumber}
               helperText={errors.requestNumber ? errors.requestNumber.message : ''}
             />
-
             <TextField
               label="SLID"
-              placeholder="Enter 7 digits (e.g., 0123456)"
+              placeholder="Enter 7 digits"
               fullWidth
               variant="outlined"
               value={watchSLID}
               onInput={(e) => {
-                // console.log('onInput triggered');
-                e.target.value = e.target.value.replace(/\D/g, '');
-                if (e.target.value.length > 7) {
-                  e.target.value = e.target.value.slice(0, 7);
-                }
+                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 7);
               }}
-              InputProps={{ maxLength: 7 }}
               {...register('slid', {
                 required: 'SLID is required',
-                pattern: {
-                  value: /^\d{7}$/,
-                  message: 'SLID must be exactly 7 digits.',
-                },
+                pattern: { value: /^\d{7}$/, message: 'SLID must be 7 digits' },
               })}
-              error={!!errors.title}
-              helperText={errors.title ? errors.title.message : ''}
+              error={!!errors.slid}
+              helperText={errors.slid ? errors.slid.message : ''}
             />
             <TextField
               label="Customer Name"
               placeholder="Customer Name"
               fullWidth
               variant="outlined"
-              {...register('customerName', {
-                required: 'Customer name is required',
-              })}
+              {...register('customerName', { required: 'Customer name is required' })}
               error={!!errors.customerName}
               helperText={errors.customerName ? errors.customerName.message : ''}
-              sx={{ marginTop: '20px' }}
             />
             <TextField
               label="Contact number"
@@ -320,27 +306,26 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               type='number'
               fullWidth
               variant="outlined"
-              {...register('contactNumber', {
-                required: 'Contact number is required',
-              })}
+              {...register('contactNumber', { required: 'Contact number is required' })}
               error={!!errors.contactNumber}
               helperText={errors.contactNumber ? errors.contactNumber.message : ''}
             />
           </Stack>
 
-          <Stack direction={"row"} spacing={2}>
-            <FormControl fullWidth variant="outlined" error={!!errors.status}>
+          {/* Row 2: Satisfaction Score, PIS Date */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
               <InputLabel>Satisfaction Score</InputLabel>
-              <Select value={evaluationScore} onChange={(e) => setEvaluationScore(e.target.value)} label="Satisfaction Score">
+              <Select
+                value={evaluationScore}
+                onChange={(e) => setEvaluationScore(e.target.value)}
+                label="Satisfaction Score"
+              >
                 {dropdownOptions.EVALUATION_SCORE.map((list) => (
-                  <MenuItem key={list} value={list}>
-                    {list}
-                  </MenuItem>
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
                 ))}
               </Select>
-              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
             </FormControl>
-
             <TextField
               label="PIS Date"
               type="date"
@@ -349,397 +334,264 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               {...register('pisDate', { required: 'PIS Date is required!' })}
               error={!!errors.pisDate}
               helperText={errors.pisDate ? errors.pisDate.message : ''}
-              InputLabelProps={{
-                shrink: true,
-              }}
+              InputLabelProps={{ shrink: true }}
             />
           </Stack>
 
-          <Stack direction={"row"} spacing={2}>
-            <FormControl fullWidth variant="outlined" error={!!errors.status}>
+          {/* Row 3: Governorate, District, Customer Type */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
               <InputLabel>Governorate</InputLabel>
-              <Select value={governorate} onChange={(e) => setGovernorate(e.target.value)} label="Governorate">
+              <Select
+                value={governorate}
+                onChange={(e) => setGovernorate(e.target.value)}
+                label="Governorate"
+              >
                 {dropdownOptions.GOVERNORATES.map((list) => (
-                  <MenuItem key={list} value={list}>
-                    {list}
-                  </MenuItem>
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
                 ))}
               </Select>
-              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
             </FormControl>
             <TextField
               label="District"
-              type="text"
               fullWidth
               variant="outlined"
               {...register('district', { required: 'District is required!' })}
               error={!!errors.district}
               helperText={errors.district ? errors.district.message : ''}
-              InputLabelProps={{
-                shrink: true,
-              }}
             />
-            <FormControl fullWidth variant="outlined" error={!!errors.status}>
+            <FormControl fullWidth variant="outlined">
               <InputLabel>Customer Type</InputLabel>
-              <Select value={customerType} onChange={(e) => setCustomerType(e.target.value)} label="Customer Type">
+              <Select
+                value={customerType}
+                onChange={(e) => setCustomerType(e.target.value)}
+                label="Customer Type"
+              >
                 {dropdownOptions.CUSTOMER_TYPE.map((list) => (
-                  <MenuItem key={list} value={list}>
-                    {list}
-                  </MenuItem>
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
                 ))}
               </Select>
-              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
             </FormControl>
           </Stack>
 
-
-          <Stack direction={"row"} spacing={2}>
+          {/* Row 4: Tariff Name, Priority, Category */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               label="Tariff Name"
-              placeholder="Tariff Name"
               fullWidth
               variant="outlined"
-              multiline
-              rows={4}
-              {...register('tarrifName', {
-                required: 'Tariff Name is required',
-              })}
+              {...register('tarrifName', { required: 'Tariff name is required' })}
               error={!!errors.tarrifName}
               helperText={errors.tarrifName ? errors.tarrifName.message : ''}
-              sx={{ marginTop: '20px' }}
             />
-            <TextField
-              label="Customer Feedback"
-              placeholder="Enter the customer feedback"
-              fullWidth
-              variant="outlined"
-              multiline
-              rows={4}
-              {...register('customerFeedback', {
-                required: 'Customer feedback is required',
-              })}
-              error={!!errors.customerFeedback}
-              helperText={errors.customerFeedback ? errors.customerFeedback.message : ''}
-              inputProps={{ dir: 'rtl' }}
-              sx={{ marginTop: '20px', '& .MuiInputBase-input': { textAlign: 'right' } }}
-            />
-          </Stack>
-
-          {/* New Fields Section */}
-          <Divider sx={{ my: 3 }} />
-          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-            Equipment & Verification Details
-          </Typography>
-
-          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-            <Autocomplete
-              freeSolo
-              options={dropdownOptions.ONT_TYPE}
-              value={ontType}
-              onChange={(e, v) => setOntType(v)}
-              onInputChange={(e, v) => setOntType(v)}
-              renderInput={(params) => <TextField {...params} label="ONT Type" />}
-              fullWidth
-            />
-            <FormControl fullWidth>
-              <InputLabel>Free Extender?</InputLabel>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Priority</InputLabel>
               <Select
-                value={freeExtender}
-                onChange={(e) => setFreeExtender(e.target.value)}
-                label="Free Extender?"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                label="Priority"
               >
-                <MenuItem value="No">No</MenuItem>
-                <MenuItem value="Yes">Yes</MenuItem>
+                {dropdownOptions.PRIORITY.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                label="Category"
+              >
+                {dropdownOptions.TASK_CATEGORIES.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Stack>
 
+          {/* Row 5: Team Company, Field Team */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Team Company</InputLabel>
+              <Select
+                value={teamCompany}
+                onChange={(e) => setTeamCompany(e.target.value)}
+                label="Team Company"
+              >
+                {dropdownOptions.TEAM_COMPANY.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Autocomplete
+              options={fieldTeams}
+              getOptionLabel={(option) => option.teamName || ""}
+              value={fieldTeams.find(t => t._id === teamInfo.teamId) || null}
+              onChange={(e, newValue) => {
+                setTeamInfo(newValue ? { teamName: newValue.teamName, teamId: newValue._id } : { teamName: '', teamId: '' });
+              }}
+              renderInput={(params) => <TextField {...params} label="Field Team Name" variant="outlined" />}
+              fullWidth
+            />
+          </Stack>
+
+          {/* Row 6: RCA (Responsibility, Reason, SubReason, RootCause) */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Autocomplete
+              freeSolo
+              fullWidth
+              options={dropdownOptions.RESPONSIBILITY?.map(item => item.value) || []}
+              value={responsible}
+              onChange={(e, newValue) => setResponsible(newValue || "")}
+              onInputChange={(e, newValue) => setResponsible(newValue || "")}
+              renderInput={(params) => <TextField {...params} label="Responsibility" variant="outlined" />}
+            />
+            <Autocomplete
+              freeSolo
+              fullWidth
+              options={dropdownOptions.REASON?.map(item => item.value) || []}
+              value={reason}
+              onChange={(e, newValue) => setReason(newValue || "")}
+              onInputChange={(e, newValue) => setReason(newValue || "")}
+              renderInput={(params) => <TextField {...params} label="Main Reason" variant="outlined" />}
+            />
+            <Autocomplete
+              freeSolo
+              fullWidth
+              options={dropdownOptions.REASON_SUB?.map(item => item.value) || []}
+              value={subReason}
+              onChange={(e, newValue) => setSubReason(newValue || "")}
+              onInputChange={(e, newValue) => setSubReason(newValue || "")}
+              renderInput={(params) => <TextField {...params} label="Sub Reason" variant="outlined" />}
+            />
+            <Autocomplete
+              freeSolo
+              fullWidth
+              options={dropdownOptions.ROOT_CAUSE?.map(item => item.value) || []}
+              value={rootCause}
+              onChange={(e, newValue) => setRootCause(newValue || "")}
+              onInputChange={(e, newValue) => setRootCause(newValue || "")}
+              renderInput={(params) => <TextField {...params} label="Root Cause" variant="outlined" />}
+            />
+          </Stack>
+
+          {/* Row 7: Validation Status, ONT Type, Free Extender */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Validation Status</InputLabel>
+              <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
+                {dropdownOptions.VALIDATION_STATUS.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>ONT Type</InputLabel>
+              <Select value={ontType} onChange={(e) => setOntType(e.target.value)} label="ONT Type">
+                {dropdownOptions.ONT_TYPE.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Free Extender</InputLabel>
+              <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
+                <MenuItem value="Yes">Yes</MenuItem>
+                <MenuItem value="No">No</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+
+          {/* Row 8: Extender Details (Conditional) */}
           {freeExtender === 'Yes' && (
-            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-              <Autocomplete
-                freeSolo
-                options={dropdownOptions.EXTENDER_TYPE}
-                value={extenderType}
-                onChange={(e, v) => setExtenderType(v)}
-                onInputChange={(e, v) => setExtenderType(v)}
-                renderInput={(params) => <TextField {...params} label="Extender Type" />}
-                fullWidth
-              />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Extender Type</InputLabel>
+                <Select value={extenderType} onChange={(e) => setExtenderType(e.target.value)} label="Extender Type">
+                  {dropdownOptions.EXTENDER_TYPE.map((list) => (
+                    <MenuItem key={list} value={list}>{list}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <TextField
-                label="Number of Extenders"
+                label="Extender Number"
                 type="number"
-                value={extenderNumber}
-                onChange={(e) => setExtenderNumber(e.target.value)}
                 fullWidth
+                variant="outlined"
+                value={extenderNumber}
+                onChange={(e) => setExtenderNumber(parseInt(e.target.value) || 0)}
               />
             </Stack>
           )}
 
-          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-            <FormControl fullWidth>
+          {/* Row 9: Closure Call Evaluation & Feedback */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
               <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
-              <Select
-                value={closureCallEvaluation}
-                onChange={(e) => setClosureCallEvaluation(e.target.value)}
-                label="Closure Call Evaluation (1-10)"
-              >
-                {[...Array(10)].map((_, i) => (
-                  <MenuItem key={i + 1} value={i + 1}>
-                    {i + 1}
-                  </MenuItem>
+              <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                  <MenuItem key={num} value={num}>{num}</MenuItem>
                 ))}
               </Select>
             </FormControl>
             <TextField
               label="Closure Call Feedback"
-              value={closureCallFeedback}
-              onChange={(e) => setClosureCallFeedback(e.target.value)}
-              fullWidth
-              multiline
-              rows={1}
-              inputProps={{ dir: 'rtl' }}
-              sx={{ '& .MuiInputBase-input': { textAlign: 'right' } }}
-            />
-          </Stack>
-
-          <Stack direction={"row"} spacing={2}>
-            <Autocomplete
-              freeSolo
-              options={dropdownOptions.RESPONSIBILITY.map(opt => opt.value)}
-              value={responsible}
-              onChange={(event, newValue) => {
-                setResponsible(newValue);
-                setReason("");
-                setSubReason("");
-                setRootCause("");
-              }}
-              onInputChange={(event, newInputValue) => {
-                setResponsible(newInputValue);
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="Responsibility" variant="outlined" />
-              )}
-              fullWidth
-            />
-            <Autocomplete
-              freeSolo
-              options={dropdownOptions.REASON
-                .filter(opt => !responsible ? !opt.parentValue : opt.parentValue === responsible)
-                .map(opt => opt.value)}
-              value={reason}
-              onChange={(event, newValue) => {
-                setReason(newValue);
-                setSubReason(""); // Reset sub reason
-                setRootCause(""); // Reset root cause
-              }}
-              onInputChange={(event, newInputValue) => {
-                setReason(newInputValue);
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="Reason (Level 1)" variant="outlined" />
-              )}
-              fullWidth
-            />
-          </Stack>
-
-          <Stack direction={"row"} spacing={2}>
-            <Autocomplete
-              freeSolo
-              options={dropdownOptions.REASON_SUB
-                .filter(opt => !reason ? !opt.parentValue : opt.parentValue === reason)
-                .map(opt => opt.value)}
-              value={subReason}
-              onChange={(event, newValue) => {
-                setSubReason(newValue);
-                setRootCause(""); // Reset root cause
-              }}
-              onInputChange={(event, newInputValue) => {
-                setSubReason(newInputValue);
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="Sub Reason (Level 2)" variant="outlined" />
-              )}
-              fullWidth
-            />
-            <Autocomplete
-              freeSolo
-              options={dropdownOptions.ROOT_CAUSE
-                .filter(opt => !subReason ? !opt.parentValue : opt.parentValue === subReason)
-                .map(opt => opt.value)}
-              value={rootCause}
-              onChange={(event, newValue) => {
-                setRootCause(newValue);
-              }}
-              onInputChange={(event, newInputValue) => {
-                setRootCause(newInputValue);
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="Root Cause (Level 3)" variant="outlined" />
-              )}
-              fullWidth
-            />
-            <TextField
-              label="Interview Date"
-              type="date"
               fullWidth
               variant="outlined"
-              {...register('interviewDate', { required: 'Interview Date is required!' })}
-              error={!!errors.interviewDate}
-              helperText={errors.interviewDate ? errors.interviewDate.message : ''}
-              InputLabelProps={{
-                shrink: true,
-              }}
+              multiline
+              rows={2}
+              value={closureCallFeedback}
+              onChange={(e) => setClosureCallFeedback(e.target.value)}
+              inputProps={{ dir: "auto" }}
+              sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
             />
           </Stack>
-        </Stack>
 
-        <Divider sx={{ my: 4 }} />
-
-        <Stack direction="row" spacing={2} alignItems="flex-start">
-          {/* Autocomplete - Takes remaining width (flex-grow) */}
-          <Box sx={{ flexGrow: 1 }}>
-            <Autocomplete
-              options={fieldTeams}
-              getOptionLabel={(option) => option.teamName}
-              value={fieldTeams.find(team => team.teamName === teamInfo.teamName) || null}
-              onChange={(event, newValue) => {
-                setTeamInfo({
-                  teamName: newValue?.teamName || '',
-                  teamId: newValue?._id || ''
-                });
-              }}
-              renderInput={(params) => (
-                <FormControl fullWidth variant="outlined" error={!!errors.status}>
-                  <TextField
-                    {...params}
-                    label="Team Name"
-                    variant="outlined"
-                    error={!!errors.status}
-                    helperText={errors.status ? errors.status.message : ''}
-                  />
-                </FormControl>
-              )}
-            />
-          </Box>
-
-          {/* Team Company - Fixed width */}
-          <Box sx={{ width: 200 }}>
-            <FormControl fullWidth variant="outlined" error={!!errors.status}>
-              <InputLabel>Team Company</InputLabel>
-              <Select value={teamCompany} onChange={(e) => setTeamCompany(e.target.value)} label="Team Company">
-                {dropdownOptions.TEAM_COMPANY.map((list) => (
-                  <MenuItem key={list} value={list}>
-                    {list}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-            </FormControl>
-          </Box>
-
-          {/* Validation Status - Fixed width */}
-          <Box sx={{ width: 200 }}>
-            <FormControl fullWidth variant="outlined" error={!!errors.status}>
-              <InputLabel>Validation Status</InputLabel>
-              <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
-                {dropdownOptions.VALIDATION_STATUS.map((list) => (
-                  <MenuItem key={list} value={list}>
-                    {list}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>{errors.status ? errors.status.message : ''}</FormHelperText>
-            </FormControl>
-          </Box>
-        </Stack>
-
-        <Divider sx={{ my: 4 }} />
-
-        <Stack direction={"row"} spacing={2}>
-          <Box sx={{ flex: 1 }}>
-            <UserList
-              setAssignedTo={handleAssignedToChange}
-              assignedTo={assignedTo}
-              users={users}
-              loading={loading}
-              error={error}
-              label="Assign Task To:"
-              filteredUsers={whomItMayConcern}
-            />
-          </Box>
-
-          <Box sx={{ flex: 1 }}>
-            <UserList
-              setAssignedTo={handleWhomItMayConcernChange}
-              assignedTo={whomItMayConcern}
-              users={users}
-              loading={loading}
-              error={error}
-              label="Whom It May Concern:"
-              filteredUsers={assignedTo}
-            />
-          </Box>
-        </Stack>
-
-        <Divider sx={{ my: 4 }} />
-
-        <Stack direction={"row"} spacing={2} sx={{ marginBottom: '20px' }}>
+          {/* Row 10: Customer Feedback */}
           <TextField
-            label="Task Date and Time"
-            type="datetime-local"
+            label="Customer Feedback / Comment"
             fullWidth
             variant="outlined"
-            {...register('date')}
-            error={!!errors.date}
-            helperText={errors.date ? errors.date.message : ''}
-            InputLabelProps={{
-              shrink: true,
-            }}
+            multiline
+            rows={4}
+            {...register('customerFeedback', { required: 'Customer feedback is required!' })}
+            error={!!errors.customerFeedback}
+            helperText={errors.customerFeedback ? errors.customerFeedback.message : ''}
+            inputProps={{ dir: "auto" }}
+            sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
           />
 
-          <FormControl fullWidth variant="outlined" error={!!errors.priority}>
-            <InputLabel>Priority Level</InputLabel>
-            <Select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              label="Feedback Severity"
-            >
-              {dropdownOptions.PRIORITY.map((level) => (
-                <MenuItem key={level} value={level}>
-                  {level}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>{errors.priority ? errors.priority.message : ''}</FormHelperText>
-          </FormControl>
+          <Divider />
 
-          <Autocomplete
-            freeSolo
-            options={dropdownOptions.TASK_CATEGORIES}
-            value={category}
-            onChange={(event, newValue) => {
-              setCategory(newValue);
-            }}
-            onInputChange={(event, newInputValue) => {
-              setCategory(newInputValue);
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Task Category"
-                variant="outlined"
-                error={!!errors.category}
-                helperText={errors.category ? errors.category.message : ''}
+          {/* Row 11: Assignment */}
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={4}>
+            <Box flex={1}>
+              <UserList
+                setAssignedTo={handleAssignedToChange}
+                assignedTo={assignedTo}
+                users={users}
+                loading={loading}
+                error={error}
+                label="Assign Task To:"
+                filteredUsers={whomItMayConcern}
               />
-            )}
-            fullWidth
-          />
+            </Box>
+            <Box flex={1}>
+              <UserList
+                setAssignedTo={handleWhomItMayConcernChange}
+                assignedTo={whomItMayConcern}
+                users={users}
+                loading={loading}
+                error={error}
+                label="Whom It May Concern:"
+                filteredUsers={assignedTo}
+              />
+            </Box>
+          </Stack>
         </Stack>
-
-        <Typography color='textSecondary' sx={{ opacity: 0.5 }}>End</Typography>
-
-      </form >
-    </Dialog >
+      </form>
+    </Dialog>
   );
 };
 

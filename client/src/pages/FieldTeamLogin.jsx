@@ -156,7 +156,6 @@ const FieldTeamLogin = () => {
             onChange={handleChange}
             disabled={loading}
             sx={textFieldStyles}
-            autoComplete="off"
           />
 
           <TextField
@@ -169,7 +168,6 @@ const FieldTeamLogin = () => {
             onChange={handleChange}
             disabled={loading}
             sx={textFieldStyles}
-            autoComplete="off"
           />
 
           <Button

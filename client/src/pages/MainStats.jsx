@@ -733,7 +733,7 @@ const MainStats = () => {
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', color: colors.textPrimary, p: 3 }}>
+    <Box sx={{ minHeight: '100vh', color: colors.textPrimary }}>
       <Typography variant="h4" gutterBottom sx={{ color: colors.primary, fontWeight: 'bold', mb: 3 }}>
         Tasks Performance Dashboard
       </Typography>

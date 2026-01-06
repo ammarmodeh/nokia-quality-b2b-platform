@@ -1068,7 +1068,7 @@ const OnTheJobAssessment = () => {
       backgroundColor: colors.background,
       minHeight: '100vh',
       color: colors.textPrimary,
-      p: { xs: 2, md: 4 },
+      // p: { xs: 2, md: 4 },
       transition: 'background-color 0.3s ease'
     }}>
       <Box sx={{ maxWidth: '1400px', mx: 'auto' }}>

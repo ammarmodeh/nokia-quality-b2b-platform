@@ -136,7 +136,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
 
   const reportUrl = `${window.location.origin}/dashboard`;
   const whatsappText = encodeURIComponent(
-    `OrangeJO FTTH QoS Executive Report\n\n${insights?.substring(0, 800)}...\n\nView full report: ${reportUrl}`
+    `OrangeJO FTTH Project Report\n\n${insights?.substring(0, 800)}...\n\nView full report: ${reportUrl}`
   );
   const whatsappLink = `https://wa.me/?text=${whatsappText}`;
 

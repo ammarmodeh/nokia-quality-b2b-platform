@@ -23,10 +23,10 @@ const settingsSchema = new mongoose.Schema(
       type: String,
       default: "PRJ-001",
     },
-    clientName: {
-      type: String,
-      default: "Orange Jordan",
-    },
+    // clientName: {
+    //   type: String,
+    //   default: "Reach -",
+    // },
     projectManager: {
       type: String,
       default: "Ammar Modeh",

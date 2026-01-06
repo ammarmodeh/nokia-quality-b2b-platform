@@ -6,10 +6,12 @@ import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Warning, CheckCircle, FilterList } from '@mui/icons-material';
+import { useMediaQuery } from '@mui/material';
 
 // Hierarchical mapping will be loaded dynamically from the API
 
 const DetractorAnalytics = () => {
+  const isMobile = useMediaQuery('(max-width:600px)');
   const [rows, setRows] = useState([]);
   const [columns, setColumns] = useState([]);
   const { token } = useSelector((state) => state.auth);
@@ -239,7 +241,7 @@ const DetractorAnalytics = () => {
   };
 
   return (
-    <Box sx={{ p: 3, minHeight: '100vh', display: 'flex', flexDirection: 'column', color: 'white' }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', color: 'white' }}>
       <Typography variant="h4" sx={{ mb: 3 }}>
         📊 Advanced NPS Analytics & Root Cause Analysis
       </Typography>
@@ -252,7 +254,7 @@ const DetractorAnalytics = () => {
           <Button size="small" onClick={resetFilters} sx={{ ml: 'auto' }}>Reset</Button>
         </Box>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} sm={6} md={3}>
             <TextField
               label="Start Date"
               type="date"
@@ -270,7 +272,7 @@ const DetractorAnalytics = () => {
               }}
             />
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} sm={6} md={3}>
             <TextField
               label="End Date"
               type="date"
@@ -288,7 +290,7 @@ const DetractorAnalytics = () => {
               }}
             />
           </Grid>
-          <Grid item xs={12} md={2}>
+          <Grid item xs={12} sm={6} md={2}>
             <Autocomplete
               options={teamNames}
               value={filters.teamName}
@@ -297,7 +299,7 @@ const DetractorAnalytics = () => {
               sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: '#3d3d3d' } } }}
             />
           </Grid>
-          <Grid item xs={12} md={2}>
+          <Grid item xs={12} sm={6} md={2}>
             <FormControl fullWidth>
               <InputLabel sx={{ color: '#aaa' }}>Responsibility</InputLabel>
               <Select
@@ -317,7 +319,7 @@ const DetractorAnalytics = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={2}>
+          <Grid item xs={12} sm={6} md={2}>
             <FormControl fullWidth>
               <InputLabel sx={{ color: '#aaa' }}>Period</InputLabel>
               <Select
@@ -492,7 +494,7 @@ const DetractorAnalytics = () => {
       </Paper>
 
       {/* Advanced RCA Section */}
-      <Paper sx={{ p: 4, mb: 4, borderRadius: 3, background: 'linear-gradient(135deg, #121212, #1a1a1a)', border: '1px solid #3d3d3d', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)' }}>
+      <Paper sx={{ p: 2, mb: 4, borderRadius: 3, background: 'linear-gradient(135deg, #121212, #1a1a1a)', border: '1px solid #3d3d3d', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, gap: 2 }}>
           <Box sx={{ p: 1, borderRadius: 1.5, bgcolor: 'rgba(123, 104, 238, 0.1)' }}>
             <Warning color="primary" />

@@ -101,7 +101,7 @@ const CalendarPage = () => {
         minHeight: '100vh',
         backgroundColor: 'background.default',
         py: 3,
-        px: isMobile ? 2 : 3,
+        // px: isMobile ? 2 : 3,
       }}
     >
       <Box

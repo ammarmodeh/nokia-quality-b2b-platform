@@ -599,7 +599,7 @@ const PerfAssessmentDashboard = () => {
       color: colors.textPrimary,
       maxWidth: '1100px',
       mx: 'auto',
-      p: 2,
+      // p: 2,
       px: isMobile ? 0 : undefined
     }}>
       <Button

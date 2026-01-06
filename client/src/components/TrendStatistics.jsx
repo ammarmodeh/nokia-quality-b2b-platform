@@ -509,7 +509,7 @@ const TrendStatistics = ({ tasks }) => {
 
             {/* Group 1: Scope */}
             <Stack direction="column" spacing={2} sx={{ flex: 1 }}>
-              <Stack direction="row" spacing={2}>
+              <Stack direction={isMobile ? "column" : "row"} spacing={2}>
                 <Box>
                   <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 1, display: 'block' }}>
                     Analysis Type
@@ -519,6 +519,7 @@ const TrendStatistics = ({ tasks }) => {
                     exclusive
                     onChange={handleAnalysisTypeChange}
                     size="small"
+                    fullWidth={isMobile}
                     sx={{
                       '& .MuiToggleButton-root': {
                         color: '#b3b3b3',
@@ -542,6 +543,7 @@ const TrendStatistics = ({ tasks }) => {
                     onChange={handleViewModeChange}
                     size="small"
                     disabled={selectedEntities.length > 0}
+                    fullWidth={isMobile}
                     sx={{
                       '& .MuiToggleButton-root': {
                         color: '#b3b3b3',
@@ -565,6 +567,7 @@ const TrendStatistics = ({ tasks }) => {
                     exclusive
                     onChange={handleRangeChange}
                     size="small"
+                    fullWidth={isMobile}
                     sx={{
                       '& .MuiToggleButton-root': {
                         color: '#b3b3b3',

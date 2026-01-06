@@ -1006,54 +1006,54 @@ const TeamsPerformancePage = () => {
   }
 
   return (
-    <Box sx={{ backgroundColor: colors.background, minHeight: '100vh', color: colors.textPrimary, p: isMobile ? 1 : 3 }}>
+    <Box sx={{ backgroundColor: colors.background, minHeight: '100vh', color: colors.textPrimary, p: isMobile ? 0 : 3 }}>
       <Typography variant="h4" gutterBottom sx={{ color: colors.primary, fontWeight: 'bold', mb: 3 }}>
         Teams Performance Analysis
       </Typography>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 2 : 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        justifyContent: 'space-between',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: 2,
+        mb: 4
+      }}>
+        <Box sx={{
+          display: 'flex',
+          gap: 2,
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'stretch' : 'center',
+          flex: 1
+        }}>
           <Autocomplete
             options={teamsData.fieldTeamStats}
-            getOptionLabel={(option) => option.teamName}
-            value={teamsData.fieldTeamStats.find(team => team.teamId._id === selectedTeamId) || null}
-            onChange={(event, newValue) => {
+            getOptionLabel={(option) => option.teamName || ''}
+            value={teamsData.fieldTeamStats.find(t => t.teamId._id === selectedTeamId) || null}
+            onChange={(e, newValue) => {
               setSelectedTeamId(newValue ? newValue.teamId._id : '');
-              if (newValue) handleTeamSelect(newValue);
+              if (newValue) {
+                handleTeamSelect(newValue);
+              } else {
+                setSelectedTeam(null);
+              }
             }}
             renderInput={(params) => (
               <TextField
                 {...params}
                 label="Select Team"
+                variant="outlined"
+                size="small"
                 sx={{
-                  minWidth: 400,
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: colors.border },
-                    '&:hover fieldset': { borderColor: colors.primary }
-                  },
+                  bgcolor: colors.surfaceElevated,
+                  '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: colors.border }, '&:hover fieldset': { borderColor: colors.primary } },
                   '& .MuiInputLabel-root': { color: colors.textSecondary },
-                  '& .MuiInputBase-input': { color: colors.textPrimary }
+                  '& .MuiInputBase-input': { color: colors.textPrimary },
                 }}
               />
             )}
-            renderOption={(props, option) => (
-              <li {...props} key={option.teamId._id}>
-                {option.teamName}
-                {option.assessmentCount === 0 && (
-                  <Chip
-                    label="Not Assessed"
-                    size="small"
-                    sx={{
-                      ml: 1,
-                      backgroundColor: colors.warning,
-                      color: colors.textPrimary
-                    }}
-                  />
-                )}
-              </li>
-            )}
             isOptionEqualToValue={(option, value) => option.teamId._id === value.teamId._id}
-            sx={{ minWidth: 200 }}
+            sx={{ flex: 1, minWidth: isMobile ? '100%' : 200 }}
           />
 
           <Button
@@ -1068,43 +1068,44 @@ const TeamsPerformancePage = () => {
               '&:hover': {
                 borderColor: colors.primary
               },
-              height: '100%',
+              height: isMobile ? '40px' : '38px', // size="small" TextField is ~40px
+              minWidth: isMobile ? '100%' : 'auto'
             }}
           >
             Clear Selection
           </Button>
-
-          {/* <TextField
-            label="Search Teams"
-            variant="outlined"
-            size="small"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{ startAdornment: <Search sx={{ color: colors.textSecondary, mr: 1 }} /> }}
-            sx={{
-              width: isMobile ? '100%' : '300px',
-              '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: colors.border }, '&:hover fieldset': { borderColor: colors.primary }, height: '100%' },
-              '& .MuiInputLabel-root': { color: colors.textSecondary },
-              '& .MuiInputBase-input': { color: colors.textPrimary },
-              height: '100%',
-            }}
-          /> */}
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2, flexDirection: isMobile ? 'column' : 'row' }}>
+        <Box sx={{
+          display: 'flex',
+          gap: 2,
+          flexDirection: 'row',
+          width: isMobile ? '100%' : 'auto'
+        }}>
           <Button
             variant="outlined"
+            fullWidth={isMobile}
             startIcon={<FilterAlt />}
             onClick={() => setFilterDialogOpen(true)}
-            sx={{ color: colors.textPrimary, borderColor: colors.border, '&:hover': { borderColor: colors.primary } }}
+            sx={{
+              color: colors.textPrimary,
+              borderColor: colors.border,
+              '&:hover': { borderColor: colors.primary },
+              flex: isMobile ? 1 : 'none'
+            }}
           >
             Filters
           </Button>
           <Button
             variant="contained"
+            fullWidth={isMobile}
             startIcon={<Download />}
             onClick={exportToExcel}
-            sx={{ backgroundColor: colors.primary, '&:hover': { backgroundColor: '#2d8ada' } }}
+            sx={{
+              backgroundColor: colors.primary,
+              '&:hover': { backgroundColor: '#2d8ada' },
+              flex: isMobile ? 1 : 'none'
+            }}
           >
             Export
           </Button>

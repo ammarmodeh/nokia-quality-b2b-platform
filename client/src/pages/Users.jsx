@@ -190,7 +190,7 @@ const Users = () => {
   ];
 
   return (
-    <Box sx={{ p: isMobile ? 1 : 3, minHeight: '100vh' }}>
+    <Box sx={{ p: isMobile ? 0 : 3, minHeight: '100vh' }}>
       {/* Header */}
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'start', md: 'center' }} mb={4} spacing={2}>
         <Box>

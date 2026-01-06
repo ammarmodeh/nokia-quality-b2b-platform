@@ -273,22 +273,14 @@ const DropdownManagement = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <Box sx={{ p: 4, minHeight: '100vh', bgcolor: colors.background }}>
+      <Box sx={{ minHeight: '100vh', bgcolor: colors.background }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
           <Typography variant="h4" sx={{ color: colors.primary, fontWeight: 'bold' }}>
             Dropdown Management
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-            sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
-          >
-            Add New Option
-          </Button>
         </Stack>
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
           <Button
             variant="outlined"
             startIcon={<UpdateIcon />}
@@ -301,7 +293,15 @@ const DropdownManagement = () => {
           >
             Save Order
           </Button>
-        </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+            sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
+          >
+            Add New Option
+          </Button>
+        </Stack>
 
 
         <Paper sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: '12px', overflow: 'hidden' }}>
