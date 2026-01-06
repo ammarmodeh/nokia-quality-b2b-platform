@@ -28,7 +28,13 @@ import {
   useMediaQuery,
   Hidden,
   useTheme,
-  Divider
+  Divider,
+  Tooltip,
+  Grid,
+  Checkbox,
+  FormControlLabel,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   MdSearch,
@@ -38,30 +44,22 @@ import {
   MdAdd,
   MdClose,
   MdVisibility,
-  MdFileDownload
+  MdFileDownload,
+  MdViewList,
+  MdViewModule,
+  MdBarChart
 } from 'react-icons/md';
 import api from '../api/api';
 import CustomerIssueDialog from './CustomerIssueDialog';
+import CustomerIssuesAnalytics from './CustomerIssuesAnalytics';
 import ViewIssueDetailsDialog from './ViewIssueDetailsDialog';
 import { utils, writeFile } from 'xlsx';
 import { useSelector } from 'react-redux';
+import ManagedAutocomplete from "./common/ManagedAutocomplete";
+import { FaFilePdf } from 'react-icons/fa6';
+import { toast } from 'sonner';
 
-const contactMethods = [
-  'Phone call',
-  'WhatsApp private message',
-  'WhatsApp group message'
-];
 
-const teams = [
-  "Activation Team",
-  "Nokia Quality Team",
-  "Orange Quality Team",
-  "Nokia Closure Team"
-];
-
-const companyTeams = [
-  'INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team', 'Others'
-];
 
 const CustomerIssuesList = () => {
   const theme = useTheme();
@@ -75,24 +73,14 @@ const CustomerIssuesList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentIssue, setCurrentIssue] = useState(null);
+  const [viewMode, setViewMode] = useState('analytics'); // 'list' | 'grid' | 'analytics'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'resolved' | 'unresolved'
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
-  const [editFormData, setEditFormData] = useState({
-    slid: '',
-    from: '',
-    reporter: '',
-    reporterNote: '',
-    contactMethod: '',
-    issueCategory: '',
-    date: new Date().toISOString().split('T')[0],
-    pisDate: new Date().toISOString().split('T')[0],
-    solved: 'no',
-    assignedTo: '',
-    assignedNote: '',
-    teamCompany: ''
-  });
 
   useEffect(() => {
     const fetchIssues = async () => {
@@ -113,34 +101,48 @@ const CustomerIssuesList = () => {
   }, []);
 
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredIssues(issues);
-    } else {
-      const filtered = issues.filter(issue =>
-        issue.slid.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredIssues(filtered);
+    let filtered = issues;
+
+    // Filter by status
+    if (statusFilter === 'resolved') {
+      filtered = filtered.filter(issue => issue.solved === 'yes');
+    } else if (statusFilter === 'unresolved') {
+      filtered = filtered.filter(issue => issue.solved === 'no');
     }
-  }, [searchTerm, issues]);
+
+    // Filter by search term
+    if (searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(issue =>
+        issue.slid.toLowerCase().includes(term) ||
+        issue.reporter.toLowerCase().includes(term) ||
+        issue.teamCompany.toLowerCase().includes(term) ||
+        issue.from.toLowerCase().includes(term) ||
+        (issue.issues && issue.issues.some(i =>
+          i.category.toLowerCase().includes(term) ||
+          (i.subCategory && i.subCategory.toLowerCase().includes(term))
+        ))
+      );
+    }
+
+    // Filter by date range
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(issue => new Date(issue.date) >= start);
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(issue => new Date(issue.date) <= end);
+    }
+
+    setFilteredIssues(filtered);
+  }, [searchTerm, issues, statusFilter, startDate, endDate]);
 
   const handleMenuOpen = (event, issue) => {
     setAnchorEl(event.currentTarget);
     setCurrentIssue(issue);
-
-    const fromValue = teams.includes(issue.from) ? issue.from : teams[0];
-    const issueDate = issue.date
-      ? new Date(issue.date).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
-    const pisDateValue = issue.pisDate
-      ? new Date(issue.pisDate).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
-
-    setEditFormData({
-      ...issue,
-      date: issueDate,
-      pisDate: pisDateValue,
-      from: fromValue,
-    });
   };
 
   const handleMenuClose = () => {
@@ -157,44 +159,54 @@ const CustomerIssuesList = () => {
     handleMenuClose();
   };
 
-  const handleAddIssue = async (newIssue) => {
+  const handleIssueSubmit = async (issueData, id) => {
     try {
-      const response = await api.post('/customer-issues-notifications', newIssue, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-      });
-
-      setIssues([response.data.data, ...issues]);
-      setFilteredIssues([response.data.data, ...filteredIssues]);
-      setOpenAddDialog(false);
-    } catch (error) {
-      // console.error('Error creating issue:', error);
-      alert('Failed to create issue. Please try again.');
-    }
-  };
-
-  const handleEditSubmit = async () => {
-    try {
-      const response = await api.put(
-        `/customer-issues-notifications/${currentIssue._id}`,
-        {
-          ...editFormData,
-          date: new Date(editFormData.date).toISOString()
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      // Auto-save new supervisor if provided
+      if (issueData.solved === 'yes' && issueData.closedBy && issueData.closedBy.trim() !== '') {
+        try {
+          await api.post('/dropdown-options', {
+            category: 'CIN_SUPERVISORS',
+            value: issueData.closedBy.trim(),
+            label: issueData.closedBy.trim(),
+            order: 99
+          }, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+          });
+        } catch (opErr) {
+          // console.error("Could not auto-save supervisor:", opErr);
+          // Don't block issue submission if this fails
         }
-      );
+      }
 
-      setIssues(issues.map(issue =>
-        issue._id === currentIssue._id ? response.data.data : issue
-      ));
-      setFilteredIssues(filteredIssues.map(issue =>
-        issue._id === currentIssue._id ? response.data.data : issue
-      ));
-      setOpenEditDialog(false);
+      if (id) {
+        // Update
+        const response = await api.put(
+          `/customer-issues-notifications/${id}`,
+          {
+            ...issueData,
+            date: new Date(issueData.date).toISOString()
+          },
+          { headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` } }
+        );
+        const updated = response.data.data;
+        setIssues(prev => prev.map(isl => isl._id === id ? updated : isl));
+        setFilteredIssues(prev => prev.map(isl => isl._id === id ? updated : isl));
+        setOpenEditDialog(false);
+        toast.success("Issue updated successfully");
+      } else {
+        // Create
+        const response = await api.post('/customer-issues-notifications', issueData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+        });
+        const created = response.data.data;
+        setIssues(prev => [created, ...prev]);
+        setFilteredIssues(prev => [created, ...prev]);
+        setOpenAddDialog(false);
+        setOpenAnalytics(true); // Switch to analytics on new issue
+        toast.success("Issue reported successfully");
+      }
     } catch (error) {
-      // console.error('Error updating issue:', error);
-      alert('Failed to update issue. Please try again.');
+      toast.error(id ? "Failed to update issue" : "Failed to create issue");
     }
   };
 
@@ -216,12 +228,27 @@ const CustomerIssuesList = () => {
     }
   };
 
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
+
+  const handleIssueChange = (index, field, value) => {
+    const updatedIssues = [...editFormData.issues];
+    updatedIssues[index][field] = value;
+    setEditFormData(prev => ({ ...prev, issues: updatedIssues }));
+  };
+
+  const addIssueRow = () => {
     setEditFormData(prev => ({
       ...prev,
-      [name]: value
+      issues: [...prev.issues, { category: '', subCategory: '' }]
     }));
+  };
+
+  const removeIssueRow = (index) => {
+    if (editFormData.issues.length > 1) {
+      setEditFormData(prev => ({
+        ...prev,
+        issues: prev.issues.filter((_, i) => i !== index)
+      }));
+    }
   };
 
   const exportToExcel = () => {
@@ -232,10 +259,13 @@ const CustomerIssuesList = () => {
       'Reporter Note': issue.reporterNote || '',
       'Team/Company': issue.teamCompany,
       'Contact Method': issue.contactMethod,
-      'Issue Category': issue.issueCategory,
+      'Issue Categories': (issue.issues && issue.issues.length > 0)
+        ? issue.issues.map(i => `${i.category}${i.subCategory ? ` (${i.subCategory})` : ''}`).join(' | ')
+        : issue.issueCategory || '',
       'Assigned User': issue.assignedTo,
-      'Assigned User Note': issue.assignedNote || '',
       'Status': issue.solved === 'yes' ? 'Resolved' : 'Unresolved',
+      'Resolve Date': issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A',
+      'Closed By (Supervisor)': issue.closedBy || 'N/A',
       'Resolution Details': issue.resolutionDetails || '',
       'Date Reported': new Date(issue.date).toLocaleDateString(),
       'PIS Date': issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'
@@ -244,6 +274,72 @@ const CustomerIssuesList = () => {
     const workbook = utils.book_new();
     utils.book_append_sheet(workbook, worksheet, 'Customer Issues Notifications');
     writeFile(workbook, 'CIN.xlsx');
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      if (filteredIssues.length === 0) {
+        toast.error("No issues to export");
+        return;
+      }
+
+      toast.info("Generating professional PDF report...");
+
+      const reportTitle = "Customer Issue Notification (CIN) Analytics Report";
+      let markdownContent = `# ${reportTitle}\n\n`;
+      markdownContent += `**Date Range**: ${startDate || 'All Time'} to ${endDate || 'Now'}\n`;
+      markdownContent += `**Total Records**: ${filteredIssues.length}\n`;
+      markdownContent += `**Status Filter**: ${statusFilter.toUpperCase()}\n\n---\n\n`;
+
+      filteredIssues.forEach((issue, index) => {
+        markdownContent += `## ${index + 1}. Issue - SLID: ${issue.slid}\n`;
+        markdownContent += `- **Date Reported**: ${new Date(issue.date).toLocaleDateString()}\n`;
+        markdownContent += `- **Reporter**: ${issue.reporter || 'N/A'}\n`;
+        markdownContent += `- **From Team**: ${issue.from || 'N/A'}\n`;
+        markdownContent += `- **Assigned To**: ${issue.assignedTo || 'Unassigned'}\n`;
+        markdownContent += `- **Status**: ${issue.solved === 'yes' ? 'Resolved ✅' : 'Unresolved ❌'}\n`;
+        if (issue.resolveDate) markdownContent += `- **Resolve Date**: ${new Date(issue.resolveDate).toLocaleDateString()}\n`;
+
+        markdownContent += `\n### Issues Highlighted:\n`;
+        if (issue.issues && issue.issues.length > 0) {
+          issue.issues.forEach(i => {
+            markdownContent += `- **${i.category}**: ${i.subCategory || 'No Details'}\n`;
+          });
+        } else {
+          markdownContent += `- ${issue.issueCategory || 'N/A'}\n`;
+        }
+
+        if (issue.reporterNote) markdownContent += `\n**Reporter Note**: ${issue.reporterNote}\n`;
+        if (issue.resolutionDetails) markdownContent += `\n**Resolution Details**: ${issue.resolutionDetails}\n`;
+
+        markdownContent += `\n---\n\n`;
+      });
+
+      markdownContent += `\n*Generated by Nokia Quality Task Tracker - ${new Date().toLocaleString()}*`;
+
+      const response = await api.post('/ai/report/download', {
+        reportContent: markdownContent,
+        title: reportTitle,
+        format: 'pdf'
+      }, {
+        responseType: 'blob',
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `CIN_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("PDF Report exported successfully");
+    } catch (error) {
+      console.error("PDF Export Error:", error);
+      toast.error("Failed to export professional PDF report");
+    }
   };
 
   if (loading) {
@@ -266,44 +362,109 @@ const CustomerIssuesList = () => {
     <Box sx={{
       maxWidth: '1100px',
       mx: 'auto',
-      p: 2,
-      px: isMobile ? 0 : undefined
+      // p: isMobile ? 1 : 3,
+      // px: isMobile ? 1 : 3
     }}>
-      <Typography variant="h5" gutterBottom sx={{
-        color: '#7b68ee',
-        fontWeight: 'bold',
-        fontSize: isMobile ? '1.2rem' : '1.5rem',
-        mb: 2
-      }}>
-        Customer Issues
-      </Typography>
       <Box sx={{
         display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: isMobile ? 'flex-start' : 'center',
-        mb: 2,
-        gap: isMobile ? 2 : 0,
+        alignItems: 'center',
+        mb: 3
+      }}>
+        <Typography variant="h5" sx={{
+          color: '#7b68ee',
+          fontWeight: 'bold',
+          fontSize: isMobile ? '1.2rem' : '1.75rem',
+        }}>
+          Customer Issues
+        </Typography>
+
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => user?.role === 'Admin' && setOpenAddDialog(true)}
+            startIcon={<MdAdd />}
+            size={isMobile ? 'small' : 'medium'}
+            disabled={user?.role !== 'Admin'}
+            sx={{
+              backgroundColor: '#1976d2',
+              '&:hover': { backgroundColor: '#1565c0' },
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: isMobile ? 1.5 : 3,
+            }}
+          >
+            {isMobile ? 'New' : 'New Issue'}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={exportToExcel}
+            startIcon={<MdFileDownload />}
+            size={isMobile ? 'small' : 'medium'}
+            sx={{
+              borderColor: '#3d3d3d',
+              color: '#4caf50',
+              '&:hover': { borderColor: '#4caf50', backgroundColor: 'rgba(76, 175, 80, 0.05)' },
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: isMobile ? 1.5 : 2,
+            }}
+          >
+            {isMobile ? 'Excel' : 'Excel'}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleExportPDF}
+            startIcon={<FaFilePdf />}
+            size={isMobile ? 'small' : 'medium'}
+            sx={{
+              borderColor: '#3d3d3d',
+              color: '#f44336',
+              '&:hover': { borderColor: '#f44336', backgroundColor: 'rgba(244, 67, 54, 0.05)' },
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: isMobile ? 1.5 : 2,
+            }}
+          >
+            {isMobile ? 'PDF' : 'Pro Report'}
+          </Button>
+        </Box>
+      </Box>
+
+      <Box sx={{
+        backgroundColor: '#2d2d2d',
+        p: 2,
+        borderRadius: '12px',
+        border: '1px solid #3d3d3d',
+        mb: 3,
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
       }}>
         <Box sx={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
-          justifyContent: isMobile ? 'flex-start' : 'space-between',
           gap: 2,
-          alignItems: 'center',
-          // width: isMobile ? '100%' : 'auto',
-          backgroundColor: '#2d2d2d',
-          p: 2,
-          borderRadius: '8px',
-          border: '1px solid #3d3d3d',
-          width: '100%',
+          mb: 2,
+          alignItems: isMobile ? 'stretch' : 'center'
         }}>
           <TextField
             variant="outlined"
             size="small"
-            placeholder="Search by SLID..."
+            placeholder="Search by SLID, Reporter, Team, or Category..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            fullWidth={isMobile}
+            sx={{
+              flexGrow: 1,
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: '#1e1e1e',
+                borderRadius: '8px',
+                color: '#ffffff',
+                '& fieldset': { borderColor: '#3d3d3d' },
+                '&:hover fieldset': { borderColor: '#666' },
+                '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+              }
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -311,250 +472,389 @@ const CustomerIssuesList = () => {
                 </InputAdornment>
               ),
               endAdornment: searchTerm && (
-                <IconButton
-                  size="small"
-                  onClick={() => setSearchTerm('')}
-                  sx={{
-                    visibility: searchTerm ? 'visible' : 'hidden',
-                    color: '#b3b3b3',
-                    '&:hover': {
-                      backgroundColor: '#2a2a2a',
-                    }
-                  }}
-                >
+                <IconButton size="small" onClick={() => setSearchTerm('')} sx={{ color: '#b3b3b3' }}>
                   <MdClose />
                 </IconButton>
-              ),
-              sx: {
-                borderRadius: '20px',
-                backgroundColor: '#2d2d2d',
-                width: '100%',
-                '& fieldset': {
-                  border: 'none',
-                },
-                '& input': {
-                  color: '#ffffff',
-                  '&::placeholder': {
-                    color: '#666',
-                    opacity: 1,
-                  }
-                },
-              },
-              style: {
-                paddingRight: '8px',
-              }
-            }}
-            sx={{
-              width: isMobile ? '100%' : 300,
-              '& .MuiOutlinedInput-root': {
-                '&:hover fieldset': {
-                  border: '1px solid #666 !important',
-                },
-                '&.Mui-focused fieldset': {
-                  border: '1px solid #7b68ee !important',
-                },
-              },
+              )
             }}
           />
-          <Stack
-            direction={isMobile ? 'column' : 'row'}
-            spacing={1}
-            justifyContent={'end'}
-            alignItems="center"
-            width={isMobile ? '100%' : 'auto'}
-          >
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => user?.role === 'Admin' && setOpenAddDialog(true)}
-              startIcon={<MdAdd style={{
-                color: '#ffffff',
-                opacity: user?.role === 'Admin' ? 1 : 0.5
-              }} />}
-              fullWidth={isMobile}
-              size={isMobile ? 'small' : 'medium'}
-              sx={{
-                backgroundColor: '#1976d2',
-                color: '#ffffff',
-                '&:hover': {
-                  backgroundColor: user?.role === 'Admin' ? '#1565c0' : '#1976d2',
-                },
-                textTransform: 'none',
-                borderRadius: '20px',
-                px: 3,
-                cursor: user?.role === 'Admin' ? 'pointer' : 'not-allowed',
-                '&.Mui-disabled': {
-                  backgroundColor: '#1976d2',
-                  color: '#ffffff',
-                  opacity: 0.5,
-                }
-              }}
-            >
-              {isMobile ? 'Add' : 'Add Issue'}
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={exportToExcel}
-              startIcon={<MdFileDownload style={{ color: '#1976d2' }} />}
-              fullWidth={isMobile}
-              size={isMobile ? 'small' : 'medium'}
-              sx={{
-                borderColor: '#3d3d3d',
-                color: '#1976d2',
-                '&:hover': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                  borderColor: '#666',
-                },
-                textTransform: 'none',
-                borderRadius: '20px',
-                px: 3,
-              }}
-            >
-              {isMobile ? 'Export' : 'Export to Excel'}
-            </Button>
-          </Stack>
+
+          <Box sx={{
+            display: 'flex',
+            backgroundColor: '#1e1e1e',
+            borderRadius: '8px',
+            p: 0.5,
+            border: '1px solid #3d3d3d'
+          }}>
+            {[
+              { id: 'analytics', icon: <MdBarChart />, label: 'Analytics' },
+              { id: 'list', icon: <MdViewList />, label: 'List' },
+              { id: 'grid', icon: <MdViewModule />, label: 'Grid' }
+            ].map((mode) => (
+              <Tooltip key={mode.id} title={mode.label}>
+                <IconButton
+                  size="small"
+                  onClick={() => setViewMode(mode.id)}
+                  sx={{
+                    borderRadius: '6px',
+                    color: viewMode === mode.id ? '#ffffff' : '#b3b3b3',
+                    backgroundColor: viewMode === mode.id ? '#7b68ee' : 'transparent',
+                    '&:hover': {
+                      backgroundColor: viewMode === mode.id ? '#6c5ce7' : 'rgba(255,255,255,0.05)'
+                    },
+                    transition: 'all 0.2s',
+                    px: 1,
+                    gap: 0.5
+                  }}
+                >
+                  {mode.icon}
+                  {!isMobile && <Typography variant="caption">{mode.label}</Typography>}
+                </IconButton>
+              </Tooltip>
+            ))}
+          </Box>
         </Box>
+
+        <Divider sx={{ mb: 2, borderColor: '#3d3d3d' }} />
+
+        <Box sx={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: 2,
+          mb: 2,
+          alignItems: isMobile ? 'stretch' : 'center'
+        }}>
+          <Typography variant="body2" sx={{ color: '#b3b3b3', minWidth: 'fit-content' }}>Filter by Date:</Typography>
+          <TextField
+            type="date"
+            label="From"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            size="small"
+            sx={{
+              maxWidth: isMobile ? 'none' : '200px',
+              '& .MuiInputBase-root': { color: '#ffffff', backgroundColor: '#1e1e1e' },
+              '& .MuiInputLabel-root': { color: '#b3b3b3' },
+              '& .MuiOutlinedInput-root fieldset': { borderColor: '#3d3d3d' },
+              '&:hover fieldset': { borderColor: '#666' },
+            }}
+          />
+          <TextField
+            type="date"
+            label="To"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            size="small"
+            sx={{
+              maxWidth: isMobile ? 'none' : '200px',
+              '& .MuiInputBase-root': { color: '#ffffff', backgroundColor: '#1e1e1e' },
+              '& .MuiInputLabel-root': { color: '#b3b3b3' },
+              '& .MuiOutlinedInput-root fieldset': { borderColor: '#3d3d3d' },
+              '&:hover fieldset': { borderColor: '#666' },
+            }}
+          />
+          {(startDate || endDate) && (
+            <Button
+              size="small"
+              onClick={() => { setStartDate(''); setEndDate(''); }}
+              sx={{ color: '#f44336', textTransform: 'none' }}
+            >
+              Clear Dates
+            </Button>
+          )}
+        </Box>
+
+        <Divider sx={{ mb: 2, borderColor: '#3d3d3d' }} />
+
+        <Tabs
+          value={statusFilter}
+          onChange={(e, val) => setStatusFilter(val)}
+          sx={{
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#7b68ee',
+              height: 3,
+              borderRadius: '3px 3px 0 0'
+            },
+            '& .MuiTab-root': {
+              color: '#b3b3b3',
+              textTransform: 'none',
+              fontWeight: 500,
+              fontSize: '0.9rem',
+              minWidth: 100,
+              '&.Mui-selected': {
+                color: '#ffffff',
+              }
+            }
+          }}
+        >
+          <Tab value="all" label={`All (${issues.length})`} />
+          <Tab value="resolved" label={`Resolved (${issues.filter(i => i.solved === 'yes').length})`} />
+          <Tab value="unresolved" label={`Unresolved (${issues.filter(i => i.solved === 'no').length})`} />
+        </Tabs>
       </Box>
 
-      <TableContainer component={Paper} sx={{
-        mt: 2,
-        maxWidth: '100%',
-        overflowX: 'auto',
-        flex: 1,
-        width: "100%",
-        border: 0,
-        color: "#ffffff",
-        "&.MuiTableContainer-root": {
-          backgroundColor: '#2d2d2d',
-        },
-        "& .MuiTable-root": {
-          backgroundColor: "#2d2d2d",
-        },
-        "& .MuiTableHead-root": {
-          backgroundColor: "#2d2d2d",
-          "& .MuiTableCell-root": {
-            color: "#b3b3b3",
-            fontSize: "0.875rem",
-            fontWeight: "bold",
-            borderBottom: "1px solid #e5e7eb",
-          }
-        },
-        "& .MuiTableBody-root": {
-          "& .MuiTableCell-root": {
-            borderBottom: "1px solid #e5e7eb",
-            color: "#ffffff",
+      {viewMode === 'analytics' ? (
+        <CustomerIssuesAnalytics issues={filteredIssues} />
+      ) : viewMode === 'list' ? (
+        <TableContainer component={Paper} sx={{
+          mt: 2,
+          maxWidth: '100%',
+          overflowX: 'auto',
+          flex: 1,
+          width: "100%",
+          border: 0,
+          color: "#ffffff",
+          "&.MuiTableContainer-root": {
+            backgroundColor: '#2d2d2d',
           },
-          "& .MuiTableRow-root": {
+          "& .MuiTable-root": {
             backgroundColor: "#2d2d2d",
-            "&:hover": {
-              backgroundColor: "#2d2d2d",
+          },
+          "& .MuiTableHead-root": {
+            backgroundColor: "#2d2d2d",
+            "& .MuiTableCell-root": {
+              color: "#b3b3b3",
+              fontSize: "0.875rem",
+              fontWeight: "bold",
+              borderBottom: "1px solid #e5e7eb",
+            }
+          },
+          "& .MuiTableBody-root": {
+            "& .MuiTableCell-root": {
+              borderBottom: "1px solid #e5e7eb",
+              color: "#ffffff",
             },
-          }
-        },
-        "& .MuiPaper-root": {
-          backgroundColor: "transparent",
-          boxShadow: "none",
-        },
-        "&::-webkit-scrollbar": {
-          width: "8px",
-          height: "8px",
-        },
-        "&::-webkit-scrollbar-thumb": {
-          backgroundColor: "#666",
-          borderRadius: "4px",
-        },
-        "&::-webkit-scrollbar-track": {
-          backgroundColor: "#e5e7eb",
-        },
-      }}>
-        <Table size={isMobile ? 'small' : 'medium'}>
-          <TableHead>
-            <TableRow>
-              <TableCell>SLID</TableCell>
-              <Hidden smDown>
-                <TableCell>PIS Date</TableCell>
-              </Hidden>
-              <Hidden xsDown>
-                <TableCell>From</TableCell>
-              </Hidden>
-              <TableCell>Reporter</TableCell>
-              <Hidden smDown>
-                <TableCell>Team/Company</TableCell>
-              </Hidden>
-              <Hidden mdDown>
-                <TableCell>Contact Method</TableCell>
-              </Hidden>
-              <TableCell>Issue</TableCell>
-              <TableCell>Assigned</TableCell>
-              <TableCell>Status</TableCell>
-              <Hidden xsDown>
-                <TableCell>Date</TableCell>
-              </Hidden>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredIssues.length > 0 ? (
-              filteredIssues.map((issue) => (
-                <TableRow key={issue._id}>
-                  <TableCell>{issue.slid}</TableCell>
-                  <Hidden smDown>
-                    <TableCell>{issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'}</TableCell>
-                  </Hidden>
-                  <Hidden xsDown>
-                    <TableCell>{issue.from}</TableCell>
-                  </Hidden>
-                  <TableCell>{issue.reporter}</TableCell>
-                  <Hidden smDown>
-                    <TableCell>{issue.teamCompany}</TableCell>
-                  </Hidden>
-                  <Hidden mdDown>
-                    <TableCell>{issue.contactMethod}</TableCell>
-                  </Hidden>
-                  <TableCell>{issue.issueCategory}</TableCell>
-                  <TableCell>{issue.assignedTo}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={issue.solved === 'yes' ? 'Resolved' : 'Unresolved'}
-                      color={issue.solved === 'yes' ? 'success' : 'error'}
-                      size={isMobile ? 'small' : 'medium'}
-                      sx={{
-                        color: "#ffffff",
-                        '&.MuiChip-colorSuccess': {
-                          backgroundColor: '#4caf50',
-                        },
-                        '&.MuiChip-colorError': {
-                          backgroundColor: '#f44336',
-                        }
-                      }}
-                    />
-                  </TableCell>
-                  <Hidden xsDown>
+            "& .MuiTableRow-root": {
+              backgroundColor: "#2d2d2d",
+              "&:hover": {
+                backgroundColor: "#2d2d2d",
+              },
+            }
+          },
+          "& .MuiPaper-root": {
+            backgroundColor: "transparent",
+            boxShadow: "none",
+          },
+          "&::-webkit-scrollbar": {
+            width: "8px",
+            height: "8px",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "#666",
+            borderRadius: "4px",
+          },
+          "&::-webkit-scrollbar-track": {
+            backgroundColor: "#e5e7eb",
+          },
+        }}>
+          <Table size={isMobile ? 'small' : 'medium'}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ pl: 3 }}>SLID</TableCell>
+                <Hidden smDown>
+                  <TableCell>From</TableCell>
+                </Hidden>
+                <TableCell>Reporter</TableCell>
+                <Hidden smDown>
+                  <TableCell>Team/Company</TableCell>
+                </Hidden>
+                <TableCell>Issues</TableCell>
+                <Hidden mdDown>
+                  <TableCell>Assigned</TableCell>
+                </Hidden>
+                <TableCell>Status</TableCell>
+                <Hidden xsDown>
+                  <TableCell>Report Date</TableCell>
+                </Hidden>
+                <TableCell sx={{ pr: 3, textAlign: 'right' }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredIssues.length > 0 ? (
+                filteredIssues.map((issue) => (
+                  <TableRow
+                    key={issue._id}
+                    sx={{
+                      '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.05) !important' },
+                      transition: 'background-color 0.2s'
+                    }}
+                  >
+                    <TableCell sx={{ pl: 3, fontWeight: 500, color: '#7b68ee !important' }}>{issue.slid}</TableCell>
+                    <Hidden smDown>
+                      <TableCell sx={{ fontSize: '0.85rem' }}>{issue.from}</TableCell>
+                    </Hidden>
+                    <TableCell sx={{ fontSize: '0.85rem' }}>{issue.reporter}</TableCell>
+                    <Hidden smDown>
+                      <TableCell sx={{ fontSize: '0.85rem' }}>
+                        <Chip
+                          label={issue.teamCompany}
+                          size="small"
+                          sx={{
+                            height: 20,
+                            fontSize: '0.7rem',
+                            backgroundColor: '#1e1e1e',
+                            color: '#b3b3b3',
+                            border: '1px solid #3d3d3d'
+                          }}
+                        />
+                      </TableCell>
+                    </Hidden>
                     <TableCell>
-                      {new Date(issue.date).toLocaleDateString()}
+                      {issue.issues && issue.issues.length > 0 ? (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {issue.issues.map((i, idx) => (
+                            <Chip
+                              key={idx}
+                              label={i.category}
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '0.7rem',
+                                backgroundColor: 'rgba(123, 104, 238, 0.1)',
+                                color: '#7b68ee',
+                                border: '1px solid rgba(123, 104, 238, 0.2)'
+                              }}
+                            />
+                          ))}
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" sx={{ fontSize: '0.85rem', color: '#666' }}>No Category</Typography>
+                      )}
                     </TableCell>
-                  </Hidden>
-                  <TableCell>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleMenuOpen(e, issue)}
-                      sx={{ color: '#ffffff' }}
-                    >
-                      <MdMoreVert />
-                    </IconButton>
+                    <Hidden mdDown>
+                      <TableCell sx={{ fontSize: '0.85rem' }}>{issue.assignedTo}</TableCell>
+                    </Hidden>
+                    <TableCell>
+                      <Chip
+                        label={issue.solved === 'yes' ? 'Resolved' : 'Pending'}
+                        size="small"
+                        sx={{
+                          height: 24,
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          backgroundColor: issue.solved === 'yes' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+                          color: issue.solved === 'yes' ? '#4caf50' : '#f44336',
+                          border: `1px solid ${issue.solved === 'yes' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'}`,
+                          borderRadius: '6px'
+                        }}
+                      />
+                    </TableCell>
+                    <Hidden xsDown>
+                      <TableCell sx={{ fontSize: '0.85rem', color: '#b3b3b3' }}>
+                        {new Date(issue.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </TableCell>
+                    </Hidden>
+                    <TableCell sx={{ pr: 3, textAlign: 'right' }}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleMenuOpen(e, issue)}
+                        sx={{
+                          color: '#b3b3b3',
+                          '&:hover': { color: '#ffffff', backgroundColor: 'rgba(255,255,255,0.05)' }
+                        }}
+                      >
+                        <MdMoreVert />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={isMobile ? 6 : 9} align="center" sx={{ color: '#ffffff' }}>
+                    {searchTerm ? 'No matching issues found' : 'No issues available'}
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={isMobile ? 6 : 11} align="center" sx={{ color: '#ffffff' }}>
-                  {searchTerm ? 'No matching issues found' : 'No issues available'}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      ) : (
+        // Grid View
+        <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 2 }}>
+          {filteredIssues.length > 0 ? (
+            filteredIssues.map((issue) => (
+              <Paper
+                key={issue._id}
+                sx={{
+                  p: 2,
+                  bgcolor: '#2d2d2d',
+                  color: '#fff',
+                  borderRadius: 2,
+                  border: '1px solid #3d3d3d',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1.5,
+                  position: 'relative'
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#7b68ee', fontSize: '1rem' }}>
+                    {issue.slid}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleMenuOpen(e, issue)}
+                    sx={{ color: '#ffffff', mt: -1, mr: -1 }}
+                  >
+                    <MdMoreVert />
+                  </IconButton>
+                </Box>
+
+                <Box>
+                  <Typography variant="caption" color="#b3b3b3">From</Typography>
+                  <Typography variant="body2">{issue.from}</Typography>
+                </Box>
+
+                <Box>
+                  <Typography variant="caption" color="#b3b3b3">Issue</Typography>
+                  {issue.issues && issue.issues.length > 0 ? (
+                    <Stack spacing={0.5}>
+                      {issue.issues.map((i, idx) => (
+                        <Typography key={idx} variant="body2" noWrap>
+                          {i.category}{i.subCategory ? ` - ${i.subCategory}` : ''}
+                        </Typography>
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" noWrap>{issue.issueCategory}</Typography>
+                  )}
+                </Box>
+
+                <Box>
+                  <Typography variant="caption" color="#b3b3b3">Assigned To</Typography>
+                  <Typography variant="body2">{issue.assignedTo}</Typography>
+                </Box>
+
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                  <Chip
+                    label={issue.solved === 'yes' ? 'Resolved' : 'Unresolved'}
+                    color={issue.solved === 'yes' ? 'success' : 'error'}
+                    size="small"
+                    sx={{
+                      color: "#ffffff",
+                      '&.MuiChip-colorSuccess': { backgroundColor: '#4caf50' },
+                      '&.MuiChip-colorError': { backgroundColor: '#f44336' }
+                    }}
+                  />
+                </Stack>
+
+                <Divider sx={{ bgcolor: '#3d3d3d' }} />
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#b3b3b3' }}>
+                  <span>Reported: {new Date(issue.date).toLocaleDateString()}</span>
+                  {issue.resolveDate && <span>Resolved: {new Date(issue.resolveDate).toLocaleDateString()}</span>}
+                </Box>
+              </Paper>
+            ))
+          ) : (
+            <Typography sx={{ color: '#ffffff', gridColumn: '1/-1', textAlign: 'center', py: 4 }}>
+              {searchTerm ? 'No matching issues found' : 'No issues available'}
+            </Typography>
+          )}
+        </Box>
+      )}
 
       {/* Action Menu */}
       <Menu
@@ -630,239 +930,16 @@ const CustomerIssuesList = () => {
       <CustomerIssueDialog
         open={openAddDialog}
         onClose={() => setOpenAddDialog(false)}
-        onSubmit={handleAddIssue}
+        onSubmit={handleIssueSubmit}
       />
 
-      {/* Edit Dialog - Responsive */}
-      <Dialog
+      {/* Edit Dialog */}
+      <CustomerIssueDialog
         open={openEditDialog}
         onClose={() => setOpenEditDialog(false)}
-        fullWidth
-        maxWidth={isMobile ? 'xs' : 'sm'}
-        fullScreen={isMobile}
-        sx={{
-          "& .MuiDialog-paper": {
-            backgroundColor: '#2d2d2d',
-            boxShadow: 'none',
-            borderRadius: isMobile ? 0 : '8px',
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '16px 24px',
-        }}>
-          <Typography variant="h6" component="div">
-            Edit Customer Issue
-          </Typography>
-        </DialogTitle>
-
-        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
-        <DialogContent dividers sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          padding: '20px 24px',
-          '&.MuiDialogContent-root': {
-            padding: isMobile ? '16px' : '20px 24px',
-          },
-        }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              fullWidth
-              label="SLID (Subscription Number)"
-              name="slid"
-              value={editFormData.slid}
-              onChange={handleEditChange}
-              required
-              size={isMobile ? 'small' : 'medium'}
-              sx={{
-                '& .MuiInputBase-root': {
-                  color: '#ffffff',
-                },
-                '& .MuiInputLabel-root': {
-                  color: '#b3b3b3',
-                },
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#3d3d3d',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#666',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#1976d2',
-                  },
-                },
-              }}
-            />
-
-            {/* Apply the same sx prop to all TextField components */}
-            {[
-              'pisDate',
-              'reporter',
-              'reporterNote',
-              'issueCategory',
-              'date',
-              'resolutionDetails',
-              'assignedTo',
-              'assignedNote'
-            ].map((field) => (
-              <TextField
-                key={field}
-                fullWidth
-                label={field === 'pisDate' ? 'PIS Date' :
-                  field === 'reporterNote' ? 'Reporter Note' :
-                    field === 'issueCategory' ? 'Issue Category' :
-                      field === 'resolutionDetails' ? 'Resolution Details' :
-                        field === 'assignedNote' ? 'Assigned User Note' :
-                          field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
-                name={field}
-                value={editFormData[field] || ''}
-                onChange={handleEditChange}
-                multiline={['reporterNote', 'resolutionDetails', 'assignedNote'].includes(field)}
-                rows={field === 'resolutionDetails' ? 3 :
-                  ['reporterNote', 'assignedNote'].includes(field) ? 2 : undefined}
-                type={['pisDate', 'date'].includes(field) ? 'date' : undefined}
-                InputLabelProps={['pisDate', 'date'].includes(field) ? { shrink: true } : undefined}
-                required={['slid', 'reporter', 'issueCategory', 'assignedTo'].includes(field)}
-                size={isMobile ? 'small' : 'medium'}
-                sx={{
-                  '& .MuiInputBase-root': {
-                    color: '#ffffff',
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: '#b3b3b3',
-                  },
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                      borderColor: '#3d3d3d',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: '#666',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#1976d2',
-                    },
-                  },
-                  '& .MuiFormHelperText-root': {
-                    color: '#b3b3b3',
-                  },
-                }}
-              />
-            ))}
-
-            {/* Style all Select components similarly */}
-            {[
-              { name: 'from', label: 'From', options: teams },
-              { name: 'teamCompany', label: 'Team/Company', options: companyTeams },
-              { name: 'contactMethod', label: 'Contact Method', options: contactMethods },
-              { name: 'solved', label: 'Solved', options: ['yes', 'no'] }
-            ].map((select) => (
-              <FormControl
-                key={select.name}
-                fullWidth
-                required
-                size={isMobile ? 'small' : 'medium'}
-                sx={{
-                  '& .MuiInputLabel-root': {
-                    color: '#b3b3b3',
-                  },
-                  '& .MuiOutlinedInput-root': {
-                    color: '#ffffff',
-                    '& fieldset': {
-                      borderColor: '#3d3d3d',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: '#666',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#1976d2',
-                    },
-                  },
-                  '& .MuiSvgIcon-root': {
-                    color: '#b3b3b3',
-                  },
-                }}
-              >
-                <InputLabel>{select.label}</InputLabel>
-                <Select
-                  name={select.name}
-                  value={editFormData[select.name] || ''}
-                  label={select.label}
-                  onChange={handleEditChange}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: {
-                        backgroundColor: '#2d2d2d',
-                        color: '#ffffff',
-                        "& .MuiMenuItem-root": {
-                          "&:hover": {
-                            backgroundColor: '#2a2a2a',
-                          }
-                        }
-                      }
-                    }
-                  }}
-                >
-                  {select.options.map(option => (
-                    <MenuItem
-                      key={option}
-                      value={option}
-                      sx={{
-                        color: '#ffffff',
-                        backgroundColor: '#2d2d2d',
-                        '&:hover': {
-                          backgroundColor: '#2a2a2a',
-                        },
-                      }}
-                    >
-                      {option === 'yes' ? 'Yes' : option === 'no' ? 'No' : option}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            ))}
-          </Box>
-        </DialogContent>
-
-        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
-        <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
-          padding: '12px 24px',
-        }}>
-          <Button
-            onClick={() => setOpenEditDialog(false)}
-            size={isMobile ? 'small' : 'medium'}
-            sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleEditSubmit}
-            variant="contained"
-            color="primary"
-            size={isMobile ? 'small' : 'medium'}
-            sx={{
-              backgroundColor: '#1976d2',
-              '&:hover': {
-                backgroundColor: '#1565c0',
-              }
-            }}
-          >
-            Save Changes
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSubmit={handleIssueSubmit}
+        issue={currentIssue}
+      />
 
       {/* View Dialog */}
       <ViewIssueDetailsDialog

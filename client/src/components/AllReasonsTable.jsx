@@ -162,11 +162,9 @@ export const AllReasonsTable = ({ tasks }) => {
       'Contact Number': task.contactNumber,
       'Tariff Name': task.tarrifName,
       'Customer Feedback': task.customerFeedback,
-      'Customer Feedback': task.customerFeedback,
       'Reason': task.reason,
       'Sub Reason': task.subReason || 'N/A',
       'Root Cause': task.rootCause || 'N/A',
-      'Customer Type': task.customerType,
       'Customer Type': task.customerType,
       'Governorate': task.governorate,
       'District': task.district,
@@ -394,7 +392,6 @@ export const AllReasonsTable = ({ tasks }) => {
                     <DetailRow label="Reason" value={task.reason} />
                     <DetailRow label="Sub Reason" value={task.subReason || 'N/A'} />
                     <DetailRow label="Root Cause" value={task.rootCause || 'N/A'} />
-                    <DetailRow label="Customer Type" value={task.customerType} />
                     <DetailRow label="Customer Type" value={task.customerType} />
                     <DetailRow label="Governorate" value={task.governorate} />
                     <DetailRow label="District" value={task.district} />

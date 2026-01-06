@@ -412,6 +412,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     if (team) {
       setSelectedTeamSessions(team.sessionHistory || []);
       setSelectedTeamIdForSession(teamId);
+      setSelectedTeamForSession(team.teamName);
       setViewSessionsDialogOpen(true);
     }
   };

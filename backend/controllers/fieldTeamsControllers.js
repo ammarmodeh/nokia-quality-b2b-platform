@@ -573,7 +573,7 @@ export const getTeamEvaluationHistory = async (req, res) => {
 
 export const addSession = async (req, res) => {
   const { teamId } = req.params;
-  const { sessionDate, conductedBy, sessionTitle, outlines } = req.body;
+  const { sessionDate, conductedBy, sessionTitle, outlines, location, sessionType, duration, violationPoints, notes } = req.body;
 
   try {
     const team = await FieldTeamsSchema.findById(teamId);
@@ -586,6 +586,11 @@ export const addSession = async (req, res) => {
       conductedBy,
       sessionTitle,
       outlines,
+      location,
+      sessionType,
+      duration,
+      violationPoints: Number(violationPoints) || 0,
+      notes: notes || "",
       status: "Completed"
     };
 
@@ -614,7 +619,7 @@ export const addSession = async (req, res) => {
 export const updateSessionForTeam = async (req, res) => {
   try {
     const { teamId, sessionId } = req.params;
-    const { sessionDate, conductedBy, sessionTitle, outlines } = req.body;
+    const { sessionDate, conductedBy, sessionTitle, outlines, location, sessionType, duration, violationPoints, notes, status, reason } = req.body;
 
     const team = await FieldTeamsSchema.findById(teamId);
     if (!team) {
@@ -629,14 +634,23 @@ export const updateSessionForTeam = async (req, res) => {
       return res.status(404).json({ success: false, message: "Session not found" });
     }
 
-    team.sessionHistory[sessionIndex] = {
-      ...team.sessionHistory[sessionIndex],
-      sessionDate,
-      conductedBy,
-      sessionTitle,
-      outlines,
-      updatedAt: new Date()
-    };
+    // Use Object.assign to update only the fields provided in the request
+    // or explicitly map them while preserving defaults/existing values if needed.
+    const session = team.sessionHistory[sessionIndex];
+    if (sessionDate) session.sessionDate = sessionDate;
+    if (conductedBy) session.conductedBy = conductedBy;
+    if (sessionTitle) session.sessionTitle = sessionTitle;
+    if (outlines) session.outlines = outlines;
+    if (location !== undefined) session.location = location;
+    if (sessionType !== undefined) session.sessionType = sessionType;
+    if (duration !== undefined) session.duration = duration;
+    if (violationPoints !== undefined) session.violationPoints = Number(violationPoints) || 0;
+    if (notes !== undefined) session.notes = notes;
+    if (status) session.status = status;
+    if (reason !== undefined) session.reason = reason;
+
+    session.updatedAt = new Date();
+    team.markModified('sessionHistory');
 
     await team.save();
 

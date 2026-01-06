@@ -26,18 +26,28 @@ import api from "../api/api";
 import { ReportedIssueCardDialog } from "./ReportedIssueCardDialog";
 
 // Helper function to count statuses with comprehensive null checks
-function countStatuses(tasks = [], customerIssues = []) {
+function countStatuses(tasks = [], customerIssues = [], teamOptions = []) {
   const statusCount = { Closed: 0, "In Progress": 0, Todo: 0, Neutral: 0, Detractor: 0 };
   const taskStatusCounts = { Closed: 0, "In Progress": 0, Todo: 0 };
   const detractorStatusCounts = { Closed: 0, "In Progress": 0, Todo: 0 };
   const neutralStatusCounts = { Closed: 0, "In Progress": 0, Todo: 0 };
 
-  const reportedIssuesBySource = {
-    "Activation Team": { count: 0, percentage: 0 },
-    "Nokia Quality Team": { count: 0, percentage: 0 },
-    "Orange Quality Team": { count: 0, percentage: 0 },
-    "Nokia Closure Team": { count: 0, percentage: 0 }
-  };
+  const reportedIssuesBySource = {};
+
+  // Initialize with dynamic teams if available, otherwise fallback
+  if (teamOptions.length > 0) {
+    teamOptions.forEach(team => {
+      reportedIssuesBySource[team] = { count: 0, percentage: 0 };
+    });
+    // Add Other/Unknown category
+    reportedIssuesBySource["Others"] = { count: 0, percentage: 0 };
+  } else {
+    // Fallback for initial load or error
+    reportedIssuesBySource["Activation Team"] = { count: 0, percentage: 0 };
+    reportedIssuesBySource["Nokia Quality Team"] = { count: 0, percentage: 0 };
+    reportedIssuesBySource["Orange Quality Team"] = { count: 0, percentage: 0 };
+    reportedIssuesBySource["Nokia Closure Team"] = { count: 0, percentage: 0 };
+  }
 
   const reportedTasks = Array.isArray(tasks) && Array.isArray(customerIssues)
     ? tasks.filter(task => customerIssues.some(issue => issue?.slid === task?.slid))
@@ -45,14 +55,35 @@ function countStatuses(tasks = [], customerIssues = []) {
 
   const totalTasks = tasks.length || 1;
 
+  const reportedIssuesStats = {
+    resolved: 0,
+    remaining: 0,
+    total: 0
+  };
+
   if (Array.isArray(customerIssues)) {
+    reportedIssuesStats.total = customerIssues.length;
     customerIssues.forEach(issue => {
-      const source = issue?.from || "Nokia Closure Team";
-      if (reportedIssuesBySource[source]) {
+      if (issue.solved === 'yes') {
+        reportedIssuesStats.resolved++;
+      } else {
+        reportedIssuesStats.remaining++;
+      }
+
+      const source = issue?.from;
+      if (source && reportedIssuesBySource[source]) {
         reportedIssuesBySource[source].count++;
       } else {
-        // Fallback if source allows others
-        if (reportedIssuesBySource["Nokia Closure Team"]) reportedIssuesBySource["Nokia Closure Team"].count++;
+        // Count as 'Others' or fallback if not found in list
+        if (reportedIssuesBySource["Others"]) {
+          reportedIssuesBySource["Others"].count++;
+        } else if (reportedIssuesBySource["Nokia Closure Team"]) {
+          // Fallback legacy behavior if using static list
+          const legacyTeams = ["Activation Team", "Nokia Quality Team", "Orange Quality Team"];
+          if (!legacyTeams.includes(source)) {
+            reportedIssuesBySource["Nokia Closure Team"].count++;
+          }
+        }
       }
     });
 
@@ -95,11 +126,12 @@ function countStatuses(tasks = [], customerIssues = []) {
     });
   }
 
-  return { statusCount, taskStatusCounts, detractorStatusCounts, neutralStatusCounts, reportedTasksCount: reportedTasks.length, reportedIssuesBySource };
+  return { statusCount, taskStatusCounts, detractorStatusCounts, neutralStatusCounts, reportedTasksCount: reportedTasks.length, reportedIssuesStats, reportedIssuesBySource };
 }
 
 const Card = ({ tasks = [], setUpdateTasksList }) => {
   const [customerIssues, setCustomerIssues] = useState([]);
+  const [teamOptions, setTeamOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTeamIssues, setSelectedTeamIssues] = useState([]);
@@ -107,7 +139,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
   const [issueDialogOpen, setIssueDialogOpen] = useState(false);
   const [expandedCards, setExpandedCards] = useState({});
 
-  const { statusCount = {}, detractorStatusCounts = {}, neutralStatusCounts = {}, reportedIssuesBySource = {} } = countStatuses(tasks, customerIssues);
+  const { statusCount = {}, detractorStatusCounts = {}, neutralStatusCounts = {}, reportedIssuesStats = {}, reportedIssuesBySource = {} } = countStatuses(tasks, customerIssues, teamOptions);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState([]);
@@ -117,13 +149,29 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
   useEffect(() => {
     const fetchCustomerIssues = async () => {
       try {
-        const response = await api.get('/customer-issues-notifications', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-        });
-        setCustomerIssues(response.data.data || []);
+        const [issuesResponse, optionsResponse] = await Promise.all([
+          api.get('/customer-issues-notifications', {
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+          }),
+          api.get('/dropdown-options/all')
+        ]);
+
+        setCustomerIssues(issuesResponse.data.data || []);
+
+        // Extract teams from dropdown options
+        if (optionsResponse.data && optionsResponse.data.ISSUE_FROM_TEAMS) {
+          const teamOptions = optionsResponse.data.ISSUE_FROM_TEAMS
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+            .map(opt => opt.value);
+
+          // Store these in state or just use them for the current render?
+          // Since countStatuses is outside, we might need to pass them or refactor countStatuses
+          setTeamOptions(teamOptions);
+        }
+
         setError(null);
       } catch (err) {
-        setError('Failed to load customer issues');
+        setError('Failed to load data');
         setCustomerIssues([]);
       } finally {
         setLoading(false);
@@ -241,8 +289,12 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
       total: customerIssues.length || 0,
       icon: <FaExclamationTriangle />,
       color: "#f59e0b", // Orange
-      subStats: reportedIssuesBySource,
-      isTeamBased: true,
+      subStats: {
+        Resolved: reportedIssuesStats.resolved || 0,
+        Remaining: reportedIssuesStats.remaining || 0,
+        Total: reportedIssuesStats.total || customerIssues.length || 0
+      },
+      isTeamBased: false, // Changed to false to use the numbers layout
       isIssueCard: true
     }
   ];
@@ -325,28 +377,54 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
                           </Box>
                         ))
                       ) : (
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Stack alignItems="center">
-                            <Typography variant="caption" color="textSecondary">Todo</Typography>
-                            <Typography variant="h6" color="textPrimary" sx={{ cursor: 'pointer', '&:hover': { color: color } }} onClick={() => handleClick(label, "Todo")}>
-                              {subStats.Todo}
-                            </Typography>
-                          </Stack>
+                        // Custom Layout for Issue Card vs others
+                        isIssueCard ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Stack alignItems="center">
+                              <Typography variant="caption" color="textSecondary">Registered</Typography>
+                              <Typography variant="h6" color="textPrimary">
+                                {subStats.Total}
+                              </Typography>
+                            </Stack>
 
-                          <Stack alignItems="center">
-                            <Typography variant="caption" color="textSecondary">In Progress</Typography>
-                            <Typography variant="h6" color="#3b82f6" sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => handleClick(label, "In Progress")}>
-                              {subStats["In Progress"]}
-                            </Typography>
-                          </Stack>
+                            <Stack alignItems="center">
+                              <Typography variant="caption" color="textSecondary">Resolved</Typography>
+                              <Typography variant="h6" color="#10b981" sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
+                                {subStats.Resolved}
+                              </Typography>
+                            </Stack>
 
-                          <Stack alignItems="center">
-                            <Typography variant="caption" color="textSecondary">Closed</Typography>
-                            <Typography variant="h6" color="#10b981" sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => handleClick(label, "Closed")}>
-                              {subStats.Closed}
-                            </Typography>
-                          </Stack>
-                        </Box>
+                            <Stack alignItems="center">
+                              <Typography variant="caption" color="textSecondary">Remain</Typography>
+                              <Typography variant="h6" color="#ef4444" sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
+                                {subStats.Remaining}
+                              </Typography>
+                            </Stack>
+                          </Box>
+                        ) : (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Stack alignItems="center">
+                              <Typography variant="caption" color="textSecondary">Todo</Typography>
+                              <Typography variant="h6" color="textPrimary" sx={{ cursor: 'pointer', '&:hover': { color: color } }} onClick={() => handleClick(label, "Todo")}>
+                                {subStats.Todo}
+                              </Typography>
+                            </Stack>
+
+                            <Stack alignItems="center">
+                              <Typography variant="caption" color="textSecondary">In Progress</Typography>
+                              <Typography variant="h6" color="#3b82f6" sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => handleClick(label, "In Progress")}>
+                                {subStats["In Progress"]}
+                              </Typography>
+                            </Stack>
+
+                            <Stack alignItems="center">
+                              <Typography variant="caption" color="textSecondary">Closed</Typography>
+                              <Typography variant="h6" color="#10b981" sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => handleClick(label, "Closed")}>
+                                {subStats.Closed}
+                              </Typography>
+                            </Stack>
+                          </Box>
+                        )
                       )}
                     </Stack>
                   </Box>

@@ -23,19 +23,21 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
   if (!issue) return null;
 
   const handleCopyDetails = () => {
+    const issuesText = (issue.issues && issue.issues.length > 0)
+      ? issue.issues.map(i => `- ${i.category}${i.subCategory ? ` (${i.subCategory})` : ''}`).join('\n      ')
+      : issue.issueCategory || 'N/A';
+
     const detailsText = `Issue Details:
       SLID: ${issue.slid}
       From: ${issue.from}
       Reporter: ${issue.reporter}
-      ${issue.reporterNote ? `Reporter Note: ${issue.reporterNote}\n` : ''}
-      Team/Company: ${issue.teamCompany}
+      ${issue.reporterNote ? `Reporter Note: ${issue.reporterNote}\n      ` : ''}Team/Company: ${issue.teamCompany}
       Contact Method: ${issue.contactMethod}
-      Issue Category: ${issue.issueCategory}
+      Issues:
+      ${issuesText}
       Assigned To: ${issue.assignedTo}
-      ${issue.assignedNote ? `Assigned Note: ${issue.assignedNote}\n` : ''}
       Status: ${issue.solved === 'yes' ? 'Resolved' : 'Unresolved'}
-      ${issue.resolutionDetails ? `Resolution Details: ${issue.resolutionDetails}\n` : ''}
-      Date Reported: ${new Date(issue.date).toLocaleDateString()}
+      ${issue.solved === 'yes' ? `Resolve Date: ${issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A'}\n      ` : ''}${issue.closedBy ? `Closed By (Supervisor): ${issue.closedBy}\n      ` : ''}${issue.resolutionDetails ? `Resolution Details: ${issue.resolutionDetails}\n      ` : ''}Date Reported: ${new Date(issue.date).toLocaleDateString()}
       PIS Date: ${issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'}`;
 
     navigator.clipboard.writeText(detailsText)
@@ -46,6 +48,11 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
   const handleShareWhatsApp = () => {
     const reportedDate = issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A';
     const pisDate = issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A';
+    const resolveDate = issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A';
+
+    const issuesMsg = (issue.issues && issue.issues.length > 0)
+      ? issue.issues.map(i => `• ${i.category}${i.subCategory ? ` (${i.subCategory})` : ''}`).join('\n  ')
+      : issue.issueCategory || 'N/A';
 
     const message = `*CIN*\n
   *SLID*: ${issue.slid || 'N/A'}
@@ -54,14 +61,14 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
   *Reporter Note*: ${issue.reporterNote || 'N/A'}
   *Team/Company*: ${issue.teamCompany || 'N/A'}
   *Contact Method*: ${issue.contactMethod || 'N/A'}
-  *Issue Category*: ${issue.issueCategory || 'N/A'}
+  *Issues*:
+  ${issuesMsg}
   *Status*: ${issue.solved === 'yes' ? 'Resolved' : 'Pending'}
-  ${issue.solved === 'yes' ? `*Resolution Details*: ${issue.resolutionDetails || 'N/A'}\n` : ''}
+  ${issue.solved === 'yes' ? `*Resolve Date*: ${resolveDate}\n  *Closed By (Supervisor)*: ${issue.closedBy || 'N/A'}\n  *Resolution Details*: ${issue.resolutionDetails || 'N/A'}\n` : ''}
   *Date Reported*: ${reportedDate}
   *PIS Date*: ${pisDate}
   
-  *Assigned To*: ${issue.assignedTo || 'N/A'}
-  *Assigned Note*: ${issue.assignedNote || 'N/A'}`;
+  *Assigned To*: ${issue.assignedTo || 'N/A'}`;
 
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
@@ -71,14 +78,14 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="md" // Changed from "sm" to "md" for wider desktop view
+      maxWidth="md"
       fullWidth
-      fullScreen={isMobile} // Makes dialog full screen on mobile
+      fullScreen={isMobile}
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#2d2d2d',
           boxShadow: 'none',
-          borderRadius: isMobile ? 0 : '8px', // Remove border radius on mobile
+          borderRadius: isMobile ? 0 : '8px',
           width: isMobile ? '100%' : 'auto',
           margin: isMobile ? 0 : '32px',
           maxHeight: isMobile ? '100%' : 'calc(100% - 64px)'
@@ -151,7 +158,6 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
         },
       }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 2 : 3, pt: 1 }}>
-          {/* Basic Information Section */}
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 2,
             backgroundColor: '#2d2d2d',
@@ -168,7 +174,6 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
             </Box>
           </Paper>
 
-          {/* Reporter Information Section */}
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 2,
             backgroundColor: '#2d2d2d',
@@ -186,7 +191,6 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
             </Box>
           </Paper>
 
-          {/* Team Information Section */}
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 2,
             backgroundColor: '#2d2d2d',
@@ -199,11 +203,9 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 1 : 1.5 }}>
               <DetailRow label="Team/Company" value={issue.teamCompany} darkMode isMobile={isMobile} />
               <DetailRow label="Assigned To" value={issue.assignedTo} darkMode isMobile={isMobile} />
-              <DetailRow label="Assigned Note" value={issue.assignedNote || "N/A"} darkMode isMobile={isMobile} />
             </Box>
           </Paper>
 
-          {/* Issue Information Section */}
           <Paper elevation={0} sx={{
             p: isMobile ? 1.5 : 2,
             backgroundColor: '#2d2d2d',
@@ -214,7 +216,19 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
               Issue Information
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 1 : 1.5 }}>
-              <DetailRow label="Issue Category" value={issue.issueCategory} darkMode isMobile={isMobile} />
+              {issue.issues && issue.issues.length > 0 ? (
+                issue.issues.map((i, idx) => (
+                  <DetailRow
+                    key={idx}
+                    label={`Issue ${idx + 1}`}
+                    value={`${i.category}${i.subCategory ? ` - ${i.subCategory}` : ''}`}
+                    darkMode
+                    isMobile={isMobile}
+                  />
+                ))
+              ) : (
+                <DetailRow label="Issue Category" value={issue.issueCategory} darkMode isMobile={isMobile} />
+              )}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="subtitle1" color="#ffffff">Status:</Typography>
                 <Chip
@@ -232,6 +246,12 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
                   }}
                 />
               </Box>
+              {issue.solved === 'yes' && (
+                <>
+                  <DetailRow label="Resolve Date" value={issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A'} darkMode isMobile={isMobile} />
+                  <DetailRow label="Closed By (Supervisor)" value={issue.closedBy} darkMode isMobile={isMobile} />
+                </>
+              )}
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <Typography variant="subtitle1" color="#ffffff">Resolution Details:</Typography>
                 <Typography sx={{

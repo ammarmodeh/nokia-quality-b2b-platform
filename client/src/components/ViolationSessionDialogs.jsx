@@ -48,6 +48,7 @@ const SessionDialogs = ({
         sessions={selectedTeamSessions}
         onEditSession={onEditSession}
         onDeleteSession={onDeleteSession}
+        teamName={selectedTeam || selectedTeamForSession}
       />
 
       <ReportAbsenceDialog

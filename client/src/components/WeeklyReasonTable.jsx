@@ -279,7 +279,6 @@ const WeeklyReasonTable = ({ tasks }) => {
             'Interview Date': dateStr,
             'SLID': task.slid || 'N/A',
             'Customer Feedback': task.customerFeedback || '',
-            'Reason': task.reason || 'N/A',
             'Sub Reason': task.subReason || 'N/A',
             'Root Cause': task.rootCause || 'N/A',
             'Score': task.evaluationScore,

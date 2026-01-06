@@ -74,6 +74,10 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
   };
 
   const formatIssueForSharing = (issue) => {
+    const issuesMsg = (issue.issues && issue.issues.length > 0)
+      ? issue.issues.map(i => `• ${i.category}${i.subCategory ? ` (${i.subCategory})` : ''}`).join('\n  ')
+      : issue.issueCategory || 'N/A';
+
     return `*Issue Details*\n\n` +
       `*SLID:* ${issue.slid}\n` +
       `*PIS Date:* ${format(new Date(issue.pisDate), 'MMM dd, yyyy')}\n` +
@@ -81,12 +85,12 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
       `*Contact Method:* ${issue.contactMethod}\n` +
       `*From Team:* ${issue.from}\n` +
       `*Team/Company:* ${issue.teamCompany}\n` +
-      `*Issue Category:* ${issue.issueCategory}\n\n` +
+      `*Issues:*\n  ${issuesMsg}\n\n` +
       `*Status:* ${issue.solved === 'yes' ? 'Solved' : 'Unresolved'}\n` +
+      `${issue.resolveDate ? `*Resolved Date:* ${format(new Date(issue.resolveDate), 'MMM dd, yyyy')}\n` : ''}` +
       `*Reporter:* ${issue.reporter}\n` +
       `${issue.reporterNote ? `*Reporter Notes:*\n${issue.reporterNote}\n\n` : ''}` +
       `*Assigned To:* ${issue.assignedTo}\n` +
-      `${issue.assignedNote ? `*Assignee Notes:*\n${issue.assignedNote}\n\n` : ''}` +
       `${issue.resolutionDetails ? `*Resolution Details:*\n${issue.resolutionDetails}\n\n` : ''}`;
   };
 
@@ -99,12 +103,14 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
       'Contact Method': issue.contactMethod,
       'From Team': issue.from,
       'Team/Company': issue.teamCompany,
-      'Issue Category': issue.issueCategory,
+      'Issues': (issue.issues && issue.issues.length > 0)
+        ? issue.issues.map(i => `${i.category}${i.subCategory ? ` (${i.subCategory})` : ''}`).join(' | ')
+        : issue.issueCategory || '',
       'Status': issue.solved === 'yes' ? 'Solved' : 'Unresolved',
+      'Resolved Date': issue.resolveDate ? format(new Date(issue.resolveDate), 'MMM dd, yyyy') : '-',
       'Reporter': issue.reporter,
       'Reporter Notes': issue.reporterNote || '',
       'Assigned To': issue.assignedTo,
-      'Assignee Notes': issue.assignedNote || '',
       'Resolution Details': issue.resolutionDetails || ''
     }));
 
@@ -307,14 +313,41 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                 />
               </Box>
 
+              {selectedIssue.solved === 'yes' && selectedIssue.resolveDate && (
+                <Box>
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>Resolved Date</Typography>
+                  <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ffffff' }}>
+                    <FaCalendarAlt size={isMobile ? 12 : 14} color="#7b68ee" />
+                    {format(new Date(selectedIssue.resolveDate), 'MMM dd, yyyy')}
+                  </Typography>
+                </Box>
+              )}
+
               <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
               {/* Issue Details */}
               <Box>
                 <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>Issue Category</Typography>
-                <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff' }}>
-                  {selectedIssue.issueCategory}
-                </Typography>
+                {selectedIssue.issues && selectedIssue.issues.length > 0 ? (
+                  <Stack spacing={1}>
+                    {selectedIssue.issues.map((i, idx) => (
+                      <Box key={idx} sx={{
+                        backgroundColor: '#2d2d2d',
+                        p: 1.5,
+                        borderRadius: 1,
+                        border: '1px solid #3d3d3d'
+                      }}>
+                        <Typography variant={isMobile ? "body2" : "body1"} sx={{ color: '#ffffff' }}>
+                          {i.category}{i.subCategory ? ` - ${i.subCategory}` : ''}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff' }}>
+                    {selectedIssue.issueCategory}
+                  </Typography>
+                )}
               </Box>
 
               {selectedIssue.reporterNote && (
@@ -328,22 +361,6 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                   }}>
                     <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff', whiteSpace: 'pre-line' }}>
                       {selectedIssue.reporterNote}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-
-              {selectedIssue.assignedNote && (
-                <Box>
-                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>Assigned Notes</Typography>
-                  <Box sx={{
-                    backgroundColor: '#2d2d2d',
-                    p: isMobile ? 1.5 : 2,
-                    borderRadius: 1,
-                    border: '1px solid #3d3d3d'
-                  }}>
-                    <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff', whiteSpace: 'pre-line' }}>
-                      {selectedIssue.assignedNote}
                     </Typography>
                   </Box>
                 </Box>

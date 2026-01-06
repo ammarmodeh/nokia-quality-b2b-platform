@@ -107,6 +107,9 @@ const DraggableRow = ({ option, index, moveRow, handleOpenDialog, handleDelete, 
       {activeTab === 'REASON' && (
         <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.parentValue}</TableCell>
       )}
+      {activeTab === 'ISSUE_SUB_CATEGORY' && (
+        <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.parentValue}</TableCell>
+      )}
       <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.border}` }}>
         <Tooltip title="Edit">
           <IconButton onClick={() => handleOpenDialog(option)} sx={{ color: colors.primary }}>
@@ -137,6 +140,13 @@ const CATEGORY_MAP = {
   RESPONSIBILITY: "Responsibilities",
   ONT_TYPE: "ONT Types",
   EXTENDER_TYPE: "Extender Types",
+  SESSION_TYPE: "Session Types",
+  SUPERVISORS: "Supervisors (Conducted By)",
+  CONTACT_METHOD: "Contact Methods",
+  ISSUE_FROM_TEAMS: "From (Customer Issue)",
+  ISSUE_CATEGORY: "Issue Categories (Level 1)",
+  ISSUE_SUB_CATEGORY: "Issue Sub Categories (Level 2)",
+  CIN_SUPERVISORS: "Closed by (Supervisor)",
 };
 
 const DropdownManagement = () => {
@@ -190,7 +200,7 @@ const DropdownManagement = () => {
         value: '',
         label: '',
 
-        parentCategory: activeTab === 'REASON_SUB' ? 'REASON' : activeTab === 'ROOT_CAUSE' ? 'REASON_SUB' : activeTab === 'REASON' ? 'RESPONSIBILITY' : null,
+        parentCategory: activeTab === 'REASON_SUB' ? 'REASON' : activeTab === 'ROOT_CAUSE' ? 'REASON_SUB' : activeTab === 'REASON' ? 'RESPONSIBILITY' : activeTab === 'ISSUE_SUB_CATEGORY' ? 'ISSUE_CATEGORY' : null,
         parentValue: null
       });
     }
@@ -337,6 +347,9 @@ const DropdownManagement = () => {
                   )}
                   {activeTab === 'REASON' && (
                     <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Responsibility)</TableCell>
+                  )}
+                  {activeTab === 'ISSUE_SUB_CATEGORY' && (
+                    <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Category)</TableCell>
                   )}
                   <TableCell align="right" sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Actions</TableCell>
                 </TableRow>

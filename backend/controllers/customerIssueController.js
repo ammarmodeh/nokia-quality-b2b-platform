@@ -3,19 +3,23 @@ import { CustomerIssueSchema } from "../models/customerIssueModel.js";
 // Create a new customer issue
 export const createIssue = async (req, res) => {
   try {
-    const validTeams = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team', 'Others'];
+    // Filter out issues where category is empty
+    if (req.body.issues && Array.isArray(req.body.issues)) {
+      req.body.issues = req.body.issues.filter(issue => issue.category && issue.category.trim() !== '');
+    }
 
-    if (!req.body.teamCompany || !validTeams.includes(req.body.teamCompany)) {
+    if (!req.body.teamCompany) {
       return res.status(400).json({
         success: false,
-        message: 'Valid team/company is required'
+        message: 'Team/company is required'
       });
     }
 
     const issueData = {
       ...req.body,
       date: req.body.date ? new Date(req.body.date) : new Date(),
-      pisDate: req.body.pisDate ? new Date(req.body.pisDate) : new Date()
+      pisDate: req.body.pisDate ? new Date(req.body.pisDate) : new Date(),
+      resolveDate: (req.body.solved === 'yes' && req.body.resolveDate) ? new Date(req.body.resolveDate) : null
     };
 
     const newIssue = new CustomerIssueSchema(issueData);
@@ -99,14 +103,8 @@ export const getIssueById = async (req, res) => {
 // Update an issue
 export const updateIssue = async (req, res) => {
   try {
-    if (req.body.teamCompany) {
-      const validTeams = ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team', 'Others'];
-      if (!validTeams.includes(req.body.teamCompany)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid team/company value'
-        });
-      }
+    if (req.body.issues && Array.isArray(req.body.issues)) {
+      req.body.issues = req.body.issues.filter(issue => issue.category && issue.category.trim() !== '');
     }
 
     const updateData = {
@@ -116,6 +114,12 @@ export const updateIssue = async (req, res) => {
 
     if (req.body.pisDate) {
       updateData.pisDate = new Date(req.body.pisDate);
+    }
+
+    if (req.body.resolveDate) {
+      updateData.resolveDate = new Date(req.body.resolveDate);
+    } else if (req.body.solved === 'no') {
+      updateData.resolveDate = null;
     }
 
     const updatedIssue = await CustomerIssueSchema.findByIdAndUpdate(

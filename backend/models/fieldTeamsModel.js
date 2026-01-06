@@ -135,9 +135,14 @@ const fieldTeamsSchema = new mongoose.Schema(
       {
         _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
         sessionDate: { type: Date, required: true },
-        conductedBy: { type: String, required: true },
+        conductedBy: { type: mongoose.Schema.Types.Mixed, required: true },
+        location: { type: String },
+        sessionType: {
+          type: String
+        },
+        duration: { type: String },
         sessionTitle: { type: String },
-        outlines: { type: String },
+        outlines: { type: mongoose.Schema.Types.Mixed },
         notes: { type: String, default: "" },
         status: {
           type: String,

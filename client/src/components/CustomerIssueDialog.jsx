@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -13,71 +13,128 @@ import {
   Box,
   Typography,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  IconButton,
+  Grid,
+  Checkbox,
+  FormControlLabel
 } from "@mui/material";
 import { useSelector } from "react-redux";
+import ManagedAutocomplete from "./common/ManagedAutocomplete";
+import { MdAdd, MdDelete } from "react-icons/md";
 
-const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
+const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const user = useSelector((state) => state?.auth?.user);
   const isAdmin = user.role === "Admin";
 
-  const [formData, setFormData] = useState({
+  const initialFormState = {
     slid: "",
     from: "",
     reporter: "",
     reporterNote: "",
     contactMethod: "",
-    issueCategory: "",
-    date: new Date().toISOString().split('T')[0],
+    issues: [{ category: '', subCategory: '' }],
+    pisDateKnown: true,
     pisDate: new Date().toISOString().split('T')[0],
+    date: new Date().toISOString().split('T')[0],
     solved: "no",
     assignedTo: "",
-    assignedNote: "",
     teamCompany: '',
+    resolveDate: new Date().toISOString().split('T')[0],
+    closedBy: "",
     resolutionDetails: ""
-  });
+  };
 
-  const teams = [
-    "Activation Team",
-    "Nokia Quality Team",
-    "Orange Quality Team",
-    "Nokia Closure Team"
-  ];
+  const [formData, setFormData] = useState(initialFormState);
 
-  const contactMethods = [
-    "Phone call",
-    "WhatsApp private message",
-    "WhatsApp group message"
-  ];
+  // Persistence & Edit Logic
+  useEffect(() => {
+    if (open) {
+      if (issue) {
+        // If editing, populate with issue data
+        setFormData({
+          ...initialFormState,
+          ...issue,
+          pisDateKnown: !!issue.pisDate,
+          pisDate: issue.pisDate ? new Date(issue.pisDate).toISOString().split('T')[0] : initialFormState.pisDate,
+          date: issue.date ? new Date(issue.date).toISOString().split('T')[0] : initialFormState.date,
+          resolveDate: issue.resolveDate ? new Date(issue.resolveDate).toISOString().split('T')[0] : initialFormState.resolveDate,
+          issues: issue.issues && issue.issues.length > 0 ? issue.issues : [{ category: '', subCategory: '' }]
+        });
+      } else {
+        // If creating, check local storage
+        const savedData = localStorage.getItem('customerIssueFormData');
+        if (savedData) {
+          setFormData(prev => ({ ...prev, ...JSON.parse(savedData) }));
+        } else {
+          setFormData(initialFormState);
+        }
+      }
+    }
+  }, [open, issue]);
 
-  const companyTeams = [
-    "INH-1",
-    "INH-2",
-    "INH-3",
-    "INH-4",
-    'INH-5',
-    'INH-6',
-    "Al-Dar 2",
-    "Orange Team",
-    "Others"
-  ];
+  useEffect(() => {
+    if (open && !issue) {
+      localStorage.setItem('customerIssueFormData', JSON.stringify(formData));
+    }
+  }, [formData, open, issue]);
 
   const handleChange = (e) => {
     if (!isAdmin) return;
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  // Issue Management
+  const handleIssueChange = (index, field, value) => {
+    const updatedIssues = [...formData.issues];
+    updatedIssues[index][field] = value;
+    setFormData(prev => ({ ...prev, issues: updatedIssues }));
+  };
+
+  const addIssueRow = () => {
+    setFormData(prev => ({
+      ...prev,
+      issues: [...prev.issues, { category: '', subCategory: '' }]
+    }));
+  };
+
+  const removeIssueRow = (index) => {
+    if (formData.issues.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        issues: prev.issues.filter((_, i) => i !== index)
+      }));
+    }
   };
 
   const handleSubmit = () => {
     if (!isAdmin) return;
-    onSubmit(formData);
+    const submitData = {
+      ...formData,
+      pisDate: formData.pisDateKnown ? formData.pisDate : null
+    };
+    onSubmit(submitData, issue?._id); // Pass ID if editing
+    if (!issue) localStorage.removeItem('customerIssueFormData');
     onClose();
   };
+
+  const handleReset = () => {
+    if (window.confirm("Are you sure you want to reset the form? This will clear all entered data.")) {
+      localStorage.removeItem('customerIssueFormData');
+      setFormData(initialFormState);
+    }
+  };
+
+  const handleClose = () => {
+    // Persist data is already handled by useEffect, so just close
+    onClose();
+  }
 
   // Style constants with disabled state
   const textFieldStyles = {
@@ -167,18 +224,27 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
     cursor: isAdmin ? 'pointer' : 'not-allowed',
   };
 
+  const resetButtonStyle = {
+    color: '#ffffff',
+    backgroundColor: '#b91c1c', // Deep Red
+    '&:hover': {
+      backgroundColor: '#991b1b', // Darker Red
+    },
+    mr: 'auto' // Push to the left
+  };
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
-      maxWidth="sm"
+      onClose={handleClose}
+      maxWidth="md"
       fullWidth
       fullScreen={fullScreen}
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#2d2d2d',
           boxShadow: 'none',
-          borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
+          borderRadius: fullScreen ? '0px' : '8px',
         }
       }}
     >
@@ -189,7 +255,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
         padding: '16px 24px',
       }}>
         <Typography variant="h6" component="div">
-          Customer Issue Notification
+          {issue ? 'Edit Customer Issue' : 'Customer Issue Notification'}
         </Typography>
       </DialogTitle>
 
@@ -206,53 +272,63 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
             fullWidth
             label="SLID (Subscription Number)"
             name="slid"
-            value={formData.slid}
+            value={formData.slid || ''}
             onChange={handleChange}
             required
             disabled={!isAdmin}
             sx={textFieldStyles}
           />
 
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.pisDateKnown}
+                  onChange={handleChange}
+                  name="pisDateKnown"
+                  sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                />
+              }
+              label="PIS Date Known"
+              sx={{ color: '#ffffff' }}
+            />
+            {formData.pisDateKnown && (
+              <TextField
+                fullWidth
+                label="PIS Date"
+                type="date"
+                name="pisDate"
+                value={formData.pisDate}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                disabled={!isAdmin}
+                sx={textFieldStyles}
+              />
+            )}
+          </Box>
+
           <TextField
             fullWidth
-            label="PIS Date"
+            label="Reported Date"
             type="date"
-            name="pisDate"
-            value={formData.pisDate}
+            name="date"
+            value={formData.date}
             onChange={handleChange}
-            InputLabelProps={{
-              shrink: true,
-            }}
+            InputLabelProps={{ shrink: true }}
             disabled={!isAdmin}
             sx={textFieldStyles}
           />
 
-          <FormControl fullWidth required sx={formControlStyles}>
-            <InputLabel sx={inputLabelStyles}>From</InputLabel>
-            <Select
-              name="from"
-              value={formData.from}
-              label="From"
-              onChange={handleChange}
-              disabled={!isAdmin}
-              sx={selectStyles}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    backgroundColor: '#2d2d2d',
-                    color: '#ffffff',
-                    '& .MuiMenuItem-root': menuItemStyles,
-                  },
-                },
-              }}
-            >
-              {teams.map(team => (
-                <MenuItem key={team} value={team} sx={menuItemStyles}>
-                  {team}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <ManagedAutocomplete
+            category="ISSUE_FROM_TEAMS"
+            label="From"
+            fullWidth
+            required
+            value={formData.from}
+            onChange={(val) => handleChange({ target: { name: 'from', value: val } })}
+            disabled={!isAdmin}
+            sx={{ ...textFieldStyles, mb: 2 }}
+          />
 
           <TextField
             fullWidth
@@ -273,88 +349,81 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
             onChange={handleChange}
             multiline
             rows={2}
+            dir="rtl" // RTL Support
             disabled={!isAdmin}
             sx={textFieldStyles}
           />
 
-          <FormControl fullWidth required sx={formControlStyles}>
-            <InputLabel sx={inputLabelStyles}>Team/Company</InputLabel>
-            <Select
-              name="teamCompany"
-              value={formData.teamCompany}
-              label="Team/Company"
-              onChange={handleChange}
-              disabled={!isAdmin}
-              sx={selectStyles}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    backgroundColor: '#2d2d2d',
-                    color: '#ffffff',
-                    '& .MuiMenuItem-root': menuItemStyles,
-                  },
-                },
-              }}
-            >
-              {companyTeams.map(team => (
-                <MenuItem key={team} value={team} sx={menuItemStyles}>
-                  {team}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth required sx={formControlStyles}>
-            <InputLabel sx={inputLabelStyles}>Contact Method</InputLabel>
-            <Select
-              name="contactMethod"
-              value={formData.contactMethod}
-              label="Contact Method"
-              onChange={handleChange}
-              disabled={!isAdmin}
-              sx={selectStyles}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    backgroundColor: '#2d2d2d',
-                    color: '#ffffff',
-                    '& .MuiMenuItem-root': menuItemStyles,
-                  },
-                },
-              }}
-            >
-              {contactMethods.map(type => (
-                <MenuItem key={type} value={type} sx={menuItemStyles}>
-                  {type}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <TextField
+          <ManagedAutocomplete
+            category="TEAM_COMPANY"
+            label="Team/Company"
             fullWidth
-            label="Issue Category"
-            name="issueCategory"
-            value={formData.issueCategory}
-            onChange={handleChange}
             required
+            value={formData.teamCompany}
+            onChange={(val) => handleChange({ target: { name: 'teamCompany', value: val } })}
             disabled={!isAdmin}
-            sx={textFieldStyles}
+            sx={{ ...textFieldStyles, mb: 2 }}
           />
 
-          <TextField
+          <ManagedAutocomplete
+            category="CONTACT_METHOD"
+            label="Contact Method"
             fullWidth
-            label="Date"
-            type="date"
-            name="date"
-            value={formData.date}
-            onChange={handleChange}
-            InputLabelProps={{
-              shrink: true,
-            }}
+            required
+            value={formData.contactMethod}
+            onChange={(val) => handleChange({ target: { name: 'contactMethod', value: val } })}
             disabled={!isAdmin}
-            sx={textFieldStyles}
+            sx={{ ...textFieldStyles, mb: 2 }}
           />
+
+          {/* Dynamic Issues Section */}
+          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 2 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee' }}>Issues</Typography>
+            {formData.issues.map((issue, index) => (
+              <Grid container spacing={2} key={index} alignItems="center" sx={{ mb: 2 }}>
+                <Grid item xs={11}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <ManagedAutocomplete
+                        category="ISSUE_CATEGORY"
+                        label={`Category ${index + 1}`}
+                        fullWidth
+                        required
+                        freeSolo
+                        value={issue.category}
+                        onChange={(val) => handleIssueChange(index, 'category', val)}
+                        disabled={!isAdmin}
+                        sx={{ ...textFieldStyles }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <ManagedAutocomplete
+                        category="ISSUE_SUB_CATEGORY"
+                        label={`Sub Category ${index + 1}`}
+                        fullWidth
+                        freeSolo
+                        value={issue.subCategory}
+                        onChange={(val) => handleIssueChange(index, 'subCategory', val)}
+                        disabled={!isAdmin}
+                        sx={{ ...textFieldStyles }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Grid>
+                <Grid item xs={1}>
+                  <IconButton onClick={() => removeIssueRow(index)} disabled={formData.issues.length === 1 || !isAdmin}>
+                    <MdDelete color="#f44336" />
+                  </IconButton>
+                </Grid>
+              </Grid>
+            ))}
+            <Button startIcon={<MdAdd />} onClick={addIssueRow} disabled={!isAdmin} sx={{ color: '#7b68ee' }}>
+              Add Another Issue
+            </Button>
+          </Box>
+
+
+
 
           <FormControl fullWidth required sx={formControlStyles}>
             <InputLabel sx={inputLabelStyles}>Solved</InputLabel>
@@ -380,40 +449,59 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
             </Select>
           </FormControl>
 
-          <TextField
-            fullWidth
-            label="Resolution Details"
-            name="resolutionDetails"
-            value={formData.resolutionDetails}
-            onChange={handleChange}
-            multiline
-            rows={3}
-            helperText="Explain the resolution details here."
-            disabled={!isAdmin}
-            sx={textFieldStyles}
-          />
+          {formData.solved === 'yes' && (
+            <>
+              <TextField
+                fullWidth
+                label="Resolve Date"
+                type="date"
+                name="resolveDate"
+                value={formData.resolveDate}
+                onChange={handleChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                disabled={!isAdmin}
+                sx={{ ...textFieldStyles, mb: 2 }}
+              />
 
-          <TextField
-            fullWidth
+              <ManagedAutocomplete
+                category="CIN_SUPERVISORS"
+                label="Closed By (Supervisor)"
+                fullWidth
+                freeSolo
+                value={formData.closedBy || ''}
+                onChange={(val) => handleChange({ target: { name: 'closedBy', value: val } })}
+                disabled={!isAdmin}
+                sx={{ ...textFieldStyles, mb: 2 }}
+              />
+
+              <TextField
+                fullWidth
+                label="Resolution Details"
+                name="resolutionDetails"
+                value={formData.resolutionDetails}
+                onChange={handleChange}
+                multiline
+                rows={3}
+                dir="rtl" // RTL Support
+                // helperText="Explain the resolution details here."
+                disabled={!isAdmin}
+                sx={textFieldStyles}
+              />
+            </>
+          )}
+
+          <ManagedAutocomplete
+            category="FIELD_TEAMS"
             label="Assigned To"
-            name="assignedTo"
-            value={formData.assignedTo}
-            onChange={handleChange}
-            required
-            disabled={!isAdmin}
-            sx={textFieldStyles}
-          />
-
-          <TextField
             fullWidth
-            label="Assigned User Note"
-            name="assignedNote"
-            value={formData.assignedNote}
-            onChange={handleChange}
-            multiline
-            rows={2}
+            required
+            freeSolo
+            value={formData.assignedTo}
+            onChange={(val) => handleChange({ target: { name: 'assignedTo', value: val } })}
             disabled={!isAdmin}
-            sx={textFieldStyles}
+            sx={{ ...textFieldStyles, mb: 2 }}
           />
         </Box>
       </DialogContent>
@@ -422,21 +510,31 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit }) => {
         backgroundColor: '#2d2d2d',
         borderTop: '1px solid #e5e7eb',
         padding: '12px 24px',
+        justifyContent: 'space-between' // Ensure space between reset and other buttons
       }}>
         <Button
-          onClick={onClose}
-          sx={cancelButtonStyles}
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
+          onClick={handleReset}
+          sx={resetButtonStyle}
           disabled={!isAdmin}
-          sx={submitButtonStyles}
         >
-          Submit
+          Reset Form
         </Button>
+        <Box>
+          <Button
+            onClick={handleClose}
+            sx={{ ...cancelButtonStyles, mr: 1 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={!isAdmin}
+            sx={submitButtonStyles}
+          >
+            Submit
+          </Button>
+        </Box>
       </DialogActions>
     </Dialog>
   );

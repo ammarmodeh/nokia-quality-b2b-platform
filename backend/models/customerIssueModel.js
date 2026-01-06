@@ -4,23 +4,25 @@ const customerIssueSchema = new mongoose.Schema({
   slid: { type: String, required: true },
   pisDate: {
     type: Date,
-    required: true,
-    default: Date.now
+    required: false, // Changed from true
+    default: null
   },
   from: { type: String, required: true },
   reporter: { type: String, required: true },
   reporterNote: { type: String },
   contactMethod: {
     type: String,
-    required: true,
-    enum: ['Phone call', 'WhatsApp private message', 'WhatsApp group message']
+    required: true
   },
-  issueCategory: { type: String, required: true },
+  // issueCategory: { type: String, required: true }, // Deprecated
+  issues: [{
+    category: { type: String, required: true },
+    subCategory: { type: String }
+  }],
   // REMOVED: issueDetails field
   teamCompany: {
     type: String,
-    required: true,
-    enum: ['INH-1', 'INH-2', 'INH-3', 'INH-4', 'INH-5', 'INH-6', 'Al-Dar 2', 'Orange Team', 'Others']
+    required: true
   },
   date: { type: Date, default: Date.now },
   solved: {
@@ -29,9 +31,10 @@ const customerIssueSchema = new mongoose.Schema({
     enum: ['yes', 'no'],
     default: 'no'
   },
+  resolveDate: { type: Date },
+  closedBy: { type: String }, // Returned as Supervisor
   resolutionDetails: { type: String },
   assignedTo: { type: String, required: true },
-  assignedNote: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

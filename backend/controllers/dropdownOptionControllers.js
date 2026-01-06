@@ -1,4 +1,6 @@
 import { DropdownOption } from "../models/dropdownOptionModel.js";
+import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
+import { UserSchema } from "../models/userModel.js";
 
 // Get all options grouped by category
 export const getAllOptions = async (req, res) => {
@@ -11,6 +13,29 @@ export const getAllOptions = async (req, res) => {
       acc[option.category].push(option);
       return acc;
     }, {});
+
+    // --- Dynamic Categories Injection ---
+
+    // 1. Field Teams
+    const fieldTeams = await FieldTeamsSchema.find({ isActive: true }).select('teamName');
+    groupedOptions['FIELD_TEAMS'] = fieldTeams.map((team, index) => ({
+      _id: team._id,
+      category: 'FIELD_TEAMS',
+      value: team.teamName,
+      label: team.teamName,
+      order: index + 1
+    }));
+
+    // 2. Supervisors/Users
+    const supervisors = await UserSchema.find().select('name');
+    groupedOptions['SUPERVISORS'] = supervisors.map((user, index) => ({
+      _id: user._id,
+      category: 'SUPERVISORS',
+      value: user.name,
+      label: user.name,
+      order: index + 1
+    }));
+
     res.status(200).json(groupedOptions);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -21,6 +46,30 @@ export const getAllOptions = async (req, res) => {
 export const getOptionsByCategory = async (req, res) => {
   try {
     const { category } = req.params;
+
+    // Handle dynamic categories
+    if (category === 'FIELD_TEAMS') {
+      const fieldTeams = await FieldTeamsSchema.find({ isActive: true }).select('teamName');
+      return res.status(200).json(fieldTeams.map((team, index) => ({
+        _id: team._id,
+        category: 'FIELD_TEAMS',
+        value: team.teamName,
+        label: team.teamName,
+        order: index + 1
+      })));
+    }
+
+    if (category === 'SUPERVISORS') {
+      const supervisors = await UserSchema.find().select('name');
+      return res.status(200).json(supervisors.map((user, index) => ({
+        _id: user._id,
+        category: 'SUPERVISORS',
+        value: user.name,
+        label: user.name,
+        order: index + 1
+      })));
+    }
+
     const options = await DropdownOption.find({ category, isActive: true }).sort({ order: 1 });
     res.status(200).json(options);
   } catch (error) {
@@ -32,6 +81,13 @@ export const getOptionsByCategory = async (req, res) => {
 export const addOption = async (req, res) => {
   try {
     const { category, value, label, order, parentCategory, parentValue } = req.body;
+
+    // Check if option already exists in this category
+    const existing = await DropdownOption.findOne({ category, value });
+    if (existing) {
+      return res.status(200).json(existing); // Return existing instead of erroring
+    }
+
     const newOption = new DropdownOption({ category, value, label, order, parentCategory, parentValue });
     await newOption.save();
     res.status(201).json(newOption);
@@ -172,6 +228,10 @@ export const seedOptions = async (req, res) => {
       { category: "RESPONSIBILITY", value: "Technical Team", label: "Technical Team", order: 4 },
       { category: "RESPONSIBILITY", value: "Customer", label: "Customer", order: 5 },
       { category: "RESPONSIBILITY", value: "Others", label: "Others", order: 6 },
+
+      // CIN Supervisors (Quality Supervisors)
+      { category: "CIN_SUPERVISORS", value: "Supervisor 1", label: "Supervisor 1", order: 1 },
+      { category: "CIN_SUPERVISORS", value: "Supervisor 2", label: "Supervisor 2", order: 2 },
     ];
 
     await DropdownOption.insertMany(initialOptions);
