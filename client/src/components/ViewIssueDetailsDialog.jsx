@@ -29,15 +29,19 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
 
     const detailsText = `Issue Details:
       SLID: ${issue.slid}
-      From: ${issue.from}
+      From (Main): ${issue.fromMain || issue.from || 'N/A'}
+      From (Sub): ${issue.fromSub || 'N/A'}
       Reporter: ${issue.reporter}
       ${issue.reporterNote ? `Reporter Note: ${issue.reporterNote}\n      ` : ''}Team/Company: ${issue.teamCompany}
+      Customer Name: ${issue.customerName || 'N/A'}
+      Customer Contact: ${issue.customerContact || 'N/A'}
       Contact Method: ${issue.contactMethod}
       Issues:
       ${issuesText}
       Assigned To: ${issue.assignedTo}
+      ${issue.assigneeNote ? `Assignee Note: ${issue.assigneeNote}\n      ` : ''}Installing Team: ${issue.installingTeam || 'N/A'}
       Status: ${issue.solved === 'yes' ? 'Resolved' : 'Unresolved'}
-      ${issue.solved === 'yes' ? `Resolve Date: ${issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A'}\n      ` : ''}${issue.closedBy ? `Closed By (Supervisor): ${issue.closedBy}\n      ` : ''}${issue.resolutionDetails ? `Resolution Details: ${issue.resolutionDetails}\n      ` : ''}Date Reported: ${new Date(issue.date).toLocaleDateString()}
+      ${issue.solved === 'yes' && issue.resolvedBy ? `Resolved By: ${issue.resolvedBy}\n      ` : ''}${issue.solved === 'yes' ? `Resolve Date: ${issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A'}\n      ` : ''}${issue.closedBy ? `Closed By (Supervisor): ${issue.closedBy}\n      ` : ''}${issue.resolutionDetails ? `Resolution Details: ${issue.resolutionDetails}\n      ` : ''}Date Reported: ${new Date(issue.date).toLocaleDateString()}
       PIS Date: ${issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'}`;
 
     navigator.clipboard.writeText(detailsText)
@@ -56,19 +60,25 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
 
     const message = `*CIN*\n
   *SLID*: ${issue.slid || 'N/A'}
-  *From*: ${issue.from || 'N/A'}
+  *From (Main)*: ${issue.fromMain || issue.from || 'N/A'}
+  *From (Sub)*: ${issue.fromSub || 'N/A'}
   *Reporter*: ${issue.reporter || 'N/A'}
   *Reporter Note*: ${issue.reporterNote || 'N/A'}
   *Team/Company*: ${issue.teamCompany || 'N/A'}
+  *Customer Name*: ${issue.customerName || 'N/A'}
+  *Customer Contact*: ${issue.customerContact || 'N/A'}
   *Contact Method*: ${issue.contactMethod || 'N/A'}
   *Issues*:
   ${issuesMsg}
+  *Assigned To*: ${issue.assignedTo || 'N/A'}
+  ${issue.assigneeNote ? `*Assignee Note*: ${issue.assigneeNote}\n  ` : ''}*Installing Team*: ${issue.installingTeam || 'N/A'}
   *Status*: ${issue.solved === 'yes' ? 'Resolved' : 'Pending'}
-  ${issue.solved === 'yes' ? `*Resolve Date*: ${resolveDate}\n  *Closed By (Supervisor)*: ${issue.closedBy || 'N/A'}\n  *Resolution Details*: ${issue.resolutionDetails || 'N/A'}\n` : ''}
+  ${issue.solved === 'yes' && issue.resolvedBy ? `*Resolved By*: ${issue.resolvedBy}\n  ` : ''}${issue.solved === 'yes' ? `*Resolve Date*: ${resolveDate}\n  *Closed By (Supervisor)*: ${issue.closedBy || 'N/A'}\n  *Resolution Details*: ${issue.resolutionDetails || 'N/A'}\n` : ''}
   *Date Reported*: ${reportedDate}
   *PIS Date*: ${pisDate}
   
-  *Assigned To*: ${issue.assignedTo || 'N/A'}`;
+  *Assigned To*: ${issue.assignedTo || 'N/A'}
+  *Installing Team*: ${issue.installingTeam || 'N/A'}`;
 
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
@@ -78,17 +88,17 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      fullScreen={isMobile}
+      // maxWidth="md"
+      // fullWidth
+      fullScreen
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#2d2d2d',
           boxShadow: 'none',
           borderRadius: isMobile ? 0 : '8px',
-          width: isMobile ? '100%' : 'auto',
-          margin: isMobile ? 0 : '32px',
-          maxHeight: isMobile ? '100%' : 'calc(100% - 64px)'
+          width: isMobile ? '100%' : '100%',
+          // margin: isMobile ? 0 : '32px',
+          // maxHeight: isMobile ? '100%' : 'calc(100% - 64px)'
         }
       }}
     >
@@ -171,6 +181,8 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
               <DetailRow label="SLID" value={issue.slid} darkMode isMobile={isMobile} />
               <DetailRow label="PIS Date" value={issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'} darkMode isMobile={isMobile} />
               <DetailRow label="Date Reported" value={issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'} darkMode isMobile={isMobile} />
+              <DetailRow label="Customer Name" value={issue.customerName} darkMode isMobile={isMobile} />
+              <DetailRow label="Customer Contact" value={issue.customerContact} darkMode isMobile={isMobile} />
             </Box>
           </Paper>
 
@@ -184,7 +196,8 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
               Reporter Information
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 1 : 1.5 }}>
-              <DetailRow label="From" value={issue.from} darkMode isMobile={isMobile} />
+              <DetailRow label="From (Main)" value={issue.fromMain || issue.from} darkMode isMobile={isMobile} />
+              <DetailRow label="From (Sub)" value={issue.fromSub} darkMode isMobile={isMobile} />
               <DetailRow label="Reporter" value={issue.reporter} darkMode isMobile={isMobile} />
               <DetailRow label="Reporter Note" value={issue.reporterNote} darkMode isMobile={isMobile} />
               <DetailRow label="Contact Method" value={issue.contactMethod} darkMode isMobile={isMobile} />
@@ -203,6 +216,8 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 1 : 1.5 }}>
               <DetailRow label="Team/Company" value={issue.teamCompany} darkMode isMobile={isMobile} />
               <DetailRow label="Assigned To" value={issue.assignedTo} darkMode isMobile={isMobile} />
+              <DetailRow label="Assignee Note" value={issue.assigneeNote} darkMode isMobile={isMobile} />
+              <DetailRow label="Installing Team" value={issue.installingTeam} darkMode isMobile={isMobile} />
             </Box>
           </Paper>
 
@@ -248,6 +263,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
               </Box>
               {issue.solved === 'yes' && (
                 <>
+                  {issue.resolvedBy && <DetailRow label="Resolved By" value={issue.resolvedBy} darkMode isMobile={isMobile} />}
                   <DetailRow label="Resolve Date" value={issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A'} darkMode isMobile={isMobile} />
                   <DetailRow label="Closed By (Supervisor)" value={issue.closedBy} darkMode isMobile={isMobile} />
                 </>

@@ -47,7 +47,8 @@ import {
   MdFileDownload,
   MdViewList,
   MdViewModule,
-  MdBarChart
+  MdBarChart,
+  MdRefresh
 } from 'react-icons/md';
 import api from '../api/api';
 import CustomerIssueDialog from './CustomerIssueDialog';
@@ -82,21 +83,24 @@ const CustomerIssuesList = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
 
-  useEffect(() => {
-    const fetchIssues = async () => {
-      try {
-        const response = await api.get('/customer-issues-notifications', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-        });
-        setIssues(response.data.data);
-        setFilteredIssues(response.data.data);
-      } catch (err) {
-        setError(err.message || 'Failed to fetch issues');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchIssues = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/customer-issues-notifications', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      });
+      setIssues(response.data.data);
+      setFilteredIssues(response.data.data);
+      setError(null);
+    } catch (err) {
+      setError(err.message || 'Failed to fetch issues');
+      toast.error("Failed to refresh issues");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchIssues();
   }, []);
 
@@ -117,7 +121,11 @@ const CustomerIssuesList = () => {
         issue.slid.toLowerCase().includes(term) ||
         issue.reporter.toLowerCase().includes(term) ||
         issue.teamCompany.toLowerCase().includes(term) ||
-        issue.from.toLowerCase().includes(term) ||
+        (issue.assignedTo && issue.assignedTo.toLowerCase().includes(term)) ||
+        (issue.installingTeam && issue.installingTeam.toLowerCase().includes(term)) ||
+        (issue.fromMain && issue.fromMain.toLowerCase().includes(term)) ||
+        (issue.fromSub && issue.fromSub.toLowerCase().includes(term)) ||
+        (issue.from && issue.from.toLowerCase().includes(term)) ||
         (issue.issues && issue.issues.some(i =>
           i.category.toLowerCase().includes(term) ||
           (i.subCategory && i.subCategory.toLowerCase().includes(term))
@@ -192,6 +200,7 @@ const CustomerIssuesList = () => {
         setIssues(prev => prev.map(isl => isl._id === id ? updated : isl));
         setFilteredIssues(prev => prev.map(isl => isl._id === id ? updated : isl));
         setOpenEditDialog(false);
+        await fetchIssues(); // Refetch
         toast.success("Issue updated successfully");
       } else {
         // Create
@@ -202,7 +211,8 @@ const CustomerIssuesList = () => {
         setIssues(prev => [created, ...prev]);
         setFilteredIssues(prev => [created, ...prev]);
         setOpenAddDialog(false);
-        setOpenAnalytics(true); // Switch to analytics on new issue
+        // setOpenAnalytics(true); // User wants to see list/analytics updated
+        await fetchIssues(); // Refetch to ensure everything is synced
         toast.success("Issue reported successfully");
       }
     } catch (error) {
@@ -254,7 +264,8 @@ const CustomerIssuesList = () => {
   const exportToExcel = () => {
     const worksheet = utils.json_to_sheet(filteredIssues.map(issue => ({
       'SLID': issue.slid,
-      'From': issue.from,
+      'From (Main)': issue.fromMain || issue.from || '',
+      'From (Sub)': issue.fromSub || '',
       'Reporter': issue.reporter,
       'Reporter Note': issue.reporterNote || '',
       'Team/Company': issue.teamCompany,
@@ -263,6 +274,7 @@ const CustomerIssuesList = () => {
         ? issue.issues.map(i => `${i.category}${i.subCategory ? ` (${i.subCategory})` : ''}`).join(' | ')
         : issue.issueCategory || '',
       'Assigned User': issue.assignedTo,
+      'Installing Team': issue.installingTeam || 'N/A',
       'Status': issue.solved === 'yes' ? 'Resolved' : 'Unresolved',
       'Resolve Date': issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A',
       'Closed By (Supervisor)': issue.closedBy || 'N/A',
@@ -295,8 +307,10 @@ const CustomerIssuesList = () => {
         markdownContent += `## ${index + 1}. Issue - SLID: ${issue.slid}\n`;
         markdownContent += `- **Date Reported**: ${new Date(issue.date).toLocaleDateString()}\n`;
         markdownContent += `- **Reporter**: ${issue.reporter || 'N/A'}\n`;
-        markdownContent += `- **From Team**: ${issue.from || 'N/A'}\n`;
+        markdownContent += `- **From (Main)**: ${issue.fromMain || issue.from || 'N/A'}\n`;
+        markdownContent += `- **From (Sub)**: ${issue.fromSub || 'N/A'}\n`;
         markdownContent += `- **Assigned To**: ${issue.assignedTo || 'Unassigned'}\n`;
+        markdownContent += `- **Installing Team**: ${issue.installingTeam || 'N/A'}\n`;
         markdownContent += `- **Status**: ${issue.solved === 'yes' ? 'Resolved ✅' : 'Unresolved ❌'}\n`;
         if (issue.resolveDate) markdownContent += `- **Resolve Date**: ${new Date(issue.resolveDate).toLocaleDateString()}\n`;
 
@@ -654,7 +668,8 @@ const CustomerIssuesList = () => {
               <TableRow>
                 <TableCell sx={{ pl: 3 }}>SLID</TableCell>
                 <Hidden smDown>
-                  <TableCell>From</TableCell>
+                  <TableCell>From (Main)</TableCell>
+                  <TableCell>From (Sub)</TableCell>
                 </Hidden>
                 <TableCell>Reporter</TableCell>
                 <Hidden smDown>
@@ -683,7 +698,8 @@ const CustomerIssuesList = () => {
                   >
                     <TableCell sx={{ pl: 3, fontWeight: 500, color: '#7b68ee !important' }}>{issue.slid}</TableCell>
                     <Hidden smDown>
-                      <TableCell sx={{ fontSize: '0.85rem' }}>{issue.from}</TableCell>
+                      <TableCell sx={{ fontSize: '0.85rem' }}>{issue.fromMain || issue.from}</TableCell>
+                      <TableCell sx={{ fontSize: '0.85rem' }}>{issue.fromSub || '-'}</TableCell>
                     </Hidden>
                     <TableCell sx={{ fontSize: '0.85rem' }}>{issue.reporter}</TableCell>
                     <Hidden smDown>

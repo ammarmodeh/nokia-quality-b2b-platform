@@ -31,7 +31,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
 
   const initialFormState = {
     slid: "",
-    from: "",
+    fromMain: "",
+    fromSub: "",
     reporter: "",
     reporterNote: "",
     contactMethod: "",
@@ -41,7 +42,12 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     date: new Date().toISOString().split('T')[0],
     solved: "no",
     assignedTo: "",
+    installingTeam: "",
     teamCompany: '',
+    customerName: '',
+    customerContact: '',
+    assigneeNote: '',
+    resolvedBy: '',
     resolveDate: new Date().toISOString().split('T')[0],
     closedBy: "",
     resolutionDetails: ""
@@ -77,7 +83,12 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
 
   useEffect(() => {
     if (open && !issue) {
-      localStorage.setItem('customerIssueFormData', JSON.stringify(formData));
+      // Debounce localStorage save to prevent excessive updates
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem('customerIssueFormData', JSON.stringify(formData));
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
     }
   }, [formData, open, issue]);
 
@@ -268,116 +279,199 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
         },
       }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <TextField
-            fullWidth
-            label="SLID (Subscription Number)"
-            name="slid"
-            value={formData.slid || ''}
-            onChange={handleChange}
-            required
-            disabled={!isAdmin}
-            sx={textFieldStyles}
-          />
+          {/* Customer Information Block */}
+          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 1 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Customer Information</Typography>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={formData.pisDateKnown}
-                  onChange={handleChange}
-                  name="pisDateKnown"
-                  sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
-                />
-              }
-              label="PIS Date Known"
-              sx={{ color: '#ffffff' }}
+            <TextField
+              fullWidth
+              label="SLID (Subscription Number)"
+              name="slid"
+              value={formData.slid || ''}
+              onChange={handleChange}
+              required
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles, mb: 2 }}
             />
-            {formData.pisDateKnown && (
-              <TextField
-                fullWidth
-                label="PIS Date"
-                type="date"
-                name="pisDate"
-                value={formData.pisDate}
-                onChange={handleChange}
-                InputLabelProps={{ shrink: true }}
-                disabled={!isAdmin}
-                sx={textFieldStyles}
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.pisDateKnown}
+                    onChange={handleChange}
+                    name="pisDateKnown"
+                    sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                  />
+                }
+                label="PIS Date Known"
+                sx={{ color: '#ffffff' }}
               />
-            )}
+              {formData.pisDateKnown && (
+                <TextField
+                  fullWidth
+                  label="PIS Date"
+                  type="date"
+                  name="pisDate"
+                  value={formData.pisDate}
+                  onChange={handleChange}
+                  InputLabelProps={{ shrink: true }}
+                  disabled={!isAdmin}
+                  sx={textFieldStyles}
+                />
+              )}
+            </Box>
+
+            <TextField
+              fullWidth
+              label="Customer Name"
+              name="customerName"
+              value={formData.customerName}
+              onChange={handleChange}
+              required
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles, mb: 2 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Customer Contact Info"
+              name="customerContact"
+              value={formData.customerContact}
+              onChange={handleChange}
+              required
+              disabled={!isAdmin}
+              sx={textFieldStyles}
+            />
           </Box>
 
-          <TextField
-            fullWidth
-            label="Reported Date"
-            type="date"
-            name="date"
-            value={formData.date}
-            onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
-            disabled={!isAdmin}
-            sx={textFieldStyles}
-          />
+          {/* Reporter Information Block */}
+          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 1 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Reporter Information</Typography>
 
-          <ManagedAutocomplete
-            category="ISSUE_FROM_TEAMS"
-            label="From"
-            fullWidth
-            required
-            value={formData.from}
-            onChange={(val) => handleChange({ target: { name: 'from', value: val } })}
-            disabled={!isAdmin}
-            sx={{ ...textFieldStyles, mb: 2 }}
-          />
+            <TextField
+              fullWidth
+              label="Reported Date"
+              type="date"
+              name="date"
+              value={formData.date}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles, mb: 2 }}
+            />
 
-          <TextField
-            fullWidth
-            label="Reporter Name"
-            name="reporter"
-            value={formData.reporter}
-            onChange={handleChange}
-            required
-            disabled={!isAdmin}
-            sx={textFieldStyles}
-          />
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <ManagedAutocomplete
+                category="ISSUE_FROM_MAIN"
+                label="From (Main)"
+                fullWidth
+                required
+                value={formData.fromMain}
+                onChange={(val) => handleChange({ target: { name: 'fromMain', value: val } })}
+                disabled={!isAdmin}
+                sx={{ ...textFieldStyles }}
+              />
 
-          <TextField
-            fullWidth
-            label="Reporter Note"
-            name="reporterNote"
-            value={formData.reporterNote}
-            onChange={handleChange}
-            multiline
-            rows={2}
-            dir="rtl" // RTL Support
-            disabled={!isAdmin}
-            sx={textFieldStyles}
-          />
+              <ManagedAutocomplete
+                category="ISSUE_FROM_SUB"
+                label="From (Sub)"
+                fullWidth
+                value={formData.fromSub}
+                onChange={(val) => handleChange({ target: { name: 'fromSub', value: val } })}
+                disabled={!isAdmin}
+                sx={{ ...textFieldStyles }}
+              />
+            </Box>
 
-          <ManagedAutocomplete
-            category="TEAM_COMPANY"
-            label="Team/Company"
-            fullWidth
-            required
-            value={formData.teamCompany}
-            onChange={(val) => handleChange({ target: { name: 'teamCompany', value: val } })}
-            disabled={!isAdmin}
-            sx={{ ...textFieldStyles, mb: 2 }}
-          />
+            <TextField
+              fullWidth
+              label="Reporter Name"
+              name="reporter"
+              value={formData.reporter}
+              onChange={handleChange}
+              required
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles, mb: 2 }}
+            />
 
-          <ManagedAutocomplete
-            category="CONTACT_METHOD"
-            label="Contact Method"
-            fullWidth
-            required
-            value={formData.contactMethod}
-            onChange={(val) => handleChange({ target: { name: 'contactMethod', value: val } })}
-            disabled={!isAdmin}
-            sx={{ ...textFieldStyles, mb: 2 }}
-          />
+            <TextField
+              fullWidth
+              label="Reporter Note"
+              name="reporterNote"
+              value={formData.reporterNote}
+              onChange={handleChange}
+              multiline
+              rows={2}
+              dir="rtl"
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles, mb: 2 }}
+            />
 
-          {/* Dynamic Issues Section */}
-          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 2 }}>
+            <ManagedAutocomplete
+              category="CONTACT_METHOD"
+              label="Contact Method"
+              fullWidth
+              required
+              value={formData.contactMethod}
+              onChange={(val) => handleChange({ target: { name: 'contactMethod', value: val } })}
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles }}
+            />
+          </Box>
+
+          {/* Team/Company Assignment Block */}
+          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 1 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Team Assignment</Typography>
+
+            <ManagedAutocomplete
+              category="TEAM_COMPANY"
+              label="Team/Company"
+              fullWidth
+              required
+              value={formData.teamCompany}
+              onChange={(val) => handleChange({ target: { name: 'teamCompany', value: val } })}
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles, mb: 2 }}
+            />
+
+            <ManagedAutocomplete
+              category="ASSIGNEE"
+              label="Assigned To"
+              fullWidth
+              required
+              value={formData.assignedTo}
+              onChange={(val) => handleChange({ target: { name: 'assignedTo', value: val } })}
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles, mb: 2 }}
+            />
+
+            <ManagedAutocomplete
+              category="FIELD_TEAMS"
+              label="Installing Team"
+              fullWidth
+              value={formData.installingTeam}
+              onChange={(val) => handleChange({ target: { name: 'installingTeam', value: val } })}
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles, mb: 2 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Assignee Note"
+              name="assigneeNote"
+              value={formData.assigneeNote}
+              onChange={handleChange}
+              multiline
+              rows={2}
+              placeholder="e.g., Called customer, appointment scheduled for..."
+              disabled={!isAdmin}
+              sx={textFieldStyles}
+            />
+          </Box>
+
+          {/* Issues Block */}
+          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 1 }}>
             <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee' }}>Issues</Typography>
             {formData.issues.map((issue, index) => (
               <Grid container spacing={2} key={index} alignItems="center" sx={{ mb: 2 }}>
@@ -422,87 +516,101 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             </Button>
           </Box>
 
-
-
-
-          <FormControl fullWidth required sx={formControlStyles}>
-            <InputLabel sx={inputLabelStyles}>Solved</InputLabel>
-            <Select
-              name="solved"
-              value={formData.solved}
-              label="Solved"
-              onChange={handleChange}
-              disabled={!isAdmin}
-              sx={selectStyles}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    backgroundColor: '#2d2d2d',
-                    color: '#ffffff',
-                    '& .MuiMenuItem-root': menuItemStyles,
+          {/* Resolution Details Block */}
+          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 1 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Resolution Status</Typography>
+            <FormControl fullWidth required sx={formControlStyles}>
+              <InputLabel sx={inputLabelStyles}>Solved</InputLabel>
+              <Select
+                name="solved"
+                value={formData.solved}
+                label="Solved"
+                onChange={handleChange}
+                disabled={!isAdmin}
+                sx={selectStyles}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: '#2d2d2d',
+                      color: '#ffffff',
+                      '& .MuiMenuItem-root': menuItemStyles,
+                    },
                   },
-                },
-              }}
-            >
-              <MenuItem value="yes" sx={menuItemStyles}>Yes</MenuItem>
-              <MenuItem value="no" sx={menuItemStyles}>No</MenuItem>
-            </Select>
-          </FormControl>
-
-          {formData.solved === 'yes' && (
-            <>
-              <TextField
-                fullWidth
-                label="Resolve Date"
-                type="date"
-                name="resolveDate"
-                value={formData.resolveDate}
-                onChange={handleChange}
-                InputLabelProps={{
-                  shrink: true,
                 }}
-                disabled={!isAdmin}
-                sx={{ ...textFieldStyles, mb: 2 }}
-              />
+              >
+                <MenuItem value="yes" sx={menuItemStyles}>Yes</MenuItem>
+                <MenuItem value="no" sx={menuItemStyles}>No</MenuItem>
+              </Select>
+            </FormControl>
 
-              <ManagedAutocomplete
-                category="CIN_SUPERVISORS"
-                label="Closed By (Supervisor)"
-                fullWidth
-                freeSolo
-                value={formData.closedBy || ''}
-                onChange={(val) => handleChange({ target: { name: 'closedBy', value: val } })}
-                disabled={!isAdmin}
-                sx={{ ...textFieldStyles, mb: 2 }}
-              />
+            {formData.solved === 'yes' && (
+              <>
+                <FormControl fullWidth sx={{ ...formControlStyles, mb: 2 }}>
+                  <InputLabel sx={inputLabelStyles}>Resolved By</InputLabel>
+                  <Select
+                    name="resolvedBy"
+                    value={formData.resolvedBy}
+                    label="Resolved By"
+                    onChange={handleChange}
+                    disabled={!isAdmin}
+                    sx={selectStyles}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          backgroundColor: '#2d2d2d',
+                          color: '#ffffff',
+                          '& .MuiMenuItem-root': menuItemStyles,
+                        },
+                      },
+                    }}
+                  >
+                    <MenuItem value="" sx={menuItemStyles}>Not Specified</MenuItem>
+                    <MenuItem value="Phone" sx={menuItemStyles}>Phone</MenuItem>
+                    <MenuItem value="Visit" sx={menuItemStyles}>Visit</MenuItem>
+                  </Select>
+                </FormControl>
 
-              <TextField
-                fullWidth
-                label="Resolution Details"
-                name="resolutionDetails"
-                value={formData.resolutionDetails}
-                onChange={handleChange}
-                multiline
-                rows={3}
-                dir="rtl" // RTL Support
-                // helperText="Explain the resolution details here."
-                disabled={!isAdmin}
-                sx={textFieldStyles}
-              />
-            </>
-          )}
+                <TextField
+                  fullWidth
+                  label="Resolve Date"
+                  type="date"
+                  name="resolveDate"
+                  value={formData.resolveDate}
+                  onChange={handleChange}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  disabled={!isAdmin}
+                  sx={{ ...textFieldStyles, mb: 2 }}
+                />
 
-          <ManagedAutocomplete
-            category="FIELD_TEAMS"
-            label="Assigned To"
-            fullWidth
-            required
-            freeSolo
-            value={formData.assignedTo}
-            onChange={(val) => handleChange({ target: { name: 'assignedTo', value: val } })}
-            disabled={!isAdmin}
-            sx={{ ...textFieldStyles, mb: 2 }}
-          />
+                <ManagedAutocomplete
+                  category="CIN_SUPERVISORS"
+                  label="Closed By (Supervisor)"
+                  fullWidth
+                  freeSolo
+                  value={formData.closedBy || ''}
+                  onChange={(val) => handleChange({ target: { name: 'closedBy', value: val } })}
+                  disabled={!isAdmin}
+                  sx={{ ...textFieldStyles, mb: 2 }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Resolution Details"
+                  name="resolutionDetails"
+                  value={formData.resolutionDetails}
+                  onChange={handleChange}
+                  multiline
+                  rows={3}
+                  dir="rtl" // RTL Support
+                  // helperText="Explain the resolution details here."
+                  disabled={!isAdmin}
+                  sx={textFieldStyles}
+                />
+              </>
+            )}
+          </Box>
         </Box>
       </DialogContent>
 
