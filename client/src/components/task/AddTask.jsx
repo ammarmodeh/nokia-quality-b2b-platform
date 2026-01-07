@@ -15,6 +15,8 @@ import {
   Stack,
   Box,
   Autocomplete,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import UserList from './UserList';
@@ -141,6 +143,13 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [extenderNumber, setExtenderNumber] = useState(0);
   const [closureCallEvaluation, setClosureCallEvaluation] = useState("");
   const [closureCallFeedback, setClosureCallFeedback] = useState("");
+
+  // Conditional field toggles
+  const [includeFieldTeam, setIncludeFieldTeam] = useState(false);
+  const [includeOntType, setIncludeOntType] = useState(false);
+  const [includeFreeExtender, setIncludeFreeExtender] = useState(false);
+  const [includeClosureEvaluation, setIncludeClosureEvaluation] = useState(false);
+  const [includeClosureFeedback, setIncludeClosureFeedback] = useState(false);
   // const [rootCause, setRootCause] = useState("");
 
   // This watchTitle is used to get the value of the title field (registered in the form)
@@ -271,7 +280,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               type='number'
               fullWidth
               variant="outlined"
-              {...register('requestNumber', { required: 'request number is required' })}
+              {...register('requestNumber')}
               error={!!errors.requestNumber}
               helperText={errors.requestNumber ? errors.requestNumber.message : ''}
             />
@@ -296,7 +305,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               placeholder="Customer Name"
               fullWidth
               variant="outlined"
-              {...register('customerName', { required: 'Customer name is required' })}
+              {...register('customerName')}
               error={!!errors.customerName}
               helperText={errors.customerName ? errors.customerName.message : ''}
             />
@@ -306,7 +315,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               type='number'
               fullWidth
               variant="outlined"
-              {...register('contactNumber', { required: 'Contact number is required' })}
+              {...register('contactNumber')}
               error={!!errors.contactNumber}
               helperText={errors.contactNumber ? errors.contactNumber.message : ''}
             />
@@ -331,7 +340,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               type="date"
               fullWidth
               variant="outlined"
-              {...register('pisDate', { required: 'PIS Date is required!' })}
+              {...register('pisDate')}
               error={!!errors.pisDate}
               helperText={errors.pisDate ? errors.pisDate.message : ''}
               InputLabelProps={{ shrink: true }}
@@ -356,7 +365,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               label="District"
               fullWidth
               variant="outlined"
-              {...register('district', { required: 'District is required!' })}
+              {...register('district')}
               error={!!errors.district}
               helperText={errors.district ? errors.district.message : ''}
             />
@@ -380,7 +389,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               label="Tariff Name"
               fullWidth
               variant="outlined"
-              {...register('tarrifName', { required: 'Tariff name is required' })}
+              {...register('tarrifName')}
               error={!!errors.tarrifName}
               helperText={errors.tarrifName ? errors.tarrifName.message : ''}
             />
@@ -424,16 +433,29 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
                 ))}
               </Select>
             </FormControl>
-            <Autocomplete
-              options={fieldTeams}
-              getOptionLabel={(option) => option.teamName || ""}
-              value={fieldTeams.find(t => t._id === teamInfo.teamId) || null}
-              onChange={(e, newValue) => {
-                setTeamInfo(newValue ? { teamName: newValue.teamName, teamId: newValue._id } : { teamName: '', teamId: '' });
-              }}
-              renderInput={(params) => <TextField {...params} label="Field Team Name" variant="outlined" />}
-              fullWidth
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={includeFieldTeam}
+                    onChange={(e) => setIncludeFieldTeam(e.target.checked)}
+                  />
+                }
+                label="Include Field Team"
+              />
+              {includeFieldTeam && (
+                <Autocomplete
+                  options={fieldTeams}
+                  getOptionLabel={(option) => option.teamName || ""}
+                  value={fieldTeams.find(t => t._id === teamInfo.teamId) || null}
+                  onChange={(e, newValue) => {
+                    setTeamInfo(newValue ? { teamName: newValue.teamName, teamId: newValue._id } : { teamName: '', teamId: '' });
+                  }}
+                  renderInput={(params) => <TextField {...params} label="Field Team Name" variant="outlined" />}
+                  fullWidth
+                />
+              )}
+            </Box>
           </Stack>
 
           {/* Row 6: RCA (Responsibility, Reason, SubReason, RootCause) */}
@@ -486,25 +508,53 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
                 ))}
               </Select>
             </FormControl>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>ONT Type</InputLabel>
-              <Select value={ontType} onChange={(e) => setOntType(e.target.value)} label="ONT Type">
-                {dropdownOptions.ONT_TYPE.map((list) => (
-                  <MenuItem key={list} value={list}>{list}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Free Extender</InputLabel>
-              <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
-                <MenuItem value="Yes">Yes</MenuItem>
-                <MenuItem value="No">No</MenuItem>
-              </Select>
-            </FormControl>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={includeOntType}
+                    onChange={(e) => setIncludeOntType(e.target.checked)}
+                  />
+                }
+                label="Include ONT Type"
+              />
+              {includeOntType && (
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>ONT Type</InputLabel>
+                  <Select value={ontType} onChange={(e) => setOntType(e.target.value)} label="ONT Type">
+                    {dropdownOptions.ONT_TYPE.map((list) => (
+                      <MenuItem key={list} value={list}>{list}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </Box>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={includeFreeExtender}
+                    onChange={(e) => setIncludeFreeExtender(e.target.checked)}
+                  />
+                }
+                label="Include Free Extender"
+              />
+              {includeFreeExtender && (
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Free Extender</InputLabel>
+                  <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+            </Box>
           </Stack>
 
           {/* Row 8: Extender Details (Conditional) */}
-          {freeExtender === 'Yes' && (
+          {includeFreeExtender && freeExtender === 'Yes' && (
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel>Extender Type</InputLabel>
@@ -527,25 +577,52 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
 
           {/* Row 9: Closure Call Evaluation & Feedback */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
-              <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                  <MenuItem key={num} value={num}>{num}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="Closure Call Feedback"
-              fullWidth
-              variant="outlined"
-              multiline
-              rows={2}
-              value={closureCallFeedback}
-              onChange={(e) => setClosureCallFeedback(e.target.value)}
-              inputProps={{ dir: "auto" }}
-              sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={includeClosureEvaluation}
+                    onChange={(e) => setIncludeClosureEvaluation(e.target.checked)}
+                  />
+                }
+                label="Include Closure Call Evaluation"
+              />
+              {includeClosureEvaluation && (
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
+                  <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                      <MenuItem key={num} value={num}>{num}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </Box>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={includeClosureFeedback}
+                    onChange={(e) => setIncludeClosureFeedback(e.target.checked)}
+                  />
+                }
+                label="Include Closure Call Feedback"
+              />
+              {includeClosureFeedback && (
+                <TextField
+                  label="Closure Call Feedback"
+                  fullWidth
+                  variant="outlined"
+                  multiline
+                  rows={2}
+                  value={closureCallFeedback}
+                  onChange={(e) => setClosureCallFeedback(e.target.value)}
+                  inputProps={{ dir: "auto" }}
+                  sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+                />
+              )}
+            </Box>
           </Stack>
 
           {/* Row 10: Customer Feedback */}
@@ -555,7 +632,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             variant="outlined"
             multiline
             rows={4}
-            {...register('customerFeedback', { required: 'Customer feedback is required!' })}
+            {...register('customerFeedback')}
             error={!!errors.customerFeedback}
             helperText={errors.customerFeedback ? errors.customerFeedback.message : ''}
             inputProps={{ dir: "auto" }}

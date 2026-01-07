@@ -150,11 +150,13 @@ const taskSchema = new mongoose.Schema(
     slid: { type: String, required: [true, "SLID is required"], trim: true },
     pisDate: {
       type: Date,
-      required: [true, "PIS Date is required"],
+      required: false,
+      default: null
     },
     contactNumber: {
       type: Number,
-      required: [true, "Contact number is required"],
+      required: false,
+      default: null
     },
     requestNumber: {
       type: Number,
@@ -163,52 +165,59 @@ const taskSchema = new mongoose.Schema(
     },
     governorate: {
       type: String,
-      required: [true, "Governorate is required"],
+      required: false,
+      default: null
     },
     district: {
       type: String,
-      required: [true, "District is required"],
+      required: false,
+      default: null
     },
     teamName: {
       type: String,
-      required: [true, "Team name is required"],
+      required: false,
       trim: true,
+      default: null
     },
     teamId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "FieldTeams",
-      required: [true, "Team ID is required"],
+      required: false,
+      default: null,
       validate: {
         validator: function (id) {
-          return mongoose.Types.ObjectId.isValid(id);
+          return !id || mongoose.Types.ObjectId.isValid(id);
         },
         message: "Invalid team ID",
       },
     },
     teamCompany: {
       type: String,
-      required: [true, "Team company is required"],
+      required: false,
+      default: null
     },
     date: {
       type: Date,
+      default: null
     },
-    tarrifName: { type: String, trim: true, required: [true, "Tariff Name is required"] },
-    customerType: { type: String, trim: true, required: [true, "Customer Type is required"] },
-    customerFeedback: { type: String, trim: true, required: [true, "Customer feedback is required"] },
-    customerName: { type: String, trim: true, required: [true, "Customer name is required"] },
+    tarrifName: { type: String, trim: true, required: false, default: null },
+    customerType: { type: String, trim: true, required: false, default: null },
+    customerFeedback: { type: String, trim: true, required: false, default: null },
+    customerName: { type: String, trim: true, required: false, default: null },
     responsible: { type: String, trim: true, default: null },
-    reason: { type: String, trim: true, required: [true, "Reason is required"] },
+    reason: { type: String, trim: true, required: false, default: null },
     subReason: { type: String, trim: true, default: null },
     rootCause: { type: String, trim: true, default: null },
     ontType: { type: String, trim: true, default: null },
-    freeExtender: { type: String, enum: ["Yes", "No"], default: "No" },
+    freeExtender: { type: String, enum: ["Yes", "No", null], default: null },
     extenderType: { type: String, trim: true, default: null },
     extenderNumber: { type: Number, default: 0 },
     closureCallEvaluation: { type: Number, min: 1, max: 10, default: null },
     closureCallFeedback: { type: String, trim: true, default: null },
     interviewDate: {
       type: Date,
-      required: [true, "Interview Date is required"],
+      required: false,
+      default: null
     },
     priority: {
       type: String,
@@ -281,7 +290,7 @@ const taskSchema = new mongoose.Schema(
         ],
         message: "Invalid category",
       },
-      required: [true, "Category is required"],
+      required: false,
     },
     validationStatus: {
       type: String,
@@ -328,7 +337,7 @@ const taskSchema = new mongoose.Schema(
     evaluationScore: {
       type: Number,
       default: 1,
-      required: [true, "Satisfaction score is required"],
+      required: false,
     },
     notifications: [{
       recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
