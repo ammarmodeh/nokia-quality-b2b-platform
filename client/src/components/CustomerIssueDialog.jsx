@@ -321,6 +321,16 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
 
             <TextField
               fullWidth
+              label="Ticket ID (Optional)"
+              name="ticketId"
+              value={formData.ticketId || ''}
+              onChange={handleChange}
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles, mb: 2 }}
+            />
+
+            <TextField
+              fullWidth
               label="SLID (Subscription Number)"
               name="slid"
               value={formData.slid || ''}
@@ -487,6 +497,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               category="FIELD_TEAMS"
               label="Installing Team"
               fullWidth
+              freeSolo
               value={formData.installingTeam}
               onChange={(val) => handleChange({ target: { name: 'installingTeam', value: val } })}
               disabled={!isAdmin}

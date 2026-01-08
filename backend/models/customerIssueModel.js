@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const customerIssueSchema = new mongoose.Schema({
   slid: { type: String, required: true },
+  ticketId: { type: String, required: false },
   pisDate: {
     type: Date,
     required: false, // Changed from true

@@ -59,6 +59,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
       : issue.issueCategory || 'N/A';
 
     const message = `*CIN*\n
+  *Ticket ID*: ${issue.ticketId || 'N/A'}
   *SLID*: ${issue.slid || 'N/A'}
   *From (Main)*: ${issue.fromMain || issue.from || 'N/A'}
   *From (Sub)*: ${issue.fromSub || 'N/A'}
@@ -178,6 +179,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
               Basic Information
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 1 : 1.5 }}>
+              <DetailRow label="Ticket ID" value={issue.ticketId} darkMode isMobile={isMobile} />
               <DetailRow label="SLID" value={issue.slid} darkMode isMobile={isMobile} />
               <DetailRow label="PIS Date" value={issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'} darkMode isMobile={isMobile} />
               <DetailRow label="Date Reported" value={issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'} darkMode isMobile={isMobile} />

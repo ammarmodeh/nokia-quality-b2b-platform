@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -99,8 +99,8 @@ const CustomerIssuesList = () => {
     setPage(0);
   };
 
-  const fetchIssues = async () => {
-    setLoading(true);
+  const fetchIssues = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const response = await api.get('/customer-issues-notifications', {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
@@ -132,6 +132,8 @@ const CustomerIssuesList = () => {
       filtered = filtered.filter(issue => issue.dispatched === 'yes' && issue.solved === 'no');
     } else if (statusFilter === 'notDispatchedOpen') {
       filtered = filtered.filter(issue => issue.dispatched !== 'yes' && issue.solved === 'no');
+    } else if (statusFilter === 'dispatchedClosed') {
+      filtered = filtered.filter(issue => issue.dispatched === 'yes' && issue.solved === 'yes');
     }
 
     // Filter by search term
@@ -171,7 +173,7 @@ const CustomerIssuesList = () => {
     }
 
     setFilteredIssues(filtered);
-  }, [searchTerm, issues, statusFilter, startDate, endDate]);
+  }, [searchTerm, issues, statusFilter, startDate, endDate, sourceFilter]);
 
   const handleMenuOpen = (event, issue) => {
     setAnchorEl(event.currentTarget);
@@ -225,7 +227,7 @@ const CustomerIssuesList = () => {
         setIssues(prev => prev.map(isl => isl._id === id ? updated : isl));
         setFilteredIssues(prev => prev.map(isl => isl._id === id ? updated : isl));
         setOpenEditDialog(false);
-        await fetchIssues(); // Refetch
+        await fetchIssues(true); // Refetch silently
         toast.success("Issue updated successfully");
       } else {
         // Create
@@ -237,7 +239,8 @@ const CustomerIssuesList = () => {
         setFilteredIssues(prev => [created, ...prev]);
         setOpenAddDialog(false);
         // setOpenAnalytics(true); // User wants to see list/analytics updated
-        await fetchIssues(); // Refetch to ensure everything is synced
+        // setOpenAnalytics(true); // User wants to see list/analytics updated
+        await fetchIssues(true); // Refetch silently to ensure everything is synced
         toast.success("Issue reported successfully");
       }
     } catch (error) {
@@ -381,6 +384,16 @@ const CustomerIssuesList = () => {
     }
   };
 
+  const availableSources = ['Overall', ...new Set(issues.map(i => i.fromMain || i.from).filter(Boolean))];
+
+  // Calculate counts based on Source Filter
+  const sourceFilteredForCounts = useMemo(() => {
+    if (sourceFilter === 'Overall') return issues;
+    return issues.filter(i => (i.fromMain === sourceFilter) || (i.from === sourceFilter));
+  }, [issues, sourceFilter]);
+
+  const paginatedIssues = filteredIssues.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" p={4}>
@@ -397,8 +410,7 @@ const CustomerIssuesList = () => {
     );
   }
 
-  const availableSources = ['Overall', ...new Set(issues.map(i => i.fromMain || i.from).filter(Boolean))];
-  const paginatedIssues = filteredIssues.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
 
   return (
     <Box sx={{
@@ -656,11 +668,12 @@ const CustomerIssuesList = () => {
             }
           }}
         >
-          <Tab value="all" label={`All (${issues.length})`} />
-          <Tab value="resolved" label={`Closed (${issues.filter(i => i.solved === 'yes').length})`} />
-          <Tab value="unresolved" label={`Open (${issues.filter(i => i.solved === 'no').length})`} />
-          <Tab value="dispatchedOpen" label={`Dispatched (Open) (${issues.filter(i => i.dispatched === 'yes' && i.solved === 'no').length})`} />
-          <Tab value="notDispatchedOpen" label={`Not Dispatched (Open) (${issues.filter(i => i.dispatched !== 'yes' && i.solved === 'no').length})`} />
+          <Tab value="all" label={`All (${sourceFilteredForCounts.length})`} />
+          <Tab value="resolved" label={`Closed (${sourceFilteredForCounts.filter(i => i.solved === 'yes').length})`} />
+          <Tab value="unresolved" label={`Open (${sourceFilteredForCounts.filter(i => i.solved === 'no').length})`} />
+          <Tab value="dispatchedOpen" label={`Dispatched (Open) (${sourceFilteredForCounts.filter(i => i.dispatched === 'yes' && i.solved === 'no').length})`} />
+          <Tab value="dispatchedClosed" label={`Dispatched (Closed) (${sourceFilteredForCounts.filter(i => i.dispatched === 'yes' && i.solved === 'yes').length})`} />
+          <Tab value="notDispatchedOpen" label={`Not Dispatched (Open) (${sourceFilteredForCounts.filter(i => i.dispatched !== 'yes' && i.solved === 'no').length})`} />
         </Tabs>
       </Box>
 
