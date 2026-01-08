@@ -147,7 +147,7 @@ const CATEGORY_MAP = {
   ISSUE_FROM_SUB: "From Sub (Customer Issue)",
   ISSUE_CATEGORY: "Issue Categories (Level 1)",
   ISSUE_SUB_CATEGORY: "Issue Sub Categories (Level 2)",
-  CIN_SUPERVISORS: "Closed by (Supervisor)",
+  CIN_SUPERVISORS: "Supervisor",
 };
 
 const DropdownManagement = () => {

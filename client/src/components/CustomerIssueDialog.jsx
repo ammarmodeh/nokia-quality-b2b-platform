@@ -50,6 +50,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     resolvedBy: '',
     resolveDate: new Date().toISOString().split('T')[0],
     closedBy: "",
+    dispatched: "no",
     resolutionDetails: ""
   };
 
@@ -124,8 +125,43 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     }
   };
 
+  const validateForm = () => {
+    const requiredFields = [
+      { field: 'slid', label: 'SLID' },
+      { field: 'fromMain', label: 'From (Main)' },
+      { field: 'reporter', label: 'Reporter Name' },
+      { field: 'contactMethod', label: 'Contact Method' },
+      { field: 'teamCompany', label: 'Team/Company' },
+      { field: 'assignedTo', label: 'Assigned To' }
+    ];
+
+    for (const { field, label } of requiredFields) {
+      if (!formData[field] || (typeof formData[field] === 'string' && !formData[field].trim())) {
+        alert(`${label} is required.`);
+        return false;
+      }
+    }
+
+    if (!formData.issues || formData.issues.length === 0) {
+      alert("At least one issue is required.");
+      return false;
+    }
+
+    for (let i = 0; i < formData.issues.length; i++) {
+      if (!formData.issues[i].category || !formData.issues[i].category.trim()) {
+        alert(`Category for Issue ${i + 1} is required.`);
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const handleSubmit = () => {
     if (!isAdmin) return;
+
+    if (!validateForm()) return;
+
     const submitData = {
       ...formData,
       pisDate: formData.pisDateKnown ? formData.pisDate : null
@@ -436,10 +472,11 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             />
 
             <ManagedAutocomplete
-              category="ASSIGNEE"
+              category="FIELD_TEAMS"
               label="Assigned To"
               fullWidth
               required
+              freeSolo
               value={formData.assignedTo}
               onChange={(val) => handleChange({ target: { name: 'assignedTo', value: val } })}
               disabled={!isAdmin}
@@ -518,13 +555,12 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
 
           {/* Resolution Details Block */}
           <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 1 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Resolution Status</Typography>
             <FormControl fullWidth required sx={formControlStyles}>
-              <InputLabel sx={inputLabelStyles}>Solved</InputLabel>
+              <InputLabel sx={inputLabelStyles}>Status</InputLabel>
               <Select
                 name="solved"
                 value={formData.solved}
-                label="Solved"
+                label="Status"
                 onChange={handleChange}
                 disabled={!isAdmin}
                 sx={selectStyles}
@@ -538,8 +574,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   },
                 }}
               >
-                <MenuItem value="yes" sx={menuItemStyles}>Yes</MenuItem>
-                <MenuItem value="no" sx={menuItemStyles}>No</MenuItem>
+                <MenuItem value="yes" sx={menuItemStyles}>Closed</MenuItem>
+                <MenuItem value="no" sx={menuItemStyles}>Open</MenuItem>
               </Select>
             </FormControl>
 
@@ -584,16 +620,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   sx={{ ...textFieldStyles, mb: 2 }}
                 />
 
-                <ManagedAutocomplete
-                  category="CIN_SUPERVISORS"
-                  label="Closed By (Supervisor)"
-                  fullWidth
-                  freeSolo
-                  value={formData.closedBy || ''}
-                  onChange={(val) => handleChange({ target: { name: 'closedBy', value: val } })}
-                  disabled={!isAdmin}
-                  sx={{ ...textFieldStyles, mb: 2 }}
-                />
+
 
                 <TextField
                   fullWidth
@@ -610,6 +637,46 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                 />
               </>
             )}
+          </Box>
+
+          {/* Supervisor / Closure Block */}
+          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 1 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Closure</Typography>
+
+            <FormControl fullWidth sx={{ ...formControlStyles, mb: 2 }}>
+              <InputLabel sx={inputLabelStyles}>Dispatched</InputLabel>
+              <Select
+                name="dispatched"
+                value={formData.dispatched || 'no'}
+                label="Dispatched"
+                onChange={handleChange}
+                disabled={!isAdmin}
+                sx={selectStyles}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: '#2d2d2d',
+                      color: '#ffffff',
+                      '& .MuiMenuItem-root': menuItemStyles,
+                    },
+                  },
+                }}
+              >
+                <MenuItem value="yes" sx={menuItemStyles}>Yes</MenuItem>
+                <MenuItem value="no" sx={menuItemStyles}>No</MenuItem>
+              </Select>
+            </FormControl>
+
+            <ManagedAutocomplete
+              category="CIN_SUPERVISORS"
+              label="Supervisor"
+              fullWidth
+              freeSolo
+              value={formData.closedBy || ''}
+              onChange={(val) => handleChange({ target: { name: 'closedBy', value: val } })}
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles }}
+            />
           </Box>
         </Box>
       </DialogContent>

@@ -41,7 +41,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
       Assigned To: ${issue.assignedTo}
       ${issue.assigneeNote ? `Assignee Note: ${issue.assigneeNote}\n      ` : ''}Installing Team: ${issue.installingTeam || 'N/A'}
       Status: ${issue.solved === 'yes' ? 'Resolved' : 'Unresolved'}
-      ${issue.solved === 'yes' && issue.resolvedBy ? `Resolved By: ${issue.resolvedBy}\n      ` : ''}${issue.solved === 'yes' ? `Resolve Date: ${issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A'}\n      ` : ''}${issue.closedBy ? `Closed By (Supervisor): ${issue.closedBy}\n      ` : ''}${issue.resolutionDetails ? `Resolution Details: ${issue.resolutionDetails}\n      ` : ''}Date Reported: ${new Date(issue.date).toLocaleDateString()}
+      ${issue.solved === 'yes' && issue.resolvedBy ? `Resolved By: ${issue.resolvedBy}\n      ` : ''}${issue.solved === 'yes' ? `Resolve Date: ${issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A'}\n      ` : ''}${issue.closedBy ? `Supervisor: ${issue.closedBy}\n      ` : ''}${issue.resolutionDetails ? `Resolution Details: ${issue.resolutionDetails}\n      ` : ''}Date Reported: ${new Date(issue.date).toLocaleDateString()}
       PIS Date: ${issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'}`;
 
     navigator.clipboard.writeText(detailsText)
@@ -73,7 +73,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
   *Assigned To*: ${issue.assignedTo || 'N/A'}
   ${issue.assigneeNote ? `*Assignee Note*: ${issue.assigneeNote}\n  ` : ''}*Installing Team*: ${issue.installingTeam || 'N/A'}
   *Status*: ${issue.solved === 'yes' ? 'Resolved' : 'Pending'}
-  ${issue.solved === 'yes' && issue.resolvedBy ? `*Resolved By*: ${issue.resolvedBy}\n  ` : ''}${issue.solved === 'yes' ? `*Resolve Date*: ${resolveDate}\n  *Closed By (Supervisor)*: ${issue.closedBy || 'N/A'}\n  *Resolution Details*: ${issue.resolutionDetails || 'N/A'}\n` : ''}
+  ${issue.solved === 'yes' && issue.resolvedBy ? `*Resolved By*: ${issue.resolvedBy}\n  ` : ''}${issue.solved === 'yes' ? `*Resolve Date*: ${resolveDate}\n  *Supervisor*: ${issue.closedBy || 'N/A'}\n  *Resolution Details*: ${issue.resolutionDetails || 'N/A'}\n` : ''}
   *Date Reported*: ${reportedDate}
   *PIS Date*: ${pisDate}
   
@@ -265,7 +265,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
                 <>
                   {issue.resolvedBy && <DetailRow label="Resolved By" value={issue.resolvedBy} darkMode isMobile={isMobile} />}
                   <DetailRow label="Resolve Date" value={issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A'} darkMode isMobile={isMobile} />
-                  <DetailRow label="Closed By (Supervisor)" value={issue.closedBy} darkMode isMobile={isMobile} />
+                  <DetailRow label="Supervisor" value={issue.closedBy} darkMode isMobile={isMobile} />
                 </>
               )}
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

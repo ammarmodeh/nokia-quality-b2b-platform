@@ -55,6 +55,11 @@ const customerIssueSchema = new mongoose.Schema({
   resolutionDetails: { type: String },
   assignedTo: { type: String, required: true },
   installingTeam: { type: String },
+  dispatched: {
+    type: String,
+    enum: ['yes', 'no'],
+    default: 'no'
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

@@ -34,7 +34,9 @@ import {
   Checkbox,
   FormControlLabel,
   Tabs,
-  Tab
+  Tab,
+  TablePagination,
+  Pagination
 } from '@mui/material';
 import {
   MdSearch,
@@ -83,6 +85,20 @@ const CustomerIssuesList = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
 
+  // Pagination & Source Filter State
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [sourceFilter, setSourceFilter] = useState('Overall');
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   const fetchIssues = async () => {
     setLoading(true);
     try {
@@ -112,6 +128,10 @@ const CustomerIssuesList = () => {
       filtered = filtered.filter(issue => issue.solved === 'yes');
     } else if (statusFilter === 'unresolved') {
       filtered = filtered.filter(issue => issue.solved === 'no');
+    } else if (statusFilter === 'dispatchedOpen') {
+      filtered = filtered.filter(issue => issue.dispatched === 'yes' && issue.solved === 'no');
+    } else if (statusFilter === 'notDispatchedOpen') {
+      filtered = filtered.filter(issue => issue.dispatched !== 'yes' && issue.solved === 'no');
     }
 
     // Filter by search term
@@ -143,6 +163,11 @@ const CustomerIssuesList = () => {
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
       filtered = filtered.filter(issue => new Date(issue.date) <= end);
+    }
+
+    // Filter by Source Tab
+    if (sourceFilter !== 'Overall') {
+      filtered = filtered.filter(issue => (issue.fromMain === sourceFilter) || (issue.from === sourceFilter));
     }
 
     setFilteredIssues(filtered);
@@ -277,7 +302,7 @@ const CustomerIssuesList = () => {
       'Installing Team': issue.installingTeam || 'N/A',
       'Status': issue.solved === 'yes' ? 'Resolved' : 'Unresolved',
       'Resolve Date': issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A',
-      'Closed By (Supervisor)': issue.closedBy || 'N/A',
+      'Supervisor': issue.closedBy || 'N/A',
       'Resolution Details': issue.resolutionDetails || '',
       'Date Reported': new Date(issue.date).toLocaleDateString(),
       'PIS Date': issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'
@@ -372,6 +397,9 @@ const CustomerIssuesList = () => {
     );
   }
 
+  const availableSources = ['Overall', ...new Set(issues.map(i => i.fromMain || i.from).filter(Boolean))];
+  const paginatedIssues = filteredIssues.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
   return (
     <Box sx={{
       maxWidth: '1100px',
@@ -454,6 +482,31 @@ const CustomerIssuesList = () => {
         mb: 3,
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
       }}>
+        {/* Source Tabs */}
+        <Box sx={{ mb: 2, borderBottom: 1, borderColor: '#3d3d3d' }}>
+          <Tabs
+            value={sourceFilter}
+            onChange={(e, val) => { setSourceFilter(val); setPage(0); }}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+            sx={{
+              '& .MuiTabs-indicator': { backgroundColor: '#7b68ee' },
+              '& .MuiTab-root': {
+                color: '#b3b3b3',
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '1rem',
+                '&.Mui-selected': { color: '#7b68ee' }
+              }
+            }}
+          >
+            {availableSources.map(source => (
+              <Tab key={source} value={source} label={source} />
+            ))}
+          </Tabs>
+        </Box>
+
         <Box sx={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
@@ -604,271 +657,325 @@ const CustomerIssuesList = () => {
           }}
         >
           <Tab value="all" label={`All (${issues.length})`} />
-          <Tab value="resolved" label={`Resolved (${issues.filter(i => i.solved === 'yes').length})`} />
-          <Tab value="unresolved" label={`Unresolved (${issues.filter(i => i.solved === 'no').length})`} />
+          <Tab value="resolved" label={`Closed (${issues.filter(i => i.solved === 'yes').length})`} />
+          <Tab value="unresolved" label={`Open (${issues.filter(i => i.solved === 'no').length})`} />
+          <Tab value="dispatchedOpen" label={`Dispatched (Open) (${issues.filter(i => i.dispatched === 'yes' && i.solved === 'no').length})`} />
+          <Tab value="notDispatchedOpen" label={`Not Dispatched (Open) (${issues.filter(i => i.dispatched !== 'yes' && i.solved === 'no').length})`} />
         </Tabs>
       </Box>
 
       {viewMode === 'analytics' ? (
         <CustomerIssuesAnalytics issues={filteredIssues} />
       ) : viewMode === 'list' ? (
-        <TableContainer component={Paper} sx={{
-          mt: 2,
-          maxWidth: '100%',
-          overflowX: 'auto',
-          flex: 1,
-          width: "100%",
-          border: 0,
-          color: "#ffffff",
-          "&.MuiTableContainer-root": {
-            backgroundColor: '#2d2d2d',
-          },
-          "& .MuiTable-root": {
-            backgroundColor: "#2d2d2d",
-          },
-          "& .MuiTableHead-root": {
-            backgroundColor: "#2d2d2d",
-            "& .MuiTableCell-root": {
-              color: "#b3b3b3",
-              fontSize: "0.875rem",
-              fontWeight: "bold",
-              borderBottom: "1px solid #e5e7eb",
-            }
-          },
-          "& .MuiTableBody-root": {
-            "& .MuiTableCell-root": {
-              borderBottom: "1px solid #e5e7eb",
-              color: "#ffffff",
+        <>
+          <TableContainer component={Paper} sx={{
+            mt: 2,
+            maxWidth: '100%',
+            overflowX: 'auto',
+            flex: 1,
+            width: "100%",
+            border: 0,
+            color: "#ffffff",
+            "&.MuiTableContainer-root": {
+              backgroundColor: '#2d2d2d',
             },
-            "& .MuiTableRow-root": {
+            "& .MuiTable-root": {
               backgroundColor: "#2d2d2d",
-              "&:hover": {
-                backgroundColor: "#2d2d2d",
+            },
+            "& .MuiTableHead-root": {
+              backgroundColor: "#2d2d2d",
+              "& .MuiTableCell-root": {
+                color: "#b3b3b3",
+                fontSize: "0.875rem",
+                fontWeight: "bold",
+                borderBottom: "1px solid #e5e7eb",
+              }
+            },
+            "& .MuiTableBody-root": {
+              "& .MuiTableCell-root": {
+                borderBottom: "1px solid #e5e7eb",
+                color: "#ffffff",
               },
-            }
-          },
-          "& .MuiPaper-root": {
-            backgroundColor: "transparent",
-            boxShadow: "none",
-          },
-          "&::-webkit-scrollbar": {
-            width: "8px",
-            height: "8px",
-          },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#666",
-            borderRadius: "4px",
-          },
-          "&::-webkit-scrollbar-track": {
-            backgroundColor: "#e5e7eb",
-          },
-        }}>
-          <Table size={isMobile ? 'small' : 'medium'}>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ pl: 3 }}>SLID</TableCell>
-                <Hidden smDown>
-                  <TableCell>From (Main)</TableCell>
-                  <TableCell>From (Sub)</TableCell>
-                </Hidden>
-                <TableCell>Reporter</TableCell>
-                <Hidden smDown>
-                  <TableCell>Team/Company</TableCell>
-                </Hidden>
-                <TableCell>Issues</TableCell>
-                <Hidden mdDown>
-                  <TableCell>Assigned</TableCell>
-                </Hidden>
-                <TableCell>Status</TableCell>
-                <Hidden xsDown>
-                  <TableCell>Report Date</TableCell>
-                </Hidden>
-                <TableCell sx={{ pr: 3, textAlign: 'right' }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredIssues.length > 0 ? (
-                filteredIssues.map((issue) => (
-                  <TableRow
-                    key={issue._id}
-                    sx={{
-                      '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.05) !important' },
-                      transition: 'background-color 0.2s'
-                    }}
-                  >
-                    <TableCell sx={{ pl: 3, fontWeight: 500, color: '#7b68ee !important' }}>{issue.slid}</TableCell>
-                    <Hidden smDown>
-                      <TableCell sx={{ fontSize: '0.85rem' }}>{issue.fromMain || issue.from}</TableCell>
-                      <TableCell sx={{ fontSize: '0.85rem' }}>{issue.fromSub || '-'}</TableCell>
-                    </Hidden>
-                    <TableCell sx={{ fontSize: '0.85rem' }}>{issue.reporter}</TableCell>
-                    <Hidden smDown>
-                      <TableCell sx={{ fontSize: '0.85rem' }}>
+              "& .MuiTableRow-root": {
+                backgroundColor: "#2d2d2d",
+                "&:hover": {
+                  backgroundColor: "#2d2d2d",
+                },
+              }
+            },
+            "& .MuiPaper-root": {
+              backgroundColor: "transparent",
+              boxShadow: "none",
+            },
+            "&::-webkit-scrollbar": {
+              width: "8px",
+              height: "8px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: "#666",
+              borderRadius: "4px",
+            },
+            "&::-webkit-scrollbar-track": {
+              backgroundColor: "#e5e7eb",
+            },
+          }}>
+            <Table size={isMobile ? 'small' : 'medium'}>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ pl: 3 }}>SLID</TableCell>
+                  <Hidden smDown>
+                    <TableCell>From (Main)</TableCell>
+                    <TableCell>From (Sub)</TableCell>
+                  </Hidden>
+                  <TableCell>Reporter</TableCell>
+                  <Hidden smDown>
+                    <TableCell>Team/Company</TableCell>
+                    <TableCell>Installing Team</TableCell>
+                  </Hidden>
+                  <TableCell>Issues</TableCell>
+                  <Hidden mdDown>
+                    <TableCell>Assigned</TableCell>
+                    <TableCell>Supervisor</TableCell>
+                    <TableCell>Dispatched</TableCell>
+                    <TableCell>Assignee Note</TableCell>
+                  </Hidden>
+                  <TableCell>Status</TableCell>
+                  <Hidden xsDown>
+                    <TableCell>Report Date</TableCell>
+                  </Hidden>
+                  <TableCell sx={{ pr: 3, textAlign: 'right' }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedIssues.length > 0 ? (
+                  paginatedIssues.map((issue) => (
+                    <TableRow
+                      key={issue._id}
+                      sx={{
+                        '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.05) !important' },
+                        transition: 'background-color 0.2s'
+                      }}
+                    >
+                      <TableCell sx={{ pl: 3, fontWeight: 500, color: '#7b68ee !important' }}>{issue.slid}</TableCell>
+                      <Hidden smDown>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>{issue.fromMain || issue.from}</TableCell>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>{issue.fromSub || '-'}</TableCell>
+                      </Hidden>
+                      <TableCell sx={{ fontSize: '0.85rem' }}>{issue.reporter}</TableCell>
+                      <Hidden smDown>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>
+                          <Chip
+                            label={issue.teamCompany}
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.7rem',
+                              backgroundColor: '#1e1e1e',
+                              color: '#b3b3b3',
+                              border: '1px solid #3d3d3d'
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>{issue.installingTeam || '-'}</TableCell>
+                      </Hidden>
+                      <TableCell>
+                        {issue.issues && issue.issues.length > 0 ? (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {issue.issues.map((i, idx) => (
+                              <Chip
+                                key={idx}
+                                label={i.category}
+                                size="small"
+                                sx={{
+                                  height: 20,
+                                  fontSize: '0.7rem',
+                                  backgroundColor: 'rgba(123, 104, 238, 0.1)',
+                                  color: '#7b68ee',
+                                  border: '1px solid rgba(123, 104, 238, 0.2)'
+                                }}
+                              />
+                            ))}
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" sx={{ fontSize: '0.85rem', color: '#666' }}>No Category</Typography>
+                        )}
+                      </TableCell>
+                      <Hidden mdDown>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>{issue.assignedTo}</TableCell>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>{issue.closedBy || '-'}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={issue.dispatched === 'yes' ? 'Yes' : 'No'}
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.7rem',
+                              bgcolor: issue.dispatched === 'yes' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(158, 158, 158, 0.1)',
+                              color: issue.dispatched === 'yes' ? '#4caf50' : '#9e9e9e',
+                              border: `1px solid ${issue.dispatched === 'yes' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(158, 158, 158, 0.2)'}`
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.85rem', maxWidth: 150 }}>
+                          <Tooltip title={issue.assigneeNote || ''}>
+                            <span style={{
+                              display: 'block',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {issue.assigneeNote || '-'}
+                            </span>
+                          </Tooltip>
+                        </TableCell>
+                      </Hidden>
+                      <TableCell>
                         <Chip
-                          label={issue.teamCompany}
+                          label={issue.solved === 'yes' ? 'Closed' : 'Open'}
                           size="small"
                           sx={{
-                            height: 20,
-                            fontSize: '0.7rem',
-                            backgroundColor: '#1e1e1e',
-                            color: '#b3b3b3',
-                            border: '1px solid #3d3d3d'
+                            height: 24,
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            backgroundColor: issue.solved === 'yes' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+                            color: issue.solved === 'yes' ? '#4caf50' : '#f44336',
+                            border: `1px solid ${issue.solved === 'yes' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'}`,
+                            borderRadius: '6px'
                           }}
                         />
                       </TableCell>
-                    </Hidden>
-                    <TableCell>
-                      {issue.issues && issue.issues.length > 0 ? (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {issue.issues.map((i, idx) => (
-                            <Chip
-                              key={idx}
-                              label={i.category}
-                              size="small"
-                              sx={{
-                                height: 20,
-                                fontSize: '0.7rem',
-                                backgroundColor: 'rgba(123, 104, 238, 0.1)',
-                                color: '#7b68ee',
-                                border: '1px solid rgba(123, 104, 238, 0.2)'
-                              }}
-                            />
-                          ))}
-                        </Box>
-                      ) : (
-                        <Typography variant="body2" sx={{ fontSize: '0.85rem', color: '#666' }}>No Category</Typography>
-                      )}
-                    </TableCell>
-                    <Hidden mdDown>
-                      <TableCell sx={{ fontSize: '0.85rem' }}>{issue.assignedTo}</TableCell>
-                    </Hidden>
-                    <TableCell>
-                      <Chip
-                        label={issue.solved === 'yes' ? 'Resolved' : 'Pending'}
-                        size="small"
-                        sx={{
-                          height: 24,
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          backgroundColor: issue.solved === 'yes' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
-                          color: issue.solved === 'yes' ? '#4caf50' : '#f44336',
-                          border: `1px solid ${issue.solved === 'yes' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'}`,
-                          borderRadius: '6px'
-                        }}
-                      />
-                    </TableCell>
-                    <Hidden xsDown>
-                      <TableCell sx={{ fontSize: '0.85rem', color: '#b3b3b3' }}>
-                        {new Date(issue.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      <Hidden xsDown>
+                        <TableCell sx={{ fontSize: '0.85rem', color: '#b3b3b3' }}>
+                          {new Date(issue.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </TableCell>
+                      </Hidden>
+                      <TableCell sx={{ pr: 3, textAlign: 'right' }}>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleMenuOpen(e, issue)}
+                          sx={{
+                            color: '#b3b3b3',
+                            '&:hover': { color: '#ffffff', backgroundColor: 'rgba(255,255,255,0.05)' }
+                          }}
+                        >
+                          <MdMoreVert />
+                        </IconButton>
                       </TableCell>
-                    </Hidden>
-                    <TableCell sx={{ pr: 3, textAlign: 'right' }}>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleMenuOpen(e, issue)}
-                        sx={{
-                          color: '#b3b3b3',
-                          '&:hover': { color: '#ffffff', backgroundColor: 'rgba(255,255,255,0.05)' }
-                        }}
-                      >
-                        <MdMoreVert />
-                      </IconButton>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={isMobile ? 6 : 9} align="center" sx={{ color: '#ffffff' }}>
+                      {searchTerm ? 'No matching issues found' : 'No issues available'}
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={isMobile ? 6 : 9} align="center" sx={{ color: '#ffffff' }}>
-                    {searchTerm ? 'No matching issues found' : 'No issues available'}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={filteredIssues.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            sx={{ color: '#ffffff', '.MuiTablePagination-selectIcon': { color: '#ffffff' } }}
+          />
+        </>
       ) : (
         // Grid View
-        <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 2 }}>
-          {filteredIssues.length > 0 ? (
-            filteredIssues.map((issue) => (
-              <Paper
-                key={issue._id}
-                sx={{
-                  p: 2,
-                  bgcolor: '#2d2d2d',
-                  color: '#fff',
-                  borderRadius: 2,
-                  border: '1px solid #3d3d3d',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 1.5,
-                  position: 'relative'
-                }}
-              >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#7b68ee', fontSize: '1rem' }}>
-                    {issue.slid}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleMenuOpen(e, issue)}
-                    sx={{ color: '#ffffff', mt: -1, mr: -1 }}
-                  >
-                    <MdMoreVert />
-                  </IconButton>
-                </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 2 }}>
+            {paginatedIssues.length > 0 ? (
+              paginatedIssues.map((issue) => (
+                <Paper
+                  key={issue._id}
+                  sx={{
+                    p: 2,
+                    bgcolor: '#2d2d2d',
+                    color: '#fff',
+                    borderRadius: 2,
+                    border: '1px solid #3d3d3d',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                    position: 'relative'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#7b68ee', fontSize: '1rem' }}>
+                      {issue.slid}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleMenuOpen(e, issue)}
+                      sx={{ color: '#ffffff', mt: -1, mr: -1 }}
+                    >
+                      <MdMoreVert />
+                    </IconButton>
+                  </Box>
 
-                <Box>
-                  <Typography variant="caption" color="#b3b3b3">From</Typography>
-                  <Typography variant="body2">{issue.from}</Typography>
-                </Box>
+                  <Box>
+                    <Typography variant="caption" color="#b3b3b3">From</Typography>
+                    <Typography variant="body2">{issue.from}</Typography>
+                  </Box>
 
-                <Box>
-                  <Typography variant="caption" color="#b3b3b3">Issue</Typography>
-                  {issue.issues && issue.issues.length > 0 ? (
-                    <Stack spacing={0.5}>
-                      {issue.issues.map((i, idx) => (
-                        <Typography key={idx} variant="body2" noWrap>
-                          {i.category}{i.subCategory ? ` - ${i.subCategory}` : ''}
-                        </Typography>
-                      ))}
-                    </Stack>
-                  ) : (
-                    <Typography variant="body2" noWrap>{issue.issueCategory}</Typography>
-                  )}
-                </Box>
+                  <Box>
+                    <Typography variant="caption" color="#b3b3b3">Issue</Typography>
+                    {issue.issues && issue.issues.length > 0 ? (
+                      <Stack spacing={0.5}>
+                        {issue.issues.map((i, idx) => (
+                          <Typography key={idx} variant="body2" noWrap>
+                            {i.category}{i.subCategory ? ` - ${i.subCategory}` : ''}
+                          </Typography>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Typography variant="body2" noWrap>{issue.issueCategory}</Typography>
+                    )}
+                  </Box>
 
-                <Box>
-                  <Typography variant="caption" color="#b3b3b3">Assigned To</Typography>
-                  <Typography variant="body2">{issue.assignedTo}</Typography>
-                </Box>
+                  <Box>
+                    <Typography variant="caption" color="#b3b3b3">Assigned To</Typography>
+                    <Typography variant="body2">{issue.assignedTo}</Typography>
+                  </Box>
 
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-                  <Chip
-                    label={issue.solved === 'yes' ? 'Resolved' : 'Unresolved'}
-                    color={issue.solved === 'yes' ? 'success' : 'error'}
-                    size="small"
-                    sx={{
-                      color: "#ffffff",
-                      '&.MuiChip-colorSuccess': { backgroundColor: '#4caf50' },
-                      '&.MuiChip-colorError': { backgroundColor: '#f44336' }
-                    }}
-                  />
-                </Stack>
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                    <Chip
+                      label={issue.solved === 'yes' ? 'Resolved' : 'Unresolved'}
+                      color={issue.solved === 'yes' ? 'success' : 'error'}
+                      size="small"
+                      sx={{
+                        color: "#ffffff",
+                        '&.MuiChip-colorSuccess': { backgroundColor: '#4caf50' },
+                        '&.MuiChip-colorError': { backgroundColor: '#f44336' }
+                      }}
+                    />
+                  </Stack>
 
-                <Divider sx={{ bgcolor: '#3d3d3d' }} />
+                  <Divider sx={{ bgcolor: '#3d3d3d' }} />
 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#b3b3b3' }}>
-                  <span>Reported: {new Date(issue.date).toLocaleDateString()}</span>
-                  {issue.resolveDate && <span>Resolved: {new Date(issue.resolveDate).toLocaleDateString()}</span>}
-                </Box>
-              </Paper>
-            ))
-          ) : (
-            <Typography sx={{ color: '#ffffff', gridColumn: '1/-1', textAlign: 'center', py: 4 }}>
-              {searchTerm ? 'No matching issues found' : 'No issues available'}
-            </Typography>
-          )}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#b3b3b3' }}>
+                    <span>Reported: {new Date(issue.date).toLocaleDateString()}</span>
+                    {issue.resolveDate && <span>Resolved: {new Date(issue.resolveDate).toLocaleDateString()}</span>}
+                  </Box>
+                </Paper>
+              ))
+            ) : (
+              <Typography sx={{ color: '#ffffff', gridColumn: '1/-1', textAlign: 'center', py: 4 }}>
+                {searchTerm ? 'No matching issues found' : 'No issues available'}
+              </Typography>
+            )}
+          </Box>
+          <Pagination
+            count={Math.ceil(filteredIssues.length / rowsPerPage)}
+            page={page + 1}
+            onChange={(e, p) => setPage(p - 1)}
+            color="primary"
+            sx={{ alignSelf: 'center', '& .MuiPaginationItem-root': { color: '#ffffff' } }}
+          />
         </Box>
       )}
 

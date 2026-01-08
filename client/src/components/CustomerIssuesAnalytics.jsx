@@ -22,6 +22,7 @@ import {
   MenuItem,
   Divider,
   IconButton,
+  TablePagination,
 } from '@mui/material';
 import {
   Chart as ChartJS,
@@ -80,6 +81,9 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
   const [selectedDetailedIssue, setSelectedDetailedIssue] = useState(null);
   const [isIssueViewOpen, setIsIssueViewOpen] = useState(false);
+
+  const [trendTimeframe, setTrendTimeframe] = useState('day'); // 'day', 'week', 'month'
+  const [trendChartType, setTrendChartType] = useState('mixed'); // 'mixed', 'bar', 'line'
 
   const handleViewIssue = (issue) => {
     setSelectedDetailedIssue(issue);
@@ -428,22 +432,59 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   const trendData = useMemo(() => {
     const countsByDate = {};
     const sortedIssues = [...issues].sort((a, b) => new Date(a.date) - new Date(b.date));
+
     sortedIssues.forEach(issue => {
-      const d = issue.date ? new Date(issue.date).toISOString().split('T')[0] : 'Unknown';
-      countsByDate[d] = (countsByDate[d] || 0) + 1;
+      if (!issue.date) return;
+      const d = new Date(issue.date);
+      let key = '';
+
+      if (trendTimeframe === 'day') {
+        key = d.toISOString().split('T')[0];
+      } else if (trendTimeframe === 'week') {
+        const startOfWeek = new Date(d);
+        startOfWeek.setDate(d.getDate() - d.getDay()); // Start on Sunday
+        key = `Week of ${startOfWeek.toISOString().split('T')[0]}`;
+      } else if (trendTimeframe === 'month') {
+        key = d.toISOString().slice(0, 7); // YYYY-MM
+      } else {
+        key = d.toISOString().split('T')[0];
+      }
+
+      countsByDate[key] = (countsByDate[key] || 0) + 1;
     });
-    return {
-      labels: Object.keys(countsByDate),
-      datasets: [{
-        label: 'Daily Reported Issues',
-        data: Object.values(countsByDate),
-        fill: true,
-        backgroundColor: 'rgba(123, 104, 238, 0.2)',
+
+    const labels = Object.keys(countsByDate);
+    const data = Object.values(countsByDate);
+    const datasets = [];
+
+    if (trendChartType === 'mixed' || trendChartType === 'bar') {
+      datasets.push({
+        type: 'bar',
+        label: 'Volume',
+        data: data,
+        backgroundColor: 'rgba(123, 104, 238, 0.5)',
         borderColor: 'rgba(123, 104, 238, 1)',
-        tension: 0.4
-      }]
-    };
-  }, [issues]);
+        borderWidth: 1,
+        order: 2
+      });
+    }
+
+    if (trendChartType === 'mixed' || trendChartType === 'line') {
+      datasets.push({
+        type: 'line',
+        label: 'Trend',
+        data: data,
+        borderColor: '#4caf50',
+        borderWidth: 2,
+        tension: 0.4,
+        pointRadius: 4,
+        order: 1,
+        fill: trendChartType === 'line' ? { target: 'origin', above: 'rgba(76, 175, 80, 0.1)' } : false
+      });
+    }
+
+    return { labels, datasets };
+  }, [issues, trendTimeframe, trendChartType]);
 
   const commonOptions = {
     responsive: true,
@@ -451,7 +492,15 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     plugins: { legend: { position: 'bottom', labels: { color: '#ffffff' } } },
     scales: {
       x: { ticks: { color: '#b3b3b3' }, grid: { color: '#3d3d3d' } },
-      y: { ticks: { color: '#b3b3b3' }, grid: { color: '#3d3d3d' } }
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: '#b3b3b3',
+          stepSize: 1,
+          precision: 0
+        },
+        grid: { color: '#3d3d3d' }
+      }
     }
   };
 
@@ -479,6 +528,31 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     </Card>
   );
 
+  const [logPage, setLogPage] = useState(0);
+  const [logRowsPerPage, setLogRowsPerPage] = useState(10);
+
+  const filteredLogIssues = useMemo(() => {
+    return issues
+      .filter(i => {
+        const term = assigneeSearch.toLowerCase();
+        const matchSearch = i.slid.toLowerCase().includes(term) ||
+          (i.assignedTo && i.assignedTo.toLowerCase().includes(term)) ||
+          (i.installingTeam && i.installingTeam.toLowerCase().includes(term));
+        const matchStatus = filters.status === 'all' || (filters.status === 'resolved' ? i.solved === 'yes' : i.solved === 'no');
+        return matchSearch && matchStatus;
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [issues, assigneeSearch, filters.status]);
+
+  const handleChangeLogPage = (event, newPage) => {
+    setLogPage(newPage);
+  };
+
+  const handleChangeLogRowsPerPage = (event) => {
+    setLogRowsPerPage(parseInt(event.target.value, 10));
+    setLogPage(0);
+  };
+
   return (
     <Box sx={{ width: '100%', mt: 2 }}>
       {/* KPI Section */}
@@ -494,8 +568,34 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         {/* Trend & Resolution Row */}
         <Grid item xs={12} lg={8}>
           <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Issue Reporting Trend</Typography>
-            <Box sx={{ height: 300 }}><Line data={trendData} options={commonOptions} /></Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" fontWeight="bold">Issue Reporting Trend</Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <FormControl size="small" variant="outlined">
+                  <Select
+                    value={trendTimeframe}
+                    onChange={(e) => setTrendTimeframe(e.target.value)}
+                    sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                  >
+                    <MenuItem value="day">Daily</MenuItem>
+                    <MenuItem value="week">Weekly</MenuItem>
+                    <MenuItem value="month">Monthly</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl size="small" variant="outlined">
+                  <Select
+                    value={trendChartType}
+                    onChange={(e) => setTrendChartType(e.target.value)}
+                    sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                  >
+                    <MenuItem value="mixed">Mixed</MenuItem>
+                    <MenuItem value="bar">Bar</MenuItem>
+                    <MenuItem value="line">Line</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
+            <Box sx={{ height: 300 }}><Bar data={trendData} options={commonOptions} /></Box>
           </Paper>
         </Grid>
         <Grid item xs={12} lg={4}>
@@ -618,16 +718,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {issues
-                    .filter(i => {
-                      const term = assigneeSearch.toLowerCase();
-                      const matchSearch = i.slid.toLowerCase().includes(term) ||
-                        (i.assignedTo && i.assignedTo.toLowerCase().includes(term)) ||
-                        (i.installingTeam && i.installingTeam.toLowerCase().includes(term));
-                      const matchStatus = filters.status === 'all' || (filters.status === 'resolved' ? i.solved === 'yes' : i.solved === 'no');
-                      return matchSearch && matchStatus;
-                    })
-                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                  {filteredLogIssues
+                    .slice(logPage * logRowsPerPage, logPage * logRowsPerPage + logRowsPerPage)
                     .map((issue, idx) => (
                       <tr
                         key={idx}
@@ -693,6 +785,16 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                 </tbody>
               </table>
             </Box>
+            <TablePagination
+              component="div"
+              count={filteredLogIssues.length}
+              page={logPage}
+              onPageChange={handleChangeLogPage}
+              rowsPerPage={logRowsPerPage}
+              onRowsPerPageChange={handleChangeLogRowsPerPage}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+              sx={{ color: '#fff', '.MuiTablePagination-selectIcon': { color: '#fff' }, borderTop: '1px solid #3d3d3d' }}
+            />
           </Paper>
         </Grid>
       </Grid>
@@ -789,7 +891,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         onClose={() => setIsIssueViewOpen(false)}
         issue={selectedDetailedIssue}
       />
-    </Box>
+    </Box >
   );
 };
 

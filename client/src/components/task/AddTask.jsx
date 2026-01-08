@@ -17,6 +17,7 @@ import {
   Autocomplete,
   Checkbox,
   FormControlLabel,
+  Grid,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import UserList from './UserList';
@@ -420,43 +421,47 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
           </Stack>
 
           {/* Row 5: Team Company, Field Team */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Team Company</InputLabel>
-              <Select
-                value={teamCompany}
-                onChange={(e) => setTeamCompany(e.target.value)}
-                label="Team Company"
-              >
-                {dropdownOptions.TEAM_COMPANY.map((list) => (
-                  <MenuItem key={list} value={list}>{list}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={includeFieldTeam}
-                    onChange={(e) => setIncludeFieldTeam(e.target.checked)}
-                  />
-                }
-                label="Include Field Team"
-              />
-              {includeFieldTeam && (
-                <Autocomplete
-                  options={fieldTeams}
-                  getOptionLabel={(option) => option.teamName || ""}
-                  value={fieldTeams.find(t => t._id === teamInfo.teamId) || null}
-                  onChange={(e, newValue) => {
-                    setTeamInfo(newValue ? { teamName: newValue.teamName, teamId: newValue._id } : { teamName: '', teamId: '' });
-                  }}
-                  renderInput={(params) => <TextField {...params} label="Field Team Name" variant="outlined" />}
-                  fullWidth
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Team Company</InputLabel>
+                <Select
+                  value={teamCompany}
+                  onChange={(e) => setTeamCompany(e.target.value)}
+                  label="Team Company"
+                >
+                  {dropdownOptions.TEAM_COMPANY.map((list) => (
+                    <MenuItem key={list} value={list}>{list}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={includeFieldTeam}
+                      onChange={(e) => setIncludeFieldTeam(e.target.checked)}
+                    />
+                  }
+                  label="Include Field Team"
                 />
-              )}
-            </Box>
-          </Stack>
+                {includeFieldTeam && (
+                  <Autocomplete
+                    options={fieldTeams}
+                    getOptionLabel={(option) => option.teamName || ""}
+                    value={fieldTeams.find(t => t._id === teamInfo.teamId) || null}
+                    onChange={(e, newValue) => {
+                      setTeamInfo(newValue ? { teamName: newValue.teamName, teamId: newValue._id } : { teamName: '', teamId: '' });
+                    }}
+                    renderInput={(params) => <TextField {...params} label="Field Team Name" variant="outlined" />}
+                    fullWidth
+                  />
+                )}
+              </Box>
+            </Grid>
+          </Grid>
 
           {/* Row 6: RCA (Responsibility, Reason, SubReason, RootCause) */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -499,59 +504,65 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
           </Stack>
 
           {/* Row 7: Validation Status, ONT Type, Free Extender */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Validation Status</InputLabel>
-              <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
-                {dropdownOptions.VALIDATION_STATUS.map((list) => (
-                  <MenuItem key={list} value={list}>{list}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Validation Status</InputLabel>
+                <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
+                  {dropdownOptions.VALIDATION_STATUS.map((list) => (
+                    <MenuItem key={list} value={list}>{list}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={includeOntType}
-                    onChange={(e) => setIncludeOntType(e.target.checked)}
-                  />
-                }
-                label="Include ONT Type"
-              />
-              {includeOntType && (
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel>ONT Type</InputLabel>
-                  <Select value={ontType} onChange={(e) => setOntType(e.target.value)} label="ONT Type">
-                    {dropdownOptions.ONT_TYPE.map((list) => (
-                      <MenuItem key={list} value={list}>{list}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-            </Box>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={includeOntType}
+                      onChange={(e) => setIncludeOntType(e.target.checked)}
+                    />
+                  }
+                  label="Include ONT Type"
+                />
+                {includeOntType && (
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>ONT Type</InputLabel>
+                    <Select value={ontType} onChange={(e) => setOntType(e.target.value)} label="ONT Type">
+                      {dropdownOptions.ONT_TYPE.map((list) => (
+                        <MenuItem key={list} value={list}>{list}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </Box>
+            </Grid>
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={includeFreeExtender}
-                    onChange={(e) => setIncludeFreeExtender(e.target.checked)}
-                  />
-                }
-                label="Include Free Extender"
-              />
-              {includeFreeExtender && (
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel>Free Extender</InputLabel>
-                  <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
-                    <MenuItem value="Yes">Yes</MenuItem>
-                    <MenuItem value="No">No</MenuItem>
-                  </Select>
-                </FormControl>
-              )}
-            </Box>
-          </Stack>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={includeFreeExtender}
+                      onChange={(e) => setIncludeFreeExtender(e.target.checked)}
+                    />
+                  }
+                  label="Include Free Extender"
+                />
+                {includeFreeExtender && (
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Free Extender</InputLabel>
+                    <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
+                      <MenuItem value="Yes">Yes</MenuItem>
+                      <MenuItem value="No">No</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
 
           {/* Row 8: Extender Details (Conditional) */}
           {includeFreeExtender && freeExtender === 'Yes' && (
@@ -576,54 +587,58 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
           )}
 
           {/* Row 9: Closure Call Evaluation & Feedback */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={includeClosureEvaluation}
-                    onChange={(e) => setIncludeClosureEvaluation(e.target.checked)}
-                  />
-                }
-                label="Include Closure Call Evaluation"
-              />
-              {includeClosureEvaluation && (
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
-                  <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                      <MenuItem key={num} value={num}>{num}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-            </Box>
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={includeClosureFeedback}
-                    onChange={(e) => setIncludeClosureFeedback(e.target.checked)}
-                  />
-                }
-                label="Include Closure Call Feedback"
-              />
-              {includeClosureFeedback && (
-                <TextField
-                  label="Closure Call Feedback"
-                  fullWidth
-                  variant="outlined"
-                  multiline
-                  rows={2}
-                  value={closureCallFeedback}
-                  onChange={(e) => setClosureCallFeedback(e.target.value)}
-                  inputProps={{ dir: "auto" }}
-                  sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={includeClosureEvaluation}
+                      onChange={(e) => setIncludeClosureEvaluation(e.target.checked)}
+                    />
+                  }
+                  label="Include Closure Call Evaluation"
                 />
-              )}
-            </Box>
-          </Stack>
+                {includeClosureEvaluation && (
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
+                    <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                        <MenuItem key={num} value={num}>{num}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </Box>
+
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={includeClosureFeedback}
+                      onChange={(e) => setIncludeClosureFeedback(e.target.checked)}
+                    />
+                  }
+                  label="Include Closure Call Feedback"
+                />
+                {includeClosureFeedback && (
+                  <TextField
+                    label="Closure Call Feedback"
+                    fullWidth
+                    variant="outlined"
+                    multiline
+                    rows={2}
+                    value={closureCallFeedback}
+                    onChange={(e) => setClosureCallFeedback(e.target.value)}
+                    inputProps={{ dir: "auto" }}
+                    sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+                  />
+                )}
+              </Box>
+            </Grid>
+          </Grid>
 
           {/* Row 10: Customer Feedback */}
           <TextField
