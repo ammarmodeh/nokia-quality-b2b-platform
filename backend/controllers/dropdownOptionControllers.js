@@ -155,7 +155,8 @@ export const seedOptions = async (req, res) => {
       // Priority
       { category: "PRIORITY", value: "High", label: "High", order: 1 },
       { category: "PRIORITY", value: "Medium", label: "Medium", order: 2 },
-      { category: "PRIORITY", value: "Low", label: "Low", order: 3 },
+      { category: "PRIORITY", value: "Normal", label: "Normal", order: 3 },
+      { category: "PRIORITY", value: "Low", label: "Low", order: 4 },
 
       // Task Categories
       { category: "TASK_CATEGORIES", value: "Orange HC detractor", label: "Orange HC detractor", order: 1 },

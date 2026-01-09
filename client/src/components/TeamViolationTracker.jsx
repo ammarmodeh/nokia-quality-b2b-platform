@@ -34,6 +34,21 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const [assessments, setAssessments] = useState([]);
 
   const [samplesTokenData, setSamplesTokenData] = useState({});
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const weekStartDay = settings?.weekStartDay || 0;
 
   // Fetch samples token data (replacing localStorage)
   useEffect(() => {
@@ -85,9 +100,9 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       tasks.forEach(task => {
         if (task.interviewDate) {
           const date = new Date(task.interviewDate);
-          const start = startOfWeek(date, { weekStartsOn: 0 });
+          const start = startOfWeek(date, { weekStartsOn: weekStartDay });
           const year = start.getFullYear();
-          const weekNum = getCustomWeekNumber(start, year);
+          const weekNum = getCustomWeekNumber(start, year, settings || {});
           uniqueWeeks.add(`${year}-W${weekNum}`);
         }
       });
@@ -111,7 +126,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const ytdTotalSamples = useMemo(() => {
     try {
       const currentYear = new Date().getFullYear();
-      const currentWeek = getCustomWeekNumber(new Date(), currentYear);
+      const currentWeek = getCustomWeekNumber(new Date(), currentYear, settings || {});
       const yearData = samplesTokenData[currentYear] || {};
 
       let total = 0;
@@ -673,7 +688,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
       }
 
       const curDate = new Date();
-      const currentWeek = getCustomWeekNumber(curDate, curDate.getFullYear());
+      const currentWeek = getCustomWeekNumber(curDate, curDate.getFullYear(), settings || {});
       const avgSamplesPerWeek = currentWeek > 0 && ytdTotalSamples > 0
         ? ytdTotalSamples / currentWeek
         : (totalGlobalSamples / 52); // fallback

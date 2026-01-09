@@ -35,6 +35,7 @@ const BenchmarkTables = () => {
   const [teamsData, setTeamsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [settings, setSettings] = useState(null);
 
   // Dashboard state
   const [selectedWeek, setSelectedWeek] = useState(null);
@@ -43,17 +44,20 @@ const BenchmarkTables = () => {
     const fetchData = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken") || "";
-        const [tasksRes, teamsRes] = await Promise.all([
+        const [tasksRes, teamsRes, settingsRes] = await Promise.all([
           api.get("/tasks/get-all-tasks", { headers: { Authorization: `Bearer ${accessToken}` } }),
-          api.get('/field-teams/get-field-teams', { headers: { Authorization: `Bearer ${accessToken}` } })
+          api.get('/field-teams/get-field-teams', { headers: { Authorization: `Bearer ${accessToken}` } }),
+          api.get('/settings', { headers: { Authorization: `Bearer ${accessToken}` } })
         ]);
 
         const tasksData = tasksRes?.data || [];
+        const settingsData = settingsRes?.data || null;
         setTasks(tasksData);
         setTeamsData(teamsRes?.data || []);
+        setSettings(settingsData);
 
         // Initialize selected week to the latest week available
-        const grouped = groupTasksByWeek(tasksData);
+        const grouped = groupTasksByWeek(tasksData, settingsData || {});
         const weeks = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
         if (weeks.length > 0) {
           setSelectedWeek(Number(weeks[0]));
@@ -70,19 +74,19 @@ const BenchmarkTables = () => {
 
   const trends = useMemo(() => {
     if (tasks.length === 0) return { reasons: [], violations: [] };
-    const grouped = groupTasksByWeek(tasks);
+    const grouped = groupTasksByWeek(tasks, settings || {});
     return {
       reasons: calculateReasonTrends(grouped),
       violations: calculateTeamViolationTrends(grouped)
     };
-  }, [tasks]);
+  }, [tasks, settings]);
 
   const availableWeeks = useMemo(() => {
     return trends.reasons.map(t => ({
       value: t.week,
-      label: `Week ${t.week} (${getWeekDateRange(t.week)})`
+      label: `Week ${t.week} (${getWeekDateRange(t.week, settings || {})})`
     })).sort((a, b) => b.value - a.value);
-  }, [trends.reasons]);
+  }, [trends.reasons, settings]);
 
   const currentStats = useMemo(() => {
     const trend = trends.reasons.find(t => t.week === selectedWeek);
@@ -216,7 +220,7 @@ const BenchmarkTables = () => {
                     Reason Analysis & Trends
                   </Typography>
                   <Suspense fallback={<Box p={4}><Skeleton variant="rectangular" height={400} sx={{ bgcolor: colors.border }} /></Box>}>
-                    <ReasonTrend tasks={tasks} selectedWeek={selectedWeek} />
+                    <ReasonTrend tasks={tasks} selectedWeek={selectedWeek} settings={settings} />
                   </Suspense>
                 </CardContent>
               </Card>
@@ -229,7 +233,7 @@ const BenchmarkTables = () => {
                     Team Violation Repository
                   </Typography>
                   <Suspense fallback={<Box p={4}><Skeleton variant="rectangular" height={400} sx={{ bgcolor: colors.border }} /></Box>}>
-                    <TeamViolationTrend tasks={tasks} selectedWeek={selectedWeek} />
+                    <TeamViolationTrend tasks={tasks} selectedWeek={selectedWeek} settings={settings} />
                   </Suspense>
                 </CardContent>
               </Card>

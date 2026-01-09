@@ -12,6 +12,7 @@ import { getCustomWeekNumber } from "../utils/helpers";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { Paper, Typography, Select, MenuItem, FormControl, useMediaQuery, Box } from "@mui/material";
 import { CalendarToday, CheckCircle } from "@mui/icons-material";
+import api from "../api/api";
 
 // ClickUp-inspired light theme
 const clickUpTheme = createTheme({
@@ -55,27 +56,43 @@ const CalendarPage = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const isMobile = useMediaQuery('(max-width:503px)');
 
-  // Generate all weeks of the selected year (ensuring weeks start on Sunday)
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const weekStartDay = settings?.weekStartDay || 0;
+
+  // Generate all weeks of the selected year
   useEffect(() => {
     const start = startOfYear(new Date(selectedYear, 0, 1));
     const end = endOfYear(new Date(selectedYear, 11, 31));
-    const weeksInYear = eachWeekOfInterval({ start, end }, { weekStartsOn: 0 }); // Sunday start
+    const weeksInYear = eachWeekOfInterval({ start, end }, { weekStartsOn: weekStartDay });
 
     setWeeks(weeksInYear);
-  }, [selectedYear]);
+  }, [selectedYear, weekStartDay]);
 
   // Format week range (e.g., "Jan 1 - Jan 7")
   const formatWeekRange = useCallback((startDate) => {
     const start = format(startDate, "MMM d");
-    const end = format(endOfWeek(startDate, { weekStartsOn: 0 }), "MMM d");
+    const end = format(endOfWeek(startDate, { weekStartsOn: weekStartDay }), "MMM d");
     return `${start} - ${end}`;
-  }, []);
+  }, [weekStartDay]);
 
   // Check if a week is in the past
   const isWeekSpent = useCallback((weekStart) => {
-    const endOfWeekDate = endOfWeek(weekStart, { weekStartsOn: 0 });
+    const endOfWeekDate = endOfWeek(weekStart, { weekStartsOn: weekStartDay });
     return isBefore(endOfWeekDate, new Date());
-  }, []);
+  }, [weekStartDay]);
 
   // Memoize the list of years for the Select component
   const realCurrentYear = new Date().getFullYear();
@@ -84,15 +101,15 @@ const CalendarPage = () => {
   // Memoize the weeks list to avoid recalculating on every render
   const memoizedWeeks = useMemo(() => weeks.map((weekStart) => {
     const isSpent = isWeekSpent(weekStart);
-    const weekNumber = getCustomWeekNumber(weekStart, selectedYear); // Use custom week number function
+    const weekNumber = getCustomWeekNumber(weekStart, selectedYear, settings || {}); // Use custom week number function
     return {
       weekStart,
       isSpent,
       weekNumber,
       formattedRange: formatWeekRange(weekStart),
-      isCurrentWeek: isSameWeek(weekStart, currentWeek, { weekStartsOn: 0 }),
+      isCurrentWeek: isSameWeek(weekStart, currentWeek, { weekStartsOn: weekStartDay }),
     };
-  }), [weeks, isWeekSpent, selectedYear, formatWeekRange, currentWeek]);
+  }), [weeks, isWeekSpent, selectedYear, formatWeekRange, currentWeek, settings, weekStartDay]);
 
   return (
     // <ThemeProvider theme={clickUpTheme}>

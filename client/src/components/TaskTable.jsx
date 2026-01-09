@@ -77,6 +77,20 @@ const TaskTable = ({ tasks, fieldTeams }) => {
   const [evaluationData, setEvaluationData] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const isMobile = useMediaQuery('(max-width:503px)');
 
   // Sync teamsData with fieldTeams prop
@@ -187,6 +201,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
       // Define the export columns
       const exportColumns = [
         { header: "SLID", field: "slid" },
+        { header: "Operation", field: "operation" },
         { header: "Week", field: "weekNumber" },
         { header: "Customer", field: "customerName" },
         { header: "Feedback", field: "customerFeedback" },
@@ -220,7 +235,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
         };
 
         // Calculate week number
-        const weekNumber = getWeekNumberForTaksTable(new Date(task.interviewDate?.$date || task.interviewDate));
+        const weekNumber = getWeekNumberForTaksTable(new Date(task.interviewDate?.$date || task.interviewDate), settings || {});
 
         // Get team data if available
         const teamData = getTeamData(teamId);
@@ -267,6 +282,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
 
         return {
           slid: task.slid,
+          operation: task.operation || 'N/A',
           weekNumber: weekNumber,
           customerName: task.customerName,
           customerFeedback: task.customerFeedback,
@@ -317,7 +333,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
       return false;
     }
 
-    return getWeekNumberForTaksTable(interviewDate) !== null;
+    return getWeekNumberForTaksTable(interviewDate, settings || {}) !== null;
   });
 
   const sortedTasks = filteredTasks.sort((a, b) => new Date(b.interviewDate) - new Date(a.interviewDate));
@@ -345,6 +361,18 @@ const TaskTable = ({ tasks, fieldTeams }) => {
         >
           {params.value}
         </Button>
+      ),
+    },
+    {
+      field: "operation",
+      headerName: "Operation",
+      minWidth: 150,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {params.value || 'N/A'}
+        </Box>
       ),
     },
     {
@@ -616,6 +644,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
         const handleCopyTaskData = () => {
           const formattedData = `
             Request Number: ${params.row.requestNumber}
+            Operation: ${params.row.operation || 'N/A'}
             SLID: ${params.row.slid}
             Customer Name: ${params.row.customerName}
             Contact Number: ${params.row.contactNumber}
@@ -676,11 +705,12 @@ const TaskTable = ({ tasks, fieldTeams }) => {
   const rows = sortedTasks.map((task, index) => ({
     id: index + 1,
     slid: task.slid,
+    operation: task.operation,
     customerName: task.customerName,
     customerFeedback: task.customerFeedback,
     impactLevel: task.priority,
     priority: task.priority,
-    weekNumber: getWeekNumberForTaksTable(new Date(task.interviewDate)),
+    weekNumber: getWeekNumberForTaksTable(new Date(task.interviewDate), settings || {}),
     evaluationScore: task.evaluationScore,
     team: task.teamName,
     company: task.teamCompany,
@@ -696,6 +726,8 @@ const TaskTable = ({ tasks, fieldTeams }) => {
     tarrifName: task.tarrifName,
     customerType: task.customerType,
     reason: task.reason,
+    subReason: task.subReason,
+    rootCause: task.rootCause,
     interviewDate: task.interviewDate,
   }));
 
@@ -784,7 +816,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
             },
             "& .MuiDataGrid-row": {
               "&:hover": {
-                backgroundColor: "#f8fafc",
+                backgroundColor: "rgba(100, 116, 139, 0.08)",
               },
             },
             "& .MuiDataGrid-footerContainer": {
@@ -889,6 +921,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                   <DetailRow label="Request Number" value={selectedTask.requestNumber} />
+                  <DetailRow label="Operation" value={selectedTask.operation} />
                   <DetailRow label="SLID" value={selectedTask.slid} />
                   <DetailRow label="Customer Name" value={selectedTask.customerName} />
                   <DetailRow label="Contact Number" value={selectedTask.contactNumber} />

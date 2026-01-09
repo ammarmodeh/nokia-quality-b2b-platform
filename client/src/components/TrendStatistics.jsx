@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -27,6 +27,7 @@ import { calculateTrendData } from '../utils/dateFilterHelpers';
 import { MdFileDownload } from 'react-icons/md';
 import * as XLSX from 'xlsx';
 import AIAnalysisButton from './AIAnalysisButton';
+import api from '../api/api';
 
 // Register ChartJS components
 ChartJS.register(
@@ -50,6 +51,19 @@ const TrendStatistics = ({ tasks }) => {
   const [customEnd, setCustomEnd] = useState('');
   const [showHelp, setShowHelp] = useState(false);
   const [selectedEntities, setSelectedEntities] = useState([]);
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Handlers
   const handlePeriodChange = (event, newPeriod) => {
@@ -90,8 +104,8 @@ const TrendStatistics = ({ tasks }) => {
       }
     }
 
-    return calculateTrendData(tasks, period, range, analysisType, dateRange);
-  }, [tasks, period, range, analysisType, customStart, customEnd]);
+    return calculateTrendData(tasks, period, range, analysisType, dateRange, settings || {});
+  }, [tasks, period, range, analysisType, customStart, customEnd, settings]);
 
   // Get available entities for autocomplete
   const allAvailableEntities = useMemo(() => {

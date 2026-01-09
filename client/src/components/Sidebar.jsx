@@ -33,6 +33,7 @@ const SidebarLinks = () => {
           isNew: true,
           subpaths: [
             { label: "Insights", link: "analytics" },
+            { label: "Issue Prevention", link: "issue-prevention" },
             { label: "Data Management", link: "excel-portal" },
           ],
         },

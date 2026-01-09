@@ -42,6 +42,24 @@ const settingsSchema = new mongoose.Schema(
       emailAlerts: { type: Boolean, default: true },
       pushNotifications: { type: Boolean, default: true },
     },
+    weekStartDay: {
+      type: Number,
+      default: 0, // 0 = Sunday, 1 = Monday, etc.
+      min: 0,
+      max: 6,
+    },
+    week1StartDate: {
+      type: Date,
+      default: null,
+    },
+    week1EndDate: {
+      type: Date,
+      default: null,
+    },
+    startWeekNumber: {
+      type: Number,
+      default: 1,
+    },
   },
   { timestamps: true }
 );

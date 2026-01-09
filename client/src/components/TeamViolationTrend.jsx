@@ -23,12 +23,12 @@ import DownloadIcon from '@mui/icons-material/Download';
 import * as XLSX from "xlsx";
 import { groupTasksByWeek, calculateTeamViolationTrends } from "../utils/benchmarkUtils";
 
-const TeamViolationTrend = ({ tasks, selectedWeek }) => {
+const TeamViolationTrend = ({ tasks, selectedWeek, settings = {} }) => {
   const trends = useMemo(() => {
     if (!tasks || tasks.length === 0) return [];
-    const grouped = groupTasksByWeek(tasks);
-    return calculateTeamViolationTrends(grouped);
-  }, [tasks]);
+    const grouped = groupTasksByWeek(tasks, settings);
+    return calculateTeamViolationTrends(grouped, settings);
+  }, [tasks, settings]);
 
   const currentTrend = useMemo(() => {
     return trends.find(t => t.week === selectedWeek);

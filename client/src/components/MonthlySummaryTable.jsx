@@ -53,15 +53,35 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
     page: 0,
   });
 
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const weekStartDay = settings?.weekStartDay || 0;
+
   // Get available months from tasks
-  const availableMonths = useMemo(() => getAvailableMonths(tasks), [tasks]);
+  const availableMonths = useMemo(() => getAvailableMonths(tasks, settings || {}), [tasks, settings]);
 
   // Set initial month to most recent
   useEffect(() => {
-    if (availableMonths.length > 0 && !selectedMonth && !isCustomRange) {
-      setSelectedMonth(availableMonths[0].key);
+    if (availableMonths.length > 0 && !isCustomRange) {
+      const isValid = availableMonths.some(m => m.key === selectedMonth);
+      if (!selectedMonth || !isValid) {
+        setSelectedMonth(availableMonths[0].key);
+      }
     }
   }, [availableMonths, selectedMonth, isCustomRange]);
+
 
   // Filter tasks by selected month or custom range
   const filteredTasks = useMemo(() => {
@@ -72,9 +92,9 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
       if (!selectedMonth) return [];
       const month = availableMonths.find(m => m.key === selectedMonth);
       if (!month) return [];
-      return filterTasksByMonth(tasks, month.year, month.month);
+      return filterTasksByMonth(tasks, month.year, month.month, settings || {});
     }
-  }, [tasks, selectedMonth, availableMonths, isCustomRange, customStart, customEnd]);
+  }, [tasks, selectedMonth, availableMonths, isCustomRange, customStart, customEnd, settings]);
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedRowData, setSelectedRowData] = useState(null);
@@ -134,9 +154,9 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
       filteredTasks.forEach(task => {
         if (task.interviewDate) {
           const date = new Date(task.interviewDate);
-          const start = startOfWeek(date, { weekStartsOn: 0 });
+          const start = startOfWeek(date, { weekStartsOn: weekStartDay });
           const year = start.getFullYear();
-          const weekNum = getCustomWeekNumber(start, year); // Use existing helper
+          const weekNum = getCustomWeekNumber(start, year, settings || {}); // Use existing helper
           uniqueWeeks.add(`${year}-W${weekNum}`);
         }
       });
@@ -436,8 +456,8 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
           if (task.interviewDate) {
             try {
               const date = new Date(task.interviewDate);
-              const start = startOfWeek(date, { weekStartsOn: 0 });
-              weekStr = `W${getCustomWeekNumber(start, start.getFullYear())}`;
+              const start = startOfWeek(date, { weekStartsOn: weekStartDay });
+              weekStr = `W${getCustomWeekNumber(start, start.getFullYear(), settings || {})}`;
               dateStr = format(date, 'yyyy-MM-dd');
             } catch (e) {
               // ignore

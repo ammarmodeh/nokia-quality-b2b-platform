@@ -27,6 +27,8 @@ import {
 import { MdClose, MdFileDownload } from 'react-icons/md';
 import * as XLSX from 'xlsx';
 import { getAvailableWeeks, getAvailableMonths, filterTasksByWeek, filterTasksByMonth } from '../utils/dateFilterHelpers';
+import api from '../api/api';
+import { useEffect } from 'react';
 
 // Register ChartJS components
 ChartJS.register(
@@ -42,18 +44,34 @@ const TrendsSummaryModal = ({ open, onClose, tasks, period = 'week' }) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, [open]); // Fetch when modal opens
+
+  const weekStartDay = settings?.weekStartDay || 0;
+
   // Calculate Trend Data (Mode)
   const rows = useMemo(() => {
     if (!tasks || tasks.length === 0) return [];
 
     const availablePeriods = period === 'week'
-      ? getAvailableWeeks(tasks)
-      : getAvailableMonths(tasks);
+      ? getAvailableWeeks(tasks, settings || {})
+      : getAvailableMonths(tasks, settings || {});
 
     return availablePeriods.map((periodInfo, index) => {
       const filteredTasks = period === 'week'
-        ? filterTasksByWeek(tasks, periodInfo.year, periodInfo.week)
-        : filterTasksByMonth(tasks, periodInfo.year, periodInfo.month);
+        ? filterTasksByWeek(tasks, periodInfo.year, periodInfo.week, settings || {})
+        : filterTasksByMonth(tasks, periodInfo.year, periodInfo.month, settings || {});
 
       // Helper to find mode
       const findMode = (items, keyExtractor) => {
@@ -99,7 +117,7 @@ const TrendsSummaryModal = ({ open, onClose, tasks, period = 'week' }) => {
         topReasonCount: topReason.count
       };
     });
-  }, [tasks, period]);
+  }, [tasks, period, weekStartDay]);
 
   const columns = [
     {

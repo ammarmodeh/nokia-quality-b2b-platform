@@ -1,14 +1,17 @@
+import { getCustomWeekNumber } from './helpers';
+import moment from 'moment';
+
 /**
  * Groups tasks by week based on interviewDate.
  */
-export const groupTasksByWeek = (tasks) => {
+export const groupTasksByWeek = (tasks, settings = {}) => {
   const groupedTasks = {};
 
   tasks.forEach((task) => {
     if (!task.interviewDate) return;
 
     const date = new Date(task.interviewDate);
-    const weekNumber = getWeekNumber(date);
+    const weekNumber = getWeekNumber(date, settings);
 
     if (!groupedTasks[weekNumber]) {
       groupedTasks[weekNumber] = [];
@@ -21,32 +24,62 @@ export const groupTasksByWeek = (tasks) => {
 };
 
 /**
- * Calculates week number relative to January 5th, 2025.
+ * Calculates week number using the custom week logic.
  */
-export const getWeekNumber = (date) => {
-  const startDate = new Date("2025-01-05");
-  const timeDifference = date - startDate;
-  const daysDifference = timeDifference / (1000 * 60 * 60 * 24);
-  return Math.floor(daysDifference / 7) + 1;
+export const getWeekNumber = (date, settings = {}) => {
+  const d = new Date(date);
+  return getCustomWeekNumber(d, d.getFullYear(), settings);
 };
 
 /**
  * Returns formatted date range for a given week number.
  */
-export const getWeekDateRange = (week) => {
-  const startDate = new Date(2025, 0, 5);
-  const startOfWeek = new Date(startDate.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
-  const endOfWeek = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000);
+export const getWeekDateRange = (week, settings = {}) => {
+  const { weekStartDay = 0, week1StartDate = null, week1EndDate = null, startWeekNumber = 1 } = settings;
 
-  const formatDate = (date) =>
-    date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  // Custom Week 1 anchor
+  if (week1StartDate && week1EndDate) {
+    const w1Start = moment(week1StartDate).startOf('day');
+    const w1End = moment(week1EndDate).startOf('day');
 
-  return `${formatDate(startOfWeek)} - ${formatDate(endOfWeek)}`;
+    if (week === startWeekNumber) {
+      const w1EndFull = moment(week1EndDate).endOf('day');
+      return `${w1Start.format('MMM D, YYYY')} - ${w1EndFull.format('MMM D, YYYY')}`;
+    }
+
+    // For weeks after anchor
+    if (week > startWeekNumber) {
+      const firstRegular = w1End.clone().add(1, 'day');
+      while (firstRegular.day() !== weekStartDay) {
+        firstRegular.add(1, 'day');
+      }
+
+      const weeksDiff = week - (startWeekNumber + 1);
+      const start = firstRegular.clone().add(weeksDiff, 'weeks');
+      const end = start.clone().add(6, 'days');
+      return `${start.format('MMM D, YYYY')} - ${end.format('MMM D, YYYY')}`;
+    }
+
+    // For weeks before anchor
+    const weeksDiff = startWeekNumber - week;
+    const start = w1Start.clone().subtract(weeksDiff, 'weeks');
+    const end = start.clone().add(6, 'days');
+    return `${start.format('MMM D, YYYY')} - ${end.format('MMM D, YYYY')}`;
+  }
+
+  // Fallback to standard annual logic if no custom Week 1
+  const year = new Date().getFullYear();
+  const startOfYear = moment().year(year).startOf('year');
+  while (startOfYear.day() !== weekStartDay) {
+    startOfYear.add(1, 'day');
+  }
+
+  const start = startOfYear.clone().add(week - 1, 'weeks');
+  const end = start.clone().add(6, 'days');
+
+  return `${start.format('MMM D, YYYY')} - ${end.format('MMM D, YYYY')}`;
 };
+
 
 /**
  * Counts reasons and categorizes tasks.
@@ -97,7 +130,7 @@ export const compareReasons = (currentReasons, previousReasons) => {
 /**
  * Calculates weekly trends for reasons and categories.
  */
-export const calculateReasonTrends = (groupedTasks) => {
+export const calculateReasonTrends = (groupedTasks, settings = {}) => {
   const weeks = Object.keys(groupedTasks).sort((a, b) => Number(a) - Number(b));
   const trends = [];
 
@@ -124,7 +157,7 @@ export const calculateReasonTrends = (groupedTasks) => {
 /**
  * Counts violations per team up to a specific week.
  */
-export const countViolationsPerTeam = (groupedTasks, currentWeek) => {
+export const countViolationsPerTeam = (groupedTasks, currentWeek, settings = {}) => {
   const violations = {};
 
   Object.keys(groupedTasks)
@@ -157,7 +190,7 @@ export const countViolationsPerTeam = (groupedTasks, currentWeek) => {
           violations[task.teamName].totalNeutrals++;
         }
 
-        const taskWeek = getWeekNumber(new Date(task.interviewDate));
+        const taskWeek = getWeekNumber(new Date(task.interviewDate), settings);
         violations[task.teamName].violatedWeeks.add(taskWeek);
 
         if (taskWeek === currentWeek) {
@@ -181,12 +214,12 @@ export const countViolationsPerTeam = (groupedTasks, currentWeek) => {
 /**
  * Calculates weekly trends for team violations.
  */
-export const calculateTeamViolationTrends = (groupedTasks) => {
+export const calculateTeamViolationTrends = (groupedTasks, settings = {}) => {
   const weeks = Object.keys(groupedTasks).sort((a, b) => Number(a) - Number(b));
   const trends = [];
 
   weeks.forEach((week) => {
-    const allViolations = countViolationsPerTeam(groupedTasks, parseInt(week));
+    const allViolations = countViolationsPerTeam(groupedTasks, parseInt(week), settings);
     const currentWeekTasks = groupedTasks[week] || [];
     const currentWeekTeams = new Set(currentWeekTasks.map(task => task.teamName));
 

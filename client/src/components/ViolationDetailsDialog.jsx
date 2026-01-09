@@ -12,11 +12,27 @@ import {
 } from '@mui/material';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { MdClose, MdFileDownload } from 'react-icons/md';
+import api from '../api/api';
 import { format, startOfWeek } from 'date-fns';
 import { getCustomWeekNumber } from '../utils/helpers';
 import * as XLSX from 'xlsx';
 
 const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    if (open) fetchSettings();
+  }, [open]);
+
+  const weekStartDay = settings?.weekStartDay || 0;
 
   const columns = [
     {
@@ -27,9 +43,9 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
         if (!row.interviewDate) return 'N/A';
         try {
           const date = new Date(row.interviewDate);
-          const start = startOfWeek(date, { weekStartsOn: 0 });
+          const start = startOfWeek(date, { weekStartsOn: weekStartDay });
           const year = start.getFullYear();
-          const weekNum = getCustomWeekNumber(start, year);
+          const weekNum = getCustomWeekNumber(start, year, settings || {});
           return weekNum;
         } catch (e) {
           return 'N/A';
@@ -171,8 +187,8 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
       if (task.interviewDate) {
         try {
           const date = new Date(task.interviewDate);
-          const start = startOfWeek(date, { weekStartsOn: 0 });
-          weekStr = `W${getCustomWeekNumber(start, start.getFullYear())}`;
+          const start = startOfWeek(date, { weekStartsOn: weekStartDay });
+          weekStr = `W${getCustomWeekNumber(start, start.getFullYear(), settings || {})}`;
           dateStr = format(date, 'yyyy-MM-dd');
         } catch (e) {
           // Keep defaults

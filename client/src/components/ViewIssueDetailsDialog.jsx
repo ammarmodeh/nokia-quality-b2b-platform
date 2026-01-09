@@ -31,11 +31,10 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
       SLID: ${issue.slid}
       From (Main): ${issue.fromMain || issue.from || 'N/A'}
       From (Sub): ${issue.fromSub || 'N/A'}
-      Reporter: ${issue.reporter}
-      ${issue.reporterNote ? `Reporter Note: ${issue.reporterNote}\n      ` : ''}Team/Company: ${issue.teamCompany}
+      ${issue.reporterNote ? `Reporter Note: ${issue.reporterNote}\n      ` : ''}
+      Team/Company: ${issue.teamCompany}
       Customer Name: ${issue.customerName || 'N/A'}
-      Customer Contact: ${issue.customerContact || 'N/A'}
-      Contact Method: ${issue.contactMethod}
+      Contact Info: ${issue.customerContact || 'N/A'}
       Issues:
       ${issuesText}
       Assigned To: ${issue.assignedTo}

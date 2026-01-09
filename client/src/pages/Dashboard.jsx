@@ -10,6 +10,7 @@ import { MoonLoader } from "react-spinners";
 // import { SnackbarProvider } from "notistack";
 // import { CompanyViolationTable } from "../components/CompanyViolationTable";
 import { AllReasonsTable } from "../components/AllReasonsTable";
+import { AllOwnersTable } from "../components/AllOwnersTable";
 import IssueCategoriesDialog from "../components/IssueCategoriesDialog";
 import ReasonCategoriesDialog from "../components/ReasonCategoriesDialog";
 import AIInsightButton from "../components/AIInsightButton";
@@ -53,6 +54,12 @@ const Dashboard = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         });
         setTasks(response.data);
+        console.log("Frontend - Sample task data:", {
+          slid: response.data[0]?.slid,
+          subReason: response.data[0]?.subReason,
+          rootCause: response.data[0]?.rootCause,
+          reason: response.data[0]?.reason
+        });
       } catch (error) {
         setTasksError(error);
       } finally {
@@ -175,11 +182,16 @@ const Dashboard = () => {
           </Typography>
 
           <Stack spacing={4}>
-            {/* Row 1: Reasons */}
+            {/* Row 1: Reasons & Owners */}
             <Stack direction={isMediumScreen ? "column" : "row"} spacing={3}>
               <Box flex={1}>
                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <AllReasonsTable tasks={tasks} />
+                </Box>
+              </Box>
+              <Box flex={1}>
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <AllOwnersTable tasks={tasks} />
                 </Box>
               </Box>
             </Stack>

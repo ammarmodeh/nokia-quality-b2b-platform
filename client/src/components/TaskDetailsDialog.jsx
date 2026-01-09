@@ -30,6 +30,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
     tasks.forEach((task, index) => {
       textToCopy += `=== Task ${index + 1} ===\n`;
       textToCopy += `Request Number: ${task.requestNumber}\n`;
+      textToCopy += `Operation: ${task.operation || 'N/A'}\n`;
       textToCopy += `SLID: ${task.slid}\n`;
       textToCopy += `Customer Name: ${task.customerName}\n`;
       textToCopy += `Contact Number: ${task.contactNumber}\n`;
@@ -76,6 +77,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
   const exportToExcel = () => {
     const data = tasks.map((task) => ({
       'Request Number': task.requestNumber,
+      'Operation': task.operation || 'N/A',
       'SLID': task.slid,
       'PIS Date': new Date(task.pisDate).toLocaleString(),
       'Customer Name': task.customerName,
@@ -212,6 +214,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                   gap: isMobile ? 1.5 : 2
                 }}>
                   <DetailRow label="Request Number" value={task.requestNumber} isMobile={isMobile} />
+                  <DetailRow label="Operation" value={task.operation} isMobile={isMobile} />
                   <DetailRow label="SLID" value={task.slid} isMobile={isMobile} />
                   <DetailRow label="Customer Name" value={task.customerName} isMobile={isMobile} />
                   <DetailRow label="Contact Number" value={task.contactNumber} isMobile={isMobile} />
@@ -313,6 +316,23 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                           backgroundColor:
                             task.priority === 'High' ? '#f44336' :
                               task.priority === 'Medium' ? '#ff9800' : '#4caf50',
+                          fontWeight: 'bold'
+                        }}
+                      />
+                    }
+                    isMobile={isMobile}
+                  />
+                  <DetailRow
+                    label="Validation Status"
+                    value={
+                      <Chip
+                        label={task.validationStatus || 'Not specified'}
+                        size={isMobile ? "small" : "medium"}
+                        sx={{
+                          color: '#ffffff',
+                          backgroundColor:
+                            task.validationStatus === 'Validated' ? '#4caf50' :
+                              task.validationStatus === 'Not validated' ? '#ff9800' : '#6b7280',
                           fontWeight: 'bold'
                         }}
                       />

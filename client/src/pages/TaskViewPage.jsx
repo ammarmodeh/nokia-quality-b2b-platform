@@ -328,6 +328,7 @@ const TaskViewPage = () => {
     const detailsText = `Task Details:
       ID: ${task._id}
       Request Number: ${task.requestNumber}
+      Operation: ${task.operation || "N/A"}
       SLID: ${task.slid}
       Tariff Name: ${task.tarrifName}
       Satisfaction Score: ${task.evaluationScore}
@@ -340,7 +341,7 @@ const TaskViewPage = () => {
       Governorate: ${task.governorate || "N/A"}
       District: ${task.district || "N/A"}
       Team Name: ${task.teamName || "N/A"}
-      Team Company: ${task.teamCompany || "N/A"}`;
+      Subcon: ${task.teamCompany || "N/A"}`;
 
     navigator.clipboard.writeText(detailsText)
       .then(() => alert('Task details copied to clipboard!'))
@@ -431,6 +432,7 @@ const TaskViewPage = () => {
             <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
               <DetailRow label="Issue ID" value={task._id} isMobile={isMobile} />
               <DetailRow label="Request Number" value={task.requestNumber} isMobile={isMobile} />
+              <DetailRow label="Operation" value={task.operation || "N/A"} isMobile={isMobile} />
               <DetailRow label="SLID" value={task.slid} isMobile={isMobile} />
               <DetailRow label="Tariff Name" value={task.tarrifName} isMobile={isMobile} />
               <DetailRow label="Satisfaction Score" value={
@@ -526,7 +528,7 @@ const TaskViewPage = () => {
               <DetailRow label="Governorate" value={task.governorate || "N/A"} isMobile={isMobile} />
               <DetailRow label="District" value={task.district || "N/A"} isMobile={isMobile} />
               <DetailRow label="Team Name" value={task.teamName || "N/A"} isMobile={isMobile} />
-              <DetailRow label="Team Company" value={task.teamCompany || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Subcon" value={task.teamCompany || "N/A"} isMobile={isMobile} />
             </Box>
           </Paper>
 
@@ -543,7 +545,7 @@ const TaskViewPage = () => {
             </Typography>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
-              <DetailRow label="Responsibility" value={task.responsible || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Owner" value={task.responsible || "N/A"} isMobile={isMobile} />
               <DetailRow label="Reason (Level 1)" value={task.reason || "N/A"} isMobile={isMobile} />
               <DetailRow label="Sub Reason (Level 2)" value={task.subReason || "N/A"} isMobile={isMobile} />
               <DetailRow label="Root Cause (Level 3)" value={task.rootCause || "N/A"} isMobile={isMobile} />

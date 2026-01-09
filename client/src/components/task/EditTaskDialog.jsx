@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogTitle, DialogContent, Button, TextField, Select, MenuItem, Stack, FormControl, InputLabel, FormHelperText, Autocomplete } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, Button, TextField, Select, MenuItem, Stack, FormControl, InputLabel, FormHelperText, Autocomplete, Typography, IconButton, Divider, Box } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import { useForm } from "react-hook-form";
 import SelectList from "../SelectList";
 import { useSelector } from "react-redux";
@@ -38,6 +39,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const [customerType, setCustomerType] = useState('');
   const [validationStatus, setValidationStatus] = useState("");
   const [responsible, setResponsible] = useState("");
+  const [reason, setReason] = useState("");
   const [subReason, setSubReason] = useState("");
   const [rootCause, setRootCause] = useState("");
   const [ontType, setOntType] = useState("");
@@ -46,6 +48,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const [extenderNumber, setExtenderNumber] = useState(0);
   const [closureCallEvaluation, setClosureCallEvaluation] = useState("");
   const [closureCallFeedback, setClosureCallFeedback] = useState("");
+  const [operation, setOperation] = useState("");
 
   // Dynamic dropdown options
   const [dropdownOptions, setDropdownOptions] = useState({
@@ -133,7 +136,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       }
 
       if (Array.isArray(task.whomItMayConcern)) {
-        setWhomItMayConcern(task.whomItMayConcern);
+        setWhomItMayConcern(task.whomItMayConcern.map((u) => u._id || u));
       }
 
       reset({
@@ -147,6 +150,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
         responsible: task.responsible || "",
         customerName: task.customerName || "",
         district: task.district || "",
+        operation: task.operation || "",
         date: formattedDate,
         interviewDate: formattedInterviewDate,
       });
@@ -154,17 +158,23 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setValue("date", formattedDate);
       setValue("pisDate", formattedPISDate);
       setValue("interviewDate", formattedInterviewDate);
-      setValue("contactNumber", task.contactNumber);
-      setValue("requestNumber", task.requestNumber);
-      setValue("customerFeedback", task.customerFeedback);
-      setValue("reason", task.reason);
-      setValue("responsible", task.responsible);
-      setValue("customerName", task.customerName);
-      setValue("district", task.district);
+      setValue("contactNumber", task.contactNumber || "");
+      setValue("requestNumber", task.requestNumber || "");
+      setValue("customerFeedback", task.customerFeedback || "");
+      setValue("reason", task.reason || "");
+      setValue("responsible", task.responsible || "");
+      setValue("customerName", task.customerName || "");
+      setValue("district", task.district || "");
+      setValue("operation", task.operation || "");
 
-      setPriority(dropdownOptions.PRIORITY.includes(task.priority) ? task.priority : dropdownOptions.PRIORITY[0]);
-      setDepartment(DEPARTMENT.includes(task.department) ? task.department : DEPARTMENT[0]);
-      setCategory(dropdownOptions.TASK_CATEGORIES.includes(task.category) ? task.category : dropdownOptions.TASK_CATEGORIES[0]);
+      const priorityValue = task.priority || "";
+      setPriority(priorityValue);
+
+      setDepartment(task.department || DEPARTMENT[0]);
+
+      const categoryValue = task.category || "";
+      setCategory(categoryValue);
+
       setDate(formattedDate);
       setPisDate(formattedPISDate);
       setInterviewDate(formattedInterviewDate);
@@ -187,6 +197,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setExtenderNumber(task.extenderNumber || 0);
       setClosureCallEvaluation(task.closureCallEvaluation || "");
       setClosureCallFeedback(task.closureCallFeedback || "");
+      setOperation(task.operation || "");
     }
   }, [task, open, reset, setValue, user, dropdownOptions]);
 
@@ -231,6 +242,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       teamName: teamInfo.teamName,
       teamId: teamInfo.teamId,
       evaluationScore,
+      operation,
       governorate,
       customerType,
       validationStatus,
@@ -276,31 +288,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       <DialogContent dividers>
         <form onSubmit={handleSubmit(handleSubmitForm)} style={{ padding: '8px 0' }}>
           <Stack spacing={3}>
-            {/* Row 1: SLID, Request Number */}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <TextField
-                label="SLID"
-                placeholder="Enter 7 digits"
-                fullWidth
-                variant="outlined"
-                value={watch("slid")}
-                onChange={(e) => setValue("slid", e.target.value.replace(/\D/g, "").slice(0, 7))}
-                {...register("slid", { required: "SLID is required", pattern: { value: /^\d{7}$/, message: "Task SLID must be 7 digits" } })}
-                error={!!errors.slid}
-                helperText={errors.slid ? errors.slid.message : ""}
-              />
-              <TextField
-                label="Request number"
-                type='number'
-                fullWidth
-                variant="outlined"
-                {...register('requestNumber', { required: 'request number is required' })}
-                error={!!errors.requestNumber}
-                helperText={errors.requestNumber ? errors.requestNumber.message : ''}
-              />
-            </Stack>
-
-            {/* Row 2: Customer Name, Contact Number */}
+            {/* Row 1: Customer Name, Contact Number */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
                 label="Customer Name"
@@ -321,13 +309,113 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               />
             </Stack>
 
-            {/* Row 3: Satisfaction Score, PIS Date */}
+            {/* Row 2: Request Number, Operation, SLID */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                label="Request number"
+                type='number'
+                fullWidth
+                variant="outlined"
+                {...register('requestNumber', { required: 'request number is required' })}
+                error={!!errors.requestNumber}
+                helperText={errors.requestNumber ? errors.requestNumber.message : ''}
+              />
+              <TextField
+                label="Operation"
+                placeholder="Enter operation"
+                fullWidth
+                variant="outlined"
+                value={operation}
+                onChange={(e) => setOperation(e.target.value)}
+              />
+              <TextField
+                label="SLID"
+                placeholder="Enter 7 digits"
+                fullWidth
+                variant="outlined"
+                value={watch("slid")}
+                onChange={(e) => setValue("slid", e.target.value.replace(/\D/g, "").slice(0, 7))}
+                {...register("slid", { required: "SLID is required", pattern: { value: /^\d{7}$/, message: "Task SLID must be 7 digits" } })}
+                error={!!errors.slid}
+                helperText={errors.slid ? errors.slid.message : ""}
+              />
+            </Stack>
+
+            {/* Row 3: Governorate, District */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth variant="outlined">
-                <InputLabel>Satisfaction Score</InputLabel>
-                <Select value={evaluationScore} onChange={(e) => setEvaluationScore(e.target.value)} label="Satisfaction Score">
-                  {dropdownOptions.EVALUATION_SCORE.map((score) => (
-                    <MenuItem key={score} value={score}>{score}</MenuItem>
+                <InputLabel>Governorate</InputLabel>
+                <Select value={governorate} onChange={(e) => setGovernorate(e.target.value)} label="Governorate">
+                  {dropdownOptions.GOVERNORATES.map((list) => (
+                    <MenuItem key={list} value={list}>{list}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                label="District"
+                fullWidth
+                variant="outlined"
+                {...register('district', { required: 'District is required!' })}
+                error={!!errors.district}
+                helperText={errors.district ? errors.district.message : ''}
+                inputProps={{ dir: "auto" }}
+                sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+              />
+            </Stack>
+
+            {/* Row 4: Tariff Name, Interview Date */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                label="Tariff Name"
+                fullWidth
+                variant="outlined"
+                {...register("tarrifName", { required: "Tariff Name is required" })}
+                error={!!errors.tarrifName}
+                helperText={errors.tarrifName ? errors.tarrifName.message : ""}
+              />
+              <TextField
+                label="Interview Date"
+                type="date"
+                fullWidth
+                variant="outlined"
+                {...register('interviewDate')}
+                value={interviewDate}
+                onChange={(e) => setInterviewDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Stack>
+
+            {/* Row 5: Satisfaction Score */}
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Satisfaction Score</InputLabel>
+              <Select value={evaluationScore} onChange={(e) => setEvaluationScore(e.target.value)} label="Satisfaction Score">
+                {dropdownOptions.EVALUATION_SCORE.map((score) => (
+                  <MenuItem key={score} value={score}>{score}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Row 6: Customer Feedback */}
+            <TextField
+              label="Customer Feedback / Comment"
+              fullWidth
+              variant="outlined"
+              multiline
+              rows={4}
+              {...register('customerFeedback', { required: 'Customer feedback is required!' })}
+              error={!!errors.customerFeedback}
+              helperText={errors.customerFeedback ? errors.customerFeedback.message : ''}
+              inputProps={{ dir: "auto" }}
+              sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+            />
+
+            {/* Row 7: Customer Type, PIS Date */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Customer Type</InputLabel>
+                <Select value={customerType} onChange={(e) => setCustomerType(e.target.value)} label="Customer Type">
+                  {dropdownOptions.CUSTOMER_TYPE.map((list) => (
+                    <MenuItem key={list} value={list}>{list}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -345,67 +433,35 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               />
             </Stack>
 
-            {/* Row 4: Governorate, District, Customer Type */}
+            {/* Row 8: Free Extender (Yes/No) */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth variant="outlined">
-                <InputLabel>Governorate</InputLabel>
-                <Select value={governorate} onChange={(e) => setGovernorate(e.target.value)} label="Governorate">
-                  {dropdownOptions.GOVERNORATES.map((list) => (
-                    <MenuItem key={list} value={list}>{list}</MenuItem>
-                  ))}
+                <InputLabel>Free Extender</InputLabel>
+                <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
+                  <MenuItem value="Yes">Yes</MenuItem>
+                  <MenuItem value="No">No</MenuItem>
                 </Select>
               </FormControl>
-              <TextField
-                label="District"
-                fullWidth
-                variant="outlined"
-                {...register('district', { required: 'District is required!' })}
-                error={!!errors.district}
-                helperText={errors.district ? errors.district.message : ''}
-              />
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Customer Type</InputLabel>
-                <Select value={customerType} onChange={(e) => setCustomerType(e.target.value)} label="Customer Type">
-                  {dropdownOptions.CUSTOMER_TYPE.map((list) => (
-                    <MenuItem key={list} value={list}>{list}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {freeExtender === 'Yes' && (
+                <>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Extender Type</InputLabel>
+                    <Select value={extenderType} onChange={(e) => setExtenderType(e.target.value)} label="Extender Type">
+                      {dropdownOptions.EXTENDER_TYPE.map((list) => (
+                        <MenuItem key={list} value={list}>{list}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <TextField label="Extender Count" type="number" fullWidth value={extenderNumber} onChange={(e) => setExtenderNumber(parseInt(e.target.value) || 0)} />
+                </>
+              )}
             </Stack>
 
-            {/* Row 5: Tariff Name, Category, Priority */}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <TextField
-                label="Tariff Name"
-                fullWidth
-                variant="outlined"
-                {...register("tarrifName", { required: "Tariff Name is required" })}
-                error={!!errors.tarrifName}
-                helperText={errors.tarrifName ? errors.tarrifName.message : ""}
-              />
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Category</InputLabel>
-                <Select value={category} onChange={(e) => setCategory(e.target.value)} label="Category">
-                  {dropdownOptions.TASK_CATEGORIES.map((list) => (
-                    <MenuItem key={list} value={list}>{list}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Priority</InputLabel>
-                <Select value={priority} onChange={(e) => setPriority(e.target.value)} label="Priority">
-                  {dropdownOptions.PRIORITY.map((level) => (
-                    <MenuItem key={level} value={level}>{level}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Stack>
-
-            {/* Row 6: Team Company, Field Team */}
+            {/* Row 9: Subcon (Team Company), Field Team */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth variant="outlined">
-                <InputLabel>Team Company</InputLabel>
-                <Select value={teamCompany} onChange={(e) => setTeamCompany(e.target.value)} label="Team Company">
+                <InputLabel>Subcon</InputLabel>
+                <Select value={teamCompany} onChange={(e) => setTeamCompany(e.target.value)} label="Subcon">
                   {dropdownOptions.TEAM_COMPANY.map((list) => (
                     <MenuItem key={list} value={list}>{list}</MenuItem>
                   ))}
@@ -425,7 +481,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
 
             <Divider />
 
-            {/* RCA Section */}
+            {/* RCA Section: Row 10 */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <Autocomplete
                 freeSolo
@@ -434,7 +490,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
                 value={responsible}
                 onChange={(e, newValue) => setResponsible(newValue || "")}
                 onInputChange={(e, newValue) => setResponsible(newValue || "")}
-                renderInput={(params) => <TextField {...params} label="Responsibility" variant="outlined" />}
+                renderInput={(params) => <TextField {...params} label="Owner" variant="outlined" />}
               />
               <Autocomplete
                 freeSolo
@@ -465,7 +521,37 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               />
             </Stack>
 
-            {/* Extra Equipment row */}
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 2 }}>Additional Details (Priority, Validation, etc.)</Typography>
+
+            {/* Additional Details Group */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Priority</InputLabel>
+                <Select value={priority} onChange={(e) => setPriority(e.target.value)} label="Priority">
+                  {dropdownOptions.PRIORITY.map((level) => (
+                    <MenuItem key={level} value={level}>{level}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Category</InputLabel>
+                <Select value={category} onChange={(e) => setCategory(e.target.value)} label="Category">
+                  {dropdownOptions.TASK_CATEGORIES.map((list) => (
+                    <MenuItem key={list} value={list}>{list}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>Validation Status</InputLabel>
+                <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
+                  {dropdownOptions.VALIDATION_STATUS.map((list) => (
+                    <MenuItem key={list} value={list}>{list}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel>ONT Type</InputLabel>
@@ -476,51 +562,29 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
                 </Select>
               </FormControl>
               <FormControl fullWidth variant="outlined">
-                <InputLabel>Free Extender</InputLabel>
-                <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
-                  <MenuItem value="Yes">Yes</MenuItem>
-                  <MenuItem value="No">No</MenuItem>
-                </Select>
-              </FormControl>
-              {freeExtender === 'Yes' && (
-                <>
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel>Extender Type</InputLabel>
-                    <Select value={extenderType} onChange={(e) => setExtenderType(e.target.value)} label="Extender Type">
-                      {dropdownOptions.EXTENDER_TYPE.map((list) => (
-                        <MenuItem key={list} value={list}>{list}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <TextField label="Extender Count" type="number" fullWidth value={extenderNumber} onChange={(e) => setExtenderNumber(parseInt(e.target.value) || 0)} />
-                </>
-              )}
-            </Stack>
-
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Validation Status</InputLabel>
-                <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
-                  {dropdownOptions.VALIDATION_STATUS.map((list) => (
-                    <MenuItem key={list} value={list}>{list}</MenuItem>
+                <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
+                <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <MenuItem key={num} value={num}>{num}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
               <TextField
-                label="Interview Date"
-                type="date"
+                label="Closure Call Feedback"
                 fullWidth
                 variant="outlined"
-                {...register('interviewDate')}
-                value={interviewDate}
-                onChange={(e) => setInterviewDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
+                multiline
+                rows={2}
+                value={closureCallFeedback}
+                onChange={(e) => setClosureCallFeedback(e.target.value)}
+                inputProps={{ dir: "auto" }}
+                sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
               />
             </Stack>
 
-            <Divider />
+            <Divider sx={{ my: 2 }} />
 
-            {/* User Assignment */}
+            {/* User Assignment Sections */}
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={4}>
               <Box flex={1}>
                 <UserList
@@ -545,42 +609,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
                 />
               </Box>
             </Stack>
-
-            {/* Closure Info */}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
-                <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                    <MenuItem key={num} value={num}>{num}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                label="Closure Call Feedback"
-                fullWidth
-                variant="outlined"
-                multiline
-                rows={2}
-                value={closureCallFeedback}
-                onChange={(e) => setClosureCallFeedback(e.target.value)}
-                inputProps={{ dir: "auto" }}
-                sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
-              />
-            </Stack>
-
-            <TextField
-              label="Customer Feedback / Comment"
-              fullWidth
-              variant="outlined"
-              multiline
-              rows={4}
-              {...register('customerFeedback', { required: 'Customer feedback is required!' })}
-              error={!!errors.customerFeedback}
-              helperText={errors.customerFeedback ? errors.customerFeedback.message : ''}
-              inputProps={{ dir: "auto" }}
-              sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
-            />
 
             {/* Actions */}
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>

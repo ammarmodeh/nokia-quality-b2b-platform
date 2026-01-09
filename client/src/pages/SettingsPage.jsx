@@ -71,6 +71,10 @@ const SettingsPage = () => {
         emailAlerts: true,
         pushNotifications: true,
       },
+      weekStartDay: 0,
+      week1StartDate: null,
+      week1EndDate: null,
+      startWeekNumber: 1,
     },
   });
 
@@ -78,7 +82,11 @@ const SettingsPage = () => {
     setLoading(true);
     try {
       const response = await api.get("/settings");
-      reset(response.data);
+      const data = response.data;
+      // Format dates for input type="date"
+      if (data.week1StartDate) data.week1StartDate = new Date(data.week1StartDate).toISOString().split('T')[0];
+      if (data.week1EndDate) data.week1EndDate = new Date(data.week1EndDate).toISOString().split('T')[0];
+      reset(data);
     } catch (error) {
       console.error("Error fetching settings:", error);
       setSnackbarMessage("Failed to load settings");
@@ -354,6 +362,72 @@ const SettingsPage = () => {
           </Grid>
 
           <Divider sx={{ my: 4, borderColor: '#444' }} />
+          <SectionHeader title="Calendar Configuration" icon={SettingsIcon} />
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                fullWidth
+                label="Week Start Day"
+                disabled={!editMode}
+                {...register("weekStartDay")}
+                InputLabelProps={{ shrink: true }}
+                sx={textFieldStyles}
+                SelectProps={{
+                  native: true,
+                }}
+              >
+                <option value={0}>Sunday</option>
+                <option value={1}>Monday</option>
+                <option value={2}>Tuesday</option>
+                <option value={3}>Wednesday</option>
+                <option value={4}>Thursday</option>
+                <option value={5}>Friday</option>
+                <option value={6}>Saturday</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Week 1 Start Date"
+                disabled={!editMode}
+                {...register("week1StartDate")}
+                InputLabelProps={{ shrink: true }}
+                sx={textFieldStyles}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Week 1 End Date"
+                disabled={!editMode}
+                {...register("week1EndDate")}
+                InputLabelProps={{ shrink: true }}
+                sx={textFieldStyles}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                type="number"
+                label="Start Week (Calibration #)"
+                disabled={!editMode}
+                {...register("startWeekNumber", { min: 1, max: 100 })}
+                InputLabelProps={{ shrink: true }}
+                sx={textFieldStyles}
+                helperText="Which week number should the calibration range be assigned?"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(25, 118, 210, 0.05)', borderRadius: 1, border: '1px dashed #1976d2' }}>
+                <Typography variant="caption" sx={{ color: '#b3b3b3' }}>
+                  ℹ️ <strong>How to Calibrate:</strong> Define a date range (e.g., Jan 1 - Jan 5) and assign it a week number (e.g., Week 1). All dates after this range will automatically increment every 7 days based on your chosen <strong>Week Start Day</strong>.
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
 
           <SectionHeader title="Global Notifications" icon={NotificationsIcon} />
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

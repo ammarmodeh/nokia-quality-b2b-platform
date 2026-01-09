@@ -25,12 +25,12 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { groupTasksByWeek, calculateReasonTrends } from "../utils/benchmarkUtils";
 
-const ReasonTrend = ({ tasks, selectedWeek }) => {
+const ReasonTrend = ({ tasks, selectedWeek, settings = {} }) => {
   const trends = useMemo(() => {
     if (!tasks || tasks.length === 0) return [];
-    const grouped = groupTasksByWeek(tasks);
+    const grouped = groupTasksByWeek(tasks, settings);
     return calculateReasonTrends(grouped);
-  }, [tasks]);
+  }, [tasks, settings]);
 
   const currentTrend = useMemo(() => {
     return trends.find(t => t.week === selectedWeek);

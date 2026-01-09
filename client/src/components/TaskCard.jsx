@@ -893,6 +893,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
   const copyToClipboard = () => {
     const formattedMessage = `
       **SLID**: ${task.slid}
+      **Operation**: ${task.operation || 'N/A'}
       **Satisfaction Score**: ${task.score}
       **Status**: ${task.status}
       **Due Date**: ${formattedDate}
@@ -1425,6 +1426,8 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                   </span>
                 )}
               </p>
+              <p><span className="font-medium text-[#bdb5b5]">Category:</span> {task?.category}</p>
+              <p><span className="font-medium text-[#bdb5b5]">Operation:</span> {task?.operation || 'N/A'}</p>
             </div>
 
             <div className="mt-3 flex items-center justify-start gap-4">

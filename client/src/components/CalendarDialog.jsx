@@ -32,48 +32,64 @@ import {
   Share, // For the export button
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
+import api from "../api/api";
 
 const CalendarDialog = ({ open, onClose }) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
-  const [weeks, setWeeks] = useState([]);
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [settings, setSettings] = useState(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [weeks, setWeeks] = useState([]);
+  const currentWeek = useMemo(() => new Date(), []);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    if (open) fetchSettings();
+  }, [open]);
+
+  const weekStartDay = settings?.weekStartDay || 0;
 
   useEffect(() => {
     const start = startOfYear(new Date(selectedYear, 0, 1));
     const end = endOfYear(new Date(selectedYear, 11, 31));
-    const weeksInYear = eachWeekOfInterval({ start, end }, { weekStartsOn: 0 });
+    const weeksInYear = eachWeekOfInterval({ start, end }, { weekStartsOn: weekStartDay });
     setWeeks(weeksInYear);
-  }, [selectedYear]);
+  }, [selectedYear, weekStartDay]);
 
   const formatWeekRange = useCallback((startDate) => {
     const start = format(startDate, "MMM d");
-    const endDate = endOfWeek(startDate, { weekStartsOn: 0 });
+    const endDate = endOfWeek(startDate, { weekStartsOn: weekStartDay });
     const end = format(endDate, "MMM d");
     return `${start} - ${end}`;
-  }, []);
+  }, [weekStartDay]);
 
   const isWeekSpent = useCallback((weekStart) => {
-    const endOfWeekDate = endOfWeek(weekStart, { weekStartsOn: 0 });
+    const endOfWeekDate = endOfWeek(weekStart, { weekStartsOn: weekStartDay });
     return isBefore(endOfWeekDate, new Date());
-  }, []);
+  }, [weekStartDay]);
 
   const realCurrentYear = new Date().getFullYear();
   const yearOptions = useMemo(() => [realCurrentYear - 1, realCurrentYear, realCurrentYear + 1], [realCurrentYear]);
 
   const memoizedWeeks = useMemo(() => weeks.map((weekStart) => {
     const isSpent = isWeekSpent(weekStart);
-    const weekNumber = getCustomWeekNumber(weekStart, selectedYear);
+    const weekNumber = getCustomWeekNumber(weekStart, selectedYear, settings || {});
     return {
       weekStart,
       isSpent,
       weekNumber,
       formattedRange: formatWeekRange(weekStart),
-      isCurrentWeek: isSameWeek(weekStart, currentWeek, { weekStartsOn: 0 }),
+      isCurrentWeek: isSameWeek(weekStart, currentWeek, { weekStartsOn: weekStartDay }),
     };
-  }), [weeks, isWeekSpent, selectedYear, formatWeekRange, currentWeek]);
+  }), [weeks, isWeekSpent, selectedYear, formatWeekRange, currentWeek, settings, weekStartDay]);
 
   // Generate shareable text
   const generateShareText = () => {
@@ -82,8 +98,11 @@ const CalendarDialog = ({ open, onClose }) => {
       ? `Week ${currentWeekData.weekNumber} (${currentWeekData.formattedRange})`
       : "Unknown";
 
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const weekStartDayName = days[weekStartDay];
+
     let text = `Yearly Calendar ${selectedYear}\n`;
-    text += `Weeks start on Sunday\n\n`;
+    text += `Weeks start on ${weekStartDayName}\n\n`;
     text += `Current Week → ${currentWeekText}\n\n`;
     text += `Weekly Overview:\n`;
     text += `━━━━━━━━━━━━━━━━━━\n`;
@@ -149,7 +168,7 @@ const CalendarDialog = ({ open, onClose }) => {
       <DialogContent dividers sx={{ p: 3 }}>
         <Box sx={{ mb: 3, display: 'flex', flexDirection: fullScreen ? 'column' : 'row', alignItems: fullScreen ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 2 }}>
           <Typography variant="body2" sx={{ color: '#6b7280' }}>
-            Custom week standard • Weeks start on Sunday
+            Custom week standard • Weeks start on {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][weekStartDay]}
           </Typography>
 
           <FormControl size="small" sx={{ minWidth: 140 }}>

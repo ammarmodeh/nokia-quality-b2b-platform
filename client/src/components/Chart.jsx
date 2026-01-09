@@ -61,8 +61,15 @@ const prepareChartData = (groupedData, timeRange) => {
   }
 
   const sortedWeeks = Object.keys(groupedData).sort((a, b) => {
-    const weekA = parseInt(a.replace("Wk-", ""), 10);
-    const weekB = parseInt(b.replace("Wk-", ""), 10);
+    const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
+    const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
+    if (!matchA || !matchB) return 0;
+    const yearA = parseInt(matchA[2], 10);
+    const yearB = parseInt(matchB[2], 10);
+    const weekA = parseInt(matchA[1], 10);
+    const weekB = parseInt(matchB[1], 10);
+
+    if (yearA !== yearB) return yearA - yearB;
     return weekA - weekB;
   });
 
@@ -92,29 +99,53 @@ const Chart = ({ tasks: initialTasks }) => {
   const [weekRanges, setWeekRanges] = useState([]);
   const [timeRange, setTimeRange] = useState([]);
   const [groupedData, setGroupedData] = useState({});
+  const [settings, setSettings] = useState(null);
   // const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const weekStartDay = settings?.weekStartDay || 0;
 
   useEffect(() => {
     if (initialTasks && initialTasks.length > 0) {
       setTasks(initialTasks);
 
-      const ranges = generateWeekRanges(initialTasks);
+      const ranges = generateWeekRanges(initialTasks, settings || {});
       setWeekRanges(ranges);
 
       const individualWeeks = ranges
-        .filter(range => /^Wk-\d+$/.test(range))
-        .sort((a, b) => parseInt(a.replace("Wk-", "")) - parseInt(b.replace("Wk-", "")));
+        .filter(range => /Wk-\d+ \(\d+\)/.test(range))
+        .sort((a, b) => {
+          const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
+          const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
+          const yearA = parseInt(matchA[2], 10);
+          const yearB = parseInt(matchB[2], 10);
+          const weekA = parseInt(matchA[1], 10);
+          const weekB = parseInt(matchB[1], 10);
+          if (yearA !== yearB) return yearA - yearB;
+          return weekA - weekB;
+        });
 
       const defaultWeeks = individualWeeks.slice(-4);
       setTimeRange(defaultWeeks);
 
-      const filteredData = getDesiredWeeks(initialTasks, defaultWeeks);
-      const grouped = groupDataByWeek(filteredData, defaultWeeks);
+      const filteredData = getDesiredWeeks(initialTasks, defaultWeeks, settings || {});
+      const grouped = groupDataByWeek(filteredData, defaultWeeks, settings || {});
       setGroupedData(grouped);
       setChartData(prepareChartData(grouped, defaultWeeks));
     }
-  }, [initialTasks]);
+  }, [initialTasks, settings]);
 
   const exportChartData = () => {
     const csvRows = [];
@@ -141,30 +172,39 @@ const Chart = ({ tasks: initialTasks }) => {
   };
 
   const handleReset = () => {
-    const individualWeeks = weekRanges.filter(range => range.split('-').length === 1);
-    individualWeeks.sort((a, b) => parseInt(a.replace("Wk-", "")) - parseInt(b.replace("Wk-", "")));
+    const individualWeeks = weekRanges.filter(range => /Wk-\d+ \(\d+\)/.test(range));
+    individualWeeks.sort((a, b) => {
+      const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
+      const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
+      const yearA = parseInt(matchA[2], 10);
+      const yearB = parseInt(matchB[2], 10);
+      const weekA = parseInt(matchA[1], 10);
+      const weekB = parseInt(matchB[1], 10);
+      if (yearA !== yearB) return yearA - yearB;
+      return weekA - weekB;
+    });
     const defaultWeeks = individualWeeks.slice(-4);
 
     setTimeRange(defaultWeeks);
-    const filteredData = getDesiredWeeks(tasks, defaultWeeks);
-    const grouped = groupDataByWeek(filteredData, defaultWeeks);
+    const filteredData = getDesiredWeeks(tasks, defaultWeeks, settings || {});
+    const grouped = groupDataByWeek(filteredData, defaultWeeks, settings || {});
     setGroupedData(grouped);
     setChartData(prepareChartData(grouped, defaultWeeks));
   };
 
   useEffect(() => {
     if (tasks.length > 0) {
-      const filteredData = getDesiredWeeks(tasks, timeRange);
-      const grouped = groupDataByWeek(filteredData, timeRange);
+      const filteredData = getDesiredWeeks(tasks, timeRange, settings || {});
+      const grouped = groupDataByWeek(filteredData, timeRange, settings || {});
       setGroupedData(grouped);
       setChartData(prepareChartData(grouped, timeRange));
     }
-  }, [timeRange, tasks]);
+  }, [timeRange, tasks, settings]);
 
   const applyFilter = (category) => {
     setFilter(category);
-    const filteredData = getDesiredWeeks(tasks, timeRange);
-    const grouped = groupDataByWeek(filteredData, timeRange);
+    const filteredData = getDesiredWeeks(tasks, timeRange, settings || {});
+    const grouped = groupDataByWeek(filteredData, timeRange, settings || {});
 
     if (category === "All") {
       setChartData(prepareChartData(grouped, timeRange));

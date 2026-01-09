@@ -1,11 +1,21 @@
-import { FavouriteSchema } from "../models/favouriteModel.js";
 import { TaskSchema } from "../models/taskModel.js";
+import { CustomerIssueSchema } from "../models/customerIssueModel.js";
 import mongoose from "mongoose";
 
 export const addTask = async (req, res) => {
   try {
+    console.log("addTask Request Body (Raw):", req.body);
+
+    // Sanitize empty strings to null to prevent CastErrors for Date/Number fields
+    Object.keys(req.body).forEach((key) => {
+      if (req.body[key] === "") {
+        req.body[key] = null;
+      }
+    });
+
     const {
       slid,
+      operation,
       contactNumber,
       customerName,
       requestNumber,
@@ -68,6 +78,7 @@ export const addTask = async (req, res) => {
 
     const task = new TaskSchema({
       slid,
+      operation,
       pisDate,
       contactNumber,
       requestNumber,
@@ -112,12 +123,25 @@ export const addTask = async (req, res) => {
     await task.save();
     res.status(201).json({ message: "Task created successfully!", task });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Add Task Error:", error);
+    if (error.code === 11000) {
+      // Extract duplicate field
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({ message: `${field} already exists. Please use a unique value.` });
+    }
+    res.status(500).json({ error: error.message, stack: error.stack });
   }
 };
 
 
 export const updateTask = async (req, res) => {
+  // Sanitize empty strings to null to prevent CastErrors for Date/Number fields
+  Object.keys(req.body).forEach((key) => {
+    if (req.body[key] === "") {
+      req.body[key] = null;
+    }
+  });
+
   const updatedData = req.body;
   const id = req.params.id;
 
@@ -139,7 +163,7 @@ export const updateTask = async (req, res) => {
 
     let changes = [];
     for (let key in updatedData) {
-      if (key !== "readBy" && task[key] !== undefined) {
+      if (key !== "readBy") {
         const oldValue = JSON.stringify(task[key]);
         const newValue = JSON.stringify(updatedData[key]);
         if (oldValue !== newValue) {
@@ -177,7 +201,7 @@ export const updateTask = async (req, res) => {
     };
 
     const syncFields = [
-      'slid', 'pisDate', 'contactNumber', 'requestNumber', 'governorate',
+      'slid', 'operation', 'pisDate', 'contactNumber', 'requestNumber', 'governorate',
       'district', 'teamName', 'teamCompany', 'date', 'tarrifName',
       'customerType', 'customerFeedback', 'customerName', 'interviewDate',
       'priority', 'status', 'assignedTo', 'whomItMayConcern',
@@ -190,7 +214,7 @@ export const updateTask = async (req, res) => {
     syncFields.forEach(field => {
       if (updatedData[field] !== undefined) {
         updateOperation.$set[field] = updatedData[field];
-      } else if (task[field] !== undefined) {
+      } else {
         updateOperation.$set[field] = task[field];
       }
     });
@@ -1009,6 +1033,14 @@ export const getAllTasks = async (req, res) => {
       .populate("createdBy", "name email")
       .sort({ createdAt: -1 });
 
+    // Debug: Check if subReason and rootCause are present
+    console.log("Sample task data (first task):", {
+      slid: tasks[0]?.slid,
+      subReason: tasks[0]?.subReason,
+      rootCause: tasks[0]?.rootCause,
+      reason: tasks[0]?.reason
+    });
+
     res.status(200).json(tasks);
   } catch (error) {
     console.error("Error fetching all tasks:", error);
@@ -1016,3 +1048,89 @@ export const getAllTasks = async (req, res) => {
   }
 };
 
+export const getIssuePreventionStats = async (req, res) => {
+  try {
+    // 1. Fetch all Detractor and Neutral tasks (score <= 8)
+    const criticalTasks = await TaskSchema.find({
+      evaluationScore: { $lte: 8 },
+      isDeleted: false
+    }).select('slid evaluationScore customerFeedback createdAt interviewDate status teamName teamCompany subReason rootCause reason');
+
+    const taskSlids = criticalTasks.map(t => t.slid);
+
+    // 2. Find matching CustomerIssue records for these SLIDs
+    const priorReports = await CustomerIssueSchema.find({
+      slid: { $in: taskSlids }
+    }).select('slid fromMain reporter reporterNote createdAt solved');
+
+    // 3. Aggregate data
+    const overlaps = criticalTasks.map(task => {
+      const reports = priorReports.filter(r => r.slid === task.slid);
+      if (reports.length > 0) {
+        return {
+          task,
+          reports
+        };
+      }
+      return null;
+    }).filter(item => item !== null);
+
+    // 4. Source Breakdown
+    const sourceBreakdown = priorReports.reduce((acc, report) => {
+      const source = report.fromMain || 'Unknown';
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {});
+
+    // 5. Calculate Prevention Gap (Time between first report and task creation)
+
+    // 6. Reporter Stats (Who reported issues that became detractors?)
+    const reporterStats = priorReports.reduce((acc, report) => {
+      const reporter = report.reporter || 'Unknown';
+      acc[reporter] = (acc[reporter] || 0) + 1;
+      return acc;
+    }, {});
+
+    // 7. Trend Data (Overlaps by Month)
+    const trendData = overlaps.reduce((acc, item) => {
+      if (!item.task.interviewDate) return acc;
+      const date = new Date(item.task.interviewDate);
+      const key = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    // 8. Reason Stats (Root Cause Analysis)
+    const reasonStats = overlaps.reduce((acc, item) => {
+      const reason = item.task.reason || 'Unknown';
+      acc[reason] = (acc[reason] || 0) + 1;
+      return acc;
+    }, {});
+
+    // 9. Company Stats (Vendor Performance)
+    const companyStats = overlaps.reduce((acc, item) => {
+      const company = item.task.teamCompany || 'Unknown';
+      acc[company] = (acc[company] || 0) + 1;
+      return acc;
+    }, {});
+
+    const stats = {
+      totalCriticalTasks: criticalTasks.length,
+      reportedOverlapCount: overlaps.length,
+      sourceBreakdown,
+      reporterStats,
+      trendData, // Add trend data
+      reasonStats, // Add reason stats
+      companyStats, // Add company stats
+      overlaps: overlaps.sort((a, b) => b.task.createdAt - a.task.createdAt),
+      preventionRate: criticalTasks.length > 0
+        ? ((overlaps.length / criticalTasks.length) * 100).toFixed(2)
+        : 0
+    };
+
+    res.status(200).json(stats);
+  } catch (error) {
+    console.error("Error in getIssuePreventionStats:", error);
+    res.status(500).json({ error: error.message });
+  }
+};

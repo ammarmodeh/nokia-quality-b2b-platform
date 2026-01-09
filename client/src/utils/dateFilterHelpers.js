@@ -11,20 +11,21 @@ import { getCustomWeekNumber } from './helpers';
  * @param {number} weekNumber - The custom week number
  * @returns {Array} Filtered tasks
  */
-export const filterTasksByWeek = (tasks, year, weekNumber) => {
+export const filterTasksByWeek = (tasks, year, weekNumber, settings = {}) => {
+  const { weekStartDay = 0 } = settings;
   return tasks.filter(task => {
     if (!task.interviewDate) return false;
     const date = new Date(task.interviewDate);
 
-    // Calculate the start of the week (Sunday) for this task
-    const weekStart = startOfWeek(date, { weekStartsOn: 0 });
+    // Calculate the start of the week for this task
+    const weekStart = startOfWeek(date, { weekStartsOn: weekStartDay });
     const weekYear = weekStart.getFullYear();
 
     // We filter based on the year of the *week start* to be consistent
     if (weekYear !== year) return false;
 
-    // Calculate week number based on the Sunday of the week
-    return getCustomWeekNumber(weekStart, weekYear) === weekNumber;
+    // Calculate week number based on the start of the week
+    return getCustomWeekNumber(weekStart, weekYear, settings) === weekNumber;
   });
 };
 
@@ -35,36 +36,30 @@ export const filterTasksByWeek = (tasks, year, weekNumber) => {
  * @param {number} month - The month (0-11)
  * @returns {Array} Filtered tasks
  */
-// Custom 5-4-4 Week Pattern
-// Jan: 5 weeks (52, 1, 2, 3, 4) - Wk 52 is from previous year
-// Feb: 4 weeks (5, 6, 7, 8)
-// Mar: 4 weeks (9, 10, 11, 12)
-// Q2
-// Apr: 5 weeks (13, 14, 15, 16, 17)
-// May: 4 weeks (18, 19, 20, 21)
-// Jun: 4 weeks (22, 23, 24, 25)
-// Q3
-// Jul: 5 weeks (26, 27, 28, 29, 30)
-// Aug: 4 weeks (31, 32, 33, 34)
-// Sep: 4 weeks (35, 36, 37, 38)
-// Q4
-// Oct: 5 weeks (39, 40, 41, 42, 43)
-// Nov: 4 weeks (44, 45, 46, 47)
-// Dec: 4 weeks (48, 49, 50, 51) + 53 if exists?
-const CUSTOM_MONTH_WEEKS = [
-  { month: 0, weeks: [52, 1, 2, 3, 4] },
-  { month: 1, weeks: [5, 6, 7, 8] },
-  { month: 2, weeks: [9, 10, 11, 12] },
-  { month: 3, weeks: [13, 14, 15, 16, 17] },
-  { month: 4, weeks: [18, 19, 20, 21] },
-  { month: 5, weeks: [22, 23, 24, 25] },
-  { month: 6, weeks: [26, 27, 28, 29, 30] },
-  { month: 7, weeks: [31, 32, 33, 34] },
-  { month: 8, weeks: [35, 36, 37, 38] },
-  { month: 9, weeks: [39, 40, 41, 42, 43] },
-  { month: 10, weeks: [44, 45, 46, 47] },
-  { month: 11, weeks: [48, 49, 50, 51, 52] }, // Include 53 in Dec if it occurs
-];
+/**
+ * Generate the 5-4-4 week pattern starting from the calibrated start week
+ * @param {number} startWeek - The beginning week number (from settings)
+ * @returns {Array} Array of {month, weeks}
+ */
+export const getCustomMonthWeeks = (startWeek = 1) => {
+  const pattern = [5, 4, 4]; // 5-4-4 pattern
+  const monthWeeks = [];
+  let currentWeek = startWeek;
+
+  for (let month = 0; month < 12; month++) {
+    const numWeeks = pattern[month % 3];
+    const weeks = [];
+    for (let i = 0; i < numWeeks; i++) {
+      weeks.push(currentWeek);
+      currentWeek++;
+      // standard wrap around if not continuous
+      if (currentWeek > 52) currentWeek = 1;
+    }
+    monthWeeks.push({ month, weeks });
+  }
+  return monthWeeks;
+};
+
 
 /**
  * Filter tasks by a specific custom month
@@ -73,31 +68,26 @@ const CUSTOM_MONTH_WEEKS = [
  * @param {number} month - The month index (0-11)
  * @returns {Array} Filtered tasks
  */
-export const filterTasksByMonth = (tasks, year, month) => {
-  const targetConfig = CUSTOM_MONTH_WEEKS.find(m => m.month === month);
+export const filterTasksByMonth = (tasks, year, month, settings = {}) => {
+  const { weekStartDay = 0, startWeekNumber = 1 } = settings;
+  const customMonthWeeks = getCustomMonthWeeks(startWeekNumber);
+  const targetConfig = customMonthWeeks.find(m => m.month === month);
   if (!targetConfig) return [];
 
   return tasks.filter(task => {
     if (!task.interviewDate) return false;
     const date = new Date(task.interviewDate);
-    const start = startOfWeek(date, { weekStartsOn: 0 });
+    const start = startOfWeek(date, { weekStartsOn: weekStartDay });
     const taskYear = start.getFullYear();
-    const weekNumber = getCustomWeekNumber(start, taskYear);
-
-    // Determine the "Custom Year" this task belongs to
-    // If Week 52, it belongs to NEXT year's January
-    // If Week 1-51, it belongs to THIS year (mostly)
-    // Wait, if we say Jan 2025 includes Wk 52 of 2024...
+    const weekNumber = getCustomWeekNumber(start, taskYear, settings);
 
     let customYear = taskYear;
-    if (weekNumber === 52 && month === 0) {
-      // Wk 52 belongs to Jan of NEXT year
-      // So if taskYear is 2024, it belongs to 2025 Jan
+    // Year attribution: if Week > 50 in Jan, it's prev year's tail
+    if (weekNumber > 50 && month === 0) {
       customYear = taskYear + 1;
     }
 
-    if (customYear !== year) return false;
-    return targetConfig.weeks.includes(weekNumber);
+    return customYear === year && targetConfig.weeks.includes(weekNumber);
   });
 };
 
@@ -156,20 +146,21 @@ export const filterTasksByDateRange = (tasks, startDate, endDate) => {
  * @param {Array} tasks - Array of tasks
  * @returns {Array} Array of {year, week, label, start, end}
  */
-export const getAvailableWeeks = (tasks) => {
+export const getAvailableWeeks = (tasks, settings = {}) => {
+  const { weekStartDay = 0 } = settings;
   const weeks = new Map();
 
   tasks.forEach(task => {
     if (!task.interviewDate) return;
     const date = new Date(task.interviewDate);
 
-    // Always use the Sunday start of the week to calculate week number
-    const start = startOfWeek(date, { weekStartsOn: 0 });
-    const end = endOfWeek(date, { weekStartsOn: 0 });
+    // Always use the start of the week to calculate week number
+    const start = startOfWeek(date, { weekStartsOn: weekStartDay });
+    const end = endOfWeek(date, { weekStartsOn: weekStartDay });
     const year = start.getFullYear();
 
     // Use the Sunday to get the custom week number
-    const weekNumber = getCustomWeekNumber(start, year);
+    const weekNumber = getCustomWeekNumber(start, year, settings);
     const key = `${year}-W${weekNumber}`;
 
     if (!weeks.has(key)) {
@@ -196,7 +187,9 @@ export const getAvailableWeeks = (tasks) => {
  * @param {Array} tasks - Array of tasks
  * @returns {Array} Array of {year, month, label}
  */
-export const getAvailableMonths = (tasks) => {
+export const getAvailableMonths = (tasks, settings = {}) => {
+  const { weekStartDay = 0, startWeekNumber = 1 } = settings;
+  const customMonthWeeks = getCustomMonthWeeks(startWeekNumber);
   const months = new Map();
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
@@ -204,32 +197,29 @@ export const getAvailableMonths = (tasks) => {
   tasks.forEach(task => {
     if (!task.interviewDate) return;
     const date = new Date(task.interviewDate);
-    const start = startOfWeek(date, { weekStartsOn: 0 });
-    const end = endOfWeek(date, { weekStartsOn: 0 });
+    const start = startOfWeek(date, { weekStartsOn: weekStartDay });
+    const end = endOfWeek(date, { weekStartsOn: weekStartDay });
     const taskYear = start.getFullYear();
-    const weekNumber = getCustomWeekNumber(start, taskYear);
+    const weekNumber = getCustomWeekNumber(start, taskYear, settings);
 
     // Find which custom month this week belongs to
     let foundMonthIndex = -1;
     let customYear = taskYear;
 
-    // Special Check for Week 52: Belongs to Jan of NEXT year
-    if (weekNumber === 52) {
-      foundMonthIndex = 0; // Jan
-      customYear = taskYear + 1;
-    } else {
-      const config = CUSTOM_MONTH_WEEKS.find(c => c.weeks.includes(weekNumber));
-      if (config) {
-        foundMonthIndex = config.month;
+    const config = customMonthWeeks.find(c => c.weeks.includes(weekNumber));
+    if (config) {
+      foundMonthIndex = config.month;
+      if (weekNumber > 50 && foundMonthIndex === 0) {
+        customYear = taskYear + 1;
       }
     }
 
-    if (foundMonthIndex === -1) return; // Should not happen if all weeks covered
+    if (foundMonthIndex === -1) return;
 
     const key = `${customYear}-${foundMonthIndex}`;
 
     if (!months.has(key)) {
-      const weeksConfig = CUSTOM_MONTH_WEEKS.find(m => m.month === foundMonthIndex);
+      const weeksConfig = customMonthWeeks.find(m => m.month === foundMonthIndex);
       const weekRangeStr = `Wk${weeksConfig.weeks[0]}-${weeksConfig.weeks[weeksConfig.weeks.length - 1]}`;
 
       months.set(key, {
@@ -274,8 +264,8 @@ export const getAvailableMonths = (tasks) => {
  * @param {Object} dateRange - { start, end } optional custom range
  * @returns {Object} Trend data by group (team name or reason)
  */
-export const calculateTrendData = (tasks, period = 'week', periodsCount = 8, groupBy = 'team', dateRange = null) => {
-  const allPeriods = period === 'week' ? getAvailableWeeks(tasks) : getAvailableMonths(tasks);
+export const calculateTrendData = (tasks, period = 'week', periodsCount = 8, groupBy = 'team', dateRange = null, settings = {}) => {
+  const allPeriods = period === 'week' ? getAvailableWeeks(tasks, settings) : getAvailableMonths(tasks, settings);
 
   let periodsToAnalyze = [];
 
@@ -311,8 +301,8 @@ export const calculateTrendData = (tasks, period = 'week', periodsCount = 8, gro
 
   periodsToAnalyze.forEach(periodInfo => {
     const tasksInPeriod = period === 'week'
-      ? filterTasksByWeek(tasks, periodInfo.year, periodInfo.week)
-      : filterTasksByMonth(tasks, periodInfo.year, periodInfo.month);
+      ? filterTasksByWeek(tasks, periodInfo.year, periodInfo.week, settings)
+      : filterTasksByMonth(tasks, periodInfo.year, periodInfo.month, settings);
 
     tasksInPeriod.forEach(task => {
       let key;
@@ -345,8 +335,8 @@ export const calculateTrendData = (tasks, period = 'week', periodsCount = 8, gro
   // 3. Iterate periods and fill data
   periodsToAnalyze.forEach((periodInfo, index) => {
     const tasksInPeriod = period === 'week'
-      ? filterTasksByWeek(tasks, periodInfo.year, periodInfo.week)
-      : filterTasksByMonth(tasks, periodInfo.year, periodInfo.month);
+      ? filterTasksByWeek(tasks, periodInfo.year, periodInfo.week, settings)
+      : filterTasksByMonth(tasks, periodInfo.year, periodInfo.month, settings);
 
     tasksInPeriod.forEach(task => {
       let key;

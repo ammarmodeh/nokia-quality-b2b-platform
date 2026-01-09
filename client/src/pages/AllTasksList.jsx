@@ -48,6 +48,7 @@ import { IoMdAdd } from "react-icons/io";
 import api from '../api/api';
 import EditTaskDialog from '../components/task/EditTaskDialog';
 import { TaskDetailsDialog } from '../components/TaskDetailsDialog';
+import { getCustomWeekNumber as getAggregatedWeekNumber } from '../utils/helpers';
 import { format, parseISO } from 'date-fns';
 import { utils, writeFile } from 'xlsx';
 import AddTask from '../components/task/AddTask';
@@ -76,31 +77,26 @@ const AllTasksList = () => {
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [priorityFilter, setPriorityFilter] = useState('all'); // 'all', 'High', 'Medium', 'Low'
 
-  const getCustomWeekNumber = (date, year) => {
-    if (!date) return null;
+  const [settings, setSettings] = useState(null);
 
-    // Create a moment object for the given date
-    const momentDate = moment(date);
-
-    // Find the first Sunday of the year (ISO weeks start on Monday)
-    let firstSunday = moment(`${year}-01-01`).startOf('year');
-    while (firstSunday.day() !== 0) { // 0 is Sunday in moment.js
-      firstSunday.add(1, 'day');
-    }
-
-    // Calculate the difference in weeks
-    const diffInWeeks = momentDate.diff(firstSunday, 'weeks') + 1;
-
-    // Ensure week number is at least 1
-    return Math.max(1, diffInWeeks);
-  };
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const getWeekDisplay = (dateString) => {
     if (!dateString) return "-";
     try {
       const date = moment(dateString);
       const year = date.year();
-      const weekNum = getCustomWeekNumber(date, year);
+      const weekNum = getAggregatedWeekNumber(date.toDate(), year, settings || {});
       return `${weekNum}`;
     } catch (e) {
       return "-";

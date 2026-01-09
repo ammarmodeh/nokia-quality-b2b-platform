@@ -148,6 +148,8 @@ const subtaskSchema = new mongoose.Schema({
 const taskSchema = new mongoose.Schema(
   {
     slid: { type: String, required: [true, "SLID is required"], trim: true },
+    operation: { type: String, default: "" },
+    interviewDate: { type: Date, default: null },
     pisDate: {
       type: Date,
       required: false,
@@ -276,20 +278,6 @@ const taskSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: {
-        values: [
-          "Orange HC detractor",
-          "Orange Closure",
-          "Orange Joint",
-          "Nokia MS detractor",
-          "Nokia FAT",
-          "Nokia Closure",
-          "TRC",
-          "TCRM",
-          "Others",
-        ],
-        message: "Invalid category",
-      },
       required: false,
     },
     validationStatus: {
@@ -345,19 +333,7 @@ const taskSchema = new mongoose.Schema(
       read: { type: Boolean, default: false },
       createdAt: { type: Date, default: Date.now }
     }],
-    ontType: {
-      type: String,
-      enum: [
-        "nokia g-140w-h",
-        "nokia g-140w-c",
-        "nokia g-240w-c",
-        "nokia g-2426g-p",
-        "sagemcom",
-        "zte wifi6 (1G)",
-        "zte wifi6 (2G)"
-      ],
-      default: null
-    },
+
     speed: {
       type: Number,
       default: null

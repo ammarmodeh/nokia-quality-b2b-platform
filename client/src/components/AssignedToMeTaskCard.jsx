@@ -62,6 +62,7 @@ const AssignedToMeTaskCard = ({
   const formatTaskForWhatsApp = () => {
     const formattedMessage = `
       **SLID**: ${task.slid}
+      **Operation**: ${task.operation || 'N/A'}
       **Satisfaction Score**: ${task.evaluationScore}
       **Status**: ${task.status}
       **Due Date**: ${formattedDate}
@@ -310,6 +311,7 @@ const AssignedToMeTaskCard = ({
                 </span>
               )}</p>
               <p><span className="font-medium text-[#bdb5b5]">Category:</span> {task?.category}</p>
+              <p><span className="font-medium text-[#bdb5b5]">Operation:</span> {task?.operation || 'N/A'}</p>
             </div>
 
           </Stack>

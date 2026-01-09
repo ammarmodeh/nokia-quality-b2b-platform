@@ -134,30 +134,8 @@ export const exportToExcel = (rows, columns) => {
   XLSX.writeFile(wb, "data.xlsx");
 };
 
-export const getWeekNumberForTaksTable = (date) => {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-
-  // Define the start of week 0
-  const startWeek0 = new Date(d.getFullYear() - 1, 11, 29); // December 29 of the previous year
-  startWeek0.setHours(0, 0, 0, 0);
-
-  // Define the end of week 0
-  const endWeek0 = new Date(d.getFullYear(), 0, 4); // January 4 of the current year
-  endWeek0.setHours(0, 0, 0, 0);
-
-  // Check if the date falls within week 0
-  if (d >= startWeek0 && d <= endWeek0) {
-    return 0;
-  }
-
-  const baseDate = new Date(d.getFullYear(), 0, 5); // Set January 5 as the base
-  baseDate.setHours(0, 0, 0, 0);
-
-  const diffDays = Math.floor((d - baseDate) / 86400000); // Days difference from Jan 5
-  const weekNumber = Math.floor(diffDays / 7) + 1; // Calculate week number starting from 1
-
-  return weekNumber;
+export const getWeekNumberForTaksTable = (date, settings = {}) => {
+  return getCustomWeekNumber(date, new Date(date).getFullYear(), settings);
 };
 
 
@@ -221,76 +199,128 @@ export const getReasonViolations2 = (tasks) => {
   }));
 };
 
+export const getOwnerViolations = (tasks) => {
+  const ownerMap = {};
 
-export const getWeekNumber = (date) => {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
+  tasks.forEach(task => {
+    const owner = task.responsible || 'Unspecified';
 
-  const baseDate = new Date(2024, 11, 29); // Set December 29, 2024, as the base
-  baseDate.setHours(0, 0, 0, 0);
+    if (!ownerMap[owner]) {
+      ownerMap[owner] = {
+        total: 0,
+        tasks: []
+      };
+    }
 
-  const diffDays = Math.floor((d - baseDate) / 86400000); // Days difference from Dec 29, 2024
-  const weekNumber = Math.floor(diffDays / 7); // Calculate week number starting from 0
+    ownerMap[owner].total++;
+    ownerMap[owner].tasks.push(task);
+  });
 
-  return weekNumber;
+  const totalT = Object.values(ownerMap).reduce((sum, { total }) => sum + total, 0);
+
+  return Object.entries(ownerMap).map(([owner, { total, tasks }]) => ({
+    owner,
+    total,
+    tasks,
+    percentage: totalT > 0 ? ((total / totalT) * 100).toFixed(2) + "%" : "0.00%"
+  }));
 };
 
-export const generateWeekRanges = (tasks) => {
-  if (tasks.length === 0) return [];
 
-  const latestTaskDate = new Date(
-    Math.max(...tasks.map((task) => new Date(task.interviewDate)))
-  );
-  const currentWeek = getWeekNumber(latestTaskDate);
-  const ranges = [];
 
-  for (let i = 0; i <= currentWeek; i++) {
-    ranges.push(`Wk-${i}`);
+export const getWeekNumber = (date, weekStartDay = 0, week1StartDate = null, week1EndDate = null, startWeekNumber = 1) => {
+  if (!date) return { week: 0, year: 0, key: "Wk-00 (0)" };
+
+  const d = new Date(date);
+  const settings = { weekStartDay, week1StartDate, week1EndDate, startWeekNumber };
+  const weekNum = getCustomWeekNumber(d, d.getFullYear(), settings);
+
+  let year = d.getFullYear();
+  if (week1StartDate) {
+    const w1Start = new Date(week1StartDate);
+    // If it's a high week number occurring before the calibration start, it's prev year
+    if (d < w1Start && weekNum > 50) {
+      year = w1Start.getFullYear() - 1;
+    } else if (d >= w1Start) {
+      year = w1Start.getFullYear();
+    }
   }
 
-  return ranges;
+  return {
+    week: weekNum,
+    year,
+    key: `Wk-${String(weekNum).padStart(2, '0')} (${year})`
+  };
 };
 
-export const groupDataByWeek = (data, timeRange) => {
+export const generateWeekRanges = (tasks, settings = {}) => {
+  if (!tasks || tasks.length === 0) return [];
+  const { weekStartDay = 0, week1StartDate = null, week1EndDate = null, startWeekNumber = 1 } = settings;
+
+  const weeksSet = new Set();
+  tasks.forEach(task => {
+    if (task.interviewDate) {
+      const { key } = getWeekNumber(task.interviewDate, weekStartDay, week1StartDate, week1EndDate, startWeekNumber);
+      weeksSet.add(key);
+    }
+  });
+
+  return Array.from(weeksSet).sort((a, b) => {
+    // Expected format: Wk-02 (2026)
+    const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
+    const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
+    if (!matchA || !matchB) return 0;
+    const yearA = parseInt(matchA[2], 10);
+    const yearB = parseInt(matchB[2], 10);
+    const weekA = parseInt(matchA[1], 10);
+    const weekB = parseInt(matchB[1], 10);
+
+    if (yearA !== yearB) return yearA - yearB;
+    return weekA - weekB;
+  });
+};
+
+export const groupDataByWeek = (data, timeRange, settings = {}) => {
   if (data.length === 0) return {};
+  const { weekStartDay = 0, week1StartDate = null, week1EndDate = null, startWeekNumber = 1 } = settings;
 
   const groupedData = {};
-  const latestTaskDate = new Date(
-    Math.max(...data.map((task) => new Date(task.interviewDate)))
-  );
-  const currentWeek = getWeekNumber(latestTaskDate);
-  let allWeeks = [];
+  const allWeeksSet = new Set();
+  data.forEach(task => {
+    if (task.interviewDate) {
+      allWeeksSet.add(getWeekNumber(task.interviewDate, weekStartDay, week1StartDate, week1EndDate, startWeekNumber).key);
+    }
+  });
+  const allWeeks = Array.from(allWeeksSet).sort((a, b) => {
+    const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
+    const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
+    if (!matchA || !matchB) return 0;
+    const yearA = parseInt(matchA[2], 10);
+    const yearB = parseInt(matchB[2], 10);
+    const weekA = parseInt(matchA[1], 10);
+    const weekB = parseInt(matchB[1], 10);
+    if (yearA !== yearB) return yearA - yearB;
+    return weekA - weekB;
+  });
 
+  let selectedWeeks = [];
   if (timeRange === "allWeeks") {
-    // All weeks up to the current week
-    allWeeks = Array.from({ length: currentWeek + 1 }, (_, i) => `Wk-${i}`);
+    selectedWeeks = allWeeks;
   } else if (Array.isArray(timeRange)) {
-    // Handle multiple week ranges
-    allWeeks = timeRange.flatMap((range) => {
-      if (range.startsWith("Wk-")) {
-        const weekNumber = parseInt(range.replace("Wk-", ""), 10);
-        return [`Wk-${weekNumber}`];
-      }
-      return [];
-    });
-  } else if (timeRange.startsWith("Wk-")) {
-    // Handle single week range
-    const weekNumber = parseInt(timeRange.replace("Wk-", ""), 10);
-    allWeeks = [`Wk-${weekNumber}`];
+    selectedWeeks = timeRange;
   } else {
-    // Default to all weeks
-    allWeeks = Array.from({ length: currentWeek + 1 }, (_, i) => `Wk-${i}`);
+    selectedWeeks = [timeRange];
   }
 
-  // Initialize groupedData with all weeks
-  allWeeks.forEach((week) => {
+  // Initialize groupedData with selected weeks
+  selectedWeeks.forEach((week) => {
     groupedData[week] = { Detractor: 0, NeutralPassive: 0, Promoter: 0 };
   });
 
   // Process tasks
   data.forEach((task) => {
-    const weekNumber = getWeekNumber(task.interviewDate);
-    const weekKey = `Wk-${weekNumber}`;
+    if (!task.interviewDate) return;
+    const { key: weekKey } = getWeekNumber(task.interviewDate, weekStartDay, week1StartDate, week1EndDate, startWeekNumber);
 
     if (groupedData[weekKey]) {
       if (task.evaluationScore >= 1 && task.evaluationScore <= 6) {
@@ -310,60 +340,83 @@ export const groupDataByWeek = (data, timeRange) => {
   return groupedData;
 };
 
-export const getDesiredWeeks = (data, range) => {
+export const getDesiredWeeks = (data, range, settings = {}) => {
   if (data.length === 0) return [];
+  const { weekStartDay = 0, week1StartDate = null, week1EndDate = null, startWeekNumber = 1 } = settings;
 
-  const latestTaskDate = new Date(
-    Math.max(...data.map((task) => new Date(task.interviewDate)))
-  );
-  const currentWeek = getWeekNumber(latestTaskDate); // Last week with data
   let desiredWeeks = [];
+  const allWeeks = generateWeekRanges(data, settings);
 
-  if (Array.isArray(range)) {
-    // Handle multiple week ranges
-    desiredWeeks = range.flatMap((r) => {
-      if (r === "allWeeks") {
-        return Array.from({ length: currentWeek + 1 }, (_, i) => `Wk-${i}`);
-      } else if (r.startsWith("Wk-")) {
-        const weekNumber = parseInt(r.replace("Wk-", ""), 10);
-        return [`Wk-${weekNumber}`];
-      }
-      return [];
-    });
-  } else if (range === "allWeeks") {
-    // All weeks
-    desiredWeeks = Array.from({ length: currentWeek + 1 }, (_, i) => `Wk-${i}`);
-  } else if (range.startsWith("Wk-")) {
-    // Single week
-    const weekNumber = parseInt(range.replace("Wk-", ""), 10);
-    desiredWeeks = [`Wk-${weekNumber}`];
-  } else {
-    // Default to no weeks
-    desiredWeeks = [];
+  if (range === "allWeeks") {
+    desiredWeeks = allWeeks;
+  } else if (Array.isArray(range)) {
+    desiredWeeks = range;
+  } else if (typeof range === "string") {
+    desiredWeeks = [range];
   }
 
   // Filter tasks based on desired weeks
   return data.filter((task) => {
-    const weekNumber = getWeekNumber(task.interviewDate);
-    return desiredWeeks.includes(`Wk-${weekNumber}`);
+    if (!task.interviewDate) return false;
+    const { key } = getWeekNumber(task.interviewDate, weekStartDay, week1StartDate, week1EndDate, startWeekNumber);
+    return desiredWeeks.includes(key);
   });
 };
 
-export const getCustomWeekNumber = (date, year) => {
+export const getCustomWeekNumber = (date, year, settings = {}) => {
+  const { weekStartDay = 0, week1StartDate = null, week1EndDate = null, startWeekNumber = 1 } = settings;
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
 
-  // Set the start date of the first week of the year
-  // Our system starts from Dec 29, 2024 for year 2025 based on previous logic
-  // But let's make it smarter: find the Sunday of the week containing Jan 1
+  // If custom calibration is defined
+  if (week1StartDate && week1EndDate) {
+    const w1Start = new Date(week1StartDate);
+    w1Start.setHours(0, 0, 0, 0);
+    const w1End = new Date(week1EndDate);
+    w1End.setHours(23, 59, 59, 999);
+
+    // 1. Within calibration range
+    if (d >= w1Start && d <= w1End) return startWeekNumber;
+
+    // 2. After calibration
+    if (d > w1End) {
+      let firstRegular = new Date(w1End);
+      firstRegular.setDate(w1End.getDate() + 1);
+      firstRegular.setHours(0, 0, 0, 0);
+      while (firstRegular.getDay() !== weekStartDay) {
+        firstRegular.setDate(firstRegular.getDate() + 1);
+      }
+
+      if (d < firstRegular) return startWeekNumber;
+
+      const diffTime = d.getTime() - firstRegular.getTime();
+      const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000));
+      return startWeekNumber + 1 + diffWeeks;
+    }
+
+    // 3. Before calibration
+    if (d < w1Start) {
+      const diffTime = w1Start.getTime() - d.getTime();
+      const diffWeeks = Math.ceil(diffTime / (7 * 24 * 60 * 60 * 1000));
+      let num = startWeekNumber - diffWeeks;
+
+      // Predictable wrap-around
+      while (num <= 0) num += 52;
+      return num;
+    }
+  }
+
+  // Fallback annual logic
   const jan1 = new Date(year, 0, 1);
   const startOfTime = new Date(jan1);
-  startOfTime.setDate(jan1.getDate() - jan1.getDay()); // Previous Sunday
+  const diff = (jan1.getDay() - weekStartDay + 7) % 7;
+  startOfTime.setDate(jan1.getDate() - diff);
   startOfTime.setHours(0, 0, 0, 0);
 
-  const diffDays = Math.floor((d - startOfTime) / 86400000);
+  const diffDays = Math.floor((d.getTime() - startOfTime.getTime()) / 86400000);
   return Math.floor(diffDays / 7) + 1;
 };
+
 
 
 

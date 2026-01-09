@@ -208,6 +208,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       extenderNumber: freeExtender === 'Yes' ? extenderNumber : 0,
       closureCallEvaluation,
       closureCallFeedback,
+      operation: data.operation,
     };
 
     console.log('Sending Task Data:', formData);
@@ -238,8 +239,10 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
         alert('Task created successfully!');
       }
     } catch (error) {
-      alert(error.response.data.message);
       console.log(error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Unknown Error";
+      const errorDetails = error.response?.data ? JSON.stringify(error.response.data, null, 2) : error.message;
+      alert(`Task Creation Failed:\n${errorDetails}`);
     }
   };
 
@@ -273,34 +276,8 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       </AppBar>
       <form id="task-form" onSubmit={handleSubmit(submitHandler)} style={{ padding: '24px' }}>
         <Stack spacing={3}>
-          {/* Row 1: Request Number, SLID, Customer Name, Contact Number */}
+          {/* Row 1: Customer Name, Contact Number */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              label="Request number"
-              placeholder="Enter request number"
-              type='number'
-              fullWidth
-              variant="outlined"
-              {...register('requestNumber')}
-              error={!!errors.requestNumber}
-              helperText={errors.requestNumber ? errors.requestNumber.message : ''}
-            />
-            <TextField
-              label="SLID"
-              placeholder="Enter 7 digits"
-              fullWidth
-              variant="outlined"
-              value={watchSLID}
-              onInput={(e) => {
-                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 7);
-              }}
-              {...register('slid', {
-                required: 'SLID is required',
-                pattern: { value: /^\d{7}$/, message: 'SLID must be 7 digits' },
-              })}
-              error={!!errors.slid}
-              helperText={errors.slid ? errors.slid.message : ''}
-            />
             <TextField
               label="Customer Name"
               placeholder="Customer Name"
@@ -322,33 +299,46 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             />
           </Stack>
 
-          {/* Row 2: Satisfaction Score, PIS Date */}
+          {/* Row 2: Operation, Request Number, SLID */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Satisfaction Score</InputLabel>
-              <Select
-                value={evaluationScore}
-                onChange={(e) => setEvaluationScore(e.target.value)}
-                label="Satisfaction Score"
-              >
-                {dropdownOptions.EVALUATION_SCORE.map((list) => (
-                  <MenuItem key={list} value={list}>{list}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
             <TextField
-              label="PIS Date"
-              type="date"
+              label="Request number"
+              placeholder="Enter request number"
+              type='number'
               fullWidth
               variant="outlined"
-              {...register('pisDate')}
-              error={!!errors.pisDate}
-              helperText={errors.pisDate ? errors.pisDate.message : ''}
-              InputLabelProps={{ shrink: true }}
+              {...register('requestNumber')}
+              error={!!errors.requestNumber}
+              helperText={errors.requestNumber ? errors.requestNumber.message : ''}
+            />
+
+            <TextField
+              label="Operation"
+              placeholder="Enter operation"
+              fullWidth
+              variant="outlined"
+              {...register('operation')}
+            />
+
+            <TextField
+              label="SLID"
+              placeholder="Enter 7 digits"
+              fullWidth
+              variant="outlined"
+              value={watchSLID}
+              onInput={(e) => {
+                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 7);
+              }}
+              {...register('slid', {
+                required: 'SLID is required',
+                pattern: { value: /^\d{7}$/, message: 'SLID must be 7 digits' },
+              })}
+              error={!!errors.slid}
+              helperText={errors.slid ? errors.slid.message : ''}
             />
           </Stack>
 
-          {/* Row 3: Governorate, District, Customer Type */}
+          {/* Row 3: Town (Governorate), District */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <FormControl fullWidth variant="outlined">
               <InputLabel>Governorate</InputLabel>
@@ -369,7 +359,61 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               {...register('district')}
               error={!!errors.district}
               helperText={errors.district ? errors.district.message : ''}
+              inputProps={{ dir: "auto" }}
+              sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
             />
+          </Stack>
+
+          {/* Row 4: Tariff Name, Interview Date */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <TextField
+              label="Tariff Name"
+              fullWidth
+              variant="outlined"
+              {...register('tarrifName')}
+              error={!!errors.tarrifName}
+              helperText={errors.tarrifName ? errors.tarrifName.message : ''}
+            />
+            <TextField
+              label="Interview Date"
+              type="date"
+              fullWidth
+              variant="outlined"
+              {...register('interviewDate')}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
+
+          {/* Row 5: Satisfaction Score */}
+          <FormControl fullWidth variant="outlined">
+            <InputLabel>Satisfaction Score</InputLabel>
+            <Select
+              value={evaluationScore}
+              onChange={(e) => setEvaluationScore(e.target.value)}
+              label="Satisfaction Score"
+            >
+              {dropdownOptions.EVALUATION_SCORE.map((list) => (
+                <MenuItem key={list} value={list}>{list}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* Row 6: Customer Feedback */}
+          <TextField
+            label="Customer Feedback / Comment"
+            fullWidth
+            variant="outlined"
+            multiline
+            rows={4}
+            {...register('customerFeedback')}
+            error={!!errors.customerFeedback}
+            helperText={errors.customerFeedback ? errors.customerFeedback.message : ''}
+            inputProps={{ dir: "auto" }}
+            sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+          />
+
+          {/* Row 7: Customer Type, PIS Date */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <FormControl fullWidth variant="outlined">
               <InputLabel>Customer Type</InputLabel>
               <Select
@@ -382,53 +426,71 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
                 ))}
               </Select>
             </FormControl>
-          </Stack>
-
-          {/* Row 4: Tariff Name, Priority, Category */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
-              label="Tariff Name"
+              label="PIS Date"
+              type="date"
               fullWidth
               variant="outlined"
-              {...register('tarrifName')}
-              error={!!errors.tarrifName}
-              helperText={errors.tarrifName ? errors.tarrifName.message : ''}
+              {...register('pisDate')}
+              error={!!errors.pisDate}
+              helperText={errors.pisDate ? errors.pisDate.message : ''}
+              InputLabelProps={{ shrink: true }}
             />
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Priority</InputLabel>
-              <Select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-                label="Priority"
-              >
-                {dropdownOptions.PRIORITY.map((list) => (
-                  <MenuItem key={list} value={list}>{list}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                label="Category"
-              >
-                {dropdownOptions.TASK_CATEGORIES.map((list) => (
-                  <MenuItem key={list} value={list}>{list}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
           </Stack>
 
-          {/* Row 5: Team Company, Field Team */}
+          {/* Row 8: Free Extender (Yes/No) */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={includeFreeExtender}
+                  onChange={(e) => setIncludeFreeExtender(e.target.checked)}
+                />
+              }
+              label="Include Free Extender"
+            />
+            {includeFreeExtender && (
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Free Extender</InputLabel>
+                  <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </Select>
+                </FormControl>
+                {freeExtender === 'Yes' && (
+                  <>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel>Extender Type</InputLabel>
+                      <Select value={extenderType} onChange={(e) => setExtenderType(e.target.value)} label="Extender Type">
+                        {dropdownOptions.EXTENDER_TYPE.map((list) => (
+                          <MenuItem key={list} value={list}>{list}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <TextField
+                      label="Extender Number"
+                      type="number"
+                      fullWidth
+                      variant="outlined"
+                      value={extenderNumber}
+                      onChange={(e) => setExtenderNumber(parseInt(e.target.value) || 0)}
+                    />
+                  </>
+                )}
+              </Stack>
+            )}
+          </Box>
+
+          {/* Row 9: Subcon (Team Company) + Include Field Team */}
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth variant="outlined">
-                <InputLabel>Team Company</InputLabel>
+                <InputLabel>Subcon</InputLabel>
                 <Select
                   value={teamCompany}
                   onChange={(e) => setTeamCompany(e.target.value)}
-                  label="Team Company"
+                  label="Subcon"
                 >
                   {dropdownOptions.TEAM_COMPANY.map((list) => (
                     <MenuItem key={list} value={list}>{list}</MenuItem>
@@ -463,7 +525,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             </Grid>
           </Grid>
 
-          {/* Row 6: RCA (Responsibility, Reason, SubReason, RootCause) */}
+          {/* Row 10: RCA (Responsibility, Reason, SubReason, RootCause) */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <Autocomplete
               freeSolo
@@ -472,7 +534,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               value={responsible}
               onChange={(e, newValue) => setResponsible(newValue || "")}
               onInputChange={(e, newValue) => setResponsible(newValue || "")}
-              renderInput={(params) => <TextField {...params} label="Responsibility" variant="outlined" />}
+              renderInput={(params) => <TextField {...params} label="Owner" variant="outlined" />}
             />
             <Autocomplete
               freeSolo
@@ -503,7 +565,37 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             />
           </Stack>
 
-          {/* Row 7: Validation Status, ONT Type, Free Extender */}
+          <Divider sx={{ my: 2 }} />
+          <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 2 }}>Additional Details (Priority, Validation, etc.)</Typography>
+
+          {/* Remaining Fields Grouped */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Priority</InputLabel>
+              <Select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                label="Priority"
+              >
+                {dropdownOptions.PRIORITY.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                label="Category"
+              >
+                {dropdownOptions.TASK_CATEGORIES.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
+
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <FormControl fullWidth variant="outlined">
@@ -539,54 +631,8 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
                 )}
               </Box>
             </Grid>
-
-            <Grid item xs={12} md={4}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={includeFreeExtender}
-                      onChange={(e) => setIncludeFreeExtender(e.target.checked)}
-                    />
-                  }
-                  label="Include Free Extender"
-                />
-                {includeFreeExtender && (
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel>Free Extender</InputLabel>
-                    <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-              </Box>
-            </Grid>
           </Grid>
 
-          {/* Row 8: Extender Details (Conditional) */}
-          {includeFreeExtender && freeExtender === 'Yes' && (
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Extender Type</InputLabel>
-                <Select value={extenderType} onChange={(e) => setExtenderType(e.target.value)} label="Extender Type">
-                  {dropdownOptions.EXTENDER_TYPE.map((list) => (
-                    <MenuItem key={list} value={list}>{list}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                label="Extender Number"
-                type="number"
-                fullWidth
-                variant="outlined"
-                value={extenderNumber}
-                onChange={(e) => setExtenderNumber(parseInt(e.target.value) || 0)}
-              />
-            </Stack>
-          )}
-
-          {/* Row 9: Closure Call Evaluation & Feedback */}
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -610,7 +656,6 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
                   </FormControl>
                 )}
               </Box>
-
             </Grid>
             <Grid item xs={12} md={6}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -640,23 +685,9 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             </Grid>
           </Grid>
 
-          {/* Row 10: Customer Feedback */}
-          <TextField
-            label="Customer Feedback / Comment"
-            fullWidth
-            variant="outlined"
-            multiline
-            rows={4}
-            {...register('customerFeedback')}
-            error={!!errors.customerFeedback}
-            helperText={errors.customerFeedback ? errors.customerFeedback.message : ''}
-            inputProps={{ dir: "auto" }}
-            sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
-          />
+          <Divider sx={{ my: 2 }} />
 
-          <Divider />
-
-          {/* Row 11: Assignment */}
+          {/* User Assignment */}
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={4}>
             <Box flex={1}>
               <UserList

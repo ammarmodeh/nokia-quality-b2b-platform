@@ -21,6 +21,7 @@ import {
   GridToolbarDensitySelector
 } from '@mui/x-data-grid';
 import { getAvailableWeeks, filterTasksByWeek, filterTasksByDateRange } from '../utils/dateFilterHelpers';
+import api from '../api/api';
 import { format, startOfWeek } from 'date-fns';
 import { getCustomWeekNumber } from '../utils/helpers';
 import * as XLSX from 'xlsx';
@@ -51,15 +52,35 @@ const WeeklyReasonTable = ({ tasks }) => {
     page: 0,
   });
 
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const weekStartDay = settings?.weekStartDay || 0;
+
   // Get available weeks from tasks
-  const availableWeeks = useMemo(() => getAvailableWeeks(tasks), [tasks]);
+  const availableWeeks = useMemo(() => getAvailableWeeks(tasks, settings || {}), [tasks, settings]);
 
   // Set initial week to most recent
   useEffect(() => {
-    if (availableWeeks.length > 0 && !selectedWeek && !isCustomRange) {
-      setSelectedWeek(availableWeeks[0].key);
+    if (availableWeeks.length > 0 && !isCustomRange) {
+      const isValid = availableWeeks.some(w => w.key === selectedWeek);
+      if (!selectedWeek || !isValid) {
+        setSelectedWeek(availableWeeks[0].key);
+      }
     }
   }, [availableWeeks, selectedWeek, isCustomRange]);
+
 
   // Filter tasks by selected week or custom range
   const filteredTasks = useMemo(() => {
@@ -70,9 +91,9 @@ const WeeklyReasonTable = ({ tasks }) => {
       if (!selectedWeek) return [];
       const week = availableWeeks.find(w => w.key === selectedWeek);
       if (!week) return [];
-      return filterTasksByWeek(tasks, week.year, week.week);
+      return filterTasksByWeek(tasks, week.year, week.week, settings || {});
     }
-  }, [tasks, selectedWeek, availableWeeks, isCustomRange, customStart, customEnd]);
+  }, [tasks, selectedWeek, availableWeeks, isCustomRange, customStart, customEnd, settings]);
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedRowData, setSelectedRowData] = useState(null);
@@ -264,8 +285,8 @@ const WeeklyReasonTable = ({ tasks }) => {
           if (task.interviewDate) {
             try {
               const date = new Date(task.interviewDate);
-              const start = startOfWeek(date, { weekStartsOn: 0 });
-              weekStr = `W${getCustomWeekNumber(start, start.getFullYear())}`;
+              const start = startOfWeek(date, { weekStartsOn: weekStartDay });
+              weekStr = `W${getCustomWeekNumber(start, start.getFullYear(), settings || {})}`;
               dateStr = format(date, 'yyyy-MM-dd');
             } catch (e) {
               // ignore
