@@ -50,7 +50,9 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     resolvedBy: '',
     resolveDate: new Date().toISOString().split('T')[0],
     closedBy: "",
+    closedAt: "",
     dispatched: "no",
+    dispatchedAt: "",
     resolutionDetails: ""
   };
 
@@ -68,6 +70,9 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           pisDate: issue.pisDate ? new Date(issue.pisDate).toISOString().split('T')[0] : initialFormState.pisDate,
           date: issue.date ? new Date(issue.date).toISOString().split('T')[0] : initialFormState.date,
           resolveDate: issue.resolveDate ? new Date(issue.resolveDate).toISOString().split('T')[0] : initialFormState.resolveDate,
+          closedAt: issue.closedAt ? new Date(issue.closedAt).toISOString().split('T')[0] : initialFormState.closedAt,
+          dispatched: issue.dispatched || 'no',
+          dispatchedAt: issue.dispatchedAt ? new Date(issue.dispatchedAt).toISOString().split('T')[0] : initialFormState.dispatchedAt,
           issues: issue.issues && issue.issues.length > 0 ? issue.issues : [{ category: '', subCategory: '' }]
         });
       } else {
@@ -678,6 +683,20 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               </Select>
             </FormControl>
 
+            {formData.dispatched === 'yes' && (
+              <TextField
+                fullWidth
+                label="Dispatched Date"
+                type="date"
+                name="dispatchedAt"
+                value={formData.dispatchedAt || ''}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                disabled={!isAdmin}
+                sx={{ ...textFieldStyles, mb: 2 }}
+              />
+            )}
+
             <ManagedAutocomplete
               category="CIN_SUPERVISORS"
               label="Supervisor"
@@ -685,6 +704,18 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               freeSolo
               value={formData.closedBy || ''}
               onChange={(val) => handleChange({ target: { name: 'closedBy', value: val } })}
+              disabled={!isAdmin}
+              sx={{ ...textFieldStyles, mb: 2 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Close Date"
+              type="date"
+              name="closedAt"
+              value={formData.closedAt || ''}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
               disabled={!isAdmin}
               sx={{ ...textFieldStyles }}
             />

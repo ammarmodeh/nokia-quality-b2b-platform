@@ -14,6 +14,7 @@ import {
   Tooltip,
   Avatar,
   LinearProgress,
+  alpha,
 } from '@mui/material';
 import * as XLSX from 'xlsx';
 import { MdClose, MdContentCopy, MdFileDownload } from 'react-icons/md';
@@ -96,6 +97,9 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       'Team Name': task.teamName,
       'Team Company': task.teamCompany,
       'Interview Date': new Date(task.interviewDate).toLocaleString(),
+      'Dispatched': task.relatedIssues?.[0]?.dispatched === 'yes' ? 'Yes' : 'No',
+      'Resolved Date': task.relatedIssues?.[0]?.resolveDate ? new Date(task.relatedIssues[0].resolveDate).toLocaleDateString() : 'N/A',
+      'Closed Date': task.relatedIssues?.[0]?.closedAt ? new Date(task.relatedIssues[0].closedAt).toLocaleDateString() : 'N/A',
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -264,6 +268,42 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                   <DetailRow label="Team Company" value={task.teamCompany} isMobile={isMobile} />
                 </Box>
               </Paper>
+
+              {/* Linked Customer Issue Stats (If Available) */}
+              {task.relatedIssues && task.relatedIssues.length > 0 && (
+                <Paper elevation={0} sx={{
+                  p: isMobile ? 1.5 : 2,
+                  backgroundColor: alpha('#7b68ee', 0.05),
+                  borderRadius: 2,
+                  border: `1px solid ${alpha('#7b68ee', 0.2)}`
+                }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
+                    Linked Customer Issue (Analytics)
+                  </Typography>
+                  <Box sx={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                    gap: isMobile ? 1.5 : 2
+                  }}>
+                    <DetailRow label="Dispatched?" value={task.relatedIssues[0].dispatched === 'yes' ? 'Yes' : 'No'} isMobile={isMobile} />
+                    <DetailRow
+                      label="Resolved on"
+                      value={task.relatedIssues[0].resolveDate ? moment(task.relatedIssues[0].resolveDate).format("MMM DD, YYYY") : 'Not Resolved'}
+                      isMobile={isMobile}
+                    />
+                    <DetailRow
+                      label="Closed on"
+                      value={task.relatedIssues[0].closedAt ? moment(task.relatedIssues[0].closedAt).format("MMM DD, YYYY") : 'Not Closed'}
+                      isMobile={isMobile}
+                    />
+                    <DetailRow
+                      label="Report Source"
+                      value={`${task.relatedIssues[0].fromMain} (${task.relatedIssues[0].reporter})`}
+                      isMobile={isMobile}
+                    />
+                  </Box>
+                </Paper>
+              )}
 
               {/* Evaluation Section */}
               <Paper elevation={0} sx={{

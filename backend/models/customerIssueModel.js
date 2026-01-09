@@ -53,14 +53,17 @@ const customerIssueSchema = new mongoose.Schema({
   },
   resolveDate: { type: Date },
   closedBy: { type: String }, // Returned as Supervisor
+  closedAt: { type: Date }, // Time of closure by Supervisor
   resolutionDetails: { type: String },
   assignedTo: { type: String, required: true },
   installingTeam: { type: String },
   dispatched: {
     type: String,
     enum: ['yes', 'no'],
+    enum: ['yes', 'no'],
     default: 'no'
   },
+  dispatchedAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

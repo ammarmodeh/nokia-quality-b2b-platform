@@ -1054,14 +1054,17 @@ export const getIssuePreventionStats = async (req, res) => {
     const criticalTasks = await TaskSchema.find({
       evaluationScore: { $lte: 8 },
       isDeleted: false
-    }).select('slid evaluationScore customerFeedback createdAt interviewDate status teamName teamCompany subReason rootCause reason');
+    })
+      .select('slid evaluationScore customerFeedback createdAt interviewDate status teamName teamCompany subReason rootCause reason requestNumber operation customerName contactNumber tarrifName customerType governorate district priority validationStatus assignedTo subTasks')
+      .populate('assignedTo', 'name email');
 
     const taskSlids = criticalTasks.map(t => t.slid);
 
-    // 2. Find matching CustomerIssue records for these SLIDs
+    // 3. Find matching CustomerIssue records for these SLIDs
+    // distinct issues categories
     const priorReports = await CustomerIssueSchema.find({
       slid: { $in: taskSlids }
-    }).select('slid fromMain reporter reporterNote createdAt solved');
+    }).select('slid fromMain reporter reporterNote createdAt date solved issues resolveDate closedAt dispatched dispatchedAt closedBy');
 
     // 3. Aggregate data
     const overlaps = criticalTasks.map(task => {
@@ -1082,7 +1085,7 @@ export const getIssuePreventionStats = async (req, res) => {
       return acc;
     }, {});
 
-    // 5. Calculate Prevention Gap (Time between first report and task creation)
+    // 5. Calculate Prevention Gap (Time between first report and task creation) - unused but potential for future
 
     // 6. Reporter Stats (Who reported issues that became detractors?)
     const reporterStats = priorReports.reduce((acc, report) => {
@@ -1114,14 +1117,195 @@ export const getIssuePreventionStats = async (req, res) => {
       return acc;
     }, {});
 
+    // 10. Reporter Comparison Stats (Top Non-Preventive Reporters)
+    const reporterComparisonMap = {};
+
+    // 11. Diagnosis Accuracy & QoS/Installation Analysis
+    let totalMatches = 0;
+    let totalComparisons = 0;
+
+    const qosMatrix = {
+      confirmed: 0,
+      falseAlarm: 0,
+      missed: 0
+    };
+
+    const installationMatrix = {
+      confirmed: 0,
+      falseAlarm: 0,
+      missed: 0
+    };
+
+    // Process Efficiency Stats
+    let totalResolutionTime = 0; // Field Team Speed
+    let totalClosureTime = 0;    // Supervisor Speed
+    let totalLifecycleTime = 0;  // End-to-End
+    let countResolution = 0;
+    let countClosure = 0;
+    let countLifecycle = 0;
+    const pendingBottlenecks = [];
+    const now = new Date();
+
+    // Removed impactStats as requested
+
+    overlaps.forEach(item => {
+      const taskReason = item.task.reason || "Unknown Task Reason";
+      const interviewDate = item.task.interviewDate ? new Date(item.task.interviewDate) : null;
+
+      item.reports.forEach(report => {
+        const reporter = report.reporter || "Unknown Reporter";
+        const reportDate = new Date(report.date || report.createdAt);
+
+        // Process Efficiency Calculations (Refined Logic)
+        const now = new Date();
+
+        // 1. Supervisor Dispatch Speed: Reported -> Dispatched (OR Reported -> Now if undispatched)
+        let dispatchEnd = report.dispatchedAt ? new Date(report.dispatchedAt) : (report.dispatched === 'no' ? now : null);
+
+        // Fallback for historical 'yes' without date
+        if (!dispatchEnd && report.dispatched === 'yes') dispatchEnd = reportDate;
+
+        if (dispatchEnd && dispatchEnd >= reportDate) {
+          const dispatchTime = (dispatchEnd - reportDate) / (1000 * 60 * 60 * 24);
+          totalClosureTime += dispatchTime;
+          countClosure++;
+        }
+
+        // 2. Field Resolution Speed (Dispatched -> Resolved OR Reported -> Now if pending)
+        if (report.dispatchedAt || report.dispatched === 'yes') {
+          let resStart = null;
+          let resEnd = null;
+
+          if (report.resolveDate) {
+            // Completed duration: Dispatched -> Resolved
+            resStart = new Date(report.dispatchedAt || report.date || report.createdAt);
+            resEnd = new Date(report.resolveDate);
+          } else if (report.solved === 'no') {
+            // Pending negligence: Reported -> Now
+            resStart = reportDate;
+            resEnd = now;
+          }
+
+          if (resStart && resEnd && resEnd >= resStart) {
+            const resTime = (resEnd - resStart) / (1000 * 60 * 60 * 24);
+            totalResolutionTime += resTime;
+            countResolution++;
+          }
+        }
+
+        // 3. Total Lifecycle: Reported -> Closed (OR Reported -> Now if open)
+        let lifeEnd = report.closedAt ? new Date(report.closedAt) : now;
+        const lifeTime = (lifeEnd - reportDate) / (1000 * 60 * 60 * 24);
+        if (lifeTime >= 0) {
+          totalLifecycleTime += lifeTime;
+          countLifecycle++;
+        }
+
+        // Bottleneck Detection
+        if (report.solved === 'no') {
+          pendingBottlenecks.push({
+            id: report._id,
+            slid: report.slid,
+            age: ((now - reportDate) / (1000 * 60 * 60 * 24)).toFixed(1),
+            stage: report.dispatched === 'no' ? 'Awaiting Dispatch' : 'Field Work',
+            assignedTo: (report.assignedTo && report.assignedTo.name) || 'Unassigned',
+            supervisor: report.closedBy || 'Unassigned',
+            originalReport: report // Send full object for viewing
+          });
+        }
+
+        // Calculate Gap (Days)
+        const gap = interviewDate ? Math.abs((interviewDate - reportDate) / (1000 * 60 * 60 * 24)) : 0;
+
+        // Get all categories from report
+        const reportedCategories = report.issues && report.issues.length > 0
+          ? report.issues.map(i => i.category)
+          : ["No Category"];
+
+        const reportedCategoriesString = reportedCategories.join(", ");
+
+        // Check for Match (Case-insensitive, simplistic check)
+        // We assume "Match" if ANY reported category includes the task reason string, or vice versa
+        // Ideally this should be a mapped comparison (e.g. "Slow Net" -> "QoS")
+        const isMatch = reportedCategories.some(cat =>
+          cat.toLowerCase().includes(taskReason.toLowerCase()) ||
+          taskReason.toLowerCase().includes(cat.toLowerCase())
+        );
+
+        totalComparisons++;
+        if (isMatch) totalMatches++;
+
+        // QoS Analysis
+        const reportedQoS = reportedCategories.some(cat => cat.toLowerCase().includes("qos"));
+        const actualQoS = taskReason.toLowerCase().includes("qos");
+
+        if (reportedQoS && actualQoS) qosMatrix.confirmed++;
+        else if (reportedQoS && !actualQoS) qosMatrix.falseAlarm++;
+        else if (!reportedQoS && actualQoS) qosMatrix.missed++;
+
+        // Installation Analysis
+        const reportedInstall = reportedCategories.some(cat => cat.toLowerCase().includes("install"));
+        const actualInstall = taskReason.toLowerCase().includes("install");
+
+        if (reportedInstall && actualInstall) installationMatrix.confirmed++;
+        else if (reportedInstall && !actualInstall) installationMatrix.falseAlarm++;
+        else if (!reportedInstall && actualInstall) installationMatrix.missed++;
+
+        // --- Existing Reporter Logic ---
+        if (!reporterComparisonMap[reporter]) {
+          reporterComparisonMap[reporter] = {
+            reporterName: reporter,
+            totalNonPrevented: 0,
+            comparisons: []
+          };
+        }
+
+        reporterComparisonMap[reporter].totalNonPrevented++;
+
+        const existingComp = reporterComparisonMap[reporter].comparisons.find(
+          c => c.reportedCategory === reportedCategoriesString && c.actualReason === taskReason
+        );
+
+        if (existingComp) {
+          existingComp.count++;
+        } else {
+          reporterComparisonMap[reporter].comparisons.push({
+            reportedCategory: reportedCategoriesString,
+            actualReason: taskReason,
+            count: 1
+          });
+        }
+      });
+    });
+
+    const reporterComparisonStats = Object.values(reporterComparisonMap)
+      .sort((a, b) => b.totalNonPrevented - a.totalNonPrevented)
+      .slice(0, 10);
+
     const stats = {
       totalCriticalTasks: criticalTasks.length,
       reportedOverlapCount: overlaps.length,
       sourceBreakdown,
       reporterStats,
-      trendData, // Add trend data
-      reasonStats, // Add reason stats
-      companyStats, // Add company stats
+      trendData,
+      reasonStats,
+      companyStats,
+      reporterComparisonStats,
+      diagnosisAccuracy: {
+        rate: totalComparisons > 0 ? ((totalMatches / totalComparisons) * 100).toFixed(1) : 0,
+        totalMatches,
+        totalComparisons
+      },
+      qosMatrix,
+      installationMatrix, // Add newly calculated matrix
+      processEfficiency: {
+        avgResolutionTime: countResolution > 0 ? (totalResolutionTime / countResolution).toFixed(1) : 0,
+        avgDispatchTime: countClosure > 0 ? (totalClosureTime / countClosure).toFixed(1) : 0,
+        avgLifecycleTime: countLifecycle > 0 ? (totalLifecycleTime / countLifecycle).toFixed(1) : 0,
+        oldestPending: pendingBottlenecks.sort((a, b) => b.age - a.age),
+        countResolution,
+        countClosure
+      },
       overlaps: overlaps.sort((a, b) => b.task.createdAt - a.task.createdAt),
       preventionRate: criticalTasks.length > 0
         ? ((overlaps.length / criticalTasks.length) * 100).toFixed(2)

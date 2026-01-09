@@ -747,7 +747,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
           variant="h6"
           fontWeight="bold"
           sx={{
-            color: "#475569",
+            color: "#c2c2c2",
             fontSize: isMobile ? "0.9rem" : "1rem",
             fontWeight: "600"
           }}

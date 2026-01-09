@@ -85,6 +85,11 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   const [trendTimeframe, setTrendTimeframe] = useState('day'); // 'day', 'week', 'month'
   const [trendChartType, setTrendChartType] = useState('mixed'); // 'mixed', 'bar', 'line'
 
+  const [negligencePage, setNegligencePage] = useState(0);
+  const [negligenceRowsPerPage, setNegligenceRowsPerPage] = useState(5);
+  const [negligenceSearch, setNegligenceSearch] = useState('');
+  const [negligenceSupervisorFilter, setNegligenceSupervisorFilter] = useState('all');
+
   const handleViewIssue = (issue) => {
     setSelectedDetailedIssue(issue);
     setIsIssueViewOpen(true);
@@ -108,7 +113,95 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
     const issueDensity = totalTransactions > 0 ? (totalIssuesHighlighted / totalTransactions).toFixed(2) : 0;
 
-    return { totalTransactions, totalIssuesHighlighted, resolved, unresolved, resolutionRate, issueDensity };
+    // Process Efficiency Calculations
+    let totalDispatchTime = 0;
+    let countDispatch = 0;
+    let totalResolutionTime = 0;
+    let countResolution = 0;
+    let totalLifecycleTime = 0;
+    let countLifecycle = 0;
+
+    const now = new Date();
+    const pendingBottlenecks = [];
+
+    issues.forEach(issue => {
+      const reportDate = new Date(issue.date || issue.createdAt);
+
+      // 1. Supervisor Dispatch Speed (Reported -> Dispatched OR Reported -> Now)
+      let dispatchEnd = issue.dispatchedAt ? new Date(issue.dispatchedAt) : (issue.dispatched === 'no' ? now : null);
+
+      // Fallback for edge cases where dispatched=yes but date missing (historical)
+      if (!dispatchEnd && issue.dispatched === 'yes') dispatchEnd = reportDate;
+
+      if (dispatchEnd && dispatchEnd >= reportDate) {
+        const time = (dispatchEnd - reportDate) / (1000 * 60 * 60 * 24);
+        totalDispatchTime += time;
+        countDispatch++;
+      }
+
+      // 2. Field Resolution Speed (Dispatched -> Resolved OR Reported -> Now if pending)
+      if (issue.dispatchedAt || issue.dispatched === 'yes') {
+        let resStart = null;
+        let resEnd = null;
+
+        if (issue.resolveDate) {
+          // Completed case: Count only the field work duration
+          resStart = new Date(issue.dispatchedAt || issue.date || issue.createdAt);
+          resEnd = new Date(issue.resolveDate);
+        } else if (issue.solved === 'no') {
+          // Pending case: Count total time from Submission (Negligence)
+          resStart = new Date(issue.date || issue.createdAt);
+          resEnd = now;
+        }
+
+        if (resStart && resEnd && resEnd >= resStart) {
+          const resTime = (resEnd - resStart) / (1000 * 60 * 60 * 24);
+          totalResolutionTime += resTime;
+          countResolution++;
+        }
+      }
+
+      // 3. Total Lifecycle (Reported -> Closed OR Reported -> Now)
+      let lifecycleEnd = issue.closedAt ? new Date(issue.closedAt) : now;
+      if (lifecycleEnd >= reportDate) {
+        const lifeTime = (lifecycleEnd - reportDate) / (1000 * 60 * 60 * 24);
+        totalLifecycleTime += lifeTime;
+        countLifecycle++;
+      }
+
+      // Bottleneck Detection: Capture aging for open issues
+      if (issue.solved === 'no') {
+        const currentAge = (now - reportDate) / (1000 * 60 * 60 * 24);
+        pendingBottlenecks.push({
+          slid: issue.slid,
+          age: currentAge.toFixed(1),
+          stage: issue.dispatched === 'no' ? 'Awaiting Dispatch' : 'Field Work (Dispatched)',
+          assignedTo: issue.assignedTo || 'Unassigned',
+          supervisor: issue.closedBy || 'Unassigned',
+          originalIssue: issue // Full object for viewing
+        });
+      }
+    });
+
+    const avgDispatchTime = countDispatch > 0 ? (totalDispatchTime / countDispatch).toFixed(1) : 0;
+    const avgResolutionTime = countResolution > 0 ? (totalResolutionTime / countResolution).toFixed(1) : 0;
+    const avgLifecycleTime = countLifecycle > 0 ? (totalLifecycleTime / countLifecycle).toFixed(1) : 0;
+
+    // Sort bottlenecks by age
+    const oldestPending = pendingBottlenecks.sort((a, b) => b.age - a.age);
+
+    return {
+      totalTransactions,
+      totalIssuesHighlighted,
+      resolved,
+      unresolved,
+      resolutionRate,
+      issueDensity,
+      avgDispatchTime,
+      avgResolutionTime,
+      avgLifecycleTime,
+      oldestPending
+    };
   }, [issues]);
 
   // --- Export Handlers ---
@@ -320,13 +413,42 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     let detailedList = sortedAssignees.map(name => {
       const topCat = Object.entries(statsMap[name].categories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
       const topSub = Object.entries(statsMap[name].subCategories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+      // Calculate Resolution Speed for this assignee (Include pending issues as aging)
+      const issuesForAssignee = issues.filter(i => (i.assignedTo || 'Unassigned') === name);
+      let totalResTime = 0;
+      let countRes = 0;
+      const now = new Date();
+      issuesForAssignee.forEach(i => {
+        if (i.dispatchedAt || i.dispatched === 'yes') {
+          let start = null;
+          let end = null;
+
+          if (i.resolveDate) {
+            start = new Date(i.dispatchedAt || i.date || i.createdAt);
+            end = new Date(i.resolveDate);
+          } else if (i.solved === 'no') {
+            // Negligence logic: from Reported date to Now
+            start = new Date(i.date || i.createdAt);
+            end = now;
+          }
+
+          if (start && end && end >= start) {
+            totalResTime += (end - start) / (1000 * 60 * 60 * 24);
+            countRes++;
+          }
+        }
+      });
+      const avgResSpeed = countRes > 0 ? (totalResTime / countRes).toFixed(1) : 'N/A';
+
       return {
         name,
         ...statsMap[name],
         topCategory: topCat,
         topSubCategory: topSub,
         rate: ((statsMap[name].resolved / statsMap[name].total) * 100).toFixed(1),
-        relatedIssues: issues.filter(i => (i.assignedTo || 'Unassigned') === name),
+        relatedIssues: issuesForAssignee,
+        avgResolutionSpeed: avgResSpeed,
         type: 'Assignee'
       };
     });
@@ -346,7 +468,10 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     }
     detailedList.sort((a, b) => {
       let valA = a[assigneeSort.field], valB = b[assigneeSort.field];
-      if (assigneeSort.field === 'rate') { valA = parseFloat(valA); valB = parseFloat(valB); }
+      if (assigneeSort.field === 'rate' || assigneeSort.field === 'avgResolutionSpeed') {
+        valA = parseFloat(valA) || 0;
+        valB = parseFloat(valB) || 0;
+      }
       return assigneeSort.direction === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
     });
 
@@ -364,6 +489,37 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       detailedList
     };
   }, [issues, assigneeSearch, assigneeSort, filters]);
+
+  const supervisorStats = useMemo(() => {
+    const statsMap = {};
+    const now = new Date();
+    issues.forEach(issue => {
+      const supervisor = issue.closedBy || 'Unknown';
+      if (!statsMap[supervisor]) {
+        statsMap[supervisor] = { total: 0, dispatchSum: 0, dispatchCount: 0 };
+      }
+      statsMap[supervisor].total += 1;
+
+      const reported = new Date(issue.date || issue.createdAt);
+      let dispatchEnd = issue.dispatchedAt ? new Date(issue.dispatchedAt) : (issue.dispatched === 'no' ? now : null);
+
+      // Fallback for historical 'yes' without date
+      if (!dispatchEnd && issue.dispatched === 'yes') dispatchEnd = reported;
+
+      if (dispatchEnd && dispatchEnd >= reported) {
+        statsMap[supervisor].dispatchSum += (dispatchEnd - reported) / (1000 * 60 * 60 * 24);
+        statsMap[supervisor].dispatchCount += 1;
+      }
+    });
+
+    return Object.entries(statsMap)
+      .map(([name, data]) => ({
+        name,
+        total: data.total,
+        avgDispatchSpeed: data.dispatchCount > 0 ? (data.dispatchSum / data.dispatchCount).toFixed(1) : 'N/A'
+      }))
+      .sort((a, b) => b.total - a.total); // Default sort by volume
+  }, [issues]);
 
   const installingTeamStats = useMemo(() => {
     const statsMap = {};
@@ -564,6 +720,214 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         <Grid item xs={12} sm={6} md={2.4}><StatCard title="Avg. Daily Issues" value={(stats.totalTransactions / (trendData.labels.length || 1)).toFixed(1)} icon={<FaChartLine />} color="#ff9800" subtext="Trend metric" /></Grid>
       </Grid>
 
+      {/* Process Efficiency Spotlight */}
+      <Box mb={4}>
+        <Grid container spacing={4}>
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+              <Typography variant="subtitle2" color="grey.500" mb={1}>SUPERVISOR DISPATCH SPEED (Incl. Aging)</Typography>
+              <Typography variant="h3" fontWeight="800" color={Number(stats.avgDispatchTime) > 1 ? "warning.main" : "info.main"}>
+                {stats.avgDispatchTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                Avg time from <b>Reported</b> → <b>Dispatched</b> (Or <b>Reported</b> → <b>Now</b> if pending)
+              </Typography>
+              <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                  * Calculation: (Dispatched Date - Reported Date) OR (Now - Reported Date) if undispatched.
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+              <Typography variant="subtitle2" color="grey.500" mb={1}>FIELD RESOLUTION SPEED (Incl. Aging)</Typography>
+              <Typography variant="h3" fontWeight="800" color="success.main">
+                {stats.avgResolutionTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                Avg time from <b>Dispatched</b> → <b>Resolved</b> (Or <b>Reported</b> → <b>Now</b> if pending)
+              </Typography>
+              <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                  * Calculation: Resolved cases use (Resolved - Dispatched). Pending cases use (Now - Reported) to reflect negligence.
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+              <Typography variant="subtitle2" color="grey.500" mb={1}>TOTAL LIFECYCLE (Accountability)</Typography>
+              <Typography variant="h3" fontWeight="800" color="white">
+                {stats.avgLifecycleTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                Total time from <b>Initial Report</b> → <b>Closed/Now</b>
+              </Typography>
+              <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                  * Calculation: Full duration from (Report Date) to (Closed Date) OR (Now) if the case is still open.
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
+
+          {/* Supervisor Performance Table - Vertical Stack */}
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
+              <Typography variant="h6" gutterBottom fontWeight="bold">Supervisor Performance (Aging Impact)</Typography>
+              <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ position: 'sticky', top: 0, backgroundColor: '#2d2d2d' }}>
+                    <tr style={{ color: '#b3b3b3', fontSize: '0.8rem', borderBottom: '1px solid #3d3d3d' }}>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Supervisor</th>
+                      <th style={{ padding: '8px', textAlign: 'right' }}>Volume</th>
+                      <th style={{ padding: '8px', textAlign: 'right' }}>Avg Dispatch (Aging Incl.)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {supervisorStats.map((sup, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
+                        <td style={{ padding: '8px', fontWeight: 'bold' }}>{sup.name}</td>
+                        <td style={{ padding: '8px', textAlign: 'right' }}>{sup.total}</td>
+                        <td style={{ padding: '8px', textAlign: 'right', color: Number(sup.avgDispatchSpeed) > 1 ? '#ff9800' : '#4caf50' }}>
+                          {sup.avgDispatchSpeed !== 'N/A' ? `${sup.avgDispatchSpeed} d` : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Box>
+            </Paper>
+          </Grid>
+
+          {/* Aging Bottlenecks List - Table Format with Search & Actions */}
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2, bgcolor: '#1a1a1a', color: '#fff', borderRadius: 2, border: '1px solid #f44336', height: '100%' }}>
+              <Stack direction={isMobile ? "column" : "row"} justifyContent="space-between" alignItems={isMobile ? "flex-start" : "center"} mb={2} spacing={2}>
+                <Typography variant="h6" fontWeight="bold" color="error">Critical Negligence (Top Aging Cases)</Typography>
+                <Stack direction={isMobile ? "column" : "row"} spacing={1} sx={{ width: isMobile ? '100%' : 'auto' }}>
+                  <FormControl size="small" sx={{ width: isMobile ? '100%' : 200 }}>
+                    <Select
+                      value={negligenceSupervisorFilter}
+                      onChange={(e) => {
+                        setNegligenceSupervisorFilter(e.target.value);
+                        setNegligencePage(0);
+                      }}
+                      displayEmpty
+                      sx={{
+                        bgcolor: '#2d2d2d',
+                        color: '#fff',
+                        borderRadius: 2,
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#444' },
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      <MenuItem value="all">All Supervisors</MenuItem>
+                      {Array.from(new Set(stats.oldestPending.map(item => item.supervisor))).sort().map(sup => (
+                        <MenuItem key={sup} value={sup}>{sup}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    size="small"
+                    placeholder="Search SLID or Technician..."
+                    variant="outlined"
+                    value={negligenceSearch}
+                    onChange={(e) => {
+                      setNegligenceSearch(e.target.value);
+                      setNegligencePage(0);
+                    }}
+                    InputProps={{
+                      startAdornment: <FaSearch style={{ marginRight: 8, color: '#666' }} />,
+                      sx: { bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, '& fieldset': { borderColor: '#444' } }
+                    }}
+                    sx={{ width: isMobile ? '100%' : 250 }}
+                  />
+                </Stack>
+              </Stack>
+              <Box sx={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ color: '#b3b3b3', fontSize: '0.75rem', borderBottom: '1px solid #3d3d3d' }}>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>SLID</th>
+                      <th style={{ padding: '8px', textAlign: 'center' }}>Age</th>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Stage</th>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Personnel</th>
+                      <th style={{ padding: '8px', textAlign: 'center' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const filtered = stats.oldestPending.filter(item => {
+                        const matchesSearch = item.slid.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
+                          item.assignedTo.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
+                          item.supervisor.toLowerCase().includes(negligenceSearch.toLowerCase());
+
+                        const matchesSupervisor = negligenceSupervisorFilter === 'all' || item.supervisor === negligenceSupervisorFilter;
+
+                        return matchesSearch && matchesSupervisor;
+                      });
+
+                      return filtered.length > 0 ? filtered
+                        .slice(negligencePage * negligenceRowsPerPage, negligencePage * negligenceRowsPerPage + negligenceRowsPerPage)
+                        .map((item, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
+                            <td style={{ padding: '8px', color: '#4e73df', fontWeight: 'bold', fontSize: '0.85rem' }}>{item.slid}</td>
+                            <td style={{ padding: '8px', textAlign: 'center' }}>
+                              <Chip label={`${item.age}d`} size="small" color="error" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
+                            </td>
+                            <td style={{ padding: '8px', fontSize: '0.8rem', color: '#ccc' }}>{item.stage}</td>
+                            <td style={{ padding: '8px', fontSize: '0.75rem', color: '#999' }}>
+                              T: {item.assignedTo}<br />S: {item.supervisor}
+                            </td>
+                            <td style={{ padding: '8px', textAlign: 'center' }}>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="primary"
+                                onClick={() => handleViewIssue(item.originalIssue)}
+                                sx={{ fontSize: '0.7rem', textTransform: 'none', py: 0.2 }}
+                              >
+                                View
+                              </Button>
+                            </td>
+                          </tr>
+                        )) : (
+                        <tr>
+                          <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#4caf50' }}>No pending delays detected.</td>
+                        </tr>
+                      );
+                    })()}
+                  </tbody>
+                </table>
+              </Box>
+              <TablePagination
+                component="div"
+                count={stats.oldestPending.filter(item => {
+                  const matchesSearch = item.slid.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
+                    item.assignedTo.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
+                    item.supervisor.toLowerCase().includes(negligenceSearch.toLowerCase());
+
+                  const matchesSupervisor = negligenceSupervisorFilter === 'all' || item.supervisor === negligenceSupervisorFilter;
+
+                  return matchesSearch && matchesSupervisor;
+                }).length}
+                page={negligencePage}
+                onPageChange={(e, newPage) => setNegligencePage(newPage)}
+                rowsPerPage={negligenceRowsPerPage}
+                onRowsPerPageChange={(e) => {
+                  setNegligenceRowsPerPage(parseInt(e.target.value, 10));
+                  setNegligencePage(0);
+                }}
+                rowsPerPageOptions={[5, 10, 25]}
+                sx={{ color: '#fff' }}
+              />
+            </Paper>
+          </Grid>
+        </Grid>
+      </Box>
+
       <Grid container spacing={3}>
         {/* Trend & Resolution Row */}
         <Grid item xs={12} lg={8}>
@@ -631,17 +995,51 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
           </Paper>
         </Grid>
 
-        {/* Team Charts Row */}
-        <Grid item xs={12} md={6}>
+
+
+        {/* Installing Team Distribution - Full Row */}
+        <Grid item xs={12}>
           <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
+            <Typography variant="h6" gutterBottom fontWeight="bold">Installing Team Distribution</Typography>
+            <Box sx={{ height: 300 }}><Bar data={installingTeamChartData} options={commonOptions} /></Box>
+          </Paper>
+        </Grid>
+
+        {/* Side-by-Side: Issues by From & Assignee Performance */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Issues by From (Main)</Typography>
             <Box sx={{ height: 300 }}><Bar data={teamData} options={commonOptions} /></Box>
           </Paper>
         </Grid>
+
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Installing Team Distribution</Typography>
-            <Box sx={{ height: 300 }}><Bar data={installingTeamChartData} options={commonOptions} /></Box>
+          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
+            <Typography variant="h6" gutterBottom fontWeight="bold">Assignee Performance (Field Team)</Typography>
+            <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead style={{ position: 'sticky', top: 0, backgroundColor: '#2d2d2d' }}>
+                  <tr style={{ color: '#b3b3b3', fontSize: '0.8rem', borderBottom: '1px solid #3d3d3d' }}>
+                    <th style={{ padding: '8px', textAlign: 'left' }}>Assignee</th>
+                    <th style={{ padding: '8px', textAlign: 'right' }}>Resolved</th>
+                    <th style={{ padding: '8px', textAlign: 'right' }}>Rate</th>
+                    <th style={{ padding: '8px', textAlign: 'right' }}>Avg Res Speed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assigneeStats.detailedList.slice(0, 10).map((stat, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
+                      <td style={{ padding: '8px', fontWeight: 'bold' }}>{stat.name}</td>
+                      <td style={{ padding: '8px', textAlign: 'right' }}>{stat.resolved}/{stat.total}</td>
+                      <td style={{ padding: '8px', textAlign: 'right' }}>{stat.rate}%</td>
+                      <td style={{ padding: '8px', textAlign: 'right', color: Number(stat.avgResolutionSpeed) > 1 ? '#ff9800' : '#4caf50' }}>
+                        {stat.avgResolutionSpeed !== 'N/A' ? `${stat.avgResolutionSpeed} d` : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Box>
           </Paper>
         </Grid>
 
