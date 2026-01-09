@@ -61,6 +61,9 @@ import { useSelector } from 'react-redux';
 import ManagedAutocomplete from "./common/ManagedAutocomplete";
 import { FaFilePdf } from 'react-icons/fa6';
 import { toast } from 'sonner';
+import ManagementEmailDialog from './ManagementEmailDialog';
+import { MdEmail } from 'react-icons/md';
+import { alpha } from '@mui/material/styles';
 
 
 
@@ -89,6 +92,7 @@ const CustomerIssuesList = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sourceFilter, setSourceFilter] = useState('Overall');
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -392,6 +396,53 @@ const CustomerIssuesList = () => {
     return issues.filter(i => (i.fromMain === sourceFilter) || (i.from === sourceFilter));
   }, [issues, sourceFilter]);
 
+  // Calculate stats for Management Email
+  const emailStats = useMemo(() => {
+    const total = filteredIssues.length;
+    const resolved = filteredIssues.filter(i => i.solved === 'yes').length;
+    const unresolved = total - resolved;
+    const resolutionRate = total > 0 ? ((resolved / total) * 100).toFixed(1) : 0;
+
+    // Efficiency
+    const withDispatch = filteredIssues.filter(i => i.dispatchedDate && i.date);
+    const avgDispatch = withDispatch.length > 0
+      ? (withDispatch.reduce((acc, i) => acc + (new Date(i.dispatchedDate) - new Date(i.date)), 0) / withDispatch.length / (1000 * 60 * 60 * 24)).toFixed(1)
+      : 0;
+
+    const withResolution = filteredIssues.filter(i => i.resolveDate && i.date);
+    const avgLifecycle = withResolution.length > 0
+      ? (withResolution.reduce((acc, i) => acc + (new Date(i.resolveDate) - new Date(i.date)), 0) / withResolution.length / (1000 * 60 * 60 * 24)).toFixed(1)
+      : 0;
+
+    // Reasons
+    const reasons = filteredIssues.reduce((acc, i) => {
+      (i.issues || []).forEach(iss => {
+        acc[iss.category] = (acc[iss.category] || 0) + 1;
+      });
+      return acc;
+    }, {});
+
+    // Companies
+    const companies = filteredIssues.reduce((acc, i) => {
+      if (i.teamCompany) acc[i.teamCompany] = (acc[i.teamCompany] || 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      totalCriticalTasks: total,
+      reportedOverlapCount: unresolved,
+      preventionRate: resolutionRate,
+      diagnosisAccuracy: { rate: resolutionRate },
+      processEfficiency: {
+        avgDispatchTime: avgDispatch,
+        avgResolutionTime: (avgLifecycle - avgDispatch).toFixed(1),
+        avgLifecycleTime: avgLifecycle
+      },
+      reasonStats: reasons,
+      companyStats: companies
+    };
+  }, [filteredIssues]);
+
   const paginatedIssues = filteredIssues.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   if (loading) {
@@ -414,9 +465,9 @@ const CustomerIssuesList = () => {
 
   return (
     <Box sx={{
-      maxWidth: '1100px',
+      // maxWidth: '1100px',
       mx: 'auto',
-      // p: isMobile ? 1 : 3,
+      p: isMobile ? 1 : 3,
       // px: isMobile ? 1 : 3
     }}>
       <Box sx={{
@@ -482,6 +533,22 @@ const CustomerIssuesList = () => {
             }}
           >
             {isMobile ? 'PDF' : 'Pro Report'}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => setShowEmailDialog(true)}
+            startIcon={<MdEmail />}
+            size={isMobile ? 'small' : 'medium'}
+            sx={{
+              backgroundColor: '#7b68ee',
+              '&:hover': { backgroundColor: '#6c5ce7' },
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: isMobile ? 1.5 : 2,
+              boxShadow: `0 4px 12px ${alpha('#7b68ee', 0.3)}`
+            }}
+          >
+            {isMobile ? 'Email' : 'Email Report'}
           </Button>
         </Box>
       </Box>
@@ -1083,6 +1150,11 @@ const CustomerIssuesList = () => {
         onClose={() => setOpenViewDialog(false)}
         issue={currentIssue}
         fullScreen={isMobile}
+      />
+      <ManagementEmailDialog
+        open={showEmailDialog}
+        onClose={() => setShowEmailDialog(false)}
+        data={emailStats}
       />
 
       {/* Delete Confirmation Dialog */}

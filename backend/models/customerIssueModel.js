@@ -68,4 +68,12 @@ const customerIssueSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+// Add indexes for better performance on frequently queried fields
+customerIssueSchema.index({ slid: 1 });
+customerIssueSchema.index({ assignedTo: 1 });
+customerIssueSchema.index({ teamCompany: 1 });
+customerIssueSchema.index({ solved: 1 });
+customerIssueSchema.index({ pisDate: -1 });
+customerIssueSchema.index({ createdAt: -1 });
+
 export const CustomerIssueSchema = mongoose.model('CustomerIssue', customerIssueSchema);

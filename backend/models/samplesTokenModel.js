@@ -13,6 +13,12 @@ const samplesTokenSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  startDate: {
+    type: Date,
+  },
+  endDate: {
+    type: Date,
+  },
   sampleSize: {
     type: Number,
     default: 0,

@@ -1,7 +1,7 @@
 // src/Dashboard.js
 import { useState, useEffect, Suspense, lazy } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Typography, Box, Divider, Snackbar, Alert, Stack, useMediaQuery, Breadcrumbs, Link, Container, Paper } from "@mui/material";
+import { Typography, Box, Divider, Snackbar, Alert, Stack, useMediaQuery, Breadcrumbs, Link, Container, Paper, Button } from "@mui/material";
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import api from "../api/api";
@@ -16,6 +16,7 @@ import ReasonCategoriesDialog from "../components/ReasonCategoriesDialog";
 import AIInsightButton from "../components/AIInsightButton";
 import ActionPlanButton from "../components/ActionPlanButton";
 import AIHistoryButton from "../components/AIHistoryButton";
+import { alpha } from "@mui/material/styles";
 
 // Lazy load components
 const Chart = lazy(() => import("../components/Chart"));
@@ -28,6 +29,7 @@ const WeeklyReasonTable = lazy(() => import("../components/WeeklyReasonTable"));
 const MonthlyReasonTable = lazy(() => import("../components/MonthlyReasonTable"));
 const TrendStatistics = lazy(() => import("../components/TrendStatistics"));
 const SamplesTokenFloatingButton = lazy(() => import("../components/SamplesTokenFloatingButton"));
+const NPSSummaryCard = lazy(() => import("../components/NPSSummaryCard"));
 
 const Dashboard = () => {
   const { user } = useSelector((state) => state?.auth);
@@ -38,13 +40,18 @@ const Dashboard = () => {
 
   const [tasks, setTasks] = useState([]);
   const [teamsData, setTeamsData] = useState([]);
+  const [samplesData, setSamplesData] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [teamsLoading, setTeamsLoading] = useState(true);
   const [tasksError, setTasksError] = useState(null);
   const [teamsError, setTeamsError] = useState(null);
+  const [settings, setSettings] = useState(null);
 
   const isMediumScreen = useMediaQuery('(max-width: 900px)');
   const isMobile = useMediaQuery('(max-width: 600px)');
+
+  const currentYear = new Date().getFullYear();
+  const todayDate = new Date().toLocaleDateString();
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -88,9 +95,31 @@ const Dashboard = () => {
       }
     };
 
+    const fetchSamples = async () => {
+      try {
+        const response = await api.get(`/samples-token/${currentYear}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+        });
+        setSamplesData(response.data || []);
+      } catch (error) {
+        console.error("Error fetching samples:", error);
+      }
+    };
+
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+
     fetchTasks();
     fetchTeams();
-  }, [updateTasksList]);
+    fetchSamples();
+    fetchSettings();
+  }, [updateTasksList, currentYear]);
 
   useEffect(() => {
     if (location.state?.showSnackbar && user) {
@@ -103,8 +132,6 @@ const Dashboard = () => {
     setSnackbarOpen(false);
   };
 
-  const currentYear = new Date().getFullYear();
-  const todayDate = new Date().toLocaleDateString();
 
   if (tasksLoading || teamsLoading) {
     return (
@@ -118,7 +145,7 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ pb: 4, minHeight: "100vh" }}>
-      <Container sx={{ pt: 3, px: 0 }}>
+      <Box sx={{ pt: 3, px: 3 }}>
         {/* Welcome Snackbar */}
         <Snackbar open={snackbarOpen} autoHideDuration={5000} onClose={handleSnackbarClose}>
           <Alert onClose={handleSnackbarClose} severity="success" variant="filled">
@@ -154,6 +181,13 @@ const Dashboard = () => {
           </Suspense>
         </Box>
 
+        {/* NPS Performance Section */}
+        <Box mb={5}>
+          <Suspense fallback={<MoonLoader color="#3b82f6" size={30} />}>
+            <NPSSummaryCard tasks={tasks} samplesData={samplesData} teamsData={teamsData} settings={settings} />
+          </Suspense>
+        </Box>
+
         {/* Charts & Analytics Section */}
         <Box mb={5}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
@@ -169,7 +203,7 @@ const Dashboard = () => {
           <Paper sx={{ p: 0, overflow: 'hidden', borderRadius: 3, bgcolor: '#1a1a1a', border: '1px solid #e2e8f0' }} elevation={0}>
             <Box p={3}>
               <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
-                <Chart tasks={tasks} />
+                <Chart tasks={tasks} samplesData={samplesData} />
               </Suspense>
             </Box>
           </Paper>
@@ -248,7 +282,7 @@ const Dashboard = () => {
         <Suspense fallback={null}>
           <SamplesTokenFloatingButton />
         </Suspense>
-      </Container>
+      </Box>
     </Box>
   );
 };

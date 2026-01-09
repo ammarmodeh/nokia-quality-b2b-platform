@@ -39,6 +39,8 @@ export const bulkSaveSamples = async (req, res) => {
         update: {
           $set: {
             weekRange: sample.weekRange,
+            startDate: sample.startDate,
+            endDate: sample.endDate,
             sampleSize: sample.sampleSize || 0,
             promoters: sample.promoters || 0,
             detractors: sample.detractors || 0,

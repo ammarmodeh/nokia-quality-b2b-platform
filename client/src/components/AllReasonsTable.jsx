@@ -19,7 +19,7 @@ import * as XLSX from 'xlsx';
 import { getReasonViolations2 } from "../utils/helpers";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { MdClose, MdFileDownload } from 'react-icons/md';
-import { useState } from "react";
+import { useState, useMemo, memo } from "react";
 import { useTheme } from '@mui/material';
 
 // Reusable DetailRow component
@@ -56,7 +56,7 @@ const DetailRow = ({ label, value }) => (
   </Box>
 );
 
-export const AllReasonsTable = ({ tasks }) => {
+export const AllReasonsTable = memo(({ tasks }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery('(max-width:503px)');
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
@@ -69,22 +69,25 @@ export const AllReasonsTable = ({ tasks }) => {
   const [reasonTasks, setReasonTasks] = useState([]);
 
   // Get the total violations for each reason (updated to include tasks)
-  const reasonViolations = getReasonViolations2(tasks);
+  const reasonViolations = useMemo(() => getReasonViolations2(tasks), [tasks]);
 
   // Sort the reasonViolations array in descending order based on total violations
-  const sortedReasonViolations = reasonViolations.sort((a, b) => b.total - a.total);
+  const sortedReasonViolations = useMemo(() =>
+    [...reasonViolations].sort((a, b) => b.total - a.total),
+    [reasonViolations]
+  );
 
   // Prepare rows for the DataGrid
-  const rows = sortedReasonViolations.map((violation, index) => ({
+  const rows = useMemo(() => sortedReasonViolations.map((violation, index) => ({
     id: index + 1,
     reason: violation.reason,
     totalViolations: violation.total,
     percentage: violation.percentage,
     tasks: violation.tasks // Include tasks in each row
-  }));
+  })), [sortedReasonViolations]);
 
   // Calculate the net total of all violations
-  const netTotal = rows.reduce((sum, row) => sum + row.totalViolations, 0);
+  const netTotal = useMemo(() => rows.reduce((sum, row) => sum + row.totalViolations, 0), [rows]);
 
   // Define columns for the DataGrid
   const columns = [
@@ -480,4 +483,4 @@ export const AllReasonsTable = ({ tasks }) => {
       </Dialog>
     </Stack>
   );
-};
+});

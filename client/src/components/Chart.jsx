@@ -19,8 +19,9 @@ import { ChartComponent } from "./ChartComponent";
 import { DataTable } from "./DataTable";
 import { generateWeekRanges, getDesiredWeeks, groupDataByWeek } from "../utils/helpers";
 
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 // Register Chart.js components
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, ChartDataLabels);
 
 // Removed redundant fetchData since tasks are passed from parent (Dashboard)
 /*
@@ -31,34 +32,13 @@ const fetchData = async () => {
 
 
 const prepareChartData = (groupedData, timeRange) => {
-  const categories = ["Detractor", "Violations", "NeutralPassive"];
+  const categories = ["NPS", "Promoters", "Neutrals", "Detractors"];
   const colors = {
-    Detractor: "rgba(255, 99, 132, 0.6)",
-    NeutralPassive: "rgba(255, 206, 86, 0.6)",
-    Violations: "rgba(75, 192, 192, 0.6)",
+    NPS: "rgba(59, 130, 246, 0.9)", // Blue
+    Promoters: "rgba(16, 185, 129, 0.9)", // Green
+    Neutrals: "rgba(251, 146, 60, 0.9)", // Yellow-orange
+    Detractors: "rgba(239, 68, 68, 0.9)", // Red
   };
-
-  if (timeRange === "allWeeks") {
-    const aggregatedData = Object.values(groupedData).reduce((acc, weekData) => {
-      categories.forEach((category) => {
-        if (category === "Violations") {
-          acc[category] = (acc[category] || 0) + ((weekData.Detractor || 0) + (weekData.NeutralPassive || 0));
-        } else {
-          acc[category] = (acc[category] || 0) + (weekData[category] || 0);
-        }
-      });
-      return acc;
-    }, {});
-
-    return {
-      labels: ["All Weeks"],
-      datasets: categories.map((category) => ({
-        label: category,
-        data: [aggregatedData[category] || 0],
-        backgroundColor: colors[category],
-      })),
-    };
-  }
 
   const sortedWeeks = Object.keys(groupedData).sort((a, b) => {
     const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
@@ -68,27 +48,49 @@ const prepareChartData = (groupedData, timeRange) => {
     const yearB = parseInt(matchB[2], 10);
     const weekA = parseInt(matchA[1], 10);
     const weekB = parseInt(matchB[1], 10);
-
     if (yearA !== yearB) return yearA - yearB;
     return weekA - weekB;
   });
 
   return {
     labels: sortedWeeks,
-    datasets: categories.map((category) => ({
-      label: category,
-      data: sortedWeeks.map((week) => {
-        if (category === "Violations") {
-          return (groupedData[week].Detractor || 0) + (groupedData[week].NeutralPassive || 0);
-        }
-        return groupedData[week][category] || 0;
-      }),
-      backgroundColor: colors[category],
-    })),
+    datasets: [
+      ...categories.map((category) => ({
+        label: category,
+        data: sortedWeeks.map((week) => {
+          if (category === "NPS") {
+            return (groupedData[week].Promoters || 0) - (groupedData[week].Detractors || 0);
+          }
+          return groupedData[week][category] || 0;
+        }),
+        backgroundColor: colors[category],
+        borderColor: colors[category],
+        pointBackgroundColor: colors[category],
+        pointBorderColor: colors[category],
+        pointStyle: category === "Promoters" ? "rectRot" : "rect",
+        borderWidth: 2.5,
+        tension: 0.3,
+        fill: false,
+      })),
+      // NPS Target Line (Promoters Target 75% - Detractors Target 9% = 66%)
+      {
+        label: "NPS Target (≥66%)",
+        data: sortedWeeks.map(() => 66),
+        borderColor: "rgba(148, 163, 184, 0.6)",
+        backgroundColor: "rgba(148, 163, 184, 0.6)",
+        pointBackgroundColor: "rgba(148, 163, 184, 0.6)",
+        pointBorderColor: "rgba(148, 163, 184, 0.6)",
+        borderWidth: 2,
+        borderDash: [5, 5],
+        pointRadius: 0,
+        tension: 0,
+        fill: false,
+      }
+    ],
   };
 };
 
-const Chart = ({ tasks: initialTasks }) => {
+const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
   const theme = useTheme();
   const hideChart = useMediaQuery('(max-width:503px)');
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
@@ -137,15 +139,15 @@ const Chart = ({ tasks: initialTasks }) => {
           return weekA - weekB;
         });
 
-      const defaultWeeks = individualWeeks.slice(-4);
+      const defaultWeeks = individualWeeks.slice(-10);
       setTimeRange(defaultWeeks);
 
       const filteredData = getDesiredWeeks(initialTasks, defaultWeeks, settings || {});
-      const grouped = groupDataByWeek(filteredData, defaultWeeks, settings || {});
+      const grouped = groupDataByWeek(filteredData, defaultWeeks, settings || {}, samplesData);
       setGroupedData(grouped);
       setChartData(prepareChartData(grouped, defaultWeeks));
     }
-  }, [initialTasks, settings]);
+  }, [initialTasks, settings, samplesData]);
 
   const exportChartData = () => {
     const csvRows = [];
@@ -187,7 +189,7 @@ const Chart = ({ tasks: initialTasks }) => {
 
     setTimeRange(defaultWeeks);
     const filteredData = getDesiredWeeks(tasks, defaultWeeks, settings || {});
-    const grouped = groupDataByWeek(filteredData, defaultWeeks, settings || {});
+    const grouped = groupDataByWeek(filteredData, defaultWeeks, settings || {}, samplesData);
     setGroupedData(grouped);
     setChartData(prepareChartData(grouped, defaultWeeks));
   };
@@ -195,16 +197,16 @@ const Chart = ({ tasks: initialTasks }) => {
   useEffect(() => {
     if (tasks.length > 0) {
       const filteredData = getDesiredWeeks(tasks, timeRange, settings || {});
-      const grouped = groupDataByWeek(filteredData, timeRange, settings || {});
+      const grouped = groupDataByWeek(filteredData, timeRange, settings || {}, samplesData);
       setGroupedData(grouped);
       setChartData(prepareChartData(grouped, timeRange));
     }
-  }, [timeRange, tasks, settings]);
+  }, [timeRange, tasks, settings, samplesData]);
 
   const applyFilter = (category) => {
     setFilter(category);
     const filteredData = getDesiredWeeks(tasks, timeRange, settings || {});
-    const grouped = groupDataByWeek(filteredData, timeRange, settings || {});
+    const grouped = groupDataByWeek(filteredData, timeRange, settings || {}, samplesData);
 
     if (category === "All") {
       setChartData(prepareChartData(grouped, timeRange));
@@ -242,41 +244,6 @@ const Chart = ({ tasks: initialTasks }) => {
         sx={{ mb: 3 }}
         alignItems={isSmallScreen ? "stretch" : "flex-end"}
       >
-        {!hideChart && (
-          <FormControl
-            variant="standard"
-            sx={{
-              minWidth: isSmallScreen ? '100%' : 150,
-            }}
-          >
-            <InputLabel sx={{ color: "#b3b3b3" }}>Filter by Score</InputLabel>
-            <Select
-              value={filter}
-              onChange={(e) => applyFilter(e.target.value)}
-              label="Filter by Score"
-              sx={{
-                height: "100%",
-                color: "#ffffff",
-                "& .MuiSelect-icon": { color: "#b3b3b3" },
-                "&::before": { borderBottom: "1px solid #666" },
-                "&:hover:not(.Mui-disabled)::before": { borderBottom: "1px solid #7b68ee" },
-                "&::after": { borderBottom: "1px solid #7b68ee" },
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    backgroundColor: "#2d2d2d",
-                    color: "#ffffff",
-                  },
-                },
-              }}
-            >
-              <MenuItem value="All">All</MenuItem>
-              <MenuItem value="Detractor">Detractor</MenuItem>
-              <MenuItem value="NeutralPassive">Neutral/Passive</MenuItem>
-            </Select>
-          </FormControl>
-        )}
 
         <FormControl
           variant="standard"

@@ -75,6 +75,8 @@ const SettingsPage = () => {
       week1StartDate: null,
       week1EndDate: null,
       startWeekNumber: 1,
+      month1StartDate: null,
+      month1EndDate: null,
     },
   });
 
@@ -86,6 +88,8 @@ const SettingsPage = () => {
       // Format dates for input type="date"
       if (data.week1StartDate) data.week1StartDate = new Date(data.week1StartDate).toISOString().split('T')[0];
       if (data.week1EndDate) data.week1EndDate = new Date(data.week1EndDate).toISOString().split('T')[0];
+      if (data.month1StartDate) data.month1StartDate = new Date(data.month1StartDate).toISOString().split('T')[0];
+      if (data.month1EndDate) data.month1EndDate = new Date(data.month1EndDate).toISOString().split('T')[0];
       reset(data);
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -429,7 +433,44 @@ const SettingsPage = () => {
             </Grid>
           </Grid>
 
-          <SectionHeader title="Global Notifications" icon={NotificationsIcon} />
+          <Divider sx={{ my: 4, borderColor: '#444' }} />
+
+          <SectionHeader title="Month Configuration" icon={SettingsIcon} />
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Month 1 Start Date"
+                disabled={!editMode}
+                {...register("month1StartDate")}
+                InputLabelProps={{ shrink: true }}
+                sx={textFieldStyles}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Month 1 End Date"
+                disabled={!editMode}
+                {...register("month1EndDate")}
+                InputLabelProps={{ shrink: true }}
+                sx={textFieldStyles}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(25, 118, 210, 0.05)', borderRadius: 1, border: '1px dashed #1976d2' }}>
+                <Typography variant="caption" sx={{ color: '#b3b3b8' }}>
+                  ℹ️ <strong>Month Configuration:</strong> Define the first month's start and end dates. <br />
+                  All subsequent months will be calculated as strict <strong>4-week periods (28 days)</strong>. <br />
+                  <em>Note: Since 52 weeks ÷ 4 weeks = 13, this creates a <strong>13-Month Year</strong> to cover the full calendar.</em>
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+
+          <Divider sx={{ my: 4, borderColor: '#444' }} />
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <FormControlLabel
               control={<Switch checked={watch("notifications.emailAlerts")} disabled={!editMode} onChange={(e) => setValue("notifications.emailAlerts", e.target.checked, { shouldDirty: true })} />}

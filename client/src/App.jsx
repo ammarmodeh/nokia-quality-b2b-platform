@@ -4,9 +4,9 @@ import { useSelector } from "react-redux";
 import React, { Suspense, lazy } from "react";
 import { FadeLoader } from "react-spinners";
 import { Box, ThemeProvider } from "@mui/material";
-import NotFound from "./pages/NotFound";
-import TeamsPerformancePage from "./pages/TeamsPerformancePage";
-import MainStats from "./pages/MainStats";
+const TeamsPerformancePage = lazy(() => import("./pages/TeamsPerformancePage"));
+const MainStats = lazy(() => import("./pages/MainStats"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 import clickUpDarkTheme from "./theme/clickUpDarkTheme";
 
 // Lazy load pages

@@ -60,10 +60,12 @@ const AllTasksList = () => {
   const user = useSelector((state) => state?.auth?.user);
 
   const [tasks, setTasks] = useState([]);
+  const [totalTasks, setTotalTasks] = useState(0);
   const [favoriteTasks, setFavoriteTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -114,26 +116,48 @@ const AllTasksList = () => {
     });
   };
 
-  // Fetch all non-deleted tasks and sort by interview date
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setPage(0); // Reset to first page on search
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/tasks/get-all-tasks", {
+      let endpoint = "/tasks/get-tasks"; // Default paginated endpoint
+      if (filter === 'detractors') {
+        endpoint = "/tasks/get-detractor-tasks-paginated";
+      } else if (filter === 'neutrals') {
+        endpoint = "/tasks/get-neutral-tasks-paginated";
+      }
+
+      const response = await api.get(endpoint, {
+        params: {
+          page: page + 1,
+          limit: rowsPerPage,
+          search: debouncedSearchTerm,
+          priority: priorityFilter !== 'all' ? priorityFilter : undefined,
+        },
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
 
-      const sortedTasks = (response.data || []).sort((a, b) => {
-        const dateA = a.interviewDate ? new Date(a.interviewDate).getTime() : 0;
-        const dateB = b.interviewDate ? new Date(b.interviewDate).getTime() : 0;
-        return dateB - dateA;
-      });
-
-      setTasks(sortedTasks);
+      if (response.data.success) {
+        setTasks(response.data.data);
+        setTotalTasks(response.data.pagination.total);
+      } else {
+        // Fallback for endpoints not yet updated or returning arrays
+        setTasks(Array.isArray(response.data) ? response.data : []);
+        setTotalTasks(Array.isArray(response.data) ? response.data.length : 0);
+      }
       setError(null);
     } catch (err) {
-      // console.error("Error fetching tasks:", err);
       setError("Failed to load tasks. Please try again.");
       setTasks([]);
+      setTotalTasks(0);
     } finally {
       setLoading(false);
     }
@@ -156,7 +180,7 @@ const AllTasksList = () => {
     if (user?._id) {
       fetchFavoriteTasks();
     }
-  }, [user?._id, updateRefetchTasks]);
+  }, [user?._id, updateRefetchTasks, page, rowsPerPage, debouncedSearchTerm, filter, priorityFilter]);
 
   // Check if task is favorited and get its favorite ID
   const getFavoriteStatus = (taskId) => {
@@ -195,31 +219,7 @@ const AllTasksList = () => {
   };
 
   // Filter tasks based on search term and selected filter
-  const filteredTasks = tasks.filter((task) => {
-    // Apply search filter
-    const matchesSearch = (
-      task.slid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.contactNumber?.toString().includes(searchTerm) ||
-      task.customerFeedback?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    // Apply Satisfaction Score filter
-    let matchesScoreFilter = true;
-    if (filter === 'neutrals') {
-      matchesScoreFilter = task.evaluationScore >= 7 && task.evaluationScore <= 8;
-    } else if (filter === 'detractors') {
-      matchesScoreFilter = task.evaluationScore >= 1 && task.evaluationScore <= 6;
-    }
-
-    // Apply priority filter
-    let matchesPriorityFilter = true;
-    if (priorityFilter !== 'all') {
-      matchesPriorityFilter = task.priority === priorityFilter;
-    }
-
-    return matchesSearch && matchesScoreFilter && matchesPriorityFilter;
-  });
+  const filteredTasks = tasks;
 
   // Handle pagination
   const handleChangePage = (event, newPage) => {
@@ -639,7 +639,6 @@ const AllTasksList = () => {
           <TableBody>
             {filteredTasks.length > 0 ? (
               filteredTasks
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((task) => {
                   const { isFavorited } = getFavoriteStatus(task._id);
                   return (
@@ -820,7 +819,7 @@ const AllTasksList = () => {
         <TablePagination
           rowsPerPageOptions={[10, 25, 50]}
           component="div"
-          count={filteredTasks.length}
+          count={totalTasks}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

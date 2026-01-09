@@ -280,61 +280,68 @@ export const generateWeekRanges = (tasks, settings = {}) => {
   });
 };
 
-export const groupDataByWeek = (data, timeRange, settings = {}) => {
-  if (data.length === 0) return {};
+export const groupDataByWeek = (data, timeRange, settings = {}, samplesData = []) => {
+  if (data.length === 0 && (!timeRange || timeRange.length === 0)) return {};
   const { weekStartDay = 0, week1StartDate = null, week1EndDate = null, startWeekNumber = 1 } = settings;
 
   const groupedData = {};
-  const allWeeksSet = new Set();
-  data.forEach(task => {
-    if (task.interviewDate) {
-      allWeeksSet.add(getWeekNumber(task.interviewDate, weekStartDay, week1StartDate, week1EndDate, startWeekNumber).key);
-    }
-  });
-  const allWeeks = Array.from(allWeeksSet).sort((a, b) => {
-    const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
-    const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
-    if (!matchA || !matchB) return 0;
-    const yearA = parseInt(matchA[2], 10);
-    const yearB = parseInt(matchB[2], 10);
-    const weekA = parseInt(matchA[1], 10);
-    const weekB = parseInt(matchB[1], 10);
-    if (yearA !== yearB) return yearA - yearB;
-    return weekA - weekB;
-  });
 
   let selectedWeeks = [];
   if (timeRange === "allWeeks") {
-    selectedWeeks = allWeeks;
+    // Usually we pass specific range, but if allWeeks, we could derive
+    selectedWeeks = [];
   } else if (Array.isArray(timeRange)) {
     selectedWeeks = timeRange;
   } else {
     selectedWeeks = [timeRange];
   }
 
-  // Initialize groupedData with selected weeks
+  // Initialize groupedData
   selectedWeeks.forEach((week) => {
-    groupedData[week] = { Detractor: 0, NeutralPassive: 0, Promoter: 0 };
+    groupedData[week] = { Detractors: 0, Neutrals: 0, Promoters: 0, sampleSize: 0 };
   });
 
-  // Process tasks
+  // 1. Process feedback tasks (counts)
   data.forEach((task) => {
     if (!task.interviewDate) return;
     const { key: weekKey } = getWeekNumber(task.interviewDate, weekStartDay, week1StartDate, week1EndDate, startWeekNumber);
 
     if (groupedData[weekKey]) {
       if (task.evaluationScore >= 1 && task.evaluationScore <= 6) {
-        groupedData[weekKey].Detractor += 1;
+        groupedData[weekKey].Detractors += 1;
       } else if (task.evaluationScore >= 7 && task.evaluationScore <= 8) {
-        groupedData[weekKey].NeutralPassive += 1;
+        groupedData[weekKey].Neutrals += 1;
       }
     }
   });
 
-  // Calculate Promoter scores
+  // 2. Process samplesData (total sample sizes)
+  samplesData.forEach((sample) => {
+    const weekKey = `Wk-${String(sample.weekNumber).padStart(2, '0')} (${sample.year})`;
+    if (groupedData[weekKey]) {
+      groupedData[weekKey].sampleSize += (sample.sampleSize || 0);
+    }
+  });
+
+  // 3. Calculate Percentages
   Object.keys(groupedData).forEach((week) => {
-    const total = 100; // Assuming total tasks per week is 100
-    groupedData[week].Promoter = total - groupedData[week].Detractor - groupedData[week].NeutralPassive;
+    const stats = groupedData[week];
+    const totalSamples = stats.sampleSize || 0;
+
+    if (totalSamples > 0) {
+      const detCount = stats.Detractors;
+      const neuCount = stats.Neutrals;
+      const proCount = Math.max(0, totalSamples - (detCount + neuCount));
+
+      groupedData[week].Promoters = Math.round((proCount / totalSamples) * 100);
+      groupedData[week].Detractors = Math.round((detCount / totalSamples) * 100);
+      groupedData[week].Neutrals = Math.round((neuCount / totalSamples) * 100);
+    } else {
+      // If no samples recorded, default to 0
+      groupedData[week].Promoters = 0;
+      groupedData[week].Detractors = 0;
+      groupedData[week].Neutrals = 0;
+    }
   });
 
   return groupedData;
@@ -409,9 +416,15 @@ export const getCustomWeekNumber = (date, year, settings = {}) => {
   // Fallback annual logic
   const jan1 = new Date(year, 0, 1);
   const startOfTime = new Date(jan1);
-  const diff = (jan1.getDay() - weekStartDay + 7) % 7;
-  startOfTime.setDate(jan1.getDate() - diff);
+  // Find the first Sunday (or weekStartDay) on or after Jan 1
+  const diff = (weekStartDay - jan1.getDay() + 7) % 7;
+  startOfTime.setDate(jan1.getDate() + diff);
   startOfTime.setHours(0, 0, 0, 0);
+
+  if (d < startOfTime) {
+    // Part of the "Week 0" or partial week before the first full week of the year
+    return 0;
+  }
 
   const diffDays = Math.floor((d.getTime() - startOfTime.getTime()) / 86400000);
   return Math.floor(diffDays / 7) + 1;
@@ -454,6 +467,178 @@ export const getCompanyViolations = (tasks) => {
   }));
 };
 ///////////////////////////////////////////////////// Constants //////////////////////////////////////////////////////////////////
+
+
+// ============================================
+// MONTH CALCULATION FUNCTIONS
+// ============================================
+
+/**
+ * Generate month ranges based on month1 configuration
+ * Month 1 is defined by user.
+ * Subsequent months are calculated as strict 4-week (28-day) periods.
+ * This results in a 13-month year (52 weeks / 4 weeks = 13).
+ */
+export const generateMonthRanges = (tasks, settings = {}) => {
+  const { month1StartDate, month1EndDate } = settings;
+
+  if (!month1StartDate || !month1EndDate) {
+    return [];
+  }
+
+  const ranges = [];
+  const month1Start = new Date(month1StartDate);
+  const month1End = new Date(month1EndDate);
+
+  // Add Month 1
+  ranges.push({
+    key: `Month-1`,
+    label: `Month 1`,
+    start: month1Start,
+    end: month1End
+  });
+
+  // Calculate subsequent months (strict 4-week periods = 28 days)
+  let currentStart = new Date(month1End);
+  currentStart.setDate(currentStart.getDate() + 1); // Day after Month 1 ends
+
+  for (let i = 2; i <= 13; i++) { // Generate up to 13 months to cover full year
+    // Every month is exactly 4 weeks (28 days)
+    const daysInMonth = 28;
+
+    const currentEnd = new Date(currentStart);
+    currentEnd.setDate(currentEnd.getDate() + (daysInMonth - 1));
+
+    ranges.push({
+      key: `Month-${i}`,
+      label: `Month ${i}`,
+      start: new Date(currentStart),
+      end: new Date(currentEnd)
+    });
+
+    // Next month starts the day after current month ends
+    currentStart = new Date(currentEnd);
+    currentStart.setDate(currentStart.getDate() + 1);
+  }
+
+  return ranges;
+};
+
+/**
+ * Get month number for a given date
+ */
+export const getMonthNumber = (date, settings = {}) => {
+  const { month1StartDate, month1EndDate } = settings;
+
+  if (!month1StartDate || !month1EndDate) {
+    return null;
+  }
+
+  const targetDate = new Date(date);
+  const month1Start = new Date(month1StartDate);
+  const month1End = new Date(month1EndDate);
+
+  // Check if date is in Month 1
+  if (targetDate >= month1Start && targetDate <= month1End) {
+    return { monthNumber: 1, key: 'Month-1' };
+  }
+
+  // Calculate which 4-week period the date falls into
+  let currentStart = new Date(month1End);
+  currentStart.setDate(currentStart.getDate() + 1);
+
+  for (let i = 2; i <= 12; i++) {
+    const currentEnd = new Date(currentStart);
+    currentEnd.setDate(currentEnd.getDate() + 27);
+
+    if (targetDate >= currentStart && targetDate <= currentEnd) {
+      return { monthNumber: i, key: `Month-${i}` };
+    }
+
+    currentStart = new Date(currentEnd);
+    currentStart.setDate(currentStart.setDate() + 1);
+  }
+
+  return null; // Date doesn't fall in any configured month
+};
+
+/**
+ * Group data by month
+ */
+export const groupDataByMonth = (data, monthRange, settings = {}, samplesData = []) => {
+  if (data.length === 0 && (!monthRange || monthRange.length === 0)) return {};
+
+  const groupedData = {};
+  const monthRanges = generateMonthRanges(data, settings);
+
+  // Initialize grouped data for selected months
+  if (Array.isArray(monthRange)) {
+    monthRange.forEach((month) => {
+      groupedData[month] = { Detractors: 0, Neutrals: 0, Promoters: 0, sampleSize: 0 };
+    });
+  }
+
+  // Process feedback tasks
+  data.forEach((task) => {
+    if (!task.interviewDate) return;
+
+    const monthInfo = getMonthNumber(task.interviewDate, settings);
+    if (!monthInfo) return;
+
+    const monthKey = monthInfo.key;
+
+    if (groupedData[monthKey]) {
+      if (task.evaluationScore >= 1 && task.evaluationScore <= 6) {
+        groupedData[monthKey].Detractors += 1;
+      } else if (task.evaluationScore >= 7 && task.evaluationScore <= 8) {
+        groupedData[monthKey].Neutrals += 1;
+      }
+    }
+  });
+
+  // Process samplesData - aggregate by month
+  const monthRangesMap = {};
+  monthRanges.forEach(range => {
+    monthRangesMap[range.key] = range;
+  });
+
+  samplesData.forEach((sample) => {
+    // Find which month this week belongs to
+    const weekKey = `Wk-${String(sample.weekNumber).padStart(2, '0')} (${sample.year})`;
+
+    // We need to determine which month this week falls into
+    // This requires checking the week's date range against month ranges
+    // For simplicity, we'll use a helper to map weeks to months
+    for (const [monthKey, monthRange] of Object.entries(monthRangesMap)) {
+      // This is a simplified check - in production you'd want more precise week-to-month mapping
+      if (groupedData[monthKey]) {
+        groupedData[monthKey].sampleSize += (sample.sampleSize || 0);
+      }
+    }
+  });
+
+  // Calculate percentages
+  Object.keys(groupedData).forEach((month) => {
+    const stats = groupedData[month];
+    const totalSamples = stats.sampleSize || 0;
+
+    if (totalSamples > 0) {
+      const detCount = stats.Detractors;
+      const neuCount = stats.Neutrals;
+      const proCount = Math.max(0, totalSamples - (detCount + neuCount));
+
+      groupedData[month].Promoters = Math.round((proCount / totalSamples) * 100);
+      groupedData[month].Detractors = Math.round((detCount / totalSamples) * 100);
+      groupedData[month].Neutrals = Math.round((neuCount / totalSamples) * 100);
+    } else {
+      groupedData[month].Promoters = 0;
+      groupedData[month].Detractors = 0;
+      groupedData[month].Neutrals = 0;
+    }
+  });
+
+  return groupedData;
+};
 
 export const PRIOTITYSTYELS = {
   high: "text-red-600",

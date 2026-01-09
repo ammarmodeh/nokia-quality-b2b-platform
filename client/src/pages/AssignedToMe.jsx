@@ -378,7 +378,7 @@ const AssignedToMe = () => {
       width: 150,
       sortable: false,
       renderCell: (params) => (
-        <Button variant="contained" size="small" onClick={() => navigate(`/task-view/${params.row._id}`)}>
+        <Button variant="contained" size="small" onClick={() => navigate(`/tasks/view-task/${params.row._id}`)}>
           View
         </Button>
       )

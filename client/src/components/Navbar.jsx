@@ -288,6 +288,13 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
               <Box sx={{ py: 1 }}>
                 <MenuItem
+                  component={Link}
+                  to="/dashboard"
+                  onClick={handleMobileMenuClose}
+                >
+                  <Typography variant="body1">Dashboard</Typography>
+                </MenuItem>
+                <MenuItem
                   onClick={() => {
                     handleClickOpenDocsMenu(null);
                     handleMobileMenuClose();
@@ -337,6 +344,29 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
         {/* Desktop view for Docs, Policies, CIN and Issues List */}
         {!isMediumSize && (
           <>
+            <Button
+              component={Link}
+              to="/dashboard"
+              disableRipple
+              sx={{
+                height: '55px',
+                minWidth: 0,
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: '#b3b3b3',
+                "&:hover": {
+                  backgroundColor: "transparent",
+                  color: '#ffffff'
+                },
+              }}
+            >
+              Dashboard
+            </Button>
+
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+
             <Button
               id="docs-menu-anchor"
               onClick={handleClickOpenDocsMenu}

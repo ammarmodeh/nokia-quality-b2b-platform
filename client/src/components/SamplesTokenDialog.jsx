@@ -286,6 +286,8 @@ const SamplesTokenDialog = ({ open, onClose }) => {
           year: selectedYear,
           weekNumber: row.weekNum,
           weekRange: `Week ${row.weekNum}`,
+          startDate: row.weekStart,
+          endDate: new Date(new Date(row.weekStart).getTime() + 6 * 24 * 60 * 60 * 1000),
           sampleSize: parseFloat(row.sampleSize) || 0,
           promoters: parseFloat(row.promoters) || 0,
           detractors: parseFloat(row.detractors) || 0,

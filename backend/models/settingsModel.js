@@ -60,6 +60,14 @@ const settingsSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    month1StartDate: {
+      type: Date,
+      default: null,
+    },
+    month1EndDate: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

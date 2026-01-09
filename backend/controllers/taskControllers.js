@@ -501,18 +501,24 @@ export const getTasks = async (req, res) => {
     const totalTasks = await TaskSchema.countDocuments({ isDeleted: false });
     const skip = (page - 1) * limit;
 
-    if (skip >= totalTasks) {
-      return res.json([]);
-    }
-
     const tasks = await TaskSchema.find({ isDeleted: false })
+      .select("-subTasks -taskLogs -notifications -readBy")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email");
 
-    return res.json(tasks);
+    return res.json({
+      success: true,
+      data: tasks,
+      pagination: {
+        total: totalTasks,
+        page,
+        limit,
+        totalPages: Math.ceil(totalTasks / limit)
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -539,10 +545,6 @@ export const getDetractorTasksPaginated = async (req, res) => {
     const totalTasks = await TaskSchema.countDocuments({ evaluationScore: { $gte: 1, $lte: 6 } });
     const skip = (page - 1) * limit;
 
-    if (skip >= totalTasks) {
-      return res.json([]);
-    }
-
     const detractorTasks = await TaskSchema.find({ evaluationScore: { $gte: 1, $lte: 6 } })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -550,7 +552,16 @@ export const getDetractorTasksPaginated = async (req, res) => {
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email");
 
-    return res.json(detractorTasks);
+    return res.json({
+      success: true,
+      data: detractorTasks,
+      pagination: {
+        total: totalTasks,
+        page,
+        limit,
+        totalPages: Math.ceil(totalTasks / limit)
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -577,10 +588,6 @@ export const getNeutralTasksPaginated = async (req, res) => {
     const totalTasks = await TaskSchema.countDocuments({ evaluationScore: { $gte: 7, $lte: 8 } });
     const skip = (page - 1) * limit;
 
-    if (skip >= totalTasks) {
-      return res.json([]);
-    }
-
     const tasks = await TaskSchema.find({ evaluationScore: { $gte: 7, $lte: 8 } })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -588,7 +595,16 @@ export const getNeutralTasksPaginated = async (req, res) => {
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email");
 
-    return res.json(tasks);
+    return res.json({
+      success: true,
+      data: tasks,
+      pagination: {
+        total: totalTasks,
+        page,
+        limit,
+        totalPages: Math.ceil(totalTasks / limit)
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1028,6 +1044,7 @@ export const clearNotifications = async (req, res) => {
 export const getAllTasks = async (req, res) => {
   try {
     const tasks = await TaskSchema.find()
+      .select("-subTasks -taskLogs -notifications -readBy")
       .populate("assignedTo", "name email role")
       .populate("whomItMayConcern", "name email role")
       .populate("createdBy", "name email")
@@ -1050,11 +1067,23 @@ export const getAllTasks = async (req, res) => {
 
 export const getIssuePreventionStats = async (req, res) => {
   try {
-    // 1. Fetch all Detractor and Neutral tasks (score <= 8)
-    const criticalTasks = await TaskSchema.find({
+    const { startDate, endDate } = req.query;
+
+    // Build query
+    const query = {
       evaluationScore: { $lte: 8 },
       isDeleted: false
-    })
+    };
+
+    if (startDate && endDate) {
+      query.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    // 1. Fetch all Detractor and Neutral tasks (score <= 8)
+    const criticalTasks = await TaskSchema.find(query)
       .select('slid evaluationScore customerFeedback createdAt interviewDate status teamName teamCompany subReason rootCause reason requestNumber operation customerName contactNumber tarrifName customerType governorate district priority validationStatus assignedTo subTasks')
       .populate('assignedTo', 'name email');
 

@@ -42,6 +42,10 @@ import 'chartjs-adapter-date-fns';
 import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel } from 'react-icons/fa';
 import { utils, writeFile } from 'xlsx';
 import ViewIssueDetailsDialog from './ViewIssueDetailsDialog';
+import ManagementEmailDialog from './ManagementEmailDialog';
+import { FaEnvelope, FaLanguage } from 'react-icons/fa';
+import { alpha } from '@mui/material/styles';
+import { Email as EmailIconUI } from '@mui/icons-material';
 
 // Register ChartJS components
 ChartJS.register(
@@ -89,6 +93,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   const [negligenceRowsPerPage, setNegligenceRowsPerPage] = useState(5);
   const [negligenceSearch, setNegligenceSearch] = useState('');
   const [negligenceSupervisorFilter, setNegligenceSupervisorFilter] = useState('all');
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
 
   const handleViewIssue = (issue) => {
     setSelectedDetailedIssue(issue);
@@ -1288,6 +1293,29 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         open={isIssueViewOpen}
         onClose={() => setIsIssueViewOpen(false)}
         issue={selectedDetailedIssue}
+      />
+      <ManagementEmailDialog
+        open={showEmailDialog}
+        onClose={() => setShowEmailDialog(false)}
+        data={{
+          totalCriticalTasks: stats.totalTransactions,
+          reportedOverlapCount: stats.unresolved,
+          preventionRate: stats.resolutionRate,
+          diagnosisAccuracy: { rate: (stats.resolved / (stats.totalTransactions || 1) * 100).toFixed(1) },
+          processEfficiency: {
+            avgDispatchTime: stats.avgDispatchTime,
+            avgResolutionTime: stats.avgResolutionTime,
+            avgLifecycleTime: stats.avgLifecycleTime
+          },
+          reasonStats: categoryData.labels.reduce((acc, label, idx) => {
+            acc[label] = categoryData.datasets[0].data[idx];
+            return acc;
+          }, {}),
+          companyStats: installingTeamChartData.labels.reduce((acc, label, idx) => {
+            acc[label] = installingTeamChartData.datasets[0].data[idx];
+            return acc;
+          }, {})
+        }}
       />
     </Box >
   );

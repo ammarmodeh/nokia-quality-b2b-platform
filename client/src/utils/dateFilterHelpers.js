@@ -1,8 +1,5 @@
-/**
- * Date filtering and aggregation utilities for weekly and monthly summaries
- */
 import { startOfWeek, endOfWeek, format } from 'date-fns';
-import { getCustomWeekNumber } from './helpers';
+import { getCustomWeekNumber, generateMonthRanges, getMonthNumber } from './helpers';
 
 /**
  * Filter tasks by a specific week
@@ -30,92 +27,33 @@ export const filterTasksByWeek = (tasks, year, weekNumber, settings = {}) => {
 };
 
 /**
- * Filter tasks by a specific month
+ * Filter tasks by a specific month (Using new configurable logic)
  * @param {Array} tasks - Array of tasks
- * @param {number} year - The year
- * @param {number} month - The month (0-11)
- * @returns {Array} Filtered tasks
- */
-/**
- * Generate the 5-4-4 week pattern starting from the calibrated start week
- * @param {number} startWeek - The beginning week number (from settings)
- * @returns {Array} Array of {month, weeks}
- */
-export const getCustomMonthWeeks = (startWeek = 1) => {
-  const pattern = [5, 4, 4]; // 5-4-4 pattern
-  const monthWeeks = [];
-  let currentWeek = startWeek;
-
-  for (let month = 0; month < 12; month++) {
-    const numWeeks = pattern[month % 3];
-    const weeks = [];
-    for (let i = 0; i < numWeeks; i++) {
-      weeks.push(currentWeek);
-      currentWeek++;
-      // standard wrap around if not continuous
-      if (currentWeek > 52) currentWeek = 1;
-    }
-    monthWeeks.push({ month, weeks });
-  }
-  return monthWeeks;
-};
-
-
-/**
- * Filter tasks by a specific custom month
- * @param {Array} tasks - Array of tasks
- * @param {number} year - The "Customer Year" (e.g. 2025 for Jan which might start in Dec 2024)
- * @param {number} month - The month index (0-11)
+ * @param {number} year - The year (ignored in favor of settings configuration ranges)
+ * @param {number} month - The month number (1-12)
  * @returns {Array} Filtered tasks
  */
 export const filterTasksByMonth = (tasks, year, month, settings = {}) => {
-  const { weekStartDay = 0, startWeekNumber = 1 } = settings;
-  const customMonthWeeks = getCustomMonthWeeks(startWeekNumber);
-  const targetConfig = customMonthWeeks.find(m => m.month === month);
-  if (!targetConfig) return [];
+  const ranges = generateMonthRanges(tasks, settings);
+  // Find range for "Month-X"
+  // Note: month param here might be 0-based index or 1-based number depending on caller.
+  // NPSSummaryCard passes parseInt(selectedPeriod). If selectedPeriod is "1", returns 1.
+  // getAvailableMonths below generates keys "Month-1", "Month-2".
+
+  // If caller passes index (0-11), we might need to adjust. 
+  // But let's assume standardizing on 1-based Month numbers.
+
+  const targetKey = `Month-${month}`;
+  const targetRange = ranges.find(r => r.key === targetKey);
+
+  if (!targetRange) return [];
 
   return tasks.filter(task => {
     if (!task.interviewDate) return false;
-    const date = new Date(task.interviewDate);
-    const start = startOfWeek(date, { weekStartsOn: weekStartDay });
-    const taskYear = start.getFullYear();
-    const weekNumber = getCustomWeekNumber(start, taskYear, settings);
-
-    let customYear = taskYear;
-    // Year attribution: if Week > 50 in Jan, it's prev year's tail
-    if (weekNumber > 50 && month === 0) {
-      customYear = taskYear + 1;
-    }
-
-    return customYear === year && targetConfig.weeks.includes(weekNumber);
+    const d = new Date(task.interviewDate);
+    // Include boundary? Usually yes.
+    return d >= targetRange.start && d <= targetRange.end;
   });
-};
-
-/**
- * Helper to get the start and end date for a custom month
- */
-const getCustomMonthDateRange = (year, monthIndex) => {
-  const config = CUSTOM_MONTH_WEEKS.find(m => m.month === monthIndex);
-  if (!config || !config.weeks.length) return null;
-
-  // Logic to find dates:
-  // We need to find the specific weeks for this year.
-  // Case Jan (Month 0): Weeks 52 (Year-1), 1 (Year), 2 (Year), 3 (Year), 4 (Year)
-  // Case others: Weeks X (Year) ...
-
-  // We can iterate weeks.
-  // Start Date = Start of first week
-  // End Date = End of last week
-
-  // To get date from week num:
-  // There isn't a cheap "get date from custom week" without reverse engineering getCustomWeekNumber
-  // But we can approximate using date-fns or moment if available.
-  // Since we don't have a direct helper, we'll try to scan.
-  // Actually, `getAvailableMonths` iterates tasks, so we can just grab min/max from actual data seen?
-  // User requested "Month (Date Range)". If no data, maybe fine? 
-  // BUT the label should ideally be theoretically correct even if gaps.
-  // Let's rely on data min/max for specific label in `getAvailableMonths` for now as it's safer than complex date math blindly.
-  return null;
 };
 
 /**
@@ -183,75 +121,34 @@ export const getAvailableWeeks = (tasks, settings = {}) => {
 };
 
 /**
- * Get list of available months with data (Custom Logic)
+ * Get list of available months (Custom Logic)
  * @param {Array} tasks - Array of tasks
  * @returns {Array} Array of {year, month, label}
  */
 export const getAvailableMonths = (tasks, settings = {}) => {
-  const { weekStartDay = 0, startWeekNumber = 1 } = settings;
-  const customMonthWeeks = getCustomMonthWeeks(startWeekNumber);
-  const months = new Map();
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'];
+  const ranges = generateMonthRanges(tasks, settings);
 
-  tasks.forEach(task => {
-    if (!task.interviewDate) return;
-    const date = new Date(task.interviewDate);
-    const start = startOfWeek(date, { weekStartsOn: weekStartDay });
-    const end = endOfWeek(date, { weekStartsOn: weekStartDay });
-    const taskYear = start.getFullYear();
-    const weekNumber = getCustomWeekNumber(start, taskYear, settings);
+  // We want to return all generated ranges (or maybe just those that encompass 'tasks' dates?)
+  // For 'Available', typically we show what is possible to select.
+  // Since ranges are fixed by settings, we display them all.
+  // Optionally filter if no data exists, but user might want to see empty month.
 
-    // Find which custom month this week belongs to
-    let foundMonthIndex = -1;
-    let customYear = taskYear;
+  return ranges.map(range => {
+    // extract number from key "Month-1"
+    const monthNum = parseInt(range.key.split('-')[1]);
+    const startStr = format(range.start, 'MMM d');
+    const endStr = format(range.end, 'MMM d');
+    const label = `${range.label} (${startStr} - ${endStr})`;
 
-    const config = customMonthWeeks.find(c => c.weeks.includes(weekNumber));
-    if (config) {
-      foundMonthIndex = config.month;
-      if (weekNumber > 50 && foundMonthIndex === 0) {
-        customYear = taskYear + 1;
-      }
-    }
-
-    if (foundMonthIndex === -1) return;
-
-    const key = `${customYear}-${foundMonthIndex}`;
-
-    if (!months.has(key)) {
-      const weeksConfig = customMonthWeeks.find(m => m.month === foundMonthIndex);
-      const weekRangeStr = `Wk${weeksConfig.weeks[0]}-${weeksConfig.weeks[weeksConfig.weeks.length - 1]}`;
-
-      months.set(key, {
-        year: customYear,
-        month: foundMonthIndex,
-        key,
-        // Initial values, will update range below
-        minDate: start,
-        maxDate: end,
-        weekRangeLabel: weekRangeStr,
-        baseLabel: `${monthNames[foundMonthIndex]} ${customYear}`
-      });
-    }
-
-    // Update min/max dates for the label
-    const combined = months.get(key);
-    if (date < combined.minDate) combined.minDate = date; // Using actual task date or week start? Week start is better for period description
-    if (start < combined.minDate) combined.minDate = start;
-    if (end > combined.maxDate) combined.maxDate = end;
-  });
-
-  // Format labels
-  return Array.from(months.values()).map(m => {
-    const startStr = format(m.minDate, 'MMM d');
-    const endStr = format(m.maxDate, 'MMM d');
     return {
-      ...m,
-      label: `${m.baseLabel} (${startStr} - ${endStr}) / ${m.weekRangeLabel}`
+      year: range.start.getFullYear(),
+      month: monthNum, // Using number as ID
+      key: range.key,
+      label: label,
+      value: monthNum,
+      start: range.start,
+      end: range.end
     };
-  }).sort((a, b) => {
-    if (a.year !== b.year) return b.year - a.year;
-    return b.month - a.month;
   });
 };
 
@@ -408,4 +305,105 @@ export const calculateTrendData = (tasks, period = 'week', periodsCount = 8, gro
 export const calculatePercentageChange = (current, previous) => {
   if (previous === 0) return current > 0 ? 100 : 0;
   return Math.round(((current - previous) / previous) * 100);
+};
+/**
+ * Aggregate survey samples based on a specific period
+ * @param {Array} samplesData - Array of sample objects {weekNumber, sampleSize, ...}
+ * @param {string} type - 'week', 'month', or 'range'
+ * @param {any} value - weekNumber, {month}, or {start, end, ...}
+ * @param {Object} settings - { weekStartDay, startWeekNumber, month1StartDate, month1EndDate }
+ * @returns {number} Sum of sample sizes
+ */
+export const aggregateSamples = (samplesData, type, value, settings = {}) => {
+  if (!samplesData || samplesData.length === 0) return 0;
+
+  if (type === 'week') {
+    const weekNum = typeof value === 'object' ? value.weekNumber : value;
+    const startDate = typeof value === 'object' ? value.startDate : null;
+
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const match = samplesData.find(s => {
+        if (!s.startDate) return false;
+        const sStart = new Date(s.startDate);
+        sStart.setHours(0, 0, 0, 0);
+        return sStart.getTime() === start.getTime();
+      });
+      if (match) return match.sampleSize || 0;
+    }
+
+    return samplesData
+      .filter(s => s.weekNumber === weekNum)
+      .reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+  }
+
+  if (type === 'month') {
+    const { month } = value;
+    // We need to find which weeks fall into this month.
+    // Using generateMonthRanges to get the date range of the month
+    const ranges = generateMonthRanges([], settings);
+    const targetKey = `Month-${month}`;
+    const targetRange = ranges.find(r => r.key === targetKey);
+
+    if (!targetRange) return 0;
+
+    // Now assume samples have a weekNumber.
+    // We need to approximate if the week falls in result range.
+    // This is imperfect without exact dates in samples, but we can try to use Week 1 Start + offset.
+    const { week1StartDate } = settings;
+
+    return samplesData.filter(s => {
+      // If sample has a specific startDate, use it
+      if (s.startDate) {
+        const sDate = new Date(s.startDate);
+        return sDate >= targetRange.start && sDate <= targetRange.end;
+      }
+
+      // Fallback: Estimate from Week 1 (if available)
+      if (week1StartDate && s.weekNumber) {
+        const w1Start = new Date(week1StartDate);
+        const estimatedStart = new Date(w1Start);
+        estimatedStart.setDate(w1Start.getDate() + (s.weekNumber - 1) * 7);
+        // Check if ANY part of the week is in the month? Or start date?
+        // Let's check start date
+        return estimatedStart >= targetRange.start && estimatedStart <= targetRange.end;
+      }
+
+      return false; // Can't determine
+    }).reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+  }
+
+  if (type === 'range') {
+    const { start, end, weeksInterval } = value;
+    if (!start || !end) return 0;
+
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    return samplesData.filter(s => {
+      // Preferred: use sample startDate
+      if (s.startDate) {
+        const sDate = new Date(s.startDate);
+        return sDate >= startDate && sDate <= endDate;
+      }
+
+      // Fallback: use weeksInterval lookup if provided
+      if (weeksInterval && s.weekNumber) {
+        const weekIdx = s.weekNumber - 1;
+        const weekStart = weeksInterval[weekIdx];
+        if (weekStart) {
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekEnd.getDate() + 6);
+          // Checking overlap
+          return weekEnd >= startDate && weekStart <= endDate;
+        }
+      }
+
+      return false;
+    }).reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+  }
+
+  // Default 'all'
+  return samplesData.reduce((sum, s) => sum + (s.sampleSize || 0), 0);
 };

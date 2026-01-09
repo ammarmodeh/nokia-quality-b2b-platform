@@ -38,10 +38,14 @@ export const createIssue = async (req, res) => {
   }
 };
 
-// Get all customer issues
+// Get all customer issues with pagination
 export const getAllIssues = async (req, res) => {
   try {
-    const { solved, assignedTo, teamCompany, pisDate, sortBy } = req.query;
+    const { solved, assignedTo, teamCompany, pisDate, sortBy, search } = req.query;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
     const query = {};
 
     if (solved) query.solved = solved;
@@ -57,6 +61,14 @@ export const getAllIssues = async (req, res) => {
       };
     }
 
+    if (search) {
+      query.$or = [
+        { slid: { $regex: search, $options: 'i' } },
+        { customerName: { $regex: search, $options: 'i' } },
+        { ticketId: { $regex: search, $options: 'i' } }
+      ];
+    }
+
     const sortOptions = {};
     if (sortBy) {
       sortOptions[sortBy] = -1; // Descending
@@ -64,11 +76,21 @@ export const getAllIssues = async (req, res) => {
       sortOptions.createdAt = -1; // Default sort by newest
     }
 
-    const issues = await CustomerIssueSchema.find(query).sort(sortOptions);
+    const total = await CustomerIssueSchema.countDocuments(query);
+    const issues = await CustomerIssueSchema.find(query)
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit);
 
     res.status(200).json({
       success: true,
-      data: issues
+      data: issues,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
     });
   } catch (error) {
     res.status(500).json({

@@ -66,6 +66,11 @@ import { MoonLoader } from "react-spinners";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import { TaskDetailsDialog } from "../components/TaskDetailsDialog";
+import ManagementEmailDialog from "../components/ManagementEmailDialog";
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { Email as EmailIconUI, FilterList as FilterIcon } from "@mui/icons-material";
 
 const IssuePreventionAnalytics = () => {
   const theme = useTheme();
@@ -76,27 +81,39 @@ const IssuePreventionAnalytics = () => {
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [selectedComparison, setSelectedComparison] = useState(null);
   const [showComparisonDialog, setShowComparisonDialog] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
 
   const [negligencePage, setNegligencePage] = useState(0);
   const [negligenceRowsPerPage, setNegligenceRowsPerPage] = useState(5);
   const [negligenceSearch, setNegligenceSearch] = useState('');
   const [negligenceSupervisorFilter, setNegligenceSupervisorFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState({ start: null, end: null });
+  const fetchStats = async (startArg, endArg) => {
+    setLoading(true);
+    try {
+      const params = {};
+      const start = startArg !== undefined ? startArg : dateFilter.start;
+      const end = endArg !== undefined ? endArg : dateFilter.end;
+
+      if (start) params.startDate = start;
+      if (end) params.endDate = end;
+
+      const response = await api.get("/tasks/prevention-stats", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        params
+      });
+      setData(response.data);
+    } catch (error) {
+      console.error("Error fetching prevention stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await api.get("/tasks/prevention-stats", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-        });
-        setData(response.data);
-      } catch (error) {
-        console.error("Error fetching prevention stats:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchStats();
   }, []);
+  // ... (skipping unchanged code) ...
 
   if (loading) {
     return (
@@ -352,7 +369,7 @@ const IssuePreventionAnalytics = () => {
           <Avatar sx={{ bgcolor: theme.palette.success.main, width: 56, height: 56 }}>
             <VerifiedIcon sx={{ fontSize: 32 }} />
           </Avatar>
-          <Box>
+          <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h4" fontWeight="800" color="text.primary">
               Issue Prevention Dashboard
             </Typography>
@@ -360,7 +377,95 @@ const IssuePreventionAnalytics = () => {
               Cross-referencing reported issues with subsequent Detractor/Neutral outcomes to improve service delivery.
             </Typography>
           </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<EmailIconUI />}
+            onClick={() => setShowEmailDialog(true)}
+            sx={{
+              borderRadius: 3,
+              textTransform: 'none',
+              fontWeight: 'bold',
+              px: 3,
+              height: 48,
+              boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.2)}`,
+              '&:hover': {
+                boxShadow: `0 12px 20px ${alpha(theme.palette.primary.main, 0.3)}`,
+              }
+            }}
+          >
+            Generate Report
+          </Button>
         </Stack>
+
+        {/* Date Filters */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2,
+            mb: 4,
+            mt: 2,
+            bgcolor: alpha(theme.palette.primary.main, 0.05),
+            border: `1px dashed ${alpha(theme.palette.primary.main, 0.2)}`,
+            borderRadius: 2
+          }}
+        >
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+            <Typography variant="body2" fontWeight="bold" color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FilterIcon fontSize="small" /> Filter Period:
+            </Typography>
+
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Start Date"
+                value={dateFilter.start}
+                onChange={(newValue) => setDateFilter(prev => ({ ...prev, start: newValue }))}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    sx: { bgcolor: 'background.paper', width: 200 }
+                  }
+                }}
+              />
+              <Typography color="text.secondary">-</Typography>
+              <DatePicker
+                label="End Date"
+                value={dateFilter.end}
+                onChange={(newValue) => setDateFilter(prev => ({ ...prev, end: newValue }))}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    sx: { bgcolor: 'background.paper', width: 200 }
+                  }
+                }}
+              />
+            </LocalizationProvider>
+
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => fetchStats()}
+              disabled={loading}
+              sx={{ height: 40, px: 3 }}
+            >
+              Apply Filter
+            </Button>
+
+            {(dateFilter.start || dateFilter.end) && (
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => {
+                  setDateFilter({ start: null, end: null });
+                  fetchStats(null, null);
+                }}
+                sx={{ height: 40 }}
+              >
+                Clear
+              </Button>
+            )}
+          </Stack>
+        </Paper>
       </Box>
 
       {/* KPI Section */}
@@ -1198,15 +1303,25 @@ const IssuePreventionAnalytics = () => {
         </DialogActions>
       </Dialog>
 
-      {selectedTask && (
-        <TaskDetailsDialog
-          open={showTaskDialog}
-          onClose={() => setShowTaskDialog(false)}
-          tasks={selectedTask.reports || []}
-          teamName={selectedTask.installerTeam}
-        />
-      )}
-    </Container>
+      {
+        selectedTask && (
+          <TaskDetailsDialog
+            open={showTaskDialog}
+            onClose={() => setShowTaskDialog(false)}
+            tasks={selectedTask.reports || []}
+            teamName={selectedTask.installerTeam}
+          />
+        )
+      }
+      <ManagementEmailDialog
+        open={showEmailDialog}
+        onClose={() => setShowEmailDialog(false)}
+        data={data}
+        type="prevention"
+        startDate={dateFilter.start}
+        endDate={dateFilter.end}
+      />
+    </Container >
   );
 };
 
