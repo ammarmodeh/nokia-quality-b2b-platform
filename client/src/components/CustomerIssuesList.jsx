@@ -472,8 +472,10 @@ const CustomerIssuesList = () => {
     }}>
       <Box sx={{
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: isMobile ? 'flex-start' : 'center',
+        gap: isMobile ? 2 : 0,
         mb: 3
       }}>
         <Typography variant="h5" sx={{
@@ -484,7 +486,7 @@ const CustomerIssuesList = () => {
           Customer Issues
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button
             variant="contained"
             color="primary"

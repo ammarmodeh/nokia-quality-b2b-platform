@@ -145,7 +145,7 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ pb: 4, minHeight: "100vh" }}>
-      <Box sx={{ pt: 3, px: 3 }}>
+      <Box sx={{ pt: 3, px: 1 }}>
         {/* Welcome Snackbar */}
         <Snackbar open={snackbarOpen} autoHideDuration={5000} onClose={handleSnackbarClose}>
           <Alert onClose={handleSnackbarClose} severity="success" variant="filled">

@@ -355,7 +355,7 @@ const IssuePreventionAnalytics = () => {
   );
 
   return (
-    <Container maxWidth="xl" sx={{ pt: 3, pb: 6 }}>
+    <Container sx={{ pt: 3, pb: 6, px: 1 }}>
       {/* Header */}
       <Box mb={4}>
         <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} sx={{ mb: 1 }}>
@@ -365,7 +365,7 @@ const IssuePreventionAnalytics = () => {
           <Typography color="text.primary">Analytics</Typography>
           <Typography color="text.primary" sx={{ fontWeight: 'bold' }}>Issue Prevention</Typography>
         </Breadcrumbs>
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', md: 'center' }}>
           <Avatar sx={{ bgcolor: theme.palette.success.main, width: 56, height: 56 }}>
             <VerifiedIcon sx={{ fontSize: 32 }} />
           </Avatar>
@@ -655,7 +655,7 @@ const IssuePreventionAnalytics = () => {
                                   const report = item.originalReport;
                                   setSelectedTask({
                                     ...report.task,
-                                    reports: [report] // Wrap it so TaskDetailsDialog sees the history context
+                                    relatedIssues: [report] // Wrap it so TaskDetailsDialog sees the history context
                                   });
                                   setShowTaskDialog(true);
                                 }}
@@ -1303,16 +1303,7 @@ const IssuePreventionAnalytics = () => {
         </DialogActions>
       </Dialog>
 
-      {
-        selectedTask && (
-          <TaskDetailsDialog
-            open={showTaskDialog}
-            onClose={() => setShowTaskDialog(false)}
-            tasks={selectedTask.reports || []}
-            teamName={selectedTask.installerTeam}
-          />
-        )
-      }
+
       <ManagementEmailDialog
         open={showEmailDialog}
         onClose={() => setShowEmailDialog(false)}
