@@ -46,6 +46,7 @@ const LabAssessment = lazy(() => import("./pages/LabAssessment"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const QuizManagement = lazy(() => import("./pages/QuizManagement"));
 const IssuePreventionAnalytics = lazy(() => import("./pages/IssuePreventionAnalytics"));
+const DocumentsPortal = lazy(() => import("./pages/DocumentsPortal"));
 
 
 const QuizRouteHandler = ({ children }) => {
@@ -159,6 +160,7 @@ const App = () => {
           <Route path="/excel-portal" element={<DataManagement />} />
           <Route path="/analytics" element={<DetractorAnalytics />} />
           <Route path="/issue-prevention" element={<IssuePreventionAnalytics />} />
+          <Route path="/documents" element={<DocumentsPortal />} />
           <Route
             path="/dropdown-management"
             element={

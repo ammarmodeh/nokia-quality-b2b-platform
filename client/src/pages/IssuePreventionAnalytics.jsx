@@ -247,7 +247,7 @@ const IssuePreventionAnalytics = () => {
     },
     {
       field: "teamCompany",
-      headerName: "Team Company",
+      headerName: "Subcon",
       width: 150,
       valueGetter: (value, row) => row.task.teamCompany || "N/A",
     },

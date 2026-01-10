@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -21,21 +21,22 @@ import {
   CircularProgress,
   Stack,
   Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Refresh as RefreshIcon,
-  Save as SaveIcon,
   DragIndicator as DragIcon,
   Update as UpdateIcon,
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 import api from '../api/api';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { useRef, useCallback } from 'react';
 
 // Drag and Drop type
 const ItemTypes = {
@@ -126,34 +127,60 @@ const DraggableRow = ({ option, index, moveRow, handleOpenDialog, handleDelete, 
   );
 };
 
-const CATEGORY_MAP = {
-  PRIORITY: "Task Priorities",
-  TASK_CATEGORIES: "Task Categories",
-  TEAM_COMPANY: "Team Companies (Add Task)",
-  EVALUATION_SCORE: "Satisfaction Scores",
-  GOVERNORATES: "Governorates",
-  CUSTOMER_TYPE: "Customer Types",
-  VALIDATION_STATUS: "Validation Statuses",
-  REASON: "Reasons (Level 1)",
-  REASON_SUB: "Sub Reasons (Level 2)",
-  ROOT_CAUSE: "Root Causes (Level 3)",
-  RESPONSIBILITY: "Responsibilities",
-  ONT_TYPE: "ONT Types",
-  EXTENDER_TYPE: "Extender Types",
-  SESSION_TYPE: "Session Types",
-  SUPERVISORS: "Supervisors (Conducted By)",
-  CONTACT_METHOD: "Contact Methods",
-  ISSUE_FROM_MAIN: "From Main (Customer Issue)",
-  ISSUE_FROM_SUB: "From Sub (Customer Issue)",
-  ISSUE_CATEGORY: "Issue Categories (Level 1)",
-  ISSUE_SUB_CATEGORY: "Issue Sub Categories (Level 2)",
-  CIN_SUPERVISORS: "Supervisor",
-};
+// Organized Groups
+const FORM_GROUPS = [
+  {
+    title: "Task Form",
+    categories: {
+      PRIORITY: "Priorities",
+      TASK_CATEGORIES: "Categories",
+      TEAM_COMPANY: "Subcon",
+    }
+  },
+  {
+    title: "Field Team Form",
+    categories: {
+      GOVERNORATES: "Governorates",
+      SUPERVISORS: "Supervisors (Conducted By)",
+      EVALUATION_SCORE: "Evaluation Scores",
+    }
+  },
+  {
+    title: "Customer Issue Notification Form",
+    categories: {
+      CUSTOMER_TYPE: "Customer Types",
+      CONTACT_METHOD: "Contact Methods",
+      CIN_SUPERVISORS: "Closed By (Supervisors)",
+      VALIDATION_STATUS: "Validation Statuses",
+      ONT_TYPE: "ONT Types",
+      EXTENDER_TYPE: "Extender Types",
+      SESSION_TYPE: "Session Types",
+    }
+  },
+  {
+    title: "Issue Analysis & Cause",
+    categories: {
+      ISSUE_CATEGORY: "Issue Categories (Level 1)",
+      ISSUE_SUB_CATEGORY: "Issue Sub Categories (Level 2)",
+      RESPONSIBILITY: "Responsibilities",
+      REASON: "Reasons (Level 1)",
+      REASON_SUB: "Sub Reasons (Level 2)",
+      ROOT_CAUSE: "Root Causes (Level 3)",
+      ISSUE_FROM_MAIN: "From Main (Issues)",
+      ISSUE_FROM_SUB: "From Sub (Issues)",
+    }
+  }
+];
+
+// Flatten for easy lookup
+const CATEGORY_MAP = FORM_GROUPS.reduce((acc, group) => ({ ...acc, ...group.categories }), {});
+
 
 const DropdownManagement = () => {
   const [loading, setLoading] = useState(true);
   const [options, setOptions] = useState({});
   const [activeTab, setActiveTab] = useState('PRIORITY');
+  const [expandedAccordions, setExpandedAccordions] = useState(['panel0']); // Open first by default
   const [openDialog, setOpenDialog] = useState(false);
   const [editingOption, setEditingOption] = useState(null);
   const [formData, setFormData] = useState({ value: '', label: '', order: 0, parentCategory: null, parentValue: null });
@@ -171,14 +198,9 @@ const DropdownManagement = () => {
   const fetchOptions = async () => {
     setLoading(true);
     try {
-      // First, try to seed if empty
-      await api.post('/dropdown-options/seed');
-
+      await api.post('/dropdown-options/seed'); // Ensure defaults exist
       const response = await api.get('/dropdown-options/all');
       setOptions(response.data);
-      if (Object.keys(response.data).length > 0 && !response.data[activeTab]) {
-        setActiveTab(Object.keys(response.data)[0]);
-      }
     } catch (error) {
       console.error('Failed to fetch options:', error);
       toast.error('Failed to load dropdown options');
@@ -191,6 +213,19 @@ const DropdownManagement = () => {
     fetchOptions();
   }, []);
 
+  const handleAccordionChange = (panel) => (event, isExpanded) => {
+    // Single Expansion logic or Multiple? User didn't specify, but single focus is often cleaner. 
+    // Let's allow multiple for overview.
+    // If we want to auto-switch tabs, we can do it here.
+    const newExpanded = isExpanded
+      ? [...expandedAccordions, panel]
+      : expandedAccordions.filter(p => p !== panel);
+    setExpandedAccordions(newExpanded);
+  };
+
+  // When clicking a tab in an accordion, make sure that accordion is open (it is by definition)
+  // and set the active tab.
+
   const handleOpenDialog = (option = null) => {
     if (option) {
       setEditingOption(option);
@@ -200,7 +235,6 @@ const DropdownManagement = () => {
       setFormData({
         value: '',
         label: '',
-
         parentCategory: activeTab === 'REASON_SUB' ? 'REASON' : activeTab === 'ROOT_CAUSE' ? 'REASON_SUB' : activeTab === 'REASON' ? 'RESPONSIBILITY' : activeTab === 'ISSUE_SUB_CATEGORY' ? 'ISSUE_CATEGORY' : null,
         parentValue: null
       });
@@ -245,7 +279,6 @@ const DropdownManagement = () => {
 
   useEffect(() => {
     if (options[activeTab]) {
-      // Sort by order initially
       const sorted = [...options[activeTab]].sort((a, b) => (a.order || 0) - (b.order || 0));
       setCurrentOptions(sorted);
     } else {
@@ -267,7 +300,6 @@ const DropdownManagement = () => {
       const orderPayload = currentOptions.map((opt, index) => ({ _id: opt._id, order: index + 1 }));
       await api.put('/dropdown-options/reorder', { options: orderPayload });
       toast.success('Order saved successfully');
-      // Optionally update local cache order
     } catch (error) {
       console.error(error)
       toast.error('Failed to save order');
@@ -284,102 +316,143 @@ const DropdownManagement = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <Box sx={{ minHeight: '100vh', bgcolor: colors.background }}>
+      <Box sx={{ minHeight: '100vh', bgcolor: colors.background, p: 3 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
           <Typography variant="h4" sx={{ color: colors.primary, fontWeight: 'bold' }}>
             Dropdown Management
           </Typography>
         </Stack>
 
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
-          <Button
-            variant="outlined"
-            startIcon={<UpdateIcon />}
-            onClick={saveOrder}
-            sx={{
-              borderColor: colors.border,
-              color: colors.textSecondary,
-              '&:hover': { borderColor: colors.primary, color: colors.primary }
-            }}
-          >
-            Save Order
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-            sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
-          >
-            Add New Option
-          </Button>
-        </Stack>
+        {/* Accordions Container */}
+        <Box sx={{ mb: 4 }}>
+          {FORM_GROUPS.map((group, index) => {
+            const panelId = `panel${index}`;
+            const isExpanded = expandedAccordions.includes(panelId);
+            const hasActiveTab = Object.keys(group.categories).includes(activeTab);
 
+            return (
+              <Accordion
+                key={index}
+                expanded={isExpanded}
+                onChange={handleAccordionChange(panelId)}
+                sx={{
+                  backgroundColor: '#2d2d2d',
+                  color: '#fff',
+                  border: `1px solid ${hasActiveTab ? colors.primary : colors.border}`,
+                  mb: 2,
+                  borderRadius: '8px !important',
+                  '&:before': { display: 'none' }
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon sx={{ color: colors.textSecondary }} />}
+                  sx={{ borderBottom: isExpanded ? `1px solid ${colors.border}` : 'none' }}
+                >
+                  <Typography sx={{
+                    fontWeight: hasActiveTab ? 'bold' : 'normal',
+                    color: hasActiveTab ? colors.primary : 'inherit'
+                  }}>
+                    {group.title}
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ p: 0 }}>
+                  <Tabs
+                    value={activeTab}
+                    onChange={(e, newVal) => setActiveTab(newVal)}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{
+                      borderBottom: `1px solid ${colors.border}`,
+                      bgcolor: '#252525',
+                      '& .MuiTabs-indicator': { bgcolor: colors.primary },
+                      '& .MuiTab-root': { color: colors.textSecondary, py: 2 },
+                      '& .Mui-selected': { color: colors.primary },
+                    }}
+                  >
+                    {Object.keys(group.categories).map((cat) => (
+                      <Tab key={cat} label={group.categories[cat]} value={cat} />
+                    ))}
+                  </Tabs>
+                  {/* Render active content only if this group contains the active tab */}
+                  {hasActiveTab && (
+                    <Box sx={{ p: 2 }}>
+                      <Stack direction="row" justifyContent="flex-end" spacing={2} mb={2}>
+                        <Button
+                          variant="outlined"
+                          startIcon={<UpdateIcon />}
+                          onClick={saveOrder}
+                          sx={{
+                            borderColor: colors.border,
+                            color: colors.textSecondary,
+                            '&:hover': { borderColor: colors.primary, color: colors.primary }
+                          }}
+                        >
+                          Save Order
+                        </Button>
+                        <Button
+                          variant="contained"
+                          startIcon={<AddIcon />}
+                          onClick={() => handleOpenDialog()}
+                          sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
+                        >
+                          Add New Option
+                        </Button>
+                      </Stack>
 
-        <Paper sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: '12px', overflow: 'hidden' }}>
-          <Tabs
-            value={activeTab}
-            onChange={(e, newVal) => setActiveTab(newVal)}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              borderBottom: `1px solid ${colors.border}`,
-              '& .MuiTabs-indicator': { bgcolor: colors.primary },
-              '& .MuiTab-root': { color: colors.textSecondary, py: 2 },
-              '& .Mui-selected': { color: colors.primary },
-            }}
-          >
-            {Object.keys(CATEGORY_MAP).map((cat) => (
-              <Tab key={cat} label={CATEGORY_MAP[cat]} value={cat} />
-            ))}
-          </Tabs>
+                      <TableContainer sx={{ maxHeight: '50vh' }}>
+                        <Table stickyHeader size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell width="50" sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}></TableCell>
+                              <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Value</TableCell>
+                              <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Label</TableCell>
+                              {activeTab === 'REASON_SUB' && (
+                                <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Reason)</TableCell>
+                              )}
+                              {activeTab === 'ROOT_CAUSE' && (
+                                <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Sub Reason)</TableCell>
+                              )}
+                              {activeTab === 'REASON' && (
+                                <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Responsibility)</TableCell>
+                              )}
+                              {activeTab === 'ISSUE_SUB_CATEGORY' && (
+                                <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Category)</TableCell>
+                              )}
+                              <TableCell align="right" sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Actions</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {currentOptions.map((option, index) => (
+                              <DraggableRow
+                                key={option._id}
+                                index={index}
+                                option={option}
+                                moveRow={moveRow}
+                                handleOpenDialog={handleOpenDialog}
+                                handleDelete={handleDelete}
+                                colors={colors}
+                                activeTab={activeTab}
+                              />
+                            ))}
+                            {currentOptions.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={6} align="center" sx={{ py: 4, color: colors.textSecondary }}>
+                                  No options found. Click "Add New Option" to create one.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+                  )}
+                </AccordionDetails>
+              </Accordion>
+            );
+          })}
+        </Box>
 
-          <TableContainer sx={{ maxHeight: '60vh' }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell width="50" sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}></TableCell>
-                  <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Value</TableCell>
-                  <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Label</TableCell>
-                  {activeTab === 'REASON_SUB' && (
-                    <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Reason)</TableCell>
-                  )}
-                  {activeTab === 'ROOT_CAUSE' && (
-                    <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Sub Reason)</TableCell>
-                  )}
-                  {activeTab === 'REASON' && (
-                    <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Responsibility)</TableCell>
-                  )}
-                  {activeTab === 'ISSUE_SUB_CATEGORY' && (
-                    <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Category)</TableCell>
-                  )}
-                  <TableCell align="right" sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {currentOptions.map((option, index) => (
-                  <DraggableRow
-                    key={option._id}
-                    index={index}
-                    option={option}
-                    moveRow={moveRow}
-                    handleOpenDialog={handleOpenDialog}
-                    handleDelete={handleDelete}
-                    colors={colors}
-                    activeTab={activeTab}
-                  />
-                ))}
-                {currentOptions.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center" sx={{ py: 4, color: colors.textSecondary }}>
-                      No options found for this category.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-
+        {/* Existing Dialog Logic */}
         <Dialog
           open={openDialog}
           onClose={handleCloseDialog}
@@ -460,6 +533,30 @@ const DropdownManagement = () => {
                 >
                   <option value="" disabled style={{ backgroundColor: colors.surface }}>Select Parent Responsibility</option>
                   {(options['RESPONSIBILITY'] || []).map(opt => (
+                    <option key={opt._id} value={opt.value} style={{ backgroundColor: colors.surface }}>{opt.label}</option>
+                  ))}
+                </TextField>
+              )}
+              {activeTab === 'ISSUE_SUB_CATEGORY' && (
+                <TextField
+                  select
+                  fullWidth
+                  label="Parent Category"
+                  value={formData.parentValue || ''}
+                  onChange={(e) => setFormData({ ...formData, parentValue: e.target.value })}
+                  SelectProps={{ native: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': { borderColor: colors.border },
+                      '&:hover fieldset': { borderColor: colors.primary },
+                      '&.Mui-focused fieldset': { borderColor: colors.primary },
+                    },
+                    '& .MuiInputLabel-root': { color: colors.textSecondary },
+                    select: { color: colors.textPrimary, bgcolor: colors.surface },
+                  }}
+                >
+                  <option value="" disabled style={{ backgroundColor: colors.surface }}>Select Parent Category</option>
+                  {(options['ISSUE_CATEGORY'] || []).map(opt => (
                     <option key={opt._id} value={opt.value} style={{ backgroundColor: colors.surface }}>{opt.label}</option>
                   ))}
                 </TextField>

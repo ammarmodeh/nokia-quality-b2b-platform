@@ -24,6 +24,8 @@ import dropdownOptionRoutes from "./routes/dropdownOptionRoutes.js";
 import ontTypeRoutes from "./routes/ontTypeRoutes.js";
 import labAssessmentRoutes from "./routes/labAssessmentRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
+import docRoutes from "./routes/docRoutes.js";
+import path from "path";
 
 
 dotenv.config();
@@ -104,7 +106,13 @@ app.use("/api/action-plan", actionPlanRoutes);
 app.use("/api/dropdown-options", dropdownOptionRoutes);
 app.use("/api/ont-types", ontTypeRoutes);
 app.use("/api/lab-assessments", labAssessmentRoutes);
+app.use("/api/lab-assessments", labAssessmentRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/docs", docRoutes);
+
+// Static Uploads Folder
+const __dirname = path.resolve();
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 // ------------------------------------------------------------------

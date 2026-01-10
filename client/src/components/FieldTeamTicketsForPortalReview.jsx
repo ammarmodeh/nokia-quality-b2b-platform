@@ -129,7 +129,7 @@ const FieldTeamTicketsForPortalReview = ({ teamId, teamName }) => {
       Governate: ${ticket.governorate}
       District: ${ticket.district}
       Team Name: ${ticket.teamName}
-      Team Company: ${ticket.teamCompany}
+      Subcon: ${ticket.teamCompany}
       Satisfaction Score: ${ticket.evaluationScore || 'N/A'}
       Customer Feedback: ${ticket.customerFeedback}
       Reason: ${ticket.reason}

@@ -2,7 +2,7 @@ import { ExpandMore, Assessment } from "@mui/icons-material";
 import { Accordion, AccordionDetails, AccordionSummary, Stack, useMediaQuery } from "@mui/material";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { MdSettings, MdPsychology } from "react-icons/md";
+import { MdSettings, MdPsychology, MdDescription } from "react-icons/md";
 import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 
@@ -163,6 +163,12 @@ const SidebarLinks = () => {
           link: "calender",
           icon: <img width={20} height={20} src="/calendar.png" />,
           isNew: false,
+        },
+        {
+          label: "Docs",
+          link: "documents",
+          icon: <MdDescription size={20} />,
+          isNew: true,
         },
       ]
     },

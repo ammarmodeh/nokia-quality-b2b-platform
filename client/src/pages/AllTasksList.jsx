@@ -286,7 +286,7 @@ const AllTasksList = () => {
       'Governorate': task.governorate || 'N/A',
       'District': task.district || 'N/A',
       'Team Name': task.teamName || 'N/A',
-      'Team Company': task.teamCompany || 'N/A',
+      'Subcon': task.teamCompany || 'N/A',
       'Satisfaction Score': task.evaluationScore || 'N/A',
       'Feedback Severity': task.priority || 'N/A',
       'Interview Week': task.interviewDate ? getWeekDisplay(task.interviewDate) : 'N/A'
