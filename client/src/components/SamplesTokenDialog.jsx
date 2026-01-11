@@ -24,9 +24,11 @@ import {
   startOfYear,
   endOfYear,
   eachWeekOfInterval,
+  startOfWeek
 } from 'date-fns';
 
 import api from '../api/api';
+import { getCustomWeekNumber } from '../utils/helpers';
 
 // Memoized Row to prevent unnecessary re-renders of the entire table
 const WeekRow = React.memo(({ row, index, onChange }) => {
@@ -139,6 +141,20 @@ const SamplesTokenDialog = ({ open, onClose }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [settings, setSettings] = useState(null);
+
+  // Fetch settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Generate years for select (e.g., last year, this year, next year)
   const currentYear = new Date().getFullYear();
@@ -165,11 +181,12 @@ const SamplesTokenDialog = ({ open, onClose }) => {
 
         const start = startOfYear(new Date(selectedYear, 0, 1));
         const end = endOfYear(new Date(selectedYear, 11, 31));
-        const weeksInYear = eachWeekOfInterval({ start, end }, { weekStartsOn: 0 });
+        const weekStartDay = settings?.weekStartDay || 0;
+        const weeksInYear = eachWeekOfInterval({ start, end }, { weekStartsOn: weekStartDay });
         console.log(`📅 Total weeks in ${selectedYear}: ${weeksInYear.length}`);
 
-        const initializedData = weeksInYear.map((weekStart, index) => {
-          const weekNum = index + 1;
+        const initializedData = weeksInYear.map((weekStart) => {
+          const weekNum = getCustomWeekNumber(weekStart, selectedYear, settings || {});
           const savedWeek = savedSamples.find(s => s.weekNumber === weekNum) || {};
 
           if (Object.keys(savedWeek).length > 0) {
@@ -199,19 +216,23 @@ const SamplesTokenDialog = ({ open, onClose }) => {
         // Fallback to empty data
         const start = startOfYear(new Date(selectedYear, 0, 1));
         const end = endOfYear(new Date(selectedYear, 11, 31));
-        const weeksInYear = eachWeekOfInterval({ start, end }, { weekStartsOn: 0 });
-        const emptyData = weeksInYear.map((weekStart, index) => ({
-          weekStart,
-          weekNum: index + 1,
-          weekKey: `W${index + 1}`,
-          promoters: '',
-          detractors: '',
-          nps: '',
-          itnRelated: '',
-          itnRelatedPercent: '',
-          sampleSize: '',
-          note: ''
-        }));
+        const weekStartDay = settings?.weekStartDay || 0;
+        const weeksInYear = eachWeekOfInterval({ start, end }, { weekStartsOn: weekStartDay });
+        const emptyData = weeksInYear.map((weekStart) => {
+          const weekNum = getCustomWeekNumber(weekStart, selectedYear, settings || {});
+          return {
+            weekStart,
+            weekNum: weekNum,
+            weekKey: `W${weekNum}`,
+            promoters: '',
+            detractors: '',
+            nps: '',
+            itnRelated: '',
+            itnRelatedPercent: '',
+            sampleSize: '',
+            note: ''
+          };
+        });
         console.log('📝 Using empty data fallback');
         setWeeksData(emptyData);
         setMounted(true);
@@ -219,7 +240,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
     };
 
     fetchSamples();
-  }, [open, selectedYear]);
+  }, [open, selectedYear, settings]);
 
 
 

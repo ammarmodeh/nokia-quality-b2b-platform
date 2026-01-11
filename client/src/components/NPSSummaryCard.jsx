@@ -85,7 +85,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
       const weekNum = parseInt(selectedPeriod);
       const selectedWeekObj = weeks.find(w => w.week.toString() === selectedPeriod && w.year === currentYear);
       filteredTasks = filterTasksByWeek(tasks, currentYear, weekNum, currentSettings);
-      totalSamples = aggregateSamples(samplesData, 'week', { weekNumber: weekNum, startDate: selectedWeekObj?.start }, currentSettings);
+      totalSamples = aggregateSamples(samplesData, 'week', { weekNumber: weekNum, startDate: selectedWeekObj?.start, year: selectedWeekObj?.year || currentYear }, currentSettings);
     } else if (filterType === 'month') { // Removed `&& selectedPeriod !== 'all'` to allow default month selection
       const monthNum = selectedPeriod === 'all' && months.length > 0 ? months[0].month : parseInt(selectedPeriod);
       filteredTasks = filterTasksByMonth(tasks, currentYear, monthNum, currentSettings);

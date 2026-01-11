@@ -39,7 +39,7 @@ import {
 } from 'chart.js';
 import { Bar, Doughnut, Line, Pie } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
-import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport } from 'react-icons/fa';
 import { utils, writeFile } from 'xlsx';
 import ViewIssueDetailsDialog from './ViewIssueDetailsDialog';
 import ManagementEmailDialog from './ManagementEmailDialog';
@@ -95,16 +95,39 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   const [negligenceSupervisorFilter, setNegligenceSupervisorFilter] = useState('all');
   const [showEmailDialog, setShowEmailDialog] = useState(false);
 
+  const [dateFilter, setDateFilter] = useState({
+    start: '',
+    end: ''
+  });
+
   const handleViewIssue = (issue) => {
     setSelectedDetailedIssue(issue);
     setIsIssueViewOpen(true);
   };
 
   // --- Statistics Calculation ---
+  const filteredIssuesByDate = useMemo(() => {
+    return issues.filter(issue => {
+      if (!dateFilter.start && !dateFilter.end) return true;
+      const reportDate = new Date(issue.date || issue.createdAt);
+      const start = dateFilter.start ? new Date(dateFilter.start) : null;
+      const end = dateFilter.end ? new Date(dateFilter.end) : null;
+      if (start && reportDate < start) return false;
+      if (end) {
+        // Set end to end of day
+        const endDay = new Date(end);
+        endDay.setHours(23, 59, 59, 999);
+        if (reportDate > endDay) return false;
+      }
+      return true;
+    });
+  }, [issues, dateFilter]);
+
   const stats = useMemo(() => {
-    const totalTransactions = issues.length;
+    const issuesToProcess = filteredIssuesByDate;
+    const totalTransactions = issuesToProcess.length;
     let totalIssuesHighlighted = 0;
-    const resolved = issues.filter(i => i.solved === 'yes').length;
+    const resolved = issuesToProcess.filter(i => i.solved === 'yes').length;
     const unresolved = totalTransactions - resolved;
     const resolutionRate = totalTransactions > 0 ? ((resolved / totalTransactions) * 100).toFixed(1) : 0;
 
@@ -129,13 +152,14 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     const now = new Date();
     const pendingBottlenecks = [];
 
-    issues.forEach(issue => {
+    issuesToProcess.forEach(issue => {
       const reportDate = new Date(issue.date || issue.createdAt);
 
       // 1. Supervisor Dispatch Speed (Reported -> Dispatched OR Reported -> Now)
       let dispatchEnd = issue.dispatchedAt ? new Date(issue.dispatchedAt) : (issue.dispatched === 'no' ? now : null);
 
-      // Fallback for edge cases where dispatched=yes but date missing (historical)
+      // Fallback for historical cases: if dispatchedAt is missing but dispatched is 'yes', 
+      // we assume it was dispatched on the report date (speed = 0)
       if (!dispatchEnd && issue.dispatched === 'yes') dispatchEnd = reportDate;
 
       if (dispatchEnd && dispatchEnd >= reportDate) {
@@ -144,20 +168,11 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         countDispatch++;
       }
 
-      // 2. Field Resolution Speed (Dispatched -> Resolved OR Reported -> Now if pending)
+      // 2. Field Resolution Speed (Dispatched -> Resolved OR Dispatched -> Now)
+      // Only measure field speed if a dispatch event exists
       if (issue.dispatchedAt || issue.dispatched === 'yes') {
-        let resStart = null;
-        let resEnd = null;
-
-        if (issue.resolveDate) {
-          // Completed case: Count only the field work duration
-          resStart = new Date(issue.dispatchedAt || issue.date || issue.createdAt);
-          resEnd = new Date(issue.resolveDate);
-        } else if (issue.solved === 'no') {
-          // Pending case: Count total time from Submission (Negligence)
-          resStart = new Date(issue.date || issue.createdAt);
-          resEnd = now;
-        }
+        let resStart = issue.dispatchedAt ? new Date(issue.dispatchedAt) : reportDate;
+        let resEnd = issue.resolveDate ? new Date(issue.resolveDate) : (issue.solved === 'no' ? now : null);
 
         if (resStart && resEnd && resEnd >= resStart) {
           const resTime = (resEnd - resStart) / (1000 * 60 * 60 * 24);
@@ -167,8 +182,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       }
 
       // 3. Total Lifecycle (Reported -> Closed OR Reported -> Now)
-      let lifecycleEnd = issue.closedAt ? new Date(issue.closedAt) : now;
-      if (lifecycleEnd >= reportDate) {
+      let lifecycleEnd = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? now : null);
+      if (lifecycleEnd && lifecycleEnd >= reportDate) {
         const lifeTime = (lifecycleEnd - reportDate) / (1000 * 60 * 60 * 24);
         totalLifecycleTime += lifeTime;
         countLifecycle++;
@@ -183,6 +198,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
           stage: issue.dispatched === 'no' ? 'Awaiting Dispatch' : 'Field Work (Dispatched)',
           assignedTo: issue.assignedTo || 'Unassigned',
           supervisor: issue.closedBy || 'Unassigned',
+          reportDate: issue.date || issue.createdAt,
           originalIssue: issue // Full object for viewing
         });
       }
@@ -271,7 +287,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
   const teamData = useMemo(() => {
     const counts = {};
-    issues.forEach(issue => {
+    filteredIssuesByDate.forEach(issue => {
       const team = issue.fromMain || issue.from || 'Unknown';
       counts[team] = (counts[team] || 0) + 1;
     });
@@ -291,7 +307,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
   const subTeamData = useMemo(() => {
     const counts = {};
-    issues.forEach(issue => {
+    filteredIssuesByDate.forEach(issue => {
       if (issue.fromSub) {
         const team = issue.fromSub;
         counts[team] = (counts[team] || 0) + 1;
@@ -313,7 +329,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
   const installingTeamChartData = useMemo(() => {
     const counts = {};
-    issues.forEach(issue => {
+    filteredIssuesByDate.forEach(issue => {
       const team = issue.installingTeam || 'Unknown';
       counts[team] = (counts[team] || 0) + 1;
     });
@@ -333,7 +349,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
   const categoryData = useMemo(() => {
     const counts = {};
-    issues.forEach(issue => {
+    filteredIssuesByDate.forEach(issue => {
       if (issue.issues && issue.issues.length > 0) {
         issue.issues.forEach(i => {
           const category = i.category || 'Uncategorized';
@@ -379,7 +395,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
   const closureData = useMemo(() => {
     const counts = {};
-    issues.forEach(issue => {
+    filteredIssuesByDate.forEach(issue => {
       if (issue.solved === 'yes' && issue.closedBy) {
         counts[issue.closedBy] = (counts[issue.closedBy] || 0) + 1;
       }
@@ -399,7 +415,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
   const assigneeStats = useMemo(() => {
     const statsMap = {};
-    issues.forEach(issue => {
+    filteredIssuesByDate.forEach(issue => {
       const assignee = issue.assignedTo || 'Unassigned';
       if (!statsMap[assignee]) {
         statsMap[assignee] = { total: 0, resolved: 0, unresolved: 0, categories: {}, subCategories: {} };
@@ -419,8 +435,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       const topCat = Object.entries(statsMap[name].categories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
       const topSub = Object.entries(statsMap[name].subCategories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
-      // Calculate Resolution Speed for this assignee (Include pending issues as aging)
-      const issuesForAssignee = issues.filter(i => (i.assignedTo || 'Unassigned') === name);
+      // Calculate Resolution Speed for this assignee
+      const issuesForAssignee = filteredIssuesByDate.filter(i => (i.assignedTo || 'Unassigned') === name);
       let totalResTime = 0;
       let countRes = 0;
       const now = new Date();
@@ -428,16 +444,13 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         if (i.dispatchedAt || i.dispatched === 'yes') {
           let start = null;
           let end = null;
-
           if (i.resolveDate) {
             start = new Date(i.dispatchedAt || i.date || i.createdAt);
             end = new Date(i.resolveDate);
           } else if (i.solved === 'no') {
-            // Negligence logic: from Reported date to Now
             start = new Date(i.date || i.createdAt);
             end = now;
           }
-
           if (start && end && end >= start) {
             totalResTime += (end - start) / (1000 * 60 * 60 * 24);
             countRes++;
@@ -465,22 +478,24 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     if (filters.status !== 'all') {
       detailedList = detailedList.filter(item => filters.status === 'resolved' ? item.resolved > 0 : item.unresolved > 0);
     }
-    if (filters.category !== 'all') {
-      detailedList = detailedList.filter(item => item.categories[filters.category] > 0);
+
+    if (assigneeSort.field) {
+      detailedList.sort((a, b) => {
+        let valA = a[assigneeSort.field], valB = b[assigneeSort.field];
+        if (assigneeSort.field === 'rate' || assigneeSort.field === 'avgResolutionSpeed') {
+          valA = parseFloat(valA) || 0;
+          valB = parseFloat(valB) || 0;
+        }
+        return assigneeSort.direction === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+      });
     }
-    if (filters.minIssues > 0) {
-      detailedList = detailedList.filter(item => item.total >= filters.minIssues);
-    }
-    detailedList.sort((a, b) => {
-      let valA = a[assigneeSort.field], valB = b[assigneeSort.field];
-      if (assigneeSort.field === 'rate' || assigneeSort.field === 'avgResolutionSpeed') {
-        valA = parseFloat(valA) || 0;
-        valB = parseFloat(valB) || 0;
-      }
-      return assigneeSort.direction === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
-    });
 
     return {
+      totals: {
+        total: detailedList.reduce((acc, curr) => acc + curr.total, 0),
+        resolved: detailedList.reduce((acc, curr) => acc + curr.resolved, 0),
+        unresolved: detailedList.reduce((acc, curr) => acc + curr.unresolved, 0)
+      },
       chartData: {
         labels: sortedAssignees.slice(0, 10),
         datasets: [{
@@ -493,27 +508,59 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       },
       detailedList
     };
-  }, [issues, assigneeSearch, assigneeSort, filters]);
+  }, [filteredIssuesByDate, assigneeSearch, assigneeSort, filters]);
 
   const supervisorStats = useMemo(() => {
     const statsMap = {};
     const now = new Date();
-    issues.forEach(issue => {
+    filteredIssuesByDate.forEach(issue => {
       const supervisor = issue.closedBy || 'Unknown';
       if (!statsMap[supervisor]) {
-        statsMap[supervisor] = { total: 0, dispatchSum: 0, dispatchCount: 0 };
+        statsMap[supervisor] = {
+          total: 0,
+          resolved: 0,
+          unresolved: 0,
+          dispatchSum: 0,
+          dispatchCount: 0,
+          resolutionSum: 0,
+          resolutionCount: 0,
+          lifecycleSum: 0,
+          lifecycleCount: 0,
+          agingCount: 0
+        };
       }
       statsMap[supervisor].total += 1;
+      issue.solved === 'yes' ? statsMap[supervisor].resolved += 1 : statsMap[supervisor].unresolved += 1;
 
-      const reported = new Date(issue.date || issue.createdAt);
+      const reportDate = new Date(issue.date || issue.createdAt);
+
+      // 1. Supervisor Dispatch Speed
       let dispatchEnd = issue.dispatchedAt ? new Date(issue.dispatchedAt) : (issue.dispatched === 'no' ? now : null);
-
-      // Fallback for historical 'yes' without date
-      if (!dispatchEnd && issue.dispatched === 'yes') dispatchEnd = reported;
-
-      if (dispatchEnd && dispatchEnd >= reported) {
-        statsMap[supervisor].dispatchSum += (dispatchEnd - reported) / (1000 * 60 * 60 * 24);
+      if (!dispatchEnd && issue.dispatched === 'yes') dispatchEnd = reportDate;
+      if (dispatchEnd && dispatchEnd >= reportDate) {
+        statsMap[supervisor].dispatchSum += (dispatchEnd - reportDate) / (1000 * 60 * 60 * 24);
         statsMap[supervisor].dispatchCount += 1;
+        // Aging check for dispatch: undispatched and > 1 day
+        if (issue.dispatched === 'no' && ((now - reportDate) / (1000 * 60 * 60 * 24)) > 1) {
+          statsMap[supervisor].agingCount += 1;
+        }
+      }
+
+      // 2. Field Resolution Speed
+      if (issue.dispatchedAt || issue.dispatched === 'yes') {
+        let resStart = issue.dispatchedAt ? new Date(issue.dispatchedAt) : reportDate;
+        let resEnd = issue.resolveDate ? new Date(issue.resolveDate) : (issue.solved === 'no' ? now : null);
+        if (resStart && resEnd && resEnd >= resStart) {
+          statsMap[supervisor].resolutionSum += (resEnd - resStart) / (1000 * 60 * 60 * 24);
+          statsMap[supervisor].resolutionCount += 1;
+        }
+      }
+
+      // 3. Total Lifecycle
+      let lifecycleEnd = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? now : null);
+      if (lifecycleEnd && lifecycleEnd >= reportDate) {
+        statsMap[supervisor].lifecycleSum += (lifecycleEnd - reportDate) / (1000 * 60 * 60 * 24);
+        statsMap[supervisor].lifecycleCount += 1;
       }
     });
 
@@ -521,35 +568,89 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       .map(([name, data]) => ({
         name,
         total: data.total,
-        avgDispatchSpeed: data.dispatchCount > 0 ? (data.dispatchSum / data.dispatchCount).toFixed(1) : 'N/A'
+        resolved: data.resolved,
+        unresolved: data.unresolved,
+        rate: data.total > 0 ? ((data.resolved / data.total) * 100).toFixed(1) : 0,
+        avgDispatchSpeed: data.dispatchCount > 0 ? (data.dispatchSum / data.dispatchCount).toFixed(1) : 'N/A',
+        avgResolutionSpeed: data.resolutionCount > 0 ? (data.resolutionSum / data.resolutionCount).toFixed(1) : 'N/A',
+        avgLifecycleTime: data.lifecycleCount > 0 ? (data.lifecycleSum / data.lifecycleCount).toFixed(1) : 'N/A',
+        agingCount: data.agingCount
       }))
-      .sort((a, b) => b.total - a.total); // Default sort by volume
-  }, [issues]);
+      .sort((a, b) => b.total - a.total);
+  }, [filteredIssuesByDate]);
 
   const installingTeamStats = useMemo(() => {
     const statsMap = {};
-    issues.forEach(issue => {
+    const now = new Date();
+    filteredIssuesByDate.forEach(issue => {
       const team = issue.installingTeam || 'Unknown';
       if (!statsMap[team]) {
-        statsMap[team] = { total: 0, resolved: 0, unresolved: 0, categories: {} };
+        statsMap[team] = {
+          total: 0,
+          resolved: 0,
+          unresolved: 0,
+          categories: {},
+          subCategories: {},
+          dispatchSum: 0,
+          dispatchCount: 0,
+          resSum: 0,
+          resCount: 0,
+          lifecycleSum: 0,
+          lifecycleCount: 0
+        };
       }
       statsMap[team].total += 1;
       issue.solved === 'yes' ? statsMap[team].resolved += 1 : statsMap[team].unresolved += 1;
       if (issue.issues) {
         issue.issues.forEach(i => {
           if (i.category) statsMap[team].categories[i.category] = (statsMap[team].categories[i.category] || 0) + 1;
+          if (i.subCategory) statsMap[team].subCategories[i.subCategory] = (statsMap[team].subCategories[i.subCategory] || 0) + 1;
         });
+      }
+
+      const reportDate = new Date(issue.date || issue.createdAt);
+
+      // Speed Metrics for Team
+      // 1. Dispatch
+      let dEnd = issue.dispatchedAt ? new Date(issue.dispatchedAt) : (issue.dispatched === 'no' ? now : null);
+      if (!dEnd && issue.dispatched === 'yes') dEnd = reportDate;
+      if (dEnd && dEnd >= reportDate) {
+        statsMap[team].dispatchSum += (dEnd - reportDate) / (1000 * 60 * 60 * 24);
+        statsMap[team].dispatchCount += 1;
+      }
+
+      // 2. Resolution (Field)
+      if (issue.dispatchedAt || issue.dispatched === 'yes') {
+        let rStart = issue.dispatchedAt ? new Date(issue.dispatchedAt) : reportDate;
+        let rEnd = issue.resolveDate ? new Date(issue.resolveDate) : (issue.solved === 'no' ? now : null);
+        if (rStart && rEnd && rEnd >= rStart) {
+          statsMap[team].resSum += (rEnd - rStart) / (1000 * 60 * 60 * 24);
+          statsMap[team].resCount += 1;
+        }
+      }
+
+      // 3. End-to-End Lifecycle
+      let lEnd = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? now : null);
+      if (lEnd && lEnd >= reportDate) {
+        statsMap[team].lifecycleSum += (lEnd - reportDate) / (1000 * 60 * 60 * 24);
+        statsMap[team].lifecycleCount += 1;
       }
     });
 
     let detailedList = Object.keys(statsMap).map(name => {
-      const topCat = Object.entries(statsMap[name].categories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+      const stats = statsMap[name];
+      const topCat = Object.entries(stats.categories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+      const topSub = Object.entries(stats.subCategories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
       return {
         name,
-        ...statsMap[name],
+        ...stats,
         topCategory: topCat,
-        rate: ((statsMap[name].resolved / statsMap[name].total) * 100).toFixed(1),
-        relatedIssues: issues.filter(i => (i.installingTeam || 'Unknown') === name),
+        topSubCategory: topSub,
+        rate: ((stats.resolved / stats.total) * 100).toFixed(1),
+        avgDispatchSpeed: stats.dispatchCount > 0 ? (stats.dispatchSum / stats.dispatchCount).toFixed(1) : 'N/A',
+        avgResolutionSpeed: stats.resCount > 0 ? (stats.resSum / stats.resCount).toFixed(1) : 'N/A',
+        avgLifecycleTime: stats.lifecycleCount > 0 ? (stats.lifecycleSum / stats.lifecycleCount).toFixed(1) : 'N/A',
+        relatedIssues: filteredIssuesByDate.filter(i => (i.installingTeam || 'Unknown') === name),
         type: 'Installing Team'
       };
     });
@@ -560,20 +661,23 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     if (installingTeamFilters.status !== 'all') {
       detailedList = detailedList.filter(item => installingTeamFilters.status === 'resolved' ? item.resolved > 0 : item.unresolved > 0);
     }
-    if (installingTeamFilters.minIssues > 0) {
-      detailedList = detailedList.filter(item => item.total >= installingTeamFilters.minIssues);
+    if (installingTeamSort.field) {
+      detailedList.sort((a, b) => {
+        let valA = a[installingTeamSort.field], valB = b[installingTeamSort.field];
+        if (['rate', 'avgDispatchSpeed', 'avgResolutionSpeed', 'avgLifecycleTime'].includes(installingTeamSort.field)) {
+          valA = valA === 'N/A' ? 999 : parseFloat(valA);
+          valB = valB === 'N/A' ? 999 : parseFloat(valB);
+        }
+        return installingTeamSort.direction === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+      });
     }
-    detailedList.sort((a, b) => {
-      let valA = a[installingTeamSort.field], valB = b[installingTeamSort.field];
-      return installingTeamSort.direction === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
-    });
 
     return detailedList;
-  }, [issues, installingTeamSearch, installingTeamSort, installingTeamFilters]);
+  }, [filteredIssuesByDate, installingTeamSearch, installingTeamSort, installingTeamFilters]);
 
   const reporterData = useMemo(() => {
     const counts = {};
-    issues.forEach(issue => {
+    filteredIssuesByDate.forEach(issue => {
       const reporter = issue.reporter || 'Unknown';
       counts[reporter] = (counts[reporter] || 0) + 1;
     });
@@ -592,7 +696,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
   const trendData = useMemo(() => {
     const countsByDate = {};
-    const sortedIssues = [...issues].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sortedIssues = [...filteredIssuesByDate].sort((a, b) => new Date(a.date) - new Date(b.date));
 
     sortedIssues.forEach(issue => {
       if (!issue.date) return;
@@ -645,7 +749,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     }
 
     return { labels, datasets };
-  }, [issues, trendTimeframe, trendChartType]);
+  }, [filteredIssuesByDate, trendTimeframe, trendChartType]);
 
   const commonOptions = {
     responsive: true,
@@ -693,7 +797,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   const [logRowsPerPage, setLogRowsPerPage] = useState(10);
 
   const filteredLogIssues = useMemo(() => {
-    return issues
+    return filteredIssuesByDate
       .filter(i => {
         const term = assigneeSearch.toLowerCase();
         const matchSearch = i.slid.toLowerCase().includes(term) ||
@@ -703,7 +807,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         return matchSearch && matchStatus;
       })
       .sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [issues, assigneeSearch, filters.status]);
+  }, [filteredIssuesByDate, assigneeSearch, filters.status]);
 
   const handleChangeLogPage = (event, newPage) => {
     setLogPage(newPage);
@@ -716,6 +820,63 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
   return (
     <Box sx={{ width: '100%', mt: 2 }}>
+      {/* Top Controls: Period Filter & Email Report */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Typography variant="h5" fontWeight="bold">Customer Issues Dashboard</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#2d2d2d', px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>From:</Typography>
+              <TextField
+                type="date"
+                size="small"
+                value={dateFilter.start}
+                onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
+                sx={{
+                  bgcolor: '#1a1a1a',
+                  borderRadius: 1,
+                  '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                }}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>To:</Typography>
+              <TextField
+                type="date"
+                size="small"
+                value={dateFilter.end}
+                onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
+                sx={{
+                  bgcolor: '#1a1a1a',
+                  borderRadius: 1,
+                  '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                }}
+              />
+            </Box>
+            {(dateFilter.start || dateFilter.end) && (
+              <Button size="small" onClick={() => setDateFilter({ start: '', end: '' })} sx={{ color: '#f44336', minWidth: 0, p: 0.5 }}>
+                Clear
+              </Button>
+            )}
+          </Box>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<FaFileExport />}
+          onClick={() => setShowEmailDialog(true)}
+          sx={{
+            bgcolor: '#4e73df',
+            '&:hover': { bgcolor: '#2e59d9' },
+            borderRadius: 2,
+            textTransform: 'none',
+            px: 3
+          }}
+        >
+          Email Report
+        </Button>
+      </Box>
       {/* KPI Section */}
       <Grid container spacing={2} mb={4}>
         <Grid item xs={12} sm={6} md={2.4}><StatCard title="Total Transactions" value={stats.totalTransactions} icon={<FaClipboardList />} color="#2196f3" subtext="Total records" /></Grid>
@@ -786,17 +947,39 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                   <thead style={{ position: 'sticky', top: 0, backgroundColor: '#2d2d2d' }}>
                     <tr style={{ color: '#b3b3b3', fontSize: '0.8rem', borderBottom: '1px solid #3d3d3d' }}>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Supervisor</th>
-                      <th style={{ padding: '8px', textAlign: 'right' }}>Volume</th>
-                      <th style={{ padding: '8px', textAlign: 'right' }}>Avg Dispatch (Aging Incl.)</th>
+                      <th style={{ padding: '8px', textAlign: 'center' }}>Total</th>
+                      <th style={{ padding: '8px', textAlign: 'center' }}>Resolved</th>
+                      <th style={{ padding: '8px', textAlign: 'center' }}>Unresolved</th>
+                      <th style={{ padding: '8px', textAlign: 'center' }}>Rate (%)</th>
+                      <th style={{ padding: '8px', textAlign: 'right' }}>Dispatch</th>
+                      <th style={{ padding: '8px', textAlign: 'right' }}>Resol.</th>
+                      <th style={{ padding: '8px', textAlign: 'right' }}>Life</th>
+                      <th style={{ padding: '8px', textAlign: 'center' }}>Aging(D)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {supervisorStats.map((sup, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
                         <td style={{ padding: '8px', fontWeight: 'bold' }}>{sup.name}</td>
-                        <td style={{ padding: '8px', textAlign: 'right' }}>{sup.total}</td>
+                        <td style={{ padding: '8px', textAlign: 'center' }}>{sup.total}</td>
+                        <td style={{ padding: '8px', textAlign: 'center', color: '#4caf50' }}>{sup.resolved}</td>
+                        <td style={{ padding: '8px', textAlign: 'center', color: '#f44336' }}>{sup.unresolved}</td>
+                        <td style={{ padding: '8px', textAlign: 'center' }}>
+                          <Chip label={`${sup.rate}%`} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                        </td>
                         <td style={{ padding: '8px', textAlign: 'right', color: Number(sup.avgDispatchSpeed) > 1 ? '#ff9800' : '#4caf50' }}>
                           {sup.avgDispatchSpeed !== 'N/A' ? `${sup.avgDispatchSpeed} d` : '-'}
+                        </td>
+                        <td style={{ padding: '8px', textAlign: 'right', color: '#4caf50' }}>
+                          {sup.avgResolutionSpeed !== 'N/A' ? `${sup.avgResolutionSpeed} d` : '-'}
+                        </td>
+                        <td style={{ padding: '8px', textAlign: 'right', color: '#fff' }}>
+                          {sup.avgLifecycleTime !== 'N/A' ? `${sup.avgLifecycleTime} d` : '-'}
+                        </td>
+                        <td style={{ padding: '8px', textAlign: 'center' }}>
+                          {sup.agingCount > 0 ? (
+                            <Chip label={sup.agingCount} size="small" color="error" sx={{ height: 20, fontSize: '0.7rem' }} />
+                          ) : '-'}
                         </td>
                       </tr>
                     ))}
@@ -810,7 +993,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
           <Grid item xs={12}>
             <Paper sx={{ p: 2, bgcolor: '#1a1a1a', color: '#fff', borderRadius: 2, border: '1px solid #f44336', height: '100%' }}>
               <Stack direction={isMobile ? "column" : "row"} justifyContent="space-between" alignItems={isMobile ? "flex-start" : "center"} mb={2} spacing={2}>
-                <Typography variant="h6" fontWeight="bold" color="error">Critical Negligence (Top Aging Cases)</Typography>
+                <Typography variant="h6" fontWeight="bold" color="error">Open Cases (Dispatched + Awaiting Dispatch)</Typography>
                 <Stack direction={isMobile ? "column" : "row"} spacing={1} sx={{ width: isMobile ? '100%' : 'auto' }}>
                   <FormControl size="small" sx={{ width: isMobile ? '100%' : 200 }}>
                     <Select
@@ -855,6 +1038,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ color: '#b3b3b3', fontSize: '0.75rem', borderBottom: '1px solid #3d3d3d' }}>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Created At</th>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Report Date</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>SLID</th>
                       <th style={{ padding: '8px', textAlign: 'center' }}>Age</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Stage</th>
@@ -878,6 +1063,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                         .slice(negligencePage * negligenceRowsPerPage, negligencePage * negligenceRowsPerPage + negligenceRowsPerPage)
                         .map((item, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
+                            <td style={{ padding: '8px', color: '#b3b3b3', fontSize: '0.75rem' }}>{new Date(item.originalIssue.createdAt).toLocaleDateString()}</td>
+                            <td style={{ padding: '8px', color: '#b3b3b3', fontSize: '0.75rem' }}>{new Date(item.reportDate).toLocaleDateString()}</td>
                             <td style={{ padding: '8px', color: '#4e73df', fontWeight: 'bold', fontSize: '0.85rem' }}>{item.slid}</td>
                             <td style={{ padding: '8px', textAlign: 'center' }}>
                               <Chip label={`${item.age}d`} size="small" color="error" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
@@ -899,8 +1086,10 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                             </td>
                           </tr>
                         )) : (
-                        <tr>
-                          <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#4caf50' }}>No pending delays detected.</td>
+                        <tr style={{ borderBottom: "1px solid #333" }}>
+                          <td colSpan={7} style={{ padding: "20px", textAlign: "center", color: "#4caf50" }}>
+                            All caught up! No un-dispatched negligence detected.
+                          </td>
                         </tr>
                       );
                     })()}
@@ -988,7 +1177,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
           </Paper>
         </Grid>
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
+          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Issue Breakdown (Categories)</Typography>
             <Box sx={{ height: 260, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <Doughnut data={categoryData} options={doughnutOptions} />
@@ -1112,7 +1301,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
               <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
                 <thead>
                   <tr style={{ color: '#b3b3b3', fontSize: '0.85rem', textAlign: 'left' }}>
-                    <th style={{ padding: '0 12px' }}>Date</th>
+                    <th style={{ padding: '0 12px' }}>Created At</th>
+                    <th style={{ padding: '0 12px' }}>Report Date</th>
                     <th style={{ padding: '0 12px' }}>SLID</th>
                     <th style={{ padding: '0 12px' }}>Assignee</th>
                     <th style={{ padding: '0 12px' }}>Installing Team</th>
@@ -1131,7 +1321,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#252525'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e1e1e'}
                       >
-                        <td style={{ padding: '12px', borderRadius: '8px 0 0 8px', color: '#b3b3b3' }}>{new Date(issue.date).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px', borderRadius: '8px 0 0 8px', color: '#b3b3b3' }}>{new Date(issue.createdAt).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px', color: '#b3b3b3' }}>{new Date(issue.date).toLocaleDateString()}</td>
                         <td style={{ padding: '12px', fontWeight: 'bold' }}>{issue.slid}</td>
                         <td style={{ padding: '12px' }}>
                           <Box
@@ -1220,7 +1411,38 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                   <Typography variant="caption" color="#b3b3b3">{selectedTeam.type} Dashboard</Typography>
                 </Box>
               </Box>
-              <IconButton onClick={() => setSelectedTeam(null)} sx={{ color: '#f44336' }}><FaTimes /></IconButton>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<FaFileExcel />}
+                  onClick={() => {
+                    const data = selectedTeam.relatedIssues.map(issue => {
+                      const reportDate = new Date(issue.date || issue.createdAt);
+                      const closeDate = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? new Date() : null);
+                      const lifecycle = closeDate ? ((closeDate - reportDate) / (1000 * 60 * 60 * 24)).toFixed(1) : 'N/A';
+
+                      return {
+                        'Created At': new Date(issue.createdAt).toLocaleString(),
+                        'Report Date': new Date(issue.date).toLocaleDateString(),
+                        'SLID': issue.slid,
+                        'Category': issue.issues?.[0]?.category || 'N/A',
+                        'Sub-category': issue.issues?.[0]?.subCategory || '-',
+                        'Status': issue.solved === 'yes' ? 'Resolved' : 'Active',
+                        'Time to Close (Days)': lifecycle
+                      };
+                    });
+                    const ws = utils.json_to_sheet(data);
+                    const wb = utils.book_new();
+                    utils.book_append_sheet(wb, ws, "TeamData");
+                    writeFile(wb, `${selectedTeam.name}_Performance.xlsx`);
+                  }}
+                  sx={{ color: '#4caf50', borderColor: '#4caf50', textTransform: 'none', mr: 2 }}
+                >
+                  Export Data
+                </Button>
+                <IconButton onClick={() => setSelectedTeam(null)} sx={{ color: '#f44336' }}><FaTimes /></IconButton>
+              </Box>
             </DialogTitle>
             <DialogContent sx={{ p: 3 }}>
               <Grid container spacing={2} mb={4} mt={1}>
@@ -1244,8 +1466,32 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                 </Grid>
                 <Grid item xs={12} md={3}>
                   <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="caption" color="#b3b3b3">Avg. Dispatch</Typography>
+                    <Typography variant="h5" fontWeight="bold" sx={{ color: '#ff9800' }}>{selectedTeam.avgDispatchSpeed || 'N/A'}</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="caption" color="#b3b3b3">Avg. Resolution</Typography>
+                    <Typography variant="h5" fontWeight="bold" sx={{ color: '#4caf50' }}>{selectedTeam.avgResolutionSpeed || 'N/A'}</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="caption" color="#b3b3b3">Avg. Lifecycle</Typography>
+                    <Typography variant="h5" fontWeight="bold" sx={{ color: '#fff' }}>{selectedTeam.avgLifecycleTime || 'N/A'}</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center' }}>
                     <Typography variant="caption" color="#b3b3b3">Top Category</Typography>
-                    <Typography variant="body1" fontWeight="bold" sx={{ color: '#ff9933' }}>{selectedTeam.topCategory}</Typography>
+                    <Typography variant="body1" fontWeight="bold" sx={{ color: '#ff9933', fontSize: '0.85rem' }}>{selectedTeam.topCategory}</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="caption" color="#b3b3b3">Top Sub-Category</Typography>
+                    <Typography variant="body1" fontWeight="bold" sx={{ color: '#03a9f4', fontSize: '0.85rem' }}>{selectedTeam.topSubCategory || 'N/A'}</Typography>
                   </Box>
                 </Grid>
               </Grid>
@@ -1255,11 +1501,13 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ textAlign: 'left', color: '#b3b3b3', borderBottom: '1px solid #333' }}>
-                      <th style={{ padding: '12px' }}>Date</th>
+                      <th style={{ padding: '12px' }}>Created At</th>
+                      <th style={{ padding: '12px' }}>Report Date</th>
                       <th style={{ padding: '12px' }}>SLID</th>
                       <th style={{ padding: '12px' }}>Category</th>
                       <th style={{ padding: '12px' }}>Sub-category</th>
                       <th style={{ padding: '12px' }}>Status</th>
+                      <th style={{ padding: '12px' }}>Life (D)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1271,12 +1519,31 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#222'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
+                        <td style={{ padding: '12px', color: '#b3b3b3' }}>{new Date(issue.createdAt).toLocaleDateString()}</td>
                         <td style={{ padding: '12px' }}>{new Date(issue.date).toLocaleDateString()}</td>
                         <td style={{ padding: '12px', fontWeight: 'bold' }}>{issue.slid}</td>
                         <td style={{ padding: '12px' }}>{issue.issues?.[0]?.category || 'N/A'}</td>
                         <td style={{ padding: '12px' }}>{issue.issues?.[0]?.subCategory || '-'}</td>
                         <td style={{ padding: '12px' }}>
                           <Chip label={issue.solved === 'yes' ? 'Success' : 'Active'} size="small" sx={{ bgcolor: issue.solved === 'yes' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 193, 7, 0.1)', color: issue.solved === 'yes' ? '#4caf50' : '#ffc107' }} />
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <Typography sx={{
+                            fontWeight: 'bold',
+                            color: (() => {
+                              const rDate = new Date(issue.date || issue.createdAt);
+                              const cDate = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? new Date() : null);
+                              if (!cDate) return '#b3b3b3';
+                              const life = (cDate - rDate) / (1000 * 60 * 60 * 24);
+                              return life > 3 ? '#f44336' : life > 1 ? '#ff9800' : '#4caf50';
+                            })()
+                          }}>
+                            {(() => {
+                              const rDate = new Date(issue.date || issue.createdAt);
+                              const cDate = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? new Date() : null);
+                              return cDate ? ((cDate - rDate) / (1000 * 60 * 60 * 24)).toFixed(1) : '-';
+                            })()}
+                          </Typography>
                         </td>
                       </tr>
                     ))}

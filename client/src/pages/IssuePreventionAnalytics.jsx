@@ -566,7 +566,7 @@ const IssuePreventionAnalytics = () => {
           <Grid item xs={12}>
             <Paper sx={{ p: 2, bgcolor: '#1a1a1a', color: '#fff', borderRadius: 2, border: '1px solid #f44336' }}>
               <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={2} spacing={2}>
-                <Typography variant="h6" fontWeight="bold" color="error">Critical Negligence (Top 5 Aging)</Typography>
+                <Typography variant="h6" fontWeight="bold" color="error">Aging Bottlenecks List</Typography>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
                   <FormControl size="small" sx={{ width: { xs: '100%', sm: 200 } }}>
                     <Select
@@ -611,6 +611,8 @@ const IssuePreventionAnalytics = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ color: '#b3b3b3', fontSize: '0.75rem', borderBottom: '1px solid #3d3d3d' }}>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Created At</th>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Report Date</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>SLID</th>
                       <th style={{ padding: '8px', textAlign: 'center' }}>Age</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Stage</th>
@@ -634,6 +636,8 @@ const IssuePreventionAnalytics = () => {
                         .slice(negligencePage * negligenceRowsPerPage, negligencePage * negligenceRowsPerPage + negligenceRowsPerPage)
                         .map((item, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
+                            <td style={{ padding: '8px', color: '#b3b3b3', fontSize: '0.75rem' }}>{new Date(item.originalReport.task.createdAt).toLocaleDateString()}</td>
+                            <td style={{ padding: '8px', color: '#b3b3b3', fontSize: '0.75rem' }}>{new Date(item.reportDate).toLocaleDateString()}</td>
                             <td style={{ padding: '8px', color: '#4e73df', fontWeight: 'bold', fontSize: '0.85rem' }}>{item.slid}</td>
                             <td style={{ padding: '8px', textAlign: 'center' }}>
                               <Chip label={`${item.age}d`} size="small" color="error" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
@@ -667,7 +671,7 @@ const IssuePreventionAnalytics = () => {
                           </tr>
                         )) : (
                         <tr>
-                          <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#4caf50' }}>No pending delays detected.</td>
+                          <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#4caf50' }}>No pending delays detected.</td>
                         </tr>
                       );
                     })()}

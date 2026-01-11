@@ -88,6 +88,7 @@ export const getAvailableWeeks = (tasks, settings = {}) => {
   const { weekStartDay = 0 } = settings;
   const weeks = new Map();
 
+  // 1. Collect weeks from tasks
   tasks.forEach(task => {
     if (!task.interviewDate) return;
     const date = new Date(task.interviewDate);
@@ -112,6 +113,25 @@ export const getAvailableWeeks = (tasks, settings = {}) => {
       });
     }
   });
+
+  // 2. Safely add the CURRENT week if it's not present (even if no tasks)
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentWeekStart = startOfWeek(today, { weekStartsOn: weekStartDay });
+  const currentWeekEnd = endOfWeek(today, { weekStartsOn: weekStartDay });
+  const currentWeekNumber = getCustomWeekNumber(currentWeekStart, currentYear, settings);
+  const currentKey = `${currentYear}-W${currentWeekNumber}`;
+
+  if (!weeks.has(currentKey)) {
+    weeks.set(currentKey, {
+      year: currentYear,
+      week: currentWeekNumber,
+      key: currentKey,
+      label: `Week ${currentWeekNumber} (${format(currentWeekStart, 'MMM d')} - ${format(currentWeekEnd, 'MMM d')})`,
+      start: currentWeekStart,
+      end: currentWeekEnd
+    });
+  }
 
   // Sort by year desc, then week desc
   return Array.from(weeks.values()).sort((a, b) => {
@@ -319,23 +339,32 @@ export const aggregateSamples = (samplesData, type, value, settings = {}) => {
 
   if (type === 'week') {
     const weekNum = typeof value === 'object' ? value.weekNumber : value;
+    const year = typeof value === 'object' ? value.year : null;
     const startDate = typeof value === 'object' ? value.startDate : null;
 
-    if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      const match = samplesData.find(s => {
-        if (!s.startDate) return false;
-        const sStart = new Date(s.startDate);
-        sStart.setHours(0, 0, 0, 0);
-        return sStart.getTime() === start.getTime();
-      });
-      if (match) return match.sampleSize || 0;
-    }
+    // Try to find exact match by weekNumber and year first
+    const matches = samplesData.filter(s => {
+      const sWeek = s.weekNumber !== undefined ? s.weekNumber : s.week;
+      const sYear = s.year;
 
-    return samplesData
-      .filter(s => s.weekNumber === weekNum)
-      .reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+      const mWeek = Number(sWeek) === Number(weekNum);
+      const mYear = year ? Number(sYear) === Number(year) : true;
+
+      if (mWeek && mYear) return true;
+
+      // Secondary check: Robust Date comparison if weekNum/year didn't match perfectly
+      if (startDate && s.startDate) {
+        const d1 = new Date(startDate);
+        const d2 = new Date(s.startDate);
+        return d1.getFullYear() === d2.getFullYear() &&
+          d1.getMonth() === d2.getMonth() &&
+          d1.getDate() === d2.getDate();
+      }
+
+      return false;
+    });
+
+    return matches.reduce((sum, s) => sum + (Number(s.sampleSize) || 0), 0);
   }
 
   if (type === 'month') {
@@ -371,7 +400,7 @@ export const aggregateSamples = (samplesData, type, value, settings = {}) => {
       }
 
       return false; // Can't determine
-    }).reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+    }).reduce((sum, s) => sum + (Number(s.sampleSize) || 0), 0);
   }
 
   if (type === 'range') {
@@ -401,9 +430,9 @@ export const aggregateSamples = (samplesData, type, value, settings = {}) => {
       }
 
       return false;
-    }).reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+    }).reduce((sum, s) => sum + (Number(s.sampleSize) || 0), 0);
   }
 
   // Default 'all'
-  return samplesData.reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+  return samplesData.reduce((sum, s) => sum + (Number(s.sampleSize) || 0), 0);
 };

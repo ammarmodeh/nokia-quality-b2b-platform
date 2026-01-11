@@ -78,6 +78,13 @@ const AllTasksList = () => {
   const [updateRefetchTasks, setUpdateRefetchTasks] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [priorityFilter, setPriorityFilter] = useState('all'); // 'all', 'High', 'Medium', 'Low'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'Open', 'In Progress', 'Closed'
+  const [governorateFilter, setGovernorateFilter] = useState('all');
+  const [districtFilter, setDistrictFilter] = useState('all');
+  const [subconFilter, setSubconFilter] = useState('all');
+  const [supervisorFilter, setSupervisorFilter] = useState('all');
+  const [teamNameFilter, setTeamNameFilter] = useState('all');
+  const [dropdownOptions, setDropdownOptions] = useState({});
 
   const [settings, setSettings] = useState(null);
 
@@ -90,7 +97,18 @@ const AllTasksList = () => {
         console.error("Error fetching settings:", err);
       }
     };
+
+    const fetchOptions = async () => {
+      try {
+        const response = await api.get('/dropdown-options/all');
+        setDropdownOptions(response.data);
+      } catch (err) {
+        console.error("Error fetching options:", err);
+      }
+    };
+
     fetchSettings();
+    fetchOptions();
   }, []);
 
   const getWeekDisplay = (dateString) => {
@@ -141,6 +159,12 @@ const AllTasksList = () => {
           limit: rowsPerPage,
           search: debouncedSearchTerm,
           priority: priorityFilter !== 'all' ? priorityFilter : undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          governorate: governorateFilter !== 'all' ? governorateFilter : undefined,
+          district: districtFilter !== 'all' ? districtFilter : undefined,
+          teamCompany: subconFilter !== 'all' ? subconFilter : undefined,
+          assignedTo: supervisorFilter !== 'all' ? supervisorFilter : undefined,
+          teamName: teamNameFilter !== 'all' ? teamNameFilter : undefined,
         },
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
@@ -180,7 +204,7 @@ const AllTasksList = () => {
     if (user?._id) {
       fetchFavoriteTasks();
     }
-  }, [user?._id, updateRefetchTasks, page, rowsPerPage, debouncedSearchTerm, filter, priorityFilter]);
+  }, [user?._id, updateRefetchTasks, page, rowsPerPage, debouncedSearchTerm, filter, priorityFilter, statusFilter, governorateFilter, districtFilter, subconFilter, supervisorFilter, teamNameFilter]);
 
   // Check if task is favorited and get its favorite ID
   const getFavoriteStatus = (taskId) => {
@@ -274,12 +298,12 @@ const AllTasksList = () => {
     }
   };
 
-  // Export to Excel function
   const exportToExcel = () => {
-    const data = filteredTasks.map(task => ({
+    const dataToExport = filteredTasks.map(task => ({
+      'Created At': task.createdAt ? new Date(task.createdAt).toLocaleString() : '-',
       'Request Number': task.requestNumber || 'N/A',
       'SLID': task.slid || 'N/A',
-      'PIS Date': task.pisDate ? format(parseISO(task.pisDate), 'dd/MM/yyyy') : 'N/A',
+      'PIS Date': task.pisDate ? new Date(task.pisDate).toLocaleDateString() : 'N/A',
       'Customer Name': task.customerName || 'N/A',
       'Contact': task.contactNumber || 'N/A',
       'Customer Feedback': task.customerFeedback || 'N/A',
@@ -292,7 +316,7 @@ const AllTasksList = () => {
       'Interview Week': task.interviewDate ? getWeekDisplay(task.interviewDate) : 'N/A'
     }));
 
-    const worksheet = utils.json_to_sheet(data);
+    const worksheet = utils.json_to_sheet(dataToExport);
     const workbook = utils.book_new();
     utils.book_append_sheet(workbook, worksheet, 'Tasks');
     writeFile(workbook, 'Tasks_Export.xlsx');
@@ -357,6 +381,19 @@ const AllTasksList = () => {
         gap: 2,
         alignItems: 'center'
       }}>
+        <Tooltip title="Refresh data">
+          <IconButton
+            onClick={() => fetchTasks()}
+            disabled={loading}
+            sx={{
+              color: '#7b68ee',
+              '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.08)' }
+            }}
+          >
+            <MdRefresh className={loading ? 'animate-spin' : ''} />
+          </IconButton>
+        </Tooltip>
+
         <TextField
           variant="outlined"
           size="small"
@@ -532,6 +569,246 @@ const AllTasksList = () => {
           </Select>
         </FormControl>
 
+        <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
+          <InputLabel id="status-filter-label" sx={{ color: '#b3b3b3' }}>
+            Task Status
+          </InputLabel>
+          <Select
+            labelId="status-filter-label"
+            id="status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            label="Task Status"
+            sx={{
+              color: '#ffffff',
+              borderRadius: '20px',
+              backgroundColor: '#2d2d2d',
+              '& .MuiOutlinedInput-notchedOutline': {
+                border: 'none',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #666 !important',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #7b68ee !important',
+              },
+            }}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  backgroundColor: '#2d2d2d',
+                  color: '#ffffff',
+                },
+              },
+            }}
+          >
+            <MenuItem value="all">
+              <Box display="flex" alignItems="center" gap={1}>
+                <MdFilterList />
+                <span>All Status</span>
+              </Box>
+            </MenuItem>
+            <MenuItem value="Open">
+              <Box display="flex" alignItems="center" gap={1}>
+                <MdError style={{ color: '#ff9800' }} />
+                <span>Open</span>
+              </Box>
+            </MenuItem>
+            <MenuItem value="In Progress">
+              <Box display="flex" alignItems="center" gap={1}>
+                <CircularProgress size={16} sx={{ color: '#1976d2' }} />
+                <span>In Progress</span>
+              </Box>
+            </MenuItem>
+            <MenuItem value="Closed">
+              <Box display="flex" alignItems="center" gap={1}>
+                <MdCheckCircle style={{ color: '#4caf50' }} />
+                <span>Closed</span>
+              </Box>
+            </MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
+          <InputLabel id="governorate-filter-label" sx={{ color: '#b3b3b3' }}>
+            Governorate
+          </InputLabel>
+          <Select
+            labelId="governorate-filter-label"
+            id="governorate-filter"
+            value={governorateFilter}
+            onChange={(e) => setGovernorateFilter(e.target.value)}
+            label="Governorate"
+            sx={{
+              color: '#ffffff',
+              borderRadius: '20px',
+              backgroundColor: '#2d2d2d',
+              '& .MuiOutlinedInput-notchedOutline': {
+                border: 'none',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #666 !important',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #7b68ee !important',
+              },
+            }}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  backgroundColor: '#2d2d2d',
+                  color: '#ffffff',
+                },
+              },
+            }}
+          >
+            <MenuItem value="all">All Govs</MenuItem>
+            {dropdownOptions['GOVERNORATES']?.map(opt => (
+              <MenuItem key={opt._id} value={opt.value}>{opt.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <TextField
+          variant="outlined"
+          size="small"
+          placeholder="District..."
+          value={districtFilter === 'all' ? '' : districtFilter}
+          onChange={(e) => setDistrictFilter(e.target.value || 'all')}
+          sx={{
+            minWidth: isMobile ? '100%' : 120,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '20px',
+              backgroundColor: '#2d2d2d',
+              color: '#ffffff',
+              '& fieldset': { border: 'none' },
+              '&:hover fieldset': { border: '1px solid #666 !important' },
+              '&.Mui-focused fieldset': { border: '1px solid #7b68ee !important' },
+            },
+            '& .MuiInputBase-input::placeholder': { color: '#b3b3b3', fontSize: '0.8rem' }
+          }}
+        />
+
+        <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
+          <InputLabel id="subcon-filter-label" sx={{ color: '#b3b3b3' }}>
+            Subcon
+          </InputLabel>
+          <Select
+            labelId="subcon-filter-label"
+            id="subcon-filter"
+            value={subconFilter}
+            onChange={(e) => setSubconFilter(e.target.value)}
+            label="Subcon"
+            sx={{
+              color: '#ffffff',
+              borderRadius: '20px',
+              backgroundColor: '#2d2d2d',
+              '& .MuiOutlinedInput-notchedOutline': {
+                border: 'none',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #666 !important',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #7b68ee !important',
+              },
+            }}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  backgroundColor: '#2d2d2d',
+                  color: '#ffffff',
+                },
+              },
+            }}
+          >
+            <MenuItem value="all">All Subcons</MenuItem>
+            {dropdownOptions['TEAM_COMPANY']?.map(opt => (
+              <MenuItem key={opt._id} value={opt.value}>{opt.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
+          <InputLabel id="supervisor-filter-label" sx={{ color: '#b3b3b3' }}>
+            Supervisor
+          </InputLabel>
+          <Select
+            labelId="supervisor-filter-label"
+            id="supervisor-filter"
+            value={supervisorFilter}
+            onChange={(e) => setSupervisorFilter(e.target.value)}
+            label="Supervisor"
+            sx={{
+              color: '#ffffff',
+              borderRadius: '20px',
+              backgroundColor: '#2d2d2d',
+              '& .MuiOutlinedInput-notchedOutline': {
+                border: 'none',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #666 !important',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #7b68ee !important',
+              },
+            }}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  backgroundColor: '#2d2d2d',
+                  color: '#ffffff',
+                },
+              },
+            }}
+          >
+            <MenuItem value="all">All Supervisors</MenuItem>
+            {dropdownOptions['SUPERVISORS']?.map(opt => (
+              <MenuItem key={opt._id} value={opt._id}>{opt.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
+          <InputLabel id="team-name-filter-label" sx={{ color: '#b3b3b3' }}>
+            Team Name
+          </InputLabel>
+          <Select
+            labelId="team-name-filter-label"
+            id="team-name-filter"
+            value={teamNameFilter}
+            onChange={(e) => setTeamNameFilter(e.target.value)}
+            label="Team Name"
+            sx={{
+              color: '#ffffff',
+              borderRadius: '20px',
+              backgroundColor: '#2d2d2d',
+              '& .MuiOutlinedInput-notchedOutline': {
+                border: 'none',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #666 !important',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #7b68ee !important',
+              },
+            }}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  backgroundColor: '#2d2d2d',
+                  color: '#ffffff',
+                },
+              },
+            }}
+          >
+            <MenuItem value="all">All Teams</MenuItem>
+            {dropdownOptions['FIELD_TEAMS']?.map(opt => (
+              <MenuItem key={opt._id} value={opt.value}>{opt.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
         <Button
           variant="outlined"
           onClick={exportToExcel}
@@ -626,6 +903,7 @@ const AllTasksList = () => {
         <Table size={isMobile ? 'small' : 'medium'}>
           <TableHead>
             <TableRow>
+              <TableCell style={{ fontSize: '0.875rem' }}>Created At</TableCell>
               <TableCell style={{ fontSize: '0.875rem' }}>SLID</TableCell>
               <TableCell style={{ fontSize: '0.875rem' }}>Customer Name</TableCell>
               {/* <TableCell>Contact</TableCell> */}
@@ -650,6 +928,9 @@ const AllTasksList = () => {
                         cursor: 'pointer',
                       }}
                     >
+                      <TableCell style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        {task.createdAt ? new Date(task.createdAt).toLocaleDateString() : '-'}
+                      </TableCell>
                       <TableCell>
                         <Box display="flex" alignItems="center" gap={1}>
                           <Typography>{task.slid || "-"}</Typography>
@@ -794,7 +1075,7 @@ const AllTasksList = () => {
                 })
             ) : (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4, color: '#ffffff' }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 4, color: '#ffffff' }}>
                   {searchTerm ? 'No matching tasks found' : 'No tasks available'}
                 </TableCell>
               </TableRow>

@@ -501,11 +501,61 @@ export const getTasks = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
+    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName } = req.query;
 
-    const totalTasks = await TaskSchema.countDocuments({ isDeleted: false });
+    const mongoQuery = { isDeleted: false };
+
+    if (priority && priority !== 'all') {
+      mongoQuery.priority = priority;
+    }
+
+    if (status && status !== 'all') {
+      if (status === 'Open') {
+        mongoQuery.status = { $in: ['Todo', 'In Progress'] };
+      } else {
+        mongoQuery.status = status;
+      }
+    }
+
+    if (governorate && governorate !== 'all') {
+      mongoQuery.governorate = governorate;
+    }
+
+    if (district && district !== 'all') {
+      mongoQuery.district = district;
+    }
+
+    if (teamCompany && teamCompany !== 'all') {
+      mongoQuery.teamCompany = teamCompany;
+    }
+
+    if (assignedTo && assignedTo !== 'all') {
+      mongoQuery.assignedTo = assignedTo;
+    }
+
+    if (teamName && teamName !== 'all') {
+      mongoQuery.teamName = teamName;
+    }
+
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+      mongoQuery.$or = [
+        { slid: searchRegex },
+        { customerName: searchRegex },
+        { teamName: searchRegex },
+        { operation: searchRegex },
+      ];
+
+      // Add requestNumber if it's a number
+      if (!isNaN(search)) {
+        mongoQuery.$or.push({ requestNumber: Number(search) });
+      }
+    }
+
+    const totalTasks = await TaskSchema.countDocuments(mongoQuery);
     const skip = (page - 1) * limit;
 
-    const tasks = await TaskSchema.find({ isDeleted: false })
+    const tasks = await TaskSchema.find(mongoQuery)
       .select("-subTasks -taskLogs -notifications -readBy")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -545,11 +595,63 @@ export const getDetractorTasksPaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
+    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName } = req.query;
 
-    const totalTasks = await TaskSchema.countDocuments({ evaluationScore: { $gte: 1, $lte: 6 } });
+    const mongoQuery = {
+      isDeleted: false,
+      evaluationScore: { $gte: 1, $lte: 6 }
+    };
+
+    if (priority && priority !== 'all') {
+      mongoQuery.priority = priority;
+    }
+
+    if (status && status !== 'all') {
+      if (status === 'Open') {
+        mongoQuery.status = { $in: ['Todo', 'In Progress'] };
+      } else {
+        mongoQuery.status = status;
+      }
+    }
+
+    if (governorate && governorate !== 'all') {
+      mongoQuery.governorate = governorate;
+    }
+
+    if (district && district !== 'all') {
+      mongoQuery.district = district;
+    }
+
+    if (teamCompany && teamCompany !== 'all') {
+      mongoQuery.teamCompany = teamCompany;
+    }
+
+    if (assignedTo && assignedTo !== 'all') {
+      mongoQuery.assignedTo = assignedTo;
+    }
+
+    if (teamName && teamName !== 'all') {
+      mongoQuery.teamName = teamName;
+    }
+
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+      mongoQuery.$or = [
+        { slid: searchRegex },
+        { customerName: searchRegex },
+        { teamName: searchRegex },
+        { operation: searchRegex },
+      ];
+
+      if (!isNaN(search)) {
+        mongoQuery.$or.push({ requestNumber: Number(search) });
+      }
+    }
+
+    const totalTasks = await TaskSchema.countDocuments(mongoQuery);
     const skip = (page - 1) * limit;
 
-    const detractorTasks = await TaskSchema.find({ evaluationScore: { $gte: 1, $lte: 6 } })
+    const detractorTasks = await TaskSchema.find(mongoQuery)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -588,11 +690,63 @@ export const getNeutralTasksPaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
+    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName } = req.query;
 
-    const totalTasks = await TaskSchema.countDocuments({ evaluationScore: { $gte: 7, $lte: 8 } });
+    const mongoQuery = {
+      isDeleted: false,
+      evaluationScore: { $gte: 7, $lte: 8 }
+    };
+
+    if (priority && priority !== 'all') {
+      mongoQuery.priority = priority;
+    }
+
+    if (status && status !== 'all') {
+      if (status === 'Open') {
+        mongoQuery.status = { $in: ['Todo', 'In Progress'] };
+      } else {
+        mongoQuery.status = status;
+      }
+    }
+
+    if (governorate && governorate !== 'all') {
+      mongoQuery.governorate = governorate;
+    }
+
+    if (district && district !== 'all') {
+      mongoQuery.district = district;
+    }
+
+    if (teamCompany && teamCompany !== 'all') {
+      mongoQuery.teamCompany = teamCompany;
+    }
+
+    if (assignedTo && assignedTo !== 'all') {
+      mongoQuery.assignedTo = assignedTo;
+    }
+
+    if (teamName && teamName !== 'all') {
+      mongoQuery.teamName = teamName;
+    }
+
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+      mongoQuery.$or = [
+        { slid: searchRegex },
+        { customerName: searchRegex },
+        { teamName: searchRegex },
+        { operation: searchRegex },
+      ];
+
+      if (!isNaN(search)) {
+        mongoQuery.$or.push({ requestNumber: Number(search) });
+      }
+    }
+
+    const totalTasks = await TaskSchema.countDocuments(mongoQuery);
     const skip = (page - 1) * limit;
 
-    const tasks = await TaskSchema.find({ evaluationScore: { $gte: 7, $lte: 8 } })
+    const tasks = await TaskSchema.find(mongoQuery)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -1224,20 +1378,11 @@ export const getIssuePreventionStats = async (req, res) => {
           countClosure++;
         }
 
-        // 2. Field Resolution Speed (Dispatched -> Resolved OR Reported -> Now if pending)
+        // 2. Field Resolution Speed (Dispatched -> Resolved OR Dispatched -> Now)
+        // Only measure field speed if a dispatch event exists
         if (report.dispatchedAt || report.dispatched === 'yes') {
-          let resStart = null;
-          let resEnd = null;
-
-          if (report.resolveDate) {
-            // Completed duration: Dispatched -> Resolved
-            resStart = new Date(report.dispatchedAt || report.date || report.createdAt);
-            resEnd = new Date(report.resolveDate);
-          } else if (report.solved === 'no') {
-            // Pending negligence: Reported -> Now
-            resStart = reportDate;
-            resEnd = now;
-          }
+          let resStart = report.dispatchedAt ? new Date(report.dispatchedAt) : reportDate;
+          let resEnd = report.resolveDate ? new Date(report.resolveDate) : (report.solved === 'no' ? now : null);
 
           if (resStart && resEnd && resEnd >= resStart) {
             const resTime = (resEnd - resStart) / (1000 * 60 * 60 * 24);
@@ -1247,9 +1392,9 @@ export const getIssuePreventionStats = async (req, res) => {
         }
 
         // 3. Total Lifecycle: Reported -> Closed (OR Reported -> Now if open)
-        let lifeEnd = report.closedAt ? new Date(report.closedAt) : now;
-        const lifeTime = (lifeEnd - reportDate) / (1000 * 60 * 60 * 24);
-        if (lifeTime >= 0) {
+        let lifeEnd = report.closedAt ? new Date(report.closedAt) : (report.solved === 'no' ? now : null);
+        if (lifeEnd && lifeEnd >= reportDate) {
+          const lifeTime = (lifeEnd - reportDate) / (1000 * 60 * 60 * 24);
           totalLifecycleTime += lifeTime;
           countLifecycle++;
         }
@@ -1261,6 +1406,7 @@ export const getIssuePreventionStats = async (req, res) => {
             slid: report.slid,
             age: ((now - reportDate) / (1000 * 60 * 60 * 24)).toFixed(1),
             stage: report.dispatched === 'no' ? 'Awaiting Dispatch' : 'Field Work',
+            reportDate: report.date || report.createdAt,
             assignedTo: (report.assignedTo && report.assignedTo.name) || 'Unassigned',
             supervisor: report.closedBy || 'Unassigned',
             originalReport: report // Send full object for viewing
@@ -1353,7 +1499,7 @@ export const getIssuePreventionStats = async (req, res) => {
       installationMatrix, // Add newly calculated matrix
       processEfficiency: {
         avgResolutionTime: countResolution > 0 ? (totalResolutionTime / countResolution).toFixed(1) : 0,
-        avgDispatchTime: countClosure > 0 ? (totalClosureTime / countClosure).toFixed(1) : 0,
+        avgDispatchTime: countClosure > 0 ? (totalClosureTime / countClosure).toFixed(1) : 0, // Using countClosure for dispatch as per historical naming
         avgLifecycleTime: countLifecycle > 0 ? (totalLifecycleTime / countLifecycle).toFixed(1) : 0,
         oldestPending: pendingBottlenecks.sort((a, b) => b.age - a.age),
         countResolution,

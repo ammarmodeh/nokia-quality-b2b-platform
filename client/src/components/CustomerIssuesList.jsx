@@ -136,8 +136,6 @@ const CustomerIssuesList = () => {
       filtered = filtered.filter(issue => issue.dispatched === 'yes' && issue.solved === 'no');
     } else if (statusFilter === 'notDispatchedOpen') {
       filtered = filtered.filter(issue => issue.dispatched !== 'yes' && issue.solved === 'no');
-    } else if (statusFilter === 'dispatchedClosed') {
-      filtered = filtered.filter(issue => issue.dispatched === 'yes' && issue.solved === 'yes');
     }
 
     // Filter by search term
@@ -684,7 +682,6 @@ const CustomerIssuesList = () => {
           <Tab value="resolved" label={`Closed (${sourceFilteredForCounts.filter(i => i.solved === 'yes').length})`} />
           <Tab value="unresolved" label={`Open (${sourceFilteredForCounts.filter(i => i.solved === 'no').length})`} />
           <Tab value="dispatchedOpen" label={`Dispatched (Open) (${sourceFilteredForCounts.filter(i => i.dispatched === 'yes' && i.solved === 'no').length})`} />
-          <Tab value="dispatchedClosed" label={`Dispatched (Closed) (${sourceFilteredForCounts.filter(i => i.dispatched === 'yes' && i.solved === 'yes').length})`} />
           <Tab value="notDispatchedOpen" label={`Not Dispatched (Open) (${sourceFilteredForCounts.filter(i => i.dispatched !== 'yes' && i.solved === 'no').length})`} />
         </Tabs>
       </Box>
