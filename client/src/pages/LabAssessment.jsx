@@ -506,6 +506,9 @@ const LabAssessment = () => {
                     '& .Mui-selected': { color: colors.primary },
                     '& .MuiTabs-indicator': { backgroundColor: colors.primary },
                   }}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  allowScrollButtonsMobile
                 >
                   <Tab label="Technical Assessment" value="Technical" />
                   <Tab label="Infrastructure Assessment" value="Infrastructure" />

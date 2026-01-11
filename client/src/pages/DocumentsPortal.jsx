@@ -172,7 +172,7 @@ const DocumentsPortal = () => {
   );
 
   return (
-    <Box sx={{ p: isMobile ? 2 : 4, minHeight: '100vh', color: '#ffffff' }}>
+    <Box sx={{ p: isMobile ? 0 : 4, minHeight: '100vh', color: '#ffffff' }}>
 
       {/* Header Section */}
       <Box sx={{ mb: 3 }}>
@@ -230,6 +230,9 @@ const DocumentsPortal = () => {
             onChange={handleTabChange}
             textColor="inherit"
             indicatorColor="primary"
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={{
               '& .MuiTabs-indicator': { backgroundColor: '#7b68ee', height: 3 },
               '& .MuiTab-root': {
@@ -433,8 +436,9 @@ const DocumentsPortal = () => {
       <Dialog
         open={openEditDialog}
         onClose={() => setOpenEditDialog(false)}
-        maxWidth="sm"
-        fullWidth
+        // maxWidth="sm"
+        fullWidth={!isMobile}
+        fullScreen={isMobile}
         PaperProps={{
           sx: { backgroundColor: '#2d2d2d', color: '#ffffff' }
         }}

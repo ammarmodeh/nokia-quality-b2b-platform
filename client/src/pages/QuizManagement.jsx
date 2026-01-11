@@ -24,7 +24,9 @@ import {
   CardContent,
   Chip,
   Autocomplete,
-  Grid
+  Grid,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -185,6 +187,8 @@ const DraggableRow = ({ question, index, moveRow, handleOpenDialog, handleDelete
 };
 
 const QuizManagement = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
@@ -435,20 +439,28 @@ const QuizManagement = () => {
   return (
     <DndProvider backend={HTML5Backend}>
       <Box sx={{ minHeight: '100vh', bgcolor: colors.background }}>
-        <Stack direction={"row"} justifyContent="space-between" alignItems="center" mb={4}>
+        <Stack
+          direction={isMobile ? "column" : "row"}
+          justifyContent="space-between"
+          alignItems={isMobile ? "flex-start" : "center"}
+          spacing={isMobile ? 2 : 0}
+          mb={4}
+        >
           <Box>
-            <Typography variant="h4" sx={{ color: colors.textPrimary, fontWeight: '900', letterSpacing: '-1px' }}>
+            <Typography variant={isMobile ? "h5" : "h4"} sx={{ color: colors.textPrimary, fontWeight: '900', letterSpacing: '-1px' }}>
               QUIZ <span style={{ color: colors.primary }}>MANAGEMENT</span>
             </Typography>
             <Typography variant="body2" sx={{ color: colors.textSecondary, mt: 0.5 }}>
               Configure, analyze, and reorder questions for field team assessments.
             </Typography>
           </Box>
-          <Stack direction="row" spacing={2}>
+          <Stack direction={isMobile ? "column" : "row"} spacing={2} width={isMobile ? "100%" : "auto"}>
             <Button
               variant="outlined"
               startIcon={<UpdateIcon />}
               onClick={saveOrder}
+              fullWidth={isMobile}
+              size={isMobile ? "small" : "medium"}
               sx={{
                 borderColor: colors.border,
                 color: colors.textSecondary,
@@ -463,6 +475,8 @@ const QuizManagement = () => {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => handleOpenDialog()}
+              fullWidth={isMobile}
+              size={isMobile ? "small" : "medium"}
               sx={{
                 bgcolor: colors.primary,
                 fontWeight: 'bold',
@@ -608,14 +622,14 @@ const QuizManagement = () => {
         <Dialog
           open={openDialog}
           onClose={handleCloseDialog}
-          fullWidth
-          maxWidth="md"
+          fullScreen
+          // maxWidth="md"
           PaperProps={{
             sx: {
               bgcolor: '#121212',
               color: colors.textPrimary,
               backgroundImage: 'none',
-              borderRadius: '20px',
+              // borderRadius: '20px',
               border: `1px solid ${colors.border}`,
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
             }

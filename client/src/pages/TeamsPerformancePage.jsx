@@ -7,7 +7,8 @@ import {
   Box, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Grid, IconButton, Rating, Tooltip as MuiToolTip, Chip, MenuItem,
-  Autocomplete
+  DialogActions, TextField, Grid, IconButton, Rating, Tooltip as MuiToolTip, Chip, MenuItem,
+  Autocomplete, useTheme, useMediaQuery
 } from '@mui/material';
 import { Download, FilterAlt, Search, ArrowBack } from '@mui/icons-material';
 import TeamDetailView from '../components/TeamDetailView';
@@ -18,7 +19,8 @@ import TeamPerformanceTablesAccordion from '../components/TeamPerformanceTablesA
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ChartDataLabels);
 
 const TeamsPerformancePage = () => {
-  const isMobile = false;
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const colors = {
     background: 'transparent',
     surface: 'transparent',

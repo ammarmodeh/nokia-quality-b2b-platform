@@ -52,7 +52,7 @@ const TeamList = ({
     border: `1px solid ${colors.border}`,
     borderRadius: '24px',
     boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-    overflow: 'hidden'
+    overflowX: 'auto'
   };
 
   return (

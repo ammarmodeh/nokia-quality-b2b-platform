@@ -1249,14 +1249,14 @@ const OnTheJobAssessment = () => {
             PaperProps={{
               sx: {
                 backgroundColor: colors.surface,
-                color: colors.textPrimary
+                color: colors.textPrimary,
               }
             }}
           >
             <DialogTitle sx={{ color: colors.primary, fontWeight: 'bold' }}>
               New Assessment for {selectedTeam.teamName}
             </DialogTitle>
-            <DialogContent>
+            <DialogContent sx={{ p: 1 }}>
               <Box sx={{ mb: 2, p: 2, bgcolor: colors.surfaceElevated, borderRadius: '8px', border: `1px solid ${colors.border}` }}>
                 <Typography variant="h6" sx={{ color: colors.primary }}>Assessment In Progress</Typography>
               </Box>

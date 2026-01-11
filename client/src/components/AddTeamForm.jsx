@@ -85,8 +85,8 @@ const AddTeamForm = ({ onAddTeam, loading }) => {
         {/* Section 1: Team Name Members */}
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
           <TextField label="First Name" size="small" {...register('firstName', { required: true })} sx={sharedInputSx} />
-          <TextField label="Second Name" size="small" {...register('secondName')} sx={sharedInputSx} />
-          <TextField label="Third Name" size="small" {...register('thirdName')} sx={sharedInputSx} />
+          <TextField label="Second Name (Optional)" size="small" {...register('secondName', { required: false })} sx={sharedInputSx} />
+          <TextField label="Third Name (Optional)" size="small" {...register('thirdName', { required: false })} sx={sharedInputSx} />
           <TextField label="Surname" size="small" {...register('surname', { required: true })} sx={sharedInputSx} />
         </Box>
 

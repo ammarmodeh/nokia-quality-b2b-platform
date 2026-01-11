@@ -31,6 +31,7 @@ import {
   FormControl,
   Select,
   MenuItem,
+  useMediaQuery,
 } from "@mui/material";
 import {
   NavigateNext as NavigateNextIcon,
@@ -74,6 +75,7 @@ import { Email as EmailIconUI, FilterList as FilterIcon } from "@mui/icons-mater
 
 const IssuePreventionAnalytics = () => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
@@ -355,7 +357,7 @@ const IssuePreventionAnalytics = () => {
   );
 
   return (
-    <Container sx={{ pt: 3, pb: 6, px: 1 }}>
+    <Container sx={{ pt: 3, pb: 6, px: 0 }}>
       {/* Header */}
       <Box mb={4}>
         <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} sx={{ mb: 1 }}>
@@ -1170,8 +1172,8 @@ const IssuePreventionAnalytics = () => {
       <Dialog
         open={showComparisonDialog}
         onClose={() => setShowComparisonDialog(false)}
-        maxWidth="md"
-        fullWidth
+        fullScreen={isMobile}
+        fullWidth={!isMobile}
         PaperProps={{
           sx: {
             bgcolor: '#1a1a1a',

@@ -316,7 +316,7 @@ const DropdownManagement = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <Box sx={{ minHeight: '100vh', bgcolor: colors.background, p: 3 }}>
+      <Box sx={{ minHeight: '100vh', bgcolor: colors.background, p: 0 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
           <Typography variant="h4" sx={{ color: colors.primary, fontWeight: 'bold' }}>
             Dropdown Management
