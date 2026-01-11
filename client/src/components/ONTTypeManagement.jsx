@@ -18,6 +18,8 @@ import {
   TextField,
   Stack,
   Tooltip,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -27,6 +29,8 @@ import { toast } from "sonner";
 import api from "../api/api";
 
 const ONTTypeManagement = ({ onTypeChange }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [ontTypes, setOntTypes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
@@ -134,7 +138,7 @@ const ONTTypeManagement = ({ onTypeChange }) => {
         </Table>
       </TableContainer>
 
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} PaperProps={{ sx: { bgcolor: colors.surface, color: colors.textPrimary, border: `1px solid ${colors.border}` } }}>
+      <Dialog open={openDialog} fullWidth={!isMobile} maxWidth="md" fullScreen={isMobile} onClose={() => setOpenDialog(false)} PaperProps={{ sx: { bgcolor: colors.surface, color: colors.textPrimary, border: `1px solid ${colors.border}` } }}>
         <DialogTitle>Add New ONT Type</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>

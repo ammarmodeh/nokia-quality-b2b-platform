@@ -1270,6 +1270,7 @@ const OnTheJobAssessment = () => {
                 getPerformanceColor={getPerformanceColor}
                 editMode={false}
                 getScoreLabel={getScoreLabel}
+                isMobile={isMobile}
               />
             </DialogContent>
             <DialogActions>
@@ -1318,6 +1319,7 @@ const OnTheJobAssessment = () => {
                   setOpenEditDialog(false);
                 }}
                 getScoreLabel={getScoreLabel}
+                isMobile={isMobile}
               />
             </DialogContent>
             <DialogActions>
@@ -1379,6 +1381,7 @@ const OnTheJobAssessment = () => {
               setTeamsPage(0);
             }}
             onSelectTeam={setSelectedTeam}
+            isMobile={isMobile}
           />
         )}
 

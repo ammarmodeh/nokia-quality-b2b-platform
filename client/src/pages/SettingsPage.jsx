@@ -168,7 +168,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <Box sx={{ p: isMobile ? 2 : 4, maxWidth: '1000px', margin: '0 auto' }}>
+    <Box sx={{ p: isMobile ? 0 : 4, maxWidth: '1000px', margin: '0 auto' }}>
       {loading && (
         <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1300 }}>
           <HashLoader color="#1976d2" size={80} />
@@ -470,7 +470,7 @@ const SettingsPage = () => {
             </Grid>
           </Grid>
 
-          <Divider sx={{ my: 4, borderColor: '#444' }} />
+          {/* <Divider sx={{ my: 4, borderColor: '#444' }} />
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <FormControlLabel
               control={<Switch checked={watch("notifications.emailAlerts")} disabled={!editMode} onChange={(e) => setValue("notifications.emailAlerts", e.target.checked, { shouldDirty: true })} />}
@@ -480,7 +480,7 @@ const SettingsPage = () => {
               control={<Switch checked={watch("notifications.pushNotifications")} disabled={!editMode} onChange={(e) => setValue("notifications.pushNotifications", e.target.checked, { shouldDirty: true })} />}
               label={<Typography sx={{ color: '#ffffff' }}>Enable Push Notifications</Typography>}
             />
-          </Box>
+          </Box> */}
         </form>
       </Paper>
 

@@ -43,7 +43,9 @@ const AssessmentForm = ({
   calculateOverallScore,
   getPerformanceColor,
   editMode,
-  onCancel
+
+  onCancel,
+  isMobile
 }) => {
   const [feedback, setFeedback] = useState(initialAssessment.feedback);
   const [checkPoints, setCheckPoints] = useState(initialAssessment.checkPoints);
@@ -60,8 +62,8 @@ const AssessmentForm = ({
   };
 
   const checkpointStyle = {
-    p: 3,
-    mb: 2.5,
+    p: isMobile ? 1.5 : 3,
+    mb: isMobile ? 1.5 : 2.5,
     backgroundColor: 'rgba(255,255,255,0.02)',
     border: `1px solid ${colors.border}`,
     borderRadius: '16px',
@@ -136,7 +138,7 @@ const AssessmentForm = ({
     <Paper component="form" onSubmit={handleSubmit} sx={{ ...glassStyle, p: { xs: 3, md: 5 }, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 5 }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: colors.textPrimary, mb: 1 }}>
+          <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 800, color: colors.textPrimary, mb: 1 }}>
             {editMode ? "Refine Assessment" : "Operational Audit"}
           </Typography>
           <Typography variant="body2" sx={{ color: colors.textSecondary }}>
@@ -175,8 +177,8 @@ const AssessmentForm = ({
               <Box key={idx} sx={checkpointStyle}>
                 <Grid container spacing={3} alignItems="center">
                   <Grid item xs={12} md={5}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>{point.name}</Typography>
-                    <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 2 }}>{point.description}</Typography>
+                    <Typography variant={isMobile ? "subtitle2" : "subtitle1"} sx={{ fontWeight: 700, mb: 0.5 }}>{point.name}</Typography>
+                    <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 2, fontSize: isMobile ? '0.75rem' : '0.875rem' }}>{point.description}</Typography>
 
                     {isEquipmentCheckpoint(point.name) && (
                       <RadioGroup
@@ -192,8 +194,8 @@ const AssessmentForm = ({
 
                   <Grid item xs={6} md={2}>
                     <FormControlLabel
-                      control={<Checkbox checked={point.isCompleted} disabled={point.isAvailable === false} onChange={(e) => handleCheckPointChange(realIndex, "isCompleted", e.target.checked)} />}
-                      label={<Typography variant="body2" sx={{ fontWeight: 600 }}>Validated</Typography>}
+                      control={<Checkbox checked={point.isCompleted} disabled={point.isAvailable === false} size={isMobile ? "small" : "medium"} onChange={(e) => handleCheckPointChange(realIndex, "isCompleted", e.target.checked)} />}
+                      label={<Typography variant="body2" sx={{ fontWeight: 600, fontSize: isMobile ? '0.8rem' : '1rem' }}>Validated</Typography>}
                     />
                   </Grid>
 
@@ -203,9 +205,10 @@ const AssessmentForm = ({
                       <Select
                         value={point.score}
                         label="Performance Metric"
+                        size={isMobile ? "small" : "medium"}
                         disabled={point.isAvailable === false}
                         onChange={(e) => handleCheckPointChange(realIndex, "score", e.target.value)}
-                        sx={{ borderRadius: '12px' }}
+                        sx={{ borderRadius: '12px', fontSize: isMobile ? '0.8rem' : '1rem' }}
                       >
                         {point.isAvailable === false ? (
                           <MenuItem value={0}>Score Fixed to 0 (Not Available)</MenuItem>

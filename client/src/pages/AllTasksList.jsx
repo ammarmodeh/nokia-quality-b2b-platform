@@ -378,6 +378,7 @@ const AllTasksList = () => {
         mb: 2,
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
+        flexWrap: 'wrap',
         gap: 2,
         alignItems: 'center'
       }}>

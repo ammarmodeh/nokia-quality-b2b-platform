@@ -307,7 +307,7 @@ const PreventionDeepDive = () => {
   );
 
   return (
-    <Container maxWidth="xl" sx={{ pt: 4, pb: 8 }}>
+    <Container maxWidth="xl" sx={{ pt: 4, pb: 8, px: 0 }}>
       {/* Header */}
       <Box mb={5}>
         <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} sx={{ mb: 2 }}>
@@ -336,8 +336,10 @@ const PreventionDeepDive = () => {
               border: `1px dashed ${alpha(theme.palette.primary.main, 0.2)}`,
               borderRadius: 3,
               display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
               alignItems: 'center',
-              gap: 2
+              gap: 2,
+              width: { xs: '100%', md: 'auto' }
             }}
           >
             <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -345,20 +347,25 @@ const PreventionDeepDive = () => {
                 label="Start"
                 value={dateFilter.start}
                 onChange={(newValue) => setDateFilter(prev => ({ ...prev, start: newValue }))}
-                slotProps={{ textField: { size: 'small', sx: { width: 150 } } }}
+                slotProps={{ textField: { size: 'small', sx: { width: { xs: '100%', sm: 150 } } } }}
               />
               <DatePicker
                 label="End"
                 value={dateFilter.end}
                 onChange={(newValue) => setDateFilter(prev => ({ ...prev, end: newValue }))}
-                slotProps={{ textField: { size: 'small', sx: { width: 150 } } }}
+                slotProps={{ textField: { size: 'small', sx: { width: { xs: '100%', sm: 150 } } } }}
               />
             </LocalizationProvider>
             <Button
               variant="contained"
               size="medium"
               onClick={() => fetchDeepDiveStats()}
-              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 'bold' }}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 'bold',
+                width: { xs: '100%', sm: 'auto' }
+              }}
             >
               Filter
             </Button>

@@ -453,7 +453,7 @@ const LabAssessment = () => {
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: colors.background }}>
-      <Typography variant="h4" sx={{ color: colors.primary, fontWeight: "bold", mb: 4 }}>
+      <Typography variant="h4" sx={{ color: colors.primary, fontWeight: "bold", mb: 1 }}>
         Lab Assessment
       </Typography>
 

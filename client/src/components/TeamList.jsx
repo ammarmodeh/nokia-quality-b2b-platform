@@ -37,7 +37,8 @@ const TeamList = ({
   rowsPerPage,
   onPageChange,
   onRowsPerPageChange,
-  onSelectTeam
+  onSelectTeam,
+  isMobile
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -90,145 +91,274 @@ const TeamList = ({
         />
       </Box>
 
-      <TableContainer component={Paper} sx={glassStyle}>
-        <Table sx={{ minWidth: 650 }}>
-          <TableHead sx={{ bgcolor: 'rgba(99, 102, 241, 0.05)' }}>
-            <TableRow>
-              <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Team Identity</TableCell>
-              <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Audits Conducted</TableCell>
-              <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Cumulative Perf.</TableCell>
-              <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Evaluation Status</TableCell>
-              <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}`, textAlign: 'right' }}>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredTeams
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((team) => {
-                const teamAssessments = teamAssessmentsMap[team._id.toString()] || [];
-                const assessmentCount = teamAssessments.length;
-                const isAssessed = assessmentCount > 0;
-                const averageScore = isAssessed ? getTeamAverageScore(team._id) : 0;
+      {isMobile ? (
+        // Mobile Card View
+        <Box>
+          {filteredTeams
+            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+            .map((team) => {
+              const teamAssessments = teamAssessmentsMap[team._id.toString()] || [];
+              const assessmentCount = teamAssessments.length;
+              const isAssessed = assessmentCount > 0;
+              const averageScore = isAssessed ? getTeamAverageScore(team._id) : 0;
 
-                return (
-                  <TableRow
-                    key={team._id}
-                    sx={{
-                      '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.02)',
-                        cursor: 'pointer'
-                      },
-                      transition: 'background-color 0.2s',
-                    }}
-                    onClick={() => onSelectTeam(team)}
-                  >
-                    <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{
-                          bgcolor: `${colors.primary}20`,
-                          color: colors.primary,
+              return (
+                <Paper
+                  key={team._id}
+                  onClick={() => onSelectTeam(team)}
+                  sx={{
+                    p: 2,
+                    mb: 2,
+                    borderRadius: '16px',
+                    bgcolor: 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${colors.border}`,
+                    cursor: 'pointer',
+                    '&:active': { bgcolor: 'rgba(255,255,255,0.05)' }
+                  }}
+                >
+                  {/* Header: Avatar, Name, ID */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Avatar sx={{
+                      bgcolor: `${colors.primary}20`,
+                      color: colors.primary,
+                      fontWeight: 700,
+                      width: 48,
+                      height: 48,
+                      fontSize: '1rem'
+                    }}>
+                      {team.teamName.substring(0, 2).toUpperCase()}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, color: colors.textPrimary }}>
+                        {team.teamName}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                        ID: {team._id.toString().slice(-6).toUpperCase()}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Stats Row */}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Assignment sx={{ fontSize: 16, color: colors.textSecondary }} />
+                      <Typography variant="body2" sx={{ color: colors.textSecondary }}>
+                        {assessmentCount} audits
+                      </Typography>
+                    </Box>
+                    {isAssessed ? (
+                      <Chip
+                        label={getScoreLabel(averageScore)}
+                        size="small"
+                        sx={{
+                          height: 24,
+                          fontSize: '0.75rem',
+                          bgcolor: `${colors[getPerformanceColor(averageScore)]}15`,
+                          color: colors[getPerformanceColor(averageScore)],
+                          borderColor: `${colors[getPerformanceColor(averageScore)]}30`,
                           fontWeight: 700,
-                          width: 40,
-                          height: 40,
-                          fontSize: '0.9rem'
-                        }}>
-                          {team.teamName.substring(0, 2).toUpperCase()}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="body1" sx={{ fontWeight: 700, color: colors.textPrimary }}>
-                            {team.teamName}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: colors.textSecondary }}>
-                            ID: {team._id.toString().slice(-6).toUpperCase()}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Assignment sx={{ fontSize: 16, color: colors.textSecondary }} />
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: colors.textPrimary }}>
-                          {assessmentCount} audits
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
-                      {isAssessed ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 800, color: colors.textPrimary, minWidth: 40 }}>
-                            {Math.round(averageScore)}%
-                          </Typography>
-                          <Box sx={{ flex: 1, minWidth: 100 }}>
-                            <LinearProgress
-                              variant="determinate"
-                              value={averageScore}
-                              sx={{
-                                height: 6,
-                                borderRadius: 3,
-                                bgcolor: 'rgba(255,255,255,0.05)',
-                                '& .MuiLinearProgress-bar': {
-                                  bgcolor: colors[getPerformanceColor(averageScore)] || colors.primary
-                                }
-                              }}
-                            />
+                          borderRadius: '6px'
+                        }}
+                      />
+                    ) : (
+                      <Chip
+                        label="No Data"
+                        size="small"
+                        sx={{ height: 24, fontSize: '0.75rem', bgcolor: 'rgba(255,255,255,0.05)', color: colors.textSecondary }}
+                      />
+                    )}
+                  </Box>
+
+                  {/* Progress Bar */}
+                  {isAssessed ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <LinearProgress
+                        variant="determinate"
+                        value={averageScore}
+                        sx={{
+                          flex: 1,
+                          height: 6,
+                          borderRadius: 3,
+                          bgcolor: 'rgba(255,255,255,0.05)',
+                          '& .MuiLinearProgress-bar': {
+                            bgcolor: colors[getPerformanceColor(averageScore)] || colors.primary
+                          }
+                        }}
+                      />
+                      <Typography variant="body2" sx={{ fontWeight: 800, color: colors.textPrimary, minWidth: 35, textAlign: 'right' }}>
+                        {Math.round(averageScore)}%
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Typography variant="caption" sx={{ color: colors.textSecondary, fontStyle: 'italic', display: 'block', textAlign: 'center' }}>
+                      Pending Baseline
+                    </Typography>
+                  )}
+                </Paper>
+              );
+            })}
+
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={filteredTeams.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={onPageChange}
+            onRowsPerPageChange={onRowsPerPageChange}
+            labelRowsPerPage="Rows:"
+            sx={{
+              color: colors.textSecondary,
+              '.MuiTablePagination-selectLabel': { mb: 0 },
+              '.MuiTablePagination-displayedRows': { mb: 0 },
+              borderTop: `1px solid ${colors.border}`,
+              '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
+              '& .MuiTablePagination-actions': { color: colors.textSecondary }
+            }}
+          />
+        </Box>
+      ) : (
+        // Desktop Table View
+        <TableContainer component={Paper} sx={glassStyle}>
+          <Table sx={{ minWidth: 650 }}>
+            <TableHead sx={{ bgcolor: 'rgba(99, 102, 241, 0.05)' }}>
+              <TableRow>
+                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Team Identity</TableCell>
+                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Audits Conducted</TableCell>
+                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Cumulative Perf.</TableCell>
+                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Evaluation Status</TableCell>
+                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}`, textAlign: 'right' }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredTeams
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((team) => {
+                  const teamAssessments = teamAssessmentsMap[team._id.toString()] || [];
+                  const assessmentCount = teamAssessments.length;
+                  const isAssessed = assessmentCount > 0;
+                  const averageScore = isAssessed ? getTeamAverageScore(team._id) : 0;
+
+                  return (
+                    <TableRow
+                      key={team._id}
+                      sx={{
+                        '&:hover': {
+                          bgcolor: 'rgba(255,255,255,0.02)',
+                          cursor: 'pointer'
+                        },
+                        transition: 'background-color 0.2s',
+                      }}
+                      onClick={() => onSelectTeam(team)}
+                    >
+                      <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Avatar sx={{
+                            bgcolor: `${colors.primary}20`,
+                            color: colors.primary,
+                            fontWeight: 700,
+                            width: 40,
+                            height: 40,
+                            fontSize: '0.9rem'
+                          }}>
+                            {team.teamName.substring(0, 2).toUpperCase()}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body1" sx={{ fontWeight: 700, color: colors.textPrimary }}>
+                              {team.teamName}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                              ID: {team._id.toString().slice(-6).toUpperCase()}
+                            </Typography>
                           </Box>
                         </Box>
-                      ) : (
-                        <Typography variant="body2" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>Pending Baseline</Typography>
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
-                      {isAssessed ? (
-                        <Chip
-                          label={getScoreLabel(averageScore)}
-                          size="small"
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Assignment sx={{ fontSize: 16, color: colors.textSecondary }} />
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: colors.textPrimary }}>
+                            {assessmentCount} audits
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
+                        {isAssessed ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 800, color: colors.textPrimary, minWidth: 40 }}>
+                              {Math.round(averageScore)}%
+                            </Typography>
+                            <Box sx={{ flex: 1, minWidth: 100 }}>
+                              <LinearProgress
+                                variant="determinate"
+                                value={averageScore}
+                                sx={{
+                                  height: 6,
+                                  borderRadius: 3,
+                                  bgcolor: 'rgba(255,255,255,0.05)',
+                                  '& .MuiLinearProgress-bar': {
+                                    bgcolor: colors[getPerformanceColor(averageScore)] || colors.primary
+                                  }
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>Pending Baseline</Typography>
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
+                        {isAssessed ? (
+                          <Chip
+                            label={getScoreLabel(averageScore)}
+                            size="small"
+                            sx={{
+                              bgcolor: `${colors[getPerformanceColor(averageScore)]}15`,
+                              color: colors[getPerformanceColor(averageScore)],
+                              borderColor: `${colors[getPerformanceColor(averageScore)]}30`,
+                              fontWeight: 700,
+                              borderRadius: '8px'
+                            }}
+                          />
+                        ) : (
+                          <Chip
+                            label="No Data"
+                            size="small"
+                            sx={{ bgcolor: 'rgba(255,255,255,0.05)', color: colors.textSecondary, fontWeight: 700 }}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: `1px solid ${colors.border}`, textAlign: 'right' }}>
+                        <IconButton
                           sx={{
-                            bgcolor: `${colors[getPerformanceColor(averageScore)]}15`,
-                            color: colors[getPerformanceColor(averageScore)],
-                            borderColor: `${colors[getPerformanceColor(averageScore)]}30`,
-                            fontWeight: 700,
-                            borderRadius: '8px'
+                            color: colors.primary,
+                            '&:hover': { bgcolor: `${colors.primary}10` }
                           }}
-                        />
-                      ) : (
-                        <Chip
-                          label="No Data"
-                          size="small"
-                          sx={{ bgcolor: 'rgba(255,255,255,0.05)', color: colors.textSecondary, fontWeight: 700 }}
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ borderBottom: `1px solid ${colors.border}`, textAlign: 'right' }}>
-                      <IconButton
-                        sx={{
-                          color: colors.primary,
-                          '&:hover': { bgcolor: `${colors.primary}10` }
-                        }}
-                      >
-                        <ChevronRight />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-          </TableBody>
-        </Table>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={filteredTeams.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={onPageChange}
-          onRowsPerPageChange={onRowsPerPageChange}
-          sx={{
-            color: colors.textSecondary,
-            borderTop: `1px solid ${colors.border}`,
-            '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
-            '& .MuiTablePagination-actions': { color: colors.textSecondary }
-          }}
-        />
-      </TableContainer>
+                        >
+                          <ChevronRight />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+            </TableBody>
+          </Table>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={filteredTeams.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={onPageChange}
+            onRowsPerPageChange={onRowsPerPageChange}
+            sx={{
+              color: colors.textSecondary,
+              borderTop: `1px solid ${colors.border}`,
+              '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
+              '& .MuiTablePagination-actions': { color: colors.textSecondary }
+            }}
+          />
+        </TableContainer>
+      )}
     </Box>
   );
 };
