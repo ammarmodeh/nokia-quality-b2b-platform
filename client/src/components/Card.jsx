@@ -94,18 +94,9 @@ function countStatuses(tasks = [], customerIssues = [], teamOptions = []) {
 
   if (Array.isArray(tasks)) {
     tasks.forEach((task) => {
-      const subTasks = task.subTasks || [];
-      const totalProgress = subTasks.reduce((sum, subTask) => sum + (subTask.progress || 0), 0) / (subTasks.length || 1);
-      // Rough approximation if subtasks length > 1, or just check sum logic if it was 0-100 per task.
-      // Original logic seemed to sum progress. Assuming max 100 per subtask? Or just check 100 total?
-      // Reverting to original logic carefully:
-      const totalProgressSum = subTasks.reduce((sum, subTask) => sum + (subTask.progress || 0), 0);
-      // Assuming existing logic: if totalProgressSum === 100 means closed? 
-      // This depends on how progress is tracked. Keeping exactly as original for safety:
-
-      if (totalProgressSum === 100) {
+      if (task.status === "Closed") {
         taskStatusCounts.Closed++;
-      } else if (totalProgressSum === 0) {
+      } else if (task.status === "Todo") {
         taskStatusCounts.Todo++;
       } else {
         taskStatusCounts["In Progress"]++;
@@ -114,13 +105,13 @@ function countStatuses(tasks = [], customerIssues = [], teamOptions = []) {
       const score = task.evaluationScore || 0;
       if (score >= 1 && score <= 6) {
         statusCount.Detractor++;
-        if (totalProgressSum === 100) detractorStatusCounts.Closed++;
-        else if (totalProgressSum === 0) detractorStatusCounts.Todo++;
+        if (task.status === "Closed") detractorStatusCounts.Closed++;
+        else if (task.status === "Todo") detractorStatusCounts.Todo++;
         else detractorStatusCounts["In Progress"]++;
       } else if (score >= 7 && score <= 8) {
         statusCount.Neutral++;
-        if (totalProgressSum === 100) neutralStatusCounts.Closed++;
-        else if (totalProgressSum === 0) neutralStatusCounts.Todo++;
+        if (task.status === "Closed") neutralStatusCounts.Closed++;
+        else if (task.status === "Todo") neutralStatusCounts.Todo++;
         else neutralStatusCounts["In Progress"]++;
       }
     });
@@ -205,25 +196,19 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
     let filteredTasks = [];
     if (cardLabel === "DETRACTORS") {
       filteredTasks = tasks.filter((task) => {
-        const subTasks = task.subTasks || [];
-        const totalProgress = subTasks.reduce((sum, subTask) => sum + (subTask.progress || 0), 0);
         const score = task.evaluationScore || 0;
         if (score >= 1 && score <= 6) {
-          if (status === "Closed" && totalProgress === 100) return true;
-          if (status === "Todo" && totalProgress === 0) return true;
-          if (status === "In Progress" && totalProgress > 0 && totalProgress < 100) return true;
+          if (status === task.status) return true;
+          if (!status) return true; // if no status specified, return all detractors
         }
         return false;
       });
     } else if (cardLabel === "NEUTRALS") {
       filteredTasks = tasks.filter((task) => {
-        const subTasks = task.subTasks || [];
-        const totalProgress = subTasks.reduce((sum, subTask) => sum + (subTask.progress || 0), 0);
         const score = task.evaluationScore || 0;
         if (score >= 7 && score <= 8) {
-          if (status === "Closed" && totalProgress === 100) return true;
-          if (status === "Todo" && totalProgress === 0) return true;
-          if (status === "In Progress" && totalProgress > 0 && totalProgress < 100) return true;
+          if (status === task.status) return true;
+          if (!status) return true;
         }
         return false;
       });

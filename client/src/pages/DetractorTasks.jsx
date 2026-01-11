@@ -102,11 +102,9 @@ const DetractorTasks = () => {
     const totalTasks = allTasks.length;
     if (totalTasks === 0) return { todo: { count: 0, percentage: 0 }, inProgress: { count: 0, percentage: 0 }, closed: { count: 0, percentage: 0 } };
 
-    let todo = 0, inProgress = 0, closed = 0;
     allTasks.forEach(task => {
-      const totalProgress = task.subTasks.reduce((sum, subtask) => sum + subtask.progress, 0);
-      if (totalProgress === 0) todo++;
-      else if (totalProgress === 100) closed++;
+      if (task.status === "Todo") todo++;
+      else if (task.status === "Closed") closed++;
       else inProgress++;
     });
 

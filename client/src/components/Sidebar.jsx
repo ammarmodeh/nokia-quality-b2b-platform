@@ -34,6 +34,7 @@ const SidebarLinks = () => {
           subpaths: [
             { label: "Insights", link: "analytics" },
             { label: "Issue Prevention", link: "issue-prevention" },
+            { label: "Prevention Deep Dive", link: "prevention-deep-dive" },
             { label: "Data Management", link: "excel-portal" },
           ],
         },

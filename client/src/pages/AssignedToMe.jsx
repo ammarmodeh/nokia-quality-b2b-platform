@@ -181,23 +181,9 @@ const AssignedToMe = () => {
 
     let todo = 0, inProgress = 0, closed = 0;
     allTasks.forEach(task => {
-      const subtasks = task.subTasks || [];
-      // Calculate progress safely
-      const totalProgress = subtasks.length > 0
-        ? subtasks.reduce((sum, subtask) => sum + (subtask.progress || 0), 0) / subtasks.length
-        : 0; // Or determine status by other means if no subtasks
-
-      // NOTE: Using the same logic as previous code for consistency, relying on subtask progress Sum?
-      // Re-reading previous logic: sum + subtask.progress. IF sum is 0 -> todo. If sum is 100 -> closed (implies 1 subtask? or avg?).
-      // Let's stick to status field if available, or fallback to the previous logic.
-      // Previous logic: totalProgress = sum of all subtask progress.
-      // if totalProgress === 0 -> todo.
-      // if totalProgress === 100 -> closed. (This seems buggy if multiple subtasks, but keeping logic)
-
-      // Better logic: Check main task status or average progress
-      if (task.status === "Done" || task.status === "Closed") {
+      if (task.status === "Closed") {
         closed++;
-      } else if (task.status === "In Progress" || (task.subTasks && task.subTasks.some(st => st.progress > 0))) {
+      } else if (task.status === "In Progress") {
         inProgress++;
       } else {
         todo++;

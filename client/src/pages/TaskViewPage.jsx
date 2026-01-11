@@ -50,6 +50,13 @@ const TaskViewPage = () => {
   const location = useLocation();
   const from = location.state?.from || "/dashboard";
   const [expandedNotes, setExpandedNotes] = useState([]);
+  const [checkpoints, setCheckpoints] = useState([]);
+  const [additionalInfo, setAdditionalInfo] = useState({
+    ontType: null,
+    speed: null,
+    serviceRecipientInitial: null,
+    serviceRecipientQoS: null,
+  });
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -62,6 +69,13 @@ const TaskViewPage = () => {
         const subtasks = filledTask.subTasks && Array.isArray(filledTask.subTasks) ? filledTask.subTasks : [];
         setTask(filledTask);
         setSubtasks(subtasks);
+        setCheckpoints(subtasks.map(st => st.checkpoints || []));
+        setAdditionalInfo({
+          ontType: filledTask.ontType || null,
+          speed: filledTask.speed || null,
+          serviceRecipientInitial: filledTask.serviceRecipientInitial || null,
+          serviceRecipientQoS: filledTask.serviceRecipientQoS || null,
+        });
         const activeSteps = subtasks.filter((subtask) => subtask.note !== "").length;
         setActiveStep(activeSteps);
         setNote(subtasks.map((subtask) => subtask.note));
@@ -131,6 +145,20 @@ const TaskViewPage = () => {
     setNoteDialogOpen(false);
   };
 
+  const handleNoteChange = (index, value) => {
+    const newNotes = [...note];
+    newNotes[index] = value;
+    setNote(newNotes);
+  };
+
+  const handleCheckpointToggle = (subtaskIndex, cpIdx) => {
+    const updatedCheckpoints = [...checkpoints];
+    if (updatedCheckpoints[subtaskIndex] && updatedCheckpoints[subtaskIndex][cpIdx]) {
+      updatedCheckpoints[subtaskIndex][cpIdx].checked = !updatedCheckpoints[subtaskIndex][cpIdx].checked;
+      setCheckpoints(updatedCheckpoints);
+    }
+  };
+
   const handleNext = () => {
     if (activeStep < subtasks.length - 1) {
       const updatedSubtasks = [...subtasks];
@@ -157,18 +185,27 @@ const TaskViewPage = () => {
     setSubtasks(predefinedSubtasks);
   };
 
-  const handleSaveNote = async () => {
+  const handleSaveNote = async (updatedSubtasksFromManager) => {
     try {
-      const updatedSubtasks = subtasks.map((subtask, index) => ({
+      const subtasksToSave = updatedSubtasksFromManager || subtasks.map((subtask, index) => ({
         ...subtask,
         note: note[index] || "",
         progress: note[index]?.trim() ? 25 : 0,
         dateTime: subtask.dateTime || null,
+        checkpoints: checkpoints[index] || [],
       }));
 
       const response = await api.put(
         `/tasks/update-subtask/${task._id}`,
-        updatedSubtasks,
+        {
+          subtasks: subtasksToSave,
+          notify: false,
+          subtaskType: task.subtaskType || "original",
+          ontType: additionalInfo.ontType,
+          speed: additionalInfo.speed,
+          serviceRecipientInitial: additionalInfo.serviceRecipientInitial,
+          serviceRecipientQoS: additionalInfo.serviceRecipientQoS,
+        },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -177,7 +214,8 @@ const TaskViewPage = () => {
       );
 
       if (response.status === 200) {
-        setSubtasks(updatedSubtasks);
+        setSubtasks(subtasksToSave);
+        setTask(response.data);
       } else {
         // console.log("Failed to update subtasks");
       }
@@ -218,11 +256,20 @@ const TaskViewPage = () => {
         note: note[index] || "",
         progress: note[index]?.trim() ? 25 : 0,
         dateTime: subtask.dateTime || null,
+        checkpoints: checkpoints[index] || [],
       }));
 
       const updateResponse = await api.put(
         `/tasks/update-subtask/${task._id}`,
-        updatedSubtasks,
+        {
+          subtasks: updatedSubtasks,
+          notify: true,
+          subtaskType: task.subtaskType || "original",
+          ontType: additionalInfo.ontType,
+          speed: additionalInfo.speed,
+          serviceRecipientInitial: additionalInfo.serviceRecipientInitial,
+          serviceRecipientQoS: additionalInfo.serviceRecipientQoS,
+        },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -232,6 +279,7 @@ const TaskViewPage = () => {
 
       if (updateResponse.status === 200) {
         setSubtasks(updatedSubtasks);
+        setTask(updateResponse.data);
 
         await api.put(
           `/tasks/${task._id}/clear-notifications`,
@@ -567,6 +615,9 @@ const TaskViewPage = () => {
 
             <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
               <DetailRow label="ONT Type" value={task.ontType || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Speed Plan" value={task.speed ? `${task.speed} Mbps` : "N/A"} isMobile={isMobile} />
+              <DetailRow label="Service Recipient" value={task.serviceRecipientInitial || "N/A"} isMobile={isMobile} />
+              <DetailRow label="Recipient QoS" value={task.serviceRecipientQoS || "N/A"} isMobile={isMobile} />
               <DetailRow label="Free Extender" value={task.freeExtender || "No"} isMobile={isMobile} />
               {task.freeExtender === 'Yes' && (
                 <>
@@ -685,16 +736,136 @@ const TaskViewPage = () => {
               borderRadius: '8px'
             }}>
               {subtasks.map((subtask, index) => (
-                <Box key={index} sx={{ mb: index < subtasks.length - 1 ? 3 : 0, pb: index < subtasks.length - 1 ? 3 : 0, borderBottom: index < subtasks.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                  <Typography variant={isMobile ? "body1" : "h6"} sx={{ mb: 1, color: '#eff5ff' }}>
+                <Box key={index} sx={{ mb: index < subtasks.length - 1 ? 3 : 0, pb: index < subtasks.length - 1 ? 3 : 0, borderBottom: index < subtasks.length - 1 ? '1px solid #3d3d3d' : 'none' }}>
+                  <Typography variant={isMobile ? "body1" : "h6"} sx={{ mb: 1, color: '#eff5ff', fontWeight: 'bold' }}>
                     {index + 1}. {subtask.title}
                   </Typography>
-                  <Typography variant="body2" sx={{ mb: 1, direction: 'rtl', textAlign: 'right', color: '#eff5ff' }}>
-                    {subtask.note}
-                  </Typography>
+
+                  {subtask.note && (
+                    <Typography variant="body2" sx={{ mb: 1, direction: 'rtl', textAlign: 'right', color: '#eff5ff', p: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '4px' }}>
+                      {subtask.note}
+                    </Typography>
+                  )}
+
+                  {subtask.checkpoints && subtask.checkpoints.length > 0 && (
+                    <Box sx={{ mt: 2, pl: 2, borderLeft: '2px solid #3d3d3d' }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, color: '#6495ED', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        Checkpoints & Results
+                      </Typography>
+                      {subtask.checkpoints.map((cp, cpIdx) => (
+                        <Box key={cpIdx} sx={{ mb: 1.5 }}>
+                          <Typography variant="body2" sx={{
+                            color: cp.checked ? '#4caf50' : '#f44336',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            fontWeight: '500'
+                          }}>
+                            {cp.checked ? '✓' : '✗'} {cp.name}
+                          </Typography>
+
+                          {cp.signalTestNotes && (
+                            <Typography variant="caption" display="block" sx={{ color: '#bdb5b5', ml: 3 }}>
+                              Signal: {cp.signalTestNotes} dBm
+                            </Typography>
+                          )}
+
+                          {cp.options?.selected && (
+                            <Box sx={{ ml: 3, mt: 0.5 }}>
+                              <Typography variant="caption" sx={{ color: '#9ca3af', display: 'block' }}>
+                                Result: <span style={{ color: '#ffffff' }}>
+                                  {cp.options.choices?.find(c => c.value === cp.options.selected)?.label || cp.options.selected}
+                                </span>
+                              </Typography>
+
+                              {/* Action Taken */}
+                              {cp.options.actionTaken?.selected && (
+                                <Typography variant="caption" sx={{ color: '#9ca3af', display: 'block' }}>
+                                  Action: <span style={{ color: '#6495ED' }}>
+                                    {cp.options.actionTaken.choices?.find(c => c.value === cp.options.actionTaken.selected)?.label || cp.options.actionTaken.selected}
+                                  </span>
+                                </Typography>
+                              )}
+
+                              {/* Justification */}
+                              {cp.options.actionTaken?.justification?.selected && (
+                                <Box sx={{ mt: 0.5, p: 1, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
+                                  <Typography variant="caption" sx={{ color: '#9ca3af', display: 'block' }}>
+                                    Justification: <span style={{ color: '#fbc02d' }}>
+                                      {cp.options.actionTaken.justification.choices?.find(c => c.value === cp.options.actionTaken.justification.selected)?.label || cp.options.actionTaken.justification.selected}
+                                    </span>
+                                  </Typography>
+                                  {cp.options.actionTaken.justification.notes?.value && (
+                                    <Typography variant="caption" sx={{ color: '#bdb5b5', display: 'block', fontStyle: 'italic', mt: 0.5 }}>
+                                      Notes: {cp.options.actionTaken.justification.notes.value}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              )}
+
+                              {/* Follow Up Questions */}
+                              {cp.options.followUpQuestion?.selected && (
+                                <Box sx={{ mt: 0.5, ml: 1, pl: 1, borderLeft: '1px dashed #4b5563' }}>
+                                  <Typography variant="caption" sx={{ color: '#9ca3af', display: 'block' }}>
+                                    Follow-up: <span style={{ color: '#ffffff' }}>
+                                      {cp.options.followUpQuestion.choices?.find(c => c.value === cp.options.followUpQuestion.selected)?.label || cp.options.followUpQuestion.selected}
+                                    </span>
+                                  </Typography>
+                                  {cp.options.followUpQuestion.actionTaken?.selected && (
+                                    <Typography variant="caption" sx={{ color: '#9ca3af', display: 'block' }}>
+                                      Follow-up Action: <span style={{ color: '#6495ED' }}>
+                                        {cp.options.followUpQuestion.actionTaken.choices?.find(c => c.value === cp.options.followUpQuestion.actionTaken.selected)?.label || cp.options.followUpQuestion.actionTaken.selected}
+                                      </span>
+                                    </Typography>
+                                  )}
+                                </Box>
+                              )}
+                            </Box>
+                          )}
+
+                          {cp.options?.type === 'text' && cp.options.value && (
+                            <Typography variant="caption" display="block" sx={{ color: '#bdb5b5', ml: 3, fontStyle: 'italic', direction: 'rtl', textAlign: 'right' }}>
+                              Answer: {cp.options.value}
+                            </Typography>
+                          )}
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+
+                  {index === subtasks.length - 1 && (task.subtaskType === "visit" || task.subtaskType === "phone") && (
+                    <Box sx={{ mt: 2, pl: 2, borderLeft: '2px solid #6495ED' }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, color: '#6495ED', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        Additional Assessment Details
+                      </Typography>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 1, ml: 1 }}>
+                        {task.ontType && (
+                          <Typography variant="caption" sx={{ color: '#9ca3af', display: 'block' }}>
+                            ONT Type: <span style={{ color: '#ffffff' }}>{task.ontType}</span>
+                          </Typography>
+                        )}
+                        {task.speed && (
+                          <Typography variant="caption" sx={{ color: '#9ca3af', display: 'block' }}>
+                            Speed Plan: <span style={{ color: '#ffffff' }}>{task.speed} Mbps</span>
+                          </Typography>
+                        )}
+                        {task.serviceRecipientInitial && (
+                          <Typography variant="caption" sx={{ color: '#9ca3af', display: 'block' }}>
+                            Service Recipient (Initial): <span style={{ color: '#ffffff' }}>{task.serviceRecipientInitial}</span>
+                          </Typography>
+                        )}
+                        {task.serviceRecipientQoS && (
+                          <Typography variant="caption" sx={{ color: '#9ca3af', display: 'block' }}>
+                            Service Recipient (QoS): <span style={{ color: '#ffffff' }}>{task.serviceRecipientQoS}</span>
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+
                   {subtask.dateTime && (
-                    <Typography variant="caption" sx={{ color: 'gray' }}>
-                      Completed on: {subtask.dateTime}
+                    <Typography variant="caption" sx={{ color: 'gray', display: 'block', mt: 1 }}>
+                      Last updated on: {new Date(subtask.dateTime).toLocaleString()}
                     </Typography>
                   )}
                 </Box>
@@ -790,18 +961,22 @@ const TaskViewPage = () => {
 
         <SubtaskManager
           subtasks={subtasks}
-          note={note}
+          notes={note}
           setNote={setNote}
-          activeStep={activeStep}
-          setActiveStep={setActiveStep}
-          handleNext={handleNext}
-          handleBack={handleBack}
+          checkpoints={checkpoints}
+          setCheckpoints={setCheckpoints}
+          handleCheckpointToggle={handleCheckpointToggle}
+          handleNoteChange={handleNoteChange}
+          setSubtasks={setSubtasks}
+          setAdditionalInfo={setAdditionalInfo}
           handleSaveNote={handleSaveNote}
           handleReset={handleReset}
           expandedNotes={expandedNotes}
           setExpandedNotes={setExpandedNotes}
           toggleNoteExpand={toggleNoteExpand}
           isMobile={isMobile}
+          selectedTaskId={task._id}
+          selectedOption={task.subtaskType || "original"}
         />
 
         <DialogActions sx={{

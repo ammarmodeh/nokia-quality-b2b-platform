@@ -31,10 +31,11 @@ import {
   updateTaskByTeamId,
   createNotification,
   clearNotifications,
-  getIssuePreventionStats,
+  markNotificationAsRead,
   getNotifications,
   getUnreadNotificationsCount,
-  markNotificationAsRead,
+  getIssuePreventionStats,
+  getPreventionDeepDiveStats,
 } from "../controllers/taskControllers.js";
 
 const router = express.Router();
@@ -113,6 +114,7 @@ router.put("/:taskId/notifications/:notificationId/read", protect, markNotificat
 router.post("/:taskId/notifications", protect, createNotification);
 router.put("/:taskId/clear-notifications", protect, clearNotifications);
 router.get("/prevention-stats", protect, getIssuePreventionStats);
+router.get("/prevention-deep-dive", protect, getPreventionDeepDiveStats);
 
 
 export default router;

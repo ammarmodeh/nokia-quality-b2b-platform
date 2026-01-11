@@ -1400,13 +1400,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
 
             <div className="flex items-center gap-2 mt-3">
               <h4 className="text-lg font-semibold text-[#bdb5b5]">{task?.slid}</h4>
-              {activeStep === 0 ? (
-                <div>{statusConfig["Todo"].icon}</div>
-              ) : activeStep === subtasks.length ? (
-                <div>{statusConfig["Closed"].icon}</div>
-              ) : (
-                <div>{statusConfig["In Progress"].icon}</div>
-              )}
+              <div>{statusConfig[task?.status || "Todo"]?.icon}</div>
             </div>
 
             <div className="text-sm text-gray-300 mt-2 space-y-1">

@@ -1,5 +1,8 @@
 import { TaskSchema } from "../models/taskModel.js";
 import { CustomerIssueSchema } from "../models/customerIssueModel.js";
+import { FavouriteSchema } from "../models/favouriteModel.js";
+import { TrashSchema } from "../models/trashModel.js";
+import { ArchiveSchema } from "../models/archiveModel.js";
 import mongoose from "mongoose";
 
 export const addTask = async (req, res) => {
@@ -404,15 +407,17 @@ export const updateSubtask = async (req, res) => {
     task.serviceRecipientInitial = serviceRecipientInitial || null;
     task.serviceRecipientQoS = serviceRecipientQoS || null;
 
+    task.status = getStatusFromCheckpoints(task.subTasks);
+
     const updateOperation = {
       $set: {
         subTasks: task.subTasks,
+        status: task.status,
         subtaskType: task.subtaskType,
         ontType: task.ontType,
         speed: task.speed,
         serviceRecipientInitial: task.serviceRecipientInitial,
         serviceRecipientQoS: task.serviceRecipientQoS,
-        status: getStatusFromCheckpoints(task.subTasks),
       },
     };
 
@@ -441,29 +446,28 @@ export const updateSubtask = async (req, res) => {
 };
 
 // Helper function to determine status based on checkpoints
+// Helper function to determine status based on checkpoints and activity
 function getStatusFromCheckpoints(subtasks) {
   if (!subtasks || subtasks.length === 0) return "Todo";
 
-  // Check if all required justifications are provided
-  const allJustificationsValid = subtasks.every(subtask => {
-    return subtask.checkpoints.every(checkpoint => {
-      if (checkpoint.options?.followUpQuestion?.actionTaken?.selected === "no_action") {
-        return !!checkpoint.options.followUpQuestion.actionTaken.justification?.selected;
-      }
-      if (checkpoint.options?.actionTaken?.selected === "no_action") {
-        return !!checkpoint.options.actionTaken.justification?.selected;
-      }
-      return true;
-    });
+  // Check if all subtasks are "Finished"
+  // A subtask is finished if it's explicitly "Closed" OR if it has a note.
+  const allSubtasksFinished = subtasks.every(subtask => {
+    return subtask.status === "Closed" || (subtask.note && subtask.note.trim().length > 0);
   });
 
-  if (!allJustificationsValid) return "In Progress";
+  if (allSubtasksFinished) return "Closed";
 
-  const allSubtasksClosed = subtasks.every(subtask => subtask.status === "Closed");
-  const someSubtasksClosed = subtasks.some(subtask => subtask.status === "Closed");
+  // Check if any subtask is "Active"
+  // A subtask is active if it's explicitly "Closed", has a note, or has any checked checkpoints.
+  const someSubtasksActive = subtasks.some(subtask => {
+    const hasNote = subtask.note && subtask.note.trim().length > 0;
+    const hasCheckedCheckpoints = subtask.checkpoints && subtask.checkpoints.some(cp => cp.checked);
+    return subtask.status === "Closed" || hasNote || hasCheckedCheckpoints;
+  });
 
-  if (allSubtasksClosed) return "Closed";
-  if (someSubtasksClosed) return "In Progress";
+  if (someSubtasksActive) return "In Progress";
+
   return "Todo";
 }
 
@@ -618,6 +622,17 @@ export const getTasksAssignedToMe = async (req, res) => {
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email");
 
+    // Self-healing: Ensure all tasks have correct status based on subtasks
+    let hasChanges = false;
+    for (const task of tasks) {
+      const correctStatus = getStatusFromCheckpoints(task.subTasks);
+      if (task.status !== correctStatus) {
+        task.status = correctStatus;
+        await task.save();
+        hasChanges = true;
+      }
+    }
+
     return res.json(tasks);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -642,6 +657,15 @@ export const getTasksAssignedToMePaginated = async (req, res) => {
       .limit(limit)
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email");
+
+    // Self-healing: Ensure all tasks have correct status based on subtasks
+    for (const task of tasks) {
+      const correctStatus = getStatusFromCheckpoints(task.subTasks);
+      if (task.status !== correctStatus) {
+        task.status = correctStatus;
+        await task.save();
+      }
+    }
 
     return res.json(tasks);
   } catch (error) {
@@ -1344,6 +1368,97 @@ export const getIssuePreventionStats = async (req, res) => {
     res.status(200).json(stats);
   } catch (error) {
     console.error("Error in getIssuePreventionStats:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+export const getPreventionDeepDiveStats = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const query = {
+      evaluationScore: { $gte: 1, $lte: 8 }
+    };
+
+    if (startDate && endDate) {
+      query.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    const tasks = await TaskSchema.find(query)
+      .populate('assignedTo', 'name');
+
+    const scoreDistribution = {
+      1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0
+    };
+
+    const actionTakenStats = {};
+    const justificationStats = {};
+    const reasonStats = {};
+    const companyStats = {};
+
+    tasks.forEach(task => {
+      // Score Distribution
+      const score = Math.floor(task.evaluationScore);
+      if (scoreDistribution[score] !== undefined) {
+        scoreDistribution[score]++;
+      }
+
+      // Reason Stats
+      const reason = task.reason || 'Unknown';
+      reasonStats[reason] = (reasonStats[reason] || 0) + 1;
+
+      // Company Stats
+      const company = task.teamCompany || 'Unknown';
+      companyStats[company] = (companyStats[company] || 0) + 1;
+
+      // Subtask Level Stats
+      if (task.subTasks && task.subTasks.length > 0) {
+        task.subTasks.forEach(subtask => {
+          if (subtask.checkpoints && subtask.checkpoints.length > 0) {
+            subtask.checkpoints.forEach(cp => {
+              // Deeply nested action/justification logic based on SubtaskManager structure
+              const processAction = (actionObj) => {
+                if (actionObj && actionObj.selected) {
+                  const action = actionObj.selected;
+                  actionTakenStats[action] = (actionTakenStats[action] || 0) + 1;
+
+                  if (action === 'no_action' && actionObj.justification && actionObj.justification.selected) {
+                    const justification = actionObj.justification.selected;
+                    justificationStats[justification] = (justificationStats[justification] || 0) + 1;
+                  }
+                }
+              };
+
+              // Check primary actionTaken
+              processAction(cp.options?.actionTaken);
+
+              // Check followUp actionTaken
+              processAction(cp.options?.followUpQuestion?.actionTaken);
+            });
+          }
+        });
+      }
+    });
+
+    const formatStats = (statsObj) => {
+      return Object.entries(statsObj)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+    };
+
+    res.status(200).json({
+      totalTasks: tasks.length,
+      scoreDistribution: Object.entries(scoreDistribution).map(([name, value]) => ({ name: `Score ${name}`, value })),
+      actionTakenStats: formatStats(actionTakenStats),
+      justificationStats: formatStats(justificationStats),
+      reasonStats: formatStats(reasonStats).slice(0, 10),
+      companyStats: formatStats(companyStats).slice(0, 10),
+      recentTasks: tasks.sort((a, b) => b.createdAt - a.createdAt).slice(0, 50)
+    });
+  } catch (error) {
+    console.error("Error in getPreventionDeepDiveStats:", error);
     res.status(500).json({ error: error.message });
   }
 };
