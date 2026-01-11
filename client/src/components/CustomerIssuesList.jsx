@@ -106,7 +106,7 @@ const CustomerIssuesList = () => {
   const fetchIssues = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const response = await api.get('/customer-issues-notifications', {
+      const response = await api.get('/customer-issues-notifications?limit=1000', {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
       setIssues(response.data.data);

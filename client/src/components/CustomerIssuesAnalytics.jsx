@@ -131,7 +131,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     const unresolved = totalTransactions - resolved;
     const resolutionRate = totalTransactions > 0 ? ((resolved / totalTransactions) * 100).toFixed(1) : 0;
 
-    issues.forEach(issue => {
+    issuesToProcess.forEach(issue => {
       if (issue.issues && Array.isArray(issue.issues)) {
         totalIssuesHighlighted += issue.issues.length;
       } else if (issue.issueCategory) {
@@ -223,7 +223,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       avgLifecycleTime,
       oldestPending
     };
-  }, [issues]);
+  }, [filteredIssuesByDate]);
 
   // --- Export Handlers ---
   const handleExportAllAssignees = () => {
@@ -303,7 +303,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         borderWidth: 1,
       }],
     };
-  }, [issues]);
+  }, [filteredIssuesByDate]);
 
   const subTeamData = useMemo(() => {
     const counts = {};
@@ -325,7 +325,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         borderWidth: 1,
       }],
     };
-  }, [issues]);
+  }, [filteredIssuesByDate]);
 
   const installingTeamChartData = useMemo(() => {
     const counts = {};
@@ -345,7 +345,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         borderWidth: 1,
       }],
     };
-  }, [issues]);
+  }, [filteredIssuesByDate]);
 
   const categoryData = useMemo(() => {
     const counts = {};
@@ -382,7 +382,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       totalCount: Object.values(counts).reduce((a, b) => a + b, 0),
       allCategories: Object.keys(counts).sort()
     };
-  }, [issues]);
+  }, [filteredIssuesByDate]);
 
   const statusData = useMemo(() => ({
     labels: ['Resolved', 'Unresolved'],
@@ -411,7 +411,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         borderWidth: 1,
       }],
     };
-  }, [issues]);
+  }, [filteredIssuesByDate]);
 
   const assigneeStats = useMemo(() => {
     const statsMap = {};
@@ -692,7 +692,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         borderWidth: 1
       }]
     };
-  }, [issues]);
+  }, [filteredIssuesByDate]);
 
   const trendData = useMemo(() => {
     const countsByDate = {};
