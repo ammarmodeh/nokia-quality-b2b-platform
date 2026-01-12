@@ -5,7 +5,7 @@ import UserAvatar from "./UserAvatar";
 import NotificationPanel from "./NotificationPanel";
 import api from "../api/api";
 import { BeatLoader } from "react-spinners";
-import { Box, Button, Divider, Menu, MenuItem, Stack, Typography, Drawer, IconButton } from "@mui/material";
+import { Box, Button, Divider, Menu, MenuItem, Stack, Typography, Drawer, IconButton, Tooltip, Badge } from "@mui/material";
 import { DocsMenu } from "./DocsMenu";
 import { PoliciesMenu } from "./PoliciesMenu";
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -14,6 +14,8 @@ import CustomerIssueDialog from "./CustomerIssueDialog";
 import CalendarDialog from "./CalendarDialog";
 import { useSelector } from "react-redux";
 import { useTheme } from "@mui/material/styles";
+import { MdOutlineStickyNote2 } from "react-icons/md";
+import UserNotesDrawer from "./UserNotesDrawer";
 
 const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
   const theme = useTheme();
@@ -29,6 +31,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
   const searchBarRef = useRef(null);
   const [cinDialogOpen, setCinDialogOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
+  const [notesDrawerOpen, setNotesDrawerOpen] = useState(false);
 
   // Mobile menu state
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
@@ -320,6 +323,28 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
+                    setNotesDrawerOpen(true);
+                    handleMobileMenuClose();
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography variant="body1">Personal Notes</Typography>
+                    <Chip
+                      label="NEW"
+                      size="small"
+                      sx={{
+                        height: 18,
+                        fontSize: '9px',
+                        fontWeight: 'bold',
+                        backgroundColor: '#7b68ee',
+                        color: 'white',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </Stack>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
                     setCinDialogOpen(true);
                     handleMobileMenuClose();
                   }}
@@ -517,6 +542,52 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
         <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
+        <Tooltip title="Personal Notes">
+          <IconButton
+            onClick={() => setNotesDrawerOpen(true)}
+            sx={{
+              color: '#b3b3b3',
+              "&:hover": {
+                color: '#ffffff',
+                backgroundColor: 'rgba(255,255,255,0.05)'
+              }
+            }}
+          >
+            <Badge
+              badgeContent="NEW"
+              color="error"
+              sx={{
+                '& .MuiBadge-badge': {
+                  fontSize: '8px',
+                  height: '14px',
+                  minWidth: '22px',
+                  backgroundColor: '#7b68ee', // Using a matching theme color or error
+                  color: 'white',
+                  top: 2,
+                  right: 0,
+                  animation: 'pulse-animation 2s infinite',
+                  boxShadow: '0 0 0 0 rgba(123, 104, 238, 0.7)',
+                },
+                '@keyframes pulse-animation': {
+                  '0%': {
+                    boxShadow: '0 0 0 0 rgba(123, 104, 238, 0.7)',
+                  },
+                  '70%': {
+                    boxShadow: '0 0 0 10px rgba(123, 104, 238, 0)',
+                  },
+                  '100%': {
+                    boxShadow: '0 0 0 0 rgba(123, 104, 238, 0)',
+                  },
+                },
+              }}
+            >
+              <MdOutlineStickyNote2 size={24} />
+            </Badge>
+          </IconButton>
+        </Tooltip>
+
+        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+
         <UserAvatar />
 
         {/* Docs Drawer */}
@@ -637,6 +708,11 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
       <CalendarDialog
         open={calendarDialogOpen}
         onClose={() => setCalendarDialogOpen(false)}
+      />
+
+      <UserNotesDrawer
+        open={notesDrawerOpen}
+        onClose={() => setNotesDrawerOpen(false)}
       />
     </>
   );

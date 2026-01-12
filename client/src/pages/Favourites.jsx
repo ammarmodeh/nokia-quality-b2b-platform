@@ -9,7 +9,7 @@ import {
   TableHead,
   TableRow,
   Paper,
-  CircularProgress,
+
   IconButton,
   Tooltip,
   TablePagination,
@@ -28,6 +28,7 @@ import {
 } from 'react-icons/md';
 import { useSelector } from "react-redux";
 import api from "../api/api";
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import { format, parseISO } from "date-fns";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -108,11 +109,7 @@ const Favourite = () => {
   };
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingSpinner variant="page" />;
   }
 
   if (error) {
@@ -133,90 +130,92 @@ const Favourite = () => {
 
   return (
     <Box sx={{
-      maxWidth: '1100px',
-      mx: 'auto',
-      p: 2,
-      px: isMobile ? 0 : undefined
+      minHeight: '100vh',
+      backgroundColor: 'background.default',
+      p: 3,
     }}>
-      <Typography variant="h5" gutterBottom sx={{
-        color: '#7b68ee',
-        fontWeight: 'bold',
-        mb: 2
+      <Box sx={{
+        mx: 'auto',
       }}>
-        Favorite Tasks
-      </Typography>
+        <Typography variant="h5" gutterBottom sx={{
+          color: '#7b68ee',
+          fontWeight: 'bold',
+          mb: 2
+        }}>
+          Favorite Tasks
+        </Typography>
 
-      {/* Favorites Table */}
-      <TableContainer component={Paper} sx={{
-        mt: 2,
-        backgroundColor: '#2d2d2d',
-        border: '1px solid #3d3d3d',
-        "& .MuiTableHead-root": {
-          backgroundColor: "#2d2d2d",
-          "& .MuiTableCell-root": {
-            color: "#b3b3b3",
-            fontWeight: "bold",
-            borderBottom: "1px solid #e5e7eb",
-          }
-        },
-        "& .MuiTableBody-root": {
-          "& .MuiTableCell-root": {
-            borderBottom: "1px solid #e5e7eb",
-            color: "#ffffff",
-          },
-          "& .MuiTableRow-root": {
+        {/* Favorites Table */}
+        <TableContainer component={Paper} sx={{
+          mt: 2,
+          backgroundColor: '#2d2d2d',
+          border: '1px solid #3d3d3d',
+          "& .MuiTableHead-root": {
             backgroundColor: "#2d2d2d",
-            "&:hover": {
-              backgroundColor: "#2d2d2d",
+            "& .MuiTableCell-root": {
+              color: "#b3b3b3",
+              fontWeight: "bold",
+              borderBottom: "1px solid #e5e7eb",
+            }
+          },
+          "& .MuiTableBody-root": {
+            "& .MuiTableCell-root": {
+              borderBottom: "1px solid #e5e7eb",
+              color: "#ffffff",
             },
-          }
-        },
-      }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>SLID</TableCell>
-              <TableCell>Customer Name</TableCell>
-              <TableCell>Contact</TableCell>
-              <TableCell>Customer Feedback</TableCell>
-              <TableCell>Interview Date</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {favourites.length > 0 ? (
-              favourites
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((task) => (
-                  <TableRow key={task._id}>
-                    <TableCell>{task.slid || "-"}</TableCell>
-                    <TableCell>
-                      <Typography fontWeight={500}>
-                        {task.customerName || "-"}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{task.contactNumber || "-"}</TableCell>
-                    <TableCell>
-                      {task.customerFeedback ? (
-                        <Typography
-                          sx={{
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}
-                        >
-                          {task.customerFeedback}
+            "& .MuiTableRow-root": {
+              backgroundColor: "#2d2d2d",
+              "&:hover": {
+                backgroundColor: "#2d2d2d",
+              },
+            }
+          },
+        }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>SLID</TableCell>
+                <TableCell>Customer Name</TableCell>
+                <TableCell>Contact</TableCell>
+                <TableCell>Customer Feedback</TableCell>
+                <TableCell>Interview Date</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {favourites.length > 0 ? (
+                favourites
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((task) => (
+                    <TableRow key={task._id}>
+                      <TableCell>{task.slid || "-"}</TableCell>
+                      <TableCell>
+                        <Typography fontWeight={500}>
+                          {task.customerName || "-"}
                         </Typography>
-                      ) : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {task.interviewDate ? format(parseISO(task.interviewDate), 'dd/MM/yyyy') : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: "flex", gap: 1 }}>
-                        {/* <Tooltip title="View Details">
+                      </TableCell>
+                      <TableCell>{task.contactNumber || "-"}</TableCell>
+                      <TableCell>
+                        {task.customerFeedback ? (
+                          <Typography
+                            sx={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {task.customerFeedback}
+                          </Typography>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {task.interviewDate ? format(parseISO(task.interviewDate), 'dd/MM/yyyy') : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          {/* <Tooltip title="View Details">
                           <IconButton
                             size="small"
                             color="info"
@@ -236,75 +235,76 @@ const Favourite = () => {
                             <MdStar />
                           </IconButton>
                         </Tooltip> */}
-                        <Tooltip title="More options">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => handleMenuOpen(e, task)}
-                            sx={{ color: '#b3b3b3' }}
-                          >
-                            <MdMoreVert />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#ffffff' }}>
-                  No favorite tasks found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                          <Tooltip title="More options">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleMenuOpen(e, task)}
+                              sx={{ color: '#b3b3b3' }}
+                            >
+                              <MdMoreVert />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#ffffff' }}>
+                    No favorite tasks found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      {/* Pagination */}
-      <Box sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        mt: 2,
-        '& .MuiTablePagination-root': {
-          color: '#ffffff',
-        }
-      }}>
-        <TablePagination
-          rowsPerPageOptions={[10, 25, 50]}
-          component="div"
-          count={favourites.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </Box>
-
-      {/* Context Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: '#2d2d2d',
+        {/* Pagination */}
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          mt: 2,
+          '& .MuiTablePagination-root': {
             color: '#ffffff',
           }
-        }}
-      >
-        <MenuItem onClick={() => currentTask && handleViewTask(currentTask)}>
-          <ListItemIcon>
-            <MdVisibility fontSize="small" style={{ color: '#7b68ee' }} />
-          </ListItemIcon>
-          <ListItemText>View Details</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDeleteFavourite}>
-          <ListItemIcon>
-            <MdDelete fontSize="small" style={{ color: '#f44336' }} />
-          </ListItemIcon>
-          <ListItemText>Remove from Favorites</ListItemText>
-        </MenuItem>
-      </Menu>
+        }}>
+          <TablePagination
+            rowsPerPageOptions={[10, 25, 50]}
+            component="div"
+            count={favourites.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
+        </Box>
+
+        {/* Context Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          sx={{
+            "& .MuiPaper-root": {
+              backgroundColor: '#2d2d2d',
+              color: '#ffffff',
+            }
+          }}
+        >
+          <MenuItem onClick={() => currentTask && handleViewTask(currentTask)}>
+            <ListItemIcon>
+              <MdVisibility fontSize="small" style={{ color: '#7b68ee' }} />
+            </ListItemIcon>
+            <ListItemText>View Details</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleDeleteFavourite}>
+            <ListItemIcon>
+              <MdDelete fontSize="small" style={{ color: '#f44336' }} />
+            </ListItemIcon>
+            <ListItemText>Remove from Favorites</ListItemText>
+          </MenuItem>
+        </Menu>
+      </Box>
     </Box>
   );
 };

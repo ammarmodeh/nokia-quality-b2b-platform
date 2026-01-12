@@ -9,6 +9,7 @@ import { getCustomWeekNumber, generateMonthRanges, getMonthNumber } from './help
  * @returns {Array} Filtered tasks
  */
 export const filterTasksByWeek = (tasks, year, weekNumber, settings = {}) => {
+  if (!Array.isArray(tasks)) return [];
   const { weekStartDay = 0 } = settings;
   return tasks.filter(task => {
     if (!task.interviewDate) return false;
@@ -34,6 +35,7 @@ export const filterTasksByWeek = (tasks, year, weekNumber, settings = {}) => {
  * @returns {Array} Filtered tasks
  */
 export const filterTasksByMonth = (tasks, year, month, settings = {}) => {
+  if (!Array.isArray(tasks)) return [];
   const ranges = generateMonthRanges(tasks, settings);
   // Find range for "Month-X"
   // Note: month param here might be 0-based index or 1-based number depending on caller.
@@ -64,6 +66,7 @@ export const filterTasksByMonth = (tasks, year, month, settings = {}) => {
  * @returns {Array} Filtered tasks
  */
 export const filterTasksByDateRange = (tasks, startDate, endDate) => {
+  if (!Array.isArray(tasks)) return [];
   if (!startDate || !endDate) return tasks;
 
   const start = new Date(startDate);
@@ -85,6 +88,7 @@ export const filterTasksByDateRange = (tasks, startDate, endDate) => {
  * @returns {Array} Array of {year, week, label, start, end}
  */
 export const getAvailableWeeks = (tasks, settings = {}) => {
+  if (!Array.isArray(tasks)) return [];
   const { weekStartDay = 0 } = settings;
   const weeks = new Map();
 
@@ -146,6 +150,7 @@ export const getAvailableWeeks = (tasks, settings = {}) => {
  * @returns {Array} Array of {year, month, label}
  */
 export const getAvailableMonths = (tasks, settings = {}) => {
+  if (!Array.isArray(tasks)) return [];
   const ranges = generateMonthRanges(tasks, settings);
 
   // We want to return all generated ranges (or maybe just those that encompass 'tasks' dates?)
@@ -182,6 +187,7 @@ export const getAvailableMonths = (tasks, settings = {}) => {
  * @returns {Object} Trend data by group (team name or reason)
  */
 export const calculateTrendData = (tasks, period = 'week', periodsCount = 8, groupBy = 'team', dateRange = null, settings = {}) => {
+  if (!Array.isArray(tasks)) return {};
   const allPeriods = period === 'week' ? getAvailableWeeks(tasks, settings) : getAvailableMonths(tasks, settings);
 
   let periodsToAnalyze = [];

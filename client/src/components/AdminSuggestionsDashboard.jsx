@@ -194,698 +194,701 @@ const AdminSuggestionsDashboard = () => {
 
   return (
     <Box sx={{
-      maxWidth: '1100px',
-      mx: 'auto',
-      p: 2,
-      px: isMobile ? 0 : undefined
+      minHeight: '100vh',
+      backgroundColor: 'background.default',
+      p: 3,
     }}>
-      <Typography variant="h5" gutterBottom sx={{
-        color: '#7b68ee',
-        fontWeight: 'bold',
-        fontSize: isMobile ? '1.2rem' : '1.5rem',
-        mb: 2
-      }}>
-        Suggestions Management
-      </Typography>
-
-      {/* Filter Controls */}
       <Box sx={{
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        justifyContent: 'space-between',
-        alignItems: isMobile ? 'flex-start' : 'center',
-        mb: 2,
-        gap: isMobile ? 2 : 0,
+        mx: 'auto',
       }}>
+        <Typography variant="h5" gutterBottom sx={{
+          color: '#7b68ee',
+          fontWeight: 'bold',
+          fontSize: isMobile ? '1.2rem' : '1.5rem',
+          mb: 2
+        }}>
+          Suggestions Management
+        </Typography>
+
+        {/* Filter Controls */}
         <Box sx={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
-          justifyContent: isMobile ? 'flex-start' : 'space-between',
-          gap: 2,
-          alignItems: 'center',
-          backgroundColor: '#2d2d2d',
-          p: 2,
-          borderRadius: '8px',
-          border: '1px solid #3d3d3d',
-          width: '100%',
+          justifyContent: 'space-between',
+          alignItems: isMobile ? 'flex-start' : 'center',
+          mb: 2,
+          gap: isMobile ? 2 : 0,
         }}>
-          <Stack
-            direction={isMobile ? 'column' : 'row'}
-            spacing={1}
-            justifyContent={'end'}
-            alignItems="center"
-            width={isMobile ? '100%' : 'auto'}
-          >
-            <Select
-              value={filter.status}
-              onChange={(e) => setFilter({ ...filter, status: e.target.value })}
-              displayEmpty
-              size="small"
-              sx={{
-                minWidth: 180,
-                backgroundColor: '#2d2d2d',
-                borderRadius: '20px',
-                '& .MuiSelect-select': {
-                  color: '#ffffff',
-                  padding: '8.5px 14px',
-                },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  border: 'none',
-                },
-                '& .MuiSvgIcon-root': {
-                  color: '#b3b3b3',
-                },
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    backgroundColor: '#2d2d2d',
-                    color: '#ffffff',
-                    "& .MuiMenuItem-root": {
-                      "&:hover": {
-                        backgroundColor: '#2a2a2a',
-                      }
-                    }
-                  }
-                }
-              }}
-            >
-              <MenuItem value="">All Statuses</MenuItem>
-              {statusOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value} sx={{ color: '#ffffff' }}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-
-            <Select
-              value={filter.category}
-              onChange={(e) => setFilter({ ...filter, category: e.target.value })}
-              displayEmpty
-              size="small"
-              sx={{
-                minWidth: 180,
-                backgroundColor: '#2d2d2d',
-                borderRadius: '20px',
-                '& .MuiSelect-select': {
-                  color: '#ffffff',
-                  padding: '8.5px 14px',
-                },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  border: 'none',
-                },
-                '& .MuiSvgIcon-root': {
-                  color: '#b3b3b3',
-                },
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    backgroundColor: '#2d2d2d',
-                    color: '#ffffff',
-                    "& .MuiMenuItem-root": {
-                      "&:hover": {
-                        backgroundColor: '#2a2a2a',
-                      }
-                    }
-                  }
-                }
-              }}
-            >
-              <MenuItem value="">All Categories</MenuItem>
-              <MenuItem value="bug" sx={{ color: '#ffffff' }}>Bug Report</MenuItem>
-              <MenuItem value="improvement" sx={{ color: '#ffffff' }}>Improvement</MenuItem>
-              <MenuItem value="feature" sx={{ color: '#ffffff' }}>Feature Request</MenuItem>
-              <MenuItem value="other" sx={{ color: '#ffffff' }}>Other</MenuItem>
-            </Select>
-          </Stack>
-          <Button
-            variant="contained"
-            onClick={fetchSuggestions}
-            disabled={loading}
-            startIcon={<MdRefresh style={{ color: '#ffffff' }} />}
-            size="small"
-            sx={{
-              backgroundColor: '#1976d2',
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#1565c0',
-              },
-              textTransform: 'none',
-              borderRadius: '20px',
-              px: 3,
-            }}
-          >
-            Refresh
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Suggestions Table */}
-      <TableContainer component={Paper} sx={{
-        mt: 2,
-        maxWidth: '100%',
-        overflowX: 'auto',
-        flex: 1,
-        width: "100%",
-        border: 0,
-        color: "#ffffff",
-        "&.MuiTableContainer-root": {
-          backgroundColor: '#2d2d2d',
-        },
-        "& .MuiTable-root": {
-          backgroundColor: "#2d2d2d",
-        },
-        "& .MuiTableHead-root": {
-          backgroundColor: "#2d2d2d",
-          "& .MuiTableCell-root": {
-            color: "#b3b3b3",
-            fontSize: "0.875rem",
-            fontWeight: "bold",
-            borderBottom: "1px solid #e5e7eb",
-          }
-        },
-        "& .MuiTableBody-root": {
-          "& .MuiTableCell-root": {
-            borderBottom: "1px solid #e5e7eb",
-            color: "#ffffff",
-          },
-          "& .MuiTableRow-root": {
-            backgroundColor: "#2d2d2d",
-            "&:hover": {
-              backgroundColor: "#2d2d2d",
-            },
-          }
-        },
-        "& .MuiPaper-root": {
-          backgroundColor: "transparent",
-          boxShadow: "none",
-        },
-        "&::-webkit-scrollbar": {
-          width: "8px",
-          height: "8px",
-        },
-        "&::-webkit-scrollbar-thumb": {
-          backgroundColor: "#666",
-          borderRadius: "4px",
-        },
-        "&::-webkit-scrollbar-track": {
-          backgroundColor: "#e5e7eb",
-        },
-      }}>
-        <Table size={isMobile ? 'small' : 'medium'}>
-          <TableHead>
-            <TableRow>
-              {tableColumns.map((column) => (
-                <TableCell key={column.id}>{column.label}</TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {suggestions.length > 0 ? (
-              suggestions.map((suggestion) => (
-                <TableRow key={suggestion._id}>
-                  <TableCell>{suggestion.title}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={suggestion.category}
-                      size="small"
-                      sx={{
-                        backgroundColor: '#3a3a3a',
-                        color: '#ffffff',
-                        textTransform: 'capitalize'
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={statusOptions.find(s => s.value === suggestion.status)?.label || suggestion.status}
-                      color={statusOptions.find(s => s.value === suggestion.status)?.color || 'default'}
-                      size="small"
-                      sx={{
-                        color: '#ffffff',
-                        '&.MuiChip-colorWarning': {
-                          backgroundColor: '#ff9800',
-                        },
-                        '&.MuiChip-colorInfo': {
-                          backgroundColor: '#2196f3',
-                        },
-                        '&.MuiChip-colorSuccess': {
-                          backgroundColor: '#4caf50',
-                        },
-                        '&.MuiChip-colorError': {
-                          backgroundColor: '#f44336',
-                        }
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {suggestion.user?.name || 'Unknown'}
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(suggestion.createdAt), 'PP')}
-                  </TableCell>
-                  <TableCell>
-                    {suggestion.lastRespondedAt ?
-                      format(new Date(suggestion.lastRespondedAt), 'PPpp') :
-                      'No responses yet'}
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => openResponseDialog(suggestion)}
-                        sx={{
-                          color: '#7b68ee',
-                          borderColor: '#7b68ee',
-                          '&:hover': {
-                            backgroundColor: 'rgba(62, 166, 255, 0.08)',
-                            borderColor: '#7b68ee',
-                          },
-                          fontSize: isMobile ? '0.75rem' : '0.875rem',
-                          padding: isMobile ? '4px 8px' : '6px 16px'
-                        }}
-                      >
-                        Respond
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => fetchResponseLog(suggestion._id)}
-                        sx={{
-                          color: '#b3b3b3',
-                          borderColor: '#3d3d3d',
-                          '&:hover': {
-                            backgroundColor: 'rgba(170, 170, 170, 0.08)',
-                            borderColor: '#666',
-                          },
-                          fontSize: isMobile ? '0.75rem' : '0.875rem',
-                          padding: isMobile ? '4px 8px' : '6px 16px'
-                        }}
-                      >
-                        History
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => {
-                          setSuggestionToDelete(suggestion._id);
-                          setDeleteDialogOpen(true);
-                        }}
-                        sx={{
-                          color: '#f44336',
-                          borderColor: '#f44336',
-                          '&:hover': {
-                            backgroundColor: 'rgba(244, 67, 54, 0.08)',
-                            borderColor: '#f44336',
-                          },
-                          fontSize: isMobile ? '0.75rem' : '0.875rem',
-                          padding: isMobile ? '4px 8px' : '6px 16px'
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={tableColumns.length} align="center" sx={{ py: 4, color: '#ffffff' }}>
-                  No suggestions found matching your filters
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Response Dialog */}
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        maxWidth="md"
-        fullWidth
-        sx={{
-          "& .MuiDialog-paper": {
+          <Box sx={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            justifyContent: isMobile ? 'flex-start' : 'space-between',
+            gap: 2,
+            alignItems: 'center',
             backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            boxShadow: 'none',
+            p: 2,
             borderRadius: '8px',
             border: '1px solid #3d3d3d',
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
+            width: '100%',
+          }}>
+            <Stack
+              direction={isMobile ? 'column' : 'row'}
+              spacing={1}
+              justifyContent={'end'}
+              alignItems="center"
+              width={isMobile ? '100%' : 'auto'}
+            >
+              <Select
+                value={filter.status}
+                onChange={(e) => setFilter({ ...filter, status: e.target.value })}
+                displayEmpty
+                size="small"
+                sx={{
+                  minWidth: 180,
+                  backgroundColor: '#2d2d2d',
+                  borderRadius: '20px',
+                  '& .MuiSelect-select': {
+                    color: '#ffffff',
+                    padding: '8.5px 14px',
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    border: 'none',
+                  },
+                  '& .MuiSvgIcon-root': {
+                    color: '#b3b3b3',
+                  },
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: '#2d2d2d',
+                      color: '#ffffff',
+                      "& .MuiMenuItem-root": {
+                        "&:hover": {
+                          backgroundColor: '#2a2a2a',
+                        }
+                      }
+                    }
+                  }
+                }}
+              >
+                <MenuItem value="">All Statuses</MenuItem>
+                {statusOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value} sx={{ color: '#ffffff' }}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+
+              <Select
+                value={filter.category}
+                onChange={(e) => setFilter({ ...filter, category: e.target.value })}
+                displayEmpty
+                size="small"
+                sx={{
+                  minWidth: 180,
+                  backgroundColor: '#2d2d2d',
+                  borderRadius: '20px',
+                  '& .MuiSelect-select': {
+                    color: '#ffffff',
+                    padding: '8.5px 14px',
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    border: 'none',
+                  },
+                  '& .MuiSvgIcon-root': {
+                    color: '#b3b3b3',
+                  },
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: '#2d2d2d',
+                      color: '#ffffff',
+                      "& .MuiMenuItem-root": {
+                        "&:hover": {
+                          backgroundColor: '#2a2a2a',
+                        }
+                      }
+                    }
+                  }
+                }}
+              >
+                <MenuItem value="">All Categories</MenuItem>
+                <MenuItem value="bug" sx={{ color: '#ffffff' }}>Bug Report</MenuItem>
+                <MenuItem value="improvement" sx={{ color: '#ffffff' }}>Improvement</MenuItem>
+                <MenuItem value="feature" sx={{ color: '#ffffff' }}>Feature Request</MenuItem>
+                <MenuItem value="other" sx={{ color: '#ffffff' }}>Other</MenuItem>
+              </Select>
+            </Stack>
+            <Button
+              variant="contained"
+              onClick={fetchSuggestions}
+              disabled={loading}
+              startIcon={<MdRefresh style={{ color: '#ffffff' }} />}
+              size="small"
+              sx={{
+                backgroundColor: '#1976d2',
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#1565c0',
+                },
+                textTransform: 'none',
+                borderRadius: '20px',
+                px: 3,
+              }}
+            >
+              Refresh
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Suggestions Table */}
+        <TableContainer component={Paper} sx={{
+          mt: 2,
+          maxWidth: '100%',
+          overflowX: 'auto',
+          flex: 1,
+          width: "100%",
+          border: 0,
+          color: "#ffffff",
+          "&.MuiTableContainer-root": {
+            backgroundColor: '#2d2d2d',
+          },
+          "& .MuiTable-root": {
+            backgroundColor: "#2d2d2d",
+          },
+          "& .MuiTableHead-root": {
+            backgroundColor: "#2d2d2d",
+            "& .MuiTableCell-root": {
+              color: "#b3b3b3",
+              fontSize: "0.875rem",
+              fontWeight: "bold",
+              borderBottom: "1px solid #e5e7eb",
+            }
+          },
+          "& .MuiTableBody-root": {
+            "& .MuiTableCell-root": {
+              borderBottom: "1px solid #e5e7eb",
+              color: "#ffffff",
+            },
+            "& .MuiTableRow-root": {
+              backgroundColor: "#2d2d2d",
+              "&:hover": {
+                backgroundColor: "#2d2d2d",
+              },
+            }
+          },
+          "& .MuiPaper-root": {
+            backgroundColor: "transparent",
+            boxShadow: "none",
+          },
+          "&::-webkit-scrollbar": {
+            width: "8px",
+            height: "8px",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "#666",
+            borderRadius: "4px",
+          },
+          "&::-webkit-scrollbar-track": {
+            backgroundColor: "#e5e7eb",
+          },
         }}>
-          Respond to Suggestion: {selectedSuggestion?.title}
-        </DialogTitle>
-        <DialogContent sx={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
-          <Box mb={2} pt={2}>
-            <Typography variant="subtitle1" sx={{ color: '#7b68ee' }}>User&apos;s Suggestion:</Typography>
-            <Typography variant="body1" sx={{
-              whiteSpace: 'pre-line',
+          <Table size={isMobile ? 'small' : 'medium'}>
+            <TableHead>
+              <TableRow>
+                {tableColumns.map((column) => (
+                  <TableCell key={column.id}>{column.label}</TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {suggestions.length > 0 ? (
+                suggestions.map((suggestion) => (
+                  <TableRow key={suggestion._id}>
+                    <TableCell>{suggestion.title}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={suggestion.category}
+                        size="small"
+                        sx={{
+                          backgroundColor: '#3a3a3a',
+                          color: '#ffffff',
+                          textTransform: 'capitalize'
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={statusOptions.find(s => s.value === suggestion.status)?.label || suggestion.status}
+                        color={statusOptions.find(s => s.value === suggestion.status)?.color || 'default'}
+                        size="small"
+                        sx={{
+                          color: '#ffffff',
+                          '&.MuiChip-colorWarning': {
+                            backgroundColor: '#ff9800',
+                          },
+                          '&.MuiChip-colorInfo': {
+                            backgroundColor: '#2196f3',
+                          },
+                          '&.MuiChip-colorSuccess': {
+                            backgroundColor: '#4caf50',
+                          },
+                          '&.MuiChip-colorError': {
+                            backgroundColor: '#f44336',
+                          }
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {suggestion.user?.name || 'Unknown'}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(suggestion.createdAt), 'PP')}
+                    </TableCell>
+                    <TableCell>
+                      {suggestion.lastRespondedAt ?
+                        format(new Date(suggestion.lastRespondedAt), 'PPpp') :
+                        'No responses yet'}
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => openResponseDialog(suggestion)}
+                          sx={{
+                            color: '#7b68ee',
+                            borderColor: '#7b68ee',
+                            '&:hover': {
+                              backgroundColor: 'rgba(62, 166, 255, 0.08)',
+                              borderColor: '#7b68ee',
+                            },
+                            fontSize: isMobile ? '0.75rem' : '0.875rem',
+                            padding: isMobile ? '4px 8px' : '6px 16px'
+                          }}
+                        >
+                          Respond
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => fetchResponseLog(suggestion._id)}
+                          sx={{
+                            color: '#b3b3b3',
+                            borderColor: '#3d3d3d',
+                            '&:hover': {
+                              backgroundColor: 'rgba(170, 170, 170, 0.08)',
+                              borderColor: '#666',
+                            },
+                            fontSize: isMobile ? '0.75rem' : '0.875rem',
+                            padding: isMobile ? '4px 8px' : '6px 16px'
+                          }}
+                        >
+                          History
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => {
+                            setSuggestionToDelete(suggestion._id);
+                            setDeleteDialogOpen(true);
+                          }}
+                          sx={{
+                            color: '#f44336',
+                            borderColor: '#f44336',
+                            '&:hover': {
+                              backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                              borderColor: '#f44336',
+                            },
+                            fontSize: isMobile ? '0.75rem' : '0.875rem',
+                            padding: isMobile ? '4px 8px' : '6px 16px'
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={tableColumns.length} align="center" sx={{ py: 4, color: '#ffffff' }}>
+                    No suggestions found matching your filters
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {/* Response Dialog */}
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          maxWidth="md"
+          fullWidth
+          sx={{
+            "& .MuiDialog-paper": {
+              backgroundColor: '#2d2d2d',
+              color: '#ffffff',
+              boxShadow: 'none',
+              borderRadius: '8px',
+              border: '1px solid #3d3d3d',
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            backgroundColor: '#2d2d2d',
+            color: '#ffffff',
+            borderBottom: '1px solid #e5e7eb',
+          }}>
+            Respond to Suggestion: {selectedSuggestion?.title}
+          </DialogTitle>
+          <DialogContent sx={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
+            <Box mb={2} pt={2}>
+              <Typography variant="subtitle1" sx={{ color: '#7b68ee' }}>User&apos;s Suggestion:</Typography>
+              <Typography variant="body1" sx={{
+                whiteSpace: 'pre-line',
+                color: '#ffffff',
+                backgroundColor: '#2d2d2d',
+                p: 2,
+                borderRadius: '4px',
+                mt: 1
+              }}>
+                {selectedSuggestion?.description}
+              </Typography>
+            </Box>
+
+            <TextField
+              label="Your Response"
+              fullWidth
+              multiline
+              rows={4}
+              value={responseText}
+              onChange={(e) => setResponseText(e.target.value)}
+              placeholder="Type your response to the user here..."
+              sx={{ mb: 2 }}
+              InputProps={{
+                sx: {
+                  color: '#ffffff',
+                  backgroundColor: '#2d2d2d',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#3d3d3d',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#666',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#7b68ee',
+                  },
+                }
+              }}
+              InputLabelProps={{
+                sx: {
+                  color: '#b3b3b3',
+                  '&.Mui-focused': {
+                    color: '#7b68ee',
+                  },
+                }
+              }}
+            />
+
+            <Typography variant="subtitle1" sx={{ color: '#7b68ee' }}>Update Status:</Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+              {statusOptions.map((option) => (
+                <Chip
+                  key={option.value}
+                  label={option.label}
+                  color={option.color}
+                  variant={selectedSuggestion?.status === option.value ? 'filled' : 'outlined'}
+                  onClick={() => handleStatusUpdate(selectedSuggestion?._id, option.value)}
+                  sx={{
+                    cursor: 'pointer',
+                    color: '#ffffff',
+                    '&.MuiChip-filledWarning': {
+                      backgroundColor: '#ff9800',
+                    },
+                    '&.MuiChip-filledInfo': {
+                      backgroundColor: '#2196f3',
+                    },
+                    '&.MuiChip-filledSuccess': {
+                      backgroundColor: '#4caf50',
+                    },
+                    '&.MuiChip-filledError': {
+                      backgroundColor: '#f44336',
+                    },
+                    '&.MuiChip-outlinedWarning': {
+                      color: '#ff9800',
+                      borderColor: '#ff9800',
+                    },
+                    '&.MuiChip-outlinedInfo': {
+                      color: '#2196f3',
+                      borderColor: '#2196f3',
+                    },
+                    '&.MuiChip-outlinedSuccess': {
+                      color: '#4caf50',
+                      borderColor: '#4caf50',
+                    },
+                    '&.MuiChip-outlinedError': {
+                      color: '#f44336',
+                      borderColor: '#f44336',
+                    },
+                  }}
+                />
+              ))}
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{
+            backgroundColor: '#2d2d2d',
+            borderTop: '1px solid #e5e7eb',
+          }}>
+            <Button
+              onClick={handleCloseDialog}
+              sx={{
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => handleStatusUpdate(selectedSuggestion?._id, selectedSuggestion?.status)}
+              disabled={!responseText}
+              sx={{
+                backgroundColor: '#1976d2',
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#1565c0',
+                },
+                '&.Mui-disabled': {
+                  backgroundColor: '#1976d2',
+                  color: '#ffffff',
+                  opacity: 0.5,
+                }
+              }}
+            >
+              Save Response
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Response History Dialog */}
+        <Dialog
+          open={detailDialogOpen}
+          onClose={() => setDetailDialogOpen(false)}
+          maxWidth="md"
+          fullWidth
+          sx={{
+            "& .MuiDialog-paper": {
+              backgroundColor: '#2d2d2d',
+              color: '#ffffff',
+              boxShadow: 'none',
+              borderRadius: '8px',
+              border: '1px solid #3d3d3d',
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            backgroundColor: '#2d2d2d',
+            color: '#ffffff',
+            borderBottom: '1px solid #e5e7eb',
+          }}>
+            Response History: {selectedSuggestion?.title}
+          </DialogTitle>
+          <DialogContent dividers sx={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
+            <Typography variant="h6" gutterBottom sx={{ color: '#7b68ee' }}>
+              Original Suggestion
+            </Typography>
+            <Typography variant="body1" paragraph sx={{
               color: '#ffffff',
               backgroundColor: '#2d2d2d',
               p: 2,
               borderRadius: '4px',
-              mt: 1
             }}>
               {selectedSuggestion?.description}
             </Typography>
-          </Box>
 
-          <TextField
-            label="Your Response"
-            fullWidth
-            multiline
-            rows={4}
-            value={responseText}
-            onChange={(e) => setResponseText(e.target.value)}
-            placeholder="Type your response to the user here..."
-            sx={{ mb: 2 }}
-            InputProps={{
-              sx: {
-                color: '#ffffff',
-                backgroundColor: '#2d2d2d',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#3d3d3d',
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#666',
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#7b68ee',
-                },
-              }
-            }}
-            InputLabelProps={{
-              sx: {
-                color: '#b3b3b3',
-                '&.Mui-focused': {
-                  color: '#7b68ee',
-                },
-              }
-            }}
-          />
+            <Divider sx={{ my: 2, backgroundColor: '#e5e7eb' }} />
 
-          <Typography variant="subtitle1" sx={{ color: '#7b68ee' }}>Update Status:</Typography>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-            {statusOptions.map((option) => (
-              <Chip
-                key={option.value}
-                label={option.label}
-                color={option.color}
-                variant={selectedSuggestion?.status === option.value ? 'filled' : 'outlined'}
-                onClick={() => handleStatusUpdate(selectedSuggestion?._id, option.value)}
-                sx={{
-                  cursor: 'pointer',
-                  color: '#ffffff',
-                  '&.MuiChip-filledWarning': {
-                    backgroundColor: '#ff9800',
-                  },
-                  '&.MuiChip-filledInfo': {
-                    backgroundColor: '#2196f3',
-                  },
-                  '&.MuiChip-filledSuccess': {
-                    backgroundColor: '#4caf50',
-                  },
-                  '&.MuiChip-filledError': {
-                    backgroundColor: '#f44336',
-                  },
-                  '&.MuiChip-outlinedWarning': {
-                    color: '#ff9800',
-                    borderColor: '#ff9800',
-                  },
-                  '&.MuiChip-outlinedInfo': {
-                    color: '#2196f3',
-                    borderColor: '#2196f3',
-                  },
-                  '&.MuiChip-outlinedSuccess': {
-                    color: '#4caf50',
-                    borderColor: '#4caf50',
-                  },
-                  '&.MuiChip-outlinedError': {
-                    color: '#f44336',
-                    borderColor: '#f44336',
-                  },
-                }}
-              />
-            ))}
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
-        }}>
-          <Button
-            onClick={handleCloseDialog}
-            sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => handleStatusUpdate(selectedSuggestion?._id, selectedSuggestion?.status)}
-            disabled={!responseText}
-            sx={{
-              backgroundColor: '#1976d2',
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#1565c0',
-              },
-              '&.Mui-disabled': {
-                backgroundColor: '#1976d2',
-                color: '#ffffff',
-                opacity: 0.5,
-              }
-            }}
-          >
-            Save Response
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Response History Dialog */}
-      <Dialog
-        open={detailDialogOpen}
-        onClose={() => setDetailDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-        sx={{
-          "& .MuiDialog-paper": {
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            boxShadow: 'none',
-            borderRadius: '8px',
-            border: '1px solid #3d3d3d',
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-        }}>
-          Response History: {selectedSuggestion?.title}
-        </DialogTitle>
-        <DialogContent dividers sx={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
-          <Typography variant="h6" gutterBottom sx={{ color: '#7b68ee' }}>
-            Original Suggestion
-          </Typography>
-          <Typography variant="body1" paragraph sx={{
-            color: '#ffffff',
-            backgroundColor: '#2d2d2d',
-            p: 2,
-            borderRadius: '4px',
-          }}>
-            {selectedSuggestion?.description}
-          </Typography>
-
-          <Divider sx={{ my: 2, backgroundColor: '#e5e7eb' }} />
-
-          <Typography variant="h6" gutterBottom sx={{ color: '#7b68ee' }}>
-            Response Log
-          </Typography>
-
-          {responseLog.length === 0 ? (
-            <Typography variant="body1" sx={{ color: '#b3b3b3' }}>
-              No responses yet
+            <Typography variant="h6" gutterBottom sx={{ color: '#7b68ee' }}>
+              Response Log
             </Typography>
-          ) : (
-            <List sx={{ backgroundColor: '#2d2d2d', borderRadius: '4px' }}>
-              {responseLog.map((response, index) => (
-                <React.Fragment key={index}>
-                  <ListItem alignItems="flex-start" sx={{ color: '#ffffff' }}>
-                    <ListItemAvatar>
-                      <Avatar sx={{ backgroundColor: '#7b68ee' }}>
-                        {response.respondedBy?.name?.charAt(0) || 'A'}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <>
-                          <Chip
-                            label={response.status}
-                            size="small"
-                            color={
-                              statusOptions.find(s => s.value === response.status)?.color || 'default'
-                            }
-                            sx={{
-                              mr: 1,
-                              color: '#ffffff',
-                              '&.MuiChip-colorWarning': {
-                                backgroundColor: '#ff9800',
-                              },
-                              '&.MuiChip-colorInfo': {
-                                backgroundColor: '#2196f3',
-                              },
-                              '&.MuiChip-colorSuccess': {
-                                backgroundColor: '#4caf50',
-                              },
-                              '&.MuiChip-colorError': {
-                                backgroundColor: '#f44336',
+
+            {responseLog.length === 0 ? (
+              <Typography variant="body1" sx={{ color: '#b3b3b3' }}>
+                No responses yet
+              </Typography>
+            ) : (
+              <List sx={{ backgroundColor: '#2d2d2d', borderRadius: '4px' }}>
+                {responseLog.map((response, index) => (
+                  <React.Fragment key={index}>
+                    <ListItem alignItems="flex-start" sx={{ color: '#ffffff' }}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ backgroundColor: '#7b68ee' }}>
+                          {response.respondedBy?.name?.charAt(0) || 'A'}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <>
+                            <Chip
+                              label={response.status}
+                              size="small"
+                              color={
+                                statusOptions.find(s => s.value === response.status)?.color || 'default'
                               }
-                            }}
-                          />
-                          {response.respondedBy?.name || 'Admin'}
-                        </>
-                      }
-                      secondary={
-                        <>
-                          <Typography
-                            component="span"
-                            variant="body2"
-                            sx={{
-                              color: '#b3b3b3',
-                              display: 'block',
-                              mb: 1
-                            }}
-                          >
-                            {format(new Date(response.respondedAt), 'PPpp')}
-                          </Typography>
-                          {response.response}
-                        </>
-                      }
-                      sx={{ color: '#ffffff' }}
-                    />
-                  </ListItem>
-                  {index < responseLog.length - 1 && <Divider variant="inset" component="li" sx={{ backgroundColor: '#e5e7eb' }} />}
-                </React.Fragment>
-              ))}
-            </List>
-          )}
-        </DialogContent>
-        <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
-        }}>
-          <Button
-            onClick={() => setDetailDialogOpen(false)}
-            sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              }
-            }}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        sx={{
-          "& .MuiDialog-paper": {
+                              sx={{
+                                mr: 1,
+                                color: '#ffffff',
+                                '&.MuiChip-colorWarning': {
+                                  backgroundColor: '#ff9800',
+                                },
+                                '&.MuiChip-colorInfo': {
+                                  backgroundColor: '#2196f3',
+                                },
+                                '&.MuiChip-colorSuccess': {
+                                  backgroundColor: '#4caf50',
+                                },
+                                '&.MuiChip-colorError': {
+                                  backgroundColor: '#f44336',
+                                }
+                              }}
+                            />
+                            {response.respondedBy?.name || 'Admin'}
+                          </>
+                        }
+                        secondary={
+                          <>
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              sx={{
+                                color: '#b3b3b3',
+                                display: 'block',
+                                mb: 1
+                              }}
+                            >
+                              {format(new Date(response.respondedAt), 'PPpp')}
+                            </Typography>
+                            {response.response}
+                          </>
+                        }
+                        sx={{ color: '#ffffff' }}
+                      />
+                    </ListItem>
+                    {index < responseLog.length - 1 && <Divider variant="inset" component="li" sx={{ backgroundColor: '#e5e7eb' }} />}
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
+          </DialogContent>
+          <DialogActions sx={{
             backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            boxShadow: 'none',
-            borderRadius: '8px',
-            border: '1px solid #3d3d3d',
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-        }}>
-          Confirm Deletion
-        </DialogTitle>
-        <DialogContent sx={{ backgroundColor: '#2d2d2d', color: '#ffffff', pt: 3 }}>
-          <Typography variant="body1">
-            Are you sure you want to delete this suggestion? This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
-        }}>
-          <Button
-            onClick={() => setDeleteDialogOpen(false)}
-            sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              handleDeleteSuggestion(suggestionToDelete);
-              setDeleteDialogOpen(false);
-            }}
-            sx={{
-              backgroundColor: '#f44336',
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#d32f2f',
-              },
-            }}
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+            borderTop: '1px solid #e5e7eb',
+          }}>
+            <Button
+              onClick={() => setDetailDialogOpen(false)}
+              sx={{
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                }
+              }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-      {/* Snackbar Notification */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
           sx={{
-            width: '100%',
-            backgroundColor: snackbar.severity === 'error' ? '#f44336' :
-              snackbar.severity === 'success' ? '#4caf50' :
-                snackbar.severity === 'warning' ? '#ff9800' : '#2196f3',
-            color: '#ffffff',
+            "& .MuiDialog-paper": {
+              backgroundColor: '#2d2d2d',
+              color: '#ffffff',
+              boxShadow: 'none',
+              borderRadius: '8px',
+              border: '1px solid #3d3d3d',
+            }
           }}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+          <DialogTitle sx={{
+            backgroundColor: '#2d2d2d',
+            color: '#ffffff',
+            borderBottom: '1px solid #e5e7eb',
+          }}>
+            Confirm Deletion
+          </DialogTitle>
+          <DialogContent sx={{ backgroundColor: '#2d2d2d', color: '#ffffff', pt: 3 }}>
+            <Typography variant="body1">
+              Are you sure you want to delete this suggestion? This action cannot be undone.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{
+            backgroundColor: '#2d2d2d',
+            borderTop: '1px solid #e5e7eb',
+          }}>
+            <Button
+              onClick={() => setDeleteDialogOpen(false)}
+              sx={{
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                handleDeleteSuggestion(suggestionToDelete);
+                setDeleteDialogOpen(false);
+              }}
+              sx={{
+                backgroundColor: '#f44336',
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#d32f2f',
+                },
+              }}
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Snackbar Notification */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert
+            onClose={handleCloseSnackbar}
+            severity={snackbar.severity}
+            sx={{
+              width: '100%',
+              backgroundColor: snackbar.severity === 'error' ? '#f44336' :
+                snackbar.severity === 'success' ? '#4caf50' :
+                  snackbar.severity === 'warning' ? '#ff9800' : '#2196f3',
+              color: '#ffffff',
+            }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Box>
     </Box>
   );
 };

@@ -9,7 +9,7 @@ import {
   TableHead,
   TableRow,
   Paper,
-  CircularProgress,
+
   IconButton,
   Tooltip,
   TablePagination,
@@ -23,6 +23,7 @@ import {
 import { FaUndoAlt } from 'react-icons/fa';
 import { MdDelete, MdRefresh } from 'react-icons/md';
 import api from '../api/api';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import { useSelector } from 'react-redux';
 import moment from 'moment';
 
@@ -118,11 +119,7 @@ const Trash = () => {
 
   // Loading state
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingSpinner variant="page" />;
   }
 
   // Error state
@@ -150,167 +147,170 @@ const Trash = () => {
 
   return (
     <Box sx={{
-      maxWidth: '1100px',
-      mx: 'auto',
-      p: 2,
-      px: isMobile ? 0 : undefined
+      minHeight: '100vh',
+      backgroundColor: 'background.default',
+      p: 3,
     }}>
-      <Typography variant="h5" gutterBottom sx={{
-        color: '#7b68ee',
-        fontWeight: 'bold',
-        mb: 2
-      }}>
-        Trash
-      </Typography>
-
-      {/* Trash Table */}
-      <TableContainer component={Paper} sx={{
-        mt: 2,
-        backgroundColor: '#2d2d2d',
-        border: '1px solid #3d3d3d',
-        "& .MuiTableHead-root": {
-          backgroundColor: "#2d2d2d",
-          "& .MuiTableCell-root": {
-            color: "#b3b3b3",
-            fontWeight: "bold",
-            borderBottom: "1px solid #e5e7eb",
-          }
-        },
-        "& .MuiTableBody-root": {
-          "& .MuiTableCell-root": {
-            borderBottom: "1px solid #e5e7eb",
-            color: "#ffffff",
-          },
-          "& .MuiTableRow-root": {
-            backgroundColor: "#2d2d2d",
-            "&:hover": {
-              backgroundColor: "#2d2d2d",
-            },
-          }
-        },
-      }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>SLID</TableCell>
-              <TableCell>Customer Name</TableCell>
-              <TableCell>Customer Feedback</TableCell>
-              <TableCell>Deleted By</TableCell>
-              <TableCell>Deleted At</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {myTrashes.length > 0 ? (
-              myTrashes
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((trash) => (
-                  <TableRow key={trash._id}>
-                    <TableCell>{trash.slid || "-"}</TableCell>
-                    <TableCell>
-                      <Typography fontWeight={500}>
-                        {trash.customerName || "-"}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      {trash.customerFeedback ? (
-                        <Typography
-                          sx={{
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}
-                        >
-                          {trash.customerFeedback}
-                        </Typography>
-                      ) : "-"}
-                    </TableCell>
-                    <TableCell>{trash.deletedBy?.name || "-"}</TableCell>
-                    <TableCell>{formatDate(trash.deletedAt)}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: "flex", gap: 1 }}>
-                        <Tooltip title="Restore">
-                          <IconButton
-                            size="small"
-                            color="info"
-                            onClick={() => restoreTask(trash._id)}
-                            sx={{ color: '#7b68ee' }}
-                          >
-                            <FaUndoAlt />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete Permanently">
-                          <IconButton
-                            size="small"
-                            color="secondary"
-                            onClick={() => deleteTaskPermanently(trash._id)}
-                            sx={{ color: '#ff4081' }}
-                          >
-                            <MdDelete />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#ffffff' }}>
-                  No trash items found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Pagination */}
       <Box sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        mt: 2,
-        '& .MuiTablePagination-root': {
-          color: '#ffffff',
-        }
+        mx: 'auto',
       }}>
-        <TablePagination
-          rowsPerPageOptions={[10, 25, 50]}
-          component="div"
-          count={myTrashes.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </Box>
+        <Typography variant="h5" gutterBottom sx={{
+          color: '#7b68ee',
+          fontWeight: 'bold',
+          mb: 2
+        }}>
+          Trash
+        </Typography>
 
-      {/* Context Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: '#2d2d2d',
+        {/* Trash Table */}
+        <TableContainer component={Paper} sx={{
+          mt: 2,
+          backgroundColor: '#2d2d2d',
+          border: '1px solid #3d3d3d',
+          "& .MuiTableHead-root": {
+            backgroundColor: "#2d2d2d",
+            "& .MuiTableCell-root": {
+              color: "#b3b3b3",
+              fontWeight: "bold",
+              borderBottom: "1px solid #e5e7eb",
+            }
+          },
+          "& .MuiTableBody-root": {
+            "& .MuiTableCell-root": {
+              borderBottom: "1px solid #e5e7eb",
+              color: "#ffffff",
+            },
+            "& .MuiTableRow-root": {
+              backgroundColor: "#2d2d2d",
+              "&:hover": {
+                backgroundColor: "#2d2d2d",
+              },
+            }
+          },
+        }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>SLID</TableCell>
+                <TableCell>Customer Name</TableCell>
+                <TableCell>Customer Feedback</TableCell>
+                <TableCell>Deleted By</TableCell>
+                <TableCell>Deleted At</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {myTrashes.length > 0 ? (
+                myTrashes
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((trash) => (
+                    <TableRow key={trash._id}>
+                      <TableCell>{trash.slid || "-"}</TableCell>
+                      <TableCell>
+                        <Typography fontWeight={500}>
+                          {trash.customerName || "-"}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {trash.customerFeedback ? (
+                          <Typography
+                            sx={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {trash.customerFeedback}
+                          </Typography>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell>{trash.deletedBy?.name || "-"}</TableCell>
+                      <TableCell>{formatDate(trash.deletedAt)}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          <Tooltip title="Restore">
+                            <IconButton
+                              size="small"
+                              color="info"
+                              onClick={() => restoreTask(trash._id)}
+                              sx={{ color: '#7b68ee' }}
+                            >
+                              <FaUndoAlt />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete Permanently">
+                            <IconButton
+                              size="small"
+                              color="secondary"
+                              onClick={() => deleteTaskPermanently(trash._id)}
+                              sx={{ color: '#ff4081' }}
+                            >
+                              <MdDelete />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#ffffff' }}>
+                    No trash items found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {/* Pagination */}
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          mt: 2,
+          '& .MuiTablePagination-root': {
             color: '#ffffff',
           }
-        }}
-      >
-        <MenuItem onClick={() => currentTask && restoreTask(currentTask._id)}>
-          <ListItemIcon>
-            <FaUndoAlt fontSize="small" style={{ color: '#7b68ee' }} />
-          </ListItemIcon>
-          <ListItemText>Restore</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => currentTask && deleteTaskPermanently(currentTask._id)}>
-          <ListItemIcon>
-            <MdDelete fontSize="small" style={{ color: '#f44336' }} />
-          </ListItemIcon>
-          <ListItemText>Delete Permanently</ListItemText>
-        </MenuItem>
-      </Menu>
+        }}>
+          <TablePagination
+            rowsPerPageOptions={[10, 25, 50]}
+            component="div"
+            count={myTrashes.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
+        </Box>
+
+        {/* Context Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          sx={{
+            "& .MuiPaper-root": {
+              backgroundColor: '#2d2d2d',
+              color: '#ffffff',
+            }
+          }}
+        >
+          <MenuItem onClick={() => currentTask && restoreTask(currentTask._id)}>
+            <ListItemIcon>
+              <FaUndoAlt fontSize="small" style={{ color: '#7b68ee' }} />
+            </ListItemIcon>
+            <ListItemText>Restore</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={() => currentTask && deleteTaskPermanently(currentTask._id)}>
+            <ListItemIcon>
+              <MdDelete fontSize="small" style={{ color: '#f44336' }} />
+            </ListItemIcon>
+            <ListItemText>Delete Permanently</ListItemText>
+          </MenuItem>
+        </Menu>
+      </Box>
     </Box>
   );
 };

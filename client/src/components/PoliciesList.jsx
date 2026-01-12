@@ -290,293 +290,279 @@ const PoliciesList = () => {
 
   return (
     <Box sx={{
-      maxWidth: '1100px',
-      mx: 'auto',
-      p: 2,
-      px: isMobile ? 0 : undefined
+      minHeight: '100vh',
+      backgroundColor: 'background.default',
+      p: 3,
     }}>
-      <Typography variant="h5" gutterBottom sx={{
-        color: '#7b68ee',
-        fontWeight: 'bold',
-        fontSize: isMobile ? '1.2rem' : '1.5rem',
-        mb: 2
-      }}>
-        Policies Management
-      </Typography>
-
       <Box sx={{
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        justifyContent: 'space-between',
-        alignItems: isMobile ? 'flex-start' : 'center',
-        mb: 2,
-        gap: isMobile ? 2 : 0,
+        mx: 'auto',
       }}>
+        <Typography variant="h5" gutterBottom sx={{
+          color: '#7b68ee',
+          fontWeight: 'bold',
+          fontSize: isMobile ? '1.2rem' : '1.5rem',
+          mb: 2
+        }}>
+          Policies Management
+        </Typography>
+
         <Box sx={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
-          justifyContent: isMobile ? 'flex-start' : 'space-between',
-          gap: 2,
-          alignItems: 'center',
-          backgroundColor: '#2d2d2d',
-          p: 2,
-          borderRadius: '8px',
-          border: '1px solid #3d3d3d',
-          width: '100%',
+          justifyContent: 'space-between',
+          alignItems: isMobile ? 'flex-start' : 'center',
+          mb: 2,
+          gap: isMobile ? 2 : 0,
         }}>
-          <TextField
-            variant="outlined"
-            size="small"
-            placeholder="Search policies..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <MdSearch style={{ color: '#b3b3b3' }} />
-                </InputAdornment>
-              ),
-              endAdornment: searchTerm && (
-                <IconButton
-                  size="small"
-                  onClick={() => setSearchTerm('')}
-                  sx={{
-                    visibility: searchTerm ? 'visible' : 'hidden',
-                    color: '#b3b3b3',
-                    '&:hover': {
-                      backgroundColor: '#2a2a2a',
+          <Box sx={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            justifyContent: isMobile ? 'flex-start' : 'space-between',
+            gap: 2,
+            alignItems: 'center',
+            backgroundColor: '#2d2d2d',
+            p: 2,
+            borderRadius: '8px',
+            border: '1px solid #3d3d3d',
+            width: '100%',
+          }}>
+            <TextField
+              variant="outlined"
+              size="small"
+              placeholder="Search policies..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <MdSearch style={{ color: '#b3b3b3' }} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <IconButton
+                    size="small"
+                    onClick={() => setSearchTerm('')}
+                    sx={{
+                      visibility: searchTerm ? 'visible' : 'hidden',
+                      color: '#b3b3b3',
+                      '&:hover': {
+                        backgroundColor: '#2a2a2a',
+                      }
+                    }}
+                  >
+                    <MdClose />
+                  </IconButton>
+                ),
+                sx: {
+                  borderRadius: '20px',
+                  backgroundColor: '#2d2d2d',
+                  width: '100%',
+                  '& fieldset': {
+                    border: 'none',
+                  },
+                  '& input': {
+                    color: '#ffffff',
+                    '&::placeholder': {
+                      color: '#666',
+                      opacity: 1,
                     }
+                  },
+                },
+                style: {
+                  paddingRight: '8px',
+                }
+              }}
+              sx={{
+                width: isMobile ? '100%' : 300,
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    border: '1px solid #666 !important',
+                  },
+                  '&.Mui-focused fieldset': {
+                    border: '1px solid #7b68ee !important',
+                  },
+                },
+              }}
+            />
+
+            <Stack
+              direction={isMobile ? 'column' : 'row'}
+              spacing={1}
+              justifyContent={'end'}
+              alignItems="center"
+              width={isMobile ? '100%' : 'auto'}
+            >
+              {(user?.isManager || user?.role === 'Admin') && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleAddClick}
+                  startIcon={<MdAdd />}
+                  fullWidth={isMobile}
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    backgroundColor: '#1976d2',
+                    color: '#ffffff',
+                    '&:hover': {
+                      backgroundColor: '#1565c0',
+                    },
+                    textTransform: 'none',
+                    borderRadius: '20px',
+                    px: 3,
                   }}
                 >
-                  <MdClose />
-                </IconButton>
-              ),
-              sx: {
-                borderRadius: '20px',
-                backgroundColor: '#2d2d2d',
-                width: '100%',
-                '& fieldset': {
-                  border: 'none',
-                },
-                '& input': {
-                  color: '#ffffff',
-                  '&::placeholder': {
-                    color: '#666',
-                    opacity: 1,
-                  }
-                },
-              },
-              style: {
-                paddingRight: '8px',
-              }
-            }}
-            sx={{
-              width: isMobile ? '100%' : 300,
-              '& .MuiOutlinedInput-root': {
-                '&:hover fieldset': {
-                  border: '1px solid #666 !important',
-                },
-                '&.Mui-focused fieldset': {
-                  border: '1px solid #7b68ee !important',
-                },
-              },
-            }}
-          />
+                  {isMobile ? 'Add' : 'Add Policy'}
+                </Button>
+              )}
 
-          <Stack
-            direction={isMobile ? 'column' : 'row'}
-            spacing={1}
-            justifyContent={'end'}
-            alignItems="center"
-            width={isMobile ? '100%' : 'auto'}
-          >
-            {(user?.isManager || user?.role === 'Admin') && (
               <Button
-                variant="contained"
-                color="primary"
-                onClick={handleAddClick}
-                startIcon={<MdAdd />}
+                variant="outlined"
+                onClick={exportToExcel}
+                startIcon={<MdFileDownload style={{ color: '#1976d2' }} />}
                 fullWidth={isMobile}
                 size={isMobile ? 'small' : 'medium'}
                 sx={{
-                  backgroundColor: '#1976d2',
-                  color: '#ffffff',
+                  borderColor: '#3d3d3d',
+                  color: '#1976d2',
                   '&:hover': {
-                    backgroundColor: '#1565c0',
+                    backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                    borderColor: '#666',
                   },
                   textTransform: 'none',
                   borderRadius: '20px',
                   px: 3,
                 }}
               >
-                {isMobile ? 'Add' : 'Add Policy'}
+                {isMobile ? 'Export' : 'Export to Excel'}
               </Button>
-            )}
-
-            <Button
-              variant="outlined"
-              onClick={exportToExcel}
-              startIcon={<MdFileDownload style={{ color: '#1976d2' }} />}
-              fullWidth={isMobile}
-              size={isMobile ? 'small' : 'medium'}
-              sx={{
-                borderColor: '#3d3d3d',
-                color: '#1976d2',
-                '&:hover': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                  borderColor: '#666',
-                },
-                textTransform: 'none',
-                borderRadius: '20px',
-                px: 3,
-              }}
-            >
-              {isMobile ? 'Export' : 'Export to Excel'}
-            </Button>
-          </Stack>
+            </Stack>
+          </Box>
         </Box>
-      </Box>
 
-      <TableContainer component={Paper} sx={{
-        mt: 2,
-        maxWidth: '100%',
-        overflowX: 'auto',
-        flex: 1,
-        width: "100%",
-        border: 0,
-        color: "#ffffff",
-        "&.MuiTableContainer-root": {
-          backgroundColor: '#2d2d2d',
-        },
-        "& .MuiTable-root": {
-          backgroundColor: "#2d2d2d",
-        },
-        "& .MuiTableHead-root": {
-          backgroundColor: "#2d2d2d",
-          "& .MuiTableCell-root": {
-            color: "#b3b3b3",
-            fontSize: "0.875rem",
-            fontWeight: "bold",
-            borderBottom: "1px solid #e5e7eb",
-          }
-        },
-        "& .MuiTableBody-root": {
-          "& .MuiTableCell-root": {
-            borderBottom: "1px solid #e5e7eb",
-            color: "#ffffff",
+        <TableContainer component={Paper} sx={{
+          mt: 2,
+          maxWidth: '100%',
+          overflowX: 'auto',
+          flex: 1,
+          width: "100%",
+          border: 0,
+          color: "#ffffff",
+          "&.MuiTableContainer-root": {
+            backgroundColor: '#2d2d2d',
           },
-          "& .MuiTableRow-root": {
+          "& .MuiTable-root": {
             backgroundColor: "#2d2d2d",
-            "&:hover": {
-              backgroundColor: "#2d2d2d",
+          },
+          "& .MuiTableHead-root": {
+            backgroundColor: "#2d2d2d",
+            "& .MuiTableCell-root": {
+              color: "#b3b3b3",
+              fontSize: "0.875rem",
+              fontWeight: "bold",
+              borderBottom: "1px solid #e5e7eb",
+            }
+          },
+          "& .MuiTableBody-root": {
+            "& .MuiTableCell-root": {
+              borderBottom: "1px solid #e5e7eb",
+              color: "#ffffff",
             },
-          }
-        },
-        "& .MuiPaper-root": {
-          backgroundColor: "transparent",
-          boxShadow: "none",
-        },
-        "&::-webkit-scrollbar": {
-          width: "8px",
-          height: "8px",
-        },
-        "&::-webkit-scrollbar-thumb": {
-          backgroundColor: "#666",
-          borderRadius: "4px",
-        },
-        "&::-webkit-scrollbar-track": {
-          backgroundColor: "#e5e7eb",
-        },
-      }}>
-        <Table size={isMobile ? 'small' : 'medium'}>
-          <TableHead>
-            <TableRow>
-              <TableCell>Status</TableCell>
-              <TableCell>Name</TableCell>
-              <Hidden smDown>
-                <TableCell>Created By</TableCell>
-              </Hidden>
-              <Hidden xsDown>
-                <TableCell>Created At</TableCell>
-              </Hidden>
-              <TableCell>Last Updated</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredPolicies.length > 0 ? (
-              filteredPolicies.map((policy) => (
-                <TableRow key={policy._id}>
-                  <TableCell>
-                    <StatusIndicator status={policy.action} />
-                  </TableCell>
-                  <TableCell>{policy.name}</TableCell>
-                  <Hidden smDown>
-                    <TableCell>{policy.createdBy?.name || 'N/A'}</TableCell>
-                  </Hidden>
-                  <Hidden xsDown>
-                    <TableCell>{new Date(policy.createdAt).toLocaleString()}</TableCell>
-                  </Hidden>
-                  <TableCell>{new Date(policy.lastUpdate).toLocaleString()}</TableCell>
-                  <TableCell>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleMenuOpen(e, policy)}
-                      sx={{ color: '#ffffff' }}
-                    >
-                      <MdMoreVert />
-                    </IconButton>
+            "& .MuiTableRow-root": {
+              backgroundColor: "#2d2d2d",
+              "&:hover": {
+                backgroundColor: "#2d2d2d",
+              },
+            }
+          },
+          "& .MuiPaper-root": {
+            backgroundColor: "transparent",
+            boxShadow: "none",
+          },
+          "&::-webkit-scrollbar": {
+            width: "8px",
+            height: "8px",
+          },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "#666",
+            borderRadius: "4px",
+          },
+          "&::-webkit-scrollbar-track": {
+            backgroundColor: "#e5e7eb",
+          },
+        }}>
+          <Table size={isMobile ? 'small' : 'medium'}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Status</TableCell>
+                <TableCell>Name</TableCell>
+                <Hidden smDown>
+                  <TableCell>Created By</TableCell>
+                </Hidden>
+                <Hidden xsDown>
+                  <TableCell>Created At</TableCell>
+                </Hidden>
+                <TableCell>Last Updated</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredPolicies.length > 0 ? (
+                filteredPolicies.map((policy) => (
+                  <TableRow key={policy._id}>
+                    <TableCell>
+                      <StatusIndicator status={policy.action} />
+                    </TableCell>
+                    <TableCell>{policy.name}</TableCell>
+                    <Hidden smDown>
+                      <TableCell>{policy.createdBy?.name || 'N/A'}</TableCell>
+                    </Hidden>
+                    <Hidden xsDown>
+                      <TableCell>{new Date(policy.createdAt).toLocaleString()}</TableCell>
+                    </Hidden>
+                    <TableCell>{new Date(policy.lastUpdate).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleMenuOpen(e, policy)}
+                        sx={{ color: '#ffffff' }}
+                      >
+                        <MdMoreVert />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ color: '#ffffff' }}>
+                    {searchTerm ? 'No matching policies found' : 'No policies available'}
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ color: '#ffffff' }}>
-                  {searchTerm ? 'No matching policies found' : 'No policies available'}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      {/* Action Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            boxShadow: 'none',
-            borderRadius: '8px',
-            border: '1px solid #3d3d3d',
-            minWidth: '200px',
-          },
-          "& .MuiList-root": {
-            padding: '4px 0',
-          }
-        }}
-      >
-        <MenuItem
-          onClick={handleViewClick}
+        {/* Action Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
           sx={{
-            '&:hover': {
-              backgroundColor: '#2a2a2a',
+            "& .MuiPaper-root": {
+              backgroundColor: '#2d2d2d',
+              color: '#ffffff',
+              boxShadow: 'none',
+              borderRadius: '8px',
+              border: '1px solid #3d3d3d',
+              minWidth: '200px',
             },
-            '&.MuiMenuItem-root': {
-              padding: '8px 16px',
+            "& .MuiList-root": {
+              padding: '4px 0',
             }
           }}
         >
-          <MdVisibility style={{ marginRight: 8, color: '#ffffff' }} />
-          <Typography variant="body1" color="#ffffff">View</Typography>
-        </MenuItem>
-
-        {(user?.isManager) && (
           <MenuItem
-            onClick={handleEditClick}
+            onClick={handleViewClick}
             sx={{
               '&:hover': {
                 backgroundColor: '#2a2a2a',
@@ -586,135 +572,90 @@ const PoliciesList = () => {
               }
             }}
           >
-            <MdEdit style={{ marginRight: 8, color: '#ffffff' }} />
-            <Typography variant="body1" color="#ffffff">Edit</Typography>
+            <MdVisibility style={{ marginRight: 8, color: '#ffffff' }} />
+            <Typography variant="body1" color="#ffffff">View</Typography>
           </MenuItem>
-        )}
 
-        {user?.isManager && (
-          <MenuItem
-            onClick={handleDeleteClick}
-            sx={{
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              },
-              '&.MuiMenuItem-root': {
-                padding: '8px 16px',
-              },
-              color: '#f44336',
-            }}
-          >
-            <MdDelete style={{ marginRight: 8, color: '#f44336' }} />
-            <Typography variant="body1" color="#f44336">Delete</Typography>
-          </MenuItem>
-        )}
-      </Menu>
+          {(user?.isManager) && (
+            <MenuItem
+              onClick={handleEditClick}
+              sx={{
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                },
+                '&.MuiMenuItem-root': {
+                  padding: '8px 16px',
+                }
+              }}
+            >
+              <MdEdit style={{ marginRight: 8, color: '#ffffff' }} />
+              <Typography variant="body1" color="#ffffff">Edit</Typography>
+            </MenuItem>
+          )}
 
-      {/* Add/Edit Dialog */}
-      <Dialog
-        open={openAddDialog || openEditDialog}
-        onClose={() => openAddDialog ? setOpenAddDialog(false) : setOpenEditDialog(false)}
-        fullWidth
-        maxWidth="md"
-        fullScreen={isMobile}
-        sx={{
-          "& .MuiDialog-paper": {
+          {user?.isManager && (
+            <MenuItem
+              onClick={handleDeleteClick}
+              sx={{
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                },
+                '&.MuiMenuItem-root': {
+                  padding: '8px 16px',
+                },
+                color: '#f44336',
+              }}
+            >
+              <MdDelete style={{ marginRight: 8, color: '#f44336' }} />
+              <Typography variant="body1" color="#f44336">Delete</Typography>
+            </MenuItem>
+          )}
+        </Menu>
+
+        {/* Add/Edit Dialog */}
+        <Dialog
+          open={openAddDialog || openEditDialog}
+          onClose={() => openAddDialog ? setOpenAddDialog(false) : setOpenEditDialog(false)}
+          fullWidth
+          maxWidth="md"
+          fullScreen={isMobile}
+          sx={{
+            "& .MuiDialog-paper": {
+              backgroundColor: '#2d2d2d',
+              boxShadow: 'none',
+              borderRadius: isMobile ? 0 : '8px',
+            }
+          }}
+        >
+          <DialogTitle sx={{
             backgroundColor: '#2d2d2d',
-            boxShadow: 'none',
-            borderRadius: isMobile ? 0 : '8px',
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '16px 24px',
-        }}>
-          <Typography variant="h6" component="div">
-            {openAddDialog ? 'Add New Policy' : 'Edit Policy'}
-          </Typography>
-        </DialogTitle>
+            color: '#ffffff',
+            borderBottom: '1px solid #e5e7eb',
+            padding: '16px 24px',
+          }}>
+            <Typography variant="h6" component="div">
+              {openAddDialog ? 'Add New Policy' : 'Edit Policy'}
+            </Typography>
+          </DialogTitle>
 
-        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
+          <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
-        <DialogContent dividers sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          padding: '20px 24px',
-          '&.MuiDialogContent-root': {
-            padding: isMobile ? '16px' : '20px 24px',
-          },
-        }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              fullWidth
-              label="Policy Name"
-              name="name"
-              value={formData.name}
-              onChange={handleFormChange}
-              required
-              size={isMobile ? 'small' : 'medium'}
-              sx={{
-                '& .MuiInputBase-root': {
-                  color: '#ffffff',
-                },
-                '& .MuiInputLabel-root': {
-                  color: '#b3b3b3',
-                },
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#3d3d3d',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#666',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#1976d2',
-                  },
-                },
-              }}
-            />
-
-            <TextField
-              fullWidth
-              label="Policy Content"
-              name="content"
-              value={formData.content}
-              onChange={handleFormChange}
-              required
-              multiline
-              rows={6}
-              size={isMobile ? 'small' : 'medium'}
-              sx={{
-                '& .MuiInputBase-root': {
-                  color: '#ffffff',
-                },
-                '& .MuiInputLabel-root': {
-                  color: '#b3b3b3',
-                },
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#3d3d3d',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#666',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#1976d2',
-                  },
-                },
-              }}
-            />
-
-            {user?.isManager && (
+          <DialogContent dividers sx={{
+            backgroundColor: '#2d2d2d',
+            color: '#ffffff',
+            padding: '20px 24px',
+            '&.MuiDialogContent-root': {
+              padding: isMobile ? '16px' : '20px 24px',
+            },
+          }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
               <TextField
                 fullWidth
-                label="Action"
-                name="action"
-                value={formData.action}
+                label="Policy Name"
+                name="name"
+                value={formData.name}
                 onChange={handleFormChange}
-                select
+                required
                 size={isMobile ? 'small' : 'medium'}
                 sx={{
                   '& .MuiInputBase-root': {
@@ -734,24 +675,85 @@ const PoliciesList = () => {
                       borderColor: '#1976d2',
                     },
                   },
-                  '& .MuiSvgIcon-root': {
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Policy Content"
+                name="content"
+                value={formData.content}
+                onChange={handleFormChange}
+                required
+                multiline
+                rows={6}
+                size={isMobile ? 'small' : 'medium'}
+                sx={{
+                  '& .MuiInputBase-root': {
+                    color: '#ffffff',
+                  },
+                  '& .MuiInputLabel-root': {
                     color: '#b3b3b3',
                   },
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#3d3d3d',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#666',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#1976d2',
+                    },
+                  },
                 }}
-              >
-                <MenuItem value="agree" sx={{ color: '#ffffff', backgroundColor: '#2d2d2d' }}>
-                  Agree
-                </MenuItem>
-                <MenuItem value="disagree" sx={{ color: '#ffffff', backgroundColor: '#2d2d2d' }}>
-                  Disagree
-                </MenuItem>
-                <MenuItem value="pending" sx={{ color: '#ffffff', backgroundColor: '#2d2d2d' }}>
-                  Pending
-                </MenuItem>
-              </TextField>
-            )}
+              />
 
-            {/* {(user?.isManager || user?.role === 'Admin') && (
+              {user?.isManager && (
+                <TextField
+                  fullWidth
+                  label="Action"
+                  name="action"
+                  value={formData.action}
+                  onChange={handleFormChange}
+                  select
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      color: '#ffffff',
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: '#b3b3b3',
+                    },
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: '#3d3d3d',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: '#666',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#1976d2',
+                      },
+                    },
+                    '& .MuiSvgIcon-root': {
+                      color: '#b3b3b3',
+                    },
+                  }}
+                >
+                  <MenuItem value="agree" sx={{ color: '#ffffff', backgroundColor: '#2d2d2d' }}>
+                    Agree
+                  </MenuItem>
+                  <MenuItem value="disagree" sx={{ color: '#ffffff', backgroundColor: '#2d2d2d' }}>
+                    Disagree
+                  </MenuItem>
+                  <MenuItem value="pending" sx={{ color: '#ffffff', backgroundColor: '#2d2d2d' }}>
+                    Pending
+                  </MenuItem>
+                </TextField>
+              )}
+
+              {/* {(user?.isManager || user?.role === 'Admin') && (
               <TextField
                 fullWidth
                 label={user?.role === 'Admin' ? 'Manager Password' : 'Your Password'}
@@ -781,300 +783,301 @@ const PoliciesList = () => {
                 }}
               />
             )} */}
-          </Box>
-        </DialogContent>
+            </Box>
+          </DialogContent>
 
-        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
+          <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
-        <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
-          padding: '12px 24px',
-        }}>
-          <Button
-            onClick={() => openAddDialog ? setOpenAddDialog(false) : setOpenEditDialog(false)}
-            size={isMobile ? 'small' : 'medium'}
-            sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => handleSavePolicy(!openAddDialog)}
-            variant="contained"
-            color="primary"
-            size={isMobile ? 'small' : 'medium'}
-            disabled={
-              !formData.name ||
-              !formData.content ||
-              (user?.isManager && !formData.action) // Only require action for managers
-            }
-            sx={{
-              backgroundColor: '#1976d2',
-              '&:hover': {
-                backgroundColor: '#1565c0',
-              },
-              '&.Mui-disabled': {
-                backgroundColor: '#555',
-                color: '#888',
-              }
-            }}
-          >
-            {openAddDialog ? 'Add' : 'Update'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* View Dialog */}
-      <Dialog
-        open={openViewDialog}
-        onClose={() => setOpenViewDialog(false)}
-        fullWidth
-        maxWidth="md"
-        fullScreen={isMobile}
-        sx={{
-          "& .MuiDialog-paper": {
+          <DialogActions sx={{
             backgroundColor: '#2d2d2d',
-            boxShadow: 'none',
-            borderRadius: isMobile ? 0 : '8px',
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '16px 24px',
-        }}>
-          <Typography variant="h6" component="div">
-            {currentPolicy?.name}
-          </Typography>
-        </DialogTitle>
-
-        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
-        <DialogContent dividers sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          padding: '20px 24px',
-          '&.MuiDialogContent-root': {
-            padding: isMobile ? '16px' : '20px 24px',
-          },
-        }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Content:</Typography>
-              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                {currentPolicy?.content}
-              </Typography>
-            </Box>
-
-            <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Status:</Typography>
-              <StatusIndicator status={currentPolicy?.action} />
-            </Box>
-
-            <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 3 }}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Created By:</Typography>
-                <Typography variant="body1">{currentPolicy?.createdBy?.name || 'N/A'}</Typography>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Created At:</Typography>
-                <Typography variant="body1">
-                  {currentPolicy?.createdAt ? new Date(currentPolicy.createdAt).toLocaleString() : 'N/A'}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 3 }}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Approved By:</Typography>
-                <Typography variant="body1">
-                  {currentPolicy?.approvedBy?.name || 'N/A'}
-                </Typography>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Approved At:</Typography>
-                <Typography variant="body1">
-                  {currentPolicy?.approvedAt ? new Date(currentPolicy.approvedAt).toLocaleString() : 'N/A'}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 3 }}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Rejected By:</Typography>
-                <Typography variant="body1">
-                  {currentPolicy?.rejectedBy?.name || 'N/A'}
-                </Typography>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Rejected At:</Typography>
-                <Typography variant="body1">
-                  {currentPolicy?.rejectedAt ? new Date(currentPolicy.rejectedAt).toLocaleString() : 'N/A'}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Last Updated:</Typography>
-              <Typography variant="body1">
-                {currentPolicy?.lastUpdate ? new Date(currentPolicy.lastUpdate).toLocaleString() : 'N/A'}
-              </Typography>
-            </Box>
-          </Box>
-        </DialogContent>
-
-        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
-        <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
-          padding: '12px 24px',
-        }}>
-          <Button
-            onClick={() => setOpenViewDialog(false)}
-            size={isMobile ? 'small' : 'medium'}
-            sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              }
-            }}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={openDeleteDialog}
-        onClose={() => setOpenDeleteDialog(false)}
-        fullScreen={isMobile}
-        sx={{
-          "& .MuiDialog-paper": {
-            backgroundColor: '#2d2d2d',
-            boxShadow: 'none',
-            borderRadius: isMobile ? 0 : '8px',
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '16px 24px',
-        }}>
-          <Typography variant="h6" component="div">
-            Confirm Delete
-          </Typography>
-        </DialogTitle>
-
-        <DialogContent sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          padding: '20px 24px',
-        }}>
-          <Typography>
-            Are you sure you want to delete the policy &quot;{currentPolicy?.name}&quot;? This action cannot be undone.
-          </Typography>
-          <TextField
-            fullWidth
-            label="Your Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            sx={{
-              mt: 3,
-              '& .MuiInputBase-root': {
+            borderTop: '1px solid #e5e7eb',
+            padding: '12px 24px',
+          }}>
+            <Button
+              onClick={() => openAddDialog ? setOpenAddDialog(false) : setOpenEditDialog(false)}
+              size={isMobile ? 'small' : 'medium'}
+              sx={{
                 color: '#ffffff',
-              },
-              '& .MuiInputLabel-root': {
-                color: '#b3b3b3',
-              },
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: '#3d3d3d',
-                },
-                '&:hover fieldset': {
-                  borderColor: '#666',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#1976d2',
-                },
-              },
-            }}
-          />
-        </DialogContent>
-
-        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
-        <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
-          padding: '12px 24px',
-        }}>
-          <Button
-            onClick={() => setOpenDeleteDialog(false)}
-            size={isMobile ? 'small' : 'medium'}
-            sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleSavePolicy(!openAddDialog)}
+              variant="contained"
+              color="primary"
+              size={isMobile ? 'small' : 'medium'}
+              disabled={
+                !formData.name ||
+                !formData.content ||
+                (user?.isManager && !formData.action) // Only require action for managers
               }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            variant="contained"
-            color="error"
-            size={isMobile ? 'small' : 'medium'}
-            disabled={!password}
-            sx={{
-              backgroundColor: '#f44336',
-              '&:hover': {
-                backgroundColor: '#d32f2f',
-              },
-              '&.Mui-disabled': {
-                backgroundColor: '#555',
-                color: '#888',
-              }
-            }}
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+              sx={{
+                backgroundColor: '#1976d2',
+                '&:hover': {
+                  backgroundColor: '#1565c0',
+                },
+                '&.Mui-disabled': {
+                  backgroundColor: '#555',
+                  color: '#888',
+                }
+              }}
+            >
+              {openAddDialog ? 'Add' : 'Update'}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={() => setSnackbarOpen(false)}
-      >
-        <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity={snackbarSeverity}
+        {/* View Dialog */}
+        <Dialog
+          open={openViewDialog}
+          onClose={() => setOpenViewDialog(false)}
+          fullWidth
+          maxWidth="md"
+          fullScreen={isMobile}
           sx={{
-            width: '100%',
-            backgroundColor: snackbarSeverity === 'error' ? '#f44336' : '#4caf50',
-            color: '#ffffff'
+            "& .MuiDialog-paper": {
+              backgroundColor: '#2d2d2d',
+              boxShadow: 'none',
+              borderRadius: isMobile ? 0 : '8px',
+            }
           }}
         >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
+          <DialogTitle sx={{
+            backgroundColor: '#2d2d2d',
+            color: '#ffffff',
+            borderBottom: '1px solid #e5e7eb',
+            padding: '16px 24px',
+          }}>
+            <Typography variant="h6" component="div">
+              {currentPolicy?.name}
+            </Typography>
+          </DialogTitle>
+
+          <Divider sx={{ backgroundColor: '#e5e7eb' }} />
+
+          <DialogContent dividers sx={{
+            backgroundColor: '#2d2d2d',
+            color: '#ffffff',
+            padding: '20px 24px',
+            '&.MuiDialogContent-root': {
+              padding: isMobile ? '16px' : '20px 24px',
+            },
+          }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Content:</Typography>
+                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {currentPolicy?.content}
+                </Typography>
+              </Box>
+
+              <Divider sx={{ backgroundColor: '#e5e7eb' }} />
+
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Status:</Typography>
+                <StatusIndicator status={currentPolicy?.action} />
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 3 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Created By:</Typography>
+                  <Typography variant="body1">{currentPolicy?.createdBy?.name || 'N/A'}</Typography>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Created At:</Typography>
+                  <Typography variant="body1">
+                    {currentPolicy?.createdAt ? new Date(currentPolicy.createdAt).toLocaleString() : 'N/A'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 3 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Approved By:</Typography>
+                  <Typography variant="body1">
+                    {currentPolicy?.approvedBy?.name || 'N/A'}
+                  </Typography>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Approved At:</Typography>
+                  <Typography variant="body1">
+                    {currentPolicy?.approvedAt ? new Date(currentPolicy.approvedAt).toLocaleString() : 'N/A'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 3 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Rejected By:</Typography>
+                  <Typography variant="body1">
+                    {currentPolicy?.rejectedBy?.name || 'N/A'}
+                  </Typography>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Rejected At:</Typography>
+                  <Typography variant="body1">
+                    {currentPolicy?.rejectedAt ? new Date(currentPolicy.rejectedAt).toLocaleString() : 'N/A'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Last Updated:</Typography>
+                <Typography variant="body1">
+                  {currentPolicy?.lastUpdate ? new Date(currentPolicy.lastUpdate).toLocaleString() : 'N/A'}
+                </Typography>
+              </Box>
+            </Box>
+          </DialogContent>
+
+          <Divider sx={{ backgroundColor: '#e5e7eb' }} />
+
+          <DialogActions sx={{
+            backgroundColor: '#2d2d2d',
+            borderTop: '1px solid #e5e7eb',
+            padding: '12px 24px',
+          }}>
+            <Button
+              onClick={() => setOpenViewDialog(false)}
+              size={isMobile ? 'small' : 'medium'}
+              sx={{
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                }
+              }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={openDeleteDialog}
+          onClose={() => setOpenDeleteDialog(false)}
+          fullScreen={isMobile}
+          sx={{
+            "& .MuiDialog-paper": {
+              backgroundColor: '#2d2d2d',
+              boxShadow: 'none',
+              borderRadius: isMobile ? 0 : '8px',
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            backgroundColor: '#2d2d2d',
+            color: '#ffffff',
+            borderBottom: '1px solid #e5e7eb',
+            padding: '16px 24px',
+          }}>
+            <Typography variant="h6" component="div">
+              Confirm Delete
+            </Typography>
+          </DialogTitle>
+
+          <DialogContent sx={{
+            backgroundColor: '#2d2d2d',
+            color: '#ffffff',
+            padding: '20px 24px',
+          }}>
+            <Typography>
+              Are you sure you want to delete the policy &quot;{currentPolicy?.name}&quot;? This action cannot be undone.
+            </Typography>
+            <TextField
+              fullWidth
+              label="Your Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              sx={{
+                mt: 3,
+                '& .MuiInputBase-root': {
+                  color: '#ffffff',
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#b3b3b3',
+                },
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: '#3d3d3d',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#666',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#1976d2',
+                  },
+                },
+              }}
+            />
+          </DialogContent>
+
+          <Divider sx={{ backgroundColor: '#e5e7eb' }} />
+
+          <DialogActions sx={{
+            backgroundColor: '#2d2d2d',
+            borderTop: '1px solid #e5e7eb',
+            padding: '12px 24px',
+          }}>
+            <Button
+              onClick={() => setOpenDeleteDialog(false)}
+              size={isMobile ? 'small' : 'medium'}
+              sx={{
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#2a2a2a',
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              variant="contained"
+              color="error"
+              size={isMobile ? 'small' : 'medium'}
+              disabled={!password}
+              sx={{
+                backgroundColor: '#f44336',
+                '&:hover': {
+                  backgroundColor: '#d32f2f',
+                },
+                '&.Mui-disabled': {
+                  backgroundColor: '#555',
+                  color: '#888',
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Snackbar */}
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={6000}
+          onClose={() => setSnackbarOpen(false)}
+        >
+          <Alert
+            onClose={() => setSnackbarOpen(false)}
+            severity={snackbarSeverity}
+            sx={{
+              width: '100%',
+              backgroundColor: snackbarSeverity === 'error' ? '#f44336' : '#4caf50',
+              color: '#ffffff'
+            }}
+          >
+            {snackbarMessage}
+          </Alert>
+        </Snackbar>
+      </Box>
     </Box>
   );
 };

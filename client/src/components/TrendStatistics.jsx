@@ -397,11 +397,25 @@ const TrendStatistics = ({ tasks }) => {
 
   return (
     <Box sx={{ my: 4 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="h6" sx={{ color: '#c2c2c2', fontWeight: 'bold' }}>
-            Trend Statistics & Analysis
-          </Typography>
+      <Box sx={{
+        display: 'flex',
+        alignItems: isMobile ? 'flex-start' : 'center',
+        justifyContent: 'space-between',
+        mb: 2,
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? 1.5 : 2
+      }}>
+        <Typography variant="h6" sx={{ color: '#c2c2c2', fontWeight: 'bold' }}>
+          Trend Statistics & Analysis
+        </Typography>
+
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          width: isMobile ? '100%' : 'auto',
+          justifyContent: isMobile ? 'flex-start' : 'flex-end'
+        }}>
           <Chip
             label={showHelp ? "Hide Guide" : "How to read"}
             onClick={() => setShowHelp(!showHelp)}
@@ -412,16 +426,19 @@ const TrendStatistics = ({ tasks }) => {
               cursor: 'pointer'
             }}
           />
-        </Box>
 
-        <Box>
           <IconButton
             onClick={handleExport}
             disabled={topEntities.length === 0}
             title="Export to Excel"
-            sx={{ color: '#4caf50', '&:hover': { bgcolor: 'rgba(76,175,80,0.1)' } }}
+            size="small"
+            sx={{
+              color: '#4caf50',
+              backgroundColor: 'rgba(76, 175, 80, 0.05)',
+              '&:hover': { bgcolor: 'rgba(76,175,80,0.15)' }
+            }}
           >
-            <MdFileDownload />
+            <MdFileDownload size={20} />
           </IconButton>
 
           <AIAnalysisButton
@@ -494,21 +511,21 @@ const TrendStatistics = ({ tasks }) => {
       {trendAnalysis.entities.length > 0 && (
         <Stack direction={isMobile ? 'column' : 'row'} spacing={2} sx={{ mb: 3 }}>
           {trendAnalysis.worsening && trendAnalysis.worsening.change > 0 && (
-            <Paper sx={{ p: 2, flex: 1, backgroundColor: 'rgba(244, 67, 54, 0.1)', border: '1px solid #f44336' }}>
+            <Paper sx={{ p: 1.5, flex: 1, backgroundColor: 'rgba(244, 67, 54, 0.1)', border: '1px solid #f44336' }}>
               <Typography variant="caption" sx={{ color: '#f44336', fontWeight: 'bold', textTransform: 'uppercase' }}>
                 Highest Concern
               </Typography>
-              <Typography variant="body1" sx={{ color: '#fff', mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: '#fff', mt: 0.5 }}>
                 {trendAnalysis.worsening.name} increased by <strong>{trendAnalysis.worsening.change}%</strong>
               </Typography>
             </Paper>
           )}
           {trendAnalysis.improving && trendAnalysis.improving.change < 0 && (
-            <Paper sx={{ p: 2, flex: 1, backgroundColor: 'rgba(76, 175, 80, 0.1)', border: '1px solid #4caf50' }}>
+            <Paper sx={{ p: 1.5, flex: 1, backgroundColor: 'rgba(76, 175, 80, 0.1)', border: '1px solid #4caf50' }}>
               <Typography variant="caption" sx={{ color: '#4caf50', fontWeight: 'bold', textTransform: 'uppercase' }}>
                 Top Improved
               </Typography>
-              <Typography variant="body1" sx={{ color: '#fff', mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: '#fff', mt: 0.5 }}>
                 {trendAnalysis.improving.name} decreased by <strong>{Math.abs(trendAnalysis.improving.change)}%</strong>
               </Typography>
             </Paper>
@@ -516,89 +533,138 @@ const TrendStatistics = ({ tasks }) => {
         </Stack>
       )}
 
-      <Paper sx={{ p: 3, backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d' }}>
+      <Paper sx={{ p: isMobile ? 2 : 3, backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d' }}>
         {/* Controls */}
         <Stack spacing={3} sx={{ mb: 3 }}>
-          <Stack direction={isMobile ? 'column' : 'row'} spacing={2} justifyContent="space-between" flexWrap="wrap">
+          <Stack direction="column" spacing={2.5}>
 
-            {/* Group 1: Scope */}
-            <Stack direction="column" spacing={2} sx={{ flex: 1 }}>
-              <Stack direction={isMobile ? "column" : "row"} spacing={2}>
-                <Box>
-                  <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 1, display: 'block' }}>
-                    Analysis Type
-                  </Typography>
-                  <ToggleButtonGroup
-                    value={analysisType}
-                    exclusive
-                    onChange={handleAnalysisTypeChange}
-                    size="small"
-                    fullWidth={isMobile}
-                    sx={{
-                      '& .MuiToggleButton-root': {
-                        color: '#b3b3b3',
-                        borderColor: '#3d3d3d',
-                        '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
-                      }
-                    }}
-                  >
-                    <ToggleButton value="team">Teams</ToggleButton>
-                    <ToggleButton value="reason">Reasons</ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
+            {/* Top Row: Analysis Type & View & Range */}
+            <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems={isMobile ? 'flex-start' : 'center'}>
+              <Box sx={{ width: isMobile ? '100% ' : 'auto' }}>
+                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 0.5, display: 'block' }}>
+                  Analysis Type
+                </Typography>
+                <ToggleButtonGroup
+                  value={analysisType}
+                  exclusive
+                  onChange={handleAnalysisTypeChange}
+                  size="small"
+                  fullWidth={isMobile}
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      color: '#b3b3b3',
+                      borderColor: '#3d3d3d',
+                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
+                    }
+                  }}
+                >
+                  <ToggleButton value="team">Teams</ToggleButton>
+                  <ToggleButton value="reason">Reasons</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
 
-                <Box>
-                  <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 1, display: 'block' }}>
-                    View
-                  </Typography>
-                  <ToggleButtonGroup
-                    value={selectedEntities.length > 0 ? null : viewMode}
-                    exclusive
-                    onChange={handleViewModeChange}
-                    size="small"
-                    disabled={selectedEntities.length > 0}
-                    fullWidth={isMobile}
-                    sx={{
-                      '& .MuiToggleButton-root': {
-                        color: '#b3b3b3',
-                        borderColor: '#3d3d3d',
-                        '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } },
-                        '&.Mui-disabled': { color: '#555' }
-                      }
-                    }}
-                  >
-                    <ToggleButton value="top5">Top 5</ToggleButton>
-                    <ToggleButton value="all">All</ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
+              <Box sx={{ width: isMobile ? '100% ' : 'auto' }}>
+                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 0.5, display: 'block' }}>
+                  View
+                </Typography>
+                <ToggleButtonGroup
+                  value={selectedEntities.length > 0 ? null : viewMode}
+                  exclusive
+                  onChange={handleViewModeChange}
+                  size="small"
+                  disabled={selectedEntities.length > 0}
+                  fullWidth={isMobile}
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      color: '#b3b3b3',
+                      borderColor: '#3d3d3d',
+                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } },
+                      '&.Mui-disabled': { color: '#555' }
+                    }
+                  }}
+                >
+                  <ToggleButton value="top5">Top 5</ToggleButton>
+                  <ToggleButton value="all">All</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
 
-                <Box>
-                  <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 1, display: 'block' }}>
-                    Range
-                  </Typography>
-                  <ToggleButtonGroup
-                    value={range}
-                    exclusive
-                    onChange={handleRangeChange}
-                    size="small"
-                    fullWidth={isMobile}
-                    sx={{
-                      '& .MuiToggleButton-root': {
-                        color: '#b3b3b3',
-                        borderColor: '#3d3d3d',
-                        '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
-                      }
-                    }}
-                  >
-                    <ToggleButton value={8}>Last 8</ToggleButton>
-                    <ToggleButton value="all">YTD</ToggleButton>
-                    <ToggleButton value="custom">Custom</ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
-              </Stack>
+              <Box sx={{ width: isMobile ? '100% ' : 'auto' }}>
+                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 0.5, display: 'block' }}>
+                  Range
+                </Typography>
+                <ToggleButtonGroup
+                  value={range}
+                  exclusive
+                  onChange={handleRangeChange}
+                  size="small"
+                  fullWidth={isMobile}
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      color: '#b3b3b3',
+                      borderColor: '#3d3d3d',
+                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
+                    }
+                  }}
+                >
+                  <ToggleButton value={8}>Last 8</ToggleButton>
+                  <ToggleButton value="all">YTD</ToggleButton>
+                  <ToggleButton value="custom">Custom</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+            </Stack>
 
-              {/* Autocomplete for Specific Selection */}
-              <Box sx={{ maxWidth: 400 }}>
+            {/* Middle Row: Metric & Period */}
+            <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems={isMobile ? 'flex-start' : 'center'}>
+              <Box sx={{ width: isMobile ? '100% ' : 'auto' }}>
+                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 0.5, display: 'block' }}>
+                  X-Axis Unit
+                </Typography>
+                <ToggleButtonGroup
+                  value={period}
+                  exclusive
+                  onChange={handlePeriodChange}
+                  size="small"
+                  fullWidth={isMobile}
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      color: '#b3b3b3',
+                      borderColor: '#3d3d3d',
+                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
+                    }
+                  }}
+                >
+                  <ToggleButton value="week">Weeks</ToggleButton>
+                  <ToggleButton value="month">Months</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+
+              <Box sx={{ width: isMobile ? '100% ' : 'auto' }}>
+                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 0.5, display: 'block' }}>
+                  Metric
+                </Typography>
+                <ToggleButtonGroup
+                  value={selectedMetric}
+                  exclusive
+                  onChange={handleMetricChange}
+                  size="small"
+                  fullWidth={isMobile}
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      color: '#b3b3b3',
+                      borderColor: '#3d3d3d',
+                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
+                    }
+                  }}
+                >
+                  <ToggleButton value="totalViolations">Total</ToggleButton>
+                  <ToggleButton value="equivalentDetractors">Eq. Det.</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+            </Stack>
+
+            {/* Bottom Row: Selection & Custom Selection */}
+            <Stack direction="column" spacing={2}>
+              <Box sx={{ width: '100%' }}>
                 <Autocomplete
                   multiple
                   options={allAvailableEntities}
@@ -630,10 +696,11 @@ const TrendStatistics = ({ tasks }) => {
               </Box>
 
               {range === 'custom' && (
-                <Stack direction="row" spacing={2}>
+                <Stack direction={isMobile ? "column" : "row"} spacing={2}>
                   <TextField
                     type="date"
                     label="From"
+                    fullWidth={isMobile}
                     value={customStart}
                     onChange={(e) => setCustomStart(e.target.value)}
                     InputLabelProps={{ shrink: true, style: { color: '#b3b3b3' } }}
@@ -643,6 +710,7 @@ const TrendStatistics = ({ tasks }) => {
                   <TextField
                     type="date"
                     label="To"
+                    fullWidth={isMobile}
                     value={customEnd}
                     onChange={(e) => setCustomEnd(e.target.value)}
                     InputLabelProps={{ shrink: true, style: { color: '#b3b3b3' } }}
@@ -651,55 +719,6 @@ const TrendStatistics = ({ tasks }) => {
                   />
                 </Stack>
               )}
-            </Stack>
-
-            {/* Group 2: Metric & Period */}
-            <Stack direction="row" spacing={2} alignItems="flex-start">
-              <Box>
-                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 1, display: 'block' }}>
-                  X-Axis Unit
-                </Typography>
-                <ToggleButtonGroup
-                  value={period}
-                  exclusive
-                  onChange={handlePeriodChange}
-                  size="small"
-                  sx={{
-                    '& .MuiToggleButton-root': {
-                      color: '#b3b3b3',
-                      borderColor: '#3d3d3d',
-                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
-                    }
-                  }}
-                >
-                  <ToggleButton value="week">Weeks</ToggleButton>
-                  <ToggleButton value="month">Months</ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
-
-              <Box>
-                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 1, display: 'block' }}>
-                  Metric
-                </Typography>
-                <ToggleButtonGroup
-                  value={selectedMetric}
-                  exclusive
-                  onChange={handleMetricChange}
-                  size="small"
-                  sx={{
-                    '& .MuiToggleButton-root': {
-                      color: '#b3b3b3',
-                      borderColor: '#3d3d3d',
-                      fontSize: isMobile ? '0.7rem' : '0.875rem',
-                      padding: isMobile ? '4px 8px' : '6px 12px',
-                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
-                    }
-                  }}
-                >
-                  <ToggleButton value="totalViolations">Total</ToggleButton>
-                  <ToggleButton value="equivalentDetractors">Eq. Det.</ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
             </Stack>
           </Stack>
         </Stack>

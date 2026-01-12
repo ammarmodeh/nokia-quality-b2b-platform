@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { format, differenceInMinutes } from "date-fns";
 import {
-  Paper, Typography, Avatar, Chip, CircularProgress, Stack, Box, Button,
+  Paper, Typography, Avatar, Chip, Stack, Box, Button,
   Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress, Tooltip, IconButton,
   useMediaQuery, useTheme
 } from "@mui/material";
@@ -11,6 +11,7 @@ import { FaEdit } from "react-icons/fa";
 import { MdClose, MdDeleteForever, MdContentCopy } from "react-icons/md";
 import api from "../api/api";
 import EditTaskDialog from "../components/task/EditTaskDialog";
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import SubtaskManager from "../components/SubtaskManager";
 
 const priorityColors = {
@@ -403,7 +404,7 @@ const TaskViewPage = () => {
     }));
   };
 
-  if (loading) return <CircularProgress />;
+  if (loading) return <LoadingSpinner variant="page" />;
   if (!task) return <Typography>No task found</Typography>;
 
   return (
@@ -661,7 +662,7 @@ const TaskViewPage = () => {
                           .join('')}
                       </Avatar>
                     }
-                    label={isMobile ? user.name.split(' ')[0] : user.name}
+                    label={isMobile ? user.name?.split(' ')[0] || '?' : user.name || 'Unknown'}
                   />
                 ))
               ) : (
@@ -701,7 +702,7 @@ const TaskViewPage = () => {
                           .join('')}
                       </Avatar>
                     }
-                    label={isMobile ? user.name.split(' ')[0] : user.name}
+                    label={isMobile ? user.name?.split(' ')[0] || '?' : user.name || 'Unknown'}
                   />
                 ))
               ) : (

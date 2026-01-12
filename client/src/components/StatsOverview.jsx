@@ -212,7 +212,7 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
                           fontWeight: 700,
                           boxShadow: `0 0 12px ${colors.primary}40`
                         }}>
-                          {supervisor.name.split(' ').map(n => n[0]).join('')}
+                          {supervisor?.name?.split(' ').map(n => n[0]).join('') || '?'}
                         </Avatar>
                         <Box sx={{ flex: 1 }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>

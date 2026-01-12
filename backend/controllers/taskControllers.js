@@ -501,7 +501,7 @@ export const getTasks = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName } = req.query;
+    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus } = req.query;
 
     const mongoQuery = { isDeleted: false };
 
@@ -535,6 +535,10 @@ export const getTasks = async (req, res) => {
 
     if (teamName && teamName !== 'all') {
       mongoQuery.teamName = teamName;
+    }
+
+    if (validationStatus && validationStatus !== 'all') {
+      mongoQuery.validationStatus = validationStatus;
     }
 
     if (search) {
@@ -595,7 +599,7 @@ export const getDetractorTasksPaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName } = req.query;
+    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus } = req.query;
 
     const mongoQuery = {
       isDeleted: false,
@@ -632,6 +636,10 @@ export const getDetractorTasksPaginated = async (req, res) => {
 
     if (teamName && teamName !== 'all') {
       mongoQuery.teamName = teamName;
+    }
+
+    if (validationStatus && validationStatus !== 'all') {
+      mongoQuery.validationStatus = validationStatus;
     }
 
     if (search) {
@@ -690,7 +698,7 @@ export const getNeutralTasksPaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName } = req.query;
+    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus } = req.query;
 
     const mongoQuery = {
       isDeleted: false,
@@ -727,6 +735,10 @@ export const getNeutralTasksPaginated = async (req, res) => {
 
     if (teamName && teamName !== 'all') {
       mongoQuery.teamName = teamName;
+    }
+
+    if (validationStatus && validationStatus !== 'all') {
+      mongoQuery.validationStatus = validationStatus;
     }
 
     if (search) {
@@ -771,7 +783,14 @@ export const getNeutralTasksPaginated = async (req, res) => {
 export const getTasksAssignedToMe = async (req, res) => {
   try {
     const currentUserId = req.user._id;
-    const tasks = await TaskSchema.find({ assignedTo: currentUserId })
+    const { validationStatus } = req.query;
+
+    const mongoQuery = { assignedTo: currentUserId };
+    if (validationStatus && validationStatus !== 'all') {
+      mongoQuery.validationStatus = validationStatus;
+    }
+
+    const tasks = await TaskSchema.find(mongoQuery)
       .sort({ createdAt: -1 })
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email");
@@ -797,15 +816,21 @@ export const getTasksAssignedToMePaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
+    const { validationStatus } = req.query;
 
-    const totalTasks = await TaskSchema.countDocuments({ assignedTo: req.user._id });
+    const mongoQuery = { assignedTo: req.user._id };
+    if (validationStatus && validationStatus !== 'all') {
+      mongoQuery.validationStatus = validationStatus;
+    }
+
+    const totalTasks = await TaskSchema.countDocuments(mongoQuery);
     const skip = (page - 1) * limit;
 
     if (skip >= totalTasks) {
       return res.json([]);
     }
 
-    const tasks = await TaskSchema.find({ assignedTo: req.user._id })
+    const tasks = await TaskSchema.find(mongoQuery)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -829,10 +854,17 @@ export const getTasksAssignedToMePaginated = async (req, res) => {
 
 export const getDetractorTasksAssignedToMe = async (req, res) => {
   try {
-    const detractorTasks = await TaskSchema.find({
+    const { validationStatus } = req.query;
+    const mongoQuery = {
       evaluationScore: { $gte: 1, $lte: 6 },
       assignedTo: req.user._id
-    });
+    };
+
+    if (validationStatus && validationStatus !== 'all') {
+      mongoQuery.validationStatus = validationStatus;
+    }
+
+    const detractorTasks = await TaskSchema.find(mongoQuery);
 
     res.status(200).json(detractorTasks);
   } catch (error) {
@@ -845,15 +877,25 @@ export const getDetractorTasksAssignedToMePaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
+    const { validationStatus } = req.query;
 
-    const totalTasks = await TaskSchema.countDocuments({ evaluationScore: { $gte: 1, $lte: 6 }, assignedTo: req.user._id });
+    const mongoQuery = {
+      evaluationScore: { $gte: 1, $lte: 6 },
+      assignedTo: req.user._id
+    };
+
+    if (validationStatus && validationStatus !== 'all') {
+      mongoQuery.validationStatus = validationStatus;
+    }
+
+    const totalTasks = await TaskSchema.countDocuments(mongoQuery);
     const skip = (page - 1) * limit;
 
     if (skip >= totalTasks) {
       return res.json([]);
     }
 
-    const tasks = await TaskSchema.find({ evaluationScore: { $gte: 1, $lte: 6 }, assignedTo: req.user._id })
+    const tasks = await TaskSchema.find(mongoQuery)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -868,10 +910,17 @@ export const getDetractorTasksAssignedToMePaginated = async (req, res) => {
 
 export const getNeutralTasksAssignedToMe = async (req, res) => {
   try {
-    const neutralTasks = await TaskSchema.find({
+    const { validationStatus } = req.query;
+    const mongoQuery = {
       evaluationScore: { $gte: 7, $lte: 8 },
       assignedTo: req.user._id
-    });
+    };
+
+    if (validationStatus && validationStatus !== 'all') {
+      mongoQuery.validationStatus = validationStatus;
+    }
+
+    const neutralTasks = await TaskSchema.find(mongoQuery);
 
     res.status(200).json(neutralTasks);
   } catch (error) {
@@ -884,15 +933,25 @@ export const getNeutralTasksAssignedToMePaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
+    const { validationStatus } = req.query;
 
-    const totalTasks = await TaskSchema.countDocuments({ evaluationScore: { $gte: 7, $lte: 8 }, assignedTo: req.user._id });
+    const mongoQuery = {
+      evaluationScore: { $gte: 7, $lte: 8 },
+      assignedTo: req.user._id
+    };
+
+    if (validationStatus && validationStatus !== 'all') {
+      mongoQuery.validationStatus = validationStatus;
+    }
+
+    const totalTasks = await TaskSchema.countDocuments(mongoQuery);
     const skip = (page - 1) * limit;
 
     if (skip >= totalTasks) {
       return res.json([]);
     }
 
-    const tasks = await TaskSchema.find({ evaluationScore: { $gte: 7, $lte: 8 }, assignedTo: req.user._id })
+    const tasks = await TaskSchema.find(mongoQuery)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

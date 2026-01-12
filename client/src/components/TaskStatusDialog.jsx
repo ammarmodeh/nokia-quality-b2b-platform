@@ -808,10 +808,10 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                               border: '2px solid',
                               borderColor: taskToView?.subTasks?.some(t => t.completedBy?._id === user._id) ? '#4caf50' : '#f44336'
                             }}>
-                              {user.name
-                                .split(' ')
+                              {user?.name
+                                ?.split(' ')
                                 .map((part, i) => i < 2 ? part.charAt(0) : '')
-                                .join('')}
+                                .join('') || '?'}
                             </Avatar>
                           </Tooltip>
                         ))}
@@ -872,10 +872,10 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                                   height: isMobile ? 20 : 24,
                                   fontSize: isMobile ? '0.65rem' : '0.75rem'
                                 }}>
-                                  {subtask.completedBy.name
-                                    .split(' ')
+                                  {subtask.completedBy?.name
+                                    ?.split(' ')
                                     .map((part, i) => i < 2 ? part.charAt(0) : '')
-                                    .join('')}
+                                    .join('') || '?'}
                                 </Avatar>
                               }
                               label={`${isMobile ? '' : 'Action by: '}${subtask.completedBy.name}`}

@@ -324,12 +324,12 @@ const WeeklyReasonTable = ({ tasks }) => {
 
   return (
     <Box sx={{ my: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexDirection: isMobile ? 'column' : 'row', gap: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, flexDirection: isMobile ? 'column' : 'row' }}>
         <Typography variant="h6" sx={{ color: '#c2c2c2', fontWeight: 'bold' }}>
           Weekly Reason Analysis
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', width: isMobile ? '100%' : 'auto', flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: 2, width: isMobile ? '100%' : 'auto', flexWrap: 'wrap' }}>
 
           <FormControlLabel
             control={
@@ -343,103 +343,106 @@ const WeeklyReasonTable = ({ tasks }) => {
             sx={{ color: '#fff', whiteSpace: 'nowrap' }}
           />
 
-          {!isCustomRange ? (
-            <FormControl sx={{ minWidth: 200, width: isMobile ? '100%' : 'auto' }} size="small">
-              <InputLabel sx={{ color: '#b3b3b3' }}>Select Week</InputLabel>
-              <Select
-                value={selectedWeek || ''}
-                onChange={(e) => setSelectedWeek(e.target.value)}
-                label="Select Week"
-                sx={{
-                  backgroundColor: '#2d2d2d',
-                  color: '#ffffff',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
-                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#555' },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
-                  '& .MuiSvgIcon-root': { color: '#b3b3b3' },
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      backgroundColor: '#2d2d2d',
-                      color: '#ffffff',
-                      '& .MuiMenuItem-root': {
-                        '&:hover': { backgroundColor: '#3d3d3d' },
-                        '&.Mui-selected': { backgroundColor: '#3d3d3d' },
-                      },
-                    },
-                  },
-                }}
-              >
-                {availableWeeks.map((week) => (
-                  <MenuItem key={week.key} value={week.key}>
-                    {week.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          ) : (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <TextField
-                type="date"
-                label="From"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                InputLabelProps={{ shrink: true, style: { color: '#b3b3b3' } }}
-                size="small"
-                sx={{
-                  input: { color: '#fff' },
-                  fieldset: { borderColor: '#555' },
-                  '& .MuiOutlinedInput-root': {
-                    '&:hover fieldset': { borderColor: '#777' },
-                    '&.Mui-focused fieldset': { borderColor: '#7b68ee' }
-                  }
-                }}
-              />
-              <TextField
-                type="date"
-                label="To"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                InputLabelProps={{ shrink: true, style: { color: '#b3b3b3' } }}
-                size="small"
-                sx={{
-                  input: { color: '#fff' },
-                  fieldset: { borderColor: '#555' },
-                  '& .MuiOutlinedInput-root': {
-                    '&:hover fieldset': { borderColor: '#777' },
-                    '&.Mui-focused fieldset': { borderColor: '#7b68ee' }
-                  }
-                }}
-              />
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ width: isMobile ? '100%' : 'auto', flexWrap: 'nowrap' }}
+          >
+            {!isCustomRange ? (
+              <FormControl sx={{ flex: 1, minWidth: isMobile ? 0 : 200 }} size="small">
+                <InputLabel sx={{ color: '#b3b3b3' }}>Select Week</InputLabel>
+                <Select
+                  value={selectedWeek || ''}
+                  onChange={(e) => setSelectedWeek(e.target.value)}
+                  label="Select Week"
+                  sx={{
+                    backgroundColor: '#2d2d2d',
+                    color: '#ffffff',
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#555' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
+                    '& .MuiSvgIcon-root': { color: '#b3b3b3' },
+                  }}
+                >
+                  {availableWeeks.map((week) => (
+                    <MenuItem key={week.key} value={week.key}>
+                      {week.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            ) : (
+              <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
+                <TextField
+                  type="date"
+                  label="From"
+                  fullWidth
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  InputLabelProps={{ shrink: true, style: { color: '#b3b3b3' } }}
+                  size="small"
+                  sx={{
+                    input: { color: '#fff', fontSize: isMobile ? '0.75rem' : 'inherit' },
+                    fieldset: { borderColor: '#555' },
+                    '& .MuiOutlinedInput-root': {
+                      '&:hover fieldset': { borderColor: '#777' },
+                      '&.Mui-focused fieldset': { borderColor: '#7b68ee' }
+                    }
+                  }}
+                />
+                <TextField
+                  type="date"
+                  label="To"
+                  fullWidth
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  InputLabelProps={{ shrink: true, style: { color: '#b3b3b3' } }}
+                  size="small"
+                  sx={{
+                    input: { color: '#fff', fontSize: isMobile ? '0.75rem' : 'inherit' },
+                    fieldset: { borderColor: '#555' },
+                    '& .MuiOutlinedInput-root': {
+                      '&:hover fieldset': { borderColor: '#777' },
+                      '&.Mui-focused fieldset': { borderColor: '#7b68ee' }
+                    }
+                  }}
+                />
+              </Box>
+            )}
+
+            <Stack direction="row" spacing={0.5}>
+              <Tooltip title="Export to Excel">
+                <IconButton
+                  onClick={exportToExcel}
+                  disabled={!rows.length}
+                  size="small"
+                  sx={{
+                    color: '#4caf50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+                    '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.15)' },
+                    '&.Mui-disabled': { color: '#666' }
+                  }}
+                >
+                  <MdFileDownload fontSize="20px" />
+                </IconButton>
+              </Tooltip>
+
+              <Tooltip title="View Weekly Trends">
+                <IconButton
+                  onClick={() => setTrendModalOpen(true)}
+                  size="small"
+                  sx={{
+                    color: '#7b68ee',
+                    backgroundColor: 'rgba(123, 104, 238, 0.05)',
+                    '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.15)' }
+                  }}
+                >
+                  <MdTrendingUp fontSize="20px" />
+                </IconButton>
+              </Tooltip>
             </Stack>
-          )}
-
-          <Tooltip title="Export to Excel">
-            <IconButton
-              onClick={exportToExcel}
-              disabled={!rows.length}
-              sx={{
-                color: '#4caf50',
-                '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' },
-                '&.Mui-disabled': { color: '#666' }
-              }}
-            >
-              <MdFileDownload fontSize="20px" />
-            </IconButton>
-          </Tooltip>
-
-          {/* <Tooltip title="View Weekly Trends">
-            <IconButton
-              onClick={() => setTrendModalOpen(true)}
-              sx={{
-                color: '#7b68ee',
-                '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.1)' }
-              }}
-            >
-              <MdTrendingUp fontSize="20px" />
-            </IconButton>
-          </Tooltip> */}
+          </Stack>
         </Box>
       </Box>
 

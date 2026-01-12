@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Autocomplete, TextField, CircularProgress } from "@mui/material";
+import { Autocomplete, TextField } from "@mui/material";
+import LoadingSpinner from '../common/LoadingSpinner';
 
 const UserList = ({ setAssignedTo, assignedTo, users, loading, error, label, filteredUsers = [] }) => {
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -21,7 +22,7 @@ const UserList = ({ setAssignedTo, assignedTo, users, loading, error, label, fil
     }
   }, [users, assignedTo]);
 
-  if (loading) return <CircularProgress />;
+  if (loading) return <LoadingSpinner variant="inline" />;
   if (error) return <p className="text-red-500">Error loading users: {error}</p>;
 
   // Filter users based on the filteredUsers prop

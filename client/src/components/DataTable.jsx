@@ -34,11 +34,17 @@ export const DataTable = ({ groupedData }) => {
     const npsValue = (current.Promoters || 0) - (current.Detractors || 0);
     const prevNpsValue = previous ? (previous.Promoters || 0) - (previous.Detractors || 0) : null;
 
-    const getTrendIcon = (currentValue, previousValue) => {
+    const getTrendIcon = (currentValue, previousValue, inverse = false) => {
       if (!previousValue && previousValue !== 0) return null;
       const diff = currentValue - previousValue;
-      if (diff > 0) return <TrendingUpIcon sx={{ fontSize: 16, color: '#10b981' }} />;
-      if (diff < 0) return <TrendingDownIcon sx={{ fontSize: 16, color: '#ef4444' }} />;
+
+      if (inverse) {
+        if (diff > 0) return <TrendingDownIcon sx={{ fontSize: 16, color: '#ef4444' }} />;
+        if (diff < 0) return <TrendingUpIcon sx={{ fontSize: 16, color: '#10b981' }} />;
+      } else {
+        if (diff > 0) return <TrendingUpIcon sx={{ fontSize: 16, color: '#10b981' }} />;
+        if (diff < 0) return <TrendingDownIcon sx={{ fontSize: 16, color: '#ef4444' }} />;
+      }
       return <TrendingFlatIcon sx={{ fontSize: 16, color: '#94a3b8' }} />;
     };
 
@@ -71,10 +77,10 @@ export const DataTable = ({ groupedData }) => {
       promotersTrend: previous ? getTrendIcon(current.Promoters, previous.Promoters) : null,
       detractors: current.Detractors || 0,
       detractorsChange: previous ? getChangeValue(current.Detractors, previous.Detractors) : '',
-      detractorsTrend: previous ? getTrendIcon(current.Detractors, previous.Detractors) : null,
+      detractorsTrend: previous ? getTrendIcon(current.Detractors, previous.Detractors, true) : null,
       neutrals: current.Neutrals || 0,
       neutralsChange: previous ? getChangeValue(current.Neutrals, previous.Neutrals) : '',
-      neutralsTrend: previous ? getTrendIcon(current.Neutrals, previous.Neutrals) : null,
+      neutralsTrend: previous ? getTrendIcon(current.Neutrals, previous.Neutrals, true) : null,
     };
   });
 

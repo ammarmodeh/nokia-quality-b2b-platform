@@ -12,15 +12,43 @@ import {
   Button,
   Box,
   Divider,
-  Chip
+  Chip,
+  ToggleButtonGroup,
+  ToggleButton,
+  FormControl,
+  Select,
+  MenuItem
 } from "@mui/material";
-import { DataGrid, GridToolbar } from '@mui/x-data-grid';
+import { DataGrid, GridToolbarContainer, GridToolbarExport, GridToolbarQuickFilter } from '@mui/x-data-grid';
 import * as XLSX from 'xlsx';
 import { getReasonViolations2 } from "../utils/helpers";
 import { RiFileExcel2Fill } from "react-icons/ri";
-import { MdClose, MdFileDownload } from 'react-icons/md';
-import { useState, useMemo, memo } from "react";
-import { useTheme } from '@mui/material';
+import { MdClose, MdFileDownload, MdTrendingUp, MdBarChart } from 'react-icons/md';
+import { useState, useMemo, useEffect, memo } from "react";
+import { useTheme, alpha } from '@mui/material';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Cell,
+  LabelList
+} from 'recharts';
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format } from 'date-fns';
+import {
+  filterTasksByWeek,
+  filterTasksByMonth,
+  filterTasksByDateRange,
+  getAvailableWeeks,
+  getAvailableMonths
+} from '../utils/dateFilterHelpers';
+import { getCustomWeekNumber } from '../utils/helpers';
+import api from "../api/api";
 
 // Reusable DetailRow component
 const DetailRow = ({ label, value }) => (
@@ -56,6 +84,16 @@ const DetailRow = ({ label, value }) => (
   </Box>
 );
 
+// Custom Toolbar Component
+function CustomToolbar() {
+  return (
+    <GridToolbarContainer sx={{ justifyContent: 'space-between', p: 1 }}>
+      <GridToolbarExport />
+      <GridToolbarQuickFilter />
+    </GridToolbarContainer>
+  );
+}
+
 export const AllReasonsTable = memo(({ tasks }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery('(max-width:503px)');
@@ -68,14 +106,80 @@ export const AllReasonsTable = memo(({ tasks }) => {
   const [selectedReason, setSelectedReason] = useState(null);
   const [reasonTasks, setReasonTasks] = useState([]);
 
-  // Get the total violations for each reason (updated to include tasks)
-  const reasonViolations = useMemo(() => getReasonViolations2(tasks), [tasks]);
+  // Filtering States
+  const currentYear = new Date().getFullYear();
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Calculate current week for default selection
+  const defaultWeek = useMemo(() => {
+    return getCustomWeekNumber(new Date(), currentYear, settings || {});
+  }, [settings, currentYear]);
+
+  const [filterType, setFilterType] = useState('week');
+  const [selectedPeriod, setSelectedPeriod] = useState(defaultWeek !== null && defaultWeek !== undefined ? String(defaultWeek) : '');
+
+  // Update selectedPeriod when defaultWeek becomes available
+  useEffect(() => {
+    if (defaultWeek && selectedPeriod === '') {
+      setSelectedPeriod(String(defaultWeek));
+    }
+  }, [defaultWeek, selectedPeriod]);
+
+  const [dateRange, setDateRange] = useState({ start: null, end: null });
+
+  // Available options
+  const weeks = useMemo(() => getAvailableWeeks(tasks, settings || {}), [tasks, settings]);
+  const months = useMemo(() => getAvailableMonths(tasks, settings || {}), [tasks, settings]);
+
+  // Filter Tasks
+  const filteredTasks = useMemo(() => {
+    let filtered = tasks;
+    const currentSettings = settings || { weekStartDay: 0, startWeekNumber: 1 };
+
+    if (filterType === 'all') {
+      filtered = tasks;
+    } else if (filterType === 'week' && selectedPeriod !== 'all') {
+      const weekNum = parseInt(selectedPeriod);
+      filtered = filterTasksByWeek(tasks, currentYear, weekNum, currentSettings);
+    } else if (filterType === 'month') {
+      const monthNum = selectedPeriod === 'all' && months.length > 0 ? months[0].month : parseInt(selectedPeriod);
+      filtered = filterTasksByMonth(tasks, currentYear, monthNum, currentSettings);
+    } else if (filterType === 'custom' && dateRange.start && dateRange.end) {
+      filtered = filterTasksByDateRange(tasks, dateRange.start, dateRange.end);
+    }
+
+    return filtered;
+  }, [tasks, filterType, selectedPeriod, dateRange, currentYear, settings, months]);
+
+
+  // Get the total violations for each reason (using filtered tasks)
+  const reasonViolations = useMemo(() => getReasonViolations2(filteredTasks), [filteredTasks]);
 
   // Sort the reasonViolations array in descending order based on total violations
   const sortedReasonViolations = useMemo(() =>
     [...reasonViolations].sort((a, b) => b.total - a.total),
     [reasonViolations]
   );
+
+  // Prepare Chart Data (Top 10)
+  const chartData = useMemo(() => {
+    return sortedReasonViolations.slice(0, 10).map(item => ({
+      name: item.reason,
+      Violations: item.total
+    }));
+  }, [sortedReasonViolations]);
 
   // Prepare rows for the DataGrid
   const rows = useMemo(() => sortedReasonViolations.map((violation, index) => ({
@@ -187,114 +291,284 @@ export const AllReasonsTable = memo(({ tasks }) => {
   };
 
   return (
-    <Stack justifyContent={"center"} sx={{ width: "100%" }}>
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{
-          marginBottom: "10px",
-          gap: 1,
-          flexWrap: "wrap",
-        }}
-      >
-        <Typography
-          variant="h6"
-          // fontWeight="bold"
-          sx={{
-            color: "#475569",
-            fontSize: isMobile ? "0.9rem" : "1rem",
-            fontWeight: "600"
-          }}
+    <Stack spacing={3} sx={{ width: "100%" }}>
+      {/* Filters Header */}
+      <Paper sx={{
+        p: 2,
+        borderRadius: "12px",
+        // backgroundColor: "rgba(255, 255, 255, 0.9)",
+        backdropFilter: "blur(10px)",
+        border: "1px solid rgba(226, 232, 240, 0.8)"
+      }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={2}
+          justifyContent="space-between"
+          alignItems={{ xs: 'stretch', md: 'center' }}
+          flexWrap="wrap"
         >
-          Reason Overview ( <span style={{ color: "#0ea5e9" }}>{netTotal}</span> )
-        </Typography>
-        <Tooltip title="Export to Excel">
-          <IconButton
-            onClick={exportToExcel}
-            size={isMobile ? "small" : "medium"}
+          <ToggleButtonGroup
+            value={filterType}
+            exclusive
+            onChange={(e, newVal) => newVal && setFilterType(newVal)}
+            size="small"
             sx={{
-              color: '#4caf50',
-              '&:hover': {
-                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+              display: 'flex',
+              overflowX: isMobile ? 'auto' : 'visible',
+              whiteSpace: 'nowrap',
+              width: isMobile ? '100% ' : 'auto',
+              '&::-webkit-scrollbar': { display: 'none' },
+              msOverflowStyle: 'none',
+              scrollbarWidth: 'none',
+              '& .MuiToggleButton-root': {
+                px: 3,
+                py: 1,
+                borderRadius: '8px !important',
+                border: '1px solid #e2e8f0',
+                mx: 0.5,
+                flexShrink: 0,
+                minWidth: isMobile ? 'max-content' : 'auto',
+                '&.Mui-selected': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  color: theme.palette.primary.main,
+                  fontWeight: 600,
+                  borderColor: theme.palette.primary.main,
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.2),
+                  }
+                }
               }
             }}
           >
-            <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
-          </IconButton>
-        </Tooltip>
-      </Stack>
-      <Paper sx={{
-        height: 400,
-        width: "100%",
-        // backgroundColor: "#ffffff",
-        borderRadius: "12px",
-        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-        overflow: "hidden"
-      }}>
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          disableVirtualization={true}
-          disableColumnResize
-          pageSizeOptions={[5, 10, 25]}
-          paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
-          slots={{ toolbar: GridToolbar }}
-          slotProps={{
-            toolbar: {
-              showQuickFilter: true,
-              quickFilterProps: { debounceMs: 500 },
-            },
-          }}
-          sx={{
-            border: 0,
-            color: "#cbd5e1", // Light gray for dark theme
-            fontFamily: "'Inter', sans-serif",
-            "& .MuiDataGrid-overlay": {
-              color: "#64748b",
-            },
-            "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#f8fafc",
-              color: "#475569",
-              fontSize: "0.75rem",
-              fontWeight: "600",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              borderBottom: "1px solid #e2e8f0",
-            },
-            "& .MuiDataGrid-columnHeader": {
-              backgroundColor: "#f8fafc",
-            },
-            "& .MuiDataGrid-cell": {
-              borderBottom: "1px solid #f1f5f9",
-            },
-            "& .MuiDataGrid-row": {
-              "&:hover": {
-                backgroundColor: "rgba(100, 116, 139, 0.08)",
-              },
-            },
-            "& .MuiDataGrid-footerContainer": {
-              borderTop: "1px solid #e2e8f0",
-              // backgroundColor: "#ffffff",
-              color: "#475569",
-            },
-            "& .MuiTablePagination-root": {
-              color: "#475569",
-            },
-            "& .MuiDataGrid-toolbarContainer": {
-              padding: "12px",
-              borderBottom: "1px solid #e2e8f0",
-              // backgroundColor: "#ffffff",
-              gap: 2,
-              "& .MuiButton-root": {
-                color: "#64748b",
-                fontSize: "0.80rem",
-              }
-            }
-          }}
-        />
+            <ToggleButton value="week">Week</ToggleButton>
+            <ToggleButton value="month">Month</ToggleButton>
+            <ToggleButton value="custom">Range</ToggleButton>
+            <ToggleButton value="all">All</ToggleButton>
+          </ToggleButtonGroup>
+
+          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+            {filterType === 'week' && (
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <Select
+                  value={selectedPeriod}
+                  onChange={(e) => setSelectedPeriod(e.target.value)}
+                  DisplayEmpty
+                  sx={{ borderRadius: '8px' }}
+                >
+                  <MenuItem value="" disabled>Select Week</MenuItem>
+                  {weeks.map(w => <MenuItem key={w.key} value={String(w.week)}>{w.label}</MenuItem>)}
+                </Select>
+              </FormControl>
+            )}
+
+            {filterType === 'month' && (
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <Select
+                  value={selectedPeriod}
+                  onChange={(e) => setSelectedPeriod(e.target.value)}
+                  DisplayEmpty
+                  sx={{ borderRadius: '8px' }}
+                >
+                  <MenuItem value="" disabled>Select Month</MenuItem>
+                  {months.map(m => <MenuItem key={m.key} value={String(m.month)}>{m.label}</MenuItem>)}
+                </Select>
+              </FormControl>
+            )}
+
+            {filterType === 'custom' && (
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <DatePicker
+                    label="Start Date"
+                    value={dateRange.start}
+                    onChange={(newValue) => setDateRange(prev => ({ ...prev, start: newValue }))}
+                    slotProps={{ textField: { size: 'small', sx: { width: 130, borderRadius: '8px' } } }}
+                  />
+                  <Box sx={{ color: 'text.secondary' }}>-</Box>
+                  <DatePicker
+                    label="End Date"
+                    value={dateRange.end}
+                    onChange={(newValue) => setDateRange(prev => ({ ...prev, end: newValue }))}
+                    slotProps={{ textField: { size: 'small', sx: { width: 130, borderRadius: '8px' } } }}
+                  />
+                </Stack>
+              </LocalizationProvider>
+            )}
+          </Box>
+        </Stack>
       </Paper>
+
+      {/* Main Content Stack (Table + Chart) */}
+      <Stack spacing={3}>
+        <Paper sx={{
+          height: 400,
+          width: "100%",
+          borderRadius: "12px",
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+          border: "1px solid #e2e8f0",
+          overflow: "hidden"
+        }}>
+          {/* Header inside Paper */}
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{
+              padding: "16px 20px",
+              borderBottom: "1px solid #e2e8f0"
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                color: "#475569",
+                fontSize: isMobile ? "0.9rem" : "1rem",
+                fontWeight: "600",
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}
+            >
+              <MdBarChart className="text-blue-500" size={24} />
+              Reason Overview
+              <Chip
+                label={netTotal}
+                size="small"
+                sx={{
+                  ml: 1,
+                  bgcolor: alpha('#3b82f6', 0.1),
+                  color: '#3b82f6',
+                  fontWeight: 'bold'
+                }}
+              />
+            </Typography>
+            <Tooltip title="Export to Excel">
+              <IconButton
+                onClick={exportToExcel}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  color: '#10b981',
+                  bgcolor: alpha('#10b981', 0.1),
+                  '&:hover': {
+                    bgcolor: alpha('#10b981', 0.2),
+                  }
+                }}
+              >
+                <RiFileExcel2Fill />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+
+          <DataGrid
+            rows={rows}
+            columns={columns}
+            disableVirtualization={true}
+            disableColumnResize
+            pageSizeOptions={[5, 10, 25]}
+            paginationModel={paginationModel}
+            onPaginationModelChange={setPaginationModel}
+            slots={{ toolbar: CustomToolbar }}
+            slotProps={{
+              toolbar: {
+                showQuickFilter: true,
+                quickFilterProps: { debounceMs: 500 },
+              },
+            }}
+            sx={{
+              border: 0,
+              color: "#cbd5e1", // Light gray for dark theme
+              fontFamily: "'Inter', sans-serif",
+              "& .MuiDataGrid-overlay": {
+                color: "#64748b",
+              },
+              "& .MuiDataGrid-columnHeaders": {
+                backgroundColor: "#f8fafc",
+                color: "#475569",
+                fontSize: "0.75rem",
+                fontWeight: "600",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                borderBottom: "1px solid #e2e8f0",
+              },
+              "& .MuiDataGrid-columnHeader": {
+                backgroundColor: "#f8fafc",
+              },
+              "& .MuiDataGrid-cell": {
+                borderBottom: "1px solid #f1f5f9",
+              },
+              "& .MuiDataGrid-row": {
+                "&:hover": {
+                  backgroundColor: "rgba(100, 116, 139, 0.08)",
+                },
+              },
+              "& .MuiDataGrid-footerContainer": {
+                borderTop: "1px solid #e2e8f0",
+                // backgroundColor: "#ffffff",
+                color: "#475569",
+              },
+              "& .MuiTablePagination-root": {
+                color: "#475569",
+              },
+              "& .MuiDataGrid-toolbarContainer": {
+                padding: "12px",
+                borderBottom: "1px solid #e2e8f0",
+                gap: 2,
+                "& .MuiButton-root": {
+                  color: "#64748b !important",
+                  fontSize: "0.80rem",
+                  textTransform: 'none',
+                }
+              }
+            }}
+          />
+        </Paper>
+
+        {/* Chart Section */}
+        {sortedReasonViolations.length > 0 && (
+          <Paper sx={{
+            p: 3,
+            borderRadius: "12px",
+            height: 400,
+            // bgcolor: 'white',
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+          }}>
+            <Stack direction="row" alignItems="center" spacing={1} mb={3}>
+              <MdBarChart size={24} color="#3b82f6" />
+              <Typography variant="h6" fontWeight="700" color="#475569">
+                Top Reasons Analysis
+              </Typography>
+            </Stack>
+            <ResponsiveContainer width="100%" height="90%">
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                <XAxis
+                  dataKey="name"
+                  type="category"
+                  tick={{ fontSize: isMobile ? 9 : 11, fill: '#64748b' }}
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis
+                  type="number"
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                />
+                <RechartsTooltip
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  cursor={{ fill: 'rgba(100, 116, 139, 0.1)' }}
+                />
+                <Bar dataKey="Violations" radius={[4, 4, 0, 0]} barSize={isMobile ? 15 : 30}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]} />
+                  ))}
+                  <LabelList dataKey="Violations" position="top" style={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
+        )}
+      </Stack>
 
       {/* Dialog to show reason tasks */}
       <Dialog

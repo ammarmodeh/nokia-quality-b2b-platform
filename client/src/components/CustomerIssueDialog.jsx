@@ -17,11 +17,13 @@ import {
   IconButton,
   Grid,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  Tooltip
 } from "@mui/material";
 import { useSelector } from "react-redux";
 import ManagedAutocomplete from "./common/ManagedAutocomplete";
-import { MdAdd, MdDelete } from "react-icons/md";
+import { MdAdd, MdDelete, MdHistory, MdTerminal } from "react-icons/md";
+import CustomerIssueLogTerminal from "./CustomerIssueLogTerminal";
 
 const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   const theme = useTheme();
@@ -48,7 +50,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     customerContact: '',
     assigneeNote: '',
     resolvedBy: '',
-    resolveDate: new Date().toISOString().split('T')[0],
+    resolveDate: '',
     closedBy: "",
     closedAt: "",
     dispatched: "no",
@@ -57,6 +59,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   };
 
   const [formData, setFormData] = useState(initialFormState);
+  const [openLogTerminal, setOpenLogTerminal] = useState(false);
+  const [logCount, setLogCount] = useState(0);
 
   // Persistence & Edit Logic
   useEffect(() => {
@@ -98,13 +102,57 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     }
   }, [formData, open, issue]);
 
+  useEffect(() => {
+    const checkLogs = async () => {
+      if (formData.slid && formData.slid.length > 5) {
+        try {
+          const res = await api.get('/customer-issues-notifications/logs', {
+            params: { slid: formData.slid, limit: 1 },
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+          });
+          setLogCount(res.data.data.length);
+        } catch (err) {
+          console.error("Log check failed", err);
+        }
+      } else {
+        setLogCount(0);
+      }
+    };
+    checkLogs();
+  }, [formData.slid]);
+
   const handleChange = (e) => {
     if (!isAdmin) return;
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+
+    setFormData(prev => {
+      let updated = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      };
+
+      // Reset resolution/closure fields if ticket is toggled back to "Open"
+      if (name === 'solved' && value === 'no') {
+        updated = {
+          ...updated,
+          resolvedBy: '',
+          resolveDate: '',
+          resolutionDetails: '',
+          closedBy: '',
+          closedAt: ''
+        };
+      }
+
+      // Reset dispatch date if dispatched is set to "no"
+      if (name === 'dispatched' && value === 'no') {
+        updated = {
+          ...updated,
+          dispatchedAt: ''
+        };
+      }
+
+      return updated;
+    });
   };
 
   // Issue Management
@@ -289,9 +337,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     <Dialog
       open={open}
       onClose={handleClose}
-      maxWidth="md"
-      fullWidth
-      fullScreen={fullScreen}
+      fullScreen
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#2d2d2d',
@@ -334,16 +380,54 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               sx={{ ...textFieldStyles, mb: 2 }}
             />
 
-            <TextField
-              fullWidth
-              label="SLID (Subscription Number)"
-              name="slid"
-              value={formData.slid || ''}
-              onChange={handleChange}
-              required
-              disabled={!isAdmin}
-              sx={{ ...textFieldStyles, mb: 2 }}
-            />
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 2 }}>
+              <TextField
+                fullWidth
+                label="SLID (Subscription Number)"
+                name="slid"
+                value={formData.slid || ''}
+                onChange={handleChange}
+                required
+                disabled={!isAdmin}
+                sx={{ ...textFieldStyles }}
+              />
+              <Tooltip title="Check History for this SLID">
+                <IconButton
+                  onClick={() => setOpenLogTerminal(true)}
+                  disabled={!formData.slid}
+                  sx={{
+                    mt: 1,
+                    backgroundColor: 'rgba(123, 104, 238, 0.1)',
+                    color: '#00ff41',
+                    '&:hover': { backgroundColor: 'rgba(0, 255, 65, 0.2)' }
+                  }}
+                >
+                  <MdTerminal />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            {logCount > 0 && (
+              <Box
+                onClick={() => setOpenLogTerminal(true)}
+                sx={{
+                  backgroundColor: 'rgba(0, 255, 65, 0.05)',
+                  p: 1,
+                  borderRadius: 1,
+                  mb: 2,
+                  border: '1px solid #00ff41',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
+                <MdTerminal color="#00ff41" />
+                <Typography variant="caption" sx={{ color: '#00ff41', fontWeight: 'bold' }}>
+                  SYSTEM LOG MATCH FOUND: {logCount} previous entry detected. Click to audit before proceeding.
+                </Typography>
+              </Box>
+            )}
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
               <FormControlLabel
@@ -435,13 +519,14 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               />
             </Box>
 
-            <TextField
-              fullWidth
+            <ManagedAutocomplete
+              category="REPORTERS"
               label="Reporter Name"
-              name="reporter"
-              value={formData.reporter}
-              onChange={handleChange}
+              fullWidth
               required
+              freeSolo
+              value={formData.reporter}
+              onChange={(val) => handleChange({ target: { name: 'reporter', value: val } })}
               disabled={!isAdmin}
               sx={{ ...textFieldStyles, mb: 2 }}
             />
@@ -569,93 +654,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             </Button>
           </Box>
 
-          {/* Resolution Details Block */}
-          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 1 }}>
-            <FormControl fullWidth required sx={formControlStyles}>
-              <InputLabel sx={inputLabelStyles}>Status</InputLabel>
-              <Select
-                name="solved"
-                value={formData.solved}
-                label="Status"
-                onChange={handleChange}
-                disabled={!isAdmin}
-                sx={selectStyles}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      backgroundColor: '#2d2d2d',
-                      color: '#ffffff',
-                      '& .MuiMenuItem-root': menuItemStyles,
-                    },
-                  },
-                }}
-              >
-                <MenuItem value="yes" sx={menuItemStyles}>Closed</MenuItem>
-                <MenuItem value="no" sx={menuItemStyles}>Open</MenuItem>
-              </Select>
-            </FormControl>
-
-            {formData.solved === 'yes' && (
-              <>
-                <FormControl fullWidth sx={{ ...formControlStyles, mb: 2 }}>
-                  <InputLabel sx={inputLabelStyles}>Resolved By</InputLabel>
-                  <Select
-                    name="resolvedBy"
-                    value={formData.resolvedBy}
-                    label="Resolved By"
-                    onChange={handleChange}
-                    disabled={!isAdmin}
-                    sx={selectStyles}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          backgroundColor: '#2d2d2d',
-                          color: '#ffffff',
-                          '& .MuiMenuItem-root': menuItemStyles,
-                        },
-                      },
-                    }}
-                  >
-                    <MenuItem value="" sx={menuItemStyles}>Not Specified</MenuItem>
-                    <MenuItem value="Phone" sx={menuItemStyles}>Phone</MenuItem>
-                    <MenuItem value="Visit" sx={menuItemStyles}>Visit</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <TextField
-                  fullWidth
-                  label="Resolve Date"
-                  type="date"
-                  name="resolveDate"
-                  value={formData.resolveDate}
-                  onChange={handleChange}
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                  disabled={!isAdmin}
-                  sx={{ ...textFieldStyles, mb: 2 }}
-                />
-
-
-
-                <TextField
-                  fullWidth
-                  label="Resolution Details"
-                  name="resolutionDetails"
-                  value={formData.resolutionDetails}
-                  onChange={handleChange}
-                  multiline
-                  rows={3}
-                  dir="rtl" // RTL Support
-                  // helperText="Explain the resolution details here."
-                  disabled={!isAdmin}
-                  sx={textFieldStyles}
-                />
-              </>
-            )}
-          </Box>
-
-          {/* Supervisor / Closure Block */}
+          {/* Closure Block */}
           <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 1 }}>
             <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Closure</Typography>
 
@@ -705,20 +704,93 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               value={formData.closedBy || ''}
               onChange={(val) => handleChange({ target: { name: 'closedBy', value: val } })}
               disabled={!isAdmin}
-              sx={{ ...textFieldStyles, mb: 2 }}
-            />
-
-            <TextField
-              fullWidth
-              label="Close Date"
-              type="date"
-              name="closedAt"
-              value={formData.closedAt || ''}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-              disabled={!isAdmin}
               sx={{ ...textFieldStyles }}
             />
+          </Box>
+
+          {/* Status Block */}
+          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2, mb: 1 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Status</Typography>
+
+            <FormControl fullWidth required sx={{ ...formControlStyles, mb: 2 }}>
+              <InputLabel sx={inputLabelStyles}>Status</InputLabel>
+              <Select
+                name="solved"
+                value={formData.solved}
+                label="Status"
+                onChange={handleChange}
+                disabled={!isAdmin}
+                sx={selectStyles}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: '#2d2d2d',
+                      color: '#ffffff',
+                      '& .MuiMenuItem-root': menuItemStyles,
+                    },
+                  },
+                }}
+              >
+                <MenuItem value="yes" sx={menuItemStyles}>Closed</MenuItem>
+                <MenuItem value="no" sx={menuItemStyles}>Open</MenuItem>
+              </Select>
+            </FormControl>
+
+            {formData.solved === 'yes' && (
+              <>
+                <FormControl fullWidth sx={{ ...formControlStyles, mb: 2 }}>
+                  <InputLabel sx={inputLabelStyles}>Resolution Method</InputLabel>
+                  <Select
+                    name="resolvedBy"
+                    value={formData.resolvedBy}
+                    label="Resolution Method"
+                    onChange={handleChange}
+                    disabled={!isAdmin}
+                    sx={selectStyles}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          backgroundColor: '#2d2d2d',
+                          color: '#ffffff',
+                          '& .MuiMenuItem-root': menuItemStyles,
+                        },
+                      },
+                    }}
+                  >
+                    <MenuItem value="" sx={menuItemStyles}>Not Specified</MenuItem>
+                    <MenuItem value="Phone" sx={menuItemStyles}>Phone</MenuItem>
+                    <MenuItem value="Visit" sx={menuItemStyles}>Visit</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  fullWidth
+                  label="Resolution Details"
+                  name="resolutionDetails"
+                  value={formData.resolutionDetails}
+                  onChange={handleChange}
+                  multiline
+                  rows={3}
+                  dir="rtl"
+                  disabled={!isAdmin}
+                  sx={{ ...textFieldStyles, mb: 2 }}
+                />
+              </>
+            )}
+
+            {formData.solved === 'yes' && (
+              <TextField
+                fullWidth
+                label="Close Date"
+                type="date"
+                name="closedAt"
+                value={formData.closedAt || ''}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                disabled={!isAdmin}
+                sx={{ ...textFieldStyles }}
+              />
+            )}
           </Box>
         </Box>
       </DialogContent>
@@ -753,6 +825,11 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           </Button>
         </Box>
       </DialogActions>
+      <CustomerIssueLogTerminal
+        open={openLogTerminal}
+        onClose={() => setOpenLogTerminal(false)}
+        slidFilter={formData.slid}
+      />
     </Dialog>
   );
 };

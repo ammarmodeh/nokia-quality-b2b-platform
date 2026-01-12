@@ -5,7 +5,11 @@ import {
   Stack,
   Typography,
   InputAdornment,
-  Chip
+  Chip,
+  ToggleButtonGroup,
+  ToggleButton,
+  Box,
+  Collapse
 } from "@mui/material";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { MdInfo, MdSearch } from "react-icons/md";
@@ -15,13 +19,16 @@ const SearchAndExport = ({
   searchText,
   setSearchText,
   exportToExcel,
-  onViolationInfoClick,
   tasks = [],
   fieldTeams = [],
   teamDetractorLimit = 0,
   teamNeutralLimit = 0,
   totalGlobalSamples = 0,
-  calculationBreakdown = null
+  calculationBreakdown = null,
+  statusFilter = 'all',
+  setStatusFilter,
+  showLimitsInfo,
+  setShowLimitsInfo
 }) => {
   const isMobile = useMediaQuery('(max-width:503px)');
 
@@ -127,7 +134,7 @@ const SearchAndExport = ({
     };
   };
 
-  const violationStats = calculateViolationStats();
+  // const violationStats = calculateViolationStats();
 
   return (
     <Stack
@@ -151,11 +158,11 @@ const SearchAndExport = ({
           }}
         >
           Team Violation Tracker
-          <Tooltip title="Learn how violations are evaluated" arrow>
+          <Tooltip title={showLimitsInfo ? "Hide limit details" : "Show limit details"} arrow>
             <IconButton
-              onClick={onViolationInfoClick}
+              onClick={() => setShowLimitsInfo(!showLimitsInfo)}
               size="medium"
-              sx={{ color: '#ffffff' }}
+              sx={{ color: showLimitsInfo ? '#7b68ee' : '#ffffff' }}
             >
               <MdInfo />
             </IconButton>
@@ -163,96 +170,147 @@ const SearchAndExport = ({
         </Typography>
 
         <Stack
-          direction={"row"}
-          gap={1}
-          alignItems={isMobile ? "flex-start" : "center"}
-          width={isMobile ? "100%" : "auto"}
-          justifyContent={isMobile ? "space-between" : "flex-end"}
+          direction="column"
+          spacing={2}
+          alignItems="center"
+          sx={{ width: isMobile ? "100%" : "auto" }}
         >
-          <TextField
-            variant="outlined"
-            // size="small"
-            placeholder="Search teams, violations, status..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            width={isMobile ? "auto" : "auto"}
+          <ToggleButtonGroup
+            value={statusFilter}
+            exclusive
+            onChange={(e, val) => val && setStatusFilter(val)}
+            size="small"
             sx={{
-              backgroundColor: '#2d2d2d',
-              borderRadius: '4px',
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': { borderColor: '#3d3d3d' },
-                '&:hover fieldset': { borderColor: '#555' },
-                '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
-              },
-              '& .MuiInputBase-input': {
-                color: '#ffffff',
-                fontSize: '0.875rem',
-                padding: '8.5px 14px',
-              },
-              minWidth: isMobile ? undefined : '400px',
-              flexGrow: isMobile ? 1 : undefined
+              backgroundColor: '#1a1a1a',
+              borderRadius: '8px',
+              display: 'flex',
+              flexDirection: 'row',
+              overflowX: 'auto',
+              whiteSpace: 'nowrap',
+              width: '100%',
+              maxWidth: isMobile ? 'calc(100vw - 40px)' : 'auto', // Ensure it doesn't push parent wide
+              '&::-webkit-scrollbar': { height: '3px' },
+              '&::-webkit-scrollbar-thumb': { backgroundColor: '#333', borderRadius: '3px' },
+              '& .MuiToggleButton-root': {
+                color: '#888',
+                border: '1px solid #333',
+                px: 2,
+                py: 0.5,
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                flexShrink: 0,
+                minWidth: 'max-content',
+                '&.Mui-selected': {
+                  backgroundColor: 'rgba(123, 104, 238, 0.15)',
+                  color: '#7b68ee',
+                  borderColor: '#7b68ee',
+                  '&:hover': {
+                    backgroundColor: 'rgba(123, 104, 238, 0.25)',
+                  }
+                }
+              }
             }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <MdSearch style={{ color: '#b3b3b3' }} />
-                </InputAdornment>
-              ),
-            }}
-          />
+          >
+            <ToggleButton value="all">Show All</ToggleButton>
+            <ToggleButton value="detractorFail">Detractor Fail</ToggleButton>
+            <ToggleButton value="neutralFail">Neutral Fail</ToggleButton>
+            <ToggleButton value="bothFail">Detractor + Neutral Fail</ToggleButton>
+          </ToggleButtonGroup>
 
-          <Tooltip title="Export to Excel">
-            <IconButton
-              onClick={exportToExcel}
-              size={isMobile ? "small" : "medium"}
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ width: '100%', alignItems: 'center' }}
+          >
+            <TextField
+              variant="outlined"
+              placeholder="Search teams..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              fullWidth
               sx={{
-                color: '#4caf50',
-                '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' },
-
+                backgroundColor: '#1e1e1e',
+                borderRadius: '8px',
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': { borderColor: '#333' },
+                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                },
+                '& .MuiInputBase-input': {
+                  color: '#fff',
+                  fontSize: '0.875rem',
+                  padding: '8px 14px',
+                },
               }}
-            >
-              <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
-            </IconButton>
-          </Tooltip>
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <MdSearch style={{ color: '#666' }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <Tooltip title="Export to Excel">
+              <IconButton
+                onClick={exportToExcel}
+                sx={{
+                  backgroundColor: '#1e1e1e',
+                  border: '1px solid #333',
+                  color: '#4caf50',
+                  '&:hover': {
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    borderColor: '#4caf50',
+                  }
+                }}
+              >
+                <RiFileExcel2Fill />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         </Stack>
       </Stack>
 
       <Stack direction={`${isMobile ? "column" : "row"}`} alignItems="center" justifyContent={"space-between"} gap={2} width={"100%"} sx={{ mt: 2 }}>
         {totalGlobalSamples > 0 && calculationBreakdown && (
-          <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '4px', p: 1, flexDirection: 'column' }}>
-            <Typography variant="caption" sx={{ color: '#5b5b5b', fontWeight: 600 }}>
-              📊 Monthly Per-Team Limits (Based on Yearly Calculation)
-            </Typography>
-            <Stack direction="row" gap={2} flexWrap="wrap">
-              <Chip
-                label={`Allow Max ${calculationBreakdown.monthlyDetractorPerTeam} Detractors/Team/Month (≤9%)`}
-                size="small"
-                sx={{
-                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                  color: '#f44336',
-                  fontSize: '0.75rem',
-                  border: '1px solid rgba(244, 67, 54, 0.3)'
-                }}
-              />
-              <Chip
-                label={`Allow Max ${calculationBreakdown.monthlyNeutralPerTeam} Neutrals/Team/Month (≤16%)`}
-                size="small"
-                sx={{
-                  backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                  color: '#ff9800',
-                  fontSize: '0.75rem',
-                  border: '1px solid rgba(255, 152, 0, 0.3)'
-                }}
-              />
+          <Collapse in={showLimitsInfo} sx={{ width: '100%' }}>
+            <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '8px', p: 2, flexDirection: 'column', border: '1px solid #333' }}>
+              <Typography variant="caption" sx={{ color: '#5b5b5b', fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                📊 Monthly Per-Team Limits (Based on Yearly Calculation)
+              </Typography>
+              <Stack direction="row" gap={2} flexWrap="wrap">
+                <Chip
+                  label={`Allow Max ${calculationBreakdown.monthlyDetractorPerTeam} Detractors/Team/Month (≤9%)`}
+                  size="small"
+                  sx={{
+                    backgroundColor: 'rgba(244, 67, 54, 0.05)',
+                    color: '#f44336',
+                    fontSize: '0.75rem',
+                    border: '1px solid rgba(244, 67, 54, 0.2)',
+                    fontWeight: 600
+                  }}
+                />
+                <Chip
+                  label={`Allow Max ${calculationBreakdown.monthlyNeutralPerTeam} Neutrals/Team/Month (≤16%)`}
+                  size="small"
+                  sx={{
+                    backgroundColor: 'rgba(255, 152, 0, 0.05)',
+                    color: '#ff9800',
+                    fontSize: '0.75rem',
+                    border: '1px solid rgba(255, 152, 0, 0.2)',
+                    fontWeight: 600
+                  }}
+                />
+              </Stack>
+              <Typography variant="caption" sx={{ color: '#7b7b7b', fontSize: '0.65rem', mt: 1.5, fontFamily: 'monospace', opacity: 0.8 }}>
+                📐 Calculation: Yearly Total ({calculationBreakdown.yearlyTotal}) × Threshold (9% or 16%) ÷ Teams ({calculationBreakdown.activeTeams}) ÷ 12 months
+                <br />
+                Detractors: {calculationBreakdown.yearlyTotal} × 0.09 = {calculationBreakdown.yearlyDetractorLimit} → ÷{calculationBreakdown.activeTeams} = {calculationBreakdown.yearlyDetractorPerTeam}/year → ÷12 = {calculationBreakdown.monthlyDetractorPerTeam}/month
+                <br />
+                Neutrals: {calculationBreakdown.yearlyTotal} × 0.16 = {calculationBreakdown.yearlyNeutralLimit} → ÷{calculationBreakdown.activeTeams} = {calculationBreakdown.yearlyNeutralPerTeam}/year → ÷12 = {calculationBreakdown.monthlyNeutralPerTeam}/month
+              </Typography>
             </Stack>
-            <Typography variant="caption" sx={{ color: '#7b7b7b', fontSize: '0.65rem', mt: 0.5, fontFamily: 'monospace' }}>
-              📐 Calculation: Yearly Total ({calculationBreakdown.yearlyTotal}) × Threshold (9% or 16%) ÷ Teams ({calculationBreakdown.activeTeams}) ÷ 12 months
-              <br />
-              Detractors: {calculationBreakdown.yearlyTotal} × 0.09 = {calculationBreakdown.yearlyDetractorLimit} → ÷{calculationBreakdown.activeTeams} = {calculationBreakdown.yearlyDetractorPerTeam}/year → ÷12 = {calculationBreakdown.monthlyDetractorPerTeam}/month
-              <br />
-              Neutrals: {calculationBreakdown.yearlyTotal} × 0.16 = {calculationBreakdown.yearlyNeutralLimit} → ÷{calculationBreakdown.activeTeams} = {calculationBreakdown.yearlyNeutralPerTeam}/year → ÷12 = {calculationBreakdown.monthlyNeutralPerTeam}/month
-            </Typography>
-          </Stack>
+          </Collapse>
         )}
 
         {tasks.length > 0 && (

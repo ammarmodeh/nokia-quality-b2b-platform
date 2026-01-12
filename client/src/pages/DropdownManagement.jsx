@@ -43,6 +43,68 @@ const ItemTypes = {
   OPTION: 'option',
 };
 
+const READ_ONLY_CATEGORIES = ['FIELD_TEAMS', 'SUPERVISORS'];
+
+// Organized Groups
+const FORM_GROUPS = [
+  {
+    title: "1. Core Task Flow",
+    categories: {
+      TASK_CATEGORIES: "Task Categories",
+      PRIORITY: "Task Priorities",
+      TEAM_COMPANY: "Subcon Providers",
+      VALIDATION_STATUS: "Field Validation Status",
+      FIELD_TEAMS: "Field Teams / Techs (Dynamic)",
+      SUPERVISORS: "Conducting Supervisors (Dynamic)",
+    }
+  },
+  {
+    title: "2. Assessment & Locations",
+    categories: {
+      SESSION_TYPE: "Session Classifications",
+      EVALUATION_SCORE: "Performance Scores",
+      GOVERNORATES: "Governorates / Locations",
+      RESPONSIBILITY: "Action Responsibilities",
+    }
+  },
+  {
+    title: "3. CIN - Engagement Hub",
+    categories: {
+      CUSTOMER_TYPE: "Client Classifications",
+      CONTACT_METHOD: "Customer Contact Channels",
+      REPORTERS: "Incident Reporters",
+      CIN_SUPERVISORS: "CIN Resolution Supervising",
+      ISSUE_FROM_MAIN: "Incident Source (Main)",
+      ISSUE_FROM_SUB: "Incident Source (Sub)",
+    }
+  },
+  {
+    title: "4. CIN - Technical Analysis",
+    categories: {
+      ISSUE_CATEGORY: "Issue Category (L1)",
+      ISSUE_SUB_CATEGORY: "Issue Sub-Category (L2)",
+    }
+  },
+  {
+    title: "5. Technical Hardware Specs",
+    categories: {
+      ONT_TYPE: "ONT Hardware Models",
+      EXTENDER_TYPE: "Extender Variants",
+    }
+  },
+  {
+    title: "6. Root Cause Deep Dive",
+    categories: {
+      REASON: "Analysis Reason (L1)",
+      REASON_SUB: "Sub-Reason Analysis (L2)",
+      ROOT_CAUSE: "Final Root Cause (L3)",
+    }
+  }
+];
+
+// Flatten for easy lookup
+const CATEGORY_MAP = FORM_GROUPS.reduce((acc, group) => ({ ...acc, ...group.categories }), {});
+
 // Draggable Row Component
 const DraggableRow = ({ option, index, moveRow, handleOpenDialog, handleDelete, colors, activeTab }) => {
   const ref = useRef(null);
@@ -112,68 +174,31 @@ const DraggableRow = ({ option, index, moveRow, handleOpenDialog, handleDelete, 
         <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.parentValue}</TableCell>
       )}
       <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.border}` }}>
-        <Tooltip title="Edit">
-          <IconButton onClick={() => handleOpenDialog(option)} sx={{ color: colors.primary }}>
-            <EditIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Delete">
-          <IconButton onClick={() => handleDelete(option._id)} sx={{ color: colors.error }}>
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {!READ_ONLY_CATEGORIES.includes(activeTab) ? (
+          <>
+            <Tooltip title="Edit">
+              <IconButton onClick={() => handleOpenDialog(option)} sx={{ color: colors.primary }}>
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Delete">
+              <IconButton onClick={() => handleDelete(option._id)} sx={{ color: colors.error }}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </>
+        ) : (
+          <Typography variant="caption" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>
+            System Managed
+          </Typography>
+        )}
       </TableCell>
     </TableRow>
   );
 };
 
-// Organized Groups
-const FORM_GROUPS = [
-  {
-    title: "Task Form",
-    categories: {
-      PRIORITY: "Priorities",
-      TASK_CATEGORIES: "Categories",
-      TEAM_COMPANY: "Subcon",
-    }
-  },
-  {
-    title: "Field Team Form",
-    categories: {
-      GOVERNORATES: "Governorates",
-      SUPERVISORS: "Supervisors (Conducted By)",
-      EVALUATION_SCORE: "Evaluation Scores",
-    }
-  },
-  {
-    title: "Customer Issue Notification Form",
-    categories: {
-      CUSTOMER_TYPE: "Customer Types",
-      CONTACT_METHOD: "Contact Methods",
-      CIN_SUPERVISORS: "Closed By (Supervisors)",
-      VALIDATION_STATUS: "Validation Statuses",
-      ONT_TYPE: "ONT Types",
-      EXTENDER_TYPE: "Extender Types",
-      SESSION_TYPE: "Session Types",
-    }
-  },
-  {
-    title: "Issue Analysis & Cause",
-    categories: {
-      ISSUE_CATEGORY: "Issue Categories (Level 1)",
-      ISSUE_SUB_CATEGORY: "Issue Sub Categories (Level 2)",
-      RESPONSIBILITY: "Responsibilities",
-      REASON: "Reasons (Level 1)",
-      REASON_SUB: "Sub Reasons (Level 2)",
-      ROOT_CAUSE: "Root Causes (Level 3)",
-      ISSUE_FROM_MAIN: "From Main (Issues)",
-      ISSUE_FROM_SUB: "From Sub (Issues)",
-    }
-  }
-];
+// Empty placeholder for safety since we moved it up
 
-// Flatten for easy lookup
-const CATEGORY_MAP = FORM_GROUPS.reduce((acc, group) => ({ ...acc, ...group.categories }), {});
 
 
 const DropdownManagement = () => {
@@ -376,28 +401,36 @@ const DropdownManagement = () => {
                   {/* Render active content only if this group contains the active tab */}
                   {hasActiveTab && (
                     <Box sx={{ p: 2 }}>
-                      <Stack direction="row" justifyContent="flex-end" spacing={2} mb={2}>
-                        <Button
-                          variant="outlined"
-                          startIcon={<UpdateIcon />}
-                          onClick={saveOrder}
-                          sx={{
-                            borderColor: colors.border,
-                            color: colors.textSecondary,
-                            '&:hover': { borderColor: colors.primary, color: colors.primary }
-                          }}
-                        >
-                          Save Order
-                        </Button>
-                        <Button
-                          variant="contained"
-                          startIcon={<AddIcon />}
-                          onClick={() => handleOpenDialog()}
-                          sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
-                        >
-                          Add New Option
-                        </Button>
-                      </Stack>
+                      {READ_ONLY_CATEGORIES.includes(activeTab) ? (
+                        <Box sx={{ p: 2, mb: 2, bgcolor: 'rgba(123, 104, 238, 0.05)', borderRadius: 1, border: `1px dashed ${colors.primary}` }}>
+                          <Typography variant="body2" sx={{ color: colors.primary }}>
+                            NOTICE: This category is dynamically populated from the {activeTab === 'FIELD_TEAMS' ? 'Operational Units' : 'User Management'} section. Changes must be made there.
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Stack direction="row" justifyContent="flex-end" spacing={2} mb={2}>
+                          <Button
+                            variant="outlined"
+                            startIcon={<UpdateIcon />}
+                            onClick={saveOrder}
+                            sx={{
+                              borderColor: colors.border,
+                              color: colors.textSecondary,
+                              '&:hover': { borderColor: colors.primary, color: colors.primary }
+                            }}
+                          >
+                            Save Order
+                          </Button>
+                          <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            onClick={() => handleOpenDialog()}
+                            sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
+                          >
+                            Add New Option
+                          </Button>
+                        </Stack>
+                      )}
 
                       <TableContainer sx={{ maxHeight: '50vh' }}>
                         <Table stickyHeader size="small">

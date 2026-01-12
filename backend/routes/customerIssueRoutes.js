@@ -1,11 +1,14 @@
 import express from 'express';
 const router = express.Router();
-import { createIssue, deleteIssue, getAllIssues, getIssueById, updateIssue } from '../controllers/customerIssueController.js';
+import { createIssue, deleteIssue, getAllIssues, getIssueById, updateIssue, getIssueLogs } from '../controllers/customerIssueController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 
 // Protect all routes with authentication
 router.use(protect);
+
+// Get logs for customer issues
+router.get('/logs', getIssueLogs);
 
 // Create a new customer issue
 router.post('/', createIssue);

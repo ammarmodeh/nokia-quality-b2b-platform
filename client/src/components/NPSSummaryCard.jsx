@@ -129,10 +129,11 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
     const detractors = filteredTasks.filter(t => t.evaluationScore >= 1 && t.evaluationScore <= 6).length;
     const neutrals = filteredTasks.filter(t => t.evaluationScore >= 7 && t.evaluationScore <= 8).length;
     const promoters = Math.max(0, totalSamples - (detractors + neutrals));
-    const nps = promoters - detractors;
 
     const promotersPercent = totalSamples > 0 ? Math.round((promoters / totalSamples) * 100) : 0;
     const detractorsPercent = totalSamples > 0 ? Math.round((detractors / totalSamples) * 100) : 0;
+
+    const nps = promotersPercent - detractorsPercent;
 
     const targetPromoters = 75;
     const targetDetractors = 9;

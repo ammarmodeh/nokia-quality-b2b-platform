@@ -117,13 +117,13 @@ const CalendarPage = () => {
       sx={{
         minHeight: '100vh',
         backgroundColor: 'background.default',
-        py: 3,
+        p: 3,
         // px: isMobile ? 2 : 3,
       }}
     >
       <Box
         sx={{
-          maxWidth: '1000px',
+          // maxWidth: '1000px',
           mx: 'auto',
         }}
       >

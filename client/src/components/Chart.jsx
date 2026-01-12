@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
 import {
   Select,
@@ -12,12 +12,28 @@ import {
   Chip,
   Box,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Autocomplete,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Slider,
+  Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from "@mui/material";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import TodayIcon from '@mui/icons-material/Today';
+import DateRangeIcon from '@mui/icons-material/DateRange';
 import api from "../api/api";
 import { ChartComponent } from "./ChartComponent";
 import { DataTable } from "./DataTable";
-import { generateWeekRanges, getDesiredWeeks, groupDataByWeek } from "../utils/helpers";
+import { generateWeekRanges, getDesiredWeeks, groupDataByWeek, generateMonthRanges, getMonthNumber } from "../utils/helpers";
+import { subDays, isAfter } from 'date-fns';
 
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 // Register Chart.js components
@@ -105,6 +121,55 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
   // const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Advanced Time Range State
+  const [timeFilterMode, setTimeFilterMode] = useState('weeks'); // 'weeks', 'days', 'months'
+  const [recentDaysValue, setRecentDaysValue] = useState(30);
+  const [selectedMonths, setSelectedMonths] = useState([]);
+  const [monthOptions, setMonthOptions] = useState([]);
+
+  // Custom Query Filters State
+  const [queryFilters, setQueryFilters] = useState({
+    teamName: null,
+    responsible: null,
+    reason: null,
+    governorate: null,
+    district: null
+  });
+
+  // Extract unique values for filters
+  const uniqueFilters = useMemo(() => {
+    if (!initialTasks || initialTasks.length === 0) return { teams: [], owners: [], reasons: [], governorates: [], districts: [] };
+
+    const teams = new Set();
+    const owners = new Set();
+    const reasons = new Set();
+    const governorates = new Set();
+    const districts = new Set();
+
+    initialTasks.forEach(task => {
+      if (task.teamName) teams.add(task.teamName);
+      if (task.responsible) owners.add(task.responsible);
+      if (task.reason) reasons.add(task.reason);
+      if (task.governorate) governorates.add(task.governorate);
+      if (task.district) districts.add(task.district);
+    });
+
+    return {
+      teams: Array.from(teams).sort(),
+      owners: Array.from(owners).sort(),
+      reasons: Array.from(reasons).sort(),
+      governorates: Array.from(governorates).sort(),
+      districts: Array.from(districts).sort()
+    };
+  }, [initialTasks]);
+
+  useEffect(() => {
+    if (initialTasks && initialTasks.length > 0 && settings) {
+      const months = generateMonthRanges(initialTasks, settings);
+      setMonthOptions(months);
+    }
+  }, [initialTasks, settings]);
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -119,10 +184,40 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
 
   const weekStartDay = settings?.weekStartDay || 0;
 
+  // Apply all filters (Time Range + Custom Queries)
+  const processData = (allTasks, range, filters, currentSettings, samples, mode, days, months) => {
+    // 1. Filter tasks by Custom Queries
+    let filtered = allTasks;
+    if (filters.teamName) filtered = filtered.filter(t => t.teamName === filters.teamName);
+    if (filters.responsible) filtered = filtered.filter(t => t.responsible === filters.responsible);
+    if (filters.reason) filtered = filtered.filter(t => t.reason === filters.reason);
+    if (filters.governorate) filtered = filtered.filter(t => t.governorate === filters.governorate);
+    if (filters.district) filtered = filtered.filter(t => t.district === filters.district);
+
+    // 2. Filter by Time Mode
+    let finalRange = range;
+    if (mode === 'days') {
+      const cutoff = subDays(new Date(), days);
+      filtered = filtered.filter(t => t.interviewDate && isAfter(new Date(t.interviewDate), cutoff));
+      const newRanges = generateWeekRanges(filtered, currentSettings || {});
+      finalRange = newRanges.filter(r => /Wk-\d+ \(\d+\)/.test(r));
+    } else if (mode === 'months' && months.length > 0) {
+      filtered = filtered.filter(t => {
+        const monthInfo = getMonthNumber(t.interviewDate, currentSettings || {});
+        return monthInfo && months.includes(monthInfo.key);
+      });
+      const newRanges = generateWeekRanges(filtered, currentSettings || {});
+      finalRange = newRanges.filter(r => /Wk-\d+ \(\d+\)/.test(r));
+    }
+
+    const timeFilteredData = getDesiredWeeks(filtered, finalRange, currentSettings || {});
+    const grouped = groupDataByWeek(timeFilteredData, finalRange, currentSettings || {}, samples);
+    return { grouped, range: finalRange };
+  };
+
   useEffect(() => {
     if (initialTasks && initialTasks.length > 0) {
       setTasks(initialTasks);
-
       const ranges = generateWeekRanges(initialTasks, settings || {});
       setWeekRanges(ranges);
 
@@ -142,10 +237,9 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
       const defaultWeeks = individualWeeks.slice(-10);
       setTimeRange(defaultWeeks);
 
-      const filteredData = getDesiredWeeks(initialTasks, defaultWeeks, settings || {});
-      const grouped = groupDataByWeek(filteredData, defaultWeeks, settings || {}, samplesData);
+      const { grouped, range: finalRange } = processData(initialTasks, defaultWeeks, queryFilters, settings, samplesData, timeFilterMode, recentDaysValue, selectedMonths);
       setGroupedData(grouped);
-      setChartData(prepareChartData(grouped, defaultWeeks));
+      setChartData(prepareChartData(grouped, finalRange));
     }
   }, [initialTasks, settings, samplesData]);
 
@@ -174,6 +268,17 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
   };
 
   const handleReset = () => {
+    setQueryFilters({
+      teamName: null,
+      responsible: null,
+      reason: null,
+      governorate: null,
+      district: null
+    });
+    setTimeFilterMode('weeks');
+    setRecentDaysValue(30);
+    setSelectedMonths([]);
+
     const individualWeeks = weekRanges.filter(range => /Wk-\d+ \(\d+\)/.test(range));
     individualWeeks.sort((a, b) => {
       const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
@@ -185,38 +290,32 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
       if (yearA !== yearB) return yearA - yearB;
       return weekA - weekB;
     });
-    const defaultWeeks = individualWeeks.slice(-4);
+    const defaultWeeks = individualWeeks.slice(-10);
 
     setTimeRange(defaultWeeks);
-    const filteredData = getDesiredWeeks(tasks, defaultWeeks, settings || {});
-    const grouped = groupDataByWeek(filteredData, defaultWeeks, settings || {}, samplesData);
-    setGroupedData(grouped);
-    setChartData(prepareChartData(grouped, defaultWeeks));
   };
 
   useEffect(() => {
     if (tasks.length > 0) {
-      const filteredData = getDesiredWeeks(tasks, timeRange, settings || {});
-      const grouped = groupDataByWeek(filteredData, timeRange, settings || {}, samplesData);
+      const { grouped, range: finalRange } = processData(tasks, timeRange, queryFilters, settings, samplesData, timeFilterMode, recentDaysValue, selectedMonths);
       setGroupedData(grouped);
-      setChartData(prepareChartData(grouped, timeRange));
+      setChartData(prepareChartData(grouped, finalRange));
     }
-  }, [timeRange, tasks, settings, samplesData]);
+  }, [timeRange, tasks, settings, samplesData, queryFilters, timeFilterMode, recentDaysValue, selectedMonths]);
 
   const applyFilter = (category) => {
     setFilter(category);
-    const filteredData = getDesiredWeeks(tasks, timeRange, settings || {});
-    const grouped = groupDataByWeek(filteredData, timeRange, settings || {}, samplesData);
+    const { grouped, range: finalRange } = processData(tasks, timeRange, queryFilters, settings, samplesData, timeFilterMode, recentDaysValue, selectedMonths);
 
     if (category === "All") {
-      setChartData(prepareChartData(grouped, timeRange));
+      setChartData(prepareChartData(grouped, finalRange));
     } else {
       const filteredGrouped = Object.keys(grouped).reduce((acc, week) => {
         acc[week] = { [category]: grouped[week][category] };
         return acc;
       }, {});
 
-      setChartData(prepareChartData(filteredGrouped, timeRange));
+      setChartData(prepareChartData(filteredGrouped, finalRange));
     }
     setGroupedData(grouped);
   };
@@ -237,83 +336,27 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
       maxWidth: '100%',
       overflowX: 'hidden'
     }}>
-      {/* Controls Section */}
       <Stack
         direction={isSmallScreen ? "column" : "row"}
-        spacing={isSmallScreen ? 2 : 3}
-        sx={{ mb: 3 }}
-        alignItems={isSmallScreen ? "stretch" : "flex-end"}
+        spacing={2}
+        sx={{ mb: 2 }}
+        alignItems="center"
+        justifyContent="space-between"
       >
+        <Typography variant="h6" sx={{ color: "#E2E8F0", fontWeight: "bold", fontSize: "1.1rem" }}>
+          Weekly QoS Trends
+        </Typography>
 
-        <FormControl
-          variant="standard"
-          sx={{
-            minWidth: isSmallScreen ? '100%' : 150,
-          }}
-        >
-          <InputLabel sx={{ color: "#b3b3b3" }}>Time Range</InputLabel>
-          <Select
-            multiple
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            label="Time Range"
-            sx={{
-              color: "#ffffff",
-              "& .MuiSelect-icon": { color: "#b3b3b3" },
-              "&::before": { borderBottom: "1px solid #666" },
-              "&:hover:not(.Mui-disabled)::before": { borderBottom: "1px solid #7b68ee" },
-              "&::after": { borderBottom: "1px solid #7b68ee" },
-              "& .MuiChip-root": {
-                backgroundColor: "#243d53",
-                color: "#ffffff",
-                margin: "2px",
-              },
-            }}
-            MenuProps={{
-              PaperProps: {
-                sx: {
-                  backgroundColor: "#2d2d2d",
-                  color: "#ffffff",
-                },
-              },
-            }}
-            renderValue={(selected) => (
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                {selected.map((value) => (
-                  <Chip
-                    key={value}
-                    label={value}
-                    sx={{
-                      backgroundColor: "#243d53",
-                      color: "#ffffff",
-                    }}
-                  />
-                ))}
-              </Box>
-            )}
-          >
-            {weekRanges.map((range, index) => (
-              <MenuItem key={`${range}-${index}`} value={range}>
-                {range}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <Stack
-          direction={isSmallScreen ? "row" : "row"}
-          spacing={1}
-          sx={{
-            width: isSmallScreen ? '100%' : 'auto',
-            height: '29px'
-          }}
-        >
+        <Stack direction="row" spacing={1.5}>
           <Button
             variant="outlined"
-            size="medium"
+            size="small"
+            startIcon={<FilterAltOffIcon />}
             sx={{
-              color: "#7b68ee",
-              width: isSmallScreen ? '50%' : 'auto'
+              color: "#94a3b8",
+              borderColor: "rgba(148, 163, 184, 0.3)",
+              textTransform: 'none',
+              "&:hover": { borderColor: "#3b82f6", color: "#3b82f6" }
             }}
             onClick={handleReset}
           >
@@ -322,14 +365,276 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
 
           <Button
             variant="contained"
-            size="medium"
-            sx={{ backgroundColor: '#1D4ED8', py: 1, lineHeight: 1, fontSize: '0.8rem', width: isSmallScreen ? '50%' : 'auto' }}
+            size="small"
+            startIcon={<TodayIcon />}
+            sx={{
+              backgroundColor: '#3b82f6',
+              textTransform: 'none',
+              "&:hover": { backgroundColor: '#2563eb' }
+            }}
             onClick={exportChartData}
           >
             Export CSV
           </Button>
         </Stack>
       </Stack>
+
+      {/* Custom Query Filters Section */}
+      <Accordion
+        elevation={0}
+        sx={{
+          mb: 3,
+          backgroundColor: "rgba(255, 255, 255, 0.03)",
+          border: "1px solid rgba(255, 255, 255, 0.05)",
+          borderRadius: "12px !important",
+          "&::before": { display: 'none' },
+          "&.Mui-expanded": { mb: 3 }
+        }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#94a3b8" }} />}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <FilterAltIcon sx={{ color: "#3b82f6", fontSize: 20 }} />
+            <Typography sx={{ color: "#e2e8f0", fontWeight: 600, fontSize: "0.9rem" }}>
+              Customize Queries
+            </Typography>
+            {(queryFilters.teamName || queryFilters.responsible || queryFilters.reason || queryFilters.governorate || queryFilters.district) && (
+              <Chip
+                label="Active Filters"
+                size="small"
+                color="primary"
+                sx={{ height: 20, fontSize: "0.7rem", fontWeight: 700 }}
+              />
+            )}
+          </Stack>
+        </AccordionSummary>
+        <AccordionDetails sx={{ pt: 2, px: 3, pb: 4 }}>
+          {/* Advanced Time Range Selector */}
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="overline" sx={{ color: "#3b82f6", fontWeight: 800, letterSpacing: 1.2, mb: 2, display: 'block' }}>
+              Advanced Time Range
+            </Typography>
+
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems="flex-start">
+              <ToggleButtonGroup
+                value={timeFilterMode}
+                exclusive
+                onChange={(e, val) => val && setTimeFilterMode(val)}
+                size="small"
+                sx={{
+                  backgroundColor: "rgba(0,0,0,0.2)",
+                  height: '40px',
+                  "& .MuiToggleButton-root": {
+                    color: "#94a3b8",
+                    borderColor: "rgba(255,255,255,0.05)",
+                    px: 3,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    "&.Mui-selected": {
+                      backgroundColor: "rgba(59, 130, 246, 0.1)",
+                      color: "#3b82f6",
+                      borderColor: "rgba(59, 130, 246, 0.3)",
+                      "&:hover": { backgroundColor: "rgba(59, 130, 246, 0.2)" }
+                    }
+                  }
+                }}
+              >
+                <ToggleButton value="days" sx={{ gap: 1 }}>
+                  <TodayIcon sx={{ fontSize: 18 }} /> Recent Days
+                </ToggleButton>
+                <ToggleButton value="weeks" sx={{ gap: 1 }}>
+                  <DateRangeIcon sx={{ fontSize: 18 }} /> Specific Weeks
+                </ToggleButton>
+                <ToggleButton value="months" sx={{ gap: 1 }}>
+                  <CalendarMonthIcon sx={{ fontSize: 18 }} /> Monthly Periods
+                </ToggleButton>
+              </ToggleButtonGroup>
+
+              <Box sx={{ flexGrow: 1, width: '100%', pt: timeFilterMode === 'days' ? 1 : 0 }}>
+                {timeFilterMode === 'days' && (
+                  <Stack direction="row" spacing={3} alignItems="center">
+                    <Slider
+                      value={recentDaysValue}
+                      onChange={(e, val) => setRecentDaysValue(val)}
+                      min={7}
+                      max={365}
+                      sx={{ flexGrow: 1, color: '#3b82f6' }}
+                      valueLabelDisplay="auto"
+                    />
+                    <TextField
+                      size="small"
+                      label="Days"
+                      type="number"
+                      value={recentDaysValue}
+                      onChange={(e) => setRecentDaysValue(Number(e.target.value))}
+                      sx={{
+                        width: 80,
+                        "& .MuiOutlinedInput-root": { color: "#cbd5e1" },
+                        "& .MuiInputLabel-root": { color: "#94a3b8" }
+                      }}
+                    />
+                  </Stack>
+                )}
+
+                {timeFilterMode === 'weeks' && (
+                  <Autocomplete
+                    multiple
+                    size="small"
+                    options={weekRanges.filter(r => /Wk-\d+ \(\d+\)/.test(r))}
+                    value={timeRange}
+                    onChange={(e, newVal) => setTimeRange(newVal)}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Select Specific Weeks" variant="outlined" placeholder="Search weeks..." />
+                    )}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        color: "#cbd5e1",
+                        "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                      },
+                      "& .MuiInputLabel-root": { color: "#94a3b8" }
+                    }}
+                  />
+                )}
+
+                {timeFilterMode === 'months' && (
+                  <Autocomplete
+                    multiple
+                    size="small"
+                    options={monthOptions}
+                    getOptionLabel={(option) => option.label}
+                    value={monthOptions.filter(m => selectedMonths.includes(m.key))}
+                    onChange={(e, newVal) => setSelectedMonths(newVal.map(v => v.key))}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Select Monthly Periods" variant="outlined" placeholder="Search months..." />
+                    )}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        color: "#cbd5e1",
+                        "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                      },
+                      "& .MuiInputLabel-root": { color: "#94a3b8" }
+                    }}
+                  />
+                )}
+              </Box>
+            </Stack>
+          </Box>
+
+          <Divider sx={{ mb: 4, borderColor: "rgba(255,255,255,0.03)" }} />
+
+          <Typography variant="overline" sx={{ color: "#3b82f6", fontWeight: 800, letterSpacing: 1.2, mb: 2, display: 'block' }}>
+            Metadata Filters
+          </Typography>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr" },
+              gap: 3,
+              mt: 1
+            }}
+          >
+            <Autocomplete
+              size="small"
+              options={uniqueFilters.teams}
+              value={queryFilters.teamName}
+              onChange={(e, newVal) => setQueryFilters(prev => ({ ...prev, teamName: newVal }))}
+              renderInput={(params) => (
+                <TextField {...params} label="Team Name" variant="outlined" />
+              )}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  color: "#cbd5e1",
+                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                  "&:hover fieldset": { borderColor: "#3b82f6" },
+                },
+                "& .MuiInputLabel-root": { color: "#94a3b8" }
+              }}
+            />
+            <Autocomplete
+              size="small"
+              options={uniqueFilters.owners}
+              value={queryFilters.responsible}
+              onChange={(e, newVal) => setQueryFilters(prev => ({ ...prev, responsible: newVal }))}
+              renderInput={(params) => (
+                <TextField {...params} label="Owner" variant="outlined" />
+              )}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  color: "#cbd5e1",
+                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                  "&:hover fieldset": { borderColor: "#3b82f6" },
+                },
+                "& .MuiInputLabel-root": { color: "#94a3b8" }
+              }}
+            />
+            <Autocomplete
+              size="small"
+              options={uniqueFilters.reasons}
+              value={queryFilters.reason}
+              onChange={(e, newVal) => setQueryFilters(prev => ({ ...prev, reason: newVal }))}
+              renderInput={(params) => (
+                <TextField {...params} label="Reason" variant="outlined" />
+              )}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  color: "#cbd5e1",
+                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                  "&:hover fieldset": { borderColor: "#3b82f6" },
+                },
+                "& .MuiInputLabel-root": { color: "#94a3b8" }
+              }}
+            />
+            <Autocomplete
+              size="small"
+              options={uniqueFilters.governorates}
+              value={queryFilters.governorate}
+              onChange={(e, newVal) => setQueryFilters(prev => ({ ...prev, governorate: newVal }))}
+              renderInput={(params) => (
+                <TextField {...params} label="Governorate" variant="outlined" />
+              )}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  color: "#cbd5e1",
+                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                  "&:hover fieldset": { borderColor: "#3b82f6" },
+                },
+                "& .MuiInputLabel-root": { color: "#94a3b8" }
+              }}
+            />
+            <Autocomplete
+              size="small"
+              options={uniqueFilters.districts}
+              value={queryFilters.district}
+              onChange={(e, newVal) => setQueryFilters(prev => ({ ...prev, district: newVal }))}
+              renderInput={(params) => (
+                <TextField {...params} label="District" variant="outlined" />
+              )}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  color: "#cbd5e1",
+                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                  "&:hover fieldset": { borderColor: "#3b82f6" },
+                },
+                "& .MuiInputLabel-root": { color: "#94a3b8" }
+              }}
+            />
+            <Button
+              startIcon={<FilterAltOffIcon />}
+              onClick={handleReset}
+              sx={{
+                color: "#ff4d4d",
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                justifyContent: 'flex-start',
+                "&:hover": { bgcolor: "rgba(255, 77, 77, 0.1)" }
+              }}
+            >
+              Clear All Filters
+            </Button>
+          </Box>
+        </AccordionDetails>
+      </Accordion>
 
       {/* Chart and Table Section */}
       <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: isSmallScreen ? 2 : undefined }}>

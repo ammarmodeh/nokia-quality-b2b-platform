@@ -357,7 +357,7 @@ const IssuePreventionAnalytics = () => {
   );
 
   return (
-    <Container sx={{ pt: 3, pb: 6, px: 0 }}>
+    <Box sx={{ pt: 3, pb: 6, px: 2 }}>
       {/* Header */}
       <Box mb={4}>
         <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} sx={{ mb: 1 }}>
@@ -1318,7 +1318,7 @@ const IssuePreventionAnalytics = () => {
         startDate={dateFilter.start}
         endDate={dateFilter.end}
       />
-    </Container >
+    </Box >
   );
 };
 

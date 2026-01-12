@@ -195,7 +195,15 @@ const DocumentsPortal = () => {
             </Avatar>
             <Box>
               <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 'bold', color: '#ffffff' }}>
-                OneDrive Documents
+                <span style={{ display: 'inline-flex' }}>
+                  <span style={{ color: '#4285F4' }}>G</span>
+                  <span style={{ color: '#EA4335' }}>o</span>
+                  <span style={{ color: '#FBBC05' }}>o</span>
+                  <span style={{ color: '#4285F4' }}>g</span>
+                  <span style={{ color: '#34A853' }}>l</span>
+                  <span style={{ color: '#EA4335' }}>e</span>
+                </span>
+                {' '}Drive Documents
               </Typography>
               <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
                 Manage and control your uploaded documents

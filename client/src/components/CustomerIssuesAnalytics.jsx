@@ -127,9 +127,9 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     const issuesToProcess = filteredIssuesByDate;
     const totalTransactions = issuesToProcess.length;
     let totalIssuesHighlighted = 0;
-    const resolved = issuesToProcess.filter(i => i.solved === 'yes').length;
-    const unresolved = totalTransactions - resolved;
-    const resolutionRate = totalTransactions > 0 ? ((resolved / totalTransactions) * 100).toFixed(1) : 0;
+    const closed = issuesToProcess.filter(i => i.solved === 'yes').length;
+    const open = totalTransactions - closed;
+    const resolutionRate = totalTransactions > 0 ? ((closed / totalTransactions) * 100).toFixed(1) : 0;
 
     issuesToProcess.forEach(issue => {
       if (issue.issues && Array.isArray(issue.issues)) {
@@ -195,7 +195,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         pendingBottlenecks.push({
           slid: issue.slid,
           age: currentAge.toFixed(1),
-          stage: issue.dispatched === 'no' ? 'Awaiting Dispatch' : 'Field Work (Dispatched)',
+          stage: issue.dispatched === 'no' ? 'Pending (Dispatching)' : 'In Progress (Field Work)',
           assignedTo: issue.assignedTo || 'Unassigned',
           supervisor: issue.closedBy || 'Unassigned',
           reportDate: issue.date || issue.createdAt,
@@ -214,8 +214,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     return {
       totalTransactions,
       totalIssuesHighlighted,
-      resolved,
-      unresolved,
+      closed,
+      open,
       resolutionRate,
       issueDensity,
       avgDispatchTime,
@@ -230,8 +230,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     const data = assigneeStats.detailedList.map(stat => ({
       'Assignee Name': stat.name,
       'Total Issues': stat.total,
-      'Resolved': stat.resolved,
-      'Unresolved': stat.unresolved,
+      'Closed': stat.resolved,
+      'Open': stat.unresolved,
       'Top Category': stat.topCategory,
       'Top Sub-category': stat.topSubCategory,
       'Resolution Rate (%)': stat.rate
@@ -261,7 +261,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       'SLID': issue.slid,
       'Category': issue.issues?.[0]?.category || 'N/A',
       'Sub-category': issue.issues?.[0]?.subCategory || 'N/A',
-      'Status': issue.solved === 'yes' ? 'Resolved' : 'Unresolved',
+      'Status': issue.solved === 'yes' ? 'Closed' : (issue.dispatched === 'yes' ? 'In Progress' : 'Pending'),
       'Reporter': issue.reporter,
       'From (Main)': issue.fromMain || issue.from || 'N/A',
       'From (Sub)': issue.fromSub || 'N/A'
@@ -385,9 +385,9 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   }, [filteredIssuesByDate]);
 
   const statusData = useMemo(() => ({
-    labels: ['Resolved', 'Unresolved'],
+    labels: ['Closed', 'Open'],
     datasets: [{
-      data: [stats.resolved, stats.unresolved],
+      data: [stats.closed, stats.open],
       backgroundColor: ['#4caf50', '#f44336'],
       borderWidth: 0,
     }],
@@ -881,8 +881,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       <Grid container spacing={2} mb={4}>
         <Grid item xs={12} sm={6} md={2.4}><StatCard title="Total Transactions" value={stats.totalTransactions} icon={<FaClipboardList />} color="#2196f3" subtext="Total records" /></Grid>
         <Grid item xs={12} sm={6} md={2.4}><StatCard title="Issues Highlighted" value={stats.totalIssuesHighlighted} icon={<FaExclamationCircle />} color="#ffc107" subtext={`Avg: ${stats.issueDensity} per txn`} /></Grid>
-        <Grid item xs={12} sm={6} md={2.4}><StatCard title="Resolved" value={stats.resolved} icon={<FaCheckCircle />} color="#4caf50" subtext={`${stats.resolutionRate}% Rate`} /></Grid>
-        <Grid item xs={12} sm={6} md={2.4}><StatCard title="Unresolved" value={stats.unresolved} icon={<FaExclamationCircle />} color="#f44336" subtext="Require attention" /></Grid>
+        <Grid item xs={12} sm={6} md={2.4}><StatCard title="Closed" value={stats.closed} icon={<FaCheckCircle />} color="#4caf50" subtext={`${stats.resolutionRate}% Rate`} /></Grid>
+        <Grid item xs={12} sm={6} md={2.4}><StatCard title="Open" value={stats.open} icon={<FaExclamationCircle />} color="#f44336" subtext="Require attention" /></Grid>
         <Grid item xs={12} sm={6} md={2.4}><StatCard title="Avg. Daily Issues" value={(stats.totalTransactions / (trendData.labels.length || 1)).toFixed(1)} icon={<FaChartLine />} color="#ff9800" subtext="Trend metric" /></Grid>
       </Grid>
 
@@ -948,8 +948,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                     <tr style={{ color: '#b3b3b3', fontSize: '0.8rem', borderBottom: '1px solid #3d3d3d' }}>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Supervisor</th>
                       <th style={{ padding: '8px', textAlign: 'center' }}>Total</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Resolved</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Unresolved</th>
+                      <th style={{ padding: '8px', textAlign: 'center' }}>Closed</th>
+                      <th style={{ padding: '8px', textAlign: 'center' }}>Open</th>
                       <th style={{ padding: '8px', textAlign: 'center' }}>Rate (%)</th>
                       <th style={{ padding: '8px', textAlign: 'right' }}>Dispatch</th>
                       <th style={{ padding: '8px', textAlign: 'right' }}>Resol.</th>
@@ -1088,7 +1088,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                         )) : (
                         <tr style={{ borderBottom: "1px solid #333" }}>
                           <td colSpan={7} style={{ padding: "20px", textAlign: "center", color: "#4caf50" }}>
-                            All caught up! No un-dispatched negligence detected.
+                            All caught up! No active bottlenecks detected.
                           </td>
                         </tr>
                       );
@@ -1266,8 +1266,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                     sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#333' } }}
                   >
                     <MenuItem value="all">All Statuses</MenuItem>
-                    <MenuItem value="resolved">Resolved Only</MenuItem>
-                    <MenuItem value="unresolved">Unresolved Only</MenuItem>
+                    <MenuItem value="resolved">Closed Only</MenuItem>
+                    <MenuItem value="unresolved">Open Only</MenuItem>
                   </Select>
                 </FormControl>
 
@@ -1275,15 +1275,40 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                   variant="outlined"
                   startIcon={<FaFileExcel />}
                   onClick={() => {
-                    const data = issues.map(i => ({
-                      'Date': new Date(i.date).toLocaleDateString(),
-                      'SLID': i.slid,
-                      'Category': i.issues?.[0]?.category || 'N/A',
-                      'Assignee': i.assignedTo || 'Unassigned',
-                      'Installing Team': i.installingTeam || 'N/A',
-                      'Reporter': i.reporter,
-                      'Status': i.solved === 'yes' ? 'Resolved' : 'Unresolved'
-                    }));
+                    const data = issues.map(i => {
+                      const categories = i.issues?.map(issue => issue.category).filter(Boolean).join(', ') || 'N/A';
+                      const subCategories = i.issues?.map(issue => issue.subCategory).filter(Boolean).join(', ') || 'N/A';
+                      const status = i.solved === 'yes' ? 'Closed' : (i.dispatched === 'yes' ? 'In Progress' : 'Pending');
+
+                      return {
+                        'Report Date': i.date ? new Date(i.date).toLocaleDateString() : 'N/A',
+                        'Created At': i.createdAt ? new Date(i.createdAt).toLocaleString() : 'N/A',
+                        'SLID': i.slid,
+                        'Customer Name': i.customerName || 'N/A',
+                        'Customer Contact': i.customerContact || 'N/A',
+                        'Customer Type': i.customerType || 'N/A',
+                        'PIS Date': i.pisDate ? new Date(i.pisDate).toLocaleDateString() : 'N/A',
+                        'From (Main)': i.fromMain || i.from || 'N/A',
+                        'From (Sub)': i.fromSub || 'N/A',
+                        'Reporter': i.reporter,
+                        'Reporter Note': i.reporterNote || 'N/A',
+                        'Contact Method': i.contactMethod || 'N/A',
+                        'Team/Company': i.teamCompany || 'N/A',
+                        'Assignee': i.assignedTo || 'Unassigned',
+                        'Installing Team': i.installingTeam || 'N/A',
+                        'Assignee Note': i.assigneeNote || 'N/A',
+                        'Status': status,
+                        'Categories': categories,
+                        'Sub-Categories': subCategories,
+                        'Resolution Details': i.resolutionDetails || 'N/A',
+                        'Resolved By': i.resolvedBy || 'N/A',
+                        'Resolve Date': i.resolveDate ? new Date(i.resolveDate).toLocaleDateString() : 'N/A',
+                        'Closed By': i.closedBy || 'N/A',
+                        'Closed At': i.closedAt ? new Date(i.closedAt).toLocaleString() : 'N/A',
+                        'Dispatched Status': i.dispatched || 'no',
+                        'Dispatched At': i.dispatchedAt ? new Date(i.dispatchedAt).toLocaleString() : 'N/A'
+                      };
+                    });
                     const ws = utils.json_to_sheet(data);
                     const wb = utils.book_new();
                     utils.book_append_sheet(wb, ws, "Consolidated Report");
@@ -1365,14 +1390,18 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                           <Chip label={issue.issues?.[0]?.category || 'N/A'} size="small" sx={{ bgcolor: 'rgba(54, 162, 235, 0.1)', color: '#36a2eb' }} />
                         </td>
                         <td style={{ padding: '12px', borderRadius: '0 8px 8px 0' }}>
-                          <Chip
-                            label={issue.solved === 'yes' ? 'Resolved' : 'Active'}
-                            size="small"
-                            sx={{
-                              bgcolor: issue.solved === 'yes' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
-                              color: issue.solved === 'yes' ? '#4caf50' : '#f44336'
-                            }}
-                          />
+                          {issue.solved === 'yes' ? (
+                            <Chip label="Closed" size="small" sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)', color: '#4caf50' }} />
+                          ) : (
+                            <Chip
+                              label={issue.dispatched === 'yes' ? 'In Progress' : 'Pending'}
+                              size="small"
+                              sx={{
+                                bgcolor: issue.dispatched === 'yes' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+                                color: issue.dispatched === 'yes' ? '#2196f3' : '#f44336'
+                              }}
+                            />
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1428,7 +1457,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                         'SLID': issue.slid,
                         'Category': issue.issues?.[0]?.category || 'N/A',
                         'Sub-category': issue.issues?.[0]?.subCategory || '-',
-                        'Status': issue.solved === 'yes' ? 'Resolved' : 'Active',
+                        'Status': issue.solved === 'yes' ? 'Closed' : (issue.dispatched === 'yes' ? 'In Progress' : 'Pending'),
                         'Time to Close (Days)': lifecycle
                       };
                     });

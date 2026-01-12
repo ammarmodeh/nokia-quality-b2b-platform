@@ -10,7 +10,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  CircularProgress,
   TextField,
   InputAdornment,
   IconButton,
@@ -30,6 +29,7 @@ import {
   FormControl,
   InputLabel
 } from '@mui/material';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import {
   MdSearch,
   MdClose,
@@ -84,6 +84,7 @@ const AllTasksList = () => {
   const [subconFilter, setSubconFilter] = useState('all');
   const [supervisorFilter, setSupervisorFilter] = useState('all');
   const [teamNameFilter, setTeamNameFilter] = useState('all');
+  const [validationFilter, setValidationFilter] = useState('all');
   const [dropdownOptions, setDropdownOptions] = useState({});
 
   const [settings, setSettings] = useState(null);
@@ -165,6 +166,7 @@ const AllTasksList = () => {
           teamCompany: subconFilter !== 'all' ? subconFilter : undefined,
           assignedTo: supervisorFilter !== 'all' ? supervisorFilter : undefined,
           teamName: teamNameFilter !== 'all' ? teamNameFilter : undefined,
+          validationStatus: validationFilter !== 'all' ? validationFilter : undefined,
         },
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
@@ -204,7 +206,7 @@ const AllTasksList = () => {
     if (user?._id) {
       fetchFavoriteTasks();
     }
-  }, [user?._id, updateRefetchTasks, page, rowsPerPage, debouncedSearchTerm, filter, priorityFilter, statusFilter, governorateFilter, districtFilter, subconFilter, supervisorFilter, teamNameFilter]);
+  }, [user?._id, updateRefetchTasks, page, rowsPerPage, debouncedSearchTerm, filter, priorityFilter, statusFilter, governorateFilter, districtFilter, subconFilter, supervisorFilter, teamNameFilter, validationFilter]);
 
   // Check if task is favorited and get its favorite ID
   const getFavoriteStatus = (taskId) => {
@@ -330,11 +332,7 @@ const AllTasksList = () => {
   };
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingSpinner variant="page" />;
   }
 
   if (error) {
@@ -355,7 +353,7 @@ const AllTasksList = () => {
 
   return (
     <Box sx={{
-      maxWidth: '1200px',
+      // maxWidth: '1200px',
       mx: 'auto',
       p: 2,
       px: isMobile ? 0 : undefined
@@ -617,7 +615,7 @@ const AllTasksList = () => {
             </MenuItem>
             <MenuItem value="In Progress">
               <Box display="flex" alignItems="center" gap={1}>
-                <CircularProgress size={16} sx={{ color: '#1976d2' }} />
+                <LoadingSpinner variant="button" size={16} />
                 <span>In Progress</span>
               </Box>
             </MenuItem>
@@ -810,6 +808,45 @@ const AllTasksList = () => {
           </Select>
         </FormControl>
 
+        <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
+          <InputLabel id="validation-filter-label" sx={{ color: '#b3b3b3' }}>
+            Validation
+          </InputLabel>
+          <Select
+            labelId="validation-filter-label"
+            id="validation-filter"
+            value={validationFilter}
+            onChange={(e) => setValidationFilter(e.target.value)}
+            label="Validation"
+            sx={{
+              color: '#ffffff',
+              borderRadius: '20px',
+              backgroundColor: '#2d2d2d',
+              '& .MuiOutlinedInput-notchedOutline': {
+                border: 'none',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #666 !important',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #7b68ee !important',
+              },
+            }}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  backgroundColor: '#2d2d2d',
+                  color: '#ffffff',
+                },
+              },
+            }}
+          >
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="Validated">Validated</MenuItem>
+            <MenuItem value="Not validated">Not Validated</MenuItem>
+          </Select>
+        </FormControl>
+
         <Button
           variant="outlined"
           onClick={exportToExcel}
@@ -933,16 +970,34 @@ const AllTasksList = () => {
                         {task.createdAt ? new Date(task.createdAt).toLocaleDateString() : '-'}
                       </TableCell>
                       <TableCell>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <Typography>{task.slid || "-"}</Typography>
+                        <Box display="flex" flexDirection="column" gap={0.5}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{task.slid || "-"}</Typography>
                           {task.validationStatus === 'Validated' ? (
-                            <Tooltip title="Validated">
-                              <MdCheckCircle color="#4caf50" size={16} />
-                            </Tooltip>
+                            <Chip
+                              label="Validated"
+                              size="small"
+                              icon={<MdCheckCircle style={{ color: '#ffffff' }} />}
+                              sx={{
+                                backgroundColor: '#4caf50',
+                                color: '#ffffff',
+                                height: '20px',
+                                fontSize: '0.65rem',
+                                '& .MuiChip-icon': { fontSize: '14px' }
+                              }}
+                            />
                           ) : task.validationStatus === 'Not validated' ? (
-                            <Tooltip title="Not validated">
-                              <MdError color="#ff9800" size={16} />
-                            </Tooltip>
+                            <Chip
+                              label="Not Validated"
+                              size="small"
+                              icon={<MdError style={{ color: '#ffffff' }} />}
+                              sx={{
+                                backgroundColor: '#ff9800',
+                                color: '#ffffff',
+                                height: '20px',
+                                fontSize: '0.65rem',
+                                '& .MuiChip-icon': { fontSize: '14px' }
+                              }}
+                            />
                           ) : null}
                         </Box>
                       </TableCell>

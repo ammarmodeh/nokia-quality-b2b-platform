@@ -89,6 +89,7 @@ const AssignedToMe = () => {
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+  const [validationFilter, setValidationFilter] = useState("all");
   const [allTasks, setAllTasks] = useState([]);
   const searchInputRef = useRef(null);
   const { ref, inView } = useInView();
@@ -120,7 +121,7 @@ const AssignedToMe = () => {
   useEffect(() => {
     const fetchAllTasks = async () => {
       try {
-        const { data } = await api.get("/tasks/get-assigned-tasks", {
+        const { data } = await api.get(`/tasks/get-assigned-tasks?validationStatus=${validationFilter}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         });
         setAllTasks(data);
@@ -130,13 +131,13 @@ const AssignedToMe = () => {
       }
     };
     fetchAllTasks();
-  }, [updateStateDuringSave, updateRefetchTasks, user]);
+  }, [updateStateDuringSave, updateRefetchTasks, user, validationFilter]);
 
   const TASKS_PER_PAGE = 5;
 
   const fetchTasks = async ({ pageParam = 1 }) => {
     try {
-      const { data } = await api.get(`/tasks/get-paginated-assigned-tasks?page=${pageParam}`, {
+      const { data } = await api.get(`/tasks/get-paginated-assigned-tasks?page=${pageParam}&validationStatus=${validationFilter}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
       return data;
@@ -146,7 +147,7 @@ const AssignedToMe = () => {
   };
 
   const { data, status, error, fetchNextPage, isFetchingNextPage, hasNextPage } = useInfiniteQuery({
-    queryKey: ['assigned-to-me-tasks'],
+    queryKey: ['assigned-to-me-tasks', validationFilter],
     queryFn: fetchTasks,
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => {
@@ -474,6 +475,26 @@ const AssignedToMe = () => {
               }}
               sx={{ width: { xs: '100%', md: 240 }, bgcolor: '#f1f5f9', borderRadius: 2, '& fieldset': { border: 'none' } }}
             />
+
+            <TextField
+              select
+              label="Validation"
+              value={validationFilter}
+              onChange={(e) => setValidationFilter(e.target.value)}
+              size="small"
+              sx={{ minWidth: 150, bgcolor: '#f1f5f9', borderRadius: 2, '& fieldset': { border: 'none' } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <MdFilterList color="action" size={18} />
+                  </InputAdornment>
+                ),
+              }}
+            >
+              <MenuItem value="all">All</MenuItem>
+              <MenuItem value="Validated">Validated</MenuItem>
+              <MenuItem value="Not validated">Not Validated</MenuItem>
+            </TextField>
 
             <TextField
               select

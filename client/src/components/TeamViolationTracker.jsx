@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Box, Paper, Stack, Typography } from "@mui/material";
+import { Box, Paper, Stack, Typography, Collapse } from "@mui/material";
 import { startOfWeek } from "date-fns";
 import { getCustomWeekNumber } from "../utils/helpers";
 import { useSelector } from "react-redux";
@@ -22,6 +22,8 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
     page: 0,
   });
   const [evaluationData, setEvaluationData] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('all'); // New: 'all', 'detractorFail', 'neutralFail'
+  const [showLimitsInfo, setShowLimitsInfo] = useState(false); // New: collapsed by default
 
   // Dialog states
   const [addSessionDialogOpen, setAddSessionDialogOpen] = useState(false);
@@ -896,11 +898,22 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   }, [selectedTeam, tasks]);
 
   const filteredRows = useMemo(() => {
-    if (!searchText) return rows;
+    let baseRows = rows;
+
+    // Apply status filter
+    if (statusFilter === 'detractorFail') {
+      baseRows = baseRows.filter(row => row.violatesDetractorThreshold);
+    } else if (statusFilter === 'neutralFail') {
+      baseRows = baseRows.filter(row => row.violatesNeutralThreshold);
+    } else if (statusFilter === 'bothFail') {
+      baseRows = baseRows.filter(row => row.violatesDetractorThreshold && row.violatesNeutralThreshold);
+    }
+
+    if (!searchText) return baseRows;
 
     const searchLower = searchText.toLowerCase();
 
-    return rows.filter(row => {
+    return baseRows.filter(row => {
       return Object.keys(row).some(key => {
         const value = row[key];
         if (value === null || value === undefined) return false;
@@ -917,54 +930,59 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         return false;
       });
     });
-  }, [rows, searchText]);
+  }, [rows, searchText, statusFilter]);
 
   const handleViolationDialogOpen = () => setViolationDialogOpen(true);
   const handleViolationDialogClose = () => setViolationDialogOpen(false);
 
   return (
-    <Box sx={{ my: "40px" }}>
-      <Stack direction="column" spacing={2}>
+    <Box>
+      <Stack direction="column" sx={{ mt: "40px" }} spacing={2}>
         <SearchAndExport
           searchText={searchText}
           setSearchText={setSearchText}
           exportToExcel={exportToExcel}
-          onViolationInfoClick={handleViolationDialogOpen}
           tasks={tasks}
           fieldTeams={fieldTeams}
           teamDetractorLimit={teamDetractorLimit}
           teamNeutralLimit={teamNeutralLimit}
           totalGlobalSamples={totalGlobalSamples}
           calculationBreakdown={calculationBreakdown}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          showLimitsInfo={showLimitsInfo}
+          setShowLimitsInfo={setShowLimitsInfo}
         />
 
-        {/* Info Card */}
-        <Paper sx={{ p: 2, backgroundColor: '#1e1e1e', border: '1px solid #333' }}>
-          <Typography variant="h6" sx={{ color: '#fff', mb: 2, fontSize: '1rem', fontWeight: 600 }}>
-            📊 Year-to-Date Dynamic Limits
-          </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-            <Box>
-              <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
-                <strong style={{ color: '#4caf50' }}>✓ Dynamic Limit:</strong> Limits grow as year progresses (Samples × Limit %) / Active Teams.
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
-                <strong style={{ color: '#f44336' }}>⚠ Violation:</strong> Total year-to-date violations exceed the current dynamic allowed limit.
-              </Typography>
+        {/* Info Card - Now Collapsible */}
+        <Collapse in={showLimitsInfo}>
+          <Paper sx={{ p: 2, backgroundColor: '#1e1e1e', border: '1px solid #333', mb: 1 }}>
+            <Typography variant="h6" sx={{ color: '#fff', mb: 2, fontSize: '1rem', fontWeight: 600 }}>
+              📊 Year-to-Date Dynamic Limits
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+              <Box>
+                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
+                  <strong style={{ color: '#4caf50' }}>✓ Dynamic Limit:</strong> Limits grow as year progresses (Samples × Limit %) / Active Teams.
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
+                  <strong style={{ color: '#f44336' }}>⚠️ Violation:</strong> Total year-to-date violations exceed the current dynamic allowed limit.
+                </Typography>
+              </Box>
+              <Box sx={{ borderLeft: '1px solid #444', pl: 2 }}>
+                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
+                  Current YTD Total Samples: <strong style={{ color: '#fff' }}>{calculationBreakdown?.ytdTotal}</strong>
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
+                  Global YTD Allowed: <strong style={{ color: '#f44336' }}>{calculationBreakdown?.ytdDetractorLimitGlobal} Detractors</strong> | <strong style={{ color: '#ff9800' }}>{calculationBreakdown?.ytdNeutralLimitGlobal} Neutrals</strong>
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                  Per Team Limit (Active: {calculationBreakdown?.activeTeams}): <strong style={{ color: '#f44336' }}>{teamDetractorLimit} Detractors</strong> | <strong style={{ color: '#ff9800' }}>{teamNeutralLimit} Neutrals</strong>
+                </Typography>
+              </Box>
             </Box>
-            <Box sx={{ borderLeft: '1px solid #444', pl: 2 }}>
-              <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
-                Current YTD Total Samples: <strong style={{ color: '#fff' }}>{calculationBreakdown?.ytdTotal}</strong>
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
-                Global YTD Allowed: <strong style={{ color: '#f44336' }}>{calculationBreakdown?.ytdDetractorLimitGlobal} Detractors</strong> | <strong style={{ color: '#ff9800' }}>{calculationBreakdown?.ytdNeutralLimitGlobal} Neutrals</strong>
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
-                Per Team Limit (Active: {calculationBreakdown?.activeTeams}): <strong style={{ color: '#f44336' }}>{teamDetractorLimit} Detractors</strong> | <strong style={{ color: '#ff9800' }}>{teamNeutralLimit} Neutrals</strong>
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
+          </Paper>
+        </Collapse>
 
         <ViolationDataGrid
           rows={filteredRows}

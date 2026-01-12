@@ -42,6 +42,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 import api from '../api/api';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -429,11 +430,7 @@ const QuizManagement = () => {
   };
 
   if (loading && questions.length === 0) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: colors.background }}>
-        <CircularProgress sx={{ color: colors.primary }} />
-      </Box>
-    );
+    return <LoadingSpinner variant="page" />;
   }
 
   return (

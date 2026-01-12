@@ -78,6 +78,7 @@ export const getCategoryStatus = (subTasks) => {
 }
 
 export const getTeamViolations = (tasks) => {
+  if (!Array.isArray(tasks)) return [];
   const teamViolations = {};
 
   // Group violations by teamName and teamCompany
@@ -140,6 +141,7 @@ export const getWeekNumberForTaksTable = (date, settings = {}) => {
 
 
 export const getReasonViolations = (tasks) => {
+  if (!Array.isArray(tasks)) return [];
   const reasonViolations = {};
 
   // Group violations by reason
@@ -173,6 +175,7 @@ export const getReasonViolations = (tasks) => {
 };
 
 export const getReasonViolations2 = (tasks) => {
+  if (!Array.isArray(tasks)) return [];
   const reasonMap = {};
 
   tasks.forEach(task => {
@@ -200,6 +203,7 @@ export const getReasonViolations2 = (tasks) => {
 };
 
 export const getOwnerViolations = (tasks) => {
+  if (!Array.isArray(tasks)) return [];
   const ownerMap = {};
 
   tasks.forEach(task => {
@@ -281,6 +285,7 @@ export const generateWeekRanges = (tasks, settings = {}) => {
 };
 
 export const groupDataByWeek = (data, timeRange, settings = {}, samplesData = []) => {
+  if (!Array.isArray(data)) return {};
   if (data.length === 0 && (!timeRange || timeRange.length === 0)) return {};
   const { weekStartDay = 0, week1StartDate = null, week1EndDate = null, startWeekNumber = 1 } = settings;
 
@@ -435,6 +440,7 @@ export const getCustomWeekNumber = (date, year, settings = {}) => {
 
 
 export const getCompanyViolations = (tasks) => {
+  if (!Array.isArray(tasks)) return [];
   const companyViolations = {};
 
   // Group violations by company
@@ -566,6 +572,7 @@ export const getMonthNumber = (date, settings = {}) => {
  * Group data by month
  */
 export const groupDataByMonth = (data, monthRange, settings = {}, samplesData = []) => {
+  if (!Array.isArray(data)) return {};
   if (data.length === 0 && (!monthRange || monthRange.length === 0)) return {};
 
   const groupedData = {};

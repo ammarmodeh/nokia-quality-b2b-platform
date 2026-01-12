@@ -220,12 +220,60 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                   <DetailRow label="Request Number" value={task.requestNumber} isMobile={isMobile} />
                   <DetailRow label="Operation" value={task.operation} isMobile={isMobile} />
                   <DetailRow label="SLID" value={task.slid} isMobile={isMobile} />
+                  <DetailRow label="Category" value={task.category} isMobile={isMobile} />
                   <DetailRow label="Customer Name" value={task.customerName} isMobile={isMobile} />
                   <DetailRow label="Contact Number" value={task.contactNumber} isMobile={isMobile} />
                   <DetailRow label="PIS Date" value={moment(task.pisDate).format("YYYY-MM-DD")} isMobile={isMobile} />
                   <DetailRow label="Tariff Name" value={task.tarrifName} isMobile={isMobile} />
                   <DetailRow label="Customer Type" value={task.customerType} isMobile={isMobile} />
                   <DetailRow label="Interview Date" value={moment(task.interviewDate).format("YYYY-MM-DD")} isMobile={isMobile} />
+                </Box>
+              </Paper>
+
+              <Paper elevation={0} sx={{
+                p: isMobile ? 1.5 : 2,
+                backgroundColor: '#2d2d2d',
+                borderRadius: 2,
+                border: '1px solid #3d3d3d'
+              }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
+                  Technical Details
+                </Typography>
+                <Box sx={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: isMobile ? 1.5 : 2
+                }}>
+                  <DetailRow label="ONT Type" value={task.ontType} isMobile={isMobile} />
+                  <DetailRow label="Speed Plan" value={task.speed ? `${task.speed} Mbps` : 'N/A'} isMobile={isMobile} />
+                  <DetailRow label="Free Extender" value={task.freeExtender} isMobile={isMobile} />
+                  {task.freeExtender === 'Yes' && (
+                    <>
+                      <DetailRow label="Extender Type" value={task.extenderType} isMobile={isMobile} />
+                      <DetailRow label="Number of Extenders" value={task.extenderNumber} isMobile={isMobile} />
+                    </>
+                  )}
+                </Box>
+              </Paper>
+
+              <Paper elevation={0} sx={{
+                p: isMobile ? 1.5 : 2,
+                backgroundColor: '#2d2d2d',
+                borderRadius: 2,
+                border: '1px solid #3d3d3d'
+              }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
+                  Service Quality
+                </Typography>
+                <Box sx={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: isMobile ? 1.5 : 2
+                }}>
+                  <DetailRow label="Service Recipient (Initial)" value={task.serviceRecipientInitial} isMobile={isMobile} />
+                  <DetailRow label="Service Recipient (QoS)" value={task.serviceRecipientQoS} isMobile={isMobile} />
+                  <DetailRow label="Closure Call Evaluation" value={task.closureCallEvaluation} isMobile={isMobile} />
+                  <DetailRow label="Closure Call Feedback" value={task.closureCallFeedback} isMobile={isMobile} />
                 </Box>
               </Paper>
 
@@ -266,6 +314,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                 }}>
                   <DetailRow label="Team Name" value={task.teamName} isMobile={isMobile} />
                   <DetailRow label="Team Company" value={task.teamCompany} isMobile={isMobile} />
+                  <DetailRow label="Responsible (Owner)" value={task.responsible} isMobile={isMobile} />
                 </Box>
               </Paper>
 
@@ -382,6 +431,61 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                 </Box>
               </Paper>
 
+              {/* Metadata Section */}
+              <Paper elevation={0} sx={{
+                p: isMobile ? 1.5 : 2,
+                backgroundColor: '#2d2d2d',
+                borderRadius: 2,
+                border: '1px solid #3d3d3d'
+              }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee' }}>
+                  Metadata
+                </Typography>
+                <Box sx={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: isMobile ? 1.5 : 2
+                }}>
+                  <DetailRow
+                    label="Created By"
+                    value={
+                      task.createdBy ? (
+                        <Chip
+                          label={task.createdBy.name}
+                          size="small"
+                          sx={{ backgroundColor: '#3a4044', color: 'white' }}
+                          avatar={<Avatar sx={{ bgcolor: '#7b68ee' }}>{task.createdBy.name?.charAt(0)}</Avatar>}
+                        />
+                      ) : 'N/A'
+                    }
+                    isMobile={isMobile}
+                  />
+                  <DetailRow
+                    label="Created At"
+                    value={moment(task.createdAt).format("YYYY-MM-DD HH:mm")}
+                    isMobile={isMobile}
+                  />
+                  <DetailRow
+                    label="Whom It May Concern"
+                    value={
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {task.whomItMayConcern?.length > 0 ? (
+                          task.whomItMayConcern.map((user, i) => (
+                            <Chip
+                              key={i}
+                              label={user.name}
+                              size="small"
+                              sx={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', color: '#ffffff' }}
+                            />
+                          ))
+                        ) : 'None'}
+                      </Box>
+                    }
+                    isMobile={isMobile}
+                  />
+                </Box>
+              </Paper>
+
               {/* Progress Section */}
               {task.subTasks?.[0]?.note && (
                 <Paper elevation={0} sx={{
@@ -411,10 +515,10 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                               border: '2px solid',
                               borderColor: task.subTasks.some(t => t.completedBy?._id === user._id) ? '#4caf50' : '#f44336'
                             }}>
-                              {user.name
-                                .split(' ')
+                              {user?.name
+                                ?.split(' ')
                                 .map((part, i) => i < 2 ? part.charAt(0) : '')
-                                .join('')}
+                                .join('') || '?'}
                             </Avatar>
                           </Tooltip>
                         ))}
@@ -475,10 +579,10 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
                                   height: isMobile ? 20 : 24,
                                   fontSize: isMobile ? '0.65rem' : '0.75rem'
                                 }}>
-                                  {subtask.completedBy.name
-                                    .split(' ')
+                                  {subtask.completedBy?.name
+                                    ?.split(' ')
                                     .map((part, i) => i < 2 ? part.charAt(0) : '')
-                                    .join('')}
+                                    .join('') || '?'}
                                 </Avatar>
                               }
                               label={`${isMobile ? '' : 'Action by: '}${subtask.completedBy.name}`}

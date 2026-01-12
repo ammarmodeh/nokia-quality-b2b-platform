@@ -10,7 +10,6 @@ import {
   TableRow,
   Paper,
   Chip,
-  CircularProgress,
   TextField,
   InputAdornment,
   IconButton,
@@ -36,7 +35,8 @@ import {
   Tabs,
   Tab,
   TablePagination,
-  Pagination
+  Pagination,
+  Badge
 } from '@mui/material';
 import {
   MdSearch,
@@ -50,7 +50,8 @@ import {
   MdViewList,
   MdViewModule,
   MdBarChart,
-  MdRefresh
+  MdRefresh,
+  MdTerminal
 } from 'react-icons/md';
 import api from '../api/api';
 import CustomerIssueDialog from './CustomerIssueDialog';
@@ -61,6 +62,8 @@ import { useSelector } from 'react-redux';
 import ManagedAutocomplete from "./common/ManagedAutocomplete";
 import { FaFilePdf } from 'react-icons/fa6';
 import { toast } from 'sonner';
+import CustomerIssueLogTerminal from './CustomerIssueLogTerminal';
+import LoadingSpinner from './common/LoadingSpinner';
 
 import { MdEmail } from 'react-icons/md';
 import { alpha } from '@mui/material/styles';
@@ -87,6 +90,7 @@ const CustomerIssuesList = () => {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [openLogTerminal, setOpenLogTerminal] = useState(false);
 
   // Pagination & Source Filter State
   const [page, setPage] = useState(0);
@@ -150,6 +154,12 @@ const CustomerIssuesList = () => {
         (issue.fromMain && issue.fromMain.toLowerCase().includes(term)) ||
         (issue.fromSub && issue.fromSub.toLowerCase().includes(term)) ||
         (issue.from && issue.from.toLowerCase().includes(term)) ||
+        (issue.customerName && issue.customerName.toLowerCase().includes(term)) ||
+        (issue.customerContact && issue.customerContact.toLowerCase().includes(term)) ||
+        (issue.closedBy && issue.closedBy.toLowerCase().includes(term)) ||
+        (issue.assigneeNote && issue.assigneeNote.toLowerCase().includes(term)) ||
+        (issue.resolutionDetails && issue.resolutionDetails.toLowerCase().includes(term)) ||
+        (issue.ticketId && issue.ticketId.toLowerCase().includes(term)) ||
         (issue.issues && issue.issues.some(i =>
           i.category.toLowerCase().includes(term) ||
           (i.subCategory && i.subCategory.toLowerCase().includes(term))
@@ -399,11 +409,7 @@ const CustomerIssuesList = () => {
   const paginatedIssues = filteredIssues.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingSpinner variant="page" />;
   }
 
   if (error) {
@@ -489,6 +495,47 @@ const CustomerIssuesList = () => {
           >
             {isMobile ? 'PDF' : 'Pro Report'}
           </Button>
+
+          <Badge
+            badgeContent="NEW"
+            color="error"
+            sx={{
+              '& .MuiBadge-badge': {
+                fontSize: '10px',
+                height: '18px',
+                minWidth: '28px',
+                backgroundColor: '#7b68ee', // Nokia-style purple
+                top: 5,
+                right: 5,
+                animation: 'pulse-animation 2s infinite',
+                boxShadow: '0 0 0 0 rgba(123, 104, 238, 0.7)',
+                '@keyframes pulse-animation': {
+                  '0%': { boxShadow: '0 0 0 0 rgba(123, 104, 238, 0.7)' },
+                  '70%': { boxShadow: '0 0 0 4px rgba(123, 104, 238, 0)' },
+                  '100%': { boxShadow: '0 0 0 0 rgba(123, 104, 238, 0)' }
+                }
+              }
+            }}
+          >
+            <Button
+              variant="outlined"
+              onClick={() => setOpenLogTerminal(true)}
+              startIcon={<MdTerminal />}
+              size={isMobile ? 'small' : 'medium'}
+              sx={{
+                borderColor: '#3d3d3d',
+                color: '#00ff41',
+                backgroundColor: 'rgba(0, 255, 65, 0.05)',
+                '&:hover': { borderColor: '#00ff41', backgroundColor: 'rgba(0, 255, 65, 0.1)' },
+                textTransform: 'none',
+                borderRadius: '8px',
+                px: isMobile ? 1.5 : 2,
+                fontFamily: 'monospace'
+              }}
+            >
+              {isMobile ? 'Logs' : 'System Logs'}
+            </Button>
+          </Badge>
 
         </Box>
       </Box>
@@ -1070,6 +1117,13 @@ const CustomerIssuesList = () => {
           </MenuItem>
         ]}
       </Menu>
+
+
+
+      <CustomerIssueLogTerminal
+        open={openLogTerminal}
+        onClose={() => setOpenLogTerminal(false)}
+      />
 
       {/* Add Issue Dialog */}
       <CustomerIssueDialog
