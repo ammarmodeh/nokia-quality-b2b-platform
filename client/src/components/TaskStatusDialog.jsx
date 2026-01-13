@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
+import { getWeekNumber } from "../utils/helpers";
 import {
   Dialog,
   DialogTitle,
@@ -47,8 +48,19 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
   const [viewLoading, setViewLoading] = useState(false);
   const [selectedReason, setSelectedReason] = useState("All");
 
-  // Calculate Reason Stats
+  // Initialize with current week
+  const currentWeek = getWeekNumber(new Date()).key;
+  const [selectedWeek, setSelectedWeek] = useState(currentWeek);
+
+  // Calculate Reason Stats based on Selected Week
   const reasonStats = tasks?.reduce((acc, task) => {
+    // Apply Week Filter to Stats
+    if (selectedWeek !== "All") {
+      const date = task.interviewDate || task.createdAt;
+      const weekKey = getWeekNumber(date).key;
+      if (weekKey !== selectedWeek) return acc;
+    }
+
     const reason = task.reason || "Unspecified";
     acc[reason] = (acc[reason] || 0) + 1;
     return acc;
@@ -58,7 +70,21 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5); // Top 5 reasons
 
+  // Unique Reasons for Dropdown (can be from all tasks or filtered, sticking to filtered for consistency with view)
   const uniqueReasons = ["All", ...Object.keys(reasonStats || {}).sort()];
+
+  // Calculate Week Stats
+  const weekStats = tasks?.reduce((acc, task) => {
+    if (task.createdAt || task.interviewDate) {
+      const date = task.interviewDate || task.createdAt;
+      // Prefer interviewDate as in Dashboard charts equivalent
+      const weekKey = getWeekNumber(date).key;
+      acc[weekKey] = (acc[weekKey] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  const uniqueWeeks = ["All", ...Object.keys(weekStats || {}).sort().reverse()]; // Sort Newest weeks first
 
   useEffect(() => {
     if (initialTasks) {
@@ -68,13 +94,17 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
     }
   }, [initialTasks]);
 
-  // Debounce search term
-
-
-  // Handle search term changes
   // Handle search and filters
   useEffect(() => {
     let filtered = tasks;
+
+    // Filter by Week
+    if (selectedWeek !== "All") {
+      filtered = filtered.filter(task => {
+        const date = task.interviewDate || task.createdAt;
+        return getWeekNumber(date).key === selectedWeek;
+      });
+    }
 
     // Filter by Reason
     if (selectedReason !== "All") {
@@ -91,7 +121,10 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
     }
 
     setFilteredTasks(filtered);
-  }, [searchTerm, tasks, selectedReason]);
+  }, [searchTerm, tasks, selectedReason, selectedWeek]);
+
+  // KPIs
+  const notClosedCount = filteredTasks.filter(t => t.status !== 'Closed').length;
 
   // Custom field display configuration
   const fieldDisplayConfig = {
@@ -405,6 +438,19 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
             backgroundColor: "#2d2d2d",
             borderBottom: "1px solid #e5e7eb"
           }}>
+            {/* KPI Stats */}
+            <Stack direction="row" spacing={2} sx={{ mb: 2 }} alignItems="center">
+              <Chip
+                label={`Open Issues: ${notClosedCount}`}
+                color={notClosedCount > 0 ? "error" : "success"}
+                variant="filled"
+                sx={{ fontWeight: 'bold' }}
+              />
+              <Typography variant="body2" color="textSecondary">
+                Showing {filteredTasks.length} tasks
+              </Typography>
+            </Stack>
+
             {/* Top Reasons Stats */}
             <Stack direction="row" spacing={1} sx={{ mb: 2, overflowX: 'auto', pb: 0.5 }} alignItems="center">
               <Typography variant="caption" color="textSecondary" sx={{ whiteSpace: 'nowrap' }}>Top Reasons:</Typography>
@@ -466,6 +512,44 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                   }}
                 />
               </Box>
+
+              {/* Week Dropdown */}
+              <FormControl variant="standard" sx={{ minWidth: 150, display: { xs: 'none', sm: 'block' } }}>
+                <Select
+                  value={selectedWeek}
+                  onChange={(e) => setSelectedWeek(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    color: "white",
+                    '.MuiSelect-icon': { color: "white" },
+                    '&:before': { borderBottomColor: 'rgba(255,255,255,0.3)' },
+                    '&:after': { borderBottomColor: '#7b68ee' },
+                    fontSize: '0.9rem'
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        bgcolor: '#333',
+                        color: 'white',
+                        '& .MuiMenuItem-root': {
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
+                          '&.Mui-selected': { bgcolor: 'rgba(123, 104, 238, 0.3)' }
+                        }
+                      }
+                    }
+                  }}
+                  renderValue={(selected) => {
+                    if (selected === "All") return <span style={{ color: '#b3b3b3' }}>All Weeks</span>;
+                    return selected;
+                  }}
+                >
+                  {uniqueWeeks.map((week) => (
+                    <MenuItem key={week} value={week}>
+                      {week} {week !== "All" && `(${weekStats[week]})`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
               {/* Reason Dropdown */}
               <FormControl variant="standard" sx={{ minWidth: 150, display: { xs: 'none', sm: 'block' } }}>
