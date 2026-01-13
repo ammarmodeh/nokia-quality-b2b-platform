@@ -94,6 +94,7 @@ export const getAllIssues = async (req, res) => {
     if (solved) query.solved = solved;
     if (assignedTo) query.assignedTo = assignedTo;
     if (teamCompany) query.teamCompany = teamCompany;
+    if (req.query.slid) query.slid = req.query.slid; // Exact match for duplicate checking
     if (pisDate) {
       const date = new Date(pisDate);
       const nextDay = new Date(date);

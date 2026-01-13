@@ -5,7 +5,7 @@ import UserAvatar from "./UserAvatar";
 import NotificationPanel from "./NotificationPanel";
 import api from "../api/api";
 import { BeatLoader } from "react-spinners";
-import { Box, Button, Divider, Menu, MenuItem, Stack, Typography, Drawer, IconButton, Tooltip, Badge } from "@mui/material";
+import { Box, Button, Divider, Menu, MenuItem, Stack, Typography, Drawer, IconButton, Tooltip, Badge, Chip } from "@mui/material";
 import { DocsMenu } from "./DocsMenu";
 import { PoliciesMenu } from "./PoliciesMenu";
 import useMediaQuery from '@mui/material/useMediaQuery';

@@ -13,7 +13,6 @@ import {
   useTheme,
   alpha,
   Button,
-  TextField,
   ToggleButton,
   ToggleButtonGroup
 } from '@mui/material';
@@ -22,11 +21,7 @@ import {
   FaMeh,
   FaFrown,
   FaPoll,
-  FaCalendarAlt,
-  FaEnvelope,
-  FaCalendarCheck,
-  FaCalendarWeek,
-  FaCalendarDay
+  FaEnvelope
 } from 'react-icons/fa';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -41,6 +36,7 @@ import {
 } from '../utils/dateFilterHelpers';
 import { getCustomWeekNumber } from '../utils/helpers';
 import ManagementEmailDialog from './ManagementEmailDialog';
+import NPSDetailsDialog from './NPSDetailsDialog';
 
 const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings = {} }) => {
   const theme = useTheme();
@@ -59,6 +55,10 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
   const [dateRange, setDateRange] = useState({ start: null, end: null });
   const [showEmailDialog, setShowEmailDialog] = useState(false);
 
+  // Details Dialog State
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsType, setDetailsType] = useState('');
+  const [detailsTasks, setDetailsTasks] = useState([]);
 
 
   // Helper for weeks interval
@@ -126,8 +126,11 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
       periodEnd = dateRange.end;
     }
 
-    const detractors = filteredTasks.filter(t => t.evaluationScore >= 1 && t.evaluationScore <= 6).length;
-    const neutrals = filteredTasks.filter(t => t.evaluationScore >= 7 && t.evaluationScore <= 8).length;
+    const detractorsTasks = filteredTasks.filter(t => t.evaluationScore >= 1 && t.evaluationScore <= 6);
+    const neutralsTasks = filteredTasks.filter(t => t.evaluationScore >= 7 && t.evaluationScore <= 8);
+
+    const detractors = detractorsTasks.length;
+    const neutrals = neutralsTasks.length;
     const promoters = Math.max(0, totalSamples - (detractors + neutrals));
 
     const promotersPercent = totalSamples > 0 ? Math.round((promoters / totalSamples) * 100) : 0;
@@ -145,9 +148,10 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
       totalSamples, promoters, neutrals, detractors, nps, filteredTasks,
       promotersPercent, detractorsPercent, targetPromoters, targetDetractors,
       isPromoterAlarm, isDetractorAlarm,
-      periodStart, periodEnd
+      periodStart, periodEnd,
+      detractorsTasks, neutralsTasks
     };
-  }, [tasks, samplesData, filterType, selectedPeriod, dateRange, currentYear, weeksInterval]);
+  }, [tasks, samplesData, filterType, selectedPeriod, dateRange, currentYear, weeksInterval, weeks, months]);
 
   const periodLabel = useMemo(() => {
     if (filterType === 'all') return 'Full Year Analytics';
@@ -159,23 +163,43 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
     return '';
   }, [filterType, selectedPeriod, months, dateRange]);
 
-  const StatItem = ({ label, value, icon, color, target, current, isAlarm }) => (
-    <Box sx={{
-      p: { xs: 1.5, sm: 2 },
-      textAlign: 'center',
-      position: 'relative',
-      borderRadius: 3,
-      transition: 'all 0.3s ease',
-      ...(isAlarm && {
-        bgcolor: alpha('#ef4444', 0.05),
-        animation: 'pulse 2s infinite ease-in-out',
-        '@keyframes pulse': {
-          '0%': { boxShadow: `0 0 0 0 ${alpha('#ef4444', 0.2)}` },
-          '70%': { boxShadow: `0 0 0 10px ${alpha('#ef4444', 0)}` },
-          '100%': { boxShadow: `0 0 0 0 ${alpha('#ef4444', 0)}` }
-        }
-      })
-    }}>
+  const handleCardClick = (type) => {
+    if (type === 'Detractors') {
+      setDetailsTasks(stats.detractorsTasks);
+      setDetailsType('Detractors');
+      setDetailsOpen(true);
+    } else if (type === 'Neutrals') {
+      setDetailsTasks(stats.neutralsTasks);
+      setDetailsType('Neutrals');
+      setDetailsOpen(true);
+    }
+  };
+
+  const StatItem = ({ label, value, icon, color, target, current, isAlarm, isClickable = false }) => (
+    <Box
+      onClick={() => isClickable && handleCardClick(label)}
+      sx={{
+        p: { xs: 1.5, sm: 2 },
+        textAlign: 'center',
+        position: 'relative',
+        borderRadius: 3,
+        transition: 'all 0.3s ease',
+        cursor: isClickable ? 'pointer' : 'default',
+        '&:hover': isClickable ? {
+          bgcolor: alpha(color, 0.05),
+          transform: 'translateY(-2px)',
+          boxShadow: 2
+        } : {},
+        ...(isAlarm && {
+          bgcolor: alpha('#ef4444', 0.05),
+          animation: 'pulse 2s infinite ease-in-out',
+          '@keyframes pulse': {
+            '0%': { boxShadow: `0 0 0 0 ${alpha('#ef4444', 0.2)}` },
+            '70%': { boxShadow: `0 0 0 10px ${alpha('#ef4444', 0)}` },
+            '100%': { boxShadow: `0 0 0 0 ${alpha('#ef4444', 0)}` }
+          }
+        })
+      }}>
       <Box sx={{
         display: 'inline-flex',
         p: 1.5,
@@ -370,6 +394,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
                     value={stats.neutrals}
                     icon={<FaMeh size={20} />}
                     color="#f59e0b"
+                    isClickable={true}
                   />
                 </Grid>
                 <Grid item xs={4} sm={4}>
@@ -381,6 +406,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
                     target={stats.targetDetractors}
                     current={stats.detractorsPercent}
                     isAlarm={stats.isDetractorAlarm}
+                    isClickable={true}
                   />
                 </Grid>
               </Grid>
@@ -424,11 +450,19 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
         <ManagementEmailDialog
           open={showEmailDialog}
           onClose={() => setShowEmailDialog(false)}
-          data={{ tasks: stats.filteredTasks, teamsData, samplesData }}
+          data={{ tasks: stats.filteredTasks, teamsData, samplesData, totalSamples: stats.totalSamples }}
           type="dashboard"
           period={periodLabel}
           startDate={stats.periodStart}
           endDate={stats.periodEnd}
+        />
+
+        {/* NPS Details Dialog */}
+        <NPSDetailsDialog
+          open={detailsOpen}
+          onClose={() => setDetailsOpen(false)}
+          title={`${detailsType} - ${periodLabel}`}
+          tasks={detailsTasks}
         />
       </Card>
     </LocalizationProvider>

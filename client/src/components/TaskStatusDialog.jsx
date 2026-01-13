@@ -19,8 +19,12 @@ import {
   Avatar,
   useMediaQuery,
   useTheme,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
-import { Edit, Visibility, Delete, ContentCopy, WhatsApp, Close, Search } from "@mui/icons-material";
+import { Edit, Visibility, Delete, ContentCopy, WhatsApp, Close, Search, FilterList } from "@mui/icons-material";
 import api from "../api/api";
 import { useSelector } from "react-redux";
 import EditTaskDialog from "./task/EditTaskDialog";
@@ -41,6 +45,20 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
   const [searchTerm, setSearchTerm] = useState("");
   // const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [viewLoading, setViewLoading] = useState(false);
+  const [selectedReason, setSelectedReason] = useState("All");
+
+  // Calculate Reason Stats
+  const reasonStats = tasks?.reduce((acc, task) => {
+    const reason = task.reason || "Unspecified";
+    acc[reason] = (acc[reason] || 0) + 1;
+    return acc;
+  }, {});
+
+  const sortedReasons = Object.entries(reasonStats || {})
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5); // Top 5 reasons
+
+  const uniqueReasons = ["All", ...Object.keys(reasonStats || {}).sort()];
 
   useEffect(() => {
     if (initialTasks) {
@@ -54,18 +72,26 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
 
 
   // Handle search term changes
+  // Handle search and filters
   useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredTasks(tasks);
-    } else {
+    let filtered = tasks;
+
+    // Filter by Reason
+    if (selectedReason !== "All") {
+      filtered = filtered.filter(task => (task.reason || "Unspecified") === selectedReason);
+    }
+
+    // Filter by Search Term
+    if (searchTerm.trim() !== "") {
       const lowerSearch = searchTerm.toLowerCase();
-      const filtered = tasks.filter(task =>
+      filtered = filtered.filter(task =>
         task.customerName?.toLowerCase().includes(lowerSearch) ||
         task.slid?.toLowerCase().includes(lowerSearch)
       );
-      setFilteredTasks(filtered);
     }
-  }, [searchTerm, tasks]);
+
+    setFilteredTasks(filtered);
+  }, [searchTerm, tasks, selectedReason]);
 
   // Custom field display configuration
   const fieldDisplayConfig = {
@@ -373,68 +399,126 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
             height: isMobile ? "calc(100vh - 112px)" : "70vh",
           }
         }}>
-          {/* Search Bar - Mobile Optimized */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              width: "100%",
-              py: isMobile ? 0.5 : 1,
-              px: isMobile ? 1 : 2,
-              gap: 1,
-              backgroundColor: "#2d2d2d",
-              borderBottom: "1px solid #e5e7eb",
-              "&:focus-within": {
-                borderColor: "#7b68ee",
-              },
-              position: "sticky",
-              top: 0,
-              zIndex: 1,
-            }}
-          >
-            <Box sx={{ color: "#b3b3b3" }}>
-              <Search fontSize={isMobile ? "small" : "medium"} />
+          {/* Stats and Filters Section */}
+          <Box sx={{
+            p: isMobile ? 1 : 2,
+            backgroundColor: "#2d2d2d",
+            borderBottom: "1px solid #e5e7eb"
+          }}>
+            {/* Top Reasons Stats */}
+            <Stack direction="row" spacing={1} sx={{ mb: 2, overflowX: 'auto', pb: 0.5 }} alignItems="center">
+              <Typography variant="caption" color="textSecondary" sx={{ whiteSpace: 'nowrap' }}>Top Reasons:</Typography>
+              {sortedReasons.map(([reason, count]) => (
+                <Chip
+                  key={reason}
+                  label={`${reason}: ${count}`}
+                  size="small"
+                  color={selectedReason === reason ? "primary" : "default"}
+                  onClick={() => setSelectedReason(reason === selectedReason ? "All" : reason)}
+                  sx={{
+                    borderRadius: '4px',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    color: selectedReason === reason ? 'white' : '#b3b3b3',
+                    backgroundColor: selectedReason === reason ? 'primary.main' : 'rgba(255,255,255,0.05)',
+                    '&:hover': { backgroundColor: selectedReason === reason ? 'primary.dark' : 'rgba(255,255,255,0.1)' }
+                  }}
+                  variant={selectedReason === reason ? "filled" : "outlined"}
+                />
+              ))}
+            </Stack>
+
+            <Stack direction="row" spacing={2} alignItems="center">
+              {/* Search Bar */}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  flex: 1,
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                  borderRadius: 1,
+                  px: 1.5,
+                  py: 0.5,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  "&:focus-within": {
+                    borderColor: "#7b68ee",
+                  },
+                }}
+              >
+                <Search fontSize="small" sx={{ color: "#b3b3b3", mr: 1 }} />
+                <TextField
+                  fullWidth
+                  variant="standard"
+                  placeholder="Search by name or SLID"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    disableUnderline: true,
+                    style: { color: "#ffffff", fontSize: '0.9rem' },
+                    endAdornment: searchTerm && (
+                      <IconButton
+                        size="small"
+                        onClick={handleClearSearch}
+                        sx={{ color: "#b3b3b3", "&:hover": { color: "#ffffff" } }}
+                      >
+                        <Close fontSize="small" />
+                      </IconButton>
+                    ),
+                  }}
+                />
+              </Box>
+
+              {/* Reason Dropdown */}
+              <FormControl variant="standard" sx={{ minWidth: 150, display: { xs: 'none', sm: 'block' } }}>
+                <Select
+                  value={selectedReason}
+                  onChange={(e) => setSelectedReason(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    color: "white",
+                    '.MuiSelect-icon': { color: "white" },
+                    '&:before': { borderBottomColor: 'rgba(255,255,255,0.3)' },
+                    '&:after': { borderBottomColor: '#7b68ee' },
+                    fontSize: '0.9rem'
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        bgcolor: '#333',
+                        color: 'white',
+                        '& .MuiMenuItem-root': {
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
+                          '&.Mui-selected': { bgcolor: 'rgba(123, 104, 238, 0.3)' }
+                        }
+                      }
+                    }
+                  }}
+                  renderValue={(selected) => {
+                    if (selected === "All") {
+                      return <span style={{ color: '#b3b3b3' }}>Filter by Reason</span>;
+                    }
+                    return selected;
+                  }}
+                >
+                  {uniqueReasons.map((reason) => (
+                    <MenuItem key={reason} value={reason}>
+                      {reason} {reason !== "All" && `(${reasonStats[reason]})`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+
+            {/* Mobile Filter Chip (Visible only on small screens) */}
+            <Box sx={{ display: { xs: 'flex', sm: 'none' }, mt: 1, gap: 1, overflowX: 'auto' }}>
+              <Chip
+                icon={<FilterList style={{ color: 'white' }} />}
+                label={selectedReason === "All" ? "Filter Reason" : selectedReason}
+                onClick={() => { /* Consider adding a mobile friendly dropdown or dialog here if needed, for now reliance on top stats chips is good enough or standard Select */ }}
+                // For now, simpler to just start with the Select functioning on mobile or relying on the top chips
+                sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'white' }}
+              />
+              {/* Or maybe just show the Select on mobile too but styled differently? Let's keep the Select above visible on all breakpoints or adjust */}
             </Box>
-            <TextField
-              fullWidth
-              variant="standard"
-              placeholder="Search by name or SLID"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              sx={{
-                "& .MuiInputBase-root": {
-                  backgroundColor: "transparent",
-                  color: "#ffffff",
-                },
-                "& .MuiInputBase-input": {
-                  fontSize: isMobile ? "13px" : "14px",
-                  color: "#ffffff",
-                  padding: 0,
-                },
-                "& .MuiInput-root:before": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-root:after": {
-                  borderBottom: "none",
-                },
-                "& .MuiInput-root:hover:not(.Mui-disabled):before": {
-                  borderBottom: "none",
-                },
-              }}
-              InputProps={{
-                disableUnderline: true,
-                style: { color: "#ffffff" },
-                endAdornment: searchTerm && (
-                  <IconButton
-                    size="small"
-                    onClick={handleClearSearch}
-                    sx={{ color: "#b3b3b3", "&:hover": { color: "#ffffff" } }}
-                  >
-                    <Close fontSize={isMobile ? "small" : "medium"} />
-                  </IconButton>
-                ),
-              }}
-            />
           </Box>
 
           {/* Scrollable content - Mobile Optimized */}

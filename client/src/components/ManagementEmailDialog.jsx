@@ -35,7 +35,12 @@ const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, p
 
       const detractorCount = tasks.filter(t => t.evaluationScore >= 1 && t.evaluationScore <= 6).length;
       const neutralCount = tasks.filter(t => t.evaluationScore >= 7 && t.evaluationScore <= 8).length;
-      const totalSamples = samplesData.reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+
+      // Use passed totalSamples (which respects filters) or fallback to summing all samples
+      const totalSamples = data.totalSamples !== undefined
+        ? data.totalSamples
+        : samplesData.reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+
       const promoterCount = Math.max(0, totalSamples - (detractorCount + neutralCount));
       const npsScore = promoterCount - detractorCount;
 

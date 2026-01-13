@@ -352,7 +352,7 @@ export const AllReasonsTable = memo(({ tasks }) => {
                 <Select
                   value={selectedPeriod}
                   onChange={(e) => setSelectedPeriod(e.target.value)}
-                  DisplayEmpty
+                  displayEmpty
                   sx={{ borderRadius: '8px' }}
                 >
                   <MenuItem value="" disabled>Select Week</MenuItem>
@@ -366,7 +366,7 @@ export const AllReasonsTable = memo(({ tasks }) => {
                 <Select
                   value={selectedPeriod}
                   onChange={(e) => setSelectedPeriod(e.target.value)}
-                  DisplayEmpty
+                  displayEmpty
                   sx={{ borderRadius: '8px' }}
                 >
                   <MenuItem value="" disabled>Select Month</MenuItem>

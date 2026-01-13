@@ -24,6 +24,7 @@ import { useSelector } from "react-redux";
 import ManagedAutocomplete from "./common/ManagedAutocomplete";
 import { MdAdd, MdDelete, MdHistory, MdTerminal } from "react-icons/md";
 import CustomerIssueLogTerminal from "./CustomerIssueLogTerminal";
+import api from "../api/api";
 
 const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   const theme = useTheme();
@@ -60,7 +61,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
 
   const [formData, setFormData] = useState(initialFormState);
   const [openLogTerminal, setOpenLogTerminal] = useState(false);
-  const [logCount, setLogCount] = useState(0);
+  const [duplicateIssues, setDuplicateIssues] = useState([]);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
 
   // Persistence & Edit Logic
   useEffect(() => {
@@ -102,24 +104,63 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     }
   }, [formData, open, issue]);
 
+  const checkExistingIssues = async (manual = false) => {
+    // Only check if creating a new issue or if the SLID has changed significantly
+    // And avoid checking if we are editing the same issue (though backend filter handles exact match)
+    if (formData.slid && formData.slid.length > 2 && !issue) {
+      try {
+        const res = await api.get('/customer-issues-notifications', {
+          params: { slid: formData.slid }, // Uses the new exact match filter backend
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+        });
+
+        if (res.data.data && res.data.data.length > 0) {
+          setDuplicateIssues(res.data.data);
+          setDuplicateDialogOpen(true);
+        } else {
+          setDuplicateIssues([]);
+          if (manual) {
+            alert("No existing issues found for this SLID.");
+          }
+        }
+      } catch (err) {
+        console.error("Duplicate check failed", err);
+      }
+    } else if (manual && (!formData.slid || formData.slid.length <= 2)) {
+      alert("Please enter a valid SLID (at least 3 characters) to check.");
+    }
+  };
+
   useEffect(() => {
-    const checkLogs = async () => {
-      if (formData.slid && formData.slid.length > 5) {
+    const checkExistingIssues = async () => {
+      // Only check if creating a new issue or if the SLID has changed significantly
+      // And avoid checking if we are editing the same issue (though backend filter handles exact match)
+      if (formData.slid && formData.slid.length > 5 && !issue) {
         try {
-          const res = await api.get('/customer-issues-notifications/logs', {
-            params: { slid: formData.slid, limit: 1 },
+          const res = await api.get('/customer-issues-notifications', {
+            params: { slid: formData.slid }, // Uses the new exact match filter backend
             headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
           });
-          setLogCount(res.data.data.length);
+
+          if (res.data.data && res.data.data.length > 0) {
+            setDuplicateIssues(res.data.data);
+            setDuplicateDialogOpen(true);
+          } else {
+            setDuplicateIssues([]);
+          }
         } catch (err) {
-          console.error("Log check failed", err);
+          console.error("Duplicate check failed", err);
         }
-      } else {
-        setLogCount(0);
       }
     };
-    checkLogs();
-  }, [formData.slid]);
+
+    // Debounce the API call
+    const timer = setTimeout(() => {
+      checkExistingIssues();
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [formData.slid, issue]);
 
   const handleChange = (e) => {
     if (!isAdmin) return;
@@ -391,43 +432,22 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                 disabled={!isAdmin}
                 sx={{ ...textFieldStyles }}
               />
-              <Tooltip title="Check History for this SLID">
+              <Tooltip title="Check Existing Issues in Database">
                 <IconButton
-                  onClick={() => setOpenLogTerminal(true)}
-                  disabled={!formData.slid}
+                  onClick={() => checkExistingIssues(true)} // Manual check
                   sx={{
                     mt: 1,
-                    backgroundColor: 'rgba(123, 104, 238, 0.1)',
-                    color: '#00ff41',
-                    '&:hover': { backgroundColor: 'rgba(0, 255, 65, 0.2)' }
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    color: '#f59e0b',
+                    '&:hover': { backgroundColor: 'rgba(245, 158, 11, 0.2)' }
                   }}
                 >
-                  <MdTerminal />
+                  <MdHistory />
                 </IconButton>
               </Tooltip>
             </Box>
 
-            {logCount > 0 && (
-              <Box
-                onClick={() => setOpenLogTerminal(true)}
-                sx={{
-                  backgroundColor: 'rgba(0, 255, 65, 0.05)',
-                  p: 1,
-                  borderRadius: 1,
-                  mb: 2,
-                  border: '1px solid #00ff41',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1
-                }}
-              >
-                <MdTerminal color="#00ff41" />
-                <Typography variant="caption" sx={{ color: '#00ff41', fontWeight: 'bold' }}>
-                  SYSTEM LOG MATCH FOUND: {logCount} previous entry detected. Click to audit before proceeding.
-                </Typography>
-              </Box>
-            )}
+
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
               <FormControlLabel
@@ -830,6 +850,104 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
         onClose={() => setOpenLogTerminal(false)}
         slidFilter={formData.slid}
       />
+
+      {/* Duplicate Issue Warning Dialog */}
+      <Dialog
+        open={duplicateDialogOpen}
+        onClose={() => setDuplicateDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        sx={{
+          "& .MuiDialog-paper": {
+            backgroundColor: '#1e1e1e', // Darker background for warning
+            color: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #f59e0b', // Amber warning border
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          backgroundColor: 'rgba(245, 158, 11, 0.15)', // Amber tint
+          color: '#f59e0b',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          borderBottom: '1px solid rgba(245, 158, 11, 0.3)'
+        }}>
+          <MdHistory size={24} />
+          <Typography variant="h6" fontWeight="bold">
+            Existing Issue(s) Found
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            This SLID <strong>({formData.slid})</strong> already exists in the database. Please review the details below before proceeding to avoid creating duplicates.
+          </Typography>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {duplicateIssues.map((issue, index) => (
+              <Box key={issue._id || index} sx={{
+                p: 2,
+                borderRadius: '8px',
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="#b3b3b3">Reported Date</Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                      {issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="#b3b3b3">Reporter</Typography>
+                    <Typography variant="body2" fontWeight="bold">{issue.reporter}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="#b3b3b3">Assigned To</Typography>
+                    <Typography variant="body2" fontWeight="bold">{issue.assignedTo}</Typography>
+                  </Grid>
+
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="#b3b3b3">Customer Name</Typography>
+                    <Typography variant="body2">{issue.customerName || 'N/A'}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="#b3b3b3">Status</Typography>
+                    <Typography variant="body2" sx={{
+                      color: issue.solved === 'yes' ? '#4caf50' : '#f44336',
+                      fontWeight: 'bold',
+                      textTransform: 'capitalize'
+                    }}>
+                      {issue.solved === 'yes' ? 'Closed' : 'Open'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="#b3b3b3">Category</Typography>
+                    <Typography variant="body2">
+                      {issue.issues?.[0]?.category || 'N/A'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <Button
+            onClick={() => setDuplicateDialogOpen(false)}
+            variant="contained"
+            sx={{
+              backgroundColor: '#f59e0b',
+              color: '#000',
+              fontWeight: 'bold',
+              '&:hover': { backgroundColor: '#d97706' }
+            }}
+          >
+            Acknowledge & Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };
