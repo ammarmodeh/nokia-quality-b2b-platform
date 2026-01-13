@@ -674,7 +674,7 @@ const FieldTeamForm = () => {
   return (
     <Box
       sx={{
-        maxWidth: '1100px',
+        // maxWidth: '1100px',
         mx: 'auto',
         p: 2,
         px: isMobile ? 0 : undefined
