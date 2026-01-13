@@ -102,7 +102,7 @@ const Dashboard = () => {
         });
         setSamplesData(response.data || []);
       } catch (error) {
-        console.error("Error fetching samples:", error);
+        console.error("Error Fetching Samples:", error);
       }
     };
 
