@@ -943,6 +943,7 @@ const AllTasksList = () => {
             <TableRow>
               <TableCell style={{ fontSize: '0.875rem' }}>Created At</TableCell>
               <TableCell style={{ fontSize: '0.875rem' }}>SLID</TableCell>
+              <TableCell style={{ fontSize: '0.875rem' }}>Summary</TableCell>
               <TableCell style={{ fontSize: '0.875rem' }}>Customer Name</TableCell>
               {/* <TableCell>Contact</TableCell> */}
               <TableCell style={{ fontSize: '0.875rem' }}>Customer Feedback</TableCell>
@@ -1000,6 +1001,11 @@ const AllTasksList = () => {
                             />
                           ) : null}
                         </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ color: '#2196f3', fontWeight: '500' }}>
+                          {task.subTasks?.[0]?.title === "Task Reception" ? task.subTasks[0].shortNote : ""}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Typography fontWeight={500} sx={{ direction: 'rtl', textAlign: 'right', fontSize: '0.8rem' }}>

@@ -143,6 +143,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
         const [issuesResponse, optionsResponse] = await Promise.all([
           api.get('/customer-issues-notifications', {
             headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+            params: { limit: 1000 }
           }),
           api.get('/dropdown-options/all')
         ]);

@@ -748,6 +748,17 @@ const TaskViewPage = () => {
                     </Typography>
                   )}
 
+                  {subtask.shortNote && (
+                    <Box sx={{ mb: 2, p: 1.5, backgroundColor: 'rgba(33, 150, 243, 0.05)', borderRadius: '4px', borderRight: '4px solid #2196f3' }}>
+                      <Typography variant="caption" sx={{ color: '#2196f3', fontWeight: 'bold', display: 'block', mb: 0.5, textAlign: 'right' }}>
+                        Reception Summary:
+                      </Typography>
+                      <Typography variant="body2" sx={{ direction: 'rtl', textAlign: 'right', color: '#ffffff', fontWeight: '500' }}>
+                        {subtask.shortNote}
+                      </Typography>
+                    </Box>
+                  )}
+
                   {subtask.checkpoints && subtask.checkpoints.length > 0 && (
                     <Box sx={{ mt: 2, pl: 2, borderLeft: '2px solid #3d3d3d' }}>
                       <Typography variant="subtitle2" sx={{ mb: 1, color: '#6495ED', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>

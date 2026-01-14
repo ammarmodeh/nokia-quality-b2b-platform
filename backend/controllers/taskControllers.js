@@ -298,21 +298,21 @@ export const updateSubtask = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
+    // Validate subtaskType
+    const validSubtaskTypes = ["original", "visit", "phone", "no_answer", "others"];
+    if (subtaskType && !validSubtaskTypes.includes(subtaskType)) {
+      return res.status(400).json({ message: "Invalid subtaskType" });
+    }
+
+    // Update task with the correct subtaskType
+    if (subtaskType) {
+      task.subtaskType = subtaskType;
+    }
+
     // Validate and normalize subtasks structure
     const normalizedSubtasks = newSubtasks.map((subtask, index) => {
       if (!subtask.title) {
         throw new Error(`Subtask at index ${index} is missing required field: title`);
-      }
-
-      // Validate subtaskType
-      const validSubtaskTypes = ["original", "visit", "phone", "no_answer", "others"];
-      if (subtaskType && !validSubtaskTypes.includes(subtaskType)) {
-        return res.status(400).json({ message: "Invalid subtaskType" });
-      }
-
-      // Update task with the correct subtaskType
-      if (subtaskType) {
-        task.subtaskType = subtaskType;
       }
 
       return {
@@ -321,6 +321,7 @@ export const updateSubtask = async (req, res) => {
         note: subtask.note || "",
         dateTime: subtask.dateTime || null,
         status: subtask.status || "Open",
+        shortNote: subtask.shortNote || "",
         checkpoints: subtask.checkpoints ? subtask.checkpoints.map((checkpoint, cpIndex) => {
           if (!checkpoint.name) {
             throw new Error(`Checkpoint at index ${cpIndex} in subtask "${subtask.title}" is missing required field: name`);
@@ -382,16 +383,18 @@ export const updateSubtask = async (req, res) => {
       subtask.checkpoints.forEach((checkpoint) => {
         if (checkpoint.options?.simpleQuestion) return;
         // Check followUpQuestion actionTaken justification
-        if (checkpoint.options?.followUpQuestion?.actionTaken?.selected === "no_action" &&
-          checkpoint.options.followUpQuestion.actionTaken.justification &&
-          !checkpoint.options.followUpQuestion.actionTaken.justification.selected) {
+        const followUpAction = checkpoint.options?.followUpQuestion?.actionTaken;
+        if (followUpAction?.selected === "no_action" &&
+          followUpAction.justification &&
+          !followUpAction.justification.selected) {
           throw new Error(`Justification required for "No corrective action" in ${checkpoint.name}`);
         }
 
         // Check main actionTaken justification
-        if (checkpoint.options?.actionTaken?.selected === "no_action" &&
-          checkpoint.options.actionTaken.justification &&
-          !checkpoint.options.actionTaken.justification.selected) {
+        const mainAction = checkpoint.options?.actionTaken;
+        if (mainAction?.selected === "no_action" &&
+          mainAction.justification &&
+          !mainAction.justification.selected) {
           throw new Error(`Justification required for "No corrective action" in ${checkpoint.name}`);
         }
       });
@@ -450,16 +453,13 @@ export const updateSubtask = async (req, res) => {
 function getStatusFromCheckpoints(subtasks) {
   if (!subtasks || subtasks.length === 0) return "Todo";
 
-  // Check if all subtasks are "Finished"
-  // A subtask is finished if it's explicitly "Closed" OR if it has a note.
-  const allSubtasksFinished = subtasks.every(subtask => {
-    return subtask.status === "Closed" || (subtask.note && subtask.note.trim().length > 0);
-  });
+  // Check if all subtasks are "Closed"
+  const allSubtasksClosed = subtasks.every(subtask => subtask.status === "Closed");
 
-  if (allSubtasksFinished) return "Closed";
+  if (allSubtasksClosed) return "Closed";
 
-  // Check if any subtask is "Active"
-  // A subtask is active if it's explicitly "Closed", has a note, or has any checked checkpoints.
+  // Check if any subtask is active
+  // A subtask is active if it's "Closed", has a note, or has any checked checkpoints.
   const someSubtasksActive = subtasks.some(subtask => {
     const hasNote = subtask.note && subtask.note.trim().length > 0;
     const hasCheckedCheckpoints = subtask.checkpoints && subtask.checkpoints.some(cp => cp.checked);
@@ -482,7 +482,7 @@ export const getCurrentYearTasks = async (req, res) => {
       isDeleted: false,
       interviewDate: { $gte: startOfYear }
     })
-      .select("-subTasks -taskLogs -notifications -readBy")
+      .select("-taskLogs -notifications -readBy")
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email")
       .sort({ interviewDate: -1 });
@@ -560,7 +560,7 @@ export const getTasks = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const tasks = await TaskSchema.find(mongoQuery)
-      .select("-subTasks -taskLogs -notifications -readBy")
+      .select("-taskLogs -notifications -readBy")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -792,6 +792,7 @@ export const getTasksAssignedToMe = async (req, res) => {
 
     const tasks = await TaskSchema.find(mongoQuery)
       .sort({ createdAt: -1 })
+      .select("-taskLogs -notifications -readBy")
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email");
 
@@ -1281,7 +1282,7 @@ export const clearNotifications = async (req, res) => {
 export const getAllTasks = async (req, res) => {
   try {
     const tasks = await TaskSchema.find()
-      .select("-subTasks -taskLogs -notifications -readBy")
+      .select("-taskLogs -notifications -readBy")
       .populate("assignedTo", "name email role")
       .populate("whomItMayConcern", "name email role")
       .populate("createdBy", "name email")

@@ -15,6 +15,7 @@ import { FaRegCopy, FaStar } from "react-icons/fa";
 import { useSelector } from "react-redux";
 import api from "../api/api";
 import { BiArchive } from "react-icons/bi";
+import { RiProgress4Fill } from "react-icons/ri";
 
 const predefinedSubtasks = [
   { title: "Receive the task", progress: 0, note: "" },
@@ -299,9 +300,54 @@ const AssignedToMeTaskCard = ({
 
             <div className="flex items-center gap-2 mt-3">
               <h4 className="text-lg font-semibold text-[#bdb5b5]">{task?.slid}</h4>
-              {/* <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md ${statusConfig[task?.status]?.color || "bg-gray-200 text-gray-300"}`}> */}
               {activeStep === 0 ? <div>{statusConfig['Todo'].icon}</div> : activeStep === subtasks.length ? <div>{statusConfig['Closed'].icon}</div> : <div>{statusConfig['In Progress'].icon}</div>}
-              {/* </div> */}
+              {task.status !== "Closed" ? (
+                subtasks?.find(st => st.title === "Task Reception")?.shortNote && (
+                  <Chip
+                    label={subtasks.find(st => st.title === "Task Reception").shortNote}
+                    size="small"
+                    sx={{
+                      backgroundColor: "rgba(33, 150, 243, 0.1)",
+                      color: "#2196f3",
+                      border: "1px solid rgba(33, 150, 243, 0.3)",
+                      fontSize: "11px",
+                      fontWeight: "500",
+                      height: "22px",
+                      maxWidth: "200px",
+                      "& .MuiChip-label": {
+                        px: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }
+                    }}
+                    tooltip={subtasks.find(st => st.title === "Task Reception").shortNote}
+                  />
+                )
+              ) : (
+                task.closureCallFeedback && (
+                  <Chip
+                    label={`Closure: ${task.closureCallFeedback}`}
+                    size="small"
+                    sx={{
+                      backgroundColor: "rgba(16, 185, 129, 0.1)",
+                      color: "#10b981",
+                      border: "1px solid rgba(16, 185, 129, 0.3)",
+                      fontSize: "11px",
+                      fontWeight: "500",
+                      height: "22px",
+                      maxWidth: "300px",
+                      "& .MuiChip-label": {
+                        px: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }
+                    }}
+                    tooltip={task.closureCallFeedback}
+                  />
+                )
+              )}
             </div>
 
             <div className="text-sm text-gray-300 mt-2 space-y-1">
@@ -320,13 +366,14 @@ const AssignedToMeTaskCard = ({
               <div>
                 <p className="text-sm text-[#bdb5b5] font-medium">Progress: ({(100 / subtasks.length) * activeStep}%)</p>
                 <LinearProgress variant="determinate" value={(100 / subtasks.length) * activeStep} sx={{ backgroundColor: "#2d2d2d", "& .MuiLinearProgress-bar": { backgroundColor: "#7b68ee" } }} />
-                {user && (user._id === task.assignedTo[0]._id || user._id === task.assignedTo[0]) && (
+                {user && (user.role === 'Admin' || (task.assignedTo?.[0] && (user._id === task.assignedTo[0]._id || user._id === task.assignedTo[0]))) && (
                   <Button
                     variant="contained"
                     color="primary"
                     onClick={handleNoteDialogOpen}
-                    sx={{ mt: 2, backgroundColor: "#01013d" }}
+                    sx={{ mt: 2, backgroundColor: "#01013d", textTransform: 'none' }}
                   >
+                    <RiProgress4Fill size={20} style={{ marginRight: '8px' }} />
                     Manage Subtasks
                   </Button>
                 )}

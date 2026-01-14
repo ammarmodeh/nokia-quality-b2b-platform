@@ -23,6 +23,7 @@ import {
   Divider,
   IconButton,
   TablePagination,
+  Avatar,
 } from '@mui/material';
 import {
   Chart as ChartJS,
@@ -45,6 +46,7 @@ import ViewIssueDetailsDialog from './ViewIssueDetailsDialog';
 import ManagementEmailDialog from './ManagementEmailDialog';
 import { FaEnvelope, FaLanguage } from 'react-icons/fa';
 import { alpha } from '@mui/material/styles';
+import { ReportedIssueCardDialog } from './ReportedIssueCardDialog';
 import { Email as EmailIconUI } from '@mui/icons-material';
 
 // Register ChartJS components
@@ -99,6 +101,19 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     start: '',
     end: ''
   });
+
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportDialogTitle, setReportDialogTitle] = useState('');
+  const [reportDialogIssues, setReportDialogIssues] = useState([]);
+
+  const handleStatusClick = (issues, title) => {
+    if (issues && issues.length > 0) {
+      setReportDialogIssues(issues);
+      setReportDialogTitle(title);
+      setReportDialogOpen(true);
+    }
+  };
+
 
   const handleViewIssue = (issue) => {
     setSelectedDetailedIssue(issue);
@@ -418,10 +433,48 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     filteredIssuesByDate.forEach(issue => {
       const assignee = issue.assignedTo || 'Unassigned';
       if (!statsMap[assignee]) {
-        statsMap[assignee] = { total: 0, resolved: 0, unresolved: 0, categories: {}, subCategories: {} };
+        statsMap[assignee] = {
+          total: 0,
+          resolved: 0,
+          unresolved: 0,
+          dispatched: 0,
+          openDispatched: 0,
+          openUndispatched: 0,
+          categories: {},
+          subCategories: {},
+          issuesTotal: [],
+          issuesResolved: [],
+          issuesUnresolved: [],
+          issuesDispatched: [],
+          issuesOpenDispatched: [],
+          issuesOpenUndispatched: []
+        };
       }
       statsMap[assignee].total += 1;
-      issue.solved === 'yes' ? statsMap[assignee].resolved += 1 : statsMap[assignee].unresolved += 1;
+      statsMap[assignee].issuesTotal.push(issue);
+
+      if (issue.solved === 'yes') {
+        statsMap[assignee].resolved += 1;
+        statsMap[assignee].issuesResolved.push(issue);
+      } else {
+        statsMap[assignee].unresolved += 1;
+        statsMap[assignee].issuesUnresolved.push(issue);
+
+        // Breakdown Open Issues
+        if (issue.dispatched === 'yes') {
+          statsMap[assignee].openDispatched += 1;
+          statsMap[assignee].issuesOpenDispatched.push(issue);
+        } else {
+          statsMap[assignee].openUndispatched += 1;
+          statsMap[assignee].issuesOpenUndispatched.push(issue);
+        }
+      }
+
+      if (issue.dispatched === 'yes') {
+        statsMap[assignee].dispatched += 1;
+        statsMap[assignee].issuesDispatched.push(issue);
+      }
+
       if (issue.issues) {
         issue.issues.forEach(i => {
           if (i.category) statsMap[assignee].categories[i.category] = (statsMap[assignee].categories[i.category] || 0) + 1;
@@ -436,11 +489,14 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       const topSub = Object.entries(statsMap[name].subCategories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
       // Calculate Resolution Speed for this assignee
-      const issuesForAssignee = filteredIssuesByDate.filter(i => (i.assignedTo || 'Unassigned') === name);
+      // Calculate Resolution Speed for this assignee using collected issues
+      const issuesForAssignee = statsMap[name].issuesTotal;
       let totalResTime = 0;
       let countRes = 0;
       const now = new Date();
+
       issuesForAssignee.forEach(i => {
+        // ... (existing logic works on 'i')
         if (i.dispatchedAt || i.dispatched === 'yes') {
           let start = null;
           let end = null;
@@ -520,6 +576,15 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
           total: 0,
           resolved: 0,
           unresolved: 0,
+          dispatched: 0,
+          openDispatched: 0,
+          openUndispatched: 0,
+          issuesTotal: [],
+          issuesResolved: [],
+          issuesUnresolved: [],
+          issuesDispatched: [],
+          issuesOpenDispatched: [],
+          issuesOpenUndispatched: [],
           dispatchSum: 0,
           dispatchCount: 0,
           resolutionSum: 0,
@@ -530,7 +595,29 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         };
       }
       statsMap[supervisor].total += 1;
-      issue.solved === 'yes' ? statsMap[supervisor].resolved += 1 : statsMap[supervisor].unresolved += 1;
+      statsMap[supervisor].issuesTotal.push(issue);
+
+      if (issue.solved === 'yes') {
+        statsMap[supervisor].resolved += 1;
+        statsMap[supervisor].issuesResolved.push(issue);
+      } else {
+        statsMap[supervisor].unresolved += 1;
+        statsMap[supervisor].issuesUnresolved.push(issue);
+
+        // Breakdown Open Issues
+        if (issue.dispatched === 'yes') {
+          statsMap[supervisor].openDispatched += 1;
+          statsMap[supervisor].issuesOpenDispatched.push(issue);
+        } else {
+          statsMap[supervisor].openUndispatched += 1;
+          statsMap[supervisor].issuesOpenUndispatched.push(issue);
+        }
+      }
+
+      if (issue.dispatched === 'yes') {
+        statsMap[supervisor].dispatched += 1;
+        statsMap[supervisor].issuesDispatched.push(issue);
+      }
 
       const reportDate = new Date(issue.date || issue.createdAt);
 
@@ -570,6 +657,15 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         total: data.total,
         resolved: data.resolved,
         unresolved: data.unresolved,
+        dispatched: data.dispatched, // Total dispatched (history)
+        openDispatched: data.openDispatched,
+        openUndispatched: data.openUndispatched,
+        issuesTotal: data.issuesTotal,
+        issuesResolved: data.issuesResolved,
+        issuesUnresolved: data.issuesUnresolved,
+        issuesDispatched: data.issuesDispatched,
+        issuesOpenDispatched: data.issuesOpenDispatched,
+        issuesOpenUndispatched: data.issuesOpenUndispatched,
         rate: data.total > 0 ? ((data.resolved / data.total) * 100).toFixed(1) : 0,
         avgDispatchSpeed: data.dispatchCount > 0 ? (data.dispatchSum / data.dispatchCount).toFixed(1) : 'N/A',
         avgResolutionSpeed: data.resolutionCount > 0 ? (data.resolutionSum / data.resolutionCount).toFixed(1) : 'N/A',
@@ -939,47 +1035,229 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
           </Grid>
 
           {/* Supervisor Performance Table - Vertical Stack */}
+          {/* Supervisor Performance Table - Vertical Stack */}
           <Grid item xs={12}>
-            <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
-              <Typography variant="h6" gutterBottom fontWeight="bold">Supervisor Performance (Aging Impact)</Typography>
-              <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={{ position: 'sticky', top: 0, backgroundColor: '#2d2d2d' }}>
-                    <tr style={{ color: '#b3b3b3', fontSize: '0.8rem', borderBottom: '1px solid #3d3d3d' }}>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Supervisor</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Total</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Closed</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Open</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Rate (%)</th>
-                      <th style={{ padding: '8px', textAlign: 'right' }}>Dispatch</th>
-                      <th style={{ padding: '8px', textAlign: 'right' }}>Resol.</th>
-                      <th style={{ padding: '8px', textAlign: 'right' }}>Life</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Aging(D)</th>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 0,
+                bgcolor: '#1e293b',
+                borderRadius: 3,
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                overflow: 'hidden',
+                background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+              }}
+            >
+              <Box sx={{
+                p: 3,
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: 'rgba(255, 255, 255, 0.02)'
+              }}>
+                <Box>
+                  <Typography variant="h6" fontWeight="700" color="#f8fafc">
+                    Supervisor Performance
+                  </Typography>
+                  <Typography variant="body2" color="#94a3b8" sx={{ mt: 0.5 }}>
+                    Aging impact and workload distribution
+                  </Typography>
+                </Box>
+                <Chip
+                  label={`${supervisorStats.length} Supervisors`}
+                  size="small"
+                  sx={{
+                    bgcolor: 'rgba(59, 130, 246, 0.1)',
+                    color: '#60a5fa',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                    fontWeight: 600
+                  }}
+                />
+              </Box>
+              <Box sx={{ width: '100%', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+                  <thead>
+                    <tr style={{ background: '#0f172a' }}>
+                      <th style={{ padding: '16px 24px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Supervisor</th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Total</th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Closed</th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Open</th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                          Dispatched
+                          <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#3b82f6' }} />
+                        </Box>
+                      </th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                          Undispatched
+                          <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#f59e0b' }} />
+                        </Box>
+                      </th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Rate</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Dispatch</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Resol.</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Life</th>
+                      <th style={{ padding: '16px 24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Aging</th>
                     </tr>
                   </thead>
                   <tbody>
                     {supervisorStats.map((sup, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
-                        <td style={{ padding: '8px', fontWeight: 'bold' }}>{sup.name}</td>
-                        <td style={{ padding: '8px', textAlign: 'center' }}>{sup.total}</td>
-                        <td style={{ padding: '8px', textAlign: 'center', color: '#4caf50' }}>{sup.resolved}</td>
-                        <td style={{ padding: '8px', textAlign: 'center', color: '#f44336' }}>{sup.unresolved}</td>
-                        <td style={{ padding: '8px', textAlign: 'center' }}>
-                          <Chip label={`${sup.rate}%`} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                      <tr
+                        key={idx}
+                        style={{
+                          borderBottom: '1px solid rgba(255,255,255,0.05)',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <td style={{ padding: '16px 24px' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Avatar
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                bgcolor: 'rgba(255,255,255,0.05)',
+                                color: '#f8fafc',
+                                fontSize: '0.85rem',
+                                border: '1px solid rgba(255,255,255,0.1)'
+                              }}
+                            >
+                              {sup.name.charAt(0)}
+                            </Avatar>
+                            <Typography variant="body2" fontWeight="600" color="#f8fafc">
+                              {sup.name}
+                            </Typography>
+                          </Box>
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'right', color: Number(sup.avgDispatchSpeed) > 1 ? '#ff9800' : '#4caf50' }}>
-                          {sup.avgDispatchSpeed !== 'N/A' ? `${sup.avgDispatchSpeed} d` : '-'}
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <Typography
+                            variant="body2"
+                            fontWeight="600"
+                            color="#94a3b8"
+                            sx={{
+                              cursor: 'pointer',
+                              transition: 'color 0.2s',
+                              '&:hover': { color: '#f8fafc', textDecoration: 'underline' }
+                            }}
+                            onClick={() => handleStatusClick(sup.issuesTotal, `${sup.name} - All Issues`)}
+                          >
+                            {sup.total}
+                          </Typography>
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'right', color: '#4caf50' }}>
-                          {sup.avgResolutionSpeed !== 'N/A' ? `${sup.avgResolutionSpeed} d` : '-'}
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <Typography
+                            variant="body2"
+                            fontWeight="600"
+                            color="#22c55e"
+                            sx={{
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              px: 1, py: 0.5, borderRadius: 1,
+                              '&:hover': { bgcolor: 'rgba(34, 197, 94, 0.1)' }
+                            }}
+                            onClick={() => handleStatusClick(sup.issuesResolved, `${sup.name} - Closed Issues`)}
+                          >
+                            {sup.resolved}
+                          </Typography>
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'right', color: '#fff' }}>
-                          {sup.avgLifecycleTime !== 'N/A' ? `${sup.avgLifecycleTime} d` : '-'}
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <Typography
+                            variant="body2"
+                            fontWeight="600"
+                            color="#ef4444"
+                            sx={{
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              px: 1, py: 0.5, borderRadius: 1,
+                              '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1)' }
+                            }}
+                            onClick={() => handleStatusClick(sup.issuesUnresolved, `${sup.name} - Open Issues`)}
+                          >
+                            {sup.unresolved}
+                          </Typography>
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'center' }}>
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <Typography
+                            variant="body2"
+                            fontWeight="600"
+                            color="#3b82f6"
+                            sx={{
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              px: 1, py: 0.5, borderRadius: 1,
+                              '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.1)' }
+                            }}
+                            onClick={() => handleStatusClick(sup.issuesOpenDispatched, `${sup.name} - Open Dispatched (In Progress)`)}
+                          >
+                            {sup.openDispatched}
+                          </Typography>
+                        </td>
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <Typography
+                            variant="body2"
+                            fontWeight="600"
+                            color="#f59e0b"
+                            sx={{
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              px: 1, py: 0.5, borderRadius: 1,
+                              '&:hover': { bgcolor: 'rgba(245, 158, 11, 0.1)' }
+                            }}
+                            onClick={() => handleStatusClick(sup.issuesOpenUndispatched, `${sup.name} - Open Undispatched (Pending)`)}
+                          >
+                            {sup.openUndispatched}
+                          </Typography>
+                        </td>
+                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                            <Chip
+                              label={`${sup.rate}%`}
+                              size="small"
+                              sx={{
+                                height: 24,
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                bgcolor: 'rgba(255,255,255,0.05)',
+                                color: parseFloat(sup.rate) >= 80 ? '#22c55e' : parseFloat(sup.rate) >= 50 ? '#f59e0b' : '#ef4444',
+                                border: `1px solid ${parseFloat(sup.rate) >= 80 ? 'rgba(34, 197, 94, 0.3)' : parseFloat(sup.rate) >= 50 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                              }}
+                            />
+                          </Box>
+                        </td>
+                        <td style={{ padding: '16px', textAlign: 'right' }}>
+                          <Typography variant="body2" fontFamily="monospace" color={Number(sup.avgDispatchSpeed) > 1 ? '#f59e0b' : '#94a3b8'}>
+                            {sup.avgDispatchSpeed !== 'N/A' ? `${sup.avgDispatchSpeed}d` : '-'}
+                          </Typography>
+                        </td>
+                        <td style={{ padding: '16px', textAlign: 'right' }}>
+                          <Typography variant="body2" fontFamily="monospace" color="#94a3b8">
+                            {sup.avgResolutionSpeed !== 'N/A' ? `${sup.avgResolutionSpeed}d` : '-'}
+                          </Typography>
+                        </td>
+                        <td style={{ padding: '16px', textAlign: 'right' }}>
+                          <Typography variant="body2" fontFamily="monospace" color="#f8fafc">
+                            {sup.avgLifecycleTime !== 'N/A' ? `${sup.avgLifecycleTime}d` : '-'}
+                          </Typography>
+                        </td>
+                        <td style={{ padding: '16px 24px', textAlign: 'center' }}>
                           {sup.agingCount > 0 ? (
-                            <Chip label={sup.agingCount} size="small" color="error" sx={{ height: 20, fontSize: '0.7rem' }} />
-                          ) : '-'}
+                            <Chip
+                              label={sup.agingCount}
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                minWidth: 24,
+                                bgcolor: 'rgba(239, 68, 68, 0.2)',
+                                color: '#ef4444'
+                              }}
+                            />
+                          ) : <Typography variant="caption" color="rgba(255,255,255,0.1)">-</Typography>}
                         </td>
                       </tr>
                     ))}
@@ -1208,26 +1486,176 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Assignee Performance (Field Team)</Typography>
-            <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead style={{ position: 'sticky', top: 0, backgroundColor: '#2d2d2d' }}>
-                  <tr style={{ color: '#b3b3b3', fontSize: '0.8rem', borderBottom: '1px solid #3d3d3d' }}>
-                    <th style={{ padding: '8px', textAlign: 'left' }}>Assignee</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Resolved</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Rate</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Avg Res Speed</th>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 0,
+              bgcolor: '#1e293b',
+              borderRadius: 3,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              overflow: 'hidden',
+              background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              height: 400, // Increased height
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', bgcolor: 'rgba(255,255,255,0.02)' }}>
+              <Typography variant="h6" fontWeight="700" color="#f8fafc">
+                Assignee Performance
+              </Typography>
+              <Typography variant="body2" color="#94a3b8" sx={{ mt: 0.5 }}>
+                Field team resolution metrics
+              </Typography>
+            </Box>
+            <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                  <tr style={{ background: '#0f172a' }}>
+                    <th style={{ padding: '16px 24px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Assignee</th>
+                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Total</th>
+                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Closed</th>
+                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Open</th>
+                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                        Disp.
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#3b82f6' }} />
+                      </Box>
+                    </th>
+                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                        Undisp.
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#f59e0b' }} />
+                      </Box>
+                    </th>
+                    <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Rate</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Avg Speed</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {assigneeStats.detailedList.slice(0, 10).map((stat, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
-                      <td style={{ padding: '8px', fontWeight: 'bold' }}>{stat.name}</td>
-                      <td style={{ padding: '8px', textAlign: 'right' }}>{stat.resolved}/{stat.total}</td>
-                      <td style={{ padding: '8px', textAlign: 'right' }}>{stat.rate}%</td>
-                      <td style={{ padding: '8px', textAlign: 'right', color: Number(stat.avgResolutionSpeed) > 1 ? '#ff9800' : '#4caf50' }}>
-                        {stat.avgResolutionSpeed !== 'N/A' ? `${stat.avgResolutionSpeed} d` : '-'}
+                  {assigneeStats.detailedList.map((stat, idx) => (
+                    <tr
+                      key={idx}
+                      style={{
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <td style={{ padding: '16px 24px' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              bgcolor: 'rgba(255,255,255,0.05)',
+                              color: '#f8fafc',
+                              fontSize: '0.75rem',
+                              border: '1px solid rgba(255,255,255,0.1)'
+                            }}
+                          >
+                            {stat.name.charAt(0)}
+                          </Avatar>
+                          <Typography variant="body2" fontWeight="600" color="#f8fafc">
+                            {stat.name}
+                          </Typography>
+                        </Box>
+                      </td>
+                      <td style={{ padding: '16px', textAlign: 'center' }}>
+                        <Typography
+                          variant="body2"
+                          fontWeight="600"
+                          color="#94a3b8"
+                          sx={{
+                            cursor: 'pointer',
+                            transition: 'color 0.2s',
+                            '&:hover': { color: '#f8fafc', textDecoration: 'underline' }
+                          }}
+                          onClick={() => handleStatusClick(stat.issuesTotal, `${stat.name} - All Issues`)}
+                        >
+                          {stat.total}
+                        </Typography>
+                      </td>
+                      <td style={{ padding: '16px', textAlign: 'center' }}>
+                        <Typography
+                          variant="body2"
+                          fontWeight="600"
+                          color="#22c55e"
+                          sx={{
+                            cursor: 'pointer',
+                            transition: 'color 0.2s',
+                            '&:hover': { color: '#4ade80', textDecoration: 'underline' }
+                          }}
+                          onClick={() => handleStatusClick(stat.issuesResolved, `${stat.name} - Closed Issues`)}
+                        >
+                          {stat.resolved}
+                        </Typography>
+                      </td>
+                      <td style={{ padding: '16px', textAlign: 'center' }}>
+                        <Typography
+                          variant="body2"
+                          fontWeight="600"
+                          color="#ef4444"
+                          sx={{
+                            cursor: 'pointer',
+                            transition: 'color 0.2s',
+                            '&:hover': { color: '#f87171', textDecoration: 'underline' }
+                          }}
+                          onClick={() => handleStatusClick(stat.issuesUnresolved, `${stat.name} - Open Issues`)}
+                        >
+                          {stat.unresolved}
+                        </Typography>
+                      </td>
+                      <td style={{ padding: '16px', textAlign: 'center' }}>
+                        <Typography
+                          variant="body2"
+                          fontWeight="600"
+                          color="#3b82f6"
+                          sx={{
+                            cursor: 'pointer',
+                            transition: 'color 0.2s',
+                            '&:hover': { color: '#60a5fa', textDecoration: 'underline' }
+                          }}
+                          onClick={() => handleStatusClick(stat.issuesOpenDispatched, `${stat.name} - Open Dispatched (In Progress)`)}
+                        >
+                          {stat.openDispatched}
+                        </Typography>
+                      </td>
+                      <td style={{ padding: '16px', textAlign: 'center' }}>
+                        <Typography
+                          variant="body2"
+                          fontWeight="600"
+                          color="#f59e0b"
+                          sx={{
+                            cursor: 'pointer',
+                            transition: 'color 0.2s',
+                            '&:hover': { color: '#fbbf24', textDecoration: 'underline' }
+                          }}
+                          onClick={() => handleStatusClick(stat.issuesOpenUndispatched, `${stat.name} - Open Undispatched (Pending)`)}
+                        >
+                          {stat.openUndispatched}
+                        </Typography>
+                      </td>
+                      <td style={{ padding: '16px', textAlign: 'right' }}>
+                        <Chip
+                          label={`${stat.rate}%`}
+                          size="small"
+                          sx={{
+                            height: 22,
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            bgcolor: 'rgba(255,255,255,0.05)',
+                            color: parseFloat(stat.rate) >= 80 ? '#22c55e' : parseFloat(stat.rate) >= 50 ? '#f59e0b' : '#ef4444',
+                            border: `1px solid ${parseFloat(stat.rate) >= 80 ? 'rgba(34, 197, 94, 0.3)' : parseFloat(stat.rate) >= 50 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                        <Typography variant="body2" fontFamily="monospace" color={Number(stat.avgResolutionSpeed) > 1 ? '#f59e0b' : '#94a3b8'}>
+                          {stat.avgResolutionSpeed !== 'N/A' ? `${stat.avgResolutionSpeed}d` : '-'}
+                        </Typography>
                       </td>
                     </tr>
                   ))}
@@ -1589,6 +2017,12 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         open={isIssueViewOpen}
         onClose={() => setIsIssueViewOpen(false)}
         issue={selectedDetailedIssue}
+      />
+      <ReportedIssueCardDialog
+        open={reportDialogOpen}
+        onClose={() => setReportDialogOpen(false)}
+        teamIssues={reportDialogIssues}
+        teamName={reportDialogTitle}
       />
       <ManagementEmailDialog
         open={showEmailDialog}

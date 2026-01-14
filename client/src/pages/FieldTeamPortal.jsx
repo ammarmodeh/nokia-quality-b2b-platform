@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -23,34 +23,76 @@ import {
   useMediaQuery,
   Button,
   Divider,
-  Grid
+  Grid,
+  FormControl,
+  Select,
+  MenuItem,
+  LinearProgress
 } from "@mui/material";
 import {
   ArrowBack,
   Quiz,
   Assignment,
   BarChart,
+  SupportAgent,
+  Warning,
+  CheckCircle,
+  Schedule,
+  Info,
+  PriorityHigh,
 } from '@mui/icons-material';
 import api from "../api/api";
 import {
   BarChart as RechartsBarChart,
-  Bar,
+  Bar as RechartsBar,
   ResponsiveContainer,
   AreaChart,
   Area,
   CartesianGrid,
   Tooltip as RechartsTooltip,
   Cell,
-  PieChart,
-  Pie,
+  PieChart as RechartsPieChart,
+  Pie as RechartsPie,
   XAxis,
   YAxis,
   Radar,
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
-  PolarRadiusAxis
+  PolarRadiusAxis,
+  Legend as RechartsLegend
 } from 'recharts';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement,
+  TimeScale
+} from 'chart.js';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import { Bar, Doughnut } from 'react-chartjs-2';
+import 'chartjs-adapter-date-fns';
+import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport, FaEnvelope } from 'react-icons/fa';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement,
+  TimeScale
+);
 import {
   TrendingUp,
   TrendingDown,
@@ -89,29 +131,384 @@ const FieldTeamPortal = () => {
   const [labPage, setLabPage] = useState(0);
   const [labRowsPerPage, setLabRowsPerPage] = useState(10);
 
+  // Customer Issues state
+  const [customerIssues, setCustomerIssues] = useState([]);
+  const [technicalTasks, setTechnicalTasks] = useState([]);
+  const [issuesPage, setIssuesPage] = useState(0);
+  const [issuesRowsPerPage, setIssuesRowsPerPage] = useState(10);
+
+  // Updated Premium Colors & Glassmorphism Theme
+  const colors = {
+    background: '#121212', // Deep dark background
+    surface: 'rgba(30, 30, 30, 0.6)', // Glassy surface
+    surfaceElevated: 'rgba(255, 255, 255, 0.05)', // Lighter glass
+    border: 'rgba(255, 255, 255, 0.12)',
+    primary: '#8b5cf6', // Vivid Violet
+    primaryGradient: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+    secondary: '#10b981', // Emerald
+    textPrimary: '#ffffff',
+    textSecondary: 'rgba(255, 255, 255, 0.7)',
+    success: '#10b981',
+    warning: '#f59e0b',
+    error: '#ef4444',
+    info: '#3b82f6',
+    chartGrid: 'rgba(255, 255, 255, 0.05)',
+    glass: {
+      background: 'rgba(30, 30, 30, 0.7)',
+      backdropFilter: 'blur(12px)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+    }
+  };
+
+  const glassCardProps = {
+    sx: {
+      ...colors.glass,
+      borderRadius: '24px',
+      color: colors.textPrimary,
+      overflow: 'hidden',
+      transition: 'all 0.3s ease-in-out',
+      '&:hover': {
+        transform: 'translateY(-5px)',
+        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.2)',
+        border: `1px solid ${colors.primary}50`
+      }
+    }
+  };
+
+  // --- Customer Issues Alignment State ---
+  const [trendTimeframe, setTrendTimeframe] = useState('day');
+  const [trendChartType, setTrendChartType] = useState('mixed');
+  const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
+
+  // --- Statistics Calculation (Ported from CustomerIssuesAnalytics.jsx) ---
+  const filteredIssuesByDate = useMemo(() => {
+    return customerIssues.filter(issue => {
+      // 1. Team filter: Only include issues belonging to the selected team
+      if (selectedTeam) {
+        const teamName = selectedTeam.teamName?.toLowerCase();
+        const installingTeam = issue.installingTeam?.toLowerCase();
+        const assignedTo = issue.assignedTo?.toLowerCase();
+
+        // Check if either field matches the selected team name
+        if (installingTeam !== teamName && assignedTo !== teamName) {
+          return false;
+        }
+      }
+
+      // 2. Date filter
+      if (!dateFilter.start && !dateFilter.end) return true;
+      const reportDate = new Date(issue.date || issue.createdAt);
+      const start = dateFilter.start ? new Date(dateFilter.start) : null;
+      const end = dateFilter.end ? new Date(dateFilter.end) : null;
+      if (start && reportDate < start) return false;
+      if (end) {
+        const endDay = new Date(end);
+        endDay.setHours(23, 59, 59, 999);
+        if (reportDate > endDay) return false;
+      }
+      return true;
+    });
+  }, [customerIssues, dateFilter, selectedTeam]);
+
+  const stats = useMemo(() => {
+    const issuesToProcess = filteredIssuesByDate;
+    const totalTransactions = issuesToProcess.length;
+    let totalIssuesHighlighted = 0;
+    const closed = issuesToProcess.filter(i => i.solved === 'yes').length;
+    const open = totalTransactions - closed;
+    const resolutionRate = totalTransactions > 0 ? ((closed / totalTransactions) * 100).toFixed(1) : 0;
+
+    issuesToProcess.forEach(issue => {
+      if (issue.issues && Array.isArray(issue.issues)) {
+        totalIssuesHighlighted += issue.issues.length;
+      } else if (issue.issueCategory) {
+        totalIssuesHighlighted += 1;
+      }
+    });
+
+    const issueDensity = totalTransactions > 0 ? (totalIssuesHighlighted / totalTransactions).toFixed(2) : 0;
+
+    // --- NPS / Detractor / Neutral Calculations ---
+    let technicalDetractors = 0;
+    let technicalNeutrals = 0;
+    let totalDetractors = 0;
+    let totalNeutrals = 0;
+
+    // Quiz evaluation
+    quizResults.forEach(r => {
+      const score = r.percentage || 0;
+      if (score < 70) totalDetractors++;
+      else if (score >= 70 && score < 85) totalNeutrals++;
+    });
+
+    // Practical evaluation
+    jobAssessments.forEach(a => {
+      const score = a.overallScore || 0;
+      if (score < 3.5) totalDetractors++;
+      else if (score >= 3.5 && score < 4.5) totalNeutrals++;
+    });
+
+    // Technical Tasks evaluation
+    technicalTasks.forEach(t => {
+      const score = t.evaluationScore || 0;
+      if (score > 0) { // Only count if evaluated
+        if (score <= 60) {
+          technicalDetractors++;
+          totalDetractors++;
+        }
+        else if (score > 60 && score <= 80) {
+          technicalNeutrals++;
+          totalNeutrals++;
+        }
+      }
+    });
+
+    // Process Efficiency Calculations
+    let totalDispatchTime = 0;
+    let countDispatch = 0;
+    let totalResolutionTime = 0;
+    let countResolution = 0;
+    let totalLifecycleTime = 0;
+    let countLifecycle = 0;
+    const now = new Date();
+
+    issuesToProcess.forEach(issue => {
+      const reportDate = new Date(issue.date || issue.createdAt);
+
+      // 1. Dispatch Speed
+      let dispatchEnd = issue.dispatchedAt ? new Date(issue.dispatchedAt) : (issue.dispatched === 'no' ? now : null);
+      if (!dispatchEnd && issue.dispatched === 'yes') dispatchEnd = reportDate;
+      if (dispatchEnd && dispatchEnd >= reportDate) {
+        const time = (dispatchEnd - reportDate) / (1000 * 60 * 60 * 24);
+        totalDispatchTime += time;
+        countDispatch++;
+      }
+
+      // 2. Resolution Speed
+      if (issue.dispatchedAt || issue.dispatched === 'yes') {
+        let resStart = issue.dispatchedAt ? new Date(issue.dispatchedAt) : reportDate;
+        let resEnd = issue.resolveDate ? new Date(issue.resolveDate) : (issue.solved === 'no' ? now : null);
+        if (resStart && resEnd && resEnd >= resStart) {
+          const resTime = (resEnd - resStart) / (1000 * 60 * 60 * 24);
+          totalResolutionTime += resTime;
+          countResolution++;
+        }
+      }
+
+      // 3. Lifecycle
+      let lifecycleEnd = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? now : null);
+      if (lifecycleEnd && lifecycleEnd >= reportDate) {
+        const lifeTime = (lifecycleEnd - reportDate) / (1000 * 60 * 60 * 24);
+        totalLifecycleTime += lifeTime;
+        countLifecycle++;
+      }
+    });
+
+    return {
+      totalTransactions,
+      totalIssuesHighlighted,
+      closed,
+      open,
+      resolutionRate,
+      issueDensity,
+      detractors: totalDetractors,
+      neutrals: totalNeutrals,
+      technicalTasksCount: technicalTasks.length,
+      technicalDetractors,
+      technicalNeutrals,
+      customerIssuesCount: totalTransactions,
+      totalTasks: totalTransactions + quizResults.length + jobAssessments.length + technicalTasks.length,
+      avgDispatchTime: countDispatch > 0 ? (totalDispatchTime / countDispatch).toFixed(1) : 0,
+      avgResolutionTime: countResolution > 0 ? (totalResolutionTime / countResolution).toFixed(1) : 0,
+      avgLifecycleTime: countLifecycle > 0 ? (totalLifecycleTime / countLifecycle).toFixed(1) : 0
+    };
+  }, [filteredIssuesByDate, quizResults, jobAssessments, technicalTasks]);
+
+  const allActivities = useMemo(() => {
+    const activities = [
+      ...filteredIssuesByDate.map(i => ({
+        type: 'issue',
+        title: 'Customer Issue',
+        detail: `${i.slid} - ${i.issueCategory || 'General'}`,
+        date: i.date || i.createdAt,
+        color: colors.error,
+        icon: <SupportAgent sx={{ fontSize: '1.2rem' }} />
+      })),
+      ...technicalTasks.map(t => ({
+        type: 'task',
+        title: 'Technical Task',
+        detail: `${t.slid} - ${t.customerName}`,
+        date: t.pisDate || t.createdAt,
+        color: colors.warning,
+        icon: <Assignment sx={{ fontSize: '1.2rem' }} />
+      })),
+      ...quizResults.map(q => ({
+        type: 'quiz',
+        title: 'Theoretical Assessment',
+        detail: `${q.quizCode} (Score: ${q.percentage}%)`,
+        date: q.submittedAt,
+        color: colors.primary,
+        icon: <Quiz sx={{ fontSize: '1.2rem' }} />
+      })),
+      ...jobAssessments.map(a => ({
+        type: 'practical',
+        title: 'Practical Assessment',
+        detail: `Score: ${a.overallScore}/5`,
+        date: a.assessmentDate,
+        color: colors.success,
+        icon: <CheckCircle sx={{ fontSize: '1.2rem' }} />
+      })),
+      ...labAssessments.map(l => ({
+        type: 'lab',
+        title: 'Lab Assessment',
+        detail: `${l.assessmentType} (${l.totalScore}%)`,
+        date: l.createdAt,
+        color: colors.info,
+        icon: <Assessment sx={{ fontSize: '1.2rem' }} />
+      }))
+    ];
+
+    return activities.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [filteredIssuesByDate, technicalTasks, quizResults, jobAssessments, labAssessments]);
+
+  const trendData = useMemo(() => {
+    const countsByDate = {};
+    const sortedIssues = [...filteredIssuesByDate].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    sortedIssues.forEach(issue => {
+      if (!issue.date) return;
+      const d = new Date(issue.date);
+      let key = '';
+      if (trendTimeframe === 'day') key = d.toISOString().split('T')[0];
+      else if (trendTimeframe === 'week') {
+        const startOfWeek = new Date(d);
+        startOfWeek.setDate(d.getDate() - d.getDay());
+        key = `Week of ${startOfWeek.toISOString().split('T')[0]}`;
+      } else if (trendTimeframe === 'month') key = d.toISOString().slice(0, 7);
+      else key = d.toISOString().split('T')[0];
+
+      countsByDate[key] = (countsByDate[key] || 0) + 1;
+    });
+
+    const labels = Object.keys(countsByDate);
+    const data = Object.values(countsByDate);
+    const datasets = [];
+
+    if (trendChartType === 'mixed' || trendChartType === 'bar') {
+      datasets.push({
+        type: 'bar',
+        label: 'Volume',
+        data: data,
+        backgroundColor: 'rgba(123, 104, 238, 0.5)',
+        borderColor: 'rgba(123, 104, 238, 1)',
+        borderWidth: 1,
+        order: 2
+      });
+    }
+
+    if (trendChartType === 'mixed' || trendChartType === 'line') {
+      datasets.push({
+        type: 'line',
+        label: 'Trend',
+        data: data,
+        borderColor: '#4caf50',
+        borderWidth: 2,
+        tension: 0.4,
+        pointRadius: 4,
+        order: 1,
+        fill: trendChartType === 'line' ? { target: 'origin', above: 'rgba(76, 175, 80, 0.1)' } : false
+      });
+    }
+
+    return { labels, datasets };
+  }, [filteredIssuesByDate, trendTimeframe, trendChartType]);
+
+  const statusData = useMemo(() => ({
+    labels: ['Closed', 'Open'],
+    datasets: [{
+      data: [stats.closed, stats.open],
+      backgroundColor: ['#4caf50', '#f44336'],
+      borderWidth: 0,
+    }],
+  }), [stats]);
+
+  const categoryData = useMemo(() => {
+    const counts = {};
+    filteredIssuesByDate.forEach(issue => {
+      if (issue.issues && issue.issues.length > 0) {
+        issue.issues.forEach(i => {
+          const category = i.category || 'Uncategorized';
+          counts[category] = (counts[category] || 0) + 1;
+        });
+      } else {
+        const category = issue.issueCategory || 'Uncategorized';
+        counts[category] = (counts[category] || 0) + 1;
+      }
+    });
+    const sortedCategories = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    let finalLabels = [];
+    let finalData = [];
+    if (sortedCategories.length > 6) {
+      const top5 = sortedCategories.slice(0, 5);
+      const othersCount = sortedCategories.slice(5).reduce((acc, curr) => acc + curr[1], 0);
+      finalLabels = [...top5.map(i => i[0]), 'Others'];
+      finalData = [...top5.map(i => i[1]), othersCount];
+    } else {
+      finalLabels = sortedCategories.map(i => i[0]);
+      finalData = sortedCategories.map(i => i[1]);
+    }
+    return {
+      labels: finalLabels,
+      datasets: [{
+        data: finalData,
+        backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796'],
+        borderWidth: 1,
+      }],
+      totalCount: Object.values(counts).reduce((a, b) => a + b, 0),
+      allCategories: Object.keys(counts).sort()
+    };
+  }, [filteredIssuesByDate]);
+
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '70%',
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#b3b3b3', usePointStyle: true, padding: 20 } }
+    }
+  };
+
+  const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { color: '#ffffff' } } },
+    scales: {
+      x: { ticks: { color: '#b3b3b3' }, grid: { color: '#3d3d3d' } },
+      y: { beginAtZero: true, ticks: { color: '#b3b3b3', stepSize: 1, precision: 0 }, grid: { color: '#3d3d3d' } }
+    }
+  };
+
+  const StatCard = ({ title, value, icon, color, subtext }) => (
+    <Card sx={{ bgcolor: '#2d2d2d', color: '#fff', height: '100%', border: '1px solid #3d3d3d' }}>
+      <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3 }}>
+        <Box>
+          <Typography variant="body2" color="#b3b3b3" gutterBottom>{title}</Typography>
+          <Typography variant="h4" fontWeight="bold">{value}</Typography>
+          {subtext && <Typography variant="caption" color={color}>{subtext}</Typography>}
+        </Box>
+        <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: `${color}20`, color: color, fontSize: '1.5rem', display: 'flex' }}>
+          {icon}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+
   const [activeTab, setActiveTab] = useState(0);
   const [generatingReport, setGeneratingReport] = useState(false);
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)');
 
-  // Colors for dark mode UI consistency
-  const colors = {
-    background: '#2d2d2d',
-    // surface: '#ffffff',
-    surfaceElevated: '#252525',
-    border: '#e5e7eb',
-    primary: '#7b68ee',
-    primaryHover: 'rgba(62, 166, 255, 0.08)',
-    textPrimary: '#ffffff',
-    textSecondary: '#6b7280',
-    success: '#4caf50',
-    warning: '#ff9800',
-    error: '#f44336',
-    tableBg: '#2d2d2d',
-    tableHeaderBg: '#252525',
-    tableRowHover: '#2a2a2a',
-    chartGrid: '#f3f4f6333',
-  };
 
   useEffect(() => {
     const fetchFieldTeams = async () => {
@@ -181,6 +578,27 @@ const FieldTeamPortal = () => {
             })
           ]);
 
+          // Fetch Customer Issues if teamCompany is available
+          if (selectedTeam.teamCompany && selectedTeam.teamCompany !== 'N/A') {
+            try {
+              const issuesRes = await api.get('/customer-issues-notifications', {
+                params: {
+                  teamCompany: selectedTeam.teamCompany,
+                  limit: 1000 // Fetch a reasonable amount for analysis
+                },
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                }
+              });
+              setCustomerIssues(issuesRes.data.data || []);
+            } catch (err) {
+              console.error("Error fetching customer issues:", err);
+              // Don't block other data if this fails
+            }
+          } else {
+            setCustomerIssues([]);
+          }
+
           // console.log("Quiz Results:", quizRes.data);
           // console.log("Job Assessments:", jobRes.data);
 
@@ -196,6 +614,20 @@ const FieldTeamPortal = () => {
           });
           setLabAssessments(labRes.data);
 
+          // Fetch Technical Tasks (Tasks & Tickets)
+          try {
+            const techRes = await api.get(`/tasks/get-all-tasks`, {
+              params: { teamId: selectedTeam._id },
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              }
+            });
+            // Filter to ensure only this team's tasks are set if not done by backend
+            setTechnicalTasks(techRes.data.filter(task => task.teamId === selectedTeam._id) || []);
+          } catch (err) {
+            console.error("Error fetching technical tasks:", err);
+          }
+
         } catch (error) {
           console.error("Error fetching assessments:", error);
           setError("Failed to fetch assessments");
@@ -209,6 +641,7 @@ const FieldTeamPortal = () => {
       setQuizResults([]);
       setJobAssessments([]);
       setLabAssessments([]);
+      setCustomerIssues([]);
     }
   }, [selectedTeam]);
 
@@ -586,6 +1019,97 @@ ${data.map((a, i) => `
 
 
 
+  const handleExportFullPerformanceToExcel = () => {
+    if (!selectedTeam) return;
+
+    const wb = XLSX.utils.book_new();
+
+    // 1. Overview Summary Sheet
+    const summaryData = [
+      { Metric: 'Team Name', Value: selectedTeam.teamName },
+      { Metric: 'Company', Value: selectedTeam.teamCompany },
+      { Metric: 'Export Date', Value: new Date().toLocaleString() },
+      { Metric: '', Value: '' },
+      { Metric: '--- KEY PERFORMANCE INDICATORS ---', Value: '' },
+      { Metric: 'Total Technical Tasks', Value: stats.technicalTasksCount },
+      { Metric: 'Technical Detractors (Score <= 60)', Value: stats.technicalDetractors },
+      { Metric: 'Technical Neutrals (Score 61-80)', Value: stats.technicalNeutrals },
+      { Metric: 'Total Customer Issues', Value: stats.customerIssuesCount },
+      { Metric: 'Issue Resolution Rate', Value: `${stats.resolutionRate}%` },
+      { Metric: 'Theoretical Avg Score', Value: `${Math.round(calculateAverageScore(quizResults))}%` },
+      { Metric: 'Practical Avg Score', Value: `${Number(calculateAverageScore(jobAssessments)).toFixed(2)}/5` },
+      { Metric: 'Lab Avg Score', Value: `${Math.round(calculateAverageScore(labAssessments))}%` },
+      { Metric: 'Avg Dispatch Time (Days)', Value: stats.avgDispatchTime },
+      { Metric: 'Avg Resolution Time (Days)', Value: stats.avgResolutionTime },
+    ];
+    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Overview Summary");
+
+    // 2. Technical Tasks Sheet
+    const techTasksData = technicalTasks.map(t => ({
+      'Request Number': t.requestNumber || 'N/A',
+      'Customer': t.customerName,
+      'SLID': t.slid,
+      'PIS Date': t.pisDate ? new Date(t.pisDate).toLocaleDateString() : 'N/A',
+      'Priority': t.priority,
+      'Status': t.validationStatus,
+      'Evaluation Score': t.evaluationScore ? `${t.evaluationScore}%` : 'N/A',
+      'Created At': formatDate(t.createdAt)
+    }));
+    const wsTech = XLSX.utils.json_to_sheet(techTasksData);
+    XLSX.utils.book_append_sheet(wb, wsTech, "Technical Tasks");
+
+    // 3. Customer Issues Sheet
+    const issuesData = filteredIssuesByDate.map(i => ({
+      'SLID': i.slid,
+      'Category': i.issueCategory || 'General',
+      'Status': i.solved === 'yes' ? 'Closed' : 'Open',
+      'Report Date': formatDate(i.date || i.createdAt),
+      'Resolution Date': i.resolveDate ? formatDate(i.resolveDate) : 'N/A',
+      'Dispatched': i.dispatched,
+      'Aging (Days)': i.date ? Math.floor((new Date() - new Date(i.date)) / (1000 * 60 * 60 * 24)) : 'N/A'
+    }));
+    const wsIssues = XLSX.utils.json_to_sheet(issuesData);
+    XLSX.utils.book_append_sheet(wb, wsIssues, "Customer Issues");
+
+    // 4. Assessments Sheet (Theoretical/Practical/Lab Combined)
+    const quizData = quizResults.map(q => ({
+      Type: 'Theoretical',
+      Date: formatDate(q.submittedAt),
+      Identifier: q.quizCode,
+      Score: `${q.percentage}%`,
+      Result: q.percentage >= 70 ? 'Pass' : 'Fail'
+    }));
+    const practicalData = jobAssessments.map(a => ({
+      Type: 'Practical',
+      Date: formatDate(a.assessmentDate),
+      Identifier: `By ${a.conductedBy}`,
+      Score: `${Number(a.overallScore).toFixed(1)}/5`,
+      Result: getAssessmentStatus(a.overallScore, 'practical').label
+    }));
+    const labData = labAssessments.map(l => ({
+      Type: 'Lab',
+      Date: formatDate(l.createdAt),
+      Identifier: l.assessmentType || 'General',
+      Score: `${l.totalScore}%`,
+      Result: getAssessmentStatus(l.totalScore, 'lab').label
+    }));
+    const consolidatedAssessments = [...quizData, ...practicalData, ...labData];
+    const wsAssessments = XLSX.utils.json_to_sheet(consolidatedAssessments);
+    XLSX.utils.book_append_sheet(wb, wsAssessments, "Assessments History");
+
+    // 5. Activity Log
+    const logData = allActivities.map(a => ({
+      Date: formatDate(a.date),
+      Type: a.title,
+      Description: a.detail
+    }));
+    const wsLog = XLSX.utils.json_to_sheet(logData);
+    XLSX.utils.book_append_sheet(wb, wsLog, "Master Activity Log");
+
+    XLSX.writeFile(wb, `${selectedTeam.teamName.replace(/\s+/g, '_')}_Full_Performance_Report.xlsx`);
+  };
+
   const renderLineChart = (data, dataKey, color = colors.primary) => (
     <ResponsiveContainer width="100%" height={300}>
       <AreaChart data={data} style={{ backgroundColor: colors.surfaceElevated, borderRadius: '12px', padding: '10px' }}>
@@ -745,7 +1269,7 @@ ${data.map((a, i) => `
     <Box sx={{
       // backgroundColor: colors.background,
       minHeight: '100vh',
-      maxWidth: '1100px',
+      // maxWidth: '1100px',
       mx: 'auto',
       overflowX: 'hidden',
       color: colors.textPrimary,
@@ -767,36 +1291,55 @@ ${data.map((a, i) => `
         Back to Dashboard
       </Button>
 
-      {/* Header */}
+      {/* Header with Premium Gradient */}
       <Box sx={{
         mb: 4,
-        p: 3,
-        background: `linear-gradient(135deg, ${colors.primary}22 0%, ${colors.surfaceElevated} 100%)`,
-        borderRadius: '16px',
-        border: `1px solid ${colors.border}`
+        p: 4,
+        background: `linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)`, // Deep tech gradient
+        borderRadius: '24px',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
       }}>
-        <Typography variant="h4" sx={{
-          color: colors.primary,
-          fontWeight: 'bold',
-          mb: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1
-        }}>
-          <Assessment /> Field Team Assessment Portal
-        </Typography>
-        <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-          Comprehensive performance analytics and evaluation reporting
-        </Typography>
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
+          <Typography variant="h3" sx={{
+            background: 'linear-gradient(90deg, #fff 0%, #a5b4fc 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontWeight: '900',
+            mb: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            letterSpacing: '-1px'
+          }}>
+            Field Team 360° Portal
+          </Typography>
+          <Typography variant="h6" sx={{ color: colors.textSecondary, fontWeight: 400 }}>
+            Advanced Performance Analytics & Operational Intelligence
+          </Typography>
+        </Box>
+        {/* Decorative Circle */}
+        <Box sx={{
+          position: 'absolute',
+          top: '-50%',
+          right: '-10%',
+          width: '300px',
+          height: '300px',
+          background: colors.primary,
+          filter: 'blur(100px)',
+          opacity: 0.2,
+          borderRadius: '50%'
+        }} />
       </Box>
 
-      {/* Team Selection */}
+      {/* Team Selection with Glass Effect */}
       <Paper sx={{
         p: 3,
-        mb: 3,
-        ...darkThemeStyles.paper,
-        borderRadius: '12px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+        mb: 4,
+        ...colors.glass,
+        borderRadius: '20px',
       }}>
         <Autocomplete
           options={fieldTeams}
@@ -804,7 +1347,6 @@ ${data.map((a, i) => `
           value={selectedTeam}
           onChange={(event, newValue) => {
             setSelectedTeam(newValue);
-            // Reset pagination when team changes
             setQuizPage(0);
             setJobPage(0);
           }}
@@ -813,278 +1355,224 @@ ${data.map((a, i) => `
           renderInput={(params) => (
             <TextField
               {...params}
-              label="Select Field Team"
+              label="Select Field Team to Analyze"
               variant="outlined"
-              InputLabelProps={{
-                style: {
-                  color: colors.textSecondary,
-                  fontSize: '0.8rem',
-                  top: '-7px',
-                },
-              }}
-              InputProps={{
-                ...params.InputProps,
-                style: {
-                  color: colors.textPrimary,
-                  height: '36px',
-                  fontSize: '0.8rem',
-                },
-              }}
+              placeholder="Search by team name..."
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: colors.border,
-                  },
-                  '&:hover fieldset': {
-                    borderColor: colors.primary,
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: colors.primary,
-                  },
-                  '&.Mui-disabled fieldset': {
-                    borderColor: `${colors.border}80`,
-                  },
+                  backgroundColor: 'rgba(0,0,0,0.2)',
+                  borderRadius: '12px',
+                  color: '#fff',
+                  '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                  '&:hover fieldset': { borderColor: colors.primary },
+                  '&.Mui-focused fieldset': { borderColor: colors.primary, borderWidth: '2px' },
                 },
-                '& .MuiInputBase-input': {
-                  padding: '8px 12px',
-                  height: 'auto',
-                },
-                '& .MuiInputLabel-root.Mui-focused': {
-                  color: colors.primary,
-                  top: '1px',
-                },
-                '& input': {
-                  caretColor: colors.primary,
-                },
-                '& input:-webkit-autofill': {
-                  WebkitBoxShadow: `0 0 0 1000px ${colors.surface} inset`,
-                  WebkitTextFillColor: colors.textPrimary,
-                  transition: 'background-color 5000s ease-in-out 0s',
-                },
+                '& .MuiInputLabel-root': { color: colors.textSecondary },
+                '& .MuiInputLabel-root.Mui-focused': { color: colors.primary }
               }}
             />
           )}
-          sx={{
-            '& .MuiAutocomplete-popupIndicator': {
-              color: colors.textSecondary,
-              '&:hover': {
-                backgroundColor: colors.primaryHover,
-              }
-            },
-            '& .MuiAutocomplete-clearIndicator': {
-              color: colors.textSecondary,
-              '&:hover': {
-                backgroundColor: colors.primaryHover,
-              }
-            },
-          }}
-          componentsProps={{
-            paper: {
-              sx: {
-                backgroundColor: colors.surfaceElevated,
-                color: colors.textPrimary,
-                border: `1px solid ${colors.border}`,
-                marginTop: '4px',
-                '& .MuiAutocomplete-option': {
-                  '&[aria-selected="true"]': {
-                    backgroundColor: `${colors.primary}22`,
-                  },
-                  '&[aria-selected="true"].Mui-focused': {
-                    backgroundColor: `${colors.primary}33`,
-                  },
-                  '&.Mui-focused': {
-                    backgroundColor: colors.primaryHover,
-                  },
-                },
-              },
-            },
-            popper: {
-              sx: {
-                '& .MuiAutocomplete-listbox': {
-                  backgroundColor: colors.surfaceElevated,
-                  '&::-webkit-scrollbar': {
-                    width: '8px',
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    background: colors.surface,
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    background: colors.border,
-                    borderRadius: '4px',
-                  },
-                },
-              },
-            },
-          }}
+          PaperComponent={({ children }) => (
+            <Paper sx={{ ...colors.glass, bgcolor: '#1a1a1a', mt: 1 }}>{children}</Paper>
+          )}
         />
       </Paper>
 
       {/* Error Alert */}
       {error && (
-        <Alert severity="error" sx={{ mb: 3, backgroundColor: colors.surfaceElevated, color: colors.textPrimary }}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: '12px', bgcolor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
           {error}
         </Alert>
       )}
 
+      {/* Main Content Area */}
       {selectedTeam && (
-        <>
-          <FieldTeamTicketsForPortalReview teamId={selectedTeam?._id} teamName={selectedTeam?.teamName} />
-          <Divider sx={{ my: 4, borderColor: colors.border }} />
-        </>
-      )}
+        <Box sx={{ animation: 'fadeIn 0.5s ease-out' }}>
 
-      {/* Assessment Content */}
-      {selectedTeam && (
-        <Box>
-          {/* Tabs for different assessment types */}
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              mb: 3,
-              ...darkThemeStyles.tabs,
-            }}
-          >
-            <Tab
-              label="Overview"
-              icon={<BarChart fontSize="small" />}
-              iconPosition="start"
-            />
-            <Tab
-              label="Theoretical"
-              icon={<Quiz fontSize="small" />}
-              iconPosition="start"
-            />
-            <Tab
-              label="Practical"
-              icon={<Assignment fontSize="small" />}
-              iconPosition="start"
-            />
-            <Tab
-              label="Lab"
-              icon={<Assessment fontSize="small" />}
-              iconPosition="start"
-            />
-            <Tab
-              label="Advanced Analytics"
-              icon={<Timeline fontSize="small" />}
-              iconPosition="start"
-            />
-          </Tabs>
+          {/* Navigation Tabs */}
+          <Paper sx={{
+            mb: 4,
+            bgcolor: 'transparent',
+            boxShadow: 'none',
+            borderBottom: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                '& .MuiTab-root': {
+                  color: colors.textSecondary,
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  fontWeight: 500,
+                  py: 3,
+                  px: 4,
+                  minHeight: 64,
+                  transition: '0.3s',
+                  '&.Mui-selected': { color: colors.primary, fontWeight: 700 }
+                },
+                '& .MuiTabs-indicator': {
+                  height: '4px',
+                  borderRadius: '4px 4px 0 0',
+                  background: colors.primaryGradient
+                }
+              }}
+            >
+              <Tab label="Executive Overview" icon={<BarChart />} iconPosition="start" />
+              <Tab label="Customer Issues" icon={<SupportAgent />} iconPosition="start" />
+              <Tab label="Tasks & Tickets" icon={<Assignment />} iconPosition="start" />
+              <Tab label="Theoretical" icon={<Quiz />} iconPosition="start" />
+              <Tab label="Practical" icon={<CheckCircle />} iconPosition="start" />
+              <Tab label="Lab" icon={<Assessment />} iconPosition="start" />
+              <Tab label="Smart Reports" icon={<Timeline />} iconPosition="start" />
+            </Tabs>
+          </Paper>
 
-          {/* OVERVIEW TAB */}
+          {/* TAB PANELS */}
+
+          {/* 1. EXECUTIVE OVERVIEW */}
           {activeTab === 0 && (
             <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>
+                  Executive Overview: <span style={{ color: colors.primary }}>{selectedTeam?.teamName}</span>
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<FaFileExport />}
+                  onClick={handleExportFullPerformanceToExcel}
+                  sx={{
+                    background: colors.primaryGradient,
+                    borderRadius: '12px',
+                    px: 3,
+                    py: 1,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
+                    '&:hover': {
+                      boxShadow: '0 6px 20px rgba(139, 92, 246, 0.4)',
+                      transform: 'translateY(-2px)'
+                    }
+                  }}
+                >
+                  Export Full Performance Data
+                </Button>
+              </Box>
+
               <Grid container spacing={3}>
-                {/* Scorecards */}
+                {/* High Level KPI Cards */}
                 {[
-                  { title: 'Theoretical Avg', score: calculateAverageScore(quizResults), icon: <Quiz />, color: colors.primary, data: quizResults, type: 'quiz' },
-                  { title: 'Practical Avg', score: calculateAverageScore(jobAssessments), icon: <Assignment />, color: colors.success, data: jobAssessments, type: 'practical', suffix: '/5' },
-                  { title: 'Lab Avg', score: calculateAverageScore(labAssessments), icon: <Assessment />, color: colors.warning, data: labAssessments, type: 'lab' }
-                ].map((card, i) => (
-                  <Grid item xs={12} md={4} key={i}>
-                    <Paper sx={{
-                      p: 3,
-                      ...darkThemeStyles.paper,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      borderRadius: '16px',
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: '0 8px 30px rgba(0,0,0,0.2)'
-                      },
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '4px',
-                        height: '100%',
-                        bgcolor: card.color
-                      }
-                    }}>
-                      <Typography variant="overline" color={colors.textSecondary}>{card.title}</Typography>
-                      {card.data.length > 0 ? (
-                        <>
-                          <Typography variant="h3" sx={{ fontWeight: 'bold', color: getAssessmentStatus(card.score, card.type).color, my: 1 }}>
-                            {card.type === 'practical' ? Number(card.score).toFixed(1) : Math.round(card.score)}{card.suffix || '%'}
-                          </Typography>
-                          <Chip
-                            label={getAssessmentStatus(card.score, card.type).label}
-                            size="small"
-                            sx={{ bgcolor: `${getAssessmentStatus(card.score, card.type).color}22`, color: getAssessmentStatus(card.score, card.type).color, border: `1px solid ${getAssessmentStatus(card.score, card.type).color}` }}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <Typography variant="h5" sx={{ fontWeight: 'bold', color: colors.textSecondary, my: 1 }}>
-                            Not Assessed
-                          </Typography>
-                          <Chip
-                            label="No Data"
-                            size="small"
-                            sx={{ bgcolor: `${colors.textSecondary}22`, color: colors.textSecondary, border: `1px solid ${colors.textSecondary}` }}
-                          />
-                        </>
-                      )}
-                      {card.data.length > 1 && (() => {
-                        const current = card.data[0]?.percentage || card.data[0]?.overallScore || card.data[0]?.totalScore || 0;
-                        const prev = card.data[1]?.percentage || card.data[1]?.overallScore || card.data[1]?.totalScore || 0;
-                        const diff = current - prev;
-                        return (
-                          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            {diff > 0 ? (
-                              <Typography variant="caption" sx={{ color: colors.success, display: 'flex', alignItems: 'center' }}>
-                                <TrendingUp fontSize="inherit" /> +{card.type === 'practical' ? diff.toFixed(1) : diff}{card.type === 'practical' ? ' pts' : '%'} Improvement
-                              </Typography>
-                            ) : diff < 0 ? (
-                              <Typography variant="caption" sx={{ color: colors.error, display: 'flex', alignItems: 'center' }}>
-                                <TrendingDown fontSize="inherit" /> {card.type === 'practical' ? diff.toFixed(1) : diff}{card.type === 'practical' ? ' pts' : '%'} {card.type === 'practical' ? 'Decrease' : 'Degradation'}
-                              </Typography>
-                            ) : (
-                              <Typography variant="caption" color={colors.textSecondary}>Stable</Typography>
-                            )}
-                          </Box>
-                        );
-                      })()}
+                  {
+                    title: 'Technical Tasks & Tickets',
+                    value: stats.technicalTasksCount,
+                    unit: 'Total',
+                    desc: `Detractors: ${stats.technicalDetractors} | Neutrals: ${stats.technicalNeutrals}`,
+                    color: colors.warning,
+                    icon: <Assignment />
+                  },
+                  {
+                    title: 'Customer Issues',
+                    value: stats.customerIssuesCount,
+                    unit: 'Reported',
+                    desc: `${stats.resolutionRate}% Resolution Rate`,
+                    color: colors.error,
+                    icon: <SupportAgent />
+                  },
+                  {
+                    title: 'Theoretical Score',
+                    value: calculateAverageScore(quizResults),
+                    max: 100,
+                    unit: '%',
+                    desc: 'Average Quiz Performance',
+                    color: colors.primary,
+                    icon: <Quiz />
+                  },
+                  {
+                    title: 'Practical Score',
+                    value: calculateAverageScore(jobAssessments),
+                    max: 5,
+                    unit: '/ 5',
+                    desc: 'Field Assessment Proficiency',
+                    color: colors.success,
+                    icon: <CheckCircle />
+                  },
+                  {
+                    title: 'Lab Score',
+                    value: calculateAverageScore(labAssessments),
+                    max: 100,
+                    unit: '%',
+                    desc: 'Average Lab Proficiency',
+                    color: colors.info,
+                    icon: <Assessment />
+                  },
+                ].map((kpi, i) => (
+                  <Grid item xs={12} sm={6} md={2.4} key={i}>
+                    <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 3, position: 'relative', height: '100%' }}>
+                      <Box sx={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: kpi.color }} />
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Typography variant="overline" sx={{ color: colors.textSecondary, letterSpacing: 1.2, fontWeight: 600 }}>
+                          {kpi.title}
+                        </Typography>
+                        <Box sx={{ color: kpi.color, opacity: 0.8 }}>
+                          {kpi.icon}
+                        </Box>
+                      </Box>
+                      <Typography variant="h3" sx={{ fontWeight: 800, color: '#fff', mb: 0.5 }}>
+                        {typeof kpi.value === 'number' ?
+                          (kpi.max === 5 ? kpi.value.toFixed(1) : Math.round(kpi.value))
+                          : kpi.value}
+                        <Typography component="span" variant="h6" sx={{ color: colors.textSecondary, ml: 1 }}>{kpi.unit}</Typography>
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block' }}>
+                        {kpi.desc}
+                      </Typography>
                     </Paper>
                   </Grid>
                 ))}
 
-                {/* Combined Trend Chart */}
-                <Grid item xs={12}>
-                  <Paper sx={{ p: 3, ...darkThemeStyles.paper }}>
-                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Performance Overview</Typography>
-                    <Box sx={{ height: 350 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={Array.from({ length: Math.max(quizResults.length, jobAssessments.length, labAssessments.length) }).map((_, i) => ({
-                          index: i,
-                          theoretical: quizResults[i]?.percentage || null,
-                          practical: jobAssessments[i]?.overallScore ? (jobAssessments[i].overallScore <= 5 ? jobAssessments[i].overallScore * 20 : jobAssessments[i].overallScore) : null,
-                          lab: labAssessments[i]?.totalScore || null,
-                        })).reverse()}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
-                          <XAxis dataKey="index" hide />
-                          <YAxis domain={[0, 100]} stroke={colors.textSecondary} fontSize={10} />
-                          <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }}
-                            formatter={(value, name) => {
-                              if (name === "Practical") return [`${(value / 20).toFixed(1)}/5`, name];
-                              return [`${Math.round(value)}%`, name];
-                            }}
-                          />
-                          <Area type="monotone" dataKey="theoretical" stroke={colors.primary} fill={colors.primary} fillOpacity={0.1} strokeWidth={2} name="Theoretical" />
-                          <Area type="monotone" dataKey="practical" stroke={colors.success} fill={colors.success} fillOpacity={0.1} strokeWidth={2} name="Practical" />
-                          <Area type="monotone" dataKey="lab" stroke={colors.warning} fill={colors.warning} fillOpacity={0.1} strokeWidth={2} name="Lab" />
-                        </AreaChart>
-                      </ResponsiveContainer>
+                {/* Radar Chart & Trends */}
+                <Grid item xs={12} md={8}>
+                  <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450 }}>
+                    <Typography variant="h6" sx={{ mb: 4, color: '#fff', fontWeight: 600 }}>360° Performance Balance</Typography>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart outerRadius={150} data={[
+                        { subject: 'Theoretical', A: calculateAverageScore(quizResults), fullMark: 100 },
+                        { subject: 'Practical', A: calculateAverageScore(jobAssessments) * 20, fullMark: 100 },
+                        { subject: 'Lab Skills', A: calculateAverageScore(labAssessments), fullMark: 100 },
+                        { subject: 'Resolution', A: Number(stats.resolutionRate), fullMark: 100 },
+                        { subject: 'Consistency', A: 85, fullMark: 100 }, // Placeholder for now
+                        { subject: 'Safety', A: 90, fullMark: 100 },
+                      ]}>
+                        <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: colors.textSecondary, fontSize: 12 }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                        <Radar name="Team Performance" dataKey="A" stroke={colors.primary} strokeWidth={3} fill={colors.primary} fillOpacity={0.3} />
+                        <RechartsTooltip contentStyle={{ backgroundColor: '#1a1a1a', border: 'none', borderRadius: '8px' }} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </Paper>
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                  <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450, display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="h6" sx={{ mb: 3, color: '#fff', fontWeight: 600 }}>Recent Activity</Typography>
+                    <Box sx={{ flex: 1, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {allActivities.slice(0, 10).map((activity, idx) => (
+                          <Box key={idx} sx={{ p: 2, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', transition: '0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' } }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ color: activity.color, display: 'flex' }}>{activity.icon}</Box>
+                                <Typography variant="caption" sx={{ color: activity.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{activity.title}</Typography>
+                              </Box>
+                              <Typography variant="caption" sx={{ color: colors.textSecondary }}>{formatDate(activity.date)}</Typography>
+                            </Box>
+                            <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{activity.detail}</Typography>
+                          </Box>
+                        ))}
+                      </Box>
                     </Box>
                   </Paper>
                 </Grid>
@@ -1092,8 +1580,458 @@ ${data.map((a, i) => `
             </Box>
           )}
 
-          {/* Theoretical (Quiz) Assessments */}
+          {/* 2. CUSTOMER ISSUES TAB (Deep Insights) */}
           {activeTab === 1 && (
+            <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>Customer Issues Dashboard</Typography>
+                  <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                    Technical analysis and performance metrics for {selectedTeam?.teamName}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#2d2d2d', px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>From:</Typography>
+                      <TextField
+                        type="date"
+                        size="small"
+                        value={dateFilter.start}
+                        onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
+                        sx={{
+                          bgcolor: '#1a1a1a',
+                          borderRadius: 1,
+                          '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                          '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                        }}
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>To:</Typography>
+                      <TextField
+                        type="date"
+                        size="small"
+                        value={dateFilter.end}
+                        onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
+                        sx={{
+                          bgcolor: '#1a1a1a',
+                          borderRadius: 1,
+                          '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                          '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                        }}
+                      />
+                    </Box>
+                    {(dateFilter.start || dateFilter.end) && (
+                      <Button size="small" onClick={() => setDateFilter({ start: '', end: '' })} sx={{ color: '#f44336', minWidth: 0, p: 0.5 }}>
+                        Clear
+                      </Button>
+                    )}
+                  </Box>
+                  <Button
+                    variant="contained"
+                    startIcon={<FaFileExport />}
+                    disabled
+                    sx={{ bgcolor: '#4e73df', '&:hover': { bgcolor: '#2e59d9' } }}
+                  >
+                    Email Report
+                  </Button>
+                </Box>
+              </Box>
+
+              {/* KPI Section - Match Reference Layout */}
+              <Grid container spacing={2} mb={4}>
+                <Grid item xs={12} sm={6} md={2.4}><StatCard title="Total Transactions" value={stats.totalTransactions} icon={<FaClipboardList />} color="#2196f3" subtext="Total records" /></Grid>
+                <Grid item xs={12} sm={6} md={2.4}><StatCard title="Issues Highlighted" value={stats.totalIssuesHighlighted} icon={<FaExclamationCircle />} color="#ffc107" subtext={`Avg: ${stats.issueDensity} per txn`} /></Grid>
+                <Grid item xs={12} sm={6} md={2.4}><StatCard title="Closed" value={stats.closed} icon={<FaCheckCircle />} color="#4caf50" subtext={`${stats.resolutionRate}% Rate`} /></Grid>
+                <Grid item xs={12} sm={6} md={2.4}><StatCard title="Open" value={stats.open} icon={<FaExclamationCircle />} color="#f44336" subtext="Require attention" /></Grid>
+                <Grid item xs={12} sm={6} md={2.4}><StatCard title="Avg. Daily Issues" value={(stats.totalTransactions / (trendData.labels.length || 1)).toFixed(1)} icon={<FaChartLine />} color="#ff9800" subtext="Trend metric" /></Grid>
+              </Grid>
+
+              {/* Process Efficiency Spotlight - Match Reference Layout */}
+              <Box mb={4}>
+                <Grid container spacing={4}>
+                  <Grid item xs={12} md={4}>
+                    <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                      <Typography variant="subtitle2" color="grey.500" mb={1}>SUPERVISOR DISPATCH SPEED (Incl. Aging)</Typography>
+                      <Typography variant="h3" fontWeight="800" color={Number(stats.avgDispatchTime) > 1 ? "warning.main" : "info.main"}>
+                        {stats.avgDispatchTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                        Avg time from <b>Reported</b> → <b>Dispatched</b> (Or <b>Reported</b> → <b>Now</b> if pending)
+                      </Typography>
+                      <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
+                        <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                          * Calculation: (Dispatched Date - Reported Date) OR (Now - Reported Date) if undispatched.
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                      <Typography variant="subtitle2" color="grey.500" mb={1}>FIELD RESOLUTION SPEED (Incl. Aging)</Typography>
+                      <Typography variant="h3" fontWeight="800" color="success.main">
+                        {stats.avgResolutionTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                        Avg time from <b>Dispatched</b> → <b>Resolved</b> (Or <b>Reported</b> → <b>Now</b> if pending)
+                      </Typography>
+                      <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
+                        <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                          * Calculation: Resolved cases use (Resolved - Dispatched). Pending cases use (Now - Reported) to reflect negligence.
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                      <Typography variant="subtitle2" color="grey.500" mb={1}>TOTAL LIFECYCLE (Accountability)</Typography>
+                      <Typography variant="h3" fontWeight="800" color="white">
+                        {stats.avgLifecycleTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                        Total time from <b>Initial Report</b> → <b>Closed/Now</b>
+                      </Typography>
+                      <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
+                        <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                          * Calculation: Full duration from (Report Date) to (Closed Date) OR (Now) if the case is still open.
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* Charts - Match Reference Layout */}
+              <Grid container spacing={3} mb={4}>
+                <Grid item xs={12} lg={8}>
+                  <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h6" fontWeight="bold">Issue Reporting Trend</Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <FormControl size="small" variant="outlined">
+                          <Select
+                            value={trendTimeframe}
+                            onChange={(e) => setTrendTimeframe(e.target.value)}
+                            sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                          >
+                            <MenuItem value="day">Daily</MenuItem>
+                            <MenuItem value="week">Weekly</MenuItem>
+                            <MenuItem value="month">Monthly</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <FormControl size="small" variant="outlined">
+                          <Select
+                            value={trendChartType}
+                            onChange={(e) => setTrendChartType(e.target.value)}
+                            sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                          >
+                            <MenuItem value="mixed">Mixed</MenuItem>
+                            <MenuItem value="bar">Bar</MenuItem>
+                            <MenuItem value="line">Line</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Box>
+                    </Box>
+                    <Box sx={{ height: 300 }}><Bar data={trendData} options={commonOptions} /></Box>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} lg={4}>
+                  <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
+                    <Typography variant="h6" gutterBottom fontWeight="bold">Resolution Status</Typography>
+                    <Box sx={{ height: 260, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      <Doughnut data={statusData} options={doughnutOptions} />
+                      <Box sx={{ position: 'absolute', textAlign: 'center' }}>
+                        <Typography variant="h4" fontWeight="bold" sx={{ color: '#1cc88a' }}>{stats.resolutionRate}%</Typography>
+                        <Typography variant="caption" color="#b3b3b3">Resolved</Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Grid>
+              </Grid>
+
+              {/* Detailed Issue Registry - Styled like Supervisor Performance Table */}
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 0,
+                  bgcolor: '#1e293b',
+                  borderRadius: 3,
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  overflow: 'hidden',
+                  background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                }}
+              >
+                <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.02)' }}>
+                  <Box>
+                    <Typography variant="h6" fontWeight="700" color="#f8fafc">
+                      Issue History & Registry
+                    </Typography>
+                    <Typography variant="body2" color="#94a3b8" sx={{ mt: 0.5 }}>
+                      Full list of issues associated with this team
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label={`${filteredIssuesByDate.length} Records`}
+                    size="small"
+                    sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)', fontWeight: 600 }}
+                  />
+                </Box>
+                <Box sx={{ width: '100%', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+                    <thead>
+                      <tr style={{ background: '#0f172a' }}>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Date</th>
+                        <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>SLID</th>
+                        <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Reporter</th>
+                        <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Category</th>
+                        <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredIssuesByDate
+                        .slice(issuesPage * issuesRowsPerPage, issuesPage * issuesRowsPerPage + issuesRowsPerPage)
+                        .map((issue) => (
+                          <tr
+                            key={issue._id}
+                            style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background-color 0.2s ease' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <td style={{ padding: '16px 24px', color: '#f8fafc', fontSize: '0.85rem' }}>{formatDate(issue.date || issue.createdAt)}</td>
+                            <td style={{ padding: '16px', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.85rem' }}>{issue.slid}</td>
+                            <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{issue.reporter || 'N/A'}</td>
+                            <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>
+                              {issue.issues?.[0]?.category || issue.issueCategory || 'Uncategorized'}
+                              <Typography variant="caption" sx={{ display: 'block', color: '#64748b' }}>{issue.issues?.[0]?.subCategory || '-'}</Typography>
+                            </td>
+                            <td style={{ padding: '16px', textAlign: 'center' }}>
+                              <Chip
+                                label={issue.solved === 'yes' ? 'Closed' : 'Open'}
+                                size="small"
+                                sx={{
+                                  bgcolor: issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                  color: issue.solved === 'yes' ? '#4ade80' : '#f87171',
+                                  border: `1px solid ${issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                                  fontWeight: 600
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                  <TablePagination
+                    rowsPerPageOptions={[10, 25, 50]}
+                    component="div"
+                    count={filteredIssuesByDate.length}
+                    rowsPerPage={issuesRowsPerPage}
+                    page={issuesPage}
+                    onPageChange={(e, p) => setIssuesPage(p)}
+                    onRowsPerPageChange={(e) => {
+                      setIssuesRowsPerPage(parseInt(e.target.value, 10));
+                      setIssuesPage(0);
+                    }}
+                    sx={{ color: '#94a3b8' }}
+                  />
+                </Box>
+              </Paper>
+            </Box>
+          )}
+
+          {/* 3. TASKS & TICKETS TAB (Full Premium Dashboard) */}
+          {activeTab === 2 && (
+            <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>Technical Tasks & Tickets</Typography>
+                  <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                    Operational workload and technical assessment registry for {selectedTeam?.teamName}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FaFileExcel />}
+                    sx={{ color: colors.success, borderColor: colors.success }}
+                    onClick={() => {
+                      const data = technicalTasks.map(t => ({
+                        SLID: t.slid,
+                        'Request Number': t.requestNumber,
+                        'Customer Name': t.customerName,
+                        'PIS Date': t.pisDate ? new Date(t.pisDate).toLocaleDateString() : 'N/A',
+                        Priority: t.priority,
+                        Status: t.validationStatus,
+                        Score: t.evaluationScore || 'N/A'
+                      }));
+                      const ws = XLSX.utils.json_to_sheet(data);
+                      const wb = XLSX.utils.book_new();
+                      XLSX.utils.book_append_sheet(wb, ws, "Tasks");
+                      XLSX.writeFile(wb, `${selectedTeam.teamName}_Technical_Tasks.xlsx`);
+                    }}
+                  >
+                    Export Excel
+                  </Button>
+                </Box>
+              </Box>
+
+              {/* Technical KPI Section */}
+              <Grid container spacing={2} mb={4}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatCard
+                    title="Total Tasks"
+                    value={technicalTasks.length}
+                    icon={<FaClipboardList />}
+                    color={colors.primary}
+                    subtext="Technical workload"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatCard
+                    title="High Priority"
+                    value={technicalTasks.filter(t => t.priority === 'High').length}
+                    icon={<PriorityHigh />}
+                    color={colors.error}
+                    subtext="Requires urgent action"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatCard
+                    title="Detractors"
+                    value={technicalTasks.filter(t => t.evaluationScore > 0 && t.evaluationScore <= 60).length}
+                    icon={<FaExclamationCircle />}
+                    color={colors.warning}
+                    subtext="Score below 60%"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatCard
+                    title="Avg. Quality"
+                    value={(() => {
+                      const evaluated = technicalTasks.filter(t => t.evaluationScore > 0);
+                      return evaluated.length > 0 ? (evaluated.reduce((a, b) => a + b.evaluationScore, 0) / evaluated.length).toFixed(1) : 'N/A';
+                    })()}
+                    icon={<CheckCircle />}
+                    color={colors.success}
+                    subtext="Technical score avg"
+                  />
+                </Grid>
+              </Grid>
+
+              {/* Technical Charts */}
+              <Grid container spacing={3} mb={4}>
+                <Grid item xs={12} lg={6}>
+                  <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Task Distribution by Priority</Typography>
+                    <Box sx={{ height: 300 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsBarChart data={[
+                          { name: 'High', value: technicalTasks.filter(t => t.priority === 'High').length, color: colors.error },
+                          { name: 'Medium', value: technicalTasks.filter(t => t.priority === 'Medium').length, color: colors.warning },
+                          { name: 'Low', value: technicalTasks.filter(t => t.priority === 'Low').length, color: colors.success },
+                        ]}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
+                          <XAxis dataKey="name" stroke={colors.textSecondary} fontSize={12} />
+                          <YAxis stroke={colors.textSecondary} fontSize={12} />
+                          <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                          <RechartsBar dataKey="value" radius={[4, 4, 0, 0]}>
+                            {[colors.error, colors.warning, colors.success].map((color, idx) => <Cell key={`cell-${idx}`} fill={color} />)}
+                          </RechartsBar>
+                        </RechartsBarChart>
+                      </ResponsiveContainer>
+                    </Box>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} lg={6}>
+                  <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Operational Status</Typography>
+                    <Box sx={{ height: 300 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPieChart>
+                          <RechartsPie
+                            data={[
+                              { name: 'Validated', value: technicalTasks.filter(t => t.validationStatus === 'Validated').length, color: colors.success },
+                              { name: 'Pending', value: technicalTasks.filter(t => t.validationStatus === 'Pending').length, color: colors.warning },
+                              { name: 'Rejected', value: technicalTasks.filter(t => t.validationStatus === 'Rejected').length, color: colors.error },
+                            ].filter(d => d.value > 0)}
+                            cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
+                          >
+                            {[colors.success, colors.warning, colors.error].map((color, idx) => <Cell key={`cell-${idx}`} fill={color} />)}
+                          </RechartsPie>
+                          <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                          <RechartsLegend verticalAlign="bottom" height={36} />
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
+                    </Box>
+                  </Paper>
+                </Grid>
+              </Grid>
+
+              {/* Task Registry Table */}
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 0,
+                  bgcolor: '#1e293b',
+                  borderRadius: 3,
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  overflow: 'hidden',
+                  background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+                }}
+              >
+                <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="h6" fontWeight="700" color="#f8fafc">Technical Task Registry</Typography>
+                  <Chip label={`${technicalTasks.length} Tasks`} size="small" sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }} />
+                </Box>
+                <Box sx={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={{ background: '#0f172a' }}>
+                      <tr>
+                        <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>REQUEST NO</th>
+                        <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>CUSTOMER</th>
+                        <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>SLID</th>
+                        <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>PIS DATE</th>
+                        <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>PRIORITY</th>
+                        <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>STATUS</th>
+                        <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>SCORE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {technicalTasks.map((task) => (
+                        <tr key={task._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: '0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                          <td style={{ padding: '16px', color: '#fff', fontSize: '0.85rem' }}>{task.requestNumber || 'N/A'}</td>
+                          <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{task.customerName}</td>
+                          <td style={{ padding: '16px', color: colors.primary, fontWeight: 'bold' }}>{task.slid}</td>
+                          <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>{formatDate(task.pisDate || task.createdAt)}</td>
+                          <td style={{ padding: '16px' }}>
+                            <Chip label={task.priority} size="small" color={task.priority === 'High' ? 'error' : task.priority === 'Medium' ? 'warning' : 'success'} variant="outlined" />
+                          </td>
+                          <td style={{ padding: '16px' }}>
+                            <Chip
+                              label={task.validationStatus}
+                              size="small"
+                              sx={{
+                                bgcolor: task.validationStatus === 'Validated' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                                color: task.validationStatus === 'Validated' ? '#4ade80' : '#facc15',
+                                border: `1px solid ${task.validationStatus === 'Validated' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)'}`
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold', color: task.evaluationScore >= 80 ? colors.success : colors.warning }}>
+                            {task.evaluationScore ? `${task.evaluationScore}%` : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Box>
+              </Paper>
+            </Box>
+          )}
+
+          {/* 4. THEORETICAL ASSESSMENTS (Updated Styling) */}
+          {activeTab === 3 && (
             <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box>
@@ -1217,8 +2155,8 @@ ${data.map((a, i) => `
             </Box>
           )}
 
-          {/* Practical (On-the-Job) Assessments */}
-          {activeTab === 2 && (
+          {/* 5. PRACTICAL ASSESSMENTS (Updated Styling) */}
+          {activeTab === 4 && (
             <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box>
@@ -1352,8 +2290,8 @@ ${data.map((a, i) => `
             </Box>
           )}
 
-          {/* Lab Assessments */}
-          {activeTab === 3 && (
+          {/* 6. LAB ASSESSMENTS (Updated Styling) */}
+          {activeTab === 5 && (
             <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box>
@@ -1494,209 +2432,285 @@ ${data.map((a, i) => `
             </Box>
           )}
 
-          {/* ADVANCED ANALYTICS TAB */}
-          {activeTab === 4 && (
+          {/* 7. REPORTS (Advanced Analytics) */}
+          {activeTab === 6 && (
             <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" sx={{ color: colors.primary }}>Advanced Analytics & Reporting</Typography>
-                <Button
-                  variant="contained"
-                  startIcon={generatingReport ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <PictureAsPdfIcon />}
-                  onClick={handleGenerateFullReport}
-                  disabled={generatingReport || (quizResults.length === 0 && jobAssessments.length === 0 && labAssessments.length === 0)}
-                  sx={{
-                    bgcolor: colors.primary,
-                    '&:hover': { bgcolor: colors.primary, opacity: 0.9 },
-                    '&:disabled': { bgcolor: colors.textSecondary }
-                  }}
-                >
-                  {generatingReport ? 'Generating...' : 'Generate Full Evaluation'}
-                </Button>
-              </Box>
+              <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h5" sx={{ color: colors.primary }}>Advanced Analytics & Reporting</Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={generatingReport ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <PictureAsPdfIcon />}
+                    onClick={handleGenerateFullReport}
+                    disabled={generatingReport || (quizResults.length === 0 && jobAssessments.length === 0 && labAssessments.length === 0)}
+                    sx={{
+                      bgcolor: colors.primary,
+                      '&:hover': { bgcolor: colors.primary, opacity: 0.9 },
+                      '&:disabled': { bgcolor: colors.textSecondary }
+                    }}
+                  >
+                    {generatingReport ? 'Generating...' : 'Generate Full Evaluation'}
+                  </Button>
+                </Box>
 
-              <Grid container spacing={3}>
-                {/* Radar Chart for Multi-Test Comparison */}
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, ...darkThemeStyles.paper }}>
-                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Performance Balance</Typography>
-                    <ResponsiveContainer width="100%" height={350}>
-                      <RadarChart data={[
-                        {
-                          subject: 'Theoretical',
-                          score: calculateAverageScore(quizResults),
-                          fullMark: 100
-                        },
-                        {
-                          subject: 'Practical',
-                          score: calculateAverageScore(jobAssessments) * 20, // Scale to 100
-                          fullMark: 100
-                        },
-                        {
-                          subject: 'Lab',
-                          score: calculateAverageScore(labAssessments),
-                          fullMark: 100
-                        }
-                      ]}>
-                        <PolarGrid stroke={colors.border} />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: colors.textPrimary, fontSize: 12 }} />
-                        <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: colors.textSecondary, fontSize: 10 }} />
-                        <Radar name="Score" dataKey="score" stroke={colors.primary} fill={colors.primary} fillOpacity={0.3} />
-                        <RechartsTooltip
-                          contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }}
-                          formatter={(value) => `${Math.round(value)}%`}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </Paper>
-                </Grid>
-
-                {/* Strengths & Weaknesses */}
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Strengths & Weaknesses</Typography>
-                    {(() => {
-                      const { strengths, weaknesses } = identifyStrengthsAndWeaknesses();
-                      return (
-                        <Box>
-                          <Typography variant="subtitle2" sx={{ color: colors.success, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <CheckCircleIcon fontSize="small" /> Top Strengths
-                          </Typography>
-                          {strengths.length > 0 ? (
-                            <Box sx={{ mb: 3 }}>
-                              {strengths.map((s, i) => (
-                                <Chip
-                                  key={i}
-                                  label={`${s.name}: ${Math.round(s.score)}%`}
-                                  size="small"
-                                  sx={{ m: 0.5, bgcolor: `${colors.success}22`, color: colors.success, borderColor: colors.success }}
-                                  variant="outlined"
+                <Grid container spacing={3}>
+                  {/* Strategic Benchmarking */}
+                  <Grid item xs={12} md={4}>
+                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)' }}>
+                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TrendingUp /> Strategic Benchmarking
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {(() => {
+                          const avgMastery = Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3);
+                          const isMaster = avgMastery >= 85;
+                          return (
+                            <>
+                              <Box>
+                                <Typography variant="caption" color={colors.textSecondary}>Current Status</Typography>
+                                <Typography variant="h5" sx={{ fontWeight: 700, color: isMaster ? colors.success : colors.warning }}>
+                                  {isMaster ? 'Mastery Level' : 'Development Phase'}
+                                </Typography>
+                              </Box>
+                              <Box>
+                                <Typography variant="caption" color={colors.textSecondary}>Distance to Top Tier</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                  {avgMastery >= 90 ? 'Elite (Top 5%)' : `${90 - avgMastery}% to Elite`}
+                                </Typography>
+                                <LinearProgress
+                                  variant="determinate"
+                                  value={Math.min(100, (avgMastery / 90) * 100)}
+                                  sx={{ mt: 1, height: 6, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: colors.primary } }}
                                 />
-                              ))}
-                            </Box>
-                          ) : (
-                            <Typography variant="body2" color={colors.textSecondary} sx={{ mb: 3 }}>No data available</Typography>
-                          )}
+                              </Box>
+                              <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                <Typography variant="caption" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>
+                                  {avgMastery < 70 ? 'Recommendation: Remedial training required in core domains.'
+                                    : avgMastery < 85 ? 'Recommendation: Focus on consistency and error reduction.'
+                                      : 'Recommendation: Maintain performance; mentor other teams.'}
+                                </Typography>
+                              </Box>
+                            </>
+                          );
+                        })()}
+                      </Box>
+                    </Paper>
+                  </Grid>
 
-                          <Typography variant="subtitle2" sx={{ color: colors.error, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <CancelIcon fontSize="small" /> Areas for Improvement
-                          </Typography>
-                          {weaknesses.length > 0 ? (
-                            <Box>
-                              {weaknesses.map((w, i) => (
-                                <Chip
-                                  key={i}
-                                  label={`${w.name}: ${Math.round(w.score)}%`}
-                                  size="small"
-                                  sx={{ m: 0.5, bgcolor: `${colors.error}22`, color: colors.error, borderColor: colors.error }}
-                                  variant="outlined"
-                                />
-                              ))}
-                            </Box>
-                          ) : (
-                            <Typography variant="body2" color={colors.textSecondary}>No data available</Typography>
-                          )}
-                        </Box>
-                      );
-                    })()}
-                  </Paper>
-                </Grid>
+                  {/* Operational Balance Radar */}
+                  <Grid item xs={12} md={4}>
+                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Performance Balance</Typography>
+                      <ResponsiveContainer width="100%" height={280}>
+                        <RadarChart data={[
+                          {
+                            subject: 'Theoretical',
+                            score: calculateAverageScore(quizResults),
+                            fullMark: 100
+                          },
+                          {
+                            subject: 'Practical',
+                            score: calculateAverageScore(jobAssessments) * 20, // Scale to 100
+                            fullMark: 100
+                          },
+                          {
+                            subject: 'Lab',
+                            score: calculateAverageScore(labAssessments),
+                            fullMark: 100
+                          }
+                        ]}>
+                          <PolarGrid stroke={colors.border} />
+                          <PolarAngleAxis dataKey="subject" tick={{ fill: colors.textPrimary, fontSize: 10 }} />
+                          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: colors.textSecondary, fontSize: 8 }} />
+                          <Radar name="Score" dataKey="score" stroke={colors.primary} fill={colors.primary} fillOpacity={0.3} />
+                          <RechartsTooltip
+                            contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }}
+                            formatter={(value) => `${Math.round(value)}%`}
+                          />
+                        </RadarChart>
+                      </ResponsiveContainer>
+                    </Paper>
+                  </Grid>
 
-                {/* Mastery & Consistency Metrics */}
-                <Grid item xs={12}>
-                  <Paper sx={{ p: 3, ...darkThemeStyles.paper }}>
-                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Consistency & Mastery Analysis</Typography>
-                    <Grid container spacing={2}>
-                      {[
-                        { label: 'Overall Mastery', value: `${Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3)}%`, color: colors.primary },
-                        { label: 'Theoretical Volatility', value: `${Math.round(calculateStandardDeviation(quizResults))}%`, color: colors.warning },
-                        { label: 'Practical Consistency', value: calculateStandardDeviation(jobAssessments) < 10 ? 'High' : 'Variable', color: colors.success },
-                        { label: 'Lab Mastery Rate', value: `${Math.round(calculatePercentageAboveThreshold(labAssessments, 80))}%`, color: colors.primary }
-                      ].map((metric, i) => (
-                        <Grid item xs={6} md={3} key={i}>
-                          <Card sx={{ bgcolor: colors.surfaceElevated, border: `1px solid ${colors.border}` }}>
-                            <CardContent>
-                              <Typography variant="caption" color={colors.textSecondary}>{metric.label}</Typography>
-                              <Typography variant="h5" sx={{ color: metric.color, fontWeight: 'bold' }}>{metric.value}</Typography>
-                            </CardContent>
-                          </Card>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Paper>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
+                  {/* Strengths & Weaknesses */}
+                  <Grid item xs={12} md={4}>
+                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Strengths & Weaknesses</Typography>
+                      {(() => {
+                        const { strengths, weaknesses } = identifyStrengthsAndWeaknesses();
+                        return (
+                          <Box>
+                            <Typography variant="subtitle2" sx={{ color: colors.success, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <CheckCircleIcon fontSize="small" /> Top Strengths
+                            </Typography>
+                            {strengths.length > 0 ? (
+                              <Box sx={{ mb: 3 }}>
+                                {strengths.map((s, i) => (
+                                  <Chip
+                                    key={i}
+                                    label={`${s.name}: ${Math.round(s.score)}%`}
+                                    size="small"
+                                    sx={{ m: 0.5, bgcolor: `${colors.success}22`, color: colors.success, borderColor: colors.success }}
+                                    variant="outlined"
+                                  />
+                                ))}
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color={colors.textSecondary} sx={{ mb: 3 }}>No data available</Typography>
+                            )}
 
-
-          {/* Performance Summary Section */}
-          {(quizResults.length > 0 || jobAssessments.length > 0 || labAssessments.length > 0) && (
-            <Box sx={{ mt: 5 }}>
-              <Typography variant="h5" sx={{ color: colors.primary, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Assessment /> Advanced Analytics
-              </Typography>
-
-              <Grid container spacing={3}>
-                {[
-                  { name: 'Theoretical', data: quizResults, color: colors.primary },
-                  { name: 'Practical', data: jobAssessments, color: colors.success },
-                  { name: 'Lab', data: labAssessments, color: colors.warning }
-                ].filter(group => group.data.length > 0).map((group, idx) => (
-                  <Grid item xs={12} key={idx}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, position: 'relative' }}>
-                      <Typography variant="h6" sx={{ color: group.color, mb: 2 }}>{group.name} Analytics</Typography>
-                      <Grid container spacing={4}>
-                        <Grid item xs={12} md={4}>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <Typography color={colors.textSecondary}>Median Score</Typography>
-                              <Typography fontWeight="bold">{Math.round(calculateMedianScore(group.data))}%</Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <Typography color={colors.textSecondary}>Volatility (StdDev)</Typography>
-                              <Typography fontWeight="bold">{Math.round(calculateStandardDeviation(group.data))}%</Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <Typography color={colors.textSecondary}>Top Score</Typography>
-                              <Typography sx={{ color: colors.success }} fontWeight="bold">{calculateHighestScore(group.data)}%</Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <Typography color={colors.textSecondary}>Mastery Rate ({'>'}80%)</Typography>
-                              <Typography fontWeight="bold">{Math.round(calculatePercentageAboveThreshold(group.data, 80))}%</Typography>
-                            </Box>
+                            <Typography variant="subtitle2" sx={{ color: colors.error, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <CancelIcon fontSize="small" /> Areas for Improvement
+                            </Typography>
+                            {weaknesses.length > 0 ? (
+                              <Box>
+                                {weaknesses.map((w, i) => (
+                                  <Chip
+                                    key={i}
+                                    label={`${w.name}: ${Math.round(w.score)}%`}
+                                    size="small"
+                                    sx={{ m: 0.5, bgcolor: `${colors.error}22`, color: colors.error, borderColor: colors.error }}
+                                    variant="outlined"
+                                  />
+                                ))}
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color={colors.textSecondary}>No data available</Typography>
+                            )}
                           </Box>
-                        </Grid>
-                        <Grid item xs={12} md={8}>
-                          <Box sx={{ height: 200 }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={group.data.map(item => ({
-                                date: formatDate(item.submittedAt || item.assessmentDate || item.createdAt),
-                                score: item.percentage || item.overallScore || item.totalScore || 0
-                              })).reverse()}>
-                                <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
-                                <XAxis dataKey="date" hide />
-                                <YAxis domain={[0, 100]} hide />
-                                <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
-                                <Area
-                                  type="monotone"
-                                  dataKey="score"
-                                  stroke={group.color}
-                                  fill={group.color}
-                                  fillOpacity={0.1}
-                                  strokeWidth={2}
-                                />
-                              </AreaChart>
-                            </ResponsiveContainer>
-                          </Box>
-                        </Grid>
+                        );
+                      })()}
+                    </Paper>
+                  </Grid>
+
+                  {/* Mastery & Consistency Metrics */}
+                  <Grid item xs={12} md={6}>
+                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Consistency & Mastery Analysis</Typography>
+                      <Grid container spacing={2}>
+                        {[
+                          { label: 'Overall Mastery', value: `${Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3)}%`, color: colors.primary },
+                          { label: 'Theoretical Volatility', value: `${Math.round(calculateStandardDeviation(quizResults))}%`, color: colors.warning },
+                          { label: 'Practical Consistency', value: calculateStandardDeviation(jobAssessments) < 10 ? 'High' : 'Variable', color: colors.success },
+                          { label: 'Lab Mastery Rate', value: `${Math.round(calculatePercentageAboveThreshold(labAssessments, 80))}%`, color: colors.primary }
+                        ].map((metric, i) => (
+                          <Grid item xs={6} key={i}>
+                            <Card sx={{ bgcolor: colors.surfaceElevated, border: `1px solid ${colors.border}` }}>
+                              <CardContent sx={{ p: 2 }}>
+                                <Typography variant="caption" color={colors.textSecondary}>{metric.label}</Typography>
+                                <Typography variant="h6" sx={{ color: metric.color, fontWeight: 'bold' }}>{metric.value}</Typography>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                        ))}
                       </Grid>
                     </Paper>
                   </Grid>
-                ))}
-              </Grid>
+
+                  {/* Process Efficiency Analysis */}
+                  <Grid item xs={12} md={6}>
+                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Process Efficiency Analysis</Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {[
+                          { label: 'Avg Dispatch Speed', value: stats.avgDispatchTime, unit: 'days', color: colors.info },
+                          { label: 'Avg Resolution Speed', value: stats.avgResolutionTime, unit: 'days', color: colors.success },
+                          { label: 'Full Lifecycle Time', value: stats.avgLifecycleTime, unit: 'days', color: colors.warning }
+                        ].map((metric, i) => (
+                          <Box key={i}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                              <Typography variant="body2" color={colors.textSecondary}>{metric.label}</Typography>
+                              <Typography variant="body2" fontWeight="bold" sx={{ color: metric.color }}>{metric.value} {metric.unit}</Typography>
+                            </Box>
+                            <LinearProgress
+                              variant="determinate"
+                              value={Math.min(100, (metric.value / 10) * 100)}
+                              sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: metric.color } }}
+                            />
+                          </Box>
+                        ))}
+                        <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(59, 130, 246, 0.05)', borderRadius: 2, border: '1px solid rgba(59, 130, 246, 0.1)' }}>
+                          <Typography variant="caption" sx={{ color: colors.info, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Info sx={{ fontSize: '1rem' }} /> Values normalized against 10-day benchmark.
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              </Box>
+
+
+              {/* Performance Summary Section */}
+              {(quizResults.length > 0 || jobAssessments.length > 0 || labAssessments.length > 0) && (
+                <Box sx={{ mt: 5 }}>
+                  <Typography variant="h5" sx={{ color: colors.primary, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Assessment /> Advanced Analytics
+                  </Typography>
+
+                  <Grid container spacing={3}>
+                    {[
+                      { name: 'Theoretical', data: quizResults, color: colors.primary },
+                      { name: 'Practical', data: jobAssessments, color: colors.success },
+                      { name: 'Lab', data: labAssessments, color: colors.warning }
+                    ].filter(group => group.data.length > 0).map((group, idx) => (
+                      <Grid item xs={12} key={idx}>
+                        <Paper sx={{ p: 3, ...darkThemeStyles.paper, position: 'relative' }}>
+                          <Typography variant="h6" sx={{ color: group.color, mb: 2 }}>{group.name} Analytics</Typography>
+                          <Grid container spacing={4}>
+                            <Grid item xs={12} md={4}>
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <Typography color={colors.textSecondary}>Median Score</Typography>
+                                  <Typography fontWeight="bold">{Math.round(calculateMedianScore(group.data))}%</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <Typography color={colors.textSecondary}>Volatility (StdDev)</Typography>
+                                  <Typography fontWeight="bold">{Math.round(calculateStandardDeviation(group.data))}%</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <Typography color={colors.textSecondary}>Top Score</Typography>
+                                  <Typography sx={{ color: colors.success }} fontWeight="bold">{calculateHighestScore(group.data)}%</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <Typography color={colors.textSecondary}>Mastery Rate ({'>'}80%)</Typography>
+                                  <Typography fontWeight="bold">{Math.round(calculatePercentageAboveThreshold(group.data, 80))}%</Typography>
+                                </Box>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={12} md={8}>
+                              <Box sx={{ height: 200 }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <AreaChart data={group.data.map(item => ({
+                                    date: formatDate(item.submittedAt || item.assessmentDate || item.createdAt),
+                                    score: item.percentage || item.overallScore || item.totalScore || 0
+                                  })).reverse()}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
+                                    <XAxis dataKey="date" hide />
+                                    <YAxis domain={[0, 100]} hide />
+                                    <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                                    <Area
+                                      type="monotone"
+                                      dataKey="score"
+                                      stroke={group.color}
+                                      fill={group.color}
+                                      fillOpacity={0.1}
+                                      strokeWidth={2}
+                                    />
+                                  </AreaChart>
+                                </ResponsiveContainer>
+                              </Box>
+                            </Grid>
+                          </Grid>
+                        </Paper>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              )}
+
             </Box>
           )}
-
         </Box>
       )}
     </Box>

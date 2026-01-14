@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Box,
   Checkbox,
@@ -20,6 +21,7 @@ import {
   Select,
   MenuItem,
   Grid,
+  Chip,
 } from "@mui/material";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import api from "../api/api";
@@ -42,9 +44,11 @@ const SubtaskManager = ({
   selectedTaskId,
   selectedOption,
   handleNoteChange,
+  handleShortNoteChange,
   setSubtasks,
   setAdditionalInfo,
 }) => {
+  const [editingIndex, setEditingIndex] = useState(null);
   const colors = {
     primary: "#3b82f6",
     textPrimary: "#ffffff",
@@ -148,17 +152,18 @@ const SubtaskManager = ({
     }
   };
 
-  const handleSaveAndClose = async (subtaskIndex) => {
+  const handleStatusUpdate = async (subtaskIndex, newStatus) => {
     if (!selectedTaskId) {
       console.error("Error: selectedTaskId is undefined");
-      alert("Cannot close subtask: Task ID is missing. Please try again or contact support.");
+      alert("Cannot update subtask: Task ID is missing. Please try again or contact support.");
       return;
     }
 
     const updatedSubtasks = subtasks.map((subtask, idx) => ({
       ...subtask,
-      status: idx === subtaskIndex ? "Closed" : subtask.status,
-      dateTime: idx === subtaskIndex ? new Date().toISOString() : subtask.dateTime,
+      status: idx === subtaskIndex ? newStatus : subtask.status,
+      dateTime: idx === subtaskIndex ? (newStatus === "Closed" ? new Date().toISOString() : null) : subtask.dateTime,
+      shortNote: subtask.shortNote,
       checkpoints: checkpoints[idx] ? checkpoints[idx].map(cp => {
         const checkpointData = {
           ...cp,
@@ -206,18 +211,20 @@ const SubtaskManager = ({
         }
       );
       handleSaveNote(updatedSubtasks);
-      alert("Subtask closed successfully!");
+      setEditingIndex(null);
     } catch (error) {
-      console.error("Error saving and closing subtask:", error);
-      alert("Failed to close subtask. Please try again.");
+      console.error(`Error updating subtask status to ${newStatus}:`, error);
+      alert("Failed to update subtask status. Please try again.");
     }
   };
 
   const isSubtaskClosable = (subtaskIndex) => {
-    return checkpoints[subtaskIndex]?.every((checkpoint) => checkpoint.checked);
+    const cps = checkpoints[subtaskIndex];
+    if (!cps || cps.length === 0) return true; // For subtasks like "Task Reception"
+    return cps.every((checkpoint) => checkpoint.checked);
   };
 
-  const renderCheckpointOptions = (subtaskIndex, checkpointIndex, checkpoint) => {
+  const renderCheckpointOptions = (subtaskIndex, checkpointIndex, checkpoint, isClosed) => {
 
     if (SIMPLE_QUESTIONS.includes(checkpoint.name)) {
       return (
@@ -229,6 +236,8 @@ const SubtaskManager = ({
           <RadioGroup
             value={checkpoint.options.selected || ""}
             onChange={(e) => handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value)}
+            disabled={isClosed}
+            sx={{ mt: 2 }}
           >
             {checkpoint.options.choices.map((choice) => (
               <FormControlLabel
@@ -272,6 +281,7 @@ const SubtaskManager = ({
             onChange={(e) =>
               handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value)
             }
+            disabled={isClosed}
           >
             {checkpoint.options.choices.map((choice) => (
               <FormControlLabel
@@ -318,6 +328,7 @@ const SubtaskManager = ({
                       'actionTaken.selected'
                     )
                   }
+                  disabled={isClosed}
                   label="Select Action Taken"
                   sx={{
                     color: colors.textPrimary,
@@ -363,6 +374,7 @@ const SubtaskManager = ({
                             'actionTaken.justification.selected'
                           )
                         }
+                        disabled={isClosed}
                         label="Select Justification"
                         sx={{
                           color: colors.textPrimary,
@@ -403,6 +415,7 @@ const SubtaskManager = ({
                             'actionTaken.justification.notes.value'
                           )
                         }
+                        disabled={isClosed}
                         sx={{ mt: 2 }}
                       />
                     )}
@@ -430,6 +443,7 @@ const SubtaskManager = ({
                           'generalJustification.selected'
                         )
                       }
+                      disabled={isClosed}
                       label="Technical Assessment"
                       sx={{
                         color: colors.textPrimary,
@@ -470,6 +484,7 @@ const SubtaskManager = ({
                           'generalJustification.notes.value'
                         )
                       }
+                      disabled={isClosed}
                       sx={{ mt: 2 }}
                     />
                   )}
@@ -492,6 +507,7 @@ const SubtaskManager = ({
                   onChange={(e) =>
                     handleRepeaterLocationChange(subtaskIndex, checkpointIndex, e.target.value)
                   }
+                  disabled={isClosed}
                 >
                   {checkpoint.options.followUpQuestion.choices.map((choice) => (
                     <FormControlLabel
@@ -534,6 +550,7 @@ const SubtaskManager = ({
                           onChange={(e) =>
                             handleActionTakenChange(subtaskIndex, checkpointIndex, e.target.value, true)
                           }
+                          disabled={isClosed}
                           label="Select Action Taken"
                           sx={{
                             color: colors.textPrimary,
@@ -579,6 +596,7 @@ const SubtaskManager = ({
                                   'followUpQuestion.actionTaken.justification.selected'
                                 )
                               }
+                              disabled={isClosed}
                               label="Select Justification"
                               sx={{
                                 color: colors.textPrimary,
@@ -619,6 +637,7 @@ const SubtaskManager = ({
                                   'followUpQuestion.actionTaken.justification.notes.value'
                                 )
                               }
+                              disabled={isClosed}
                               sx={{ mt: 2 }}
                             />
                           )}
@@ -644,8 +663,9 @@ const SubtaskManager = ({
             rows={2}
             value={checkpoint.options.value || ""}
             onChange={(e) =>
-              handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value)
+              handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value, "value")
             }
+            disabled={isClosed}
             InputLabelProps={{
               style: { color: colors.textSecondary },
             }}
@@ -680,6 +700,7 @@ const SubtaskManager = ({
             onChange={(e) =>
               handleSignalTestNotesChange(subtaskIndex, checkpointIndex, e.target.value)
             }
+            disabled={isClosed}
             InputLabelProps={{
               style: { color: colors.textSecondary },
             }}
@@ -726,13 +747,27 @@ const SubtaskManager = ({
               >
                 <ListItemText
                   primary={
-                    <Typography variant="subtitle1" sx={{ color: colors.textPrimary }}>
-                      {subtask.title} - {subtask.status}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: colors.textPrimary }}>
+                        {subtask.title}
+                      </Typography>
+                      <Chip
+                        label={subtask.status}
+                        size="small"
+                        sx={{
+                          backgroundColor:
+                            subtask.status === "Closed" ? "#4caf50" :
+                              subtask.status === "In Progress" ? "#2196f3" : "#757575",
+                          color: "#ffffff",
+                          fontSize: "10px",
+                          height: "20px"
+                        }}
+                      />
+                    </Box>
                   }
                   secondary={
                     <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                      {subtask.dateTime ? `Completed on: ${new Date(subtask.dateTime).toLocaleString()}` : "Not completed yet"}
+                      {subtask.dateTime ? `Completed on: ${new Date(subtask.dateTime).toLocaleString()}` : "Active subtask"}
                     </Typography>
                   }
                 />
@@ -759,7 +794,8 @@ const SubtaskManager = ({
                         }}
                       >
                         <ListItemButton
-                          onClick={() => handleCheckpointToggle(subtaskIndex, checkpointIndex)}
+                          onClick={() => (subtask.status !== "Closed" || editingIndex === subtaskIndex) && handleCheckpointToggle(subtaskIndex, checkpointIndex)}
+                          disabled={subtask.status === "Closed" && editingIndex !== subtaskIndex}
                           sx={{
                             borderLeft: `4px solid ${checkpoint.checked ? "#4caf50" : "#f44336"}`,
                           }}
@@ -770,6 +806,7 @@ const SubtaskManager = ({
                               checked={checkpoint.checked}
                               tabIndex={-1}
                               disableRipple
+                              disabled={subtask.status === "Closed" && editingIndex !== subtaskIndex}
                               sx={{
                                 color: colors.primary,
                                 "&.Mui-checked": { color: colors.primary },
@@ -786,21 +823,23 @@ const SubtaskManager = ({
                         </ListItemButton>
 
                         <Box sx={{ px: 3, pb: 2 }}>
-                          {renderCheckpointOptions(subtaskIndex, checkpointIndex, checkpoint)}
+                          {renderCheckpointOptions(subtaskIndex, checkpointIndex, checkpoint, subtask.status === "Closed" && editingIndex !== subtaskIndex)}
                         </Box>
                       </Paper>
                     ))}
                   </List>
 
-                  {selectedOption !== "others" && (
+                  {/* Always show notes field, change label based on option */}
+                  {(
                     <TextField
                       fullWidth
                       variant="outlined"
-                      label="Additional Notes"
+                      label={selectedOption === "others" ? "Reason for Out of Scope" : "Additional Notes"}
                       multiline
                       rows={4}
                       value={notes[subtaskIndex] || ""}
                       onChange={(e) => handleNoteChange(subtaskIndex, e.target.value)}
+                      disabled={subtask.status === "Closed" && editingIndex !== subtaskIndex}
                       InputLabelProps={{
                         style: { color: colors.textSecondary },
                       }}
@@ -811,32 +850,109 @@ const SubtaskManager = ({
                         mt: 2,
                         direction: "rtl",
                         textAlign: "right",
-                        // "& .MuiOutlinedInput-root": {
-                        //   "& fieldset": { borderColor: colors.border },
-                        //   "&:hover fieldset": { borderColor: colors.primary },
-                        //   "&.Mui-focused fieldset": { borderColor: colors.primary },
-                        //   backgroundColor: colors.surface,
-                        // },
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": { borderColor: colors.border },
+                          "&:hover fieldset": { borderColor: colors.primary },
+                          "&.Mui-focused fieldset": { borderColor: colors.primary },
+                        },
                       }}
                     />
                   )}
 
-                  {isSubtaskClosable(subtaskIndex) && subtask.status !== "Closed" && (
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={() => handleSaveAndClose(subtaskIndex)}
+                  {subtask.title === "Task Reception" && (
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      label="Short Note (Summary for dashboard)"
+                      value={subtask.shortNote || ""}
+                      onChange={(e) => handleShortNoteChange(subtaskIndex, e.target.value)}
+                      disabled={subtask.status === "Closed" && editingIndex !== subtaskIndex}
+                      InputLabelProps={{
+                        style: { color: colors.textSecondary },
+                      }}
+                      InputProps={{
+                        style: { color: colors.textPrimary },
+                      }}
                       sx={{
                         mt: 2,
-                        backgroundColor: colors.primary,
-                        "&:hover": {
-                          backgroundColor: colors.primaryHover,
+                        direction: "rtl",
+                        textAlign: "right",
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": { borderColor: colors.border },
+                          "&:hover fieldset": { borderColor: colors.primary },
+                          "&.Mui-focused fieldset": { borderColor: colors.primary },
+                          backgroundColor: colors.surface,
                         },
                       }}
-                    >
-                      Save and Close Subtask
-                    </Button>
+                      placeholder="e.g. Awaiting customer contact"
+                      helperText="This note will appear on the task card for quick overview."
+                    />
                   )}
+
+
+                  <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                    {editingIndex === subtaskIndex ? (
+                      <>
+                        {isSubtaskClosable(subtaskIndex) && (
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => handleStatusUpdate(subtaskIndex, "Closed")}
+                            sx={{
+                              backgroundColor: colors.primary,
+                              "&:hover": {
+                                backgroundColor: colors.primaryHover,
+                              },
+                            }}
+                          >
+                            Save and Close Subtask
+                          </Button>
+                        )}
+                        <Button
+                          variant="outlined"
+                          onClick={() => setEditingIndex(null)}
+                          sx={{
+                            color: "#9ca3af",
+                            borderColor: "#9ca3af",
+                            "&:hover": {
+                              borderColor: "#ffffff",
+                              backgroundColor: "rgba(255, 255, 255, 0.05)",
+                            },
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      subtask.status === "Open" ? (
+                        <Button
+                          variant="contained"
+                          onClick={() => setEditingIndex(subtaskIndex)}
+                          sx={{
+                            backgroundColor: "#2196f3",
+                            "&:hover": { backgroundColor: "#1976d2" },
+                          }}
+                        >
+                          Start Subtask
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outlined"
+                          onClick={() => setEditingIndex(subtaskIndex)}
+                          sx={{
+                            color: "#2196f3",
+                            borderColor: "#2196f3",
+                            "&:hover": {
+                              borderColor: "#1976d2",
+                              backgroundColor: "rgba(33, 150, 243, 0.04)",
+                            },
+                          }}
+                        >
+                          Edit Subtask
+                        </Button>
+                      )
+                    )}
+                  </Box>
                 </Box>
               </Collapse>
             </Paper>

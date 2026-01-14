@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import {
   Typography,
@@ -42,6 +42,13 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
   const [copied, setCopied] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  useEffect(() => {
+    if (open) {
+      setDetailView(false);
+      setSelectedIssue(null);
+    }
+  }, [open, teamIssues]);
 
   if (!teamIssues || teamIssues.length === 0) return null;
 

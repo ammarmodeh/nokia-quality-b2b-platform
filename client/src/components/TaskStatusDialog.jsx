@@ -25,19 +25,29 @@ import {
   Select,
   MenuItem,
 } from "@mui/material";
-import { Edit, Visibility, Delete, ContentCopy, WhatsApp, Close, Search, FilterList } from "@mui/icons-material";
+import { Edit, Visibility, Delete, ContentCopy, WhatsApp, Close, Search, FilterList, HourglassEmpty, PlayCircle, CheckCircle, Cancel } from "@mui/icons-material";
+import { format, differenceInMinutes } from "date-fns";
 import api from "../api/api";
 import { useSelector } from "react-redux";
 import EditTaskDialog from "./task/EditTaskDialog";
+import DetailedSubtaskDialog from "./task/DetailedSubtaskDialog";
 import { MdClose } from "react-icons/md";
 import moment from "moment";
-import { RiFileExcel2Fill } from "react-icons/ri";
+import { RiFileExcel2Fill, RiProgress4Fill } from "react-icons/ri";
+
+const statusConfig = {
+  Todo: { icon: <HourglassEmpty fontSize="small" className="text-yellow-600" />, color: "bg-yellow-100 text-yellow-800" },
+  "In Progress": { icon: <PlayCircle className="text-blue-600" />, color: "bg-blue-100 text-blue-800" },
+  Closed: { icon: <CheckCircle className="text-green-600" />, color: "bg-green-100 text-green-800" },
+  Cancelled: { icon: <Cancel className="text-gray-500" />, color: "bg-[#2d2d2d] text-gray-300" },
+};
 
 const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdateTasksList }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const currentUser = useSelector((state) => state?.auth?.user?._id);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [subtaskDialogOpen, setSubtaskDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [tasks, setTasks] = useState(initialTasks);
   const [filteredTasks, setFilteredTasks] = useState(initialTasks);
@@ -48,9 +58,30 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
   const [viewLoading, setViewLoading] = useState(false);
   const [selectedReason, setSelectedReason] = useState("All");
 
-  // Initialize with current week
+  // Determine default week: Current week if it has tasks, otherwise "All"
   const currentWeek = getWeekNumber(new Date()).key;
   const [selectedWeek, setSelectedWeek] = useState(currentWeek);
+
+  // Update default selection when tasks load
+  useEffect(() => {
+    if (initialTasks) {
+      const hasCurrentWeekTasks = initialTasks.some(t => {
+        const date = t.interviewDate || t.createdAt;
+        return getWeekNumber(date).key === currentWeek;
+      });
+
+      // If no tasks in current week, default to "All" to show data
+      if (!hasCurrentWeekTasks && initialTasks.length > 0) {
+        setSelectedWeek("All");
+      } else {
+        setSelectedWeek(currentWeek);
+      }
+
+      const sortedTasks = [...initialTasks].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setTasks(sortedTasks);
+      setFilteredTasks(sortedTasks);
+    }
+  }, [initialTasks, currentWeek]); // Added currentWeek dependency
 
   // Calculate Reason Stats based on Selected Week
   const reasonStats = tasks?.reduce((acc, task) => {
@@ -86,13 +117,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
 
   const uniqueWeeks = ["All", ...Object.keys(weekStats || {}).sort().reverse()]; // Sort Newest weeks first
 
-  useEffect(() => {
-    if (initialTasks) {
-      const sortedTasks = [...initialTasks].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      setTasks(sortedTasks);
-      setFilteredTasks(sortedTasks);
-    }
-  }, [initialTasks]);
+
 
   // Handle search and filters
   useEffect(() => {
@@ -315,6 +340,11 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
     setEditDialogOpen(true);
   };
 
+  const handleOpenSubtasks = (task) => {
+    setSelectedTask(task);
+    setSubtaskDialogOpen(true);
+  };
+
   const handleTaskUpdate = (updatedTask) => {
     const updatedTasks = tasks.map((task) =>
       task._id === updatedTask._id ? { ...updatedTask } : task
@@ -383,17 +413,45 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
         }}
       >
         <DialogTitle component="div" sx={{
-          backgroundColor: "#998e8e24",
+          background: 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(123, 104, 238, 0.2)',
           color: "white",
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          py: isMobile ? 1 : 2,
-          px: isMobile ? 1 : 3,
+          py: isMobile ? 1.5 : 2.5,
+          px: isMobile ? 2 : 3,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
         }}>
-          <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontWeight: 500 }}>
-            {title}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography
+              variant={isMobile ? "h6" : "h5"}
+              component="div"
+              sx={{
+                fontWeight: 700,
+                letterSpacing: '-0.5px',
+                background: 'linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              {title}
+            </Typography>
+            <Chip
+              label={`${filteredTasks.length} ${filteredTasks.length === 1 ? 'Task' : 'Tasks'}`}
+              size="small"
+              sx={{
+                background: 'linear-gradient(135deg, rgba(123, 104, 238, 0.2) 0%, rgba(123, 104, 238, 0.1) 100%)',
+                color: '#7b68ee',
+                border: '1px solid rgba(123, 104, 238, 0.3)',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+              }}
+            />
+          </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Tooltip title="Export to Excel">
               <IconButton
@@ -401,8 +459,10 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                 size={isMobile ? "small" : "medium"}
                 sx={{
                   color: '#4caf50',
+                  transition: 'all 0.2s ease',
                   '&:hover': {
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+                    transform: 'scale(1.1)',
                   }
                 }}
               >
@@ -414,8 +474,10 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               size={isMobile ? "small" : "medium"}
               sx={{
                 color: '#ffffff',
+                transition: 'all 0.2s ease',
                 '&:hover': {
                   backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  transform: 'rotate(90deg)',
                 }
               }}
             >
@@ -473,7 +535,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               ))}
             </Stack>
 
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="stretch">
               {/* Search Bar */}
               <Box
                 sx={{
@@ -514,7 +576,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               </Box>
 
               {/* Week Dropdown */}
-              <FormControl variant="standard" sx={{ minWidth: 150, display: { xs: 'none', sm: 'block' } }}>
+              <FormControl variant="standard" sx={{ minWidth: { xs: '100%', sm: 150 } }}>
                 <Select
                   value={selectedWeek}
                   onChange={(e) => setSelectedWeek(e.target.value)}
@@ -552,7 +614,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               </FormControl>
 
               {/* Reason Dropdown */}
-              <FormControl variant="standard" sx={{ minWidth: 150, display: { xs: 'none', sm: 'block' } }}>
+              <FormControl variant="standard" sx={{ minWidth: { xs: '100%', sm: 150 } }}>
                 <Select
                   value={selectedReason}
                   onChange={(e) => setSelectedReason(e.target.value)}
@@ -625,92 +687,348 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                     key={index}
                     elevation={0}
                     sx={{
-                      p: isMobile ? 1 : 2,
-                      backgroundColor: '#2d2d2d',
-                      borderRadius: 1,
-                      border: '1px solid #f3f4f6',
+                      p: isMobile ? 2 : 3,
+                      background: 'linear-gradient(135deg, #2d2d2d 0%, #252525 100%)',
+                      borderRadius: 3,
+                      border: '1px solid rgba(123, 104, 238, 0.2)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 12px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(123, 104, 238, 0.3)',
+                        border: '1px solid rgba(123, 104, 238, 0.4)',
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '3px',
+                        background: task.status === 'Closed'
+                          ? 'linear-gradient(90deg, #66BB6A 0%, #43A047 100%)'
+                          : task.status === 'In Progress'
+                            ? 'linear-gradient(90deg, #42A5F5 0%, #1E88E5 100%)'
+                            : 'linear-gradient(90deg, #FFA726 0%, #FB8C00 100%)',
+                      }
                     }}
                   >
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                      <Box>
-                        <Typography variant={isMobile ? "subtitle2" : "h6"} sx={{ fontWeight: 500, color: '#ffffff' }}>
-                          {task.customerName}
-                        </Typography>
-                        <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#aaa' }}>
-                          SLID: {task.slid}
-                        </Typography>
-                        <Typography variant={isMobile ? "caption" : "body2"} sx={{ display: 'block', mt: 0.5, color: '#aaa' }}>
-                          <Box component="span">Score:</Box> {task.evaluationScore}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#aaa' }}>
-                            <Box component="span">Assignee:</Box>
-                          </Typography>
-                          <Chip
-                            label={task.assignedTo?.[0]?.name || "Not Assigned"}
-                            size="small"
+                    <Stack spacing={isMobile ? 1.5 : 2}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                        <Box sx={{ flex: 1 }}>
+                          <Typography
+                            variant={isMobile ? "h6" : "h5"}
                             sx={{
+                              fontWeight: 700,
                               color: '#ffffff',
-                              backgroundColor: task.assignedTo?.[0] ? 'primary.main' : 'grey.600',
-                              fontSize: isMobile ? '0.75rem' : '0.8125rem'
+                              mb: 1,
+                              letterSpacing: '-0.5px',
+                              lineHeight: 1.2
                             }}
-                          />
+                          >
+                            {task.customerName}
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                            <Chip
+                              label={task.slid}
+                              size="small"
+                              sx={{
+                                background: 'linear-gradient(135deg, rgba(123, 104, 238, 0.2) 0%, rgba(123, 104, 238, 0.1) 100%)',
+                                color: '#7b68ee',
+                                border: '1px solid rgba(123, 104, 238, 0.3)',
+                                fontWeight: 600,
+                                fontSize: '0.75rem',
+                                letterSpacing: '0.5px',
+                                height: '24px',
+                              }}
+                            />
+                            {statusConfig[task.status || "Todo"]?.icon}
+                            {task.status !== "Closed" ? (
+                              task.subTasks?.find(st => st.title === "Task Reception")?.shortNote && (
+                                <Chip
+                                  label={task.subTasks.find(st => st.title === "Task Reception").shortNote}
+                                  size="small"
+                                  sx={{
+                                    backgroundColor: "rgba(33, 150, 243, 0.1)",
+                                    color: "#2196f3",
+                                    border: "1px solid rgba(33, 150, 243, 0.3)",
+                                    fontSize: "10px",
+                                    fontWeight: "500",
+                                    height: "20px",
+                                    ml: 1,
+                                    "& .MuiChip-label": {
+                                      px: 1,
+                                    }
+                                  }}
+                                />
+                              )
+                            ) : (
+                              task.closureCallFeedback && (
+                                <Chip
+                                  label={`Closure: ${task.closureCallFeedback}`}
+                                  size="small"
+                                  sx={{
+                                    backgroundColor: "rgba(16, 185, 129, 0.1)",
+                                    color: "#10b981",
+                                    border: "1px solid rgba(16, 185, 129, 0.3)",
+                                    fontSize: "10px",
+                                    fontWeight: "500",
+                                    height: "20px",
+                                    ml: 1,
+                                    maxWidth: "250px",
+                                    "& .MuiChip-label": {
+                                      px: 1,
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }
+                                  }}
+                                />
+                              )
+                            )}
+                          </Box>
+                        </Box>
+                        <Stack direction="row" spacing={isMobile ? 0.25 : 0.5}>
+                          <Tooltip title="Copy">
+                            <IconButton onClick={() => handleCopy(task)} size="small" sx={{ color: '#7b68ee' }}>
+                              <ContentCopy fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="WhatsApp">
+                            <IconButton onClick={() => handleWhatsAppShare(task)} size="small" sx={{ color: '#25D366' }}>
+                              <WhatsApp fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="View">
+                            <IconButton onClick={() => handleView(task)} size="small" sx={{ color: '#ffffff' }}>
+                              <Visibility fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          {currentUser === (task.createdBy?._id || task.createdBy) && (
+                            <>
+                              <Tooltip title="Edit">
+                                <IconButton onClick={() => handleEdit(task)} size="small" sx={{ color: 'beige' }}>
+                                  <Edit fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete">
+                                <IconButton onClick={() => handleTaskDelete(task._id)} size="small" sx={{ color: '#f44336' }}>
+                                  <Delete fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                        </Stack>
+                      </Stack>
+
+                      {/* Enhanced Information Blocks */}
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {task.customerFeedback && (
+                          <Box sx={{
+                            p: 2,
+                            background: 'linear-gradient(135deg, rgba(123, 104, 238, 0.08) 0%, rgba(123, 104, 238, 0.03) 100%)',
+                            backdropFilter: 'blur(10px)',
+                            borderRadius: 2,
+                            borderLeft: '4px solid #7b68ee',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              boxShadow: '0 6px 16px rgba(123, 104, 238, 0.2)',
+                              transform: 'translateX(2px)'
+                            }
+                          }}>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: '#7b68ee',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                mb: 1,
+                                textTransform: 'uppercase',
+                                letterSpacing: '1px',
+                                fontSize: '0.7rem'
+                              }}
+                            >
+                              <Box component="span" sx={{ fontSize: '1rem' }}>💬</Box>
+                              Customer Feedback
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                direction: 'rtl',
+                                textAlign: 'right',
+                                color: '#eff5ff',
+                                lineHeight: 1.6,
+                                fontWeight: 500
+                              }}
+                            >
+                              {task.customerFeedback}
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {(() => {
+                          const taskReception = task.subTasks?.find(st => st.title === "Task Reception");
+                          const hasShortNote = taskReception?.shortNote;
+
+                          return hasShortNote ? (
+                            <Box sx={{
+                              p: 2,
+                              background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.08) 0%, rgba(33, 150, 243, 0.03) 100%)',
+                              backdropFilter: 'blur(10px)',
+                              borderRadius: 2,
+                              borderLeft: '4px solid #2196f3',
+                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                boxShadow: '0 6px 16px rgba(33, 150, 243, 0.2)',
+                                transform: 'translateX(2px)'
+                              }
+                            }}>
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  color: '#2196f3',
+                                  fontWeight: 700,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  mb: 1,
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '1px',
+                                  fontSize: '0.7rem'
+                                }}
+                              >
+                                <Box component="span" sx={{ fontSize: '1rem' }}>📝</Box>
+                                Reception Summary
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  direction: 'rtl',
+                                  textAlign: 'right',
+                                  color: '#eff5ff',
+                                  lineHeight: 1.6,
+                                  fontWeight: 500
+                                }}
+                              >
+                                {taskReception.shortNote}
+                              </Typography>
+                            </Box>
+                          ) : null;
+                        })()}
+                      </Box>
+
+                      <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 2 }}>
+                        <Box sx={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#bdb5b5', spaceY: 0.5 }}>
+                          <Typography variant="caption" sx={{ display: 'block' }}>
+                            <Box component="span" sx={{ color: '#aaa', fontWeight: 500 }}>Due Date:</Box> {task.date ? format(new Date(task.date), "MMM dd, yyyy") : "No Date"}
+                            {task.date && (
+                              <Box component="span" sx={{ ml: 1, color: differenceInMinutes(new Date(task.date), new Date()) > 0 ? "success.main" : "error.main" }}>
+                                ({differenceInMinutes(new Date(task.date), new Date()) > 0 ? "Left" : "Overdue"})
+                              </Box>
+                            )}
+                          </Typography>
+                          <Typography variant="caption" sx={{ display: 'block' }}>
+                            <Box component="span" sx={{ color: '#aaa', fontWeight: 500 }}>Category:</Box> {task.category}
+                          </Typography>
+                          <Typography variant="caption" sx={{ display: 'block' }}>
+                            <Box component="span" sx={{ color: '#aaa', fontWeight: 500 }}>Operation:</Box> {task.operation || 'N/A'}
+                          </Typography>
+                        </Box>
+
+                        <Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Typography variant="caption" sx={{ color: '#aaa' }}>Assignee:</Typography>
+                            <Chip
+                              label={task.assignedTo?.[0]?.name || "Not Assigned"}
+                              size="small"
+                              sx={{
+                                color: '#ffffff',
+                                backgroundColor: task.assignedTo?.[0] ? 'primary.main' : 'grey.600',
+                                height: 20,
+                                fontSize: '0.7rem'
+                              }}
+                            />
+                          </Box>
+
+                          {task.subTasks && task.subTasks.length > 0 && (
+                            <Box sx={{ mt: 1.5 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: '#aaa',
+                                    fontWeight: 600,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                    fontSize: '0.7rem'
+                                  }}
+                                >
+                                  Progress
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: '#7b68ee',
+                                    fontWeight: 700,
+                                    fontSize: '0.75rem'
+                                  }}
+                                >
+                                  {Math.round((task.subTasks.filter(st => st.status === "Closed" || st.note !== "").length / task.subTasks.length) * 100)}%
+                                </Typography>
+                              </Box>
+                              <LinearProgress
+                                variant="determinate"
+                                value={(task.subTasks.filter(st => st.status === "Closed" || st.note !== "").length / task.subTasks.length) * 100}
+                                sx={{
+                                  height: 8,
+                                  borderRadius: 4,
+                                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                                  "& .MuiLinearProgress-bar": {
+                                    background: 'linear-gradient(90deg, #7b68ee 0%, #9b87f5 100%)',
+                                    borderRadius: 4,
+                                    boxShadow: '0 0 10px rgba(123, 104, 238, 0.4)'
+                                  }
+                                }}
+                              />
+                            </Box>
+                          )}
                         </Box>
                       </Box>
-                      <Stack direction="row" spacing={isMobile ? 0.5 : 1}>
-                        <Tooltip title="Copy">
-                          <IconButton
-                            onClick={() => handleCopy(task)}
-                            size={isMobile ? "small" : "medium"}
-                            sx={{ color: '#7b68ee' }}
-                          >
-                            <ContentCopy fontSize={isMobile ? "small" : "medium"} />
-                          </IconButton>
-                        </Tooltip>
 
-                        <Tooltip title="WhatsApp">
-                          <IconButton
-                            onClick={() => handleWhatsAppShare(task)}
-                            size={isMobile ? "small" : "medium"}
-                            sx={{ color: '#25D366' }}
-                          >
-                            <WhatsApp fontSize={isMobile ? "small" : "medium"} />
-                          </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="View">
-                          <IconButton
-                            onClick={() => handleView(task)}
-                            size={isMobile ? "small" : "medium"}
-                            sx={{ color: '#ffffff' }}
-                          >
-                            <Visibility fontSize={isMobile ? "small" : "medium"} />
-                          </IconButton>
-                        </Tooltip>
-
-                        {currentUser === (task.createdBy._id || task.createdBy) && (
-                          <>
-                            <Tooltip title="Edit">
-                              <IconButton
-                                onClick={() => handleEdit(task)}
-                                size={isMobile ? "small" : "medium"}
-                                sx={{ color: 'beige' }}
-                              >
-                                <Edit fontSize={isMobile ? "small" : "medium"} />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <IconButton
-                                onClick={() => handleTaskDelete(task._id)}
-                                size={isMobile ? "small" : "medium"}
-                                sx={{ color: '#f44336' }}
-                              >
-                                <Delete fontSize={isMobile ? "small" : "medium"} />
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        )}
-                      </Stack>
+                      <Button
+                        variant="contained"
+                        fullWidth={isMobile}
+                        onClick={() => handleOpenSubtasks(task)}
+                        sx={{
+                          mt: 2,
+                          background: 'linear-gradient(135deg, #7b68ee 0%, #6a5acd 100%)',
+                          color: '#ffffff',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          fontSize: '0.875rem',
+                          py: 1.25,
+                          borderRadius: 2,
+                          boxShadow: '0 4px 12px rgba(123, 104, 238, 0.3)',
+                          alignSelf: isMobile ? 'stretch' : 'flex-start',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #6a5acd 0%, #5b4bbd 100%)',
+                            boxShadow: '0 6px 16px rgba(123, 104, 238, 0.4)',
+                            transform: 'translateY(-2px)'
+                          },
+                          '&:active': {
+                            transform: 'translateY(0)'
+                          }
+                        }}
+                      >
+                        <RiProgress4Fill size={20} style={{ marginRight: '8px' }} />
+                        Manage Subtasks
+                      </Button>
                     </Stack>
                   </Paper>
                 ))
@@ -721,7 +1039,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               )}
             </Stack>
           </Box>
-        </DialogContent>
+        </DialogContent >
 
         {isMobile && (
           <DialogActions sx={{
@@ -744,11 +1062,12 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
               Close
             </Button>
           </DialogActions>
-        )}
-      </Dialog>
+        )
+        }
+      </Dialog >
 
       {/* Task Details View Dialog - Mobile Optimized */}
-      <Dialog
+      < Dialog
         open={viewDialogOpen}
         onClose={() => setViewDialogOpen(false)}
         fullScreen
@@ -1068,6 +1387,23 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                           </Typography>
                         </Box>
 
+                        {subtask.shortNote && (
+                          <Box sx={{
+                            mt: 1,
+                            p: 1.5,
+                            backgroundColor: 'rgba(33, 150, 243, 0.05)',
+                            borderRadius: '4px',
+                            borderRight: '4px solid #2196f3'
+                          }}>
+                            <Typography variant="caption" sx={{ color: '#2196f3', fontWeight: 'bold', display: 'block', mb: 0.5, textAlign: 'right' }}>
+                              Reception Summary:
+                            </Typography>
+                            <Typography variant="body2" sx={{ direction: 'rtl', textAlign: 'right', color: '#ffffff', fontWeight: '500' }}>
+                              {subtask.shortNote}
+                            </Typography>
+                          </Box>
+                        )}
+
                         {subtask.dateTime && (
                           <Typography variant="caption" sx={{
                             color: 'gray',
@@ -1108,7 +1444,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
             Close
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog >
 
       {/* EditTaskDialog */}
       {
@@ -1119,6 +1455,18 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
             task={selectedTask}
             handleTaskUpdate={handleTaskUpdate}
             isMobile={isMobile}
+          />
+        )
+      }
+
+      {/* Detailed Subtask Dialog */}
+      {
+        subtaskDialogOpen && selectedTask && (
+          <DetailedSubtaskDialog
+            open={subtaskDialogOpen}
+            onClose={() => setSubtaskDialogOpen(false)}
+            task={selectedTask}
+            setUpdateTasksList={setUpdateTasksList}
           />
         )
       }
