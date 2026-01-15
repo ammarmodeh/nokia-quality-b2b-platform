@@ -1,3 +1,4 @@
+import React from "react";
 import * as XLSX from "xlsx";
 import moment from "moment";
 import {
@@ -20,7 +21,7 @@ import {
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import { useNavigate } from "react-router-dom";
 import { getWeekNumberForTaksTable, newFormatDate } from "../utils/helpers";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { FaCopy, FaTimes } from "react-icons/fa";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { Assignment, AssignmentTurnedIn } from "@mui/icons-material";
@@ -327,16 +328,16 @@ const TaskTable = ({ tasks, fieldTeams }) => {
   };
 
   // Ensure valid tasks and calculate week numbers using getWeekNumberForTaksTable
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = useMemo(() => tasks.filter(task => {
     const interviewDate = new Date(task.interviewDate);
     if (isNaN(interviewDate)) {
       return false;
     }
 
     return getWeekNumberForTaksTable(interviewDate, settings || {}) !== null;
-  });
+  }), [tasks, settings]);
 
-  const sortedTasks = filteredTasks.sort((a, b) => new Date(b.interviewDate) - new Date(a.interviewDate));
+  const sortedTasks = useMemo(() => filteredTasks.sort((a, b) => new Date(b.interviewDate) - new Date(a.interviewDate)), [filteredTasks]);
 
   const taskColumns = [
     {
@@ -702,7 +703,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
   ];
 
   // Map tasks correctly with the new week numbering system
-  const rows = sortedTasks.map((task, index) => ({
+  const rows = useMemo(() => sortedTasks.map((task, index) => ({
     id: index + 1,
     slid: task.slid,
     operation: task.operation,
@@ -729,7 +730,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
     subReason: task.subReason,
     rootCause: task.rootCause,
     interviewDate: task.interviewDate,
-  }));
+  })), [sortedTasks, settings]);
 
   return (
     <Box sx={{ marginBottom: "20px" }}>
@@ -1115,4 +1116,4 @@ const DetailRow = ({ label, value }) => (
   </Box>
 );
 
-export default TaskTable;
+export default React.memo(TaskTable);

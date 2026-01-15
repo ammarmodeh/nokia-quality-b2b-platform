@@ -89,7 +89,8 @@ export const filterTasksByDateRange = (tasks, startDate, endDate) => {
  */
 export const getAvailableWeeks = (tasks, settings = {}) => {
   if (!Array.isArray(tasks)) return [];
-  const { weekStartDay = 0 } = settings;
+  const safeSettings = settings || {};
+  const { weekStartDay = 0, week1StartDate = null, week1EndDate = null, startWeekNumber = 1 } = safeSettings;
   const weeks = new Map();
 
   // 1. Collect weeks from tasks

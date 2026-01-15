@@ -138,108 +138,125 @@ const BenchmarkTables = () => {
   };
 
   return (
-    <Box sx={{
-      p: { xs: 2, md: 4 },
-      bgcolor: colors.background,
-      minHeight: "100vh",
-      color: colors.textPrimary
-    }}>
+    <Box
+      sx={{
+        bgcolor: colors.background,
+        minHeight: "100vh",
+        color: colors.textPrimary,
+        pb: 8
+      }}
+    >
       <Fade in={true} timeout={800}>
-        <Stack spacing={4}>
-          <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2}>
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: colors.primary, letterSpacing: '-0.02em' }}>
-                Benchmark Analytics
-              </Typography>
-              <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                Deep dive into weekly performance and violation trends
-              </Typography>
-            </Box>
+        <Box sx={{ px: { xs: 2, md: 4 }, py: { xs: 3, md: 4 } }}>
+          <Stack spacing={4}>
+            {/* Header Section */}
+            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={3}>
+              <Box>
+                <Typography variant="h4" sx={{ fontWeight: 800, color: colors.primary, letterSpacing: '-0.02em' }}>
+                  Benchmark Analytics
+                </Typography>
+                <Typography variant="body1" sx={{ color: colors.textSecondary }}>
+                  Deep dive into weekly performance and violation trends
+                </Typography>
+              </Box>
 
-            <Autocomplete
-              options={availableWeeks}
-              value={availableWeeks.find(w => w.value === selectedWeek) || null}
-              onChange={(e, v) => setSelectedWeek(v?.value)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Select Analysis Week"
-                  sx={{
-                    minWidth: 300,
-                    "& .MuiOutlinedInput-root": {
-                      bgcolor: colors.surface,
-                      "& fieldset": { borderColor: colors.border },
-                      "&:hover fieldset": { borderColor: colors.primary },
-                    },
-                    "& .MuiInputLabel-root": { color: colors.textSecondary },
-                    "& input": { color: colors.textPrimary }
-                  }}
-                />
-              )}
-            />
-          </Stack>
+              <Autocomplete
+                options={availableWeeks}
+                value={availableWeeks.find(w => w.value === selectedWeek) || null}
+                onChange={(e, v) => setSelectedWeek(v?.value)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select Analysis Week"
+                    sx={{
+                      minWidth: 320,
+                      "& .MuiOutlinedInput-root": {
+                        bgcolor: colors.surface,
+                        "& fieldset": { borderColor: colors.border },
+                        "&:hover fieldset": { borderColor: colors.primary },
+                      },
+                      "& .MuiInputLabel-root": { color: colors.textSecondary },
+                      "& input": { color: colors.textPrimary }
+                    }}
+                  />
+                )}
+              />
+            </Stack>
 
-          <Divider sx={{ borderColor: colors.border }} />
+            <Divider sx={{ borderColor: colors.border }} />
 
-          {/* Key Metrics */}
-          <Grid container spacing={3}>
-            {[
-              { label: 'Total Assessments', value: currentStats?.totalTasks, icon: <AssignmentIcon />, color: colors.primary },
-              { label: 'Total Detractors', value: currentStats?.detractors, icon: <ErrorOutlineIcon />, color: colors.error },
-              { label: 'Top Root Cause', value: currentStats?.topReason, icon: <TrendingUpIcon />, color: colors.warning },
-              { label: 'Main Offender', value: currentStats?.topOffender, icon: <PeopleIcon />, color: colors.success },
-            ].map((stat, i) => (
-              <Grid item xs={12} sm={6} md={3} key={i}>
-                <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4 }}>
-                  <CardContent>
-                    <Stack direction="row" spacing={2} alignItems="center">
-                      <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: `${stat.color}15`, color: stat.color }}>
-                        {stat.icon}
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 600, textTransform: 'uppercase' }}>
-                          {stat.label}
-                        </Typography>
-                        <Typography variant="h5" sx={{ fontWeight: 700, color: colors.textPrimary }}>
-                          {stat.value}
-                        </Typography>
-                      </Box>
-                    </Stack>
+            {/* Key Metrics Dashboard */}
+            <Grid container spacing={3}>
+              {[
+                { label: 'Total Assessments', value: currentStats?.totalTasks, icon: <AssignmentIcon />, color: colors.primary },
+                { label: 'Total Detractors', value: currentStats?.detractors, icon: <ErrorOutlineIcon />, color: colors.error },
+                { label: 'Top Root Cause', value: currentStats?.topReason, icon: <TrendingUpIcon />, color: colors.warning },
+                { label: 'Main Offender', value: currentStats?.topOffender, icon: <PeopleIcon />, color: colors.success },
+              ].map((stat, i) => (
+                <Grid item xs={12} sm={6} md={3} key={i}>
+                  <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4, height: '100%' }}>
+                    <CardContent sx={{ p: 3 }}>
+                      <Stack direction="row" spacing={2.5} alignItems="center">
+                        <Box sx={{
+                          p: 1.5,
+                          borderRadius: 3,
+                          bgcolor: `${stat.color}15`,
+                          color: stat.color,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {stat.icon}
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            {stat.label}
+                          </Typography>
+                          <Typography variant="h4" sx={{ fontWeight: 800, color: colors.textPrimary, mt: 0.5 }}>
+                            {stat.value || 0}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+
+            {/* Deep Analysis Repository */}
+            <Grid container spacing={4}>
+              <Grid item xs={12}>
+                <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4, overflow: 'hidden' }}>
+                  <Box sx={{ p: 3, borderBottom: `1px solid ${colors.border}`, bgcolor: 'rgba(255,255,255,0.02)' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 800, color: colors.textPrimary }}>
+                      Reason Analysis & Trends
+                    </Typography>
+                  </Box>
+                  <CardContent sx={{ p: 0 }}>
+                    <Suspense fallback={<Box p={4}><Skeleton variant="rectangular" height={400} sx={{ bgcolor: colors.border, borderRadius: 2 }} /></Box>}>
+                      <ReasonTrend tasks={tasks} selectedWeek={selectedWeek} settings={settings} />
+                    </Suspense>
                   </CardContent>
                 </Card>
               </Grid>
-            ))}
-          </Grid>
 
-          {/* Analysis Sections */}
-          <Grid container spacing={4}>
-            <Grid item xs={12}>
-              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4, overflow: 'visible' }}>
-                <CardContent sx={{ p: 0 }}>
-                  <Typography variant="h6" sx={{ p: 3, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>
-                    Reason Analysis & Trends
-                  </Typography>
-                  <Suspense fallback={<Box p={4}><Skeleton variant="rectangular" height={400} sx={{ bgcolor: colors.border }} /></Box>}>
-                    <ReasonTrend tasks={tasks} selectedWeek={selectedWeek} settings={settings} />
-                  </Suspense>
-                </CardContent>
-              </Card>
+              <Grid item xs={12}>
+                <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4, overflow: 'hidden' }}>
+                  <Box sx={{ p: 3, borderBottom: `1px solid ${colors.border}`, bgcolor: 'rgba(255,255,255,0.02)' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 800, color: colors.textPrimary }}>
+                      Team Violation Repository
+                    </Typography>
+                  </Box>
+                  <CardContent sx={{ p: 0 }}>
+                    <Suspense fallback={<Box p={4}><Skeleton variant="rectangular" height={400} sx={{ bgcolor: colors.border, borderRadius: 2 }} /></Box>}>
+                      <TeamViolationTrend tasks={tasks} selectedWeek={selectedWeek} settings={settings} />
+                    </Suspense>
+                  </CardContent>
+                </Card>
+              </Grid>
             </Grid>
-
-            <Grid item xs={12}>
-              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4, overflow: 'visible' }}>
-                <CardContent sx={{ p: 0 }}>
-                  <Typography variant="h6" sx={{ p: 3, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>
-                    Team Violation Repository
-                  </Typography>
-                  <Suspense fallback={<Box p={4}><Skeleton variant="rectangular" height={400} sx={{ bgcolor: colors.border }} /></Box>}>
-                    <TeamViolationTrend tasks={tasks} selectedWeek={selectedWeek} settings={settings} />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Stack>
+          </Stack>
+        </Box>
       </Fade>
     </Box>
   );

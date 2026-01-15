@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -507,4 +507,4 @@ const WeeklyReasonTable = ({ tasks }) => {
   );
 };
 
-export default WeeklyReasonTable;
+export default React.memo(WeeklyReasonTable);

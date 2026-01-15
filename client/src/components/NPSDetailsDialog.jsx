@@ -118,9 +118,7 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
     <Dialog
       open={open}
       onClose={onClose}
-      fullScreen={fullScreen}
-      maxWidth="lg"
-      fullWidth
+      fullScreen
       sx={{
         '& .MuiDialog-paper': {
           borderRadius: fullScreen ? 0 : 3,

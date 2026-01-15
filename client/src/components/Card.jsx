@@ -129,6 +129,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
   const [selectedTeamName, setSelectedTeamName] = useState('');
   const [issueDialogOpen, setIssueDialogOpen] = useState(false);
   const [expandedCards, setExpandedCards] = useState({});
+  const [activeFilter, setActiveFilter] = useState(null); // Track which filter is active to refresh data
 
   const { statusCount = {}, detractorStatusCounts = {}, neutralStatusCounts = {}, reportedIssuesStats = {}, reportedIssuesBySource = {} } = countStatuses(tasks, customerIssues, teamOptions);
 
@@ -136,6 +137,13 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
   const [selectedTasks, setSelectedTasks] = useState([]);
   const [dialogTitle, setDialogTitle] = useState("");
   const [lastUpdated, setLastUpdated] = useState(new Date());
+
+  useEffect(() => {
+    // If we have an active filter and tasks update, re-run the filter to update the dialog content
+    if (activeFilter && dialogOpen && tasks.length > 0) {
+      handleClick(activeFilter.label, activeFilter.status, activeFilter.team, true);
+    }
+  }, [tasks]);
 
   useEffect(() => {
     const fetchCustomerIssues = async () => {
@@ -196,7 +204,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
     setExpandedCards(prev => ({ ...prev, [cardId]: !prev[cardId] }));
   };
 
-  const handleClick = (cardLabel, status, team) => {
+  const handleClick = (cardLabel, status, team, isRefresh = false) => {
     let filteredTasks = [];
     if (cardLabel === "DETRACTORS") {
       filteredTasks = tasks.filter((task) => {
@@ -216,10 +224,17 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
         }
         return false;
       });
+    } else if (status) {
+      // Generic status filter for "TOTAL TASKS" card or others if implemented
+      filteredTasks = tasks.filter(task => task.status === status);
     }
+
     setSelectedTasks(filteredTasks);
-    setDialogTitle(`${cardLabel}${team ? ` - ${team}` : ''}${status ? ` - ${status}` : ''} (${filteredTasks.length})`);
-    setDialogOpen(true);
+    if (!isRefresh) {
+      setDialogTitle(`${cardLabel}${team ? ` - ${team}` : ''}${status ? ` - ${status}` : ''}`);
+      setDialogOpen(true);
+      setActiveFilter({ label: cardLabel, status, team });
+    }
   };
 
   const handleIssueClick = (sourceTeam) => {

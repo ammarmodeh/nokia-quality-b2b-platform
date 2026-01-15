@@ -27,7 +27,8 @@ import {
   FormControl,
   Select,
   MenuItem,
-  LinearProgress
+  LinearProgress,
+  Stack
 } from "@mui/material";
 import {
   ArrowBack,
@@ -325,47 +326,102 @@ const FieldTeamPortal = () => {
     };
   }, [filteredIssuesByDate, quizResults, jobAssessments, technicalTasks]);
 
+  const operationalEfficiencyData = useMemo(() => {
+    const totalReported = stats.customerIssuesCount + stats.technicalTasksCount;
+    const totalResolved = stats.closed;
+    const resolutionRate = Number(stats.resolutionRate);
+
+    // Responsivity Score: 100 - (avgDispatchTime * 10), capped at 0-100
+    // Shorter dispatch time = Higher score
+    const responsivityScore = Math.max(0, Math.min(100, 100 - (parseFloat(stats.avgDispatchTime) * 10)));
+
+    // Completion Score: NPS Tickets with evaluation score > 0
+    const taskCompletionRate = stats.technicalTasksCount > 0
+      ? (technicalTasks.filter(t => (t.evaluationScore || 0) > 0).length / stats.technicalTasksCount) * 100
+      : 0;
+
+    return [
+      { name: 'Resolution Success', value: resolutionRate, full: 100, color: colors.secondary },
+      { name: 'Team Responsivity', value: responsivityScore, full: 100, color: colors.primary },
+      { name: 'Operational Volume', value: totalReported, full: Math.max(totalReported, 20), color: colors.info },
+      { name: 'Task Completion', value: taskCompletionRate, full: 100, color: colors.success },
+    ];
+  }, [stats, technicalTasks, colors]);
+
+  const deepStats = useMemo(() => {
+    // Calculate critical insights
+    const agingIssues = filteredIssuesByDate.filter(i => i.solved === 'no' && (new Date() - new Date(i.date || i.createdAt)) / (1000 * 60 * 60 * 24) > 7).length;
+    const expressResolution = filteredIssuesByDate.filter(i => {
+      if (!i.resolveDate || !i.date) return false;
+      return (new Date(i.resolveDate) - new Date(i.date)) / (1000 * 60 * 60 * 24) <= 1;
+    }).length;
+
+    return {
+      highAgingCount: agingIssues,
+      expressResolutionCount: expressResolution,
+      avgResolutionSpeed: stats.avgResolutionTime,
+      reliabilityIndex: Math.max(0, 100 - (agingIssues * 5)).toFixed(1)
+    };
+  }, [filteredIssuesByDate, stats]);
+
   const allActivities = useMemo(() => {
     const activities = [
       ...filteredIssuesByDate.map(i => ({
+        id: i._id,
         type: 'issue',
         title: 'Customer Issue',
         detail: `${i.slid} - ${i.issueCategory || 'General'}`,
         date: i.date || i.createdAt,
-        color: colors.error,
-        icon: <SupportAgent sx={{ fontSize: '1.2rem' }} />
+        color: i.solved === 'yes' ? colors.success : colors.error,
+        icon: <SupportAgent sx={{ fontSize: '1.2rem' }} />,
+        status: i.solved === 'yes' ? 'Closed' : 'Open',
+        priority: i.priority || 'Medium',
+        metadata: `Reporter: ${i.reporter || 'N/A'} | Area: ${i.area || 'N/A'}`
       })),
       ...technicalTasks.map(t => ({
+        id: t._id,
         type: 'task',
         title: 'Technical Task',
         detail: `${t.slid} - ${t.customerName}`,
         date: t.pisDate || t.createdAt,
         color: colors.warning,
-        icon: <Assignment sx={{ fontSize: '1.2rem' }} />
+        icon: <Assignment sx={{ fontSize: '1.2rem' }} />,
+        status: t.validationStatus || 'Pending',
+        priority: t.priority || 'Medium',
+        metadata: t.evaluationScore ? `Score: ${t.evaluationScore}% | Tech: ${t.technician || 'N/A'}` : `Tech: ${t.technician || 'N/A'}`
       })),
       ...quizResults.map(q => ({
+        id: q._id,
         type: 'quiz',
         title: 'Theoretical Assessment',
-        detail: `${q.quizCode} (Score: ${q.percentage}%)`,
+        detail: `${q.quizCode}`,
         date: q.submittedAt,
-        color: colors.primary,
-        icon: <Quiz sx={{ fontSize: '1.2rem' }} />
+        color: q.percentage >= 70 ? colors.secondary : colors.error,
+        icon: <Quiz sx={{ fontSize: '1.2rem' }} />,
+        status: q.percentage >= 70 ? 'Passed' : 'Failed',
+        metadata: `Score: ${q.percentage}% | Mark: ${q.score}`
       })),
       ...jobAssessments.map(a => ({
+        id: a._id,
         type: 'practical',
         title: 'Practical Assessment',
-        detail: `Score: ${a.overallScore}/5`,
+        detail: `Field Performance Evaluation`,
         date: a.assessmentDate,
         color: colors.success,
-        icon: <CheckCircle sx={{ fontSize: '1.2rem' }} />
+        icon: <CheckCircle sx={{ fontSize: '1.2rem' }} />,
+        status: getAssessmentStatus(a.overallScore, 'practical').label,
+        metadata: `Score: ${Number(a.overallScore).toFixed(1)}/5 | Evaluator: ${a.conductedBy}`
       })),
       ...labAssessments.map(l => ({
+        id: l._id,
         type: 'lab',
         title: 'Lab Assessment',
-        detail: `${l.assessmentType} (${l.totalScore}%)`,
+        detail: `${l.assessmentType || 'Standard'}`,
         date: l.createdAt,
         color: colors.info,
-        icon: <Assessment sx={{ fontSize: '1.2rem' }} />
+        icon: <Assessment sx={{ fontSize: '1.2rem' }} />,
+        status: `${l.totalScore}% Proficiency`,
+        metadata: `ONT: ${l.ontType?.name || 'N/A'} | Comments: ${l.comments ? 'Yes' : 'None'}`
       }))
     ];
 
@@ -1335,7 +1391,7 @@ ${data.map((a, i) => `
             gap: 2,
             letterSpacing: '-1px'
           }}>
-            Field Team 360° Portal
+            Field Team Portal
           </Typography>
           <Typography variant="h6" sx={{ color: colors.textSecondary, fontWeight: 400 }}>
             Advanced Performance Analytics & Operational Intelligence
@@ -1553,26 +1609,65 @@ ${data.map((a, i) => `
                   </Grid>
                 ))}
 
-                {/* Radar Chart & Trends */}
+                {/* Operational Efficiency & Deep Stats */}
                 <Grid item xs={12} md={8}>
-                  <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450 }}>
-                    <Typography variant="h6" sx={{ mb: 4, color: '#fff', fontWeight: 600 }}>360° Performance Balance</Typography>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart outerRadius={150} data={[
-                        { subject: 'Theoretical', A: calculateAverageScore(quizResults), fullMark: 100 },
-                        { subject: 'Practical', A: calculateAverageScore(jobAssessments) * 20, fullMark: 100 },
-                        { subject: 'Lab Skills', A: calculateAverageScore(labAssessments), fullMark: 100 },
-                        { subject: 'Resolution', A: Number(stats.resolutionRate), fullMark: 100 },
-                        { subject: 'Consistency', A: 85, fullMark: 100 }, // Placeholder for now
-                        { subject: 'Safety', A: 90, fullMark: 100 },
-                      ]}>
-                        <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: colors.textSecondary, fontSize: 12 }} />
-                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                        <Radar name="Team Performance" dataKey="A" stroke={colors.primary} strokeWidth={3} fill={colors.primary} fillOpacity={0.3} />
-                        <RechartsTooltip contentStyle={{ backgroundColor: '#1a1a1a', border: 'none', borderRadius: '8px' }} />
-                      </RadarChart>
-                    </ResponsiveContainer>
+                  <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450, display: 'flex', flexDirection: 'column' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                      <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>Operational Efficiency & Responsivity</Typography>
+                      <Chip
+                        label="Live Operational Data"
+                        size="small"
+                        sx={{ bgcolor: `${colors.primary}20`, color: colors.primary, fontWeight: 700, border: `1px solid ${colors.primary}40` }}
+                      />
+                    </Box>
+                    <Box sx={{ flex: 1, minHeight: 0 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsBarChart
+                          data={operationalEfficiencyData}
+                          layout="vertical"
+                          margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                          <XAxis type="number" domain={[0, 100]} hide />
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            stroke={colors.textSecondary}
+                            fontSize={12}
+                            width={120}
+                          />
+                          <RechartsTooltip
+                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                            contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                          />
+                          <RechartsBar dataKey="value" radius={[0, 4, 4, 0]} barSize={32}>
+                            {operationalEfficiencyData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </RechartsBar>
+                        </RechartsBarChart>
+                      </ResponsiveContainer>
+                    </Box>
+
+                    {/* Deep Stats Sub-grid */}
+                    <Grid container spacing={2} sx={{ mt: 2 }}>
+                      {[
+                        { label: 'Reliability Index', value: `${deepStats.reliabilityIndex}%`, icon: <TrendingUpIcon fontSize="small" />, color: colors.secondary },
+                        { label: 'Avg Resolution', value: `${deepStats.avgResolutionSpeed}d`, icon: <Schedule fontSize="small" />, color: colors.info },
+                        { label: 'Aging Issues', value: deepStats.highAgingCount, icon: <Warning fontSize="small" />, color: colors.error },
+                        { label: 'Express Fixes', value: deepStats.expressResolutionCount, icon: <CheckCircleIcon fontSize="small" />, color: colors.success },
+                      ].map((s, i) => (
+                        <Grid item xs={3} key={i}>
+                          <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+                              <Box sx={{ color: s.color, display: 'flex' }}>{s.icon}</Box>
+                              <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', fontSize: '1rem' }}>{s.value}</Typography>
+                            </Box>
+                            <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.65rem', display: 'block' }}>{s.label}</Typography>
+                          </Box>
+                        </Grid>
+                      ))}
+                    </Grid>
                   </Paper>
                 </Grid>
 
@@ -1581,16 +1676,73 @@ ${data.map((a, i) => `
                     <Typography variant="h6" sx={{ mb: 3, color: '#fff', fontWeight: 600 }}>Recent Activity</Typography>
                     <Box sx={{ flex: 1, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {allActivities.slice(0, 10).map((activity, idx) => (
-                          <Box key={idx} sx={{ p: 2, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', transition: '0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' } }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{ color: activity.color, display: 'flex' }}>{activity.icon}</Box>
-                                <Typography variant="caption" sx={{ color: activity.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{activity.title}</Typography>
+                        {allActivities.slice(0, 15).map((activity, idx) => (
+                          <Box key={activity.id || idx} sx={{
+                            p: 2,
+                            borderRadius: '16px',
+                            bgcolor: 'rgba(255,255,255,0.02)',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            '&:hover': {
+                              bgcolor: 'rgba(255,255,255,0.04)',
+                              borderColor: `${activity.color}40`,
+                              transform: 'translateX(4px)'
+                            }
+                          }}>
+                            {/* Vertical Accent */}
+                            <Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', bgcolor: activity.color, opacity: 0.6 }} />
+
+                            <Stack spacing={1}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <Stack direction="row" spacing={1.5} alignItems="center">
+                                  <Box sx={{
+                                    p: 1,
+                                    borderRadius: '10px',
+                                    bgcolor: `${activity.color}15`,
+                                    color: activity.color,
+                                    display: 'flex',
+                                    backdropFilter: 'blur(4px)'
+                                  }}>
+                                    {activity.icon}
+                                  </Box>
+                                  <Box>
+                                    <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 0.2, fontSize: '0.65rem' }}>
+                                      {activity.title}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, lineHeight: 1.3 }}>
+                                      {activity.detail}
+                                    </Typography>
+                                  </Box>
+                                </Stack>
+                                <Typography variant="caption" sx={{ color: colors.textSecondary, whiteSpace: 'nowrap', fontSize: '0.7rem', opacity: 0.7 }}>
+                                  {formatDate(activity.date)}
+                                </Typography>
                               </Box>
-                              <Typography variant="caption" sx={{ color: colors.textSecondary }}>{formatDate(activity.date)}</Typography>
-                            </Box>
-                            <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{activity.detail}</Typography>
+
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', fontWeight: 400 }}>
+                                  {activity.metadata}
+                                </Typography>
+                                {activity.status && (
+                                  <Chip
+                                    label={activity.status}
+                                    size="small"
+                                    sx={{
+                                      height: '20px',
+                                      fontSize: '0.62rem',
+                                      fontWeight: 800,
+                                      textTransform: 'uppercase',
+                                      bgcolor: `${activity.color}15`,
+                                      color: activity.color,
+                                      border: `1px solid ${activity.color}30`,
+                                      '& .MuiChip-label': { px: 1 }
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            </Stack>
                           </Box>
                         ))}
                       </Box>

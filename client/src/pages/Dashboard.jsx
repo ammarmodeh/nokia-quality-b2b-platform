@@ -65,72 +65,45 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-
-    const fetchTasks = async () => {
-      // console.time("fetchTasks Duration");
+    const fetchDashboardData = async () => {
+      // Create a unified loading state or keep granular if needed, but parallelize the requests
       try {
-        const response = await api.get("/tasks/get-all-tasks", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-        });
-        setTasks(response.data);
-        console.log("Frontend - Sample task data:", {
-          slid: response.data[0]?.slid,
-          subReason: response.data[0]?.subReason,
-          rootCause: response.data[0]?.rootCause,
-          reason: response.data[0]?.reason
-        });
-      } catch (error) {
-        setTasksError(error);
-      } finally {
-        setTasksLoading(false);
-        // console.timeEnd("fetchTasks Duration");
-      }
-    };
+        const headers = { Authorization: `Bearer ${localStorage.getItem("accessToken")}` };
 
-    const fetchTeams = async () => {
-      try {
-        const response = await api.get('/field-teams/get-field-teams', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-          },
-        });
-        const teams = response.data.map(team => ({
+        const [tasksRes, teamsRes, samplesRes, settingsRes] = await Promise.all([
+          api.get("/tasks/get-all-tasks", { headers }),
+          api.get('/field-teams/get-field-teams', { headers }),
+          api.get(`/samples-token/${currentYear}`, { headers }),
+          api.get("/settings")
+        ]);
+
+        // Process Tasks
+        setTasks(tasksRes.data);
+
+        // Process Teams
+        const teams = teamsRes.data.map(team => ({
           ...team,
           evaluationScore: team.evaluationScore || 0,
           isEvaluated: team.isEvaluated || false,
         }));
         setTeamsData(teams);
+
+        // Process Samples
+        setSamplesData(samplesRes.data || []);
+
+        // Process Settings
+        setSettings(settingsRes.data);
+
       } catch (error) {
-        setTeamsError(error);
+        console.error("Error fetching dashboard data:", error);
+        setTasksError(error); // Using one error state to trigger error UI if any fails
       } finally {
+        setTasksLoading(false);
         setTeamsLoading(false);
       }
     };
 
-    const fetchSamples = async () => {
-      try {
-        const response = await api.get(`/samples-token/${currentYear}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-        });
-        setSamplesData(response.data || []);
-      } catch (error) {
-        console.error("Error Fetching Samples:", error);
-      }
-    };
-
-    const fetchSettings = async () => {
-      try {
-        const response = await api.get("/settings");
-        setSettings(response.data);
-      } catch (err) {
-        console.error("Error fetching settings:", err);
-      }
-    };
-
-    fetchTasks();
-    fetchTeams();
-    fetchSamples();
-    fetchSettings();
+    fetchDashboardData();
   }, [updateTasksList, currentYear]);
 
   useEffect(() => {
@@ -252,7 +225,7 @@ const Dashboard = () => {
                 )}
               </Typography>
 
-              <Typography
+              {/* <Typography
                 variant="body1"
                 sx={{
                   color: '#94a3b8',
@@ -262,7 +235,7 @@ const Dashboard = () => {
                 }}
               >
                 QoS-related tickets statistics from <span style={{ color: '#ffffff', fontWeight: 700 }}>2026</span> until <span style={{ color: '#ffffff', fontWeight: 700 }}>{todayDate}</span>.
-              </Typography>
+              </Typography> */}
             </Box>
 
             {/* Partner Logos Section */}

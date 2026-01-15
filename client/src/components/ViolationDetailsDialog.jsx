@@ -245,8 +245,7 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="lg"
-      fullWidth
+      fullScreen
       PaperProps={{
         sx: {
           backgroundColor: '#1e1e1e',

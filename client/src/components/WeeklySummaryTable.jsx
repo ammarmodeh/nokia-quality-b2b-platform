@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -578,4 +578,4 @@ const WeeklySummaryTable = ({ tasks, fieldTeams = [] }) => {
   );
 };
 
-export default WeeklySummaryTable;
+export default React.memo(WeeklySummaryTable);
