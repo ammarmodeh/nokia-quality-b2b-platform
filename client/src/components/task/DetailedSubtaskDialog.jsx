@@ -293,6 +293,7 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
       if (response.status === 200) {
         setCancelState((prev) => !prev);
         if (setUpdateTasksList) setUpdateTasksList((prev) => !prev);
+        window.dispatchEvent(new CustomEvent('dashboard-refresh'));
         alert(`${selectedOption.charAt(0).toUpperCase() + selectedOption.slice(1)} subtasks reset successfully!`);
         onClose();
       }
@@ -350,6 +351,7 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
       if (response.status === 200) {
         alert("Subtasks saved successfully!");
         if (setUpdateTasksList) setUpdateTasksList((prev) => !prev);
+        window.dispatchEvent(new CustomEvent('dashboard-refresh'));
         onClose();
       }
     } catch (error) {

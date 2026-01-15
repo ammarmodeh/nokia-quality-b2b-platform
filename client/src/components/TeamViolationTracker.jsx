@@ -14,6 +14,10 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
   const { enqueueSnackbar } = useSnackbar();
   const user = useSelector((state) => state?.auth?.user);
   const [fieldTeams, setFieldTeams] = useState(initialFieldTeams);
+
+  useEffect(() => {
+    setFieldTeams(initialFieldTeams);
+  }, [initialFieldTeams]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedTeamIdForSession, setSelectedTeamIdForSession] = useState(null);
   const [searchText, setSearchText] = useState('');

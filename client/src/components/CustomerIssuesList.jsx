@@ -66,6 +66,7 @@ import CustomerIssueLogTerminal from './CustomerIssueLogTerminal';
 import LoadingSpinner from './common/LoadingSpinner';
 
 import { MdEmail } from 'react-icons/md';
+import { FaWhatsapp } from 'react-icons/fa6';
 import { alpha } from '@mui/material/styles';
 
 
@@ -126,6 +127,15 @@ const CustomerIssuesList = () => {
 
   useEffect(() => {
     fetchIssues();
+  }, []);
+
+  useEffect(() => {
+    const handleSyncRefresh = () => {
+      fetchIssues(true);
+    };
+
+    window.addEventListener('cin-refresh', handleSyncRefresh);
+    return () => window.removeEventListener('cin-refresh', handleSyncRefresh);
   }, []);
 
   useEffect(() => {
@@ -393,6 +403,90 @@ const CustomerIssuesList = () => {
     } catch (error) {
       console.error("PDF Export Error:", error);
       toast.error("Failed to export professional PDF report");
+    }
+  };
+
+  const handleWhatsAppContact = async (issue) => {
+    // Build comprehensive message
+    let formattedMessage = `*🔔 Issue Report*\n\n`;
+
+    formattedMessage += `*SLID:* ${issue.slid}\n`;
+    if (issue.ticketId) formattedMessage += `*Ticket ID:* ${issue.ticketId}\n`;
+    formattedMessage += `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Open'}\n\n`;
+
+    formattedMessage += `*📍 Source & Team*\n`;
+    formattedMessage += `Team Company: ${issue.teamCompany}\n`;
+    formattedMessage += `Installing Team: ${issue.installingTeam || 'N/A'}\n`;
+    formattedMessage += `Assigned To: ${issue.assignedTo || 'Unassigned'}\n\n`;
+
+    formattedMessage += `*👤 Customer Info*\n`;
+    formattedMessage += `Name: ${issue.customerName || 'N/A'}\n`;
+    formattedMessage += `Contact: ${issue.customerContact || 'N/A'}\n\n`;
+
+    formattedMessage += `*🔍 Issue Details*\n`;
+    formattedMessage += `Categories: ${issue.issues?.map(i => i.category + (i.subCategory ? ` (${i.subCategory})` : '')).join(', ') || 'N/A'}\n`;
+    if (issue.reporterNote) formattedMessage += `Reporter Note: ${issue.reporterNote}\n`;
+    if (issue.assigneeNote) formattedMessage += `Assignee Note: ${issue.assigneeNote}\n`;
+    formattedMessage += `\n`;
+
+    formattedMessage += `*📅 Timeline*\n`;
+    formattedMessage += `Reported: ${new Date(issue.date).toLocaleDateString()}\n`;
+    if (issue.pisDate) formattedMessage += `PIS Date: ${new Date(issue.pisDate).toLocaleDateString()}\n`;
+    if (issue.dispatched === 'yes') {
+      formattedMessage += `Dispatched: ${issue.dispatchedAt ? new Date(issue.dispatchedAt).toLocaleDateString() : 'Yes'}\n`;
+    }
+
+    if (issue.solved === 'yes') {
+      formattedMessage += `\n*✅ Resolution*\n`;
+      if (issue.resolveDate) formattedMessage += `Resolved: ${new Date(issue.resolveDate).toLocaleDateString()}\n`;
+      if (issue.resolvedBy) formattedMessage += `Method: ${issue.resolvedBy}\n`;
+      if (issue.closedBy) formattedMessage += `Supervisor: ${issue.closedBy}\n`;
+      if (issue.closedAt) formattedMessage += `Closed: ${new Date(issue.closedAt).toLocaleDateString()}\n`;
+      if (issue.resolutionDetails) formattedMessage += `Details: ${issue.resolutionDetails}\n`;
+    }
+
+    const installingTeamName = issue.installingTeam;
+
+    if (!installingTeamName) {
+      toast.error('Installing team not specified');
+      return;
+    }
+
+    try {
+      // Fetch field team data to get contact number
+      const response = await api.get('/field-teams/get-field-teams', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+
+      const fieldTeam = response.data.find(team => team.teamName === installingTeamName);
+
+      if (!fieldTeam || !fieldTeam.contactNumber) {
+        toast.error('Team contact number not found');
+        return;
+      }
+
+      let phoneNumber = fieldTeam.contactNumber;
+
+      // Clean and validate phone number
+      let cleanNumber = phoneNumber.toString().trim();
+      const hasPlus = cleanNumber.startsWith('+');
+      cleanNumber = cleanNumber.replace(/[^0-9]/g, '');
+      if (hasPlus && cleanNumber) cleanNumber = '+' + cleanNumber;
+
+      const digitsOnly = cleanNumber.replace(/\+/g, '');
+      if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+        toast.error('Invalid phone number format');
+        console.error('Invalid phone number:', phoneNumber, 'cleaned to:', cleanNumber);
+        return;
+      }
+
+      navigator.clipboard.writeText(formattedMessage).catch(() => { });
+
+      const whatsappUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(formattedMessage)}`;
+      window.open(whatsappUrl, '_blank');
+    } catch (error) {
+      console.error('Error fetching team data:', error);
+      toast.error('Failed to fetch team contact information');
     }
   };
 
@@ -919,16 +1013,29 @@ const CustomerIssuesList = () => {
                         </TableCell>
                       </Hidden>
                       <TableCell sx={{ pr: 3, textAlign: 'right' }}>
-                        <IconButton
-                          size="small"
-                          onClick={(e) => handleMenuOpen(e, issue)}
-                          sx={{
-                            color: '#b3b3b3',
-                            '&:hover': { color: '#ffffff', backgroundColor: 'rgba(255,255,255,0.05)' }
-                          }}
-                        >
-                          <MdMoreVert />
-                        </IconButton>
+                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                          {issue.installingTeam && (
+                            <Tooltip title="Contact Team via WhatsApp">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleWhatsAppContact(issue)}
+                                sx={{ color: '#25D366', '&:hover': { backgroundColor: 'rgba(37, 211, 102, 0.1)' } }}
+                              >
+                                <FaWhatsapp size={16} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleMenuOpen(e, issue)}
+                            sx={{
+                              color: '#b3b3b3',
+                              '&:hover': { color: '#ffffff', backgroundColor: 'rgba(255,255,255,0.05)' }
+                            }}
+                          >
+                            <MdMoreVert />
+                          </IconButton>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))

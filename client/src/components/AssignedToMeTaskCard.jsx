@@ -12,6 +12,7 @@ import StepLabel from '@mui/material/StepLabel';
 import StepContent from '@mui/material/StepContent';
 import Typography from '@mui/material/Typography';
 import { FaRegCopy, FaStar } from "react-icons/fa";
+import { FaWhatsapp } from "react-icons/fa6";
 import { useSelector } from "react-redux";
 import api from "../api/api";
 import { BiArchive } from "react-icons/bi";
@@ -86,6 +87,37 @@ const AssignedToMeTaskCard = ({
     }).catch(err => {
       // console.error('Failed to copy: ', err);
     });
+  };
+
+  const redirectToWhatsApp = () => {
+    const formattedMessage = formatTaskForWhatsApp();
+
+    // Get phone number from populated teamId
+    let phoneNumber = task.teamId?.contactNumber;
+
+    if (!phoneNumber) {
+      alert('Team contact number not available');
+      return;
+    }
+
+    // Clean and validate phone number
+    let cleanNumber = phoneNumber.toString().trim();
+    const hasPlus = cleanNumber.startsWith('+');
+    cleanNumber = cleanNumber.replace(/[^0-9]/g, '');
+    if (hasPlus && cleanNumber) cleanNumber = '+' + cleanNumber;
+
+    const digitsOnly = cleanNumber.replace(/\+/g, '');
+    if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+      alert('Invalid team phone number');
+      return;
+    }
+
+    // Copy to clipboard first
+    navigator.clipboard.writeText(formattedMessage).catch(() => { });
+
+    // Open WhatsApp with pre-filled message
+    const whatsappUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(formattedMessage)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   useEffect(() => {
@@ -232,6 +264,13 @@ const AssignedToMeTaskCard = ({
                     <FaRegCopy />
                   </IconButton>
                 </Tooltip>
+                {task.teamId?.contactNumber && (
+                  <Tooltip title="Contact Team via WhatsApp">
+                    <IconButton onClick={redirectToWhatsApp} sx={{ color: "#25D366" }}>
+                      <FaWhatsapp />
+                    </IconButton>
+                  </Tooltip>
+                )}
                 <IconButton onClick={handleMenuOpen} sx={{ color: "#ffffff" }}>
                   <MoreVertIcon />
                 </IconButton>

@@ -565,7 +565,8 @@ export const getTasks = async (req, res) => {
       .skip(skip)
       .limit(limit)
       .populate("assignedTo", "name email")
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email")
+      .populate("teamId", "contactNumber");
 
     return res.json({
       success: true,
@@ -664,7 +665,8 @@ export const getDetractorTasksPaginated = async (req, res) => {
       .skip(skip)
       .limit(limit)
       .populate("assignedTo", "name email")
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email")
+      .populate("teamId", "contactNumber");
 
     return res.json({
       success: true,
@@ -763,7 +765,8 @@ export const getNeutralTasksPaginated = async (req, res) => {
       .skip(skip)
       .limit(limit)
       .populate("assignedTo", "name email")
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email")
+      .populate("teamId", "contactNumber");
 
     return res.json({
       success: true,
@@ -794,7 +797,8 @@ export const getTasksAssignedToMe = async (req, res) => {
       .sort({ createdAt: -1 })
       .select("-taskLogs -notifications -readBy")
       .populate("assignedTo", "name email")
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email")
+      .populate("teamId", "contactNumber");
 
     // Self-healing: Ensure all tasks have correct status based on subtasks
     let hasChanges = false;

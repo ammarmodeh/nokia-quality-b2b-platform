@@ -18,7 +18,8 @@ import {
   Grid,
   Checkbox,
   FormControlLabel,
-  Tooltip
+  Tooltip,
+  alpha
 } from "@mui/material";
 import { useSelector } from "react-redux";
 import ManagedAutocomplete from "./common/ManagedAutocomplete";
@@ -84,10 +85,21 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
       } else {
         // If creating, check local storage
         const savedData = localStorage.getItem('customerIssueFormData');
+        const today = new Date().toISOString().split('T')[0];
         if (savedData) {
-          setFormData(prev => ({ ...prev, ...JSON.parse(savedData) }));
+          const parsed = JSON.parse(savedData);
+          setFormData(prev => ({
+            ...prev,
+            ...parsed,
+            pisDate: today, // Always default to today for new entries
+            date: today     // Always default to today for new entries
+          }));
         } else {
-          setFormData(initialFormState);
+          setFormData({
+            ...initialFormState,
+            pisDate: today,
+            date: today
+          });
         }
       }
     }
@@ -564,16 +576,38 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               sx={{ ...textFieldStyles, mb: 2 }}
             />
 
-            <ManagedAutocomplete
-              category="CONTACT_METHOD"
-              label="Contact Method"
-              fullWidth
-              required
-              value={formData.contactMethod}
-              onChange={(val) => handleChange({ target: { name: 'contactMethod', value: val } })}
-              disabled={!isAdmin}
-              sx={{ ...textFieldStyles }}
-            />
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+              <ManagedAutocomplete
+                category="CONTACT_METHOD"
+                label="Contact Method"
+                fullWidth
+                required
+                freeSolo
+                value={formData.contactMethod}
+                onChange={(val) => handleChange({ target: { name: 'contactMethod', value: val } })}
+                disabled={!isAdmin}
+                sx={{ ...textFieldStyles }}
+              />
+              <Tooltip title="Use Reporter Name as Contact Method">
+                <Button
+                  onClick={() => handleChange({ target: { name: 'contactMethod', value: formData.reporter } })}
+                  disabled={!isAdmin || !formData.reporter}
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    mt: 1,
+                    minWidth: '100px',
+                    borderColor: '#3d3d3d',
+                    color: '#7b68ee',
+                    fontSize: '0.65rem',
+                    textTransform: 'none',
+                    '&:hover': { borderColor: '#7b68ee', backgroundColor: alpha('#7b68ee', 0.05) }
+                  }}
+                >
+                  Use Reporter
+                </Button>
+              </Tooltip>
+            </Box>
           </Box>
 
           {/* Team/Company Assignment Block */}

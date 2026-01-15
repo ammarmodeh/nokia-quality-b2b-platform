@@ -5,6 +5,7 @@ import UserAvatar from "./UserAvatar";
 import NotificationPanel from "./NotificationPanel";
 import api from "../api/api";
 import { BeatLoader } from "react-spinners";
+import { toast } from "sonner";
 import { Box, Button, Divider, Menu, MenuItem, Stack, Typography, Drawer, IconButton, Tooltip, Badge, Chip } from "@mui/material";
 import { DocsMenu } from "./DocsMenu";
 import { PoliciesMenu } from "./PoliciesMenu";
@@ -103,12 +104,16 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
   const handleCinSubmit = async (formData) => {
     try {
-      const response = await api.post("/customer-issues-notifications", formData, {
+      await api.post("/customer-issues-notifications", formData, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
       });
-      alert("Issue submitted successfully!");
+      toast.success("Issue reported successfully!");
+      setCinDialogOpen(false);
+      window.dispatchEvent(new CustomEvent('cin-refresh'));
+      window.dispatchEvent(new CustomEvent('dashboard-refresh'));
     } catch (error) {
       console.error("Error submitting issue:", error);
+      toast.error("Failed to submit issue");
     }
   };
 

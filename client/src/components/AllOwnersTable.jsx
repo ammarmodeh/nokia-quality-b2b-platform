@@ -174,10 +174,18 @@ export const AllOwnersTable = memo(({ tasks }) => {
 
   // Prepare chart data (top 10 owners)
   const chartData = useMemo(() => {
-    return sortedOwnerViolations.slice(0, 10).map(item => ({
-      name: item.owner,
-      Violations: item.total
-    }));
+    return sortedOwnerViolations.slice(0, 10).map(item => {
+      const validatedTasks = item.tasks.filter(t => t.validationStatus === "Validated").length;
+      const totalTasks = item.total;
+      const validationPercentage = totalTasks > 0 ? Math.round((validatedTasks / totalTasks) * 100) : 0;
+
+      return {
+        name: item.owner,
+        Violations: totalTasks,
+        Validated: validatedTasks,
+        ValidationRate: validationPercentage
+      };
+    });
   }, [sortedOwnerViolations]);
 
   // Prepare rows for the DataGrid
@@ -564,6 +572,17 @@ export const AllOwnersTable = memo(({ tasks }) => {
                   ))}
                   <LabelList dataKey="Violations" position="top" style={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
                 </Bar>
+                <Bar dataKey="ValidationRate" radius={[4, 4, 0, 0]} barSize={isMobile ? 10 : 20}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-v-${index}`} fill={alpha(['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5], 0.4)} />
+                  ))}
+                  <LabelList
+                    dataKey="ValidationRate"
+                    position="top"
+                    formatter={(val) => `${val}%`}
+                    style={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }}
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </Paper>
@@ -627,27 +646,22 @@ export const AllOwnersTable = memo(({ tasks }) => {
                     <DetailRow label="Request Number" value={task.requestNumber} />
                     <DetailRow label="SLID" value={task.slid} />
                     <DetailRow label="PIS Date" value={task.pisDate ? new Date(task.pisDate).toLocaleDateString() : 'N/A'} />
-                    <DetailRow
-                      label="Satisfaction Score"
-                      value={
-                        <Chip
-                          label={task.evaluationScore}
-                          sx={{
-                            color: '#ffffff',
-                            backgroundColor:
-                              task.evaluationScore >= 9 ? '#10b981' :
-                                task.evaluationScore >= 7 ? '#6b7280' : '#ef4444',
-                            fontWeight: 'bold'
-                          }}
-                        />
-                      }
-                    />
+                    <DetailRow label="Customer Name" value={task.customerName} />
+                    <DetailRow label="Contact Number" value={task.contactNumber} />
                   </Box>
                   <Box>
                     <DetailRow label="Tariff Name" value={task.tarrifName} />
                     <DetailRow label="Customer Feedback" value={task.customerFeedback} />
                     <DetailRow label="Reason" value={task.reason} />
+                    <DetailRow label="Sub Reason" value={task.subReason || 'N/A'} />
+                    <DetailRow label="Root Cause" value={task.rootCause || 'N/A'} />
+                    <DetailRow label="Customer Type" value={task.customerType} />
+                    <DetailRow label="Governorate" value={task.governorate} />
+                    <DetailRow label="District" value={task.district} />
                     <DetailRow label="Owner" value={task.responsible || 'N/A'} />
+                    <DetailRow label="Team Name" value={task.teamName} />
+                    <DetailRow label="Team Company" value={task.teamCompany} />
+                    <DetailRow label="Interview Date" value={task.interviewDate ? new Date(task.interviewDate).toLocaleDateString() : 'N/A'} />
                   </Box>
                 </Box>
               </Paper>

@@ -54,6 +54,18 @@ const Dashboard = () => {
   const todayDate = new Date().toLocaleDateString();
 
   useEffect(() => {
+    const handleRefresh = () => {
+      setUpdateTasksList(prev => !prev);
+    };
+
+    window.addEventListener('dashboard-refresh', handleRefresh);
+    return () => {
+      window.removeEventListener('dashboard-refresh', handleRefresh);
+    };
+  }, []);
+
+  useEffect(() => {
+
     const fetchTasks = async () => {
       // console.time("fetchTasks Duration");
       try {

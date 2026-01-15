@@ -249,7 +249,7 @@ const FieldTeamPortal = () => {
       else if (score >= 3.5 && score < 4.5) totalNeutrals++;
     });
 
-    // Technical Tasks evaluation
+    // NPS Tickets evaluation
     technicalTasks.forEach(t => {
       const score = t.evaluationScore || 0;
       if (score > 0) { // Only count if evaluated
@@ -614,7 +614,7 @@ const FieldTeamPortal = () => {
           });
           setLabAssessments(labRes.data);
 
-          // Fetch Technical Tasks (Tasks & Tickets)
+          // Fetch NPS Tickets
           try {
             const techRes = await api.get(`/tasks/get-all-tasks`, {
               params: { teamId: selectedTeam._id },
@@ -625,7 +625,7 @@ const FieldTeamPortal = () => {
             // Filter to ensure only this team's tasks are set if not done by backend
             setTechnicalTasks(techRes.data.filter(task => task.teamId === selectedTeam._id) || []);
           } catch (err) {
-            console.error("Error fetching technical tasks:", err);
+            console.error("Error fetching NPS tickets:", err);
           }
 
         } catch (error) {
@@ -1031,10 +1031,10 @@ ${data.map((a, i) => `
       { Metric: 'Export Date', Value: new Date().toLocaleString() },
       { Metric: '', Value: '' },
       { Metric: '--- KEY PERFORMANCE INDICATORS ---', Value: '' },
-      { Metric: 'Total Technical Tasks', Value: stats.technicalTasksCount },
-      { Metric: 'Technical Detractors (Score <= 60)', Value: stats.technicalDetractors },
-      { Metric: 'Technical Neutrals (Score 61-80)', Value: stats.technicalNeutrals },
-      { Metric: 'Total Customer Issues', Value: stats.customerIssuesCount },
+      { Metric: 'Total NPS Tickets', Value: stats.technicalTasksCount },
+      { Metric: 'Total Detractors (Score <= 60)', Value: stats.technicalDetractors },
+      { Metric: 'Total Neutrals (Score 61-80)', Value: stats.technicalNeutrals },
+      { Metric: 'Total Customer Issues (Snags & Complaints)', Value: stats.customerIssuesCount },
       { Metric: 'Issue Resolution Rate', Value: `${stats.resolutionRate}%` },
       { Metric: 'Theoretical Avg Score', Value: `${Math.round(calculateAverageScore(quizResults))}%` },
       { Metric: 'Practical Avg Score', Value: `${Number(calculateAverageScore(jobAssessments)).toFixed(2)}/5` },
@@ -1045,29 +1045,50 @@ ${data.map((a, i) => `
     const wsSummary = XLSX.utils.json_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Overview Summary");
 
-    // 2. Technical Tasks Sheet
+    // 2. NPS Tickets Sheet
     const techTasksData = technicalTasks.map(t => ({
-      'Request Number': t.requestNumber || 'N/A',
-      'Customer': t.customerName,
+      'Ticket Request': t.requestNumber || 'N/A',
+      'Ticket ID': t.ticketId || '-',
+      'Customer Name': t.customerName,
+      'Customer Contact': t.customerContact || 'N/A',
+      'Customer Feedback': t.customerFeedback || '-',
       'SLID': t.slid,
       'PIS Date': t.pisDate ? new Date(t.pisDate).toLocaleDateString() : 'N/A',
+      'Task Date': formatDate(t.createdAt),
       'Priority': t.priority,
       'Status': t.validationStatus,
-      'Evaluation Score': t.evaluationScore ? `${t.evaluationScore}%` : 'N/A',
-      'Created At': formatDate(t.createdAt)
+      'Validation Notes': t.validationNotes || '-',
+      'Evaluation Score': t.evaluationScore ? `${t.evaluationScore}%` : 'Not Evaluated',
+      'Satisfaction Level': t.evaluationScore ? (t.evaluationScore <= 60 ? 'Detractor' : (t.evaluationScore <= 80 ? 'Neutral' : 'Promoter')) : 'N/A',
+      'Technician': t.technician || t.primaryTechnician || '-',
+      'Subtasks Count': t.subtasks?.length || 0,
+      'Region': t.governorate || '-',
+      'City': t.city || '-'
     }));
     const wsTech = XLSX.utils.json_to_sheet(techTasksData);
-    XLSX.utils.book_append_sheet(wb, wsTech, "Technical Tasks");
+    XLSX.utils.book_append_sheet(wb, wsTech, "NPS Tickets");
 
     // 3. Customer Issues Sheet
     const issuesData = filteredIssuesByDate.map(i => ({
       'SLID': i.slid,
       'Category': i.issueCategory || 'General',
+      'Sub-Category': i.issueSubCategory || '-',
       'Status': i.solved === 'yes' ? 'Closed' : 'Open',
+      'Customer Name': i.customerName || 'N/A',
+      'Customer Contact': i.customerContact || 'N/A',
+      'Reporter': i.reporter || 'N/A',
+      'Source': i.fromMain || i.reports?.[0]?.fromMain || '-',
       'Report Date': formatDate(i.date || i.createdAt),
-      'Resolution Date': i.resolveDate ? formatDate(i.resolveDate) : 'N/A',
       'Dispatched': i.dispatched,
-      'Aging (Days)': i.date ? Math.floor((new Date() - new Date(i.date)) / (1000 * 60 * 60 * 24)) : 'N/A'
+      'Dispatched Time': i.dispatchedAt ? formatDate(i.dispatchedAt) : (i.dispatched === 'yes' ? 'IMMEDIATE' : '-'),
+      'Resolution Date': i.resolveDate ? formatDate(i.resolveDate) : 'N/A',
+      'Closed By': i.closedBy || i.supervisor || '-',
+      'Closed Date': i.closedAt ? formatDate(i.closedAt) : '-',
+      'Resolution Details': i.resolutionDetails || '-',
+      'Issue Note/Details': i.issueDetails || i.reporterNote || '-',
+      'Aging (Days)': i.date ? Math.floor((new Date() - new Date(i.date)) / (1000 * 60 * 60 * 24)) : 'N/A',
+      'Is QoS?': i.isQoS ? 'Yes' : 'No',
+      'Is Install?': i.isInstall ? 'Yes' : 'No'
     }));
     const wsIssues = XLSX.utils.json_to_sheet(issuesData);
     XLSX.utils.book_append_sheet(wb, wsIssues, "Customer Issues");
@@ -1465,7 +1486,7 @@ ${data.map((a, i) => `
                 {/* High Level KPI Cards */}
                 {[
                   {
-                    title: 'Technical Tasks & Tickets',
+                    title: 'NPS Tickets',
                     value: stats.technicalTasksCount,
                     unit: 'Total',
                     desc: `Detractors: ${stats.technicalDetractors} | Neutrals: ${stats.technicalNeutrals}`,
@@ -1473,7 +1494,7 @@ ${data.map((a, i) => `
                     icon: <Assignment />
                   },
                   {
-                    title: 'Customer Issues',
+                    title: 'Customer Issues (Snags and Complaints)',
                     value: stats.customerIssuesCount,
                     unit: 'Reported',
                     desc: `${stats.resolutionRate}% Resolution Rate`,
@@ -1845,7 +1866,7 @@ ${data.map((a, i) => `
             <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Box>
-                  <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>Technical Tasks & Tickets</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>NPS Tickets</Typography>
                   <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
                     Operational workload and technical assessment registry for {selectedTeam?.teamName}
                   </Typography>

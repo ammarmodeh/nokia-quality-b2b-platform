@@ -638,7 +638,7 @@ const IssuePreventionAnalytics = () => {
                         .slice(negligencePage * negligenceRowsPerPage, negligencePage * negligenceRowsPerPage + negligenceRowsPerPage)
                         .map((item, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
-                            <td style={{ padding: '8px', color: '#b3b3b3', fontSize: '0.75rem' }}>{new Date(item.originalReport.task.createdAt).toLocaleDateString()}</td>
+                            <td style={{ padding: '8px', color: '#b3b3b3', fontSize: '0.75rem' }}>{new Date(item.originalReport?.task?.createdAt || item.reportDate).toLocaleDateString()}</td>
                             <td style={{ padding: '8px', color: '#b3b3b3', fontSize: '0.75rem' }}>{new Date(item.reportDate).toLocaleDateString()}</td>
                             <td style={{ padding: '8px', color: '#4e73df', fontWeight: 'bold', fontSize: '0.85rem' }}>{item.slid}</td>
                             <td style={{ padding: '8px', textAlign: 'center' }}>
@@ -1172,8 +1172,7 @@ const IssuePreventionAnalytics = () => {
       <Dialog
         open={showComparisonDialog}
         onClose={() => setShowComparisonDialog(false)}
-        fullScreen={isMobile}
-        fullWidth={!isMobile}
+        fullScreen
         PaperProps={{
           sx: {
             bgcolor: '#1a1a1a',
@@ -1206,6 +1205,12 @@ const IssuePreventionAnalytics = () => {
                 </Typography>
                 <Table size="small">
                   <TableBody>
+                    <TableRow>
+                      <TableCell sx={{ color: 'grey.400', border: 'none' }}>PIS Date:</TableCell>
+                      <TableCell sx={{ color: 'grey.100', border: 'none', fontWeight: 'bold' }}>
+                        {selectedComparison.task.pisDate ? moment(selectedComparison.task.pisDate).format("MMM DD, YYYY") : "N/A"}
+                      </TableCell>
+                    </TableRow>
                     <TableRow>
                       <TableCell sx={{ color: 'grey.400', border: 'none' }}>First Reported:</TableCell>
                       <TableCell sx={{ color: 'grey.100', border: 'none', fontWeight: 'bold' }}>

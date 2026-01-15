@@ -34,7 +34,10 @@ import {
 } from "react-icons/fa";
 import { format } from 'date-fns';
 import { RiFileExcel2Fill } from "react-icons/ri";
+
 import { MdClose } from "react-icons/md";
+import api from '../api/api';
+import { toast } from 'sonner';
 
 export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName }) => {
   const [selectedIssue, setSelectedIssue] = useState(null);
@@ -72,12 +75,53 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
     });
   };
 
-  const shareOnWhatsApp = () => {
+  const shareOnWhatsApp = async () => {
     if (!selectedIssue) return;
 
-    const issueText = formatIssueForSharing(selectedIssue);
-    const encodedText = encodeURIComponent(issueText);
-    window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+    // Check for installing team
+    const installingTeamName = selectedIssue.installingTeam;
+
+    if (!installingTeamName) {
+      toast.error('Installing team not specified for this issue');
+      return;
+    }
+
+    try {
+      // Fetch field team data to get contact number
+      const response = await api.get('/field-teams/get-field-teams', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+
+      const fieldTeam = response.data.find(team =>
+        team.teamName?.trim().toLowerCase() === installingTeamName.trim().toLowerCase()
+      );
+
+      if (!fieldTeam || !fieldTeam.contactNumber) {
+        toast.error('Team contact number not found');
+        return;
+      }
+
+      let phoneNumber = fieldTeam.contactNumber;
+
+      // Clean and validate phone number
+      let cleanNumber = phoneNumber.toString().trim();
+      const hasPlus = cleanNumber.startsWith('+');
+      cleanNumber = cleanNumber.replace(/[^0-9]/g, '');
+      if (hasPlus && cleanNumber) cleanNumber = '+' + cleanNumber;
+
+      const digitsOnly = cleanNumber.replace(/\+/g, '');
+      if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+        toast.error('Invalid phone number format');
+        return;
+      }
+
+      const issueText = formatIssueForSharing(selectedIssue);
+      const encodedText = encodeURIComponent(issueText);
+      window.open(`https://wa.me/${cleanNumber}?text=${encodedText}`, '_blank');
+    } catch (error) {
+      console.error('Error fetching team data:', error);
+      toast.error('Failed to fetch team contact information');
+    }
   };
 
   const formatIssueForSharing = (issue) => {
@@ -85,20 +129,21 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
       ? issue.issues.map(i => `• ${i.category}${i.subCategory ? ` (${i.subCategory})` : ''}`).join('\n  ')
       : issue.issueCategory || 'N/A';
 
-    return `*Issue Details*\n\n` +
+    return `*🔔 Issue Report*\n\n` +
       `*SLID:* ${issue.slid}\n` +
       `*PIS Date:* ${format(new Date(issue.pisDate), 'MMM dd, yyyy')}\n` +
       `*Report Date:* ${format(new Date(issue.date), 'MMM dd, yyyy')}\n` +
-      `*Contact Method:* ${issue.contactMethod}\n` +
-      `*From Team:* ${issue.from}\n` +
-      `*Team/Company:* ${issue.teamCompany}\n` +
-      `*Issues:*\n  ${issuesMsg}\n\n` +
-      `*Status:* ${issue.solved === 'yes' ? 'Solved' : 'Unresolved'}\n` +
-      `${issue.resolveDate ? `*Resolved Date:* ${format(new Date(issue.resolveDate), 'MMM dd, yyyy')}\n` : ''}` +
-      `*Reporter:* ${issue.reporter}\n` +
-      `${issue.reporterNote ? `*Reporter Notes:*\n${issue.reporterNote}\n\n` : ''}` +
-      `*Assigned To:* ${issue.assignedTo}\n` +
-      `${issue.resolutionDetails ? `*Resolution Details:*\n${issue.resolutionDetails}\n\n` : ''}`;
+      `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Unresolved'}\n\n` +
+
+      `*📍 Source & Team*\n` +
+      `Team Company: ${issue.teamCompany}\n` +
+      `Installing Team: ${issue.installingTeam || 'N/A'}\n` +
+      `Assigned To: ${issue.assignedTo || 'Unassigned'}\n\n` +
+
+      `*🔍 Issue Details*\n` +
+      `Issues:\n  ${issuesMsg}\n` +
+      `${issue.reporterNote ? `Reporter Notes: ${issue.reporterNote}\n` : ''}` +
+      `${issue.resolutionDetails ? `\n*✅ Resolution*\nDetails: ${issue.resolutionDetails}\n` : ''}`;
   };
 
   const exportToExcel = () => {
@@ -262,6 +307,24 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
 
               <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
+              {/* Customer Info */}
+              <Box sx={{ display: 'flex', gap: isMobile ? 2 : 3, flexWrap: 'wrap' }}>
+                <Box>
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>Customer Name</Typography>
+                  <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ffffff' }}>
+                    <FaUser size={isMobile ? 12 : 14} color="#7b68ee" /> {selectedIssue.customerName || 'N/A'}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>Customer Contact</Typography>
+                  <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ffffff' }}>
+                    <FaPhone size={isMobile ? 12 : 14} color="#7b68ee" /> {selectedIssue.customerContact || 'N/A'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider sx={{ backgroundColor: '#e5e7eb' }} />
+
               {/* Reporter Info */}
               <Box sx={{ display: 'flex', gap: isMobile ? 2 : 3, flexWrap: 'wrap' }}>
                 <Box>
@@ -283,6 +346,13 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                 <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>From Team</Typography>
                 <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff' }}>
                   {selectedIssue.from}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>Installing Team</Typography>
+                <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff' }}>
+                  {selectedIssue.installingTeam || 'N/A'}
                 </Typography>
               </Box>
 
@@ -483,6 +553,9 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                     secondary={
                       <Box component="div">
                         <Typography variant={isMobile ? "caption" : "body2"} component="div" sx={{ color: '#b3b3b3', mt: 0.5 }}>
+                          Customer: {issue.customerName || 'N/A'} - {issue.customerContact || 'N/A'}
+                        </Typography>
+                        <Typography variant={isMobile ? "caption" : "body2"} component="div" sx={{ color: '#b3b3b3' }}>
                           Reporter: {issue.reporter}
                         </Typography>
                         <Typography variant={isMobile ? "caption" : "body2"} component="div" sx={{ color: '#b3b3b3' }}>

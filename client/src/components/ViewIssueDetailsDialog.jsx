@@ -15,6 +15,8 @@ import {
   useTheme
 } from '@mui/material';
 import { MdClose, MdContentCopy, MdWhatsapp } from 'react-icons/md';
+import api from '../api/api';
+import { toast } from 'sonner';
 
 const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
   const theme = useTheme();
@@ -48,40 +50,93 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
       .catch(() => alert('Failed to copy details'));
   };
 
-  const handleShareWhatsApp = () => {
-    const reportedDate = issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A';
-    const pisDate = issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A';
-    const resolveDate = issue.resolveDate ? new Date(issue.resolveDate).toLocaleDateString() : 'N/A';
+  const handleShareWhatsApp = async () => {
+    // Build comprehensive message
+    let formattedMessage = `*🔔 Issue Report*\n\n`;
 
-    const issuesMsg = (issue.issues && issue.issues.length > 0)
-      ? issue.issues.map(i => `• ${i.category}${i.subCategory ? ` (${i.subCategory})` : ''}`).join('\n  ')
-      : issue.issueCategory || 'N/A';
+    formattedMessage += `*SLID:* ${issue.slid}\n`;
+    if (issue.ticketId) formattedMessage += `*Ticket ID:* ${issue.ticketId}\n`;
+    formattedMessage += `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Open'}\n\n`;
 
-    const message = `*CIN*\n
-  *Ticket ID*: ${issue.ticketId || 'N/A'}
-  *SLID*: ${issue.slid || 'N/A'}
-  *From (Main)*: ${issue.fromMain || issue.from || 'N/A'}
-  *From (Sub)*: ${issue.fromSub || 'N/A'}
-  *Reporter*: ${issue.reporter || 'N/A'}
-  *Reporter Note*: ${issue.reporterNote || 'N/A'}
-  *Team/Company*: ${issue.teamCompany || 'N/A'}
-  *Customer Name*: ${issue.customerName || 'N/A'}
-  *Customer Contact*: ${issue.customerContact || 'N/A'}
-  *Contact Method*: ${issue.contactMethod || 'N/A'}
-  *Issues*:
-  ${issuesMsg}
-  *Assigned To*: ${issue.assignedTo || 'N/A'}
-  ${issue.assigneeNote ? `*Assignee Note*: ${issue.assigneeNote}\n  ` : ''}*Installing Team*: ${issue.installingTeam || 'N/A'}
-  *Status*: ${issue.solved === 'yes' ? 'Resolved' : 'Pending'}
-  ${issue.solved === 'yes' && issue.resolvedBy ? `*Resolved By*: ${issue.resolvedBy}\n  ` : ''}${issue.solved === 'yes' ? `*Resolve Date*: ${resolveDate}\n  *Supervisor*: ${issue.closedBy || 'N/A'}\n  *Resolution Details*: ${issue.resolutionDetails || 'N/A'}\n` : ''}
-  *Date Reported*: ${reportedDate}
-  *PIS Date*: ${pisDate}
-  
-  *Assigned To*: ${issue.assignedTo || 'N/A'}
-  *Installing Team*: ${issue.installingTeam || 'N/A'}`;
+    formattedMessage += `*📍 Source & Team*\n`;
+    formattedMessage += `Team Company: ${issue.teamCompany}\n`;
+    formattedMessage += `Installing Team: ${issue.installingTeam || 'N/A'}\n`;
+    formattedMessage += `Assigned To: ${issue.assignedTo || 'Unassigned'}\n\n`;
 
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    formattedMessage += `*👤 Customer Info*\n`;
+    formattedMessage += `Name: ${issue.customerName || 'N/A'}\n`;
+    formattedMessage += `Contact: ${issue.customerContact || 'N/A'}\n\n`;
+
+    formattedMessage += `*🔍 Issue Details*\n`;
+    formattedMessage += `Categories: ${issue.issues?.map(i => i.category + (i.subCategory ? ` (${i.subCategory})` : '')).join(', ') || 'N/A'}\n`;
+    if (issue.reporterNote) formattedMessage += `Reporter Note: ${issue.reporterNote}\n`;
+    if (issue.assigneeNote) formattedMessage += `Assignee Note: ${issue.assigneeNote}\n`;
+    formattedMessage += `\n`;
+
+    formattedMessage += `*📅 Timeline*\n`;
+    formattedMessage += `Reported: ${new Date(issue.date).toLocaleDateString()}\n`;
+    if (issue.pisDate) formattedMessage += `PIS Date: ${new Date(issue.pisDate).toLocaleDateString()}\n`;
+    if (issue.dispatched === 'yes') {
+      formattedMessage += `Dispatched: ${issue.dispatchedAt ? new Date(issue.dispatchedAt).toLocaleDateString() : 'Yes'}\n`;
+    }
+
+    if (issue.solved === 'yes') {
+      formattedMessage += `\n*✅ Resolution*\n`;
+      if (issue.resolveDate) formattedMessage += `Resolved: ${new Date(issue.resolveDate).toLocaleDateString()}\n`;
+      if (issue.resolvedBy) formattedMessage += `Method: ${issue.resolvedBy}\n`;
+      if (issue.closedBy) formattedMessage += `Supervisor: ${issue.closedBy}\n`;
+      if (issue.closedAt) formattedMessage += `Closed: ${new Date(issue.closedAt).toLocaleDateString()}\n`;
+      if (issue.resolutionDetails) formattedMessage += `Details: ${issue.resolutionDetails}\n`;
+    }
+
+    const installingTeamName = issue.installingTeam;
+
+    if (!installingTeamName) {
+      toast.error('Installing team not specified');
+      return;
+    }
+
+    try {
+      console.log('Fetching field teams for WhatsApp contact...');
+      // Fetch field team data to get contact number
+      const response = await api.get('/field-teams/get-field-teams', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      console.log('Target Installing Team:', installingTeamName);
+
+      const fieldTeam = response.data.find(team =>
+        team.teamName?.trim().toLowerCase() === installingTeamName.trim().toLowerCase()
+      );
+      console.log('Found Field Team:', fieldTeam);
+
+      if (!fieldTeam || !fieldTeam.contactNumber) {
+        toast.error('Team contact number not found');
+        return;
+      }
+
+      let phoneNumber = fieldTeam.contactNumber;
+
+      // Clean and validate phone number
+      let cleanNumber = phoneNumber.toString().trim();
+      const hasPlus = cleanNumber.startsWith('+');
+      cleanNumber = cleanNumber.replace(/[^0-9]/g, '');
+      if (hasPlus && cleanNumber) cleanNumber = '+' + cleanNumber;
+
+      const digitsOnly = cleanNumber.replace(/\+/g, '');
+      if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+        toast.error('Invalid phone number format');
+        console.error('Invalid phone number:', phoneNumber, 'cleaned to:', cleanNumber);
+        return;
+      }
+
+      navigator.clipboard.writeText(formattedMessage).catch(() => { });
+
+      const whatsappUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(formattedMessage)}`;
+      window.open(whatsappUrl, '_blank');
+    } catch (error) {
+      console.error('Error fetching team data:', error);
+      toast.error('Failed to fetch team contact information');
+    }
   };
 
   return (

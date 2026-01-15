@@ -18,11 +18,15 @@ import {
   Email as EmailIcon,
   Close as CloseIcon,
   Language as LanguageIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material';
+import { TextField } from '@mui/material';
 import { toast } from 'sonner';
 
 const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, period = '', startDate = null, endDate = null }) => {
   const [tab, setTab] = useState(0);
+  const [managementName, setManagementName] = useState('Management');
+  const [managementNameAr, setManagementNameAr] = useState('الإدارة الموقرة');
 
   if (!data) return null;
 
@@ -42,10 +46,9 @@ const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, p
         : samplesData.reduce((sum, s) => sum + (s.sampleSize || 0), 0);
 
       const promoterCount = Math.max(0, totalSamples - (detractorCount + neutralCount));
-      const npsScore = promoterCount - detractorCount;
-
       const promotersPercent = totalSamples > 0 ? Math.round((promoterCount / totalSamples) * 100) : 0;
       const detractorsPercent = totalSamples > 0 ? Math.round((detractorCount / totalSamples) * 100) : 0;
+      const npsScore = promotersPercent - detractorsPercent;
 
       const targetPromoters = 75;
       const targetDetractors = 9;
@@ -67,11 +70,12 @@ const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, p
         : '';
 
       if (lang === 'en') {
-        return `Subject: Operations Performance Summary - QoS & Workforce Analytics
+        const greeting = `Dear ${managementName},`;
+        return `Subject: NPS & Workforce Analytics
 
-Dear Management,
+${greeting}
 
-Please find the high-level operations summary based on the latest field data.
+Please find attached the NPS analysis and high-level operations performance summary for the mentioned period, based on the latest field and workforce data.
 
 Reporting Period: ${dateStr} ${explicitDates}
 
@@ -94,11 +98,12 @@ Operational Insights:
 3. Risk Focus: "${topReason}" remains the primary reason for recorded violations.
 
 Best Regards,
-Operations Team`;
+Quality Team`;
       } else {
+        const greeting = `إلى ${managementNameAr}،`;
         return `الموضوع: ملخص أداء العمليات - تحليلات الجودة والقوى العاملة
 
-إلى الإدارة الموقرة،
+${greeting}
 
 نرفق لكم ملخصاً رفيع المستوى للعمليات بناءً على أحدث البيانات الميدانية.
 
@@ -150,9 +155,10 @@ Operations Team`;
         : '';
 
       if (lang === 'en') {
+        const greeting = `Dear ${managementName},`;
         return `Subject: Weekly Quality & Issue Prevention Performance Report
 
-Dear Management,
+${greeting}
 
 Please find the latest performance and issue prevention insights based on our analytics dashboard.
 
@@ -180,9 +186,10 @@ Actionable Insights:
 Best Regards,
 Quality Assurance Team`;
       } else {
+        const greeting = `إلى ${managementNameAr}،`;
         return `الموضوع: تقرير أداء الجودة ومنع تفاقم المشكلات
 
-إلى الإدارة الموقرة،
+${greeting}
 
 نرفق لكم أحدث نتائج تحليل الأداء ومنع تفاقم المشكلات بناءً على لوحة البيانات الخاصة بنا.
 
@@ -259,7 +266,29 @@ ${topReasons.map(([reason, count]) => `- ${reason}: ${count} حالة`).join('\n
           <Tab icon={<LanguageIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Arabic (العربية)" />
         </Tabs>
 
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ px: 3, pt: 2 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label={tab === 0 ? "Recipient Management Name" : "اسم الإدارة المستلمة"}
+            value={tab === 0 ? managementName : managementNameAr}
+            onChange={(e) => tab === 0 ? setManagementName(e.target.value) : setManagementNameAr(e.target.value)}
+            InputProps={{
+              startAdornment: <PersonIcon sx={{ color: 'primary.main', mr: 1, fontSize: 20 }} />,
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                color: '#fff',
+                '& fieldset': { borderColor: '#333' },
+                '&:hover fieldset': { borderColor: 'primary.main' },
+              },
+              '& .MuiInputLabel-root': { color: 'grey.500' },
+              mb: 2,
+            }}
+          />
+        </Box>
+
+        <Box sx={{ p: 3, pt: 0 }}>
           <Box
             component="pre"
             sx={{

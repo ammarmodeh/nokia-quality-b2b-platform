@@ -156,8 +156,6 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
             .sort((a, b) => (a.order || 0) - (b.order || 0))
             .map(opt => opt.value);
 
-          // Store these in state or just use them for the current render?
-          // Since countStatuses is outside, we might need to pass them or refactor countStatuses
           setTeamOptions(teamOptions);
         }
 
@@ -171,6 +169,11 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
       }
     };
     fetchCustomerIssues();
+
+    window.addEventListener('dashboard-refresh', handleRefresh);
+    return () => {
+      window.removeEventListener('dashboard-refresh', handleRefresh);
+    };
   }, []);
 
   const handleRefresh = async () => {

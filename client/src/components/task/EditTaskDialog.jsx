@@ -269,6 +269,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
 
       if (response.status === 200) {
         alert("Task updated successfully!");
+        window.dispatchEvent(new CustomEvent('dashboard-refresh'));
         handleTaskUpdate(response.data);  // This should update the parent component's state
         setOpen(false);
       }

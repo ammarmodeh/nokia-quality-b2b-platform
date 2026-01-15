@@ -89,6 +89,7 @@ const SubtaskManagementDialog = ({ open, onClose, taskId, onUpdate }) => {
   const saveSubtasks = async (updatedSubtasks) => {
     try {
       await api.put(`/tasks/update-subtask/${taskId}`, { subtasks: updatedSubtasks });
+      window.dispatchEvent(new CustomEvent('dashboard-refresh'));
       if (onUpdate) onUpdate(); // Refresh parent list if needed
     } catch (error) {
       console.error("Error updating subtasks:", error);

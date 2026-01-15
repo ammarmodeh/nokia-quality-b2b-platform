@@ -24,6 +24,7 @@ import {
   IconButton,
   TablePagination,
   Avatar,
+  Tooltip,
 } from '@mui/material';
 import {
   Chart as ChartJS,
@@ -31,7 +32,7 @@ import {
   LinearScale,
   BarElement,
   Title,
-  Tooltip,
+  Tooltip as ChartTooltip,
   Legend,
   ArcElement,
   PointElement,
@@ -48,6 +49,9 @@ import { FaEnvelope, FaLanguage } from 'react-icons/fa';
 import { alpha } from '@mui/material/styles';
 import { ReportedIssueCardDialog } from './ReportedIssueCardDialog';
 import { Email as EmailIconUI } from '@mui/icons-material';
+import api from '../api/api';
+import { toast } from 'sonner';
+import { FaWhatsapp } from 'react-icons/fa6';
 
 // Register ChartJS components
 ChartJS.register(
@@ -55,7 +59,7 @@ ChartJS.register(
   LinearScale,
   BarElement,
   Title,
-  Tooltip,
+  ChartTooltip,
   Legend,
   ArcElement,
   PointElement,
@@ -914,6 +918,98 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     setLogPage(0);
   };
 
+  const handleWhatsAppContact = async (issue) => {
+    // Build comprehensive message
+    let formattedMessage = `*🔔 Issue Report*\n\n`;
+
+    formattedMessage += `*SLID:* ${issue.slid}\n`;
+    if (issue.ticketId) formattedMessage += `*Ticket ID:* ${issue.ticketId}\n`;
+    formattedMessage += `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Open'}\n\n`;
+
+    formattedMessage += `*📍 Source & Team*\n`;
+    formattedMessage += `Team Company: ${issue.teamCompany}\n`;
+    formattedMessage += `Installing Team: ${issue.installingTeam || 'N/A'}\n`;
+    formattedMessage += `Assigned To: ${issue.assignedTo || 'Unassigned'}\n\n`;
+
+    formattedMessage += `*👤 Customer Info*\n`;
+    formattedMessage += `Name: ${issue.customerName || 'N/A'}\n`;
+    formattedMessage += `Contact: ${issue.customerContact || 'N/A'}\n\n`;
+
+    formattedMessage += `*🔍 Issue Details*\n`;
+    formattedMessage += `Categories: ${issue.issues?.map(i => i.category + (i.subCategory ? ` (${i.subCategory})` : '')).join(', ') || 'N/A'}\n`;
+    if (issue.reporterNote) formattedMessage += `Reporter Note: ${issue.reporterNote}\n`;
+    if (issue.assigneeNote) formattedMessage += `Assignee Note: ${issue.assigneeNote}\n`;
+    formattedMessage += `\n`;
+
+    formattedMessage += `*📅 Timeline*\n`;
+    formattedMessage += `Reported: ${new Date(issue.date).toLocaleDateString()}\n`;
+    if (issue.pisDate) formattedMessage += `PIS Date: ${new Date(issue.pisDate).toLocaleDateString()}\n`;
+    if (issue.dispatched === 'yes') {
+      formattedMessage += `Dispatched: ${issue.dispatchedAt ? new Date(issue.dispatchedAt).toLocaleDateString() : 'Yes'}\n`;
+    }
+
+    if (issue.solved === 'yes') {
+      formattedMessage += `\n*✅ Resolution*\n`;
+      if (issue.resolveDate) formattedMessage += `Resolved: ${new Date(issue.resolveDate).toLocaleDateString()}\n`;
+      if (issue.resolvedBy) formattedMessage += `Method: ${issue.resolvedBy}\n`;
+      if (issue.closedBy) formattedMessage += `Supervisor: ${issue.closedBy}\n`;
+      if (issue.closedAt) formattedMessage += `Closed: ${new Date(issue.closedAt).toLocaleDateString()}\n`;
+      if (issue.resolutionDetails) formattedMessage += `Details: ${issue.resolutionDetails}\n`;
+    }
+
+    const installingTeamName = issue.installingTeam;
+
+    if (!installingTeamName) {
+      toast.error('Installing team not specified');
+      return;
+    }
+
+    try {
+      console.log('Fetching field teams for WhatsApp contact...');
+      // Fetch field team data to get contact number
+      const response = await api.get('/field-teams/get-field-teams', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+
+      console.log('Target Installing Team:', installingTeamName);
+
+      const fieldTeam = response.data.find(team =>
+        team.teamName?.trim().toLowerCase() === installingTeamName.trim().toLowerCase()
+      );
+
+      console.log('Found Field Team:', fieldTeam);
+
+      if (!fieldTeam || !fieldTeam.contactNumber) {
+        toast.error('Team contact number not found');
+        return;
+      }
+
+      let phoneNumber = fieldTeam.contactNumber;
+
+      // Clean and validate phone number
+      let cleanNumber = phoneNumber.toString().trim();
+      const hasPlus = cleanNumber.startsWith('+');
+      cleanNumber = cleanNumber.replace(/[^0-9]/g, '');
+      if (hasPlus && cleanNumber) cleanNumber = '+' + cleanNumber;
+
+      const digitsOnly = cleanNumber.replace(/\+/g, '');
+      if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+        toast.error('Invalid phone number format');
+        console.error('Invalid phone number:', phoneNumber, 'cleaned to:', cleanNumber);
+        return;
+      }
+
+      navigator.clipboard.writeText(formattedMessage).catch(() => { });
+
+      const whatsappUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(formattedMessage)}`;
+      console.log('Opening WhatsApp URL:', whatsappUrl);
+      window.open(whatsappUrl, '_blank');
+    } catch (error) {
+      console.error('Error fetching team data:', error);
+      toast.error('Failed to fetch team contact information');
+    }
+  };
+
   return (
     <Box sx={{ width: '100%', mt: 2 }}>
       {/* Top Controls: Period Filter & Email Report */}
@@ -1361,6 +1457,20 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                               >
                                 View
                               </Button>
+                              {item.originalIssue?.installingTeam && (
+                                <Tooltip title="Contact Team via WhatsApp">
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleWhatsAppContact(item.originalIssue);
+                                    }}
+                                    sx={{ ml: 1, color: '#25D366', '&:hover': { backgroundColor: 'rgba(37, 211, 102, 0.1)' } }}
+                                  >
+                                    <FaWhatsapp size={16} />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
                             </td>
                           </tr>
                         )) : (
@@ -1965,6 +2075,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                       <th style={{ padding: '12px' }}>Sub-category</th>
                       <th style={{ padding: '12px' }}>Status</th>
                       <th style={{ padding: '12px' }}>Life (D)</th>
+                      <th style={{ padding: '12px', textAlign: 'center' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2001,6 +2112,22 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                               return cDate ? ((cDate - rDate) / (1000 * 60 * 60 * 24)).toFixed(1) : '-';
                             })()}
                           </Typography>
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          {issue.installingTeam && (
+                            <Tooltip title="Contact Team via WhatsApp">
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleWhatsAppContact(issue);
+                                }}
+                                sx={{ color: '#25D366', '&:hover': { backgroundColor: 'rgba(37, 211, 102, 0.1)' } }}
+                              >
+                                <FaWhatsapp size={16} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                         </td>
                       </tr>
                     ))}

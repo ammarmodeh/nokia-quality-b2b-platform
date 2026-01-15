@@ -175,10 +175,18 @@ export const AllReasonsTable = memo(({ tasks }) => {
 
   // Prepare Chart Data (Top 10)
   const chartData = useMemo(() => {
-    return sortedReasonViolations.slice(0, 10).map(item => ({
-      name: item.reason,
-      Violations: item.total
-    }));
+    return sortedReasonViolations.slice(0, 10).map(item => {
+      const validatedTasks = item.tasks.filter(t => t.validationStatus === "Validated").length;
+      const totalTasks = item.total;
+      const validationPercentage = totalTasks > 0 ? Math.round((validatedTasks / totalTasks) * 100) : 0;
+
+      return {
+        name: item.reason,
+        Violations: totalTasks,
+        Validated: validatedTasks,
+        ValidationRate: validationPercentage
+      };
+    });
   }, [sortedReasonViolations]);
 
   // Prepare rows for the DataGrid
@@ -564,6 +572,17 @@ export const AllReasonsTable = memo(({ tasks }) => {
                   ))}
                   <LabelList dataKey="Violations" position="top" style={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
                 </Bar>
+                <Bar dataKey="ValidationRate" radius={[4, 4, 0, 0]} barSize={isMobile ? 10 : 20}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-v-${index}`} fill={alpha(['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5], 0.4)} />
+                  ))}
+                  <LabelList
+                    dataKey="ValidationRate"
+                    position="top"
+                    formatter={(val) => `${val}%`}
+                    style={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }}
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </Paper>
@@ -708,6 +727,7 @@ export const AllReasonsTable = memo(({ tasks }) => {
                   flexWrap: 'wrap',
                   gap: 2
                 }}>
+                  <DetailRow label="Owner" value={task.responsible || 'N/A'} />
                   <DetailRow label="Team Name" value={task.teamName} />
                   <DetailRow label="Team Company" value={task.teamCompany} />
                   <DetailRow label="Interview Date" value={task.interviewDate ? new Date(task.interviewDate).toLocaleDateString('en-US', {

@@ -34,6 +34,7 @@ import DetailedSubtaskDialog from "./task/DetailedSubtaskDialog";
 import { MdClose } from "react-icons/md";
 import moment from "moment";
 import { RiFileExcel2Fill, RiProgress4Fill } from "react-icons/ri";
+import { toast } from 'sonner';
 
 const statusConfig = {
   Todo: { icon: <HourglassEmpty fontSize="small" className="text-yellow-600" />, color: "bg-yellow-100 text-yellow-800" },
@@ -323,15 +324,58 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
   };
 
   // Handle WhatsApp share button click
-  const handleWhatsAppShare = (task) => {
+  const handleWhatsAppShare = async (task) => {
+    let phoneNumber = task.teamId?.contactNumber;
+
+    // Fallback search if phone number not directly available
+    if (!phoneNumber && task.teamName) {
+      try {
+        const response = await api.get('/field-teams/get-field-teams', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+        });
+        const fieldTeam = response.data.find(team =>
+          team.teamName?.trim().toLowerCase() === task.teamName.trim().toLowerCase()
+        );
+        if (fieldTeam) phoneNumber = fieldTeam.contactNumber;
+      } catch (error) {
+        console.error('Error fetching team for contact:', error);
+      }
+    }
+
+    if (!phoneNumber) {
+      toast.error('No contact number found for this team');
+      // Prompt user to update team? Or just fallback to no number?
+      // Fallback to opening WhatsApp without number for now, but warned
+    } else {
+      // Clean and validate phone number
+      let cleanNumber = phoneNumber.toString().trim();
+      const hasPlus = cleanNumber.startsWith('+');
+      cleanNumber = cleanNumber.replace(/[^0-9]/g, '');
+      if (hasPlus && cleanNumber) cleanNumber = '+' + cleanNumber;
+
+      const digitsOnly = cleanNumber.replace(/\+/g, '');
+      if (digitsOnly.length >= 10 && digitsOnly.length <= 15) {
+        phoneNumber = cleanNumber;
+      } else {
+        toast.error('Invalid phone number format');
+        phoneNumber = null;
+      }
+    }
+
+
     const formattedFields = formatTaskForCopy(task);
-    let message = 'Task Details:\n\n';
+    let message = `*🔔 Task Details - ${task.slid}*\n\n`;
 
     formattedFields.forEach(field => {
+      // Exclude internal IDs or long technical fields if desired, but for now keep all as "Details"
+      if (field.displayName === 'Team ID') return;
       message += `*${field.displayName}:* ${field.value}\n`;
     });
 
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = phoneNumber
+      ? `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+
     window.open(whatsappUrl, '_blank');
   };
 
