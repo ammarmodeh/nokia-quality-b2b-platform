@@ -41,7 +41,7 @@ import {
 } from 'chart.js';
 import { Bar, Doughnut, Line, Pie } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
-import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport, FaInfoCircle } from 'react-icons/fa';
 import { utils, writeFile } from 'xlsx';
 import ViewIssueDetailsDialog from './ViewIssueDetailsDialog';
 import ManagementEmailDialog from './ManagementEmailDialog';
@@ -214,7 +214,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         pendingBottlenecks.push({
           slid: issue.slid,
           age: currentAge.toFixed(1),
-          stage: issue.dispatched === 'no' ? 'Pending (Dispatching)' : 'In Progress (Field Work)',
+          stage: issue.dispatched === 'no' ? 'Awaiting Dispatch' : 'In Progress (Dispatched)',
           assignedTo: issue.assignedTo || 'Unassigned',
           supervisor: issue.closedBy || 'Unassigned',
           reportDate: issue.date || issue.createdAt,
@@ -923,6 +923,9 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     let formattedMessage = `*🔔 Issue Report*\n\n`;
 
     formattedMessage += `*SLID:* ${issue.slid}\n`;
+    formattedMessage += `*👤 Customer Info*\n`;
+    formattedMessage += `Name: ${issue.customerName || 'N/A'}\n`;
+    formattedMessage += `Contact: ${issue.customerContact || 'N/A'}\n`;
     if (issue.ticketId) formattedMessage += `*Ticket ID:* ${issue.ticketId}\n`;
     formattedMessage += `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Open'}\n\n`;
 
@@ -930,10 +933,6 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     formattedMessage += `Team Company: ${issue.teamCompany}\n`;
     formattedMessage += `Installing Team: ${issue.installingTeam || 'N/A'}\n`;
     formattedMessage += `Assigned To: ${issue.assignedTo || 'Unassigned'}\n\n`;
-
-    formattedMessage += `*👤 Customer Info*\n`;
-    formattedMessage += `Name: ${issue.customerName || 'N/A'}\n`;
-    formattedMessage += `Contact: ${issue.customerContact || 'N/A'}\n\n`;
 
     formattedMessage += `*🔍 Issue Details*\n`;
     formattedMessage += `Categories: ${issue.issues?.map(i => i.category + (i.subCategory ? ` (${i.subCategory})` : '')).join(', ') || 'N/A'}\n`;
@@ -1192,11 +1191,56 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                           <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#f59e0b' }} />
                         </Box>
                       </th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Rate</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Dispatch</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Resol.</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Life</th>
-                      <th style={{ padding: '16px 24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Aging</th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                          Rate
+                          <Tooltip title="Resolution Rate (%): Percentage of closed issues out of total assigned." arrow>
+                            <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
+                              <FaInfoCircle size={10} style={{ opacity: 0.6 }} />
+                            </Box>
+                          </Tooltip>
+                        </Box>
+                      </th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                          Dispatch
+                          <Tooltip title="Avg. Dispatch Speed (Days): Average time taken from report date to issue dispatch." arrow>
+                            <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
+                              <FaInfoCircle size={10} style={{ opacity: 0.6 }} />
+                            </Box>
+                          </Tooltip>
+                        </Box>
+                      </th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                          Resol.
+                          <Tooltip title="Avg. Field Resolution Speed (Days): Average time taken from dispatch to field resolution." arrow>
+                            <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
+                              <FaInfoCircle size={10} style={{ opacity: 0.6 }} />
+                            </Box>
+                          </Tooltip>
+                        </Box>
+                      </th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                          Life
+                          <Tooltip title="Avg. Total Lifecycle (Days): Total duration from report date to final closure (or now if open)." arrow>
+                            <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
+                              <FaInfoCircle size={10} style={{ opacity: 0.6 }} />
+                            </Box>
+                          </Tooltip>
+                        </Box>
+                      </th>
+                      <th style={{ padding: '16px 24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                          Aging
+                          <Tooltip title="Aging Bottlenecks: Count of undispatched issues pending for more than 1 day." arrow>
+                            <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
+                              <FaInfoCircle size={10} style={{ opacity: 0.6 }} />
+                            </Box>
+                          </Tooltip>
+                        </Box>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

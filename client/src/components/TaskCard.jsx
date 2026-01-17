@@ -93,6 +93,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
           : `${Math.floor(Math.abs(remainingMinutes) / 1440)} days, ${Math.floor((Math.abs(remainingMinutes) % 1440) / 60)} hours, ${Math.abs(remainingMinutes % 60)} minutes overdue`
         : "Not specified"}
       **Category**: ${task.category || "Not specified"}
+      **Field Team**: ${task.teamName || "N/A"} (${task.teamCompany || "N/A"})
       **Assigned To**: ${assignedUsers.map((user) => user.name).join(", ") || "No assignees"}`;
 
     navigator.clipboard.writeText(formattedMessage).then(() => {
@@ -274,6 +275,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                 )}
               </p>
               <p><span className="font-medium text-[#bdb5b5]">Category:</span> {task?.category}</p>
+              <p><span className="font-medium text-[#bdb5b5]">Field Team:</span> {task?.teamName || "N/A"} ({task?.teamCompany || "N/A"})</p>
               <p><span className="font-medium text-[#bdb5b5]">Operation:</span> {task?.operation || 'N/A'}</p>
             </div>
 

@@ -70,6 +70,7 @@ const AssignedToMeTaskCard = ({
       **Due Date**: ${formattedDate}
       **Remaining Time**: ${remainingMinutes > 0 ? `${Math.floor(remainingMinutes / 1440)} days, ${Math.floor((remainingMinutes % 1440) / 60)} hours, ${remainingMinutes % 60} minutes left` : `${Math.floor(Math.abs(remainingMinutes) / 1440)} days, ${Math.floor((Math.abs(remainingMinutes) % 1440) / 60)} hours, ${Math.abs(remainingMinutes) % 60} minutes overdue`}
       **Category**: ${task.category}
+      **Field Team**: ${task.teamName || "N/A"} (${task.teamCompany || "N/A"})
       **Assigned To**: ${assignedUsers.map(user => user.name).join(", ")}
       **Progress**: ${(100 / subtasks.length) * activeStep}%
       **Subtasks**:
@@ -396,6 +397,7 @@ const AssignedToMeTaskCard = ({
                 </span>
               )}</p>
               <p><span className="font-medium text-[#bdb5b5]">Category:</span> {task?.category}</p>
+              <p><span className="font-medium text-[#bdb5b5]">Field Team:</span> {task?.teamName || "N/A"} ({task?.teamCompany || "N/A"})</p>
               <p><span className="font-medium text-[#bdb5b5]">Operation:</span> {task?.operation || 'N/A'}</p>
             </div>
 

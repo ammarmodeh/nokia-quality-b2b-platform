@@ -111,11 +111,15 @@ const FieldTeamForm = () => {
       if (response.status === 201) {
         alert('Team information submitted successfully!');
         setUpdateState((prev) => !prev);
+        return true; // Success
       } else {
-        setErrorMessage('There was an error submitting the information.');
+        setErrorMessage(response.data.error || 'There was an error submitting the information.');
+        return false; // Failure
       }
     } catch (error) {
-      setErrorMessage('There was an error submitting the information.');
+      const errorMsg = error.response?.data?.error || 'There was an error submitting the information.';
+      setErrorMessage(errorMsg);
+      return false; // Failure
     } finally {
       setLoading(false);
     }
@@ -262,8 +266,10 @@ const FieldTeamForm = () => {
       teamCode: data.teamCode,
       fsmSerialNumber: data.fsmSerialNumber || 'N/A',
       laptopSerialNumber: data.laptopSerialNumber || 'N/A',
+      forceRegenerateQuizCode: data.forceRegenerateQuizCode,
     };
 
+    console.log("Submitting team update:", updatedData);
     try {
       const response = await api.put(`/field-teams/update-field-team/${editTeam._id}`, updatedData, {
         headers: {
@@ -272,6 +278,7 @@ const FieldTeamForm = () => {
       });
 
       if (response.status === 200) {
+        let tasksUpdatedCount = 0;
         try {
           const updateTasksResponse = await api.put(
             `/tasks/update-tasks-by-team-id/${editTeam._id}`,
@@ -282,23 +289,24 @@ const FieldTeamForm = () => {
               },
             }
           );
-
-          alert('Team information updated successfully!' +
-            (updateTasksResponse.data.updatedCount > 0
-              ? ` ${updateTasksResponse.data.updatedCount} related tasks were also updated.`
-              : ' No related tasks needed updating.')
-          );
-
-          setUpdateState((prev) => !prev);
-          setOpenEditDialog(false);
+          tasksUpdatedCount = updateTasksResponse.data.updatedCount;
         } catch (taskError) {
-          alert('Team information updated successfully, but there was an error updating related tasks.');
+          console.error("Error updating related tasks:", taskError);
         }
+
+        alert('Team information updated successfully!' +
+          (tasksUpdatedCount > 0
+            ? ` ${tasksUpdatedCount} related tasks were also updated.`
+            : ' No related tasks needed updating.')
+        );
+
+        setUpdateState((prev) => !prev);
+        setOpenEditDialog(false);
       } else {
-        setErrorMessage('There was an error updating the information.');
+        setErrorMessage(response.data.message || response.data.error || 'There was an error updating the information.');
       }
     } catch (error) {
-      setErrorMessage('There was an error updating the information.');
+      setErrorMessage(error.response?.data?.message || error.response?.data?.error || 'There was an error updating the information.');
     } finally {
       setLoading(false);
     }
@@ -467,8 +475,15 @@ const FieldTeamForm = () => {
 
   // Memoize filtered teams
   const filteredTeams = useMemo(() => {
+    if (!searchText) return teams;
+    const lowerSearch = searchText.toLowerCase();
     return teams.filter(team =>
-      team.teamName && team.teamName.toLowerCase().includes(searchText.toLowerCase())
+      (team.teamName && team.teamName.toLowerCase().includes(lowerSearch)) ||
+      (team.teamCode && team.teamCode.toLowerCase().includes(lowerSearch)) ||
+      (team.teamCompany && team.teamCompany.toLowerCase().includes(lowerSearch)) ||
+      (team.contactNumber && team.contactNumber.toLowerCase().includes(lowerSearch)) ||
+      (team.firstName && team.firstName.toLowerCase().includes(lowerSearch)) ||
+      (team.surname && team.surname.toLowerCase().includes(lowerSearch))
     );
   }, [teams, searchText]);
 
@@ -890,6 +905,7 @@ const FieldTeamForm = () => {
           onClose={() => setOpenEditDialog(false)}
           team={editTeam}
           onSubmit={onEditSubmit}
+          loading={loading}
           errorMessage={errorMessage}
         />
 
@@ -1325,14 +1341,12 @@ const FieldTeamForm = () => {
             View State Logs
           </MenuItem>
 
+          {user.role === 'Admin' && <Divider sx={{ borderColor: '#333', my: 0.5 }} />}
           {user.role === 'Admin' && (
-            <>
-              <Divider sx={{ borderColor: '#333', my: 0.5 }} />
-              <MenuItem onClick={() => { handleDeleteClick(menuTeam); handleMenuClose(); }} sx={{ color: '#f44336' }}>
-                <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: '#f44336' }} /></ListItemIcon>
-                Delete Team permanently
-              </MenuItem>
-            </>
+            <MenuItem onClick={() => { handleDeleteClick(menuTeam); handleMenuClose(); }} sx={{ color: '#f44336' }}>
+              <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: '#f44336' }} /></ListItemIcon>
+              Delete Team permanently
+            </MenuItem>
           )}
         </Menu>
 

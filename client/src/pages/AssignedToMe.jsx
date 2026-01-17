@@ -210,10 +210,15 @@ const AssignedToMe = () => {
     let filtered = source;
 
     if (term) {
+      const lowerTerm = term.toLowerCase();
       filtered = source.filter((task) =>
-        task.slid?.toLowerCase().includes(term.toLowerCase()) ||
-        task.customerName?.toLowerCase().includes(term.toLowerCase()) ||
-        task.governorate?.toLowerCase().includes(term.toLowerCase())
+        task.slid?.toLowerCase().includes(lowerTerm) ||
+        task.customerName?.toLowerCase().includes(lowerTerm) ||
+        task.governorate?.toLowerCase().includes(lowerTerm) ||
+        task.teamName?.toLowerCase().includes(lowerTerm) ||
+        task.teamCompany?.toLowerCase().includes(lowerTerm) ||
+        task.category?.toLowerCase().includes(lowerTerm) ||
+        task.priority?.toLowerCase().includes(lowerTerm)
       );
     }
 
@@ -323,6 +328,17 @@ const AssignedToMe = () => {
   // --- Columns for DataGrid ---
   const columns = [
     { field: 'slid', headerName: 'SLID', width: 120, renderCell: (params) => <Typography fontWeight="bold" color="primary">{params.value}</Typography> },
+    {
+      field: 'teamName',
+      headerName: 'Field Team',
+      width: 180,
+      renderCell: (params) => (
+        <Box>
+          <Typography variant="body2" fontWeight="600">{params.row.teamName || "N/A"}</Typography>
+          <Typography variant="caption" color="textSecondary">{params.row.teamCompany}</Typography>
+        </Box>
+      )
+    },
     { field: 'customerName', headerName: 'Customer Name', flex: 1, minWidth: 150 },
     { field: 'governorate', headerName: 'Governorate', width: 130 },
     {

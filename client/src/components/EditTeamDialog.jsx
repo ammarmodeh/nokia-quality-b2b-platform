@@ -23,12 +23,13 @@ import { AccountCircle, Phone } from '@mui/icons-material';
 import api from '../api/api';
 import { useEffect, useState } from 'react';
 
-const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
+const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useSelector((state) => state.auth);
   const { register, handleSubmit, reset } = useForm();
   const [fieldTeamsCompany, setFieldTeamsCompany] = useState([]);
+  const [forceRegenerate, setForceRegenerate] = useState(false);
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -47,6 +48,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
   // Reset form when team data changes
   React.useEffect(() => {
     if (team) {
+      setForceRegenerate(false);
       reset({
         firstName: team.firstName || team.teamName.split(' ')[0] || '',
         secondName: team.secondName || team.teamName.split(' ')[1] || '',
@@ -60,6 +62,11 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
       });
     }
   }, [team, reset]);
+
+  const handleFormSubmit = (data) => {
+    console.log("EditTeamDialog: Submitting with data:", data, "forceRegenerate:", forceRegenerate);
+    onSubmit({ ...data, forceRegenerateQuizCode: forceRegenerate });
+  };
 
   return (
     <Dialog
@@ -80,7 +87,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
         }
       }}
     >
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleSubmit(handleFormSubmit)}>
         <DialogTitle sx={{
           backgroundColor: '#111',
           color: '#ffffff',
@@ -220,8 +227,8 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
             <TextField
               label="Team Code / Team ID"
               variant="outlined"
-              {...register('teamCode')}
-              helperText="Changing this will regenerate the Quiz Code"
+              {...register('teamCode', { required: 'Team code is required' })}
+              helperText="Changing this will automatically regenerate the Quiz Code"
               FormHelperTextProps={{ sx: { color: '#666' } }}
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -234,6 +241,46 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
               InputProps={{ style: { color: '#ffffff' } }}
               InputLabelProps={{ style: { color: '#888' }, shrink: true }}
             />
+
+            <Box sx={{ position: 'relative' }}>
+              <TextField
+                label="Current Quiz Code"
+                variant="outlined"
+                fullWidth
+                value={forceRegenerate ? "GENERATING NEW CODE..." : (team?.quizCode || 'N/A')}
+                disabled
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: '#1a1a1a',
+                    '& fieldset': { borderColor: forceRegenerate ? '#7b68ee' : '#333' },
+                    '&.Mui-disabled fieldset': { borderColor: forceRegenerate ? '#7b68ee' : '#222' },
+                  },
+                }}
+                InputProps={{
+                  style: { color: forceRegenerate ? '#7b68ee' : '#aaa', fontStyle: forceRegenerate ? 'italic' : 'normal', fontWeight: forceRegenerate ? 'bold' : 'normal' },
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setForceRegenerate(!forceRegenerate)}
+                        sx={{
+                          color: forceRegenerate ? '#fff' : '#7b68ee',
+                          borderColor: forceRegenerate ? '#7b68ee' : '#7b68ee',
+                          bgcolor: forceRegenerate ? '#7b68ee' : 'transparent',
+                          '&:hover': { bgcolor: forceRegenerate ? '#6652e0' : 'rgba(123, 104, 238, 0.1)' },
+                          textTransform: 'none',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        {forceRegenerate ? "Cancel" : "Regenerate"}
+                      </Button>
+                    </InputAdornment>
+                  )
+                }}
+                InputLabelProps={{ style: { color: '#666' }, shrink: true }}
+              />
+            </Box>
 
             <FormControl fullWidth>
               <InputLabel shrink sx={{ color: '#888', '&.Mui-focused': { color: '#7b68ee' } }}>
@@ -333,15 +380,17 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, errorMessage }) => {
             type="submit"
             variant="contained"
             disableElevation
+            disabled={loading}
             sx={{
               backgroundColor: '#7b68ee',
               color: '#fff',
               px: 4,
               py: 1,
-              '&:hover': { backgroundColor: '#6652e0' }
+              '&:hover': { backgroundColor: '#6652e0' },
+              '&.Mui-disabled': { backgroundColor: '#333', color: '#666' }
             }}
           >
-            Save Changes
+            {loading ? 'Saving Changes...' : 'Save Changes'}
           </Button>
         </DialogActions>
       </form>

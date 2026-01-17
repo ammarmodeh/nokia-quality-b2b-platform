@@ -131,6 +131,9 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
 
     return `*🔔 Issue Report*\n\n` +
       `*SLID:* ${issue.slid}\n` +
+      `*👤 Customer Info*\n` +
+      `Customer Name: ${issue.customerName || 'N/A'}\n` +
+      `Customer Contact: ${issue.customerContact || 'N/A'}\n` +
       `*PIS Date:* ${format(new Date(issue.pisDate), 'MMM dd, yyyy')}\n` +
       `*Report Date:* ${format(new Date(issue.date), 'MMM dd, yyyy')}\n` +
       `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Unresolved'}\n\n` +
@@ -181,9 +184,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
     <Dialog
       open={open}
       onClose={onClose}
-      fullWidth
-      maxWidth="md"
-      fullScreen={isMobile}
+      fullScreen
       sx={{
         "& .MuiDialog-paper": {
           backgroundColor: '#2d2d2d',

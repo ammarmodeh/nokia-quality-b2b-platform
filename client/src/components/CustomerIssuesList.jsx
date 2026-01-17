@@ -411,6 +411,9 @@ const CustomerIssuesList = () => {
     let formattedMessage = `*🔔 Issue Report*\n\n`;
 
     formattedMessage += `*SLID:* ${issue.slid}\n`;
+    formattedMessage += `*👤 Customer Info*\n`;
+    formattedMessage += `Name: ${issue.customerName || 'N/A'}\n`;
+    formattedMessage += `Contact: ${issue.customerContact || 'N/A'}\n`;
     if (issue.ticketId) formattedMessage += `*Ticket ID:* ${issue.ticketId}\n`;
     formattedMessage += `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Open'}\n\n`;
 
@@ -418,10 +421,6 @@ const CustomerIssuesList = () => {
     formattedMessage += `Team Company: ${issue.teamCompany}\n`;
     formattedMessage += `Installing Team: ${issue.installingTeam || 'N/A'}\n`;
     formattedMessage += `Assigned To: ${issue.assignedTo || 'Unassigned'}\n\n`;
-
-    formattedMessage += `*👤 Customer Info*\n`;
-    formattedMessage += `Name: ${issue.customerName || 'N/A'}\n`;
-    formattedMessage += `Contact: ${issue.customerContact || 'N/A'}\n\n`;
 
     formattedMessage += `*🔍 Issue Details*\n`;
     formattedMessage += `Categories: ${issue.issues?.map(i => i.category + (i.subCategory ? ` (${i.subCategory})` : '')).join(', ') || 'N/A'}\n`;

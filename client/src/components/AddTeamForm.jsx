@@ -21,7 +21,7 @@ import { AccountCircle, Phone, Add } from '@mui/icons-material';
 import api from '../api/api';
 import { useEffect, useState } from 'react';
 
-const AddTeamForm = ({ onAddTeam, loading }) => {
+const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -42,9 +42,11 @@ const AddTeamForm = ({ onAddTeam, loading }) => {
     fetchCompanies();
   }, []);
 
-  const onSubmit = (data) => {
-    onAddTeam(data);
-    reset();
+  const onSubmit = async (data) => {
+    const success = await onAddTeam(data);
+    if (success) {
+      reset();
+    }
   };
 
   const sharedInputSx = {
@@ -146,6 +148,23 @@ const AddTeamForm = ({ onAddTeam, loading }) => {
           <TextField label="Laptop Serial" size="small" {...register('laptopSerialNumber')} sx={sharedInputSx} />
         </Box>
       </Stack>
+
+      {errorMessage && (
+        <Box sx={{
+          mt: 2,
+          p: 1.5,
+          bgcolor: 'rgba(244, 67, 54, 0.1)',
+          border: '1px solid #f44336',
+          borderRadius: 2
+        }}>
+          <Typography variant="caption" sx={{ color: '#ffb74d', fontWeight: 600, display: 'block' }}>
+            Submission Error:
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#fff' }}>
+            {errorMessage}
+          </Typography>
+        </Box>
+      )}
 
       <Button
         type="submit"

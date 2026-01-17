@@ -178,31 +178,46 @@ export const addFieldTeam = async (req, res) => {
   try {
     const { teamName, firstName, secondName, thirdName, surname, teamCompany, contactNumber, fsmSerialNumber, laptopSerialNumber, teamCode } = req.body;
 
-    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const randomLetters = Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
-    const quizCode = `${randomLetters}${teamCode}`;
+    if (!teamCode) return res.status(400).json({ error: "Team ID/Code is required" });
+    if (!teamName) return res.status(400).json({ error: "Team Name is required" });
+    if (!teamCompany) return res.status(400).json({ error: "Team Company is required" });
+    if (!contactNumber) return res.status(400).json({ error: "Contact Number is required" });
 
-    if (!teamName || !teamCompany || !contactNumber || !teamCode) {
-      return res.status(400).json({ error: "Missing required fields: teamName, teamCompany, contactNumber, or teamCode" });
+    // Uniqueness check for teamCode
+    const existingCode = await FieldTeamsSchema.findOne({ teamCode: teamCode.trim() });
+    if (existingCode) {
+      return res.status(400).json({ error: `Team Code '${teamCode}' already exists.` });
     }
 
-    // Generate Password: FirstName + Surname + TeamCode
-    const rawPassword = `${firstName.trim()}${surname.trim()}${teamCode.trim()}`;
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const randomLetters = Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
+    const quizCode = `${randomLetters}${teamCode.trim()}`;
+
+    // Generate Password: FirstName + Surname + TeamCode (Safe handling)
+    const fName = (firstName || "").trim();
+    const sName = (surname || "").trim();
+    const tCode = teamCode.trim();
+
+    if (!fName || !sName) {
+      return res.status(400).json({ error: "First Name and Surname are required to generate the security profile." });
+    }
+
+    const rawPassword = `${fName}${sName}${tCode}`;
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(rawPassword, salt);
 
     const newFieldTeam = new FieldTeamsSchema({
-      teamName,
-      firstName,
-      secondName,
-      thirdName,
-      surname,
-      teamCompany,
-      contactNumber,
+      teamName: teamName.trim(),
+      firstName: fName,
+      secondName: (secondName || "").trim(),
+      thirdName: (thirdName || "").trim(),
+      surname: sName,
+      teamCompany: teamCompany.trim(),
+      contactNumber: contactNumber.trim(),
       fsmSerialNumber: fsmSerialNumber || 'N/A',
       laptopSerialNumber: laptopSerialNumber || 'N/A',
       quizCode,
-      teamCode,
+      teamCode: tCode,
       password: hashedPassword,
       canTakeQuiz: false,
       isActive: true,
@@ -213,10 +228,19 @@ export const addFieldTeam = async (req, res) => {
     await newFieldTeam.save();
     res.status(201).json(newFieldTeam);
   } catch (error) {
-    if (error.code === 11000) { // Duplicate key error
-      return res.status(400).json({ error: "Team Code must be unique." });
+    console.error("Error adding field team:", error);
+
+    // Handle specific Mongoose validation errors (e.g., phone format mismatch)
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).json({ error: messages.join(', ') });
     }
-    res.status(500).json({ error: "Internal server error: " + error.message });
+
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({ error: `${field} must be unique.` });
+    }
+    res.status(500).json({ error: "Server Error: " + error.message });
   }
 };
 
@@ -411,7 +435,8 @@ export const deleteFieldTeam = async (req, res) => {
 export const updateFieldTeam = async (req, res) => {
   try {
     const teamId = req.params.id;
-    const { teamCode } = req.body;
+    const { teamCode, forceRegenerateQuizCode } = req.body;
+    console.log(`Updating Field Team ${teamId}. forceRegenerateQuizCode: ${forceRegenerateQuizCode}, teamCode: ${teamCode}`);
 
     const team = await FieldTeamsSchema.findById(teamId);
     if (!team) {
@@ -419,31 +444,38 @@ export const updateFieldTeam = async (req, res) => {
     }
 
     const updates = { ...req.body };
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const generateRandomLetters = () => Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
 
     // Check if teamCode is being updated and is different
-    if (teamCode && teamCode !== team.teamCode) {
+    if (teamCode && teamCode.trim() !== team.teamCode) {
+      const cleanTeamCode = teamCode.trim();
       // Check for uniqueness
-      const existingTeam = await FieldTeamsSchema.findOne({ teamCode });
+      const existingTeam = await FieldTeamsSchema.findOne({ teamCode: cleanTeamCode, _id: { $ne: teamId } });
       if (existingTeam) {
-        return res.status(400).json({ message: "Team Code already exists." });
+        return res.status(400).json({ error: `Team Code '${cleanTeamCode}' already exists.` });
       }
 
-      // Regenerate Quiz Code: 4 random letters + new teamCode
-      const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-      const randomLetters = Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
-      updates.quizCode = `${randomLetters}${teamCode}`;
+      updates.teamCode = cleanTeamCode;
+      // Automatically regenerate Quiz Code if teamCode changes
+      updates.quizCode = `${generateRandomLetters()}${cleanTeamCode}`;
+    } else if (forceRegenerateQuizCode) {
+      // Manually regenerate Quiz Code if requested even if teamCode is the same
+      updates.quizCode = `${generateRandomLetters()}${team.teamCode}`;
     }
 
     const updatedFieldTeam = await FieldTeamsSchema.findByIdAndUpdate(teamId, updates, {
       new: true,
+      runValidators: true
     });
 
     res.status(200).json(updatedFieldTeam);
   } catch (error) {
+    console.error("Error updating field team:", error);
     if (error.code === 11000) {
-      return res.status(400).json({ message: "Team Code must be unique." });
+      return res.status(400).json({ error: "Team Code must be unique." });
     }
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Server Error: " + error.message });
   }
 };
 

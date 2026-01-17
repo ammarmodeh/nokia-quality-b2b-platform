@@ -57,8 +57,8 @@ const ManagedAutocomplete = ({
       loading={loading}
       value={value}
       onChange={(event, newValue) => onChange(newValue)}
-      onInputChange={(event, newInputValue) => {
-        if (freeSolo) {
+      onInputChange={(event, newInputValue, reason) => {
+        if (freeSolo && reason === 'input') {
           onChange(newInputValue);
         }
       }}

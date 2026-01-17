@@ -106,7 +106,6 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
       field: 'reason',
       headerName: 'Violation Reason',
       width: 200,
-      width: 200,
       flex: 1,
     },
     {
