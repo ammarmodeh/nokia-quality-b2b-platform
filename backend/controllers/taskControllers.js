@@ -501,9 +501,13 @@ export const getTasks = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus } = req.query;
+    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus, teamId } = req.query;
 
     const mongoQuery = { isDeleted: false };
+
+    if (teamId && teamId !== 'all') {
+      mongoQuery.teamId = teamId;
+    }
 
     if (priority && priority !== 'all') {
       mongoQuery.priority = priority;
@@ -600,12 +604,16 @@ export const getDetractorTasksPaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus } = req.query;
+    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus, teamId } = req.query;
 
     const mongoQuery = {
       isDeleted: false,
       evaluationScore: { $gte: 1, $lte: 6 }
     };
+
+    if (teamId && teamId !== 'all') {
+      mongoQuery.teamId = teamId;
+    }
 
     if (priority && priority !== 'all') {
       mongoQuery.priority = priority;
@@ -640,7 +648,11 @@ export const getDetractorTasksPaginated = async (req, res) => {
     }
 
     if (validationStatus && validationStatus !== 'all') {
-      mongoQuery.validationStatus = validationStatus;
+      if (validationStatus === 'Pending') {
+        mongoQuery.validationStatus = { $ne: 'Validated' };
+      } else {
+        mongoQuery.validationStatus = validationStatus;
+      }
     }
 
     if (search) {
@@ -700,12 +712,16 @@ export const getNeutralTasksPaginated = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
-    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus } = req.query;
+    const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus, teamId } = req.query;
 
     const mongoQuery = {
       isDeleted: false,
       evaluationScore: { $gte: 7, $lte: 8 }
     };
+
+    if (teamId && teamId !== 'all') {
+      mongoQuery.teamId = teamId;
+    }
 
     if (priority && priority !== 'all') {
       mongoQuery.priority = priority;
@@ -740,7 +756,11 @@ export const getNeutralTasksPaginated = async (req, res) => {
     }
 
     if (validationStatus && validationStatus !== 'all') {
-      mongoQuery.validationStatus = validationStatus;
+      if (validationStatus === 'Pending') {
+        mongoQuery.validationStatus = { $ne: 'Validated' };
+      } else {
+        mongoQuery.validationStatus = validationStatus;
+      }
     }
 
     if (search) {
@@ -1326,7 +1346,7 @@ export const getIssuePreventionStats = async (req, res) => {
 
     // 1. Fetch all Detractor and Neutral tasks (score <= 8)
     const criticalTasks = await TaskSchema.find(query)
-      .select('slid evaluationScore customerFeedback createdAt interviewDate status teamName teamCompany subReason rootCause reason requestNumber operation customerName contactNumber tarrifName customerType governorate district priority validationStatus assignedTo subTasks')
+      .select('slid evaluationScore customerFeedback createdAt interviewDate pisDate status teamName teamCompany subReason rootCause reason requestNumber operation customerName contactNumber tarrifName customerType governorate district priority validationStatus assignedTo subTasks')
       .populate('assignedTo', 'name email');
 
     const taskSlids = criticalTasks.map(t => t.slid);
@@ -1335,7 +1355,7 @@ export const getIssuePreventionStats = async (req, res) => {
     // distinct issues categories
     const priorReports = await CustomerIssueSchema.find({
       slid: { $in: taskSlids }
-    }).select('slid fromMain reporter reporterNote createdAt date solved issues resolveDate closedAt dispatched dispatchedAt closedBy');
+    }).select('slid fromMain fromSub reporter reporterNote createdAt date solved issues resolveDate closedAt dispatched dispatchedAt closedBy');
 
     // 3. Aggregate data
     const overlaps = criticalTasks.map(task => {
@@ -1352,6 +1372,19 @@ export const getIssuePreventionStats = async (req, res) => {
     // 4. Source Breakdown
     const sourceBreakdown = priorReports.reduce((acc, report) => {
       const source = report.fromMain || 'Unknown';
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {});
+
+    // 4b. Overlap Source Breakdowns (Crucial for KPI Card)
+    const overlapMainBreakdown = overlaps.reduce((acc, item) => {
+      const source = item.reports[0]?.fromMain || 'Unknown';
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {});
+
+    const overlapSubBreakdown = overlaps.reduce((acc, item) => {
+      const source = item.reports[0]?.fromSub || 'Unknown';
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {});
@@ -1541,6 +1574,21 @@ export const getIssuePreventionStats = async (req, res) => {
       });
     });
 
+    const globalCategoryReasonMatrix = overlaps.reduce((acc, item) => {
+      const taskReason = item.task.reason || "Unknown Task Reason";
+      item.reports.forEach(report => {
+        const reportedCategories = report.issues && report.issues.length > 0
+          ? report.issues.map(i => i.category)
+          : ["No Category"];
+
+        reportedCategories.forEach(cat => {
+          if (!acc[cat]) acc[cat] = {};
+          acc[cat][taskReason] = (acc[cat][taskReason] || 0) + 1;
+        });
+      });
+      return acc;
+    }, {});
+
     const reporterComparisonStats = Object.values(reporterComparisonMap)
       .sort((a, b) => b.totalNonPrevented - a.totalNonPrevented)
       .slice(0, 10);
@@ -1548,8 +1596,11 @@ export const getIssuePreventionStats = async (req, res) => {
     const stats = {
       totalCriticalTasks: criticalTasks.length,
       reportedOverlapCount: overlaps.length,
+      overlapMainBreakdown,
+      overlapSubBreakdown,
       sourceBreakdown,
       reporterStats,
+      globalCategoryReasonMatrix,
       trendData,
       reasonStats,
       companyStats,

@@ -56,10 +56,8 @@ export const DataTable = ({ groupedData }) => {
     };
 
     const getNPSStatus = (nps) => {
-      if (nps >= 66) return { label: 'Target Met', color: '#10b981' };
-      if (nps >= 50) return { label: 'Good', color: '#f59e0b' };
-      if (nps >= 0) return { label: 'Fair', color: '#fb923c' };
-      return { label: 'Poor', color: '#ef4444' };
+      if (nps >= 66) return { label: 'Met Target', color: '#10b981' };
+      return { label: 'Out of Target', color: '#ef4444' };
     };
 
     const npsStatus = getNPSStatus(npsValue);

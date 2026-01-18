@@ -471,7 +471,13 @@ const AssignedNeutral = () => {
             <Box textAlign="center" py={10}><Typography variant="h6" color="textSecondary">No tasks found</Typography></Box>
           ) : (
             <>
-              <Box sx={{ display: 'grid', gridTemplateColumns: isSmallScreen ? '1fr' : isMediumScreen ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: 3 }}>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: isSmallScreen ? '1fr' : 'repeat(auto-fit, minmax(360px, 1fr))',
+                  gap: 3,
+                  justifyContent: isSmallScreen ? 'center' : 'flex-start'
+                }}>
                 {filteredTasks.map((task, index) => (
                   <TaskCard
                     key={`task-${task._id}-${index}`}

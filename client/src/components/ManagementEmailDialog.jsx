@@ -165,7 +165,7 @@ Please find the latest performance and issue prevention insights based on our an
 Reporting Period: ${dateStr} ${explicitDates}
 
 Executive Summary:
-- Total Critical Tasks (Detractors / Neutrals): ${totalCriticalTasks}
+- Total Tasks (Detractors / Neutrals): ${totalCriticalTasks}
 - Failed Preventions (Reported issues that escalated): ${reportedOverlapCount}
 - Prevention Gap Rate: ${preventionRate}%
 - Diagnosis Accuracy: ${diagnosisAccuracy?.rate || 0}%

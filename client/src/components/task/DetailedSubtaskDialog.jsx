@@ -12,12 +12,26 @@ import {
   Radio,
   Box,
 } from "@mui/material";
-import { MdClose } from "react-icons/md";
+import { MdClose, MdCheckCircle, MdCancel } from "react-icons/md";
 import SubtaskManager from "../SubtaskManager";
 import api from "../../api/api";
 import { predefinedSubtasks } from "../../constants/subtaskData";
 
 const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
+  const colors = {
+    primary: "#0ea5e9",
+    primaryDark: "#0369a1",
+    secondary: "#6366f1",
+    success: "#10b981",
+    warning: "#f59e0b",
+    error: "#ef4444",
+    bg: "#0f172a", // Darker slate
+    card: "#1e293b",
+    border: "#334155",
+    textPrimary: "#f8fafc",
+    textSecondary: "#94a3b8",
+  };
+
   const [selectedOption, setSelectedOption] = useState("visit");
   const [subtasks, setSubtasks] = useState(predefinedSubtasks.visit);
   const [checkpoints, setCheckpoints] = useState(predefinedSubtasks.visit.map((subtask) => (subtask.checkpoints ? [...subtask.checkpoints] : [])));
@@ -308,6 +322,7 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
       const subtasksToSave = updatedSubtasks || subtasks.map((subtask, index) => ({
         ...subtask,
         note: notes[selectedOption][index] || "",
+        progress: (notes[selectedOption][index] || "").trim() ? (100 / subtasks.length) : 0,
         shortNote: subtask.shortNote || "",
         dateTime: subtask.status === "Closed" ? (subtask.dateTime || new Date().toISOString()) : null,
         checkpoints: checkpoints[index] ? checkpoints[index].map(cp => ({
@@ -358,6 +373,52 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
       console.error("Error updating subtasks:", error);
       alert("Failed to save subtasks. Please try again.");
     }
+  }
+
+
+  const handleToggleComplete = async (isCompleting) => {
+    try {
+      const newStatus = isCompleting ? "Closed" : "In Progress";
+
+      // Update Task Status
+      await api.put(`/tasks/update-task/${task._id}`, { ...task, status: newStatus }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      });
+
+      // Update Subtasks
+      const updatedSubtasks = subtasks.map(st => ({
+        ...st,
+        status: isCompleting ? "Closed" : "Open",
+        progress: isCompleting ? (st.optional ? 0 : 100 / subtasks.filter(s => !s.optional).length) : 0,
+      }));
+
+      await api.put(
+        `/tasks/update-subtask/${task._id}`,
+        {
+          subtasks: updatedSubtasks,
+          notify: false,
+          subtaskType: selectedOption,
+          ontType: additionalInfo.ontType,
+          speed: additionalInfo.speed,
+          serviceRecipientInitial: additionalInfo.serviceRecipientInitial,
+          serviceRecipientQoS: additionalInfo.serviceRecipientQoS,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (setUpdateTasksList) setUpdateTasksList((prev) => !prev);
+      window.dispatchEvent(new CustomEvent('dashboard-refresh'));
+      alert(isCompleting ? "Task marked as completed!" : "Task completion undone!");
+      onClose();
+
+    } catch (error) {
+      console.error("Error toggling completion:", error);
+      alert("Failed to update status");
+    }
   };
 
   return (
@@ -365,12 +426,12 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
       open={open}
       onClose={onClose}
       fullScreen
+      TransitionProps={{ unmountOnExit: true }}
       PaperProps={{
         sx: {
-          backgroundColor: "#2d2d2d",
-          color: "#ffffff",
-          width: "100%",
-          maxWidth: "none",
+          backgroundColor: colors.bg,
+          color: colors.textPrimary,
+          backgroundImage: 'none',
         }
       }}
     >
@@ -379,24 +440,31 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          backgroundColor: "#2d2d2d",
-          color: "#ffffff",
-          borderBottom: "1px solid #e5e7eb",
-          padding: "16px 24px",
+          bgcolor: colors.card,
+          borderBottom: `1px solid ${colors.border}`,
+          px: 4,
+          py: 2,
           position: "sticky",
           top: 0,
-          zIndex: 1,
+          zIndex: 10,
         }}
       >
-        <Typography variant="h6" component="div">
-          Manage Subtasks - {task?.slid}
-        </Typography>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 'black', color: colors.textPrimary, letterSpacing: -0.5 }}>
+            TASK AUDIT & QUALITY CONTROL
+          </Typography>
+          <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 'bold' }}>
+            Reference: {task?.slid} • {task?.customerName}
+          </Typography>
+        </Box>
         <IconButton
           onClick={onClose}
           sx={{
-            color: "#ffffff",
-            "&:hover": {
-              backgroundColor: "#2a2a2a",
+            color: colors.textSecondary,
+            bgcolor: 'rgba(255,255,255,0.05)',
+            '&:hover': {
+              bgcolor: 'rgba(255,255,255,0.1)',
+              color: colors.error,
             },
           }}
         >
@@ -404,90 +472,163 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ padding: 0 }}>
-        <RadioGroup row value={selectedOption} onChange={handleOptionChange} sx={{ padding: 2 }}>
-          {Object.keys(predefinedSubtasks).map((option) => (
-            <FormControlLabel
-              key={option}
-              value={option}
-              control={<Radio />}
-              label={option === "no_answer" ? "No Answer" :
-                option === "others" ? "Others" :
-                  option.charAt(0).toUpperCase() + option.slice(1)}
-            />
-          ))}
-        </RadioGroup>
-        <SubtaskManager
-          subtasks={subtasks}
-          notes={notes[selectedOption]}
-          activeStep={activeStep}
-          setActiveStep={setActiveStep}
-          handleBack={handleBack}
-          handleSaveNote={handleSaveNote}
-          handleReset={handleReset}
-          expandedNotes={expandedNotes}
-          setExpandedNotes={setExpandedNotes}
-          toggleNoteExpand={toggleNoteExpand}
-          checkpoints={checkpoints}
-          setCheckpoints={setCheckpoints}
-          handleCheckpointToggle={handleCheckpointToggle}
-          selectedTaskId={task?._id}
-          selectedOption={selectedOption}
-          handleNoteChange={handleNoteChange}
-          handleShortNoteChange={handleShortNoteChange}
-          setSubtasks={setSubtasks}
-          additionalInfo={additionalInfo}
-          setAdditionalInfo={setAdditionalInfo}
-        />
+      <DialogContent sx={{ p: 0, bgcolor: colors.bg }}>
+        <Box sx={{ p: 4 }}>
+          <Box sx={{ mb: 4, p: 1, bgcolor: colors.card, borderRadius: 3, display: 'inline-flex', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+            <RadioGroup row value={selectedOption} onChange={handleOptionChange}>
+              {Object.keys(predefinedSubtasks).map((option) => (
+                <FormControlLabel
+                  key={option}
+                  value={option}
+                  control={<Radio size="small" sx={{ color: colors.primary }} />}
+                  label={
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 'bold',
+                        color: selectedOption === option ? colors.primary : colors.textSecondary,
+                        mr: 1
+                      }}
+                    >
+                      {option === "no_answer" ? "No Answer" :
+                        option === "others" ? "Others" :
+                          option.toUpperCase()}
+                    </Typography>
+                  }
+                  sx={{
+                    px: 2,
+                    py: 0.5,
+                    m: 0,
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
+                    bgcolor: selectedOption === option ? 'rgba(14, 165, 233, 0.1)' : 'transparent',
+                    '&:hover': { bgcolor: 'rgba(14, 165, 233, 0.05)' }
+                  }}
+                />
+              ))}
+            </RadioGroup>
+          </Box>
+
+          <SubtaskManager
+            subtasks={subtasks}
+            notes={notes[selectedOption]}
+            activeStep={activeStep}
+            setActiveStep={setActiveStep}
+            handleBack={handleBack}
+            handleSaveNote={handleSaveNote}
+            handleReset={handleReset}
+            expandedNotes={expandedNotes}
+            setExpandedNotes={setExpandedNotes}
+            toggleNoteExpand={toggleNoteExpand}
+            checkpoints={checkpoints}
+            setCheckpoints={setCheckpoints}
+            handleCheckpointToggle={handleCheckpointToggle}
+            selectedTaskId={task?._id}
+            selectedOption={selectedOption}
+            handleNoteChange={handleNoteChange}
+            handleShortNoteChange={handleShortNoteChange}
+            setSubtasks={setSubtasks}
+            additionalInfo={additionalInfo}
+            setAdditionalInfo={setAdditionalInfo}
+          />
+        </Box>
       </DialogContent>
 
       <DialogActions
         sx={{
+          px: 4,
+          py: 3,
+          bgcolor: colors.card,
+          borderTop: `1px solid ${colors.border}`,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          p: 2,
-          backgroundColor: "#2d2d2d",
-          borderTop: "1px solid #e5e7eb",
           position: "sticky",
           bottom: 0,
-          zIndex: 1,
+          zIndex: 10,
         }}
       >
         <Button
           onClick={handleReset}
+          startIcon={<MdClose />}
           sx={{
-            color: "#f44336",
-            "&:hover": {
-              backgroundColor: "rgba(244, 67, 54, 0.1)",
+            color: colors.error,
+            fontWeight: 'bold',
+            px: 3,
+            '&:hover': {
+              bgcolor: 'rgba(239, 68, 68, 0.1)',
             },
+            textTransform: 'none',
           }}
         >
-          Reset
+          Reset All Data
         </Button>
-        <Box sx={{ display: "flex", gap: "8px" }}>
+
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          {task?.status !== "Closed" && (
+            <Button
+              variant="outlined"
+              onClick={() => handleToggleComplete(true)}
+              startIcon={<MdCheckCircle />}
+              sx={{
+                color: colors.success,
+                borderColor: colors.success,
+                '&:hover': {
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  borderColor: colors.success
+                }
+              }}
+            >
+              Mark as Completed
+            </Button>
+          )}
+
+          {task?.status === "Closed" && (
+            <Button
+              variant="outlined"
+              onClick={() => handleToggleComplete(false)}
+              startIcon={<MdCancel />}
+              sx={{
+                color: colors.error,
+                borderColor: colors.error,
+                '&:hover': {
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  borderColor: colors.error
+                }
+              }}
+            >
+              Undo Completion
+            </Button>
+          )}
+        </Box>
+
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             onClick={onClose}
             sx={{
-              color: "#ffffff",
-              "&:hover": {
-                backgroundColor: "#2a2a2a",
-              },
+              color: colors.textSecondary,
+              fontWeight: 'bold',
+              px: 4,
+              textTransform: 'none',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
             }}
           >
-            Cancel
+            Close Dialog
           </Button>
           <Button
             variant="contained"
             onClick={() => handleSaveNote()}
             sx={{
-              backgroundColor: "#3b82f6",
-              "&:hover": {
-                backgroundColor: "#1d4ed8",
-              },
+              bgcolor: colors.primary,
+              '&:hover': { bgcolor: colors.primaryDark },
+              fontWeight: 'bold',
+              px: 6,
+              borderRadius: 2,
+              textTransform: 'none',
+              boxShadow: `0 8px 16px ${colors.primary}44`,
             }}
           >
-            Save All
+            Finalize & Save Progress
           </Button>
         </Box>
       </DialogActions>

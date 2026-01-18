@@ -50,13 +50,17 @@ const SubtaskManager = ({
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
   const colors = {
-    primary: "#3b82f6",
-    textPrimary: "#ffffff",
-    textSecondary: "#9ca3af",
-    // surface: "#ffffff",
-    surfaceElevated: "#2a2a2a",
-    border: "#e5e7eb",
-    primaryHover: "#1d4ed8",
+    primary: "#0ea5e9", // Vibrant sky blue
+    primaryDark: "#0369a1",
+    secondary: "#6366f1", // Indigo
+    success: "#10b981", // Emerald
+    warning: "#f59e0b", // Amber
+    error: "#ef4444", // Rose
+    bg: "#1e293b", // Slate 800
+    card: "#334155", // Slate 700
+    border: "#475569", // Slate 600
+    textPrimary: "#f8fafc", // Slate 50
+    textSecondary: "#94a3b8", // Slate 400
   };
 
   const handleConditionalOptionChange = (subtaskIndex, checkpointIndex, value, fieldPath = 'selected') => {
@@ -225,766 +229,468 @@ const SubtaskManager = ({
   };
 
   const renderCheckpointOptions = (subtaskIndex, checkpointIndex, checkpoint, isClosed) => {
-
     if (SIMPLE_QUESTIONS.includes(checkpoint.name)) {
       return (
-        <>
-          <Divider sx={{ my: 2, bgcolor: colors.border }} />
-          <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 1 }}>
+        <Box sx={{ mt: 2, p: 2, bgcolor: "rgba(0,0,0,0.2)", borderRadius: 2 }}>
+          <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 1, display: 'block', fontWeight: 'bold', textTransform: 'uppercase' }}>
             {checkpoint.options.question}
           </Typography>
           <RadioGroup
+            row
             value={checkpoint.options.selected || ""}
             onChange={(e) => handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value)}
             disabled={isClosed}
-            sx={{ mt: 2 }}
           >
             {checkpoint.options.choices.map((choice) => (
               <FormControlLabel
                 key={choice.value}
                 value={choice.value}
-                control={<Radio sx={{ color: colors.primary }} />}
-                label={<Typography variant="body2">{choice.label}</Typography>}
+                control={<Radio size="small" sx={{ color: colors.primary, '&.Mui-checked': { color: colors.primary } }} />}
+                label={<Typography variant="body2" sx={{ color: colors.textPrimary }}>{choice.label}</Typography>}
               />
             ))}
           </RadioGroup>
-        </>
+        </Box>
       );
     }
 
     if (checkpoint.options?.type === "conditional") {
       const showActionTaken = checkpoint.options.actionTaken &&
-        (checkpoint.options.selected === "incorrect" ||
-          checkpoint.options.selected === "partial" ||
-          checkpoint.options.selected === "not_using" ||
-          checkpoint.options.selected === "not_discussed" ||
-          checkpoint.options.selected === "low" ||
-          checkpoint.options.selected === "weak" ||
-          checkpoint.options.selected === "low_power" ||
-          checkpoint.options.selected === "none" ||
-          checkpoint.options.selected === "minimal" ||
-          checkpoint.options.selected === "no" ||
-          checkpoint.options.selected === "not_delivered" ||
-          checkpoint.options.selected === "incomplete_unclear" ||
-          checkpoint.options.selected === "unacceptable_conduct" ||
-          checkpoint.options.selected === "rushed_service" ||
-          checkpoint.options.selected === "yes");
+        ["incorrect", "partial", "not_using", "not_discussed", "low", "weak", "low_power", "none", "minimal", "no", "not_delivered", "incomplete_unclear", "unacceptable_conduct", "rushed_service", "yes"].includes(checkpoint.options.selected);
 
       return (
-        <>
-          <Divider sx={{ my: 2, bgcolor: colors.border }} />
-          <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 1 }}>
-            {checkpoint.options.question}
-          </Typography>
-          <RadioGroup
-            value={checkpoint.options.selected || ""}
-            onChange={(e) =>
-              handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value)
-            }
-            disabled={isClosed}
-          >
-            {checkpoint.options.choices.map((choice) => (
-              <FormControlLabel
-                key={choice.value}
-                value={choice.value}
-                control={
-                  <Radio
-                    sx={{
-                      color: colors.primary,
-                      "&.Mui-checked": {
-                        color: colors.primary,
-                      },
-                    }}
-                  />
-                }
-                label={
-                  <Typography variant="body2" sx={{ color: colors.textPrimary }}>
-                    {choice.label}
-                  </Typography>
-                }
-                sx={{ ml: 0 }}
-              />
-            ))}
-          </RadioGroup>
+        <Box sx={{ mt: 1 }}>
+          <Box sx={{ p: 2, bgcolor: "rgba(0,0,0,0.15)", borderRadius: 2, mb: showActionTaken ? 2 : 0 }}>
+            <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 1, display: 'block', fontWeight: 'bold' }}>
+              {checkpoint.options.question}
+            </Typography>
+            <RadioGroup
+              value={checkpoint.options.selected || ""}
+              onChange={(e) => handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value)}
+              disabled={isClosed}
+            >
+              <Grid container>
+                {checkpoint.options.choices.map((choice) => (
+                  <Grid item xs={12} sm={6} key={choice.value}>
+                    <FormControlLabel
+                      value={choice.value}
+                      control={<Radio size="small" sx={{ color: colors.primary }} />}
+                      label={<Typography variant="body2" sx={{ color: colors.textPrimary }}>{choice.label}</Typography>}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+            </RadioGroup>
+          </Box>
 
-          {/* Conditionally render Action Taken section */}
           {showActionTaken && (
-            <>
-              <Divider sx={{ my: 2, bgcolor: colors.border }} />
-              <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 1 }}>
-                {checkpoint.options.actionTaken.question}
-              </Typography>
-              <FormControl fullWidth>
-                <InputLabel sx={{ color: colors.textSecondary }}>
-                  Select Action Taken
-                </InputLabel>
-                <Select
-                  value={checkpoint.options.actionTaken.selected || ""}
-                  onChange={(e) =>
-                    handleConditionalOptionChange(
-                      subtaskIndex,
-                      checkpointIndex,
-                      e.target.value,
-                      'actionTaken.selected'
-                    )
-                  }
-                  disabled={isClosed}
-                  label="Select Action Taken"
-                  sx={{
-                    color: colors.textPrimary,
-                    "& .MuiOutlinedInput-notchedOutline": {
-                      borderColor: colors.border,
-                    },
-                    "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: colors.primary,
-                    },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: colors.primary,
-                    },
-                    backgroundColor: colors.surface,
-                  }}
-                >
-                  {checkpoint.options.actionTaken.choices.map((choice) => (
-                    <MenuItem key={choice.value} value={choice.value}>
-                      {choice.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+            <Collapse in={showActionTaken}>
+              <Box sx={{ p: 2, bgcolor: "rgba(14, 165, 233, 0.1)", borderRadius: 2, border: `1px solid ${colors.primary}44` }}>
+                <Typography variant="caption" sx={{ color: colors.primary, mb: 1, display: 'block', fontWeight: 'bold' }}>
+                  {checkpoint.options.actionTaken.question}
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={checkpoint.options.actionTaken.selected || ""}
+                    onChange={(e) => handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value, 'actionTaken.selected')}
+                    disabled={isClosed}
+                    sx={{
+                      color: colors.textPrimary,
+                      bgcolor: colors.bg,
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: colors.border },
+                    }}
+                  >
+                    {checkpoint.options.actionTaken.choices.map((choice) => (
+                      <MenuItem key={choice.value} value={choice.value}>{choice.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              {/* Justification section (only shown when no_action is selected) */}
-              {checkpoint.options.actionTaken.justification &&
-                checkpoint.options.actionTaken.selected === 'no_action' && (
-                  <>
-                    <Divider sx={{ my: 2, bgcolor: colors.border }} />
-                    <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 1 }}>
+                {checkpoint.options.actionTaken.justification && checkpoint.options.actionTaken.selected === 'no_action' && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="caption" sx={{ color: colors.warning, mb: 1, display: 'block', fontWeight: 'bold' }}>
                       {checkpoint.options.actionTaken.justification.question}
                     </Typography>
-                    <FormControl fullWidth>
-                      <InputLabel sx={{ color: colors.textSecondary }}>
-                        Select Justification
-                      </InputLabel>
+                    <FormControl fullWidth size="small">
                       <Select
                         value={checkpoint.options.actionTaken.justification.selected || ""}
-                        onChange={(e) =>
-                          handleConditionalOptionChange(
-                            subtaskIndex,
-                            checkpointIndex,
-                            e.target.value,
-                            'actionTaken.justification.selected'
-                          )
-                        }
+                        onChange={(e) => handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value, 'actionTaken.justification.selected')}
                         disabled={isClosed}
-                        label="Select Justification"
-                        sx={{
-                          color: colors.textPrimary,
-                          "& .MuiOutlinedInput-notchedOutline": {
-                            borderColor: colors.border,
-                          },
-                          "&:hover .MuiOutlinedInput-notchedOutline": {
-                            borderColor: colors.primary,
-                          },
-                          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                            borderColor: colors.primary,
-                          },
-                          backgroundColor: colors.surface,
-                        }}
+                        sx={{ color: colors.textPrimary, bgcolor: colors.bg }}
                       >
                         {checkpoint.options.actionTaken.justification.choices.map((choice) => (
-                          <MenuItem key={choice.value} value={choice.value}>
-                            {choice.label}
-                          </MenuItem>
+                          <MenuItem key={choice.value} value={choice.value}>{choice.label}</MenuItem>
                         ))}
                       </Select>
                     </FormControl>
-
-                    {/* Justification notes */}
                     {checkpoint.options.actionTaken.justification.notes && (
                       <TextField
                         fullWidth
-                        variant="outlined"
-                        label={checkpoint.options.actionTaken.justification.notes.question}
+                        size="small"
                         multiline
                         rows={2}
+                        placeholder={checkpoint.options.actionTaken.justification.notes.question}
                         value={checkpoint.options.actionTaken.justification.notes.value || ""}
-                        onChange={(e) =>
-                          handleJustificationNotesChange(
-                            subtaskIndex,
-                            checkpointIndex,
-                            e.target.value,
-                            'actionTaken.justification.notes.value'
-                          )
-                        }
+                        onChange={(e) => handleJustificationNotesChange(subtaskIndex, checkpointIndex, e.target.value, 'actionTaken.justification.notes.value')}
                         disabled={isClosed}
-                        sx={{ mt: 2 }}
+                        sx={{ mt: 2, bgcolor: colors.bg, borderRadius: 1 }}
                       />
                     )}
-                  </>
+                  </Box>
                 )}
-
-              {/* General justification section (shown for all speed test results) */}
-              {checkpoint.options.generalJustification && (
-                <>
-                  <Divider sx={{ my: 2, bgcolor: colors.border }} />
-                  <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 1 }}>
-                    {checkpoint.options.generalJustification.question}
-                  </Typography>
-                  <FormControl fullWidth>
-                    <InputLabel sx={{ color: colors.textSecondary }}>
-                      Technical Assessment
-                    </InputLabel>
-                    <Select
-                      value={checkpoint.options.generalJustification.selected || ""}
-                      onChange={(e) =>
-                        handleConditionalOptionChange(
-                          subtaskIndex,
-                          checkpointIndex,
-                          e.target.value,
-                          'generalJustification.selected'
-                        )
-                      }
-                      disabled={isClosed}
-                      label="Technical Assessment"
-                      sx={{
-                        color: colors.textPrimary,
-                        "& .MuiOutlinedInput-notchedOutline": {
-                          borderColor: colors.border,
-                        },
-                        "&:hover .MuiOutlinedInput-notchedOutline": {
-                          borderColor: colors.primary,
-                        },
-                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                          borderColor: colors.primary,
-                        },
-                        backgroundColor: colors.surface,
-                      }}
-                    >
-                      {checkpoint.options.generalJustification.choices.map((choice) => (
-                        <MenuItem key={choice.value} value={choice.value}>
-                          {choice.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                  {/* Technical notes */}
-                  {checkpoint.options.generalJustification.notes && (
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      label={checkpoint.options.generalJustification.notes.question}
-                      multiline
-                      rows={2}
-                      value={checkpoint.options.generalJustification.notes.value || ""}
-                      onChange={(e) =>
-                        handleJustificationNotesChange(
-                          subtaskIndex,
-                          checkpointIndex,
-                          e.target.value,
-                          'generalJustification.notes.value'
-                        )
-                      }
-                      disabled={isClosed}
-                      sx={{ mt: 2 }}
-                    />
-                  )}
-                </>
-              )}
-            </>
+              </Box>
+            </Collapse>
           )}
 
-          {/* Follow-up question for Wi-Fi Repeater Setup */}
-          {checkpoint.name === "Wi-Fi Repeater Setup" &&
-            checkpoint.options?.selected === "yes_working" &&
-            checkpoint.options?.followUpQuestion?.question && (
-              <>
-                <Divider sx={{ my: 2, bgcolor: colors.border }} />
-                <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 1 }}>
-                  {checkpoint.options.followUpQuestion.question}
-                </Typography>
-                <RadioGroup
-                  value={checkpoint.options.followUpQuestion.selected || ""}
-                  onChange={(e) =>
-                    handleRepeaterLocationChange(subtaskIndex, checkpointIndex, e.target.value)
-                  }
+          {checkpoint.options.generalJustification && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: "rgba(99, 102, 241, 0.15)", borderRadius: 2, border: `1px solid ${colors.secondary}44` }}>
+              <Typography variant="caption" sx={{ color: colors.secondary, mb: 1, display: 'block', fontWeight: 'bold' }}>
+                {checkpoint.options.generalJustification.question}
+              </Typography>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={checkpoint.options.generalJustification.selected || ""}
+                  onChange={(e) => handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value, 'generalJustification.selected')}
                   disabled={isClosed}
+                  sx={{ color: colors.textPrimary, bgcolor: colors.bg }}
                 >
-                  {checkpoint.options.followUpQuestion.choices.map((choice) => (
-                    <FormControlLabel
-                      key={choice.value}
-                      value={choice.value}
-                      control={
-                        <Radio
-                          sx={{
-                            color: colors.primary,
-                            "&.Mui-checked": {
-                              color: colors.primary,
-                            },
-                          }}
-                        />
-                      }
-                      label={
-                        <Typography variant="body2" sx={{ color: colors.textPrimary }}>
-                          {choice.label}
-                        </Typography>
-                      }
-                      sx={{ ml: 0 }}
-                    />
+                  {checkpoint.options.generalJustification.choices.map((choice) => (
+                    <MenuItem key={choice.value} value={choice.value}>{choice.label}</MenuItem>
                   ))}
-                </RadioGroup>
+                </Select>
+              </FormControl>
+              {checkpoint.options.generalJustification.notes && (
+                <TextField
+                  fullWidth
+                  size="small"
+                  multiline
+                  rows={2}
+                  placeholder={checkpoint.options.generalJustification.notes.question}
+                  value={checkpoint.options.generalJustification.notes.value || ""}
+                  onChange={(e) => handleJustificationNotesChange(subtaskIndex, checkpointIndex, e.target.value, 'generalJustification.notes.value')}
+                  disabled={isClosed}
+                  sx={{ mt: 2, bgcolor: colors.bg, borderRadius: 1 }}
+                />
+              )}
+            </Box>
+          )}
 
-                {/* Action Taken for Wi-Fi Repeater Setup follow-up question */}
-                {checkpoint.options.followUpQuestion.selected === "incorrect" &&
-                  checkpoint.options.followUpQuestion.actionTaken && (
-                    <>
-                      <Divider sx={{ my: 2, bgcolor: colors.border }} />
-                      <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 1 }}>
-                        {checkpoint.options.followUpQuestion.actionTaken.question}
-                      </Typography>
-                      <FormControl fullWidth>
-                        <InputLabel sx={{ color: colors.textSecondary }}>
-                          Select Action Taken
-                        </InputLabel>
-                        <Select
-                          value={checkpoint.options.followUpQuestion.actionTaken.selected || ""}
-                          onChange={(e) =>
-                            handleActionTakenChange(subtaskIndex, checkpointIndex, e.target.value, true)
-                          }
-                          disabled={isClosed}
-                          label="Select Action Taken"
-                          sx={{
-                            color: colors.textPrimary,
-                            "& .MuiOutlinedInput-notchedOutline": {
-                              borderColor: colors.border,
-                            },
-                            "&:hover .MuiOutlinedInput-notchedOutline": {
-                              borderColor: colors.primary,
-                            },
-                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                              borderColor: colors.primary,
-                            },
-                            backgroundColor: colors.surface,
-                          }}
-                        >
-                          <MenuItem value="">Select an action</MenuItem>
-                          {checkpoint.options.followUpQuestion.actionTaken.choices.map((choice) => (
-                            <MenuItem key={choice.value} value={choice.value}>
-                              {choice.label}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-
-                      {/* Justification for No Corrective Action */}
-                      {checkpoint.options.followUpQuestion.actionTaken.selected === "no_action" && (
-                        <>
-                          <Divider sx={{ my: 2, bgcolor: colors.border }} />
-                          <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 1 }}>
-                            Reason for not relocating the repeater:
-                          </Typography>
-                          <FormControl fullWidth>
-                            <InputLabel sx={{ color: colors.textSecondary }}>
-                              Select Justification
-                            </InputLabel>
-                            <Select
-                              value={checkpoint.options.followUpQuestion.actionTaken.justification?.selected || ""}
-                              onChange={(e) =>
-                                handleConditionalOptionChange(
-                                  subtaskIndex,
-                                  checkpointIndex,
-                                  e.target.value,
-                                  'followUpQuestion.actionTaken.justification.selected'
-                                )
-                              }
-                              disabled={isClosed}
-                              label="Select Justification"
-                              sx={{
-                                color: colors.textPrimary,
-                                "& .MuiOutlinedInput-notchedOutline": {
-                                  borderColor: colors.border,
-                                },
-                                "&:hover .MuiOutlinedInput-notchedOutline": {
-                                  borderColor: colors.primary,
-                                },
-                                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                                  borderColor: colors.primary,
-                                },
-                                backgroundColor: colors.surface,
-                              }}
-                            >
-                              <MenuItem value="">Select justification</MenuItem>
-                              <MenuItem value="customer_preference">Customer prefers current location</MenuItem>
-                              <MenuItem value="structural_limitation">Structural limitations prevent relocation</MenuItem>
-                              <MenuItem value="temporary_solution">Temporary solution until better location is available</MenuItem>
-                              <MenuItem value="minimal_impact">Minimal impact on performance expected</MenuItem>
-                            </Select>
-                          </FormControl>
-
-                          {/* Additional notes field */}
-                          {checkpoint.options.followUpQuestion.actionTaken.justification?.selected && (
-                            <TextField
-                              fullWidth
-                              variant="outlined"
-                              label="Additional notes about repeater placement"
-                              multiline
-                              rows={2}
-                              value={checkpoint.options.followUpQuestion.actionTaken.justification.notes?.value || ""}
-                              onChange={(e) =>
-                                handleJustificationNotesChange(
-                                  subtaskIndex,
-                                  checkpointIndex,
-                                  e.target.value,
-                                  'followUpQuestion.actionTaken.justification.notes.value'
-                                )
-                              }
-                              disabled={isClosed}
-                              sx={{ mt: 2 }}
-                            />
-                          )}
-                        </>
-                      )}
-                    </>
-                  )}
-              </>
-            )}
-        </>
+          {checkpoint.name === "Wi-Fi Repeater Setup" && checkpoint.options?.selected === "yes_working" && checkpoint.options?.followUpQuestion?.question && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: "rgba(16, 185, 129, 0.1)", borderRadius: 2 }}>
+              <Typography variant="caption" sx={{ color: colors.success, mb: 1, display: 'block', fontWeight: 'bold' }}>
+                {checkpoint.options.followUpQuestion.question}
+              </Typography>
+              <RadioGroup
+                value={checkpoint.options.followUpQuestion.selected || ""}
+                onChange={(e) => handleRepeaterLocationChange(subtaskIndex, checkpointIndex, e.target.value)}
+                disabled={isClosed}
+              >
+                {checkpoint.options.followUpQuestion.choices.map((choice) => (
+                  <FormControlLabel
+                    key={choice.value}
+                    value={choice.value}
+                    control={<Radio size="small" sx={{ color: colors.success }} />}
+                    label={<Typography variant="body2" sx={{ color: colors.textPrimary }}>{choice.label}</Typography>}
+                  />
+                ))}
+              </RadioGroup>
+            </Box>
+          )}
+        </Box>
       );
     } else if (checkpoint.options?.type === "text") {
       return (
-        <>
-          <Divider sx={{ my: 2, bgcolor: colors.border }} />
-          <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 1 }}>
-            {checkpoint.options.question}
-          </Typography>
-          <TextField
-            fullWidth
-            variant="outlined"
-            multiline
-            rows={2}
-            value={checkpoint.options.value || ""}
-            onChange={(e) =>
-              handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value, "value")
-            }
-            disabled={isClosed}
-            InputLabelProps={{
-              style: { color: colors.textSecondary },
-            }}
-            InputProps={{
-              style: { color: colors.textPrimary },
-            }}
-            sx={{
-              mt: 1,
-              "& .MuiOutlinedInput-root": {
-                "& fieldset": { borderColor: colors.border },
-                "&:hover fieldset": { borderColor: colors.primary },
-                "&.Mui-focused fieldset": { borderColor: colors.primary },
-                backgroundColor: colors.surface,
-              },
-              direction: "rtl",
-              textAlign: "right",
-            }}
-          />
-        </>
+        <TextField
+          fullWidth
+          size="small"
+          multiline
+          rows={3}
+          placeholder={checkpoint.options.question}
+          value={checkpoint.options.value || ""}
+          onChange={(e) => handleConditionalOptionChange(subtaskIndex, checkpointIndex, e.target.value, "value")}
+          disabled={isClosed}
+          sx={{ mt: 2, bgcolor: colors.bg, borderRadius: 1, direction: "rtl", textAlign: "right" }}
+        />
       );
     } else if (checkpoint.name === "Rx Optics Signal Quality") {
       return (
-        <>
-          <Divider sx={{ my: 2, bgcolor: colors.border }} />
-          <TextField
-            fullWidth
-            variant="outlined"
-            label="Enter the Rx optics signal, in dBm"
-            multiline
-            rows={1}
-            value={checkpoint.signalTestNotes || ""}
-            onChange={(e) =>
-              handleSignalTestNotesChange(subtaskIndex, checkpointIndex, e.target.value)
-            }
-            disabled={isClosed}
-            InputLabelProps={{
-              style: { color: colors.textSecondary },
-            }}
-            InputProps={{
-              style: { color: colors.textPrimary },
-            }}
-            sx={{
-              mt: 2,
-              "& .MuiOutlinedInput-root": {
-                "& fieldset": { borderColor: colors.border },
-                "&:hover fieldset": { borderColor: colors.primary },
-                "&.Mui-focused fieldset": { borderColor: colors.primary },
-                backgroundColor: colors.surface,
-              },
-            }}
-          />
-        </>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Enter the Rx optics signal, in dBm"
+          value={checkpoint.signalTestNotes || ""}
+          onChange={(e) => handleSignalTestNotesChange(subtaskIndex, checkpointIndex, e.target.value)}
+          disabled={isClosed}
+          sx={{ mt: 2, bgcolor: colors.bg, borderRadius: 1 }}
+        />
       );
     }
     return null;
   };
 
   return (
-    <DialogContent sx={{ padding: 0, height: "calc(100vh - 128px)", overflowY: "auto" }}>
+    <DialogContent sx={{ padding: 0, height: "calc(100vh - 128px)", overflowY: "auto", bgcolor: colors.bg }}>
       <Box sx={{ maxWidth: "100%", padding: 2 }}>
+        <Box sx={{ mb: 4, textAlign: 'center' }}>
+          <Typography variant="h5" sx={{ color: colors.textPrimary, fontWeight: 'bold', mb: 1 }}>
+            Execution Progress
+          </Typography>
+          <Typography variant="body2" sx={{ color: colors.textSecondary }}>
+            {selectedOption.charAt(0).toUpperCase() + selectedOption.slice(1)} Mode Active
+          </Typography>
+        </Box>
+
         <List sx={{ width: "100%" }}>
-          {subtasks.map((subtask, subtaskIndex) => (
-            <Paper
-              key={subtaskIndex}
-              elevation={2}
-              sx={{
-                mb: 3,
-                backgroundColor: colors.surfaceElevated,
-                border: `1px solid ${colors.border}`,
-                borderRadius: "8px",
-                overflow: "hidden",
-              }}
-            >
-              <ListItemButton
-                onClick={() => toggleNoteExpand(subtaskIndex)}
+          {subtasks.map((subtask, subtaskIndex) => {
+            const isExpanded = expandedNotes[subtaskIndex];
+            const isClosed = subtask.status === "Closed";
+            const inProgress = subtask.status === "In Progress";
+
+            return (
+              <Paper
+                key={subtaskIndex}
+                elevation={isExpanded ? 8 : 1}
                 sx={{
-                  backgroundColor: expandedNotes[subtaskIndex] ? "rgba(63, 81, 181, 0.1)" : "inherit",
+                  mb: 3,
+                  backgroundColor: colors.card,
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  transition: 'all 0.3s ease',
+                  border: isExpanded ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
+                  transform: isExpanded ? 'scale(1.01)' : 'scale(1)',
                 }}
               >
-                <ListItemText
-                  primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="subtitle1" sx={{ color: colors.textPrimary }}>
+                <ListItemButton
+                  onClick={() => toggleNoteExpand(subtaskIndex)}
+                  sx={{
+                    p: 3,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    bgcolor: isExpanded ? "rgba(14, 165, 233, 0.1)" : "transparent",
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 3,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: isClosed ? colors.success : inProgress ? colors.primary : colors.bg,
+                        color: "#fff",
+                        boxShadow: isClosed ? `0 0 15px ${colors.success}66` : 'none',
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{subtaskIndex + 1}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ color: colors.textPrimary, fontWeight: 'bold' }}>
                         {subtask.title}
                       </Typography>
-                      <Chip
-                        label={subtask.status}
-                        size="small"
+                      <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                        {isClosed ? `Completed: ${new Date(subtask.dateTime).toLocaleDateString()}` : (subtask.optional ? "Optional" : "Action Required")}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Chip
+                      label={subtask.status}
+                      size="small"
+                      sx={{
+                        bgcolor: isClosed ? `${colors.success}22` : inProgress ? `${colors.primary}22` : `${colors.textSecondary}22`,
+                        color: isClosed ? colors.success : inProgress ? colors.primary : colors.textSecondary,
+                        fontWeight: 'bold',
+                        border: '1px solid currentColor',
+                      }}
+                    />
+                    {isExpanded ? <ExpandLess sx={{ color: colors.primary }} /> : <ExpandMore sx={{ color: colors.textSecondary }} />}
+                  </Box>
+                </ListItemButton>
+
+                <Collapse in={isExpanded}>
+                  <Box sx={{ px: 3, pb: 4, pt: 1 }}>
+                    <Divider sx={{ mb: 3, borderColor: `${colors.border}44` }} />
+
+                    <Typography variant="overline" sx={{ color: colors.primary, fontWeight: 'bold', letterSpacing: 1.5 }}>
+                      Checkpoints Checklisting
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                      {checkpoints[subtaskIndex]?.map((checkpoint, checkpointIndex) => (
+                        <Box
+                          key={checkpointIndex}
+                          sx={{
+                            p: 2,
+                            borderRadius: 3,
+                            bgcolor: "rgba(0,0,0,0.1)",
+                            border: `1px solid ${checkpoint.checked ? colors.success + '44' : colors.border + '22'}`,
+                            transition: 'all 0.2s ease',
+                            '&:hover': { bgcolor: "rgba(0,0,0,0.2)" }
+                          }}
+                        >
+                          <ListItemButton
+                            dense
+                            onClick={() => (subtask.status !== "Closed" || editingIndex === subtaskIndex) && handleCheckpointToggle(subtaskIndex, checkpointIndex)}
+                            disabled={subtask.status === "Closed" && editingIndex !== subtaskIndex}
+                            sx={{ borderRadius: 2 }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                              <Checkbox
+                                edge="start"
+                                checked={checkpoint.checked}
+                                sx={{
+                                  color: colors.border,
+                                  '&.Mui-checked': { color: colors.success },
+                                }}
+                              />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={
+                                <Typography variant="body2" sx={{ color: colors.textPrimary, fontWeight: 500 }}>
+                                  {checkpoint.name}
+                                </Typography>
+                              }
+                            />
+                          </ListItemButton>
+
+                          <Box sx={{ pl: 5, pr: 2 }}>
+                            {renderCheckpointOptions(subtaskIndex, checkpointIndex, checkpoint, subtask.status === "Closed" && editingIndex !== subtaskIndex)}
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+
+                    {/* Notes Section */}
+                    <Box sx={{ mt: 4 }}>
+                      <TextField
+                        fullWidth
+                        variant="standard"
+                        label={selectedOption === "others" ? "OUT OF SCOPE REASONING" : "ACTIVITY FEEDBACK / NOTES"}
+                        multiline
+                        rows={3}
+                        value={notes[subtaskIndex] || ""}
+                        onChange={(e) => handleNoteChange(subtaskIndex, e.target.value)}
+                        disabled={isClosed && editingIndex !== subtaskIndex}
                         sx={{
-                          backgroundColor:
-                            subtask.status === "Closed" ? "#4caf50" :
-                              subtask.status === "In Progress" ? "#2196f3" : "#757575",
-                          color: "#ffffff",
-                          fontSize: "10px",
-                          height: "20px"
+                          bgcolor: 'rgba(0,0,0,0.1)',
+                          p: 2,
+                          borderRadius: 3,
+                          '& .MuiInputBase-root': { color: colors.textPrimary },
+                          '& .MuiInputLabel-root': { color: colors.primary, fontWeight: 'bold', px: 2 },
+                          direction: "rtl",
+                          textAlign: "right",
                         }}
                       />
                     </Box>
-                  }
-                  secondary={
-                    <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                      {subtask.dateTime ? `Completed on: ${new Date(subtask.dateTime).toLocaleString()}` : "Active subtask"}
-                    </Typography>
-                  }
-                />
-                {expandedNotes[subtaskIndex] ? <ExpandLess sx={{ color: colors.textPrimary }} /> : <ExpandMore sx={{ color: colors.textPrimary }} />}
-              </ListItemButton>
 
-              <Collapse in={expandedNotes[subtaskIndex]}>
-                <Box sx={{ px: 2, pb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ color: colors.textPrimary, mb: 1, mt: 1 }}>
-                    Checkpoints:
-                  </Typography>
+                    {subtask.title === "Task Reception" && (
+                      <TextField
+                        fullWidth
+                        variant="outlined"
+                        size="small"
+                        placeholder="Short summary for quick overview..."
+                        label="DASHBOARD SHORT NOTE"
+                        value={subtask.shortNote || ""}
+                        onChange={(e) => handleShortNoteChange(subtaskIndex, e.target.value)}
+                        disabled={isClosed && editingIndex !== subtaskIndex}
+                        sx={{ mt: 3, bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 2 }}
+                      />
+                    )}
 
-                  <List sx={{ width: "100%" }}>
-                    {checkpoints[subtaskIndex]?.map((checkpoint, checkpointIndex) => (
-                      <Paper
-                        key={checkpointIndex}
-                        elevation={0}
-                        sx={{
-                          mb: 2,
-                          backgroundColor: colors.surface,
-                          border: `1px solid ${colors.border}`,
-                          borderRadius: "8px",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <ListItemButton
-                          onClick={() => (subtask.status !== "Closed" || editingIndex === subtaskIndex) && handleCheckpointToggle(subtaskIndex, checkpointIndex)}
-                          disabled={subtask.status === "Closed" && editingIndex !== subtaskIndex}
-                          sx={{
-                            borderLeft: `4px solid ${checkpoint.checked ? "#4caf50" : "#f44336"}`,
-                          }}
-                        >
-                          <ListItemIcon sx={{ minWidth: 40 }}>
-                            <Checkbox
-                              edge="start"
-                              checked={checkpoint.checked}
-                              tabIndex={-1}
-                              disableRipple
-                              disabled={subtask.status === "Closed" && editingIndex !== subtaskIndex}
-                              sx={{
-                                color: colors.primary,
-                                "&.Mui-checked": { color: colors.primary },
-                              }}
-                            />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={
-                              <Typography variant="body1" sx={{ color: colors.textPrimary }}>
-                                {checkpoint.name}
-                              </Typography>
-                            }
-                          />
-                        </ListItemButton>
-
-                        <Box sx={{ px: 3, pb: 2 }}>
-                          {renderCheckpointOptions(subtaskIndex, checkpointIndex, checkpoint, subtask.status === "Closed" && editingIndex !== subtaskIndex)}
-                        </Box>
-                      </Paper>
-                    ))}
-                  </List>
-
-                  {/* Always show notes field, change label based on option */}
-                  {(
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      label={selectedOption === "others" ? "Reason for Out of Scope" : "Additional Notes"}
-                      multiline
-                      rows={4}
-                      value={notes[subtaskIndex] || ""}
-                      onChange={(e) => handleNoteChange(subtaskIndex, e.target.value)}
-                      disabled={subtask.status === "Closed" && editingIndex !== subtaskIndex}
-                      InputLabelProps={{
-                        style: { color: colors.textSecondary },
-                      }}
-                      InputProps={{
-                        style: { color: colors.textPrimary },
-                      }}
-                      sx={{
-                        mt: 2,
-                        direction: "rtl",
-                        textAlign: "right",
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": { borderColor: colors.border },
-                          "&:hover fieldset": { borderColor: colors.primary },
-                          "&.Mui-focused fieldset": { borderColor: colors.primary },
-                        },
-                      }}
-                    />
-                  )}
-
-                  {subtask.title === "Task Reception" && (
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      label="Short Note (Summary for dashboard)"
-                      value={subtask.shortNote || ""}
-                      onChange={(e) => handleShortNoteChange(subtaskIndex, e.target.value)}
-                      disabled={subtask.status === "Closed" && editingIndex !== subtaskIndex}
-                      InputLabelProps={{
-                        style: { color: colors.textSecondary },
-                      }}
-                      InputProps={{
-                        style: { color: colors.textPrimary },
-                      }}
-                      sx={{
-                        mt: 2,
-                        direction: "rtl",
-                        textAlign: "right",
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": { borderColor: colors.border },
-                          "&:hover fieldset": { borderColor: colors.primary },
-                          "&.Mui-focused fieldset": { borderColor: colors.primary },
-                          backgroundColor: colors.surface,
-                        },
-                      }}
-                      placeholder="e.g. Awaiting customer contact"
-                      helperText="This note will appear on the task card for quick overview."
-                    />
-                  )}
-
-
-                  <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                    {editingIndex === subtaskIndex ? (
-                      <>
-                        {isSubtaskClosable(subtaskIndex) && (
+                    <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                      {editingIndex === subtaskIndex ? (
+                        <>
                           <Button
+                            fullWidth
                             variant="contained"
-                            color="primary"
+                            disabled={!isSubtaskClosable(subtaskIndex)}
                             onClick={() => handleStatusUpdate(subtaskIndex, "Closed")}
                             sx={{
-                              backgroundColor: colors.primary,
-                              "&:hover": {
-                                backgroundColor: colors.primaryHover,
-                              },
+                              py: 1.5,
+                              borderRadius: 3,
+                              bgcolor: colors.success,
+                              '&:hover': { bgcolor: colors.success },
+                              fontWeight: 'bold',
+                              textTransform: 'none',
+                              boxShadow: `0 4px 14px ${colors.success}66`,
                             }}
                           >
-                            Save and Close Subtask
+                            Finalize and Close
                           </Button>
-                        )}
+                          <Button
+                            fullWidth
+                            variant="outlined"
+                            onClick={() => setEditingIndex(null)}
+                            sx={{
+                              py: 1.5,
+                              borderRadius: 3,
+                              color: colors.textSecondary,
+                              borderColor: colors.border,
+                              textTransform: 'none',
+                            }}
+                          >
+                            Cancel Edit
+                          </Button>
+                        </>
+                      ) : (
                         <Button
-                          variant="outlined"
-                          onClick={() => setEditingIndex(null)}
-                          sx={{
-                            color: "#9ca3af",
-                            borderColor: "#9ca3af",
-                            "&:hover": {
-                              borderColor: "#ffffff",
-                              backgroundColor: "rgba(255, 255, 255, 0.05)",
-                            },
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </>
-                    ) : (
-                      subtask.status === "Open" ? (
-                        <Button
+                          fullWidth
                           variant="contained"
                           onClick={() => setEditingIndex(subtaskIndex)}
                           sx={{
-                            backgroundColor: "#2196f3",
-                            "&:hover": { backgroundColor: "#1976d2" },
+                            py: 1.5,
+                            borderRadius: 3,
+                            bgcolor: isClosed ? colors.border : colors.primary,
+                            '&:hover': { bgcolor: isClosed ? colors.border : colors.primaryDark },
+                            fontWeight: 'bold',
+                            textTransform: 'none',
+                            boxShadow: isClosed ? 'none' : `0 4px 14px ${colors.primary}66`,
                           }}
                         >
-                          Start Subtask
+                          {isClosed ? "Update/Edit Findings" : "Unlock to Start Execution"}
                         </Button>
-                      ) : (
-                        <Button
-                          variant="outlined"
-                          onClick={() => setEditingIndex(subtaskIndex)}
-                          sx={{
-                            color: "#2196f3",
-                            borderColor: "#2196f3",
-                            "&:hover": {
-                              borderColor: "#1976d2",
-                              backgroundColor: "rgba(33, 150, 243, 0.04)",
-                            },
-                          }}
-                        >
-                          Edit Subtask
-                        </Button>
-                      )
-                    )}
+                      )}
+                    </Box>
                   </Box>
-                </Box>
-              </Collapse>
-            </Paper>
-          ))}
+                </Collapse>
+              </Paper>
+            );
+          })}
         </List>
 
         {/* Additional Info Section */}
         {(selectedOption === "visit" || selectedOption === "phone") && (
           <Paper
             sx={{
-              p: 3,
+              p: 4,
               mb: 4,
-              backgroundColor: colors.surface,
+              backgroundColor: colors.card,
               border: `1px solid ${colors.border}`,
-              borderRadius: "8px",
+              borderRadius: 4,
             }}
           >
             <Typography
               variant="h6"
               sx={{
                 color: colors.primary,
-                mb: 2,
-                borderBottom: `1px solid ${colors.border}`,
-                pb: 1,
+                mb: 3,
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5
               }}
             >
-              Additional Info
+              <Box sx={{ width: 4, height: 24, bgcolor: colors.primary, borderRadius: 1 }} />
+              Hardware & Equipment Specification
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel sx={{ color: colors.textSecondary }}>ONT Type</InputLabel>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel sx={{ color: colors.textSecondary }}>ONT MODEL TYPE</InputLabel>
                   <Select
                     value={subtasks[0]?.ontType || ""}
                     onChange={(e) => {
@@ -993,40 +699,11 @@ const SubtaskManager = ({
                       setSubtasks(updatedSubtasks);
                       setAdditionalInfo(prev => ({ ...prev, ontType: e.target.value }));
                     }}
-                    label="ONT Type"
+                    label="ONT MODEL TYPE"
                     sx={{
                       color: colors.textPrimary,
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: colors.border,
-                      },
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: colors.primary,
-                      },
-                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor: colors.primary,
-                      },
-                      backgroundColor: colors.surface,
-                      direction: "rtl",
-                      textAlign: "right",
-                    }}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          backgroundColor: colors.surfaceElevated,
-                          color: colors.textPrimary,
-                          "& .MuiMenuItem-root": {
-                            "&:hover": {
-                              backgroundColor: colors.primaryHover,
-                            },
-                            "&.Mui-selected": {
-                              backgroundColor: `${colors.primary}22`,
-                            },
-                            "&.Mui-selected:hover": {
-                              backgroundColor: `${colors.primary}33`,
-                            },
-                          },
-                        },
-                      },
+                      bgcolor: colors.bg,
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: colors.border },
                     }}
                   >
                     <MenuItem value="">Select ONT Type</MenuItem>
@@ -1040,162 +717,59 @@ const SubtaskManager = ({
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Speed (Mbps)"
+                  size="small"
+                  label="CONNECTION SPEED (MBPS)"
                   type="number"
                   value={subtasks[0]?.speed || ""}
                   onChange={(e) => {
-                    const inputValue = e.target.value;
-                    // Use Number() instead of parseInt for better decimal handling
-                    const numericValue = inputValue === "" ? null : Number(inputValue);
-
+                    const numericValue = e.target.value === "" ? null : Number(e.target.value);
                     const updatedSubtasks = [...subtasks];
-                    updatedSubtasks[0] = {
-                      ...updatedSubtasks[0],
-                      speed: numericValue
-                    };
-
+                    updatedSubtasks[0] = { ...updatedSubtasks[0], speed: numericValue };
                     setSubtasks(updatedSubtasks);
-                    setAdditionalInfo(prev => ({
-                      ...prev,
-                      speed: numericValue
-                    }));
+                    setAdditionalInfo(prev => ({ ...prev, speed: numericValue }));
                   }}
-                  InputLabelProps={{
-                    style: { color: colors.textSecondary },
-                  }}
-                  InputProps={{
-                    style: { color: colors.textPrimary },
-                  }}
-                  sx={{
-                    mt: 2,
-                    direction: "rtl",
-                    textAlign: "right",
-                    "& .MuiOutlinedInput-root": {
-                      "& fieldset": { borderColor: colors.border },
-                      "&:hover fieldset": { borderColor: colors.primary },
-                      "&.Mui-focused fieldset": { borderColor: colors.primary },
-                      backgroundColor: colors.surface,
-                    },
-                  }}
+                  sx={{ bgcolor: colors.bg, borderRadius: 1 }}
                 />
               </Grid>
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel sx={{ color: colors.textSecondary }}>Service Recipient (Initial Setup)</InputLabel>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel sx={{ color: colors.textSecondary }}>RECIPIENT (INITIAL SETUP)</InputLabel>
                   <Select
                     value={subtasks[0]?.serviceRecipientInitial || ""}
                     onChange={(e) => {
                       const updatedSubtasks = [...subtasks];
-                      updatedSubtasks[0] = {
-                        ...updatedSubtasks[0],
-                        serviceRecipientInitial: e.target.value,
-                      };
+                      updatedSubtasks[0] = { ...updatedSubtasks[0], serviceRecipientInitial: e.target.value };
                       setSubtasks(updatedSubtasks);
-                      setAdditionalInfo(prev => ({
-                        ...prev,
-                        serviceRecipientInitial: e.target.value,
-                      }));
+                      setAdditionalInfo(prev => ({ ...prev, serviceRecipientInitial: e.target.value }));
                     }}
-                    label="Service Recipient (Initial Setup)"
-                    sx={{
-                      color: colors.textPrimary,
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: colors.border,
-                      },
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: colors.primary,
-                      },
-                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor: colors.primary,
-                      },
-                      backgroundColor: colors.surface,
-                      direction: "rtl",
-                      textAlign: "right",
-                    }}
-                    MenuProps={{
-                      PaperProps: {
-                        sx: {
-                          backgroundColor: colors.surfaceElevated,
-                          color: colors.textPrimary,
-                          "& .MuiMenuItem-root": {
-                            "&:hover": {
-                              backgroundColor: colors.primaryHover,
-                            },
-                            "&.Mui-selected": {
-                              backgroundColor: `${colors.primary}22`,
-                            },
-                            "&.Mui-selected:hover": {
-                              backgroundColor: `${colors.primary}33`,
-                            },
-                          },
-                        },
-                      },
-                    }}
+                    label="RECIPIENT (INITIAL SETUP)"
+                    sx={{ color: colors.textPrimary, bgcolor: colors.bg }}
                   >
-                    <MenuItem value="">Select Service Recipient</MenuItem>
+                    <MenuItem value="">Select Recipient</MenuItem>
                     <MenuItem value="Authorized Representative">Authorized Representative</MenuItem>
                     <MenuItem value="Primary Subscriber">Primary Subscriber</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
-              {(selectedOption === "visit") && (
-                <Grid item xs={12}>
-                  <FormControl fullWidth>
-                    <InputLabel sx={{ color: colors.textSecondary }}>Service Recipient (QoS Team Visit)</InputLabel>
+              {selectedOption === "visit" && (
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel sx={{ color: colors.textSecondary }}>RECIPIENT (QOS VISIT)</InputLabel>
                     <Select
                       value={subtasks[0]?.serviceRecipientQoS || ""}
                       onChange={(e) => {
                         const updatedSubtasks = [...subtasks];
-                        updatedSubtasks[0] = {
-                          ...updatedSubtasks[0],
-                          serviceRecipientQoS: e.target.value,
-                        };
+                        updatedSubtasks[0] = { ...updatedSubtasks[0], serviceRecipientQoS: e.target.value };
                         setSubtasks(updatedSubtasks);
-                        setAdditionalInfo(prev => ({
-                          ...prev,
-                          serviceRecipientQoS: e.target.value,
-                        }));
+                        setAdditionalInfo(prev => ({ ...prev, serviceRecipientQoS: e.target.value }));
                       }}
-                      label="Service Recipient (QoS Team Visit)"
-                      sx={{
-                        color: colors.textPrimary,
-                        "& .MuiOutlinedInput-notchedOutline": {
-                          borderColor: colors.border,
-                        },
-                        "&:hover .MuiOutlinedInput-notchedOutline": {
-                          borderColor: colors.primary,
-                        },
-                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                          borderColor: colors.primary,
-                        },
-                        backgroundColor: colors.surface,
-                        direction: "rtl",
-                        textAlign: "right",
-                      }}
-                      MenuProps={{
-                        PaperProps: {
-                          sx: {
-                            backgroundColor: colors.surfaceElevated,
-                            color: colors.textPrimary,
-                            "& .MuiMenuItem-root": {
-                              "&:hover": {
-                                backgroundColor: colors.primaryHover,
-                              },
-                              "&.Mui-selected": {
-                                backgroundColor: `${colors.primary}22`,
-                              },
-                              "&.Mui-selected:hover": {
-                                backgroundColor: `${colors.primary}33`,
-                              },
-                            },
-                          },
-                        },
-                      }}
+                      label="RECIPIENT (QOS VISIT)"
+                      sx={{ color: colors.textPrimary, bgcolor: colors.bg }}
                     >
-                      <MenuItem value="">Select Service Recipient</MenuItem>
+                      <MenuItem value="">Select Recipient</MenuItem>
                       <MenuItem value="Authorized Representative">Authorized Representative</MenuItem>
                       <MenuItem value="Primary Subscriber">Primary Subscriber</MenuItem>
                     </Select>

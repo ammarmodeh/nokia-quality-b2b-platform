@@ -25,6 +25,7 @@ import {
   TablePagination,
   Avatar,
   Tooltip,
+  Checkbox,
 } from '@mui/material';
 import {
   Chart as ChartJS,
@@ -122,6 +123,39 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   const handleViewIssue = (issue) => {
     setSelectedDetailedIssue(issue);
     setIsIssueViewOpen(true);
+  };
+
+  const handleToggleCheck = async (issue) => {
+    try {
+      const updatedValue = !issue.isChecked;
+      const response = await api.put(
+        `/customer-issues-notifications/${issue._id}`,
+        { isChecked: updatedValue },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` } }
+      );
+
+      if (response.data.success) {
+        // toast.success(`Issue marked as ${updatedValue ? 'checked' : 'unchecked'}`);
+        // Dispatch refresh event to update parent state
+        window.dispatchEvent(new CustomEvent('cin-refresh'));
+      }
+    } catch (error) {
+      toast.error("Failed to update status");
+    }
+  };
+
+  const handleIssueUpdate = async (formData, id) => {
+    try {
+      const response = await api.put(`/customer-issues-notifications/${id}`, formData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      if (response.data.success) {
+        toast.success("Issue updated successfully");
+        window.dispatchEvent(new CustomEvent('cin-refresh'));
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update issue");
+    }
   };
 
   // --- Statistics Calculation ---
@@ -1492,29 +1526,49 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                               T: {item.assignedTo}<br />S: {item.supervisor}
                             </td>
                             <td style={{ padding: '8px', textAlign: 'center' }}>
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                color="primary"
-                                onClick={() => handleViewIssue(item.originalIssue)}
-                                sx={{ fontSize: '0.7rem', textTransform: 'none', py: 0.2 }}
-                              >
-                                View
-                              </Button>
-                              {item.originalIssue?.installingTeam && (
-                                <Tooltip title="Contact Team via WhatsApp">
-                                  <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleWhatsAppContact(item.originalIssue);
-                                    }}
-                                    sx={{ ml: 1, color: '#25D366', '&:hover': { backgroundColor: 'rgba(37, 211, 102, 0.1)' } }}
-                                  >
-                                    <FaWhatsapp size={16} />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
+                              <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                                <Checkbox
+                                  size="small"
+                                  checked={item.originalIssue.isChecked || false}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleCheck(item.originalIssue);
+                                  }}
+                                  sx={{
+                                    p: 0,
+                                    color: '#3d3d3d',
+                                    '&.Mui-checked': {
+                                      color: '#7b68ee',
+                                    },
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(123, 104, 238, 0.05)',
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="primary"
+                                  onClick={() => handleViewIssue(item.originalIssue)}
+                                  sx={{ fontSize: '0.7rem', textTransform: 'none', py: 0.2 }}
+                                >
+                                  View
+                                </Button>
+                                {item.originalIssue?.installingTeam && (
+                                  <Tooltip title="Contact Team via WhatsApp">
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleWhatsAppContact(item.originalIssue);
+                                      }}
+                                      sx={{ color: '#25D366', '&:hover': { backgroundColor: 'rgba(37, 211, 102, 0.1)' } }}
+                                    >
+                                      <FaWhatsapp size={16} />
+                                    </IconButton>
+                                  </Tooltip>
+                                )}
+                              </Stack>
                             </td>
                           </tr>
                         )) : (
@@ -2188,6 +2242,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         open={isIssueViewOpen}
         onClose={() => setIsIssueViewOpen(false)}
         issue={selectedDetailedIssue}
+        onUpdate={handleIssueUpdate}
       />
       <ReportedIssueCardDialog
         open={reportDialogOpen}

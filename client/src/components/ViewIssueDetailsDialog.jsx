@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -34,12 +35,16 @@ import {
   MdOutlineDescription,
   MdOutlineEngineering,
   MdOutlineSupervisorAccount,
-  MdOutlineDoneAll
+  MdOutlineDoneAll,
+  MdInfo,
+  MdEdit
 } from 'react-icons/md';
 import { FaBuilding } from 'react-icons/fa';
 import api from '../api/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useSelector } from 'react-redux';
+import CustomerIssueDialog from './CustomerIssueDialog';
 
 // Premium Colors
 const colors = {
@@ -137,9 +142,13 @@ const StatusTimeline = ({ issue }) => {
   );
 };
 
-const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
+const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const user = useSelector((state) => state?.auth?.user);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+
+  const isAdmin = user?.role === 'Admin';
 
   if (!issue) return null;
 
@@ -153,6 +162,10 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
       Ticket ID: ${issue.ticketId || 'N/A'}
       From (Main): ${issue.fromMain || issue.from || 'N/A'}
       From (Sub): ${issue.fromSub || 'N/A'}
+      Area: ${issue.area || 'N/A'}
+      Caller Name: ${issue.callerName || 'N/A'}
+      Caller Details: ${issue.callerDetails || 'N/A'}
+      Call Date: ${issue.callDate ? format(new Date(issue.callDate), 'MMM dd, yyyy') : 'N/A'}
       Reporter: ${issue.reporter}
       Reporter Note: ${issue.reporterNote || 'N/A'}
       Team/Company: ${issue.teamCompany}
@@ -183,6 +196,9 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
     formattedMessage += `*👤 Customer Info*\n`;
     formattedMessage += `Name: ${issue.customerName || 'N/A'}\n`;
     formattedMessage += `Contact: ${issue.customerContact || 'N/A'}\n`;
+    formattedMessage += `Area: ${issue.area || 'N/A'}\n`;
+    formattedMessage += `Caller: ${issue.callerName || 'N/A'} (${issue.callerDetails || 'N/A'})\n`;
+    formattedMessage += `Call Date: ${issue.callDate ? format(new Date(issue.callDate), 'MMM dd, yyyy') : 'N/A'}\n`;
     if (issue.ticketId) formattedMessage += `*Ticket ID:* ${issue.ticketId}\n`;
     formattedMessage += `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Open'}\n\n`;
 
@@ -306,6 +322,10 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
               <Stack spacing={0.5}>
                 <DetailItem icon={MdPerson} label="Full Name" value={issue.customerName} />
                 <DetailItem icon={MdPhone} label="Contact Number" value={issue.customerContact} />
+                <DetailItem icon={MdPerson} label="Caller Name" value={issue.callerName} />
+                <DetailItem icon={MdInfo} label="Caller Details" value={issue.callerDetails} />
+                <DetailItem icon={MdEvent} label="Call Date" value={issue.callDate ? format(new Date(issue.callDate), 'MMM dd, yyyy') : 'N/A'} />
+                <DetailItem icon={MdLocationOn} label="Area" value={issue.area} />
                 <DetailItem icon={MdEvent} label="PIS Date" value={issue.pisDate ? format(new Date(issue.pisDate), 'MMM dd, yyyy') : 'N/A'} />
                 <DetailItem icon={MdLocationOn} label="SLID" value={issue.slid} />
               </Stack>
@@ -414,7 +434,23 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
         </Grid>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.02)', borderTop: `1px solid ${colors.border}` }}>
+      <DialogActions sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.02)', borderTop: `1px solid ${colors.border}`, gap: 1 }}>
+        {isAdmin && (
+          <Button
+            onClick={() => setOpenEditDialog(true)}
+            variant="contained"
+            startIcon={<MdEdit />}
+            sx={{
+              bgcolor: colors.primary,
+              '&:hover': { bgcolor: '#6a5acd' },
+              textTransform: 'none',
+              borderRadius: 2,
+              px: 3
+            }}
+          >
+            Edit Details
+          </Button>
+        )}
         <Button
           onClick={onClose}
           variant="outlined"
@@ -433,6 +469,19 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue }) => {
           Close Insight
         </Button>
       </DialogActions>
+
+      {/* Edit Dialog Integration */}
+      {isAdmin && (
+        <CustomerIssueDialog
+          open={openEditDialog}
+          onClose={() => setOpenEditDialog(false)}
+          issue={issue}
+          onSubmit={async (data, id) => {
+            if (onUpdate) await onUpdate(data, id);
+            setOpenEditDialog(false);
+          }}
+        />
+      )}
     </Dialog>
   );
 };

@@ -412,6 +412,17 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
           />
 
+          {/* New Row: Dashboard Short Note */}
+          <TextField
+            label="Dashboard Short Note"
+            placeholder="A very short note for the main dashboard card"
+            fullWidth
+            variant="outlined"
+            {...register('dashboardShortNote')}
+            inputProps={{ dir: "auto", maxLength: 100 }}
+            helperText="Maximum 100 characters"
+          />
+
           {/* Row 7: Customer Type, PIS Date */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <FormControl fullWidth variant="outlined">

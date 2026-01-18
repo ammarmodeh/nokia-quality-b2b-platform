@@ -173,7 +173,7 @@ const NotificationPanel = () => {
       let taskNotifications = [];
       if (Array.isArray(tasksResponse.data)) {
         const myAssignedTasks = tasksResponse.data.filter((task) =>
-          task.assignedTo.some((assignedUser) =>
+          Array.isArray(task.assignedTo) && task.assignedTo.some((assignedUser) =>
             String(assignedUser._id || assignedUser) === String(user._id)
           )
         );

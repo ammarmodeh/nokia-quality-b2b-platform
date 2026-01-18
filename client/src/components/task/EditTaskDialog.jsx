@@ -166,6 +166,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setValue("customerName", task.customerName || "");
       setValue("district", task.district || "");
       setValue("operation", task.operation || "");
+      setValue("dashboardShortNote", task.dashboardShortNote || "");
 
       const priorityValue = task.priority || "";
       setPriority(priorityValue);
@@ -181,9 +182,11 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setTeamCompany(task.teamCompany || '');
       setEvaluationScore(task.evaluationScore || '');
       setGovernorate(task.governorate || '');
+      const teamIdVal = task.teamId && typeof task.teamId === 'object' ? task.teamId._id : task.teamId;
+      const teamNameVal = task.teamName || (task.teamId && typeof task.teamId === 'object' ? task.teamId.teamName : '');
       setTeamInfo({
-        teamName: task.teamName || '',
-        teamId: task.teamId || ''
+        teamName: teamNameVal || '',
+        teamId: teamIdVal || ''
       });
       setCustomerType(task.customerType || '');
       setValidationStatus(task.validationStatus || "");
@@ -408,6 +411,17 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               helperText={errors.customerFeedback ? errors.customerFeedback.message : ''}
               inputProps={{ dir: "auto" }}
               sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+            />
+
+            {/* New Row: Dashboard Short Note */}
+            <TextField
+              label="Dashboard Short Note"
+              placeholder="A very short note for the main dashboard card"
+              fullWidth
+              variant="outlined"
+              {...register('dashboardShortNote')}
+              inputProps={{ dir: "auto", maxLength: 100 }}
+              helperText="Maximum 100 characters"
             />
 
             {/* Row 7: Customer Type, PIS Date */}

@@ -32,6 +32,7 @@ import {
   Select,
   MenuItem,
   useMediaQuery,
+  TableHead,
 } from "@mui/material";
 import {
   NavigateNext as NavigateNextIcon,
@@ -236,22 +237,16 @@ const IssuePreventionAnalytics = () => {
       valueGetter: (value, row) => row.reports.length,
     },
     {
-      field: "source",
-      headerName: "Main Source",
+      field: "sourceMain",
+      headerName: "From (Main)",
       width: 150,
       valueGetter: (value, row) => row.reports[0]?.fromMain || "N/A",
     },
     {
-      field: "reporter",
-      headerName: "Reporter",
+      field: "sourceSub",
+      headerName: "From (Sub)",
       width: 150,
-      valueGetter: (value, row) => row.reports[0]?.reporter || "N/A",
-    },
-    {
-      field: "teamCompany",
-      headerName: "Subcon",
-      width: 150,
-      valueGetter: (value, row) => row.task.teamCompany || "N/A",
+      valueGetter: (value, row) => row.reports[0]?.fromSub || "N/A",
     },
     {
       field: "reason",
@@ -296,9 +291,9 @@ const IssuePreventionAnalytics = () => {
       headerName: "Prevention Gap",
       width: 140,
       valueGetter: (value, row) => {
-        const reportDate = moment(row.reports[0].createdAt);
-        const interviewDate = moment(row.task.interviewDate);
-        return interviewDate.diff(reportDate, 'days');
+        const reportDate = moment(row.reports[0].date || row.reports[0].createdAt).startOf('day');
+        const interviewDate = moment(row.task.interviewDate).startOf('day');
+        return Math.abs(interviewDate.diff(reportDate, 'days'));
       },
       renderCell: (params) => (
         <Chip
@@ -336,21 +331,50 @@ const IssuePreventionAnalytics = () => {
     }
   ];
 
-  const StatCard = ({ title, value, icon, color }) => (
+  const StatCard = ({ title, value, icon, color, description, subStats }) => (
     <MuiCard sx={{ height: '100%', borderRadius: 3, bgcolor: alpha(color, 0.05), border: `1px solid ${alpha(color, 0.2)}` }} elevation={0}>
       <CardContent>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
-              {title}
-            </Typography>
-            <Typography variant="h4" fontWeight="800" sx={{ color: color }}>
-              {value}
-            </Typography>
-          </Box>
-          <Avatar sx={{ bgcolor: color, width: 48, height: 48 }}>
-            {icon}
-          </Avatar>
+        <Stack spacing={2}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
+                  {title}
+                </Typography>
+                {description && (
+                  <Tooltip title={description} arrow>
+                    <IconButton size="small" sx={{ mb: 0.5 }}>
+                      <FilterIcon sx={{ fontSize: 14, color: 'grey.500' }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Stack>
+              <Typography variant="h4" fontWeight="800" sx={{ color: color }}>
+                {value}
+              </Typography>
+            </Box>
+            <Avatar sx={{ bgcolor: color, width: 48, height: 48 }}>
+              {icon}
+            </Avatar>
+          </Stack>
+
+          {subStats && subStats.length > 0 && (
+            <Box>
+              <Divider sx={{ mb: 1, opacity: 0.05 }} />
+              <Stack spacing={0.5}>
+                {subStats.map((stat, idx) => (
+                  <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, fontSize: '0.68rem' }}>
+                      {stat.label}
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                      {stat.value} ({stat.percentage}%)
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
+          )}
         </Stack>
       </CardContent>
     </MuiCard>
@@ -474,7 +498,7 @@ const IssuePreventionAnalytics = () => {
       <Grid container spacing={3} mb={5}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Total Critical Tasks"
+            title="Total Tasks (Det/Neu)"
             value={data?.totalCriticalTasks}
             icon={<AssessmentIcon />}
             color={theme.palette.error.main}
@@ -486,6 +510,33 @@ const IssuePreventionAnalytics = () => {
             value={data?.reportedOverlapCount}
             icon={<ReportIcon />}
             color={theme.palette.warning.main}
+            subStats={(() => {
+              const stats = [];
+              if (data?.overlapMainBreakdown) {
+                // Get top categories if many, or all if few. Let's just show top 1 or 2.
+                const mainEntries = Object.entries(data.overlapMainBreakdown).sort((a, b) => b[1] - a[1]);
+                mainEntries.slice(0, 2).forEach(([label, val]) => {
+                  stats.push({
+                    label: `Main: ${label}`,
+                    value: val,
+                    percentage: data.reportedOverlapCount > 0 ? ((val / data.reportedOverlapCount) * 100).toFixed(0) : 0
+                  });
+                });
+              }
+              if (data?.overlapSubBreakdown) {
+                const subEntries = Object.entries(data.overlapSubBreakdown).sort((a, b) => b[1] - a[1]);
+                subEntries.slice(0, 2).forEach(([label, val]) => {
+                  if (label && label !== 'null' && label !== 'undefined') {
+                    stats.push({
+                      label: `Sub: ${label}`,
+                      value: val,
+                      percentage: data.reportedOverlapCount > 0 ? ((val / data.reportedOverlapCount) * 100).toFixed(0) : 0
+                    });
+                  }
+                });
+              }
+              return stats;
+            })()}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -502,6 +553,7 @@ const IssuePreventionAnalytics = () => {
             value={`${data?.diagnosisAccuracy?.rate || 0}%`}
             icon={<VerifiedIcon />}
             color={theme.palette.success.main}
+            description="Measures the alignment between the reasons reported by customers (Initial Category) and the finalized root causes identified after technical resolution."
           />
         </Grid>
       </Grid>
@@ -949,48 +1001,87 @@ const IssuePreventionAnalytics = () => {
         </Grid>
       </Box>
 
+      {/* Global Category Accuracy Matrix */}
+      <Box mb={10}>
+        <Stack direction="row" alignItems="center" spacing={1} mb={3}>
+          <Typography variant="h6" fontWeight="700">
+            Global Category Accuracy Deep Dive
+          </Typography>
+          <Tooltip title="Mapping initially reported categories (from Issues page) to the finalized reasons (from Tasks). Green chips indicate matches, red indicates reclassifications.">
+            <IconButton size="small"><Explore fontSize="small" sx={{ color: 'grey.500' }} /></IconButton>
+          </Tooltip>
+        </Stack>
+        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', border: '1px solid #333' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ color: 'primary.main', fontWeight: 'bold', borderBottom: '2px solid #333', py: 2 }}>Initial Reported Category</TableCell>
+                <TableCell sx={{ color: 'primary.main', fontWeight: 'bold', borderBottom: '2px solid #333', py: 2 }}>Final Resolution Distribution</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {Object.entries(data?.globalCategoryReasonMatrix || {}).length > 0 ? (
+                Object.entries(data?.globalCategoryReasonMatrix || {}).map(([category, reasons], idx) => (
+                  <TableRow key={idx} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                    <TableCell sx={{ borderBottom: '1px solid #333', color: 'grey.300', fontWeight: 'bold', width: '30%' }}>
+                      {category}
+                    </TableCell>
+                    <TableCell sx={{ borderBottom: '1px solid #333', py: 2 }}>
+                      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                        {Object.entries(reasons).map(([reason, count], i) => (
+                          <Chip
+                            key={i}
+                            label={`${reason}: ${count}`}
+                            size="small"
+                            sx={{
+                              bgcolor: category.toLowerCase().includes(reason.toLowerCase()) || reason.toLowerCase().includes(category.toLowerCase())
+                                ? alpha(theme.palette.success.main, 0.1)
+                                : alpha(theme.palette.error.main, 0.1),
+                              color: category.toLowerCase().includes(reason.toLowerCase()) || reason.toLowerCase().includes(category.toLowerCase())
+                                ? 'success.main'
+                                : 'error.main',
+                              border: '1px solid currentColor',
+                              fontWeight: 'bold',
+                              fontSize: '0.7rem'
+                            }}
+                          />
+                        ))}
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={2} align="center" sx={{ border: 'none', py: 4, color: 'grey.500' }}>
+                    No mapping data available for the selected period.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Paper>
+      </Box>
+
       {/* Deep Dive Analysis: Root Cause & Vendor Performance */}
-      <Grid container spacing={4} mb={5}>
-        <Grid item xs={12} md={6}>
-          <Typography variant="h6" fontWeight="700" mb={3}>
-            Root Cause Deep Dive (Failures by Reason)
-          </Typography>
-          <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%' }}>
-            <Box sx={{ height: 350 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={reasonChartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
-                  <XAxis type="number" stroke="#cbd5e1" tick={{ fill: '#94a3b8' }} />
-                  <YAxis dataKey="name" type="category" stroke="#cbd5e1" width={100} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                  <RechartsTooltip cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} contentStyle={{ backgroundColor: '#262626', border: '1px solid #333', color: '#fff' }} />
-                  <Bar dataKey="value" fill="#FF8042" name="Failed Preventions" radius={[0, 4, 4, 0]}>
-                    <Cell fill="#FF8042" />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Typography variant="h6" fontWeight="700" mb={3}>
-            Vendor Ecosystem (Failures by Team Company)
-          </Typography>
-          <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%' }}>
-            <Box sx={{ height: 350 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={companyChartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
-                  <XAxis type="number" stroke="#cbd5e1" tick={{ fill: '#94a3b8' }} />
-                  <YAxis dataKey="name" type="category" stroke="#cbd5e1" width={100} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                  <RechartsTooltip cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} contentStyle={{ backgroundColor: '#262626', border: '1px solid #333', color: '#fff' }} />
-                  <Bar dataKey="value" fill="#00C49F" name="Failed Preventions" radius={[0, 4, 4, 0]}>
-                    <Cell fill="#00C49F" />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </Box>
-          </Paper>
-        </Grid>
+      <Grid item xs={12}>
+        <Typography variant="h6" fontWeight="700" mb={3}>
+          Root Cause Deep Dive (Failures by Reason)
+        </Typography>
+        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: 450 }}>
+          <Box sx={{ height: "100%" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={reasonChartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
+                <XAxis type="number" stroke="#cbd5e1" tick={{ fill: '#94a3b8' }} />
+                <YAxis dataKey="name" type="category" stroke="#cbd5e1" width={100} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                <RechartsTooltip cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} contentStyle={{ backgroundColor: '#262626', border: '1px solid #333', color: '#fff' }} />
+                <Bar dataKey="value" fill="#FF8042" name="Failed Preventions" radius={[0, 4, 4, 0]}>
+                  <Cell fill="#FF8042" />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </Box>
+        </Paper>
       </Grid>
 
       {/* Top Non-Preventive Reporters */}
@@ -1212,9 +1303,21 @@ const IssuePreventionAnalytics = () => {
                       </TableCell>
                     </TableRow>
                     <TableRow>
+                      <TableCell sx={{ color: 'grey.400', border: 'none' }}>From (Main):</TableCell>
+                      <TableCell sx={{ color: 'grey.100', border: 'none', fontWeight: 'bold' }}>
+                        {selectedComparison.reports[0].fromMain || "N/A"}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ color: 'grey.400', border: 'none' }}>From (Sub):</TableCell>
+                      <TableCell sx={{ color: 'grey.100', border: 'none', fontWeight: 'bold' }}>
+                        {selectedComparison.reports[0].fromSub || "-"}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
                       <TableCell sx={{ color: 'grey.400', border: 'none' }}>First Reported:</TableCell>
                       <TableCell sx={{ color: 'grey.100', border: 'none', fontWeight: 'bold' }}>
-                        {moment(selectedComparison.reports[0].createdAt).format("MMM DD, YYYY HH:mm")}
+                        {moment(selectedComparison.reports[0].date || selectedComparison.reports[0].createdAt).format("MMM DD, YYYY HH:mm")}
                       </TableCell>
                     </TableRow>
                     <TableRow>
@@ -1224,17 +1327,53 @@ const IssuePreventionAnalytics = () => {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell sx={{ color: 'grey.400', border: 'none' }}>Prevention Gap:</TableCell>
+                      <TableCell sx={{ color: 'grey.400', border: 'none' }}>Resolved Date:</TableCell>
+                      <TableCell sx={{ color: 'grey.100', border: 'none', fontWeight: 'bold' }}>
+                        {selectedComparison.reports[0].resolveDate ? moment(selectedComparison.reports[0].resolveDate).format("MMM DD, YYYY HH:mm") : "N/A"}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ color: 'grey.400', border: 'none' }}>Technical Delay (Reported vs Resolved):</TableCell>
                       <TableCell sx={{ border: 'none' }}>
-                        <Chip
-                          label={`${moment(selectedComparison.task.interviewDate).diff(moment(selectedComparison.reports[0].createdAt), 'days')} days`}
-                          size="small"
-                          sx={{
-                            backgroundColor: moment(selectedComparison.task.interviewDate).diff(moment(selectedComparison.reports[0].createdAt), 'days') > 7 ? "#d32f2f" : "#ed6c02",
-                            color: "white",
-                            fontWeight: "bold"
-                          }}
-                        />
+                        {(() => {
+                          if (!selectedComparison.reports[0].resolveDate) return "N/A";
+                          const reportDate = moment(selectedComparison.reports[0].date || selectedComparison.reports[0].createdAt).startOf('day');
+                          const resolveDate = moment(selectedComparison.reports[0].resolveDate).startOf('day');
+                          const techDelay = Math.abs(resolveDate.diff(reportDate, 'days'));
+                          return (
+                            <Chip
+                              label={`${techDelay} days`}
+                              size="small"
+                              variant="outlined"
+                              sx={{
+                                color: techDelay > 3 ? "#ed6c02" : "#4caf50",
+                                borderColor: techDelay > 3 ? "#ed6c02" : "#4caf50",
+                                fontWeight: "bold"
+                              }}
+                            />
+                          );
+                        })()}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ color: 'grey.400', border: 'none' }}>Prevention Gap (Reported vs Interview):</TableCell>
+                      <TableCell sx={{ border: 'none' }}>
+                        {(() => {
+                          const reportDate = moment(selectedComparison.reports[0].date || selectedComparison.reports[0].createdAt).startOf('day');
+                          const interviewDate = moment(selectedComparison.task.interviewDate).startOf('day');
+                          const gap = Math.abs(interviewDate.diff(reportDate, 'days'));
+                          return (
+                            <Chip
+                              label={`${gap} days`}
+                              size="small"
+                              sx={{
+                                backgroundColor: gap > 7 ? "#d32f2f" : "#ed6c02",
+                                color: "white",
+                                fontWeight: "bold"
+                              }}
+                            />
+                          );
+                        })()}
                       </TableCell>
                     </TableRow>
                   </TableBody>
@@ -1270,6 +1409,46 @@ const IssuePreventionAnalytics = () => {
                 </Grid>
               </Paper>
 
+              {/* Classification Comparison */}
+              <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2 }}>
+                <Typography variant="subtitle2" color="info.main" gutterBottom sx={{ fontWeight: 'bold' }}>
+                  Classification Comparison
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ p: 2, bgcolor: '#1a1a1a', borderRadius: 2, border: '1px solid #333' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Reported Categories
+                      </Typography>
+                      <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}>
+                        {(selectedComparison.reports[0].issues || []).map((issue, idx) => (
+                          <Chip
+                            key={idx}
+                            label={issue.category}
+                            size="small"
+                            sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), color: 'warning.main', border: '1px solid rgba(237, 108, 2, 0.2)' }}
+                          />
+                        ))}
+                      </Stack>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ p: 2, bgcolor: '#1a1a1a', borderRadius: 2, border: '1px solid #333' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Finalized Task Reason
+                      </Typography>
+                      <Box sx={{ mt: 1 }}>
+                        <Chip
+                          label={selectedComparison.task.reason || "N/A"}
+                          size="small"
+                          sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: 'success.main', border: '1px solid rgba(76, 175, 80, 0.2)' }}
+                        />
+                      </Box>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
+
               {/* Professional Insights */}
               <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2 }}>
                 <Typography variant="subtitle2" color="success.main" gutterBottom sx={{ fontWeight: 'bold' }}>
@@ -1289,9 +1468,14 @@ const IssuePreventionAnalytics = () => {
                       • Prevention Opportunity:
                     </Typography>
                     <Typography variant="body2" color="grey.300" sx={{ ml: 2 }}>
-                      {moment(selectedComparison.task.interviewDate).diff(moment(selectedComparison.reports[0].createdAt), 'days') > 7
-                        ? "High - Issue was reported well in advance but escalated to negative feedback."
-                        : "Medium - Short window between report and interview suggests rapid escalation."}
+                      {(() => {
+                        const reportDate = moment(selectedComparison.reports[0].date || selectedComparison.reports[0].createdAt).startOf('day');
+                        const interviewDate = moment(selectedComparison.task.interviewDate).startOf('day');
+                        const gap = Math.abs(interviewDate.diff(reportDate, 'days'));
+                        return gap > 7
+                          ? "High - Issue was reported well in advance but escalated to negative feedback."
+                          : "Medium - Short window between report and interview suggests rapid escalation.";
+                      })()}
                     </Typography>
                   </Box>
                   <Box>

@@ -1396,7 +1396,7 @@ const TaskStatusDialog = ({ open, onClose, tasks: initialTasks, title, setUpdate
                               }}
                               avatar={
                                 <Avatar sx={{
-                                  backgroundColor: taskToView.assignedTo.some(u => u._id === subtask.completedBy._id)
+                                  backgroundColor: (Array.isArray(taskToView.assignedTo) && taskToView.assignedTo.some(u => (u?._id || u) === subtask.completedBy?._id))
                                     ? '#7b68ee'
                                     : '#f44336',
                                   width: isMobile ? 20 : 24,

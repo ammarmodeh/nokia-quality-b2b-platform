@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { IoMdAdd } from "react-icons/io";
 import { FaList } from "react-icons/fa";
-import { MdClose, MdGridView, MdOutlineSearch } from "react-icons/md";
-import { Tabs, Tab, Stack, Typography, TextField, IconButton, Box, Button, CircularProgress, useMediaQuery } from "@mui/material";
-import { HourglassEmpty, PlayCircle, CheckCircle } from "@mui/icons-material";
+import { MdClose, MdGridView, MdOutlineSearch, MdFilterList, MdExpandMore, MdExpandLess } from "react-icons/md";
+import {
+  Tabs, Tab, Stack, Typography, TextField, IconButton, Box, Button, CircularProgress,
+  useMediaQuery, MenuItem, FormControl, InputLabel, Select, Grid, Collapse, Paper
+} from "@mui/material";
+import { HourglassEmpty, PlayCircle, CheckCircle, Warning, Speed, VerifiedUser, Security } from "@mui/icons-material";
 import AddTask from "../components/task/AddTask";
 import api from "../api/api";
 import { PulseLoader } from "react-spinners";
@@ -26,9 +29,17 @@ const Tasks = () => {
   const [updateRefetchTasks, setUpdateRefetchTasks] = useState(false);
   const [updateStateDuringSave, setUpdateStateDuringSave] = useState(false);
   const [filteredTasks, setFilteredTasks] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [allTasks, setAllTasks] = useState([]);
+  const [fieldTeams, setFieldTeams] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
   const searchInputRef = useRef(null);
+
+  // Advanced Filters State
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [validationFilter, setValidationFilter] = useState("all");
+  const [teamFilter, setTeamFilter] = useState("all");
+
   const { ref, inView } = useInView();
   const [trashActionState, setTrashActionState] = useState({
     loading: false,
@@ -40,18 +51,19 @@ const Tasks = () => {
   const isSmallScreen = useMediaQuery('(max-width:600px)');
   const isMediumScreen = useMediaQuery('(max-width:900px)');
 
+  // Fetch all users and field teams
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       try {
-        const { data } = await api.get("/users/get-all-users", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-        });
-        setUsers(data);
-      } catch (error) {
-        // console.error("Error fetching users:", error);
-      }
+        const [usersRes, teamsRes] = await Promise.all([
+          api.get("/users/get-all-users", { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }),
+          api.get("/field-teams/get-field-teams", { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } })
+        ]);
+        setUsers(usersRes.data);
+        setFieldTeams(teamsRes.data);
+      } catch (error) { }
     };
-    fetchUsers();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -68,22 +80,31 @@ const Tasks = () => {
     fetchAllTasks();
   }, [updateStateDuringSave, updateRefetchTasks]);
 
-  const TASKS_PER_PAGE = 5;
+  const TASKS_PER_PAGE = 50;
 
   const fetchTasks = async ({ pageParam = 1 }) => {
     try {
-      const { data } = await api.get(`/tasks/get-tasks?page=${pageParam}`, {
+      const params = new URLSearchParams({
+        page: pageParam,
+        limit: TASKS_PER_PAGE,
+        status: statusFilter,
+        priority: priorityFilter,
+        validationStatus: validationFilter,
+        teamId: teamFilter,
+        search: searchTerm
+      });
+
+      const { data } = await api.get(`/tasks/get-tasks?${params.toString()}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
-      return data;
+      return data.data || [];
     } catch (error) {
-      // console.error("Error fetching tasks:", error);
       throw error;
     }
   };
 
   const { data, status, error, fetchNextPage, isFetchingNextPage, hasNextPage } = useInfiniteQuery({
-    queryKey: ['all-tasks'],
+    queryKey: ['all-tasks', statusFilter, priorityFilter, validationFilter, teamFilter, searchTerm],
     queryFn: fetchTasks,
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => {
@@ -110,8 +131,7 @@ const Tasks = () => {
 
   const calculateStatusStats = () => {
     const totalTasks = allTasks.length;
-    if (totalTasks === 0) return { todo: { count: 0, percentage: 0 }, inProgress: { count: 0, percentage: 0 }, closed: { count: 0, percentage: 0 } };
-
+    let todo = 0, inProgress = 0, closed = 0;
     allTasks.forEach(task => {
       if (task.status === "Todo") todo++;
       else if (task.status === "Closed") closed++;
@@ -119,9 +139,9 @@ const Tasks = () => {
     });
 
     return {
-      todo: { count: todo, percentage: (todo / totalTasks) * 100 },
-      inProgress: { count: inProgress, percentage: (inProgress / totalTasks) * 100 },
-      closed: { count: closed, percentage: (closed / totalTasks) * 100 },
+      todo: { count: todo, percentage: totalTasks > 0 ? (todo / totalTasks) * 100 : 0 },
+      inProgress: { count: inProgress, percentage: totalTasks > 0 ? (inProgress / totalTasks) * 100 : 0 },
+      closed: { count: closed, percentage: totalTasks > 0 ? (closed / totalTasks) * 100 : 0 },
     };
   };
 
@@ -377,72 +397,57 @@ const Tasks = () => {
             <Stack
               direction="row"
               alignItems="center"
-              spacing={0.5}
+              spacing={1}
               sx={{
-                backgroundColor: "#fef9c2",
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                color: "#d08700",
-                fontSize: "12px",
+                background: "rgba(234, 179, 8, 0.1)",
+                backdropFilter: "blur(10px)",
+                px: 2, py: 1, borderRadius: 3,
+                color: "#eab308",
+                border: "1px solid rgba(234, 179, 8, 0.2)",
                 minWidth: 'max-content'
               }}
             >
-              <HourglassEmpty sx={{ fontSize: "16px" }} />
-              <Typography variant="caption" fontWeight="bold">
-                {isSmallScreen ? (
-                  `${statusStats.todo.count} (${statusStats.todo.percentage.toFixed(0)}%)`
-                ) : (
-                  `Todo (${statusStats.todo.count} | ${statusStats.todo.percentage.toFixed(0)}%)`
-                )}
+              <HourglassEmpty sx={{ fontSize: "18px" }} />
+              <Typography variant="caption" sx={{ fontWeight: 900, letterSpacing: '0.5px' }}>
+                TODO: {statusStats.todo.count} ({statusStats.todo.percentage.toFixed(0)}%)
               </Typography>
             </Stack>
 
             <Stack
               direction="row"
               alignItems="center"
-              spacing={0.5}
+              spacing={1}
               sx={{
-                backgroundColor: "#dbeafe",
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                color: "#155dfc",
-                fontSize: "12px",
+                background: "rgba(59, 130, 246, 0.1)",
+                backdropFilter: "blur(10px)",
+                px: 2, py: 1, borderRadius: 3,
+                color: "#3b82f6",
+                border: "1px solid rgba(59, 130, 246, 0.2)",
                 minWidth: 'max-content'
               }}
             >
-              <PlayCircle sx={{ fontSize: "16px" }} />
-              <Typography variant="caption" fontWeight="bold">
-                {isSmallScreen ? (
-                  `${statusStats.inProgress.count} (${statusStats.inProgress.percentage.toFixed(0)}%)`
-                ) : (
-                  `In Progress (${statusStats.inProgress.count} | ${statusStats.inProgress.percentage.toFixed(0)}%)`
-                )}
+              <PlayCircle sx={{ fontSize: "18px" }} />
+              <Typography variant="caption" sx={{ fontWeight: 900, letterSpacing: '0.5px' }}>
+                IN PROGRESS: {statusStats.inProgress.count} ({statusStats.inProgress.percentage.toFixed(0)}%)
               </Typography>
             </Stack>
 
             <Stack
               direction="row"
               alignItems="center"
-              spacing={0.5}
+              spacing={1}
               sx={{
-                backgroundColor: "#dcfce7",
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                color: "#00a63e",
-                fontSize: "12px",
+                background: "rgba(34, 197, 94, 0.1)",
+                backdropFilter: "blur(10px)",
+                px: 2, py: 1, borderRadius: 3,
+                color: "#22c55e",
+                border: "1px solid rgba(34, 197, 94, 0.2)",
                 minWidth: 'max-content'
               }}
             >
-              <CheckCircle sx={{ fontSize: "16px" }} />
-              <Typography variant="caption" fontWeight="bold">
-                {isSmallScreen ? (
-                  `${statusStats.closed.count} (${statusStats.closed.percentage.toFixed(0)}%)`
-                ) : (
-                  `Closed (${statusStats.closed.count} | ${statusStats.closed.percentage.toFixed(0)}%)`
-                )}
+              <CheckCircle sx={{ fontSize: "18px" }} />
+              <Typography variant="caption" sx={{ fontWeight: 900, letterSpacing: '0.5px' }}>
+                CLOSED: {statusStats.closed.count} ({statusStats.closed.percentage.toFixed(0)}%)
               </Typography>
             </Stack>
           </Stack>
@@ -471,40 +476,23 @@ const Tasks = () => {
             variant="standard"
             placeholder="Search tasks by SLID..."
             inputRef={searchInputRef}
+            onChange={(e) => !e.target.value && handleClearSearch()}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearchClick()}
             sx={{
-              "& .MuiInputBase-root": {
-                backgroundColor: "transparent",
-                color: "#ffffff",
-              },
-              "& .MuiInputBase-input": {
-                fontSize: "14px",
-                color: "#ffffff",
-                padding: 0,
-              },
-              "& .MuiInput-root:before": {
-                borderBottom: "none",
-              },
-              "& .MuiInput-root:after": {
-                borderBottom: "none",
-              },
-              "& .MuiInput-root:hover:not(.Mui-disabled):before": {
-                borderBottom: "none",
-              },
+              "& .MuiInputBase-root": { backgroundColor: "transparent", color: "#ffffff" },
+              "& .MuiInputBase-input": { fontSize: "14px", color: "#ffffff", padding: 0 },
+              "& .MuiInput-root:before, & .MuiInput-root:after": { borderBottom: "none" },
             }}
             InputProps={{
               disableUnderline: true,
-              style: { color: "#ffffff" },
               endAdornment: searchTerm && (
-                <IconButton
-                  size="small"
-                  onClick={handleClearSearch}
-                  sx={{ color: "#b3b3b3", "&:hover": { color: "#ffffff" } }}
-                >
-                  <MdClose className="text-xl" />
-                </IconButton>
+                <IconButton size="small" onClick={handleClearSearch} sx={{ color: "#b3b3b3" }}><MdClose /></IconButton>
               ),
             }}
           />
+          <IconButton onClick={() => setShowFilters(!showFilters)} size="small" sx={{ color: showFilters ? "#7b68ee" : "#888" }}>
+            <MdFilterList />
+          </IconButton>
           <Button
             variant="contained"
             onClick={handleSearchClick}
@@ -513,19 +501,91 @@ const Tasks = () => {
               backgroundColor: "#323232",
               color: "#ffffff",
               borderRadius: "999px",
-              "&:hover": {
-                backgroundColor: "#1d4ed8",
-              },
+              "&:hover": { backgroundColor: "#1d4ed8" },
               fontSize: "14px",
               textTransform: "none",
               px: 2,
-              // display: isSmallScreen ? 'none' : 'inline-flex'
             }}
           >
             Search
           </Button>
         </Box>
       </Stack>
+
+      {/* Advanced Filter Collapse */}
+      <Collapse in={showFilters}>
+        <Paper sx={{ p: 3, bgcolor: "#1e1e1e", borderRadius: 4, mb: 3, border: "1px solid #333" }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel sx={{ color: "#888" }}>Priority</InputLabel>
+                <Select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                  label="Priority"
+                  sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#333" } }}
+                >
+                  <MenuItem value="all">All Priorities</MenuItem>
+                  <MenuItem value="High">🔴 High</MenuItem>
+                  <MenuItem value="Medium">🟠 Medium</MenuItem>
+                  <MenuItem value="Low">🔵 Low</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel sx={{ color: "#888" }}>Status</InputLabel>
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  label="Status"
+                  sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#333" } }}
+                >
+                  <MenuItem value="all">All Statuses</MenuItem>
+                  <MenuItem value="Todo">⏳ Todo</MenuItem>
+                  <MenuItem value="In Progress">⚡ In Progress</MenuItem>
+                  <MenuItem value="Closed">✅ Closed</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel sx={{ color: "#888" }}>Validation</InputLabel>
+                <Select
+                  value={validationFilter}
+                  onChange={(e) => setValidationFilter(e.target.value)}
+                  label="Validation"
+                  sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#333" } }}
+                >
+                  <MenuItem value="all">All Validation</MenuItem>
+                  <MenuItem value="Pending">🕒 Pending</MenuItem>
+                  <MenuItem value="Validated">🛡️ Validated</MenuItem>
+                  <MenuItem value="Rejected">❌ Rejected</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel sx={{ color: "#888" }}>Field Team</InputLabel>
+                <Select
+                  value={teamFilter}
+                  onChange={(e) => setTeamFilter(e.target.value)}
+                  label="Field Team"
+                  sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#333" } }}
+                >
+                  <MenuItem value="all">All Teams</MenuItem>
+                  {fieldTeams.map(team => (
+                    <MenuItem key={team._id} value={team._id}>{team.teamName}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button size="small" onClick={() => { setStatusFilter("all"); setPriorityFilter("all"); setValidationFilter("all"); setTeamFilter("all"); }} sx={{ color: "#7b68ee" }}>Reset Filters</Button>
+          </Box>
+        </Paper>
+      </Collapse>
 
       {selected === 0 ? (
         <Box>

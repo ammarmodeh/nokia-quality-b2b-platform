@@ -146,6 +146,10 @@ const subtaskSchema = new mongoose.Schema({
   shortNote: {
     type: String,
     default: ""
+  },
+  optional: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -209,6 +213,7 @@ const taskSchema = new mongoose.Schema(
     tarrifName: { type: String, trim: true, required: false, default: null },
     customerType: { type: String, trim: true, required: false, default: null },
     customerFeedback: { type: String, trim: true, required: false, default: null },
+    dashboardShortNote: { type: String, trim: true, default: "" },
     customerName: { type: String, trim: true, required: false, default: null },
     responsible: { type: String, trim: true, default: null },
     reason: { type: String, trim: true, required: false, default: null },

@@ -64,6 +64,11 @@ const customerIssueSchema = new mongoose.Schema({
     default: 'no'
   },
   dispatchedAt: { type: Date },
+  area: { type: String, required: false }, // Geographic area
+  callerName: { type: String, required: false }, // Caller Name from dropdown
+  callerDetails: { type: String, required: false }, // Caller details/note
+  callDate: { type: Date, required: false }, // Date of the call
+  isChecked: { type: Boolean, default: false }, // For user progress tracking
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -75,5 +80,7 @@ customerIssueSchema.index({ teamCompany: 1 });
 customerIssueSchema.index({ solved: 1 });
 customerIssueSchema.index({ pisDate: -1 });
 customerIssueSchema.index({ createdAt: -1 });
+customerIssueSchema.index({ area: 1 });
+customerIssueSchema.index({ callerName: 1 });
 
 export const CustomerIssueSchema = mongoose.model('CustomerIssue', customerIssueSchema);

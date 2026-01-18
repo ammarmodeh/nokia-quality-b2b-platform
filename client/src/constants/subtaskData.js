@@ -433,6 +433,7 @@ export const predefinedSubtasks = {
     {
       title: "Remote Service Assessment",
       status: "Open",
+      optional: true,
       checkpoints: [
         {
           name: "Wi-Fi Coverage Evaluation",
@@ -585,6 +586,7 @@ export const predefinedSubtasks = {
     {
       title: "Alternative Resolution Methods",
       status: "Open",
+      optional: true,
       checkpoints: [
         {
           name: "Resolution Category",

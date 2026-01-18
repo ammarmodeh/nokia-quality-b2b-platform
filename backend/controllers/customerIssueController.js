@@ -120,6 +120,9 @@ export const getAllIssues = async (req, res) => {
         { assigneeNote: { $regex: search, $options: 'i' } },
         { resolutionDetails: { $regex: search, $options: 'i' } },
         { customerContact: { $regex: search, $options: 'i' } },
+        { area: { $regex: search, $options: 'i' } },
+        { callerName: { $regex: search, $options: 'i' } },
+        { callerDetails: { $regex: search, $options: 'i' } },
         { "issues.category": { $regex: search, $options: 'i' } },
         { "issues.subCategory": { $regex: search, $options: 'i' } }
       ];

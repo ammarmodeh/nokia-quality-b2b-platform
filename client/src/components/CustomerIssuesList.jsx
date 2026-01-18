@@ -166,6 +166,9 @@ const CustomerIssuesList = () => {
         (issue.from && issue.from.toLowerCase().includes(term)) ||
         (issue.customerName && issue.customerName.toLowerCase().includes(term)) ||
         (issue.customerContact && issue.customerContact.toLowerCase().includes(term)) ||
+        (issue.area && issue.area.toLowerCase().includes(term)) ||
+        (issue.callerName && issue.callerName.toLowerCase().includes(term)) ||
+        (issue.callerDetails && issue.callerDetails.toLowerCase().includes(term)) ||
         (issue.closedBy && issue.closedBy.toLowerCase().includes(term)) ||
         (issue.assigneeNote && issue.assigneeNote.toLowerCase().includes(term)) ||
         (issue.resolutionDetails && issue.resolutionDetails.toLowerCase().includes(term)) ||
@@ -289,6 +292,7 @@ const CustomerIssuesList = () => {
   };
 
 
+
   const handleIssueChange = (index, field, value) => {
     const updatedIssues = [...editFormData.issues];
     updatedIssues[index][field] = value;
@@ -317,6 +321,10 @@ const CustomerIssuesList = () => {
       'From (Main)': issue.fromMain || issue.from || '',
       'From (Sub)': issue.fromSub || '',
       'Reporter': issue.reporter,
+      'Area': issue.area || 'N/A',
+      'Caller Name': issue.callerName || 'N/A',
+      'Caller Details': issue.callerDetails || 'N/A',
+      'Call Date': issue.callDate ? new Date(issue.callDate).toLocaleDateString() : 'N/A',
       'Reporter Note': issue.reporterNote || '',
       'Team/Company': issue.teamCompany,
       'Contact Method': issue.contactMethod,
@@ -357,6 +365,10 @@ const CustomerIssuesList = () => {
         markdownContent += `## ${index + 1}. Issue - SLID: ${issue.slid}\n`;
         markdownContent += `- **Date Reported**: ${new Date(issue.date).toLocaleDateString()}\n`;
         markdownContent += `- **Reporter**: ${issue.reporter || 'N/A'}\n`;
+        markdownContent += `- **Area**: ${issue.area || 'N/A'}\n`;
+        markdownContent += `- **Caller Name**: ${issue.callerName || 'N/A'}\n`;
+        markdownContent += `- **Caller Details**: ${issue.callerDetails || 'N/A'}\n`;
+        markdownContent += `- **Call Date**: ${issue.callDate ? new Date(issue.callDate).toLocaleDateString() : 'N/A'}\n`;
         markdownContent += `- **From (Main)**: ${issue.fromMain || issue.from || 'N/A'}\n`;
         markdownContent += `- **From (Sub)**: ${issue.fromSub || 'N/A'}\n`;
         markdownContent += `- **Assigned To**: ${issue.assignedTo || 'Unassigned'}\n`;
@@ -1251,6 +1263,7 @@ const CustomerIssuesList = () => {
         open={openViewDialog}
         onClose={() => setOpenViewDialog(false)}
         issue={currentIssue}
+        onUpdate={handleIssueSubmit}
         fullScreen={isMobile}
       />
 

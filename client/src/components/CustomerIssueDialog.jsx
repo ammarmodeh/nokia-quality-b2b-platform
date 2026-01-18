@@ -58,7 +58,11 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     closedAt: "",
     dispatched: "no",
     dispatchedAt: "",
-    resolutionDetails: ""
+    resolutionDetails: "",
+    area: "",
+    callerName: "",
+    callerDetails: "",
+    callDate: ""
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -119,7 +123,15 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           solved: issue.solved || (issue.closedAt ? 'yes' : 'no'),
 
           // Managed array
-          issues: issuesArray
+          issues: issuesArray,
+
+          // Area field
+          area: issue.area || '',
+
+          // Caller fields
+          callerName: issue.callerName || '',
+          callerDetails: issue.callerDetails || '',
+          callDate: issue.callDate ? new Date(issue.callDate).toISOString().split('T')[0] : ''
         };
 
         setFormData(baseData);
@@ -579,6 +591,17 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
+                  label="Area"
+                  name="area"
+                  value={formData.area || ''}
+                  onChange={handleChange}
+                  disabled={!isAdmin}
+                  sx={textFieldStyles}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
                   label="Reported Date"
                   type="date"
                   name="date"
@@ -776,6 +799,47 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   value={formData.assigneeNote}
                   onChange={handleChange}
                   placeholder="Notes for the field team..."
+                  disabled={!isAdmin}
+                  sx={textFieldStyles}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+          {/* Section: Caller Details - Separately after Assignment */}
+          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Caller Information</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <ManagedAutocomplete
+                  category="CALLERS"
+                  label="Caller Name"
+                  fullWidth
+                  value={formData.callerName}
+                  onChange={(val) => handleChange({ target: { name: 'callerName', value: val } })}
+                  disabled={!isAdmin}
+                  sx={textFieldStyles}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Caller Details"
+                  name="callerDetails"
+                  value={formData.callerDetails || ''}
+                  onChange={handleChange}
+                  disabled={!isAdmin}
+                  sx={textFieldStyles}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Call Date"
+                  type="date"
+                  name="callDate"
+                  value={formData.callDate || ''}
+                  onChange={handleChange}
+                  InputLabelProps={{ shrink: true }}
                   disabled={!isAdmin}
                   sx={textFieldStyles}
                 />

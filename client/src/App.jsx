@@ -41,6 +41,8 @@ const AIPortal = lazy(() => import("./pages/AIPortal"));
 const AIIntegrationExample = lazy(() => import("./pages/AIIntegrationExample"));
 const DataManagement = lazy(() => import("./pages/DataManagement"));
 const DetractorAnalytics = lazy(() => import("./pages/DetractorAnalytics"));
+const DetractorTasks = lazy(() => import("./pages/DetractorTasks"));
+const NeutralTasks = lazy(() => import("./pages/NeutralTasks"));
 const DropdownManagement = lazy(() => import("./pages/DropdownManagement"));
 const LabAssessment = lazy(() => import("./pages/LabAssessment"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -159,7 +161,9 @@ const App = () => {
           <Route path="/ai-portal" element={<AIPortal />} />
           <Route path="/ai-example" element={<AIIntegrationExample />} />
           <Route path="/excel-portal" element={<DataManagement />} />
-          <Route path="/analytics" element={<DetractorAnalytics />} />
+          <Route path="/detractors-analytics" element={<DetractorAnalytics />} />
+          <Route path="/detractor-tasks" element={<DetractorTasks />} />
+          <Route path="/neutral-tasks" element={<NeutralTasks />} />
           <Route path="/issue-prevention" element={<IssuePreventionAnalytics />} />
           <Route path="/prevention-deep-dive" element={<PreventionDeepDive />} />
           <Route path="/documents" element={<DocumentsPortal />} />
