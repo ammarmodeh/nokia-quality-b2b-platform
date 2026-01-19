@@ -93,7 +93,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   const [selectedDetailedIssue, setSelectedDetailedIssue] = useState(null);
   const [isIssueViewOpen, setIsIssueViewOpen] = useState(false);
 
-  const [trendTimeframe, setTrendTimeframe] = useState('day'); // 'day', 'week', 'month'
+  const [trendTimeframe, setTrendTimeframe] = useState('week'); // 'day', 'week', 'month'
   const [trendChartType, setTrendChartType] = useState('mixed'); // 'mixed', 'bar', 'line'
 
   const [negligencePage, setNegligencePage] = useState(0);

@@ -112,6 +112,7 @@ const UserNotesDrawer = ({ open, onClose }) => {
       setEditDialogOpen(false);
       resetForm();
       fetchNotes();
+      window.dispatchEvent(new CustomEvent('notes-refresh'));
     } catch (error) {
       console.error("Error saving note:", error);
       toast.error("Failed to save note");
@@ -124,6 +125,7 @@ const UserNotesDrawer = ({ open, onClose }) => {
       await api.delete(`/user-notes/${id}`);
       toast.success("Note deleted");
       fetchNotes();
+      window.dispatchEvent(new CustomEvent('notes-refresh'));
     } catch (error) {
       console.error("Error deleting note:", error);
       toast.error("Failed to delete note");

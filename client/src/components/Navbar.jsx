@@ -6,10 +6,7 @@ import NotificationPanel from "./NotificationPanel";
 import api from "../api/api";
 import { BeatLoader } from "react-spinners";
 import { toast } from "sonner";
-import { Box, Button, Divider, Menu, MenuItem, Stack, Typography, Drawer, IconButton, Tooltip, Badge, Chip } from "@mui/material";
-import { DocsMenu } from "./DocsMenu";
-import { PoliciesMenu } from "./PoliciesMenu";
-import useMediaQuery from '@mui/material/useMediaQuery';
+import { Box, Button, Divider, Menu, MenuItem, Stack, Typography, Drawer, IconButton, Tooltip, Badge, Chip, useMediaQuery } from "@mui/material";
 import { IoIosArrowDropleftCircle, IoIosCloseCircle, IoMdClose, IoMdCloseCircle } from "react-icons/io";
 import CustomerIssueDialog from "./CustomerIssueDialog";
 import CalendarDialog from "./CalendarDialog";
@@ -17,6 +14,8 @@ import { useSelector } from "react-redux";
 import { useTheme } from "@mui/material/styles";
 import { MdOutlineStickyNote2 } from "react-icons/md";
 import UserNotesDrawer from "./UserNotesDrawer";
+import AddTask from "./task/AddTask";
+import { MdAdd } from "react-icons/md";
 
 const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
   const theme = useTheme();
@@ -33,20 +32,16 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
   const [cinDialogOpen, setCinDialogOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
   const [notesDrawerOpen, setNotesDrawerOpen] = useState(false);
+  const [openAddTask, setOpenAddTask] = useState(false);
+  const [notesCount, setNotesCount] = useState(0);
 
   // Mobile menu state
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
   const openMobileMenu = Boolean(mobileMenuAnchor);
 
-  // Drawer states for mobile view
-  const [docsDrawerOpen, setDocsDrawerOpen] = useState(false);
-  const [policiesDrawerOpen, setPoliciesDrawerOpen] = useState(false);
-
   // Desktop menu states
-  const [DocsMenuAnchorEl, setDocsMenuAnchorEl] = useState(null);
-  const openDocsMenu = Boolean(DocsMenuAnchorEl);
-  const [policiesMenuAnchorEl, setPoliciesMenuAnchorEl] = useState(null);
-  const openPolicyMenu = Boolean(policiesMenuAnchorEl);
+  const [reviewsMenuAnchorEl, setReviewsMenuAnchorEl] = useState(null);
+  const openReviewsMenu = Boolean(reviewsMenuAnchorEl);
 
   const menuStyles = {
     '& .MuiPaper-root': {
@@ -55,7 +50,8 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
       borderRadius: '8px',
       border: `1px solid #3d3d3d`,
       padding: '8px 0',
-      overflow: 'hidden',
+      maxHeight: '90vh',
+      overflowY: 'auto',
     },
     '& .MuiMenuItem-root': {
       padding: '8px 16px',
@@ -70,28 +66,12 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
     },
   };
 
-  const handleClickOpenDocsMenu = (event) => {
-    if (isMediumSize) {
-      setDocsDrawerOpen(true);
-    } else {
-      setDocsMenuAnchorEl(event?.currentTarget);
-    }
+  const handleReviewsMenuOpen = (event) => {
+    setReviewsMenuAnchorEl(event.currentTarget);
   };
 
-  const handleClickOpenPoliciesMenu = (event) => {
-    if (isMediumSize) {
-      setPoliciesDrawerOpen(true);
-    } else {
-      setPoliciesMenuAnchorEl(event?.currentTarget);
-    }
-  };
-
-  const handleCloseDocsMenu = () => {
-    setDocsMenuAnchorEl(null);
-  };
-
-  const handleClosePoliciesMenu = () => {
-    setPoliciesMenuAnchorEl(null);
+  const handleReviewsMenuClose = () => {
+    setReviewsMenuAnchorEl(null);
   };
 
   const handleMobileMenuOpen = (event) => {
@@ -140,6 +120,23 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
     const timeout = setTimeout(() => fetchTasks(searchQuery), 500);
     return () => clearTimeout(timeout);
   }, [searchQuery, fetchTasks]);
+
+  const fetchNotesCount = useCallback(async () => {
+    try {
+      const response = await api.get("/user-notes");
+      if (response.data) {
+        setNotesCount(response.data.length);
+      }
+    } catch (error) {
+      console.error("Error fetching notes count:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotesCount();
+    window.addEventListener('notes-refresh', fetchNotesCount);
+    return () => window.removeEventListener('notes-refresh', fetchNotesCount);
+  }, [fetchNotesCount]);
 
   const handleTaskClick = (taskId) => {
     navigate(`/tasks/view-task/${taskId}`);
@@ -302,21 +299,40 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 >
                   <Typography variant="body1">Dashboard</Typography>
                 </MenuItem>
+                <Divider sx={{ borderColor: '#3d3d3d', mx: 2, my: 1 }} />
+                <Typography variant="caption" sx={{ px: 3, py: 1, color: '#6b7280', display: 'block', fontWeight: 'bold' }}>TASK CATEGORIES</Typography>
                 <MenuItem
-                  onClick={() => {
-                    handleClickOpenDocsMenu(null);
-                    handleMobileMenuClose();
-                  }}
+                  component={Link}
+                  to="/detractor-tasks"
+                  onClick={handleMobileMenuClose}
                 >
-                  <Typography variant="body1">Docs</Typography>
+                  <Typography variant="body1">Detractor Tasks</Typography>
                 </MenuItem>
                 <MenuItem
+                  component={Link}
+                  to="/neutral-tasks"
+                  onClick={handleMobileMenuClose}
+                >
+                  <Typography variant="body1">Neutral Tasks</Typography>
+                </MenuItem>
+                <MenuItem
+                  component={Link}
+                  to="/audit/tasks"
+                  onClick={handleMobileMenuClose}
+                >
+                  <Typography variant="body1">Audit Tasks</Typography>
+                </MenuItem>
+                <Divider sx={{ borderColor: '#3d3d3d', mx: 2, my: 1 }} />
+                <MenuItem
                   onClick={() => {
-                    handleClickOpenPoliciesMenu(null);
+                    setOpenAddTask(true);
                     handleMobileMenuClose();
                   }}
                 >
-                  <Typography variant="body1">Policies</Typography>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <MdAdd size={20} color="#7b68ee" />
+                    <Typography variant="body1">Create Task</Typography>
+                  </Stack>
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
@@ -335,7 +351,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <Typography variant="body1">Personal Notes</Typography>
                     <Chip
-                      label="NEW"
+                      label={notesCount}
                       size="small"
                       sx={{
                         height: 18,
@@ -357,7 +373,10 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                     cursor: user?.role === "Admin" ? "pointer" : "not-allowed",
                   }}
                 >
-                  <Typography variant="body1">Report Issue</Typography>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <MdAdd size={20} color="#7b68ee" />
+                    <Typography variant="body1">Report Issue</Typography>
+                  </Stack>
                 </MenuItem>
                 <MenuItem
                   component={Link}
@@ -398,8 +417,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
             <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
             <Button
-              id="docs-menu-anchor"
-              onClick={handleClickOpenDocsMenu}
+              onClick={() => setOpenAddTask(true)}
               disableRipple
               sx={{
                 height: '55px',
@@ -408,26 +426,23 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#b3b3b3',
+                color: '#7b68ee',
+                fontWeight: 'bold',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: '#ffffff'
+                  color: '#9c8dff'
                 },
               }}
+              startIcon={<MdAdd style={{ fontSize: '20px' }} />}
             >
-              Docs
+              Create Task
             </Button>
-            <DocsMenu
-              anchorEl={DocsMenuAnchorEl}
-              open={openDocsMenu}
-              onClose={handleCloseDocsMenu}
-            />
 
             <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
             <Button
-              id="policies-menu-anchor"
-              onClick={handleClickOpenPoliciesMenu}
+              id="reviews-menu-anchor"
+              onClick={handleReviewsMenuOpen}
               disableRipple
               sx={{
                 height: '55px',
@@ -443,30 +458,48 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 },
               }}
             >
-              Policies
+              Task Reviews
             </Button>
             <Menu
-              id="policies-menu"
-              anchorEl={policiesMenuAnchorEl}
-              open={openPolicyMenu}
-              onClose={handleClosePoliciesMenu}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "right",
-              }}
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
+              id="reviews-menu"
+              anchorEl={reviewsMenuAnchorEl}
+              open={openReviewsMenu}
+              onClose={handleReviewsMenuClose}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
               sx={menuStyles}
-              PaperProps={{
-                sx: {
-                  width: '300px',
-                }
+              PaperProps={{ sx: { width: '200px' } }}
+            >
+              <MenuItem component={Link} to="/detractor-tasks" onClick={handleReviewsMenuClose}>
+                Detractor Tasks
+              </MenuItem>
+              <MenuItem component={Link} to="/neutral-tasks" onClick={handleReviewsMenuClose}>
+                Neutral Tasks
+              </MenuItem>
+            </Menu>
+
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+
+            <Button
+              component={Link}
+              to="/audit/tasks"
+              disableRipple
+              sx={{
+                height: '55px',
+                minWidth: 0,
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: '#b3b3b3',
+                "&:hover": {
+                  backgroundColor: "transparent",
+                  color: '#ffffff'
+                },
               }}
             >
-              <PoliciesMenu handleClosePoliciesMenu={handleClosePoliciesMenu} />
-            </Menu>
+              Audit Tasks
+            </Button>
 
             <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
@@ -483,14 +516,16 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                gap: 1,
                 cursor: user?.role === 'Admin' ? 'pointer' : 'not-allowed',
-                color: user?.role === 'Admin' ? '#6b7280' : '#666',
+                color: user?.role === 'Admin' ? '#b3b3b3' : '#666',
                 "&:hover": {
                   backgroundColor: "transparent",
                   color: user?.role === 'Admin' ? '#ffffff' : '#666'
                 },
               }}
             >
+              <MdAdd size={20} color="#7b68ee" />
               Report Issue
             </Button>
 
@@ -516,30 +551,30 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
             >
               Issues List
             </Button>
+
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+
+            <Button
+              onClick={() => setCalendarDialogOpen(true)}
+              disableRipple
+              sx={{
+                height: '55px',
+                minWidth: 0,
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: '#b3b3b3',
+                "&:hover": {
+                  backgroundColor: "transparent",
+                  color: '#ffffff'
+                },
+              }}
+            >
+              Calendar
+            </Button>
           </>
         )}
-
-        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
-
-        <Button
-          onClick={() => setCalendarDialogOpen(true)}
-          disableRipple
-          sx={{
-            height: '55px',
-            minWidth: 0,
-            padding: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: '#b3b3b3',
-            "&:hover": {
-              backgroundColor: "transparent",
-              color: '#ffffff'
-            },
-          }}
-        >
-          Calendar
-        </Button>
 
         <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
@@ -559,14 +594,15 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
             }}
           >
             <Badge
-              badgeContent="NEW"
+              showZero
+              badgeContent={notesCount}
               color="error"
               sx={{
                 '& .MuiBadge-badge': {
                   fontSize: '8px',
                   height: '14px',
                   minWidth: '22px',
-                  backgroundColor: '#7b68ee', // Using a matching theme color or error
+                  backgroundColor: '#7b68ee',
                   color: 'white',
                   top: 2,
                   right: 0,
@@ -574,15 +610,9 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                   boxShadow: '0 0 0 0 rgba(123, 104, 238, 0.7)',
                 },
                 '@keyframes pulse-animation': {
-                  '0%': {
-                    boxShadow: '0 0 0 0 rgba(123, 104, 238, 0.7)',
-                  },
-                  '70%': {
-                    boxShadow: '0 0 0 10px rgba(123, 104, 238, 0)',
-                  },
-                  '100%': {
-                    boxShadow: '0 0 0 0 rgba(123, 104, 238, 0)',
-                  },
+                  '0%': { boxShadow: '0 0 0 0 rgba(123, 104, 238, 0.7)' },
+                  '70%': { boxShadow: '0 0 0 10px rgba(123, 104, 238, 0)' },
+                  '100%': { boxShadow: '0 0 0 0 rgba(123, 104, 238, 0)' },
                 },
               }}
             >
@@ -594,79 +624,6 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
         <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
         <UserAvatar />
-
-        {/* Docs Drawer */}
-        <Drawer
-          anchor="right"
-          open={docsDrawerOpen}
-          onClose={() => setDocsDrawerOpen(false)}
-          PaperProps={{
-            sx: {
-              width: { xs: '100%', sm: '400px' },
-              backgroundColor: '#2d2d2d',
-              color: '#ffffff',
-            }
-          }}
-        >
-          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Box sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              p: 2,
-              backgroundColor: '#2d2d2d',
-              borderBottom: '1px solid #e5e7eb'
-            }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                Documentation
-              </Typography>
-              <IconButton onClick={() => setDocsDrawerOpen(false)} sx={{ color: '#b3b3b3' }}>
-                <MdClose size={24} />
-              </IconButton>
-            </Box>
-
-            <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-              <DocsMenu isDrawer />
-            </Box>
-          </Box>
-        </Drawer>
-
-        {/* Policies Drawer */}
-        <Drawer
-          anchor="right"
-          open={policiesDrawerOpen}
-          onClose={() => setPoliciesDrawerOpen(false)}
-          PaperProps={{
-            sx: {
-              width: { xs: '100%', sm: '450px' },
-              backgroundColor: '#2d2d2d',
-              color: '#ffffff',
-              // boxShadow: '0 0 20px rgba(0,0,0,0.5)',
-            }
-          }}
-        >
-          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Box sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              p: 2,
-              backgroundColor: '#2d2d2d',
-              borderBottom: '1px solid #e5e7eb'
-            }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                Policies
-              </Typography>
-              <IconButton onClick={() => setPoliciesDrawerOpen(false)} sx={{ color: '#b3b3b3' }}>
-                <MdClose size={24} />
-              </IconButton>
-            </Box>
-
-            <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-              <PoliciesMenu />
-            </Box>
-          </Box>
-        </Drawer>
       </div>
 
       {/* Search Results Dropdown */}
@@ -718,6 +675,12 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
       <UserNotesDrawer
         open={notesDrawerOpen}
         onClose={() => setNotesDrawerOpen(false)}
+      />
+
+      <AddTask
+        open={openAddTask}
+        setOpen={setOpenAddTask}
+        setUpdateRefetchTasks={() => window.dispatchEvent(new CustomEvent('dashboard-refresh'))}
       />
     </>
   );

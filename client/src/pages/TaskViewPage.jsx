@@ -30,10 +30,14 @@ const TaskViewPage = () => {
   const [whomItMayConcernUsers, setWhomItMayConcernUsers] = useState([]);
   const [subtasks, setSubtasks] = useState([]);
 
+  // ... (previous code)
+
   // Dialog States
   const [manageSubtasksOpen, setManageSubtasksOpen] = useState(false);
   const [progressDialogOpen, setProgressDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [managementNoteResult, setManagementNoteResult] = useState(''); // New State
+  const [managementNoteOpen, setManagementNoteOpen] = useState(false); // New State
 
   // Derived state
   const [activeStep, setActiveStep] = useState(0);
@@ -241,11 +245,18 @@ const TaskViewPage = () => {
             </Tooltip>
 
             {task.createdBy?._id === user?._id && (
-              <Tooltip title="Delete Task">
-                <IconButton onClick={() => handleTaskDelete(task._id)} sx={{ color: theme.palette.error.main }}>
-                  <MdDeleteForever />
-                </IconButton>
-              </Tooltip>
+              <>
+                <Tooltip title="Edit Task">
+                  <IconButton onClick={() => setEditDialogOpen(true)} sx={{ color: theme.palette.primary.main }}>
+                    <FaEdit />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete Task">
+                  <IconButton onClick={() => handleTaskDelete(task._id)} sx={{ color: theme.palette.error.main }}>
+                    <MdDeleteForever />
+                  </IconButton>
+                </Tooltip>
+              </>
             )}
           </Box>
         </Box>
@@ -270,6 +281,16 @@ const TaskViewPage = () => {
                     <DetailItem label="Contact" value={task.contactNumber} />
                     <DetailItem label="Type" value={task.customerType} />
                     <DetailItem label="Feedback" value={task.customerFeedback} fullWidth />
+                    <DetailItem
+                      label="Management Note"
+                      value={subtasks.filter(st => st.note).map(st => st.note).join(" | ")}
+                      fullWidth
+                      allowReadMore={true}
+                      onReadMore={(val) => {
+                        setManagementNoteResult(val);
+                        setManagementNoteOpen(true);
+                      }}
+                    />
                   </DetailGrid>
                 </Section>
 
@@ -440,6 +461,39 @@ const TaskViewPage = () => {
         </DialogActions>
       </Dialog>
 
+      {/* MANAGEMENT NOTE DIALOG */}
+      <Dialog
+        open={managementNoteOpen}
+        onClose={() => setManagementNoteOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: '#2d2d2d',
+            color: '#fff',
+            borderRadius: 2
+          }
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid #444' }}>
+          Management Note
+          <IconButton
+            onClick={() => setManagementNoteOpen(false)}
+            sx={{ position: 'absolute', right: 8, top: 8, color: '#aaa' }}
+          >
+            <MdClose />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2, direction: 'rtl', textAlign: 'right' }}>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+            {managementNoteResult || "No note available."}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: '1px solid #444' }}>
+          <Button onClick={() => setManagementNoteOpen(false)} sx={{ color: '#fff' }}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* MANAGE SUBTASKS DIALOG */}
       <DetailedSubtaskDialog
         open={manageSubtasksOpen}
@@ -476,14 +530,38 @@ const DetailGrid = ({ children }) => (
   </Box>
 );
 
-const DetailItem = ({ label, value, fullWidth }) => (
+const DetailItem = ({ label, value, fullWidth, allowReadMore, onReadMore }) => (
   <Box sx={{ gridColumn: fullWidth ? '1 / -1' : 'auto' }}>
     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5 }}>
       {label.toUpperCase()}
     </Typography>
-    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', wordBreak: 'break-word' }}>
-      {value || "N/A"}
-    </Typography>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Typography variant="body2" sx={{
+        fontWeight: 600,
+        color: 'text.primary',
+        wordBreak: 'break-word',
+        ...(allowReadMore && {
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        })
+      }}>
+        {value || "N/A"}
+      </Typography>
+      {allowReadMore && value && onReadMore && (
+        <Tooltip title="Read More">
+          <IconButton
+            size="small"
+            onClick={() => onReadMore(value)}
+            sx={{ color: 'primary.main', p: 0.5 }}
+          >
+            <MdVisibility size={16} />
+          </IconButton>
+        </Tooltip>
+      )}
+    </Box>
   </Box>
 );
 

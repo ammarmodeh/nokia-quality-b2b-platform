@@ -11,6 +11,7 @@ import {
   FormControlLabel,
   Radio,
   Box,
+  Stack,
 } from "@mui/material";
 import { MdClose, MdCheckCircle, MdCancel } from "react-icons/md";
 import SubtaskManager from "../SubtaskManager";
@@ -19,17 +20,17 @@ import { predefinedSubtasks } from "../../constants/subtaskData";
 
 const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
   const colors = {
-    primary: "#0ea5e9",
-    primaryDark: "#0369a1",
-    secondary: "#6366f1",
-    success: "#10b981",
-    warning: "#f59e0b",
-    error: "#ef4444",
-    bg: "#0f172a", // Darker slate
-    card: "#1e293b",
-    border: "#334155",
-    textPrimary: "#f8fafc",
-    textSecondary: "#94a3b8",
+    primary: "#1976d2",
+    primaryDark: "#1565c0",
+    secondary: "#7b68ee",
+    success: "#4caf50", // Matching dashboard chip success
+    warning: "#ff9800",
+    error: "#f44336",
+    bg: "#1e1e1e", // Dark background
+    card: "#2d2d2d", // Matching dashboard sections
+    border: "#3d3d3d", // Matching dashboard borders
+    textPrimary: "#ffffff",
+    textSecondary: "#b3b3b3",
   };
 
   const [selectedOption, setSelectedOption] = useState("visit");
@@ -431,133 +432,87 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
         sx: {
           backgroundColor: colors.bg,
           color: colors.textPrimary,
-          backgroundImage: 'none',
+          borderRadius: 0,
         }
       }}
     >
       <DialogTitle
         sx={{
+          p: 0,
+          borderBottom: `1px solid ${colors.border}`,
+        }}
+      >
+        <Box sx={{
+          backgroundColor: "#2d2d2d",
+          px: 2,
+          py: 1.5,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          bgcolor: colors.card,
-          borderBottom: `1px solid ${colors.border}`,
-          px: 4,
-          py: 2,
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
-        }}
-      >
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 'black', color: colors.textPrimary, letterSpacing: -0.5 }}>
-            TASK AUDIT & QUALITY CONTROL
-          </Typography>
-          <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 'bold' }}>
-            Reference: {task?.slid} • {task?.customerName}
-          </Typography>
-        </Box>
-        <IconButton
-          onClick={onClose}
-          sx={{
-            color: colors.textSecondary,
-            bgcolor: 'rgba(255,255,255,0.05)',
-            '&:hover': {
-              bgcolor: 'rgba(255,255,255,0.1)',
-              color: colors.error,
-            },
-          }}
-        >
-          <MdClose />
-        </IconButton>
-      </DialogTitle>
-
-      <DialogContent sx={{ p: 0, bgcolor: colors.bg }}>
-        <Box sx={{ p: 4 }}>
-          <Box sx={{ mb: 4, p: 1, bgcolor: colors.card, borderRadius: 3, display: 'inline-flex', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
-            <RadioGroup row value={selectedOption} onChange={handleOptionChange}>
-              {Object.keys(predefinedSubtasks).map((option) => (
-                <FormControlLabel
-                  key={option}
-                  value={option}
-                  control={<Radio size="small" sx={{ color: colors.primary }} />}
-                  label={
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 'bold',
-                        color: selectedOption === option ? colors.primary : colors.textSecondary,
-                        mr: 1
-                      }}
-                    >
-                      {option === "no_answer" ? "No Answer" :
-                        option === "others" ? "Others" :
-                          option.toUpperCase()}
-                    </Typography>
-                  }
-                  sx={{
-                    px: 2,
-                    py: 0.5,
-                    m: 0,
-                    borderRadius: 2,
-                    transition: 'all 0.2s ease',
-                    bgcolor: selectedOption === option ? 'rgba(14, 165, 233, 0.1)' : 'transparent',
-                    '&:hover': { bgcolor: 'rgba(14, 165, 233, 0.05)' }
-                  }}
-                />
-              ))}
-            </RadioGroup>
+        }}>
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#ffffff" }}>
+              Task Audit & Quality Review
+            </Typography>
+            <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
+              <Typography variant="caption" sx={{ color: "#b3b3b3" }}>
+                ID: <span style={{ color: '#fff' }}>{task?.requestNumber || "N/A"}</span>
+              </Typography>
+              <Typography variant="caption" sx={{ color: "#b3b3b3" }}>
+                SLID: <span style={{ color: '#fff' }}>{task?.slid}</span>
+              </Typography>
+            </Stack>
           </Box>
 
-          <SubtaskManager
-            subtasks={subtasks}
-            notes={notes[selectedOption]}
-            activeStep={activeStep}
-            setActiveStep={setActiveStep}
-            handleBack={handleBack}
-            handleSaveNote={handleSaveNote}
-            handleReset={handleReset}
-            expandedNotes={expandedNotes}
-            setExpandedNotes={setExpandedNotes}
-            toggleNoteExpand={toggleNoteExpand}
-            checkpoints={checkpoints}
-            setCheckpoints={setCheckpoints}
-            handleCheckpointToggle={handleCheckpointToggle}
-            selectedTaskId={task?._id}
-            selectedOption={selectedOption}
-            handleNoteChange={handleNoteChange}
-            handleShortNoteChange={handleShortNoteChange}
-            setSubtasks={setSubtasks}
-            additionalInfo={additionalInfo}
-            setAdditionalInfo={setAdditionalInfo}
-          />
+          <IconButton onClick={onClose} sx={{ color: "#ffffff", p: 0.5 }}>
+            <MdClose />
+          </IconButton>
         </Box>
+      </DialogTitle>
+
+      <DialogContent sx={{ p: 2, bgcolor: colors.bg }}>
+        <SubtaskManager
+          subtasks={subtasks}
+          notes={notes[selectedOption]}
+          activeStep={activeStep}
+          setActiveStep={setActiveStep}
+          handleBack={handleBack}
+          handleSaveNote={handleSaveNote}
+          handleReset={handleReset}
+          expandedNotes={expandedNotes}
+          setExpandedNotes={setExpandedNotes}
+          toggleNoteExpand={toggleNoteExpand}
+          checkpoints={checkpoints}
+          setCheckpoints={setCheckpoints}
+          handleCheckpointToggle={handleCheckpointToggle}
+          selectedTaskId={task?._id}
+          selectedOption={selectedOption}
+          handleOptionChange={handleOptionChange}
+          predefinedOptions={Object.keys(predefinedSubtasks)}
+          handleNoteChange={handleNoteChange}
+          handleShortNoteChange={handleShortNoteChange}
+          setSubtasks={setSubtasks}
+          additionalInfo={additionalInfo}
+          setAdditionalInfo={setAdditionalInfo}
+        />
       </DialogContent>
 
       <DialogActions
         sx={{
-          px: 4,
-          py: 3,
+          px: 2,
+          py: 1,
           bgcolor: colors.card,
           borderTop: `1px solid ${colors.border}`,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          position: "sticky",
-          bottom: 0,
-          zIndex: 10,
         }}
       >
         <Button
           onClick={handleReset}
           startIcon={<MdClose />}
+          variant="outlined"
+          color="inherit"
           sx={{
-            color: colors.error,
-            fontWeight: 'bold',
-            px: 3,
-            '&:hover': {
-              bgcolor: 'rgba(239, 68, 68, 0.1)',
-            },
+            fontWeight: "bold",
+            borderRadius: 0,
             textTransform: 'none',
           }}
         >
@@ -573,13 +528,16 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
               sx={{
                 color: colors.success,
                 borderColor: colors.success,
+                fontWeight: "bold",
+                borderRadius: 0,
+                textTransform: 'none',
                 '&:hover': {
-                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  backgroundColor: 'rgba(46, 125, 50, 0.08)',
                   borderColor: colors.success
-                }
+                },
               }}
             >
-              Mark as Completed
+              Mark Task as Completed
             </Button>
           )}
 
@@ -591,44 +549,47 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
               sx={{
                 color: colors.error,
                 borderColor: colors.error,
+                fontWeight: "bold",
+                borderRadius: 0,
+                textTransform: 'none',
                 '&:hover': {
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  backgroundColor: 'rgba(211, 47, 47, 0.08)',
                   borderColor: colors.error
-                }
+                },
               }}
             >
               Undo Completion
             </Button>
           )}
-        </Box>
 
-        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             onClick={onClose}
             sx={{
               color: colors.textSecondary,
-              fontWeight: 'bold',
-              px: 4,
+              fontWeight: "bold",
+              borderRadius: 0,
               textTransform: 'none',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
             }}
           >
-            Close Dialog
+            Discard Changes
           </Button>
+
           <Button
             variant="contained"
+            color="primary"
             onClick={() => handleSaveNote()}
             sx={{
-              bgcolor: colors.primary,
-              '&:hover': { bgcolor: colors.primaryDark },
-              fontWeight: 'bold',
-              px: 6,
-              borderRadius: 2,
+              fontWeight: "bold",
+              px: 4,
+              borderRadius: 0,
               textTransform: 'none',
-              boxShadow: `0 8px 16px ${colors.primary}44`,
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: 'none',
+              }
             }}
           >
-            Finalize & Save Progress
+            Finalize & Save Changes
           </Button>
         </Box>
       </DialogActions>

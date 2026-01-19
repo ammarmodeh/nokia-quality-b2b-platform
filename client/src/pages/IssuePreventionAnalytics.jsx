@@ -90,7 +90,10 @@ const IssuePreventionAnalytics = () => {
   const [negligenceRowsPerPage, setNegligenceRowsPerPage] = useState(5);
   const [negligenceSearch, setNegligenceSearch] = useState('');
   const [negligenceSupervisorFilter, setNegligenceSupervisorFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState({ start: null, end: null });
+  const [dateFilter, setDateFilter] = useState({
+    start: moment().startOf('month').toDate(),
+    end: moment().endOf('day').toDate()
+  });
   const fetchStats = async (startArg, endArg) => {
     setLoading(true);
     try {

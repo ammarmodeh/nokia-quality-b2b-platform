@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import {
   Box,
@@ -27,8 +27,13 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Stack,
+  Grid,
+  Collapse,
+  ButtonGroup
 } from '@mui/material';
+import { MoonLoader } from 'react-spinners';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import {
   MdSearch,
@@ -42,14 +47,40 @@ import {
   MdStarOutline,
   MdFilterList,
   MdCheckCircle,
-  MdError
+  MdRadioButtonUnchecked,
+  MdError,
+  MdBarChart, // New Import
+  MdTimeline, // New Import
+  MdDateRange, // New Import
+  MdAssignmentTurnedIn // New Import
 } from 'react-icons/md';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, format, subWeeks } from 'date-fns';
 import { IoMdAdd } from "react-icons/io";
 import api from '../api/api';
 import EditTaskDialog from '../components/task/EditTaskDialog';
+import DetailedSubtaskDialog from '../components/task/DetailedSubtaskDialog';
 import { TaskDetailsDialog } from '../components/TaskDetailsDialog';
 import { getCustomWeekNumber as getAggregatedWeekNumber } from '../utils/helpers';
-import { format, parseISO } from 'date-fns';
 import { utils, writeFile } from 'xlsx';
 import AddTask from '../components/task/AddTask';
 import moment from 'moment';
@@ -59,58 +90,194 @@ const AllTasksList = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const user = useSelector((state) => state?.auth?.user);
 
-  const [tasks, setTasks] = useState([]);
-  const [totalTasks, setTotalTasks] = useState(0);
-  const [favoriteTasks, setFavoriteTasks] = useState([]);
+  // --- Consolidated State ---
+  const [allTasks, setAllTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // UI State
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [selectedTask, setSelectedTask] = useState(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [taskToDelete, setTaskToDelete] = useState(null);
-  const [filter, setFilter] = useState('all'); // 'all', 'neutrals', 'detractors'
-  const [openAddTask, setOpenAddTask] = useState(false);
-  const [updateRefetchTasks, setUpdateRefetchTasks] = useState(false);
-  const [selectedRowId, setSelectedRowId] = useState(null);
-  const [priorityFilter, setPriorityFilter] = useState('all'); // 'all', 'High', 'Medium', 'Low'
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'Open', 'In Progress', 'Closed'
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // Filter State
+  const [dateFilter, setDateFilter] = useState({
+    start: startOfWeek(subWeeks(new Date(), 2)),
+    end: endOfWeek(new Date()),
+    type: 'latest3Weeks'
+  });
+  const [tempStartDate, setTempStartDate] = useState(startOfWeek(subWeeks(new Date(), 2)));
+  const [tempEndDate, setTempEndDate] = useState(endOfWeek(new Date()));
+
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [governorateFilter, setGovernorateFilter] = useState('all');
   const [districtFilter, setDistrictFilter] = useState('all');
   const [subconFilter, setSubconFilter] = useState('all');
   const [supervisorFilter, setSupervisorFilter] = useState('all');
   const [teamNameFilter, setTeamNameFilter] = useState('all');
   const [validationFilter, setValidationFilter] = useState('all');
+  const [filter, setFilter] = useState('all'); // Eval score filter
+
+  // Dialogs & Selection
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [openAddTask, setOpenAddTask] = useState(false);
+  const [updateRefetchTasks, setUpdateRefetchTasks] = useState(false);
+
+  const [selectedRowId, setSelectedRowId] = useState(null);
+  const [dialogContent, setDialogContent] = useState('');
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   const [dropdownOptions, setDropdownOptions] = useState({});
-
   const [settings, setSettings] = useState(null);
+  const [favoriteTasks, setFavoriteTasks] = useState([]);
+  const [visitedRowIds, setVisitedRowIds] = useState([]);
+  const [hiddenSeries, setHiddenSeries] = useState(new Set());
+  const [manageSubtasksDialogOpen, setManageSubtasksDialogOpen] = useState(false);
+  const [subtaskTask, setSubtaskTask] = useState(null);
 
+  const handleLegendClick = (e) => {
+    const { dataKey } = e;
+    setHiddenSeries((prev) => {
+      const next = new Set(prev);
+      if (next.has(dataKey)) {
+        next.delete(dataKey);
+      } else {
+        next.add(dataKey);
+      }
+      return next;
+    });
+  };
+
+  // Fetch ALL Data on Mount
   useEffect(() => {
-    const fetchSettings = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const response = await api.get("/settings");
-        setSettings(response.data);
+        const [tasksRes, optionsRes, settingsRes, favRes] = await Promise.all([
+          api.get("/tasks/get-all-tasks"),
+          api.get('/dropdown-options/all'),
+          api.get("/settings"),
+          api.get("/favourites/get-favourites")
+        ]);
+
+        const tasksData = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.tasks || []);
+        setAllTasks(tasksData);
+        setDropdownOptions(optionsRes.data);
+        setSettings(settingsRes.data);
+        setFavoriteTasks(favRes.data.favourites || []);
       } catch (err) {
-        console.error("Error fetching settings:", err);
+        console.error("Error fetching data:", err);
+        setError("Failed to load dashboard data.");
+      } finally {
+        setLoading(false);
       }
     };
+    fetchData();
+  }, [updateRefetchTasks]);
 
-    const fetchOptions = async () => {
-      try {
-        const response = await api.get('/dropdown-options/all');
-        setDropdownOptions(response.data);
-      } catch (err) {
-        console.error("Error fetching options:", err);
-      }
-    };
-
-    fetchSettings();
-    fetchOptions();
+  // Global refresh listener for navbar-based task creation
+  useEffect(() => {
+    const handleGlobalRefresh = () => setUpdateRefetchTasks(prev => !prev);
+    window.addEventListener('dashboard-refresh', handleGlobalRefresh);
+    return () => window.removeEventListener('dashboard-refresh', handleGlobalRefresh);
   }, []);
+
+  // Sync Temp Dates
+  useEffect(() => {
+    setTempStartDate(dateFilter.start);
+    setTempEndDate(dateFilter.end);
+  }, [dateFilter]);
+
+  // --- UNIFIED FILTERING LOGIC ---
+  const filteredTasks = useMemo(() => {
+    if (!allTasks.length) return [];
+
+    return allTasks.filter(task => {
+      // 1. Priority
+      if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
+
+      // 2. Status
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'Open' && !['Todo', 'In Progress'].includes(task.status)) return false;
+        if (statusFilter !== 'Open' && task.status !== statusFilter) return false;
+      }
+
+      // 3. Location
+      if (governorateFilter !== 'all' && task.governorate !== governorateFilter) return false;
+      if (districtFilter !== 'all' && task.district !== districtFilter) return false;
+
+      // 4. Teams
+      if (subconFilter !== 'all' && task.teamCompany !== subconFilter) return false;
+      if (teamNameFilter !== 'all' && task.teamName !== teamNameFilter) return false;
+
+      // 5. Validation
+      if (validationFilter !== 'all') {
+        if (validationFilter === 'Pending' && task.validationStatus === 'Validated') return false;
+        if (validationFilter !== 'Pending' && task.validationStatus !== validationFilter) return false;
+      }
+
+      // 6. Supervisor
+      if (supervisorFilter !== 'all') {
+        const assigned = task.assignedTo;
+        if (Array.isArray(assigned)) {
+          if (!assigned.some(u => (u._id || u) === supervisorFilter)) return false;
+        } else {
+          if ((assigned?._id || assigned) !== supervisorFilter) return false;
+        }
+      }
+
+      // 7. Eval Score (Legacy 'filter' state)
+      // 'neutrals' (7-8), 'detractors' (0-6)
+      if (filter === 'neutrals') {
+        if (task.evaluationScore < 7 || task.evaluationScore > 8) return false;
+      } else if (filter === 'detractors') {
+        if (task.evaluationScore > 6) return false;
+      }
+
+      // 8. Search
+      if (debouncedSearchTerm) {
+        const lower = debouncedSearchTerm.toLowerCase();
+        const searchMatch = (
+          (task.slid?.toLowerCase().includes(lower)) ||
+          (task.customerName?.toLowerCase().includes(lower)) ||
+          (task.teamName?.toLowerCase().includes(lower)) ||
+          (task.operation?.toLowerCase().includes(lower)) ||
+          (String(task.requestNumber || '').includes(lower))
+        );
+        if (!searchMatch) return false;
+      }
+
+      // 9. Date Filter
+      if (dateFilter.type !== 'all') {
+        if (!task.interviewDate) return false;
+        const taskDate = parseISO(task.interviewDate);
+        if (dateFilter.start && dateFilter.end) {
+          if (!isWithinInterval(taskDate, { start: dateFilter.start, end: dateFilter.end })) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [allTasks, priorityFilter, statusFilter, governorateFilter, districtFilter, subconFilter, supervisorFilter, teamNameFilter, validationFilter, filter, debouncedSearchTerm, dateFilter]);
+
+  // Pagination
+  const paginatedTasks = useMemo(() => {
+    const start = page * rowsPerPage;
+    return filteredTasks.slice(start, start + rowsPerPage);
+  }, [filteredTasks, page, rowsPerPage]);
+
+
+
+
+
+
 
   const getWeekDisplay = (dateString) => {
     if (!dateString) return "-";
@@ -144,69 +311,88 @@ const AllTasksList = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const fetchTasks = async () => {
-    setLoading(true);
-    try {
-      let endpoint = "/tasks/get-tasks"; // Default paginated endpoint
-      if (filter === 'detractors') {
-        endpoint = "/tasks/get-detractor-tasks-paginated";
-      } else if (filter === 'neutrals') {
-        endpoint = "/tasks/get-neutral-tasks-paginated";
-      }
 
-      const response = await api.get(endpoint, {
-        params: {
-          page: page + 1,
-          limit: rowsPerPage,
-          search: debouncedSearchTerm,
-          priority: priorityFilter !== 'all' ? priorityFilter : undefined,
-          status: statusFilter !== 'all' ? statusFilter : undefined,
-          governorate: governorateFilter !== 'all' ? governorateFilter : undefined,
-          district: districtFilter !== 'all' ? districtFilter : undefined,
-          teamCompany: subconFilter !== 'all' ? subconFilter : undefined,
-          assignedTo: supervisorFilter !== 'all' ? supervisorFilter : undefined,
-          teamName: teamNameFilter !== 'all' ? teamNameFilter : undefined,
-          validationStatus: validationFilter !== 'all' ? validationFilter : undefined,
-        },
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+
+  // Chart Data Processing
+  const analyticsData = useMemo(() => {
+    const sourceData = filteredTasks;
+    if (!sourceData.length) return { reason: [], subReason: [], rootCause: [] };
+
+    // Helper to count frequencies
+    const count = (key) => {
+      const map = {};
+      sourceData.forEach(t => {
+        const val = t[key] || 'Unknown';
+        map[val] = (map[val] || 0) + 1;
+      });
+      return Object.entries(map)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+    };
+
+    return {
+      reason: count('reason'),
+      subReason: count('subReason'),
+      rootCause: count('rootCause')
+    };
+  }, [filteredTasks]);
+
+  // Weekly Trend Data Processing
+  const trendData = useMemo(() => {
+    if (!filteredTasks.length) return [];
+
+    // 1. Group by Week
+    const weekMap = {};
+    filteredTasks.forEach(t => {
+      const week = getWeekDisplay(t.interviewDate);
+      if (week === "-") return;
+      if (!weekMap[week]) weekMap[week] = { week, tasks: [] };
+      weekMap[week].tasks.push(t);
+    });
+
+    // 2. Sort weeks chronologically (simplified assuming "W1", "W2" format or similar)
+    // For robust sorting, we might need the actual date, but let's stick to the labels for now
+    const sortedWeeks = Object.keys(weekMap).sort((a, b) => parseInt(a) - parseInt(b));
+
+    // 3. Find top Reasons/Owners across all data to track them
+    const getTopKeys = (field, limit = 5) => {
+      const counts = {};
+      filteredTasks.forEach(t => {
+        const val = t[field] || 'Unknown';
+        counts[val] = (counts[val] || 0) + 1;
+      });
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([key, total]) => ({ name: key, total }));
+    };
+
+    const topReasons = getTopKeys('reason');
+    const topOwners = getTopKeys('teamName');
+
+    // 4. Transform into Recharts format
+    const data = sortedWeeks.map(weekLabel => {
+      const dataPoint = { name: `W${weekLabel}` };
+      const tasksInWeek = weekMap[weekLabel].tasks;
+
+      topReasons.forEach(reasonObj => {
+        dataPoint[reasonObj.name] = tasksInWeek.filter(t => (t.reason || 'Unknown') === reasonObj.name).length;
       });
 
-      if (response.data.success) {
-        setTasks(response.data.data);
-        setTotalTasks(response.data.pagination.total);
-      } else {
-        // Fallback for endpoints not yet updated or returning arrays
-        setTasks(Array.isArray(response.data) ? response.data : []);
-        setTotalTasks(Array.isArray(response.data) ? response.data.length : 0);
-      }
-      setError(null);
-    } catch (err) {
-      setError("Failed to load tasks. Please try again.");
-      setTasks([]);
-      setTotalTasks(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch user's favorite tasks
-  const fetchFavoriteTasks = async () => {
-    try {
-      const response = await api.get("/favourites/get-favourites", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      topOwners.forEach(ownerObj => {
+        dataPoint[ownerObj.name] = tasksInWeek.filter(t => (t.teamName || 'Unknown') === ownerObj.name).length;
       });
-      setFavoriteTasks(response.data.favourites || []);
-    } catch (err) {
-      // console.error("Error fetching favorite tasks:", err);
-    }
-  };
 
-  useEffect(() => {
-    fetchTasks();
-    if (user?._id) {
-      fetchFavoriteTasks();
-    }
-  }, [user?._id, updateRefetchTasks, page, rowsPerPage, debouncedSearchTerm, filter, priorityFilter, statusFilter, governorateFilter, districtFilter, subconFilter, supervisorFilter, teamNameFilter, validationFilter]);
+      return dataPoint;
+    });
+
+    return { data, topReasons, topOwners };
+  }, [filteredTasks, settings]); // settings needed for getWeekDisplay
+
+
+
+
 
   // Check if task is favorited and get its favorite ID
   const getFavoriteStatus = (taskId) => {
@@ -244,8 +430,7 @@ const AllTasksList = () => {
     }
   };
 
-  // Filter tasks based on search term and selected filter
-  const filteredTasks = tasks;
+
 
   // Handle pagination
   const handleChangePage = (event, newPage) => {
@@ -285,7 +470,7 @@ const AllTasksList = () => {
         });
 
         // Update UI state
-        setTasks(tasks.filter(task => task._id !== taskToDelete._id));
+        setAllTasks(prev => prev.filter(task => task._id !== taskToDelete._id));
         setDeleteDialogOpen(false);
         setTaskToDelete(null);
 
@@ -340,7 +525,7 @@ const AllTasksList = () => {
       <Box p={4}>
         <Typography color="error">{error}</Typography>
         <Button
-          onClick={fetchTasks}
+          onClick={() => setUpdateRefetchTasks(prev => !prev)}
           variant="contained"
           startIcon={<MdRefresh />}
           sx={{ mt: 2 }}
@@ -367,6 +552,234 @@ const AllTasksList = () => {
         Tasks Audit Dashboard
       </Typography>
 
+      {/* Advanced Analytics & Filter Section */}
+      <Paper sx={{ mb: 3, p: 2, borderRadius: 3, border: '1px dashed #6366f1', bgcolor: 'rgba(99, 102, 241, 0.04)' }}>
+
+        {/* KPI Cards */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={6} sm={3}>
+            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#2d2d2d', color: '#fff' }}>
+              <Typography variant="h4" color="primary">{filteredTasks.length}</Typography>
+              <Typography variant="caption" color="gray">Tasks Found</Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={6} sm={3}>
+            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#2d2d2d', color: '#fff' }}>
+              <Typography variant="h4" color="secondary">
+                {filteredTasks.filter(t => t.validationStatus === 'Validated').length}
+              </Typography>
+              <Typography variant="caption" color="gray">Validated</Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={6} sm={3}>
+            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#2d2d2d', color: '#fff' }}>
+              <Typography variant="h4" sx={{ color: '#ff9800' }}>
+                {filteredTasks.filter(t => ['Todo', 'In Progress'].includes(t.status)).length}
+              </Typography>
+              <Typography variant="caption" color="gray">Open Issues</Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={6} sm={3}>
+            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#2d2d2d', color: '#fff' }}>
+              <Typography variant="h4" color="error">
+                {filteredTasks.filter(t => t.evaluationScore <= 6).length}
+              </Typography>
+              <Typography variant="caption" color="gray">Detractors</Typography>
+            </Paper>
+          </Grid>
+        </Grid>
+
+        <Divider sx={{ my: 2, borderColor: '#6366f1' }} />
+
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <MdDateRange /> Date Filter:
+            </Typography>
+            <ButtonGroup size="small" variant="outlined">
+              <Button onClick={() => setDateFilter({ start: startOfWeek(subWeeks(new Date(), 2)), end: endOfWeek(new Date()), type: 'latest3Weeks' })} variant={dateFilter.type === 'latest3Weeks' ? 'contained' : 'outlined'}>Latest 3 Weeks</Button>
+              <Button onClick={() => setDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()), type: 'thisWeek' })} variant={dateFilter.type === 'thisWeek' ? 'contained' : 'outlined'}>This Week</Button>
+              <Button onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()), type: 'thisMonth' })} variant={dateFilter.type === 'thisMonth' ? 'contained' : 'outlined'}>This Month</Button>
+              <Button onClick={() => setDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()), type: 'thisYear' })} variant={dateFilter.type === 'thisYear' ? 'contained' : 'outlined'}>This Year</Button>
+              <Button onClick={() => setDateFilter({ start: null, end: null, type: 'all' })} variant={dateFilter.type === 'all' ? 'contained' : 'outlined'}>All Time</Button>
+            </ButtonGroup>
+
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Start"
+                value={tempStartDate}
+                onChange={(v) => setTempStartDate(v)}
+                slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
+              />
+              <DatePicker
+                label="End"
+                value={tempEndDate}
+                onChange={(v) => setTempEndDate(v)}
+                slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => {
+                  setDateFilter({ start: tempStartDate, end: tempEndDate, type: 'custom' });
+                }}
+                sx={{ borderRadius: '20px', textTransform: 'none' }}
+              >
+                Apply
+              </Button>
+            </LocalizationProvider>
+          </Box>
+        </Stack>
+
+        {/* Analytics Dashboard (Always Visible) */}
+        <Box sx={{ mt: 3 }}>
+          <Grid container spacing={3}>
+            {/* Reason Chart */}
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Reasons</Typography>
+                <ResponsiveContainer width="100%" height="90%">
+                  <BarChart data={analyticsData.reason} layout="vertical" margin={{ left: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11 }} />
+                    <RechartsTooltip />
+                    <Bar dataKey="value" fill="#8884d8" radius={[0, 4, 4, 0]}>
+                      {analyticsData.reason.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={['#8884d8', '#82ca9d', '#ffc658', '#ff8042'][index % 4]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Paper>
+            </Grid>
+            {/* Sub-Reason Chart */}
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Sub-Reasons</Typography>
+                <ResponsiveContainer width="100%" height="90%">
+                  <BarChart data={analyticsData.subReason} layout="vertical" margin={{ left: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11 }} />
+                    <RechartsTooltip />
+                    <Bar dataKey="value" fill="#82ca9d" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Paper>
+            </Grid>
+            {/* Root Cause Chart */}
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Root Causes</Typography>
+                <ResponsiveContainer width="100%" height="90%">
+                  <BarChart data={analyticsData.rootCause} layout="vertical" margin={{ left: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11 }} />
+                    <RechartsTooltip />
+                    <Bar dataKey="value" fill="#ffc658" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
+
+        {/* Weekly Trend Analytics (NEW) */}
+        {trendData.data?.length > 0 && (
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 3, display: 'flex', alignItems: 'center', gap: 1, color: '#7b68ee' }}>
+              <MdTimeline /> Weekly Performance Trends
+            </Typography>
+            <Grid container spacing={3}>
+              {/* Reason Trends */}
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 400 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Reasons Trend (Volume)</Typography>
+                  <ResponsiveContainer width="100%" height="90%">
+                    <LineChart data={trendData.data}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <RechartsTooltip />
+                      <Legend
+                        iconType="circle"
+                        wrapperStyle={{ fontSize: '11px', paddingTop: '10px', cursor: 'pointer' }}
+                        onClick={handleLegendClick}
+                        formatter={(value) => {
+                          const item = trendData.topReasons.find(r => r.name === value);
+                          const isHidden = hiddenSeries.has(value);
+                          return (
+                            <span style={{ color: isHidden ? '#999' : 'inherit', textDecoration: isHidden ? 'line-through' : 'none' }}>
+                              {value} ({item?.total || 0})
+                            </span>
+                          );
+                        }}
+                      />
+                      {trendData.topReasons.map((item, index) => (
+                        <Line
+                          key={item.name}
+                          type="monotone"
+                          dataKey={item.name}
+                          stroke={['#6366f1', '#10b981', '#f59e0b', '#d946ef', '#ec4899'][index % 5]}
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                          hide={hiddenSeries.has(item.name)}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Paper>
+              </Grid>
+
+              {/* Owner Trends */}
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 400 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Owners Load Trend</Typography>
+                  <ResponsiveContainer width="100%" height="90%">
+                    <AreaChart data={trendData.data}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <RechartsTooltip />
+                      <Legend
+                        iconType="circle"
+                        wrapperStyle={{ fontSize: '11px', paddingTop: '10px', cursor: 'pointer' }}
+                        onClick={handleLegendClick}
+                        formatter={(value) => {
+                          const item = trendData.topOwners.find(o => o.name === value);
+                          const isHidden = hiddenSeries.has(value);
+                          return (
+                            <span style={{ color: isHidden ? '#999' : 'inherit', textDecoration: isHidden ? 'line-through' : 'none' }}>
+                              {value} ({item?.total || 0})
+                            </span>
+                          );
+                        }}
+                      />
+                      {trendData.topOwners.map((item, index) => (
+                        <Area
+                          key={item.name}
+                          type="monotone"
+                          dataKey={item.name}
+                          stackId="1"
+                          stroke={['#0369a1', '#15803d', '#a16207', '#be123c', '#6d28d9'][index % 5]}
+                          fill={['#0369a1', '#15803d', '#a16207', '#be123c', '#6d28d9'][index % 5]}
+                          fillOpacity={0.6}
+                          hide={hiddenSeries.has(item.name)}
+                        />
+                      ))}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
+      </Paper>
+
+
       {/* Search and Export Bar */}
       <Box sx={{
         backgroundColor: '#2d2d2d',
@@ -382,7 +795,7 @@ const AllTasksList = () => {
       }}>
         <Tooltip title="Refresh data">
           <IconButton
-            onClick={() => fetchTasks()}
+            onClick={() => setUpdateRefetchTasks(prev => !prev)}
             disabled={loading}
             sx={{
               color: '#7b68ee',
@@ -941,30 +1354,31 @@ const AllTasksList = () => {
         <Table size={isMobile ? 'small' : 'medium'}>
           <TableHead>
             <TableRow>
-              <TableCell style={{ fontSize: '0.875rem' }}>Created At</TableCell>
-              <TableCell style={{ fontSize: '0.875rem' }}>SLID</TableCell>
-              <TableCell style={{ fontSize: '0.875rem' }}>Summary</TableCell>
-              <TableCell style={{ fontSize: '0.875rem' }}>Customer Name</TableCell>
-              {/* <TableCell>Contact</TableCell> */}
-              <TableCell style={{ fontSize: '0.875rem' }}>Customer Feedback</TableCell>
-              <TableCell style={{ fontSize: '0.875rem' }}>Feedback Severity</TableCell>
-              <TableCell style={{ fontSize: '0.875rem' }}>Eval Score</TableCell>
-              <TableCell style={{ fontSize: '0.875rem' }}>Week</TableCell>
-              <TableCell style={{ fontSize: '0.875rem' }}>Actions</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Created At</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 100 }}>SLID</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 120 }}>Customer Name</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 200, maxWidth: 300 }}>Customer Feedback</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 200, maxWidth: 300 }}>Management Note</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 150, maxWidth: 200 }}>Summary</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Feedback Severity</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Eval Score</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Week</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredTasks.length > 0 ? (
-              filteredTasks
+            {paginatedTasks.length > 0 ? (
+              paginatedTasks
                 .map((task) => {
                   const { isFavorited } = getFavoriteStatus(task._id);
                   return (
                     <TableRow
                       key={task._id}
-                      onClick={() => handleRowClick(task._id)}
                       sx={{
-                        backgroundColor: task._id === selectedRowId ? '#f3f4f6' : '#ffffff',
-                        cursor: 'pointer',
+                        backgroundColor: task._id === selectedRowId ? '#eef2ff' : visitedRowIds.includes(task._id) ? '#fafafa' : '#ffffff',
+                        transition: '0.2s',
+                        borderLeft: visitedRowIds.includes(task._id) ? '6px solid #7b68ee' : '6px solid transparent',
+                        '&:hover': { backgroundColor: '#f5f5f5' }
                       }}
                     >
                       <TableCell style={{ fontSize: '0.75rem', color: '#6b7280' }}>
@@ -1003,33 +1417,109 @@ const AllTasksList = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="caption" sx={{ color: '#2196f3', fontWeight: '500' }}>
-                          {task.subTasks?.[0]?.title === "Task Reception" ? task.subTasks[0].shortNote : ""}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
                         <Typography fontWeight={500} sx={{ direction: 'rtl', textAlign: 'right', fontSize: '0.8rem' }}>
                           {task.customerName || "-"}
                         </Typography>
                       </TableCell>
-                      {/* <TableCell>{task.contactNumber || "-"}</TableCell> */}
                       <TableCell>
                         {task.customerFeedback ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, maxWidth: 300 }}>
+                            <Typography
+                              sx={{
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                textAlign: 'right',
+                                direction: 'rtl',
+                                fontSize: '0.8rem'
+                              }}
+                            >
+                              {task.customerFeedback}
+                            </Typography>
+                            <Tooltip title="Read More">
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDialogContent(task.customerFeedback);
+                                  setDialogTitle('Customer Feedback');
+                                  setDialogOpen(true);
+                                }}
+                                sx={{ color: '#fff', p: 0.5 }}
+                              >
+                                <MdVisibility size={16} />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, maxWidth: 300 }}>
                           <Typography
+                            variant="body2"
                             sx={{
+                              fontSize: '0.8rem',
+                              color: '#4caf50',
                               display: '-webkit-box',
                               WebkitLineClamp: 2,
                               WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              textAlign: 'right',
-                              direction: 'rtl',
-                              fontSize: '0.8rem'
+                              textOverflow: 'ellipsis'
                             }}
                           >
-                            {task.customerFeedback}
+                            {task.subTasks?.filter(st => st.note).map(st => st.note).join(" | ") || "-"}
                           </Typography>
-                        ) : "-"}
+                          {task.subTasks?.some(st => st.note) && (
+                            <Tooltip title="Read More">
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const fullNote = task.subTasks?.filter(st => st.note).map(st => st.note).join(" | ");
+                                  setDialogContent(fullNote);
+                                  setDialogTitle('Management Note');
+                                  setDialogOpen(true);
+                                }}
+                                sx={{ color: '#4caf50', p: 0.5 }}
+                              >
+                                <MdVisibility size={16} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, maxWidth: 200 }}>
+                          <Typography variant="caption" sx={{
+                            color: '#2196f3',
+                            fontWeight: '500',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {task.subTasks?.[0]?.title === "Task Reception" ? task.subTasks[0].shortNote : ""}
+                          </Typography>
+                          {task.subTasks?.[0]?.title === "Task Reception" && task.subTasks[0].shortNote && (
+                            <Tooltip title="Read More">
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDialogContent(task.subTasks[0].shortNote);
+                                  setDialogTitle('Summary');
+                                  setDialogOpen(true);
+                                }}
+                                sx={{ color: '#2196f3', p: 0.5 }}
+                              >
+                                <MdVisibility size={16} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
                       </TableCell>
                       <TableCell>
                         {task.priority ? (
@@ -1065,6 +1555,27 @@ const AllTasksList = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: "flex", gap: 1 }}>
+                          <Tooltip title={visitedRowIds.includes(task._id) ? "Mark as Unread" : "Mark as Read"}>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setVisitedRowIds(prev =>
+                                  prev.includes(task._id)
+                                    ? prev.filter(id => id !== task._id)
+                                    : [...prev, task._id]
+                                );
+                              }}
+                              sx={{
+                                color: visitedRowIds.includes(task._id) ? '#7b68ee' : '#b0b0b0',
+                                '&:hover': {
+                                  color: visitedRowIds.includes(task._id) ? '#6854d9' : '#7b68ee'
+                                }
+                              }}
+                            >
+                              {visitedRowIds.includes(task._id) ? <MdCheckCircle /> : <MdRadioButtonUnchecked />}
+                            </IconButton>
+                          </Tooltip>
                           <Tooltip title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}>
                             <IconButton
                               size="small"
@@ -1080,6 +1591,22 @@ const AllTasksList = () => {
                               }}
                             >
                               {isFavorited ? <MdStar /> : <MdStarOutline />}
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Manage Subtasks">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSubtaskTask(task);
+                                setManageSubtasksDialogOpen(true);
+                              }}
+                              sx={{
+                                color: '#10b981',
+                                '&:hover': { color: '#059669' }
+                              }}
+                            >
+                              <MdAssignmentTurnedIn />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="View Details">
@@ -1160,13 +1687,14 @@ const AllTasksList = () => {
         }
       }}>
         <TablePagination
-          rowsPerPageOptions={[10, 25, 50]}
           component="div"
-          count={totalTasks}
-          rowsPerPage={rowsPerPage}
+          count={filteredTasks.length}
           page={page}
+          rowsPerPage={rowsPerPage}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           sx={{
             // borderTop: '1px solid #e5e7eb',
             backgroundColor: '#2d2d2d',
@@ -1201,7 +1729,7 @@ const AllTasksList = () => {
           setOpen={setEditDialogOpen}
           task={selectedTask}
           handleTaskUpdate={(updatedTask) => {
-            setTasks(tasks.map(t =>
+            setAllTasks(allTasks.map(t =>
               t._id === updatedTask._id ? updatedTask : t
             ));
             setSelectedTask(null);
@@ -1323,6 +1851,49 @@ const AllTasksList = () => {
         open={openAddTask}
         setOpen={setOpenAddTask}
         setUpdateRefetchTasks={setUpdateRefetchTasks}
+      />
+      {/* Read More Dialog */}
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: '#2d2d2d',
+            color: '#fff',
+            borderRadius: 2
+          }
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid #444' }}>
+          {dialogTitle}
+          <IconButton
+            onClick={() => setDialogOpen(false)}
+            sx={{ position: 'absolute', right: 8, top: 8, color: '#aaa' }}
+          >
+            <MdClose />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2, direction: 'rtl', textAlign: 'right' }}>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+            {dialogContent || "No content available."}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: '1px solid #444' }}>
+          <Button onClick={() => setDialogOpen(false)} sx={{ color: '#fff' }}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Detailed Subtask Dialog */}
+      <DetailedSubtaskDialog
+        open={manageSubtasksDialogOpen}
+        onClose={() => {
+          setManageSubtasksDialogOpen(false);
+          setSubtaskTask(null);
+        }}
+        task={subtaskTask}
+        setUpdateTasksList={setUpdateRefetchTasks}
       />
     </Box>
   );

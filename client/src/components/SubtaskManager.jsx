@@ -22,6 +22,7 @@ import {
   MenuItem,
   Grid,
   Chip,
+  Stack,
 } from "@mui/material";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import api from "../api/api";
@@ -43,6 +44,8 @@ const SubtaskManager = ({
   handleCheckpointToggle,
   selectedTaskId,
   selectedOption,
+  handleOptionChange,
+  predefinedOptions,
   handleNoteChange,
   handleShortNoteChange,
   setSubtasks,
@@ -50,17 +53,17 @@ const SubtaskManager = ({
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
   const colors = {
-    primary: "#0ea5e9", // Vibrant sky blue
-    primaryDark: "#0369a1",
-    secondary: "#6366f1", // Indigo
-    success: "#10b981", // Emerald
-    warning: "#f59e0b", // Amber
-    error: "#ef4444", // Rose
-    bg: "#1e293b", // Slate 800
-    card: "#334155", // Slate 700
-    border: "#475569", // Slate 600
-    textPrimary: "#f8fafc", // Slate 50
-    textSecondary: "#94a3b8", // Slate 400
+    primary: "#1976d2",
+    primaryDark: "#1565c0",
+    secondary: "#7b68ee",
+    success: "#4caf50",
+    warning: "#ff9800",
+    error: "#f44336",
+    bg: "#1e1e1e",
+    card: "#2d2d2d",
+    border: "#3d3d3d",
+    textPrimary: "#ffffff",
+    textSecondary: "#b3b3b3",
   };
 
   const handleConditionalOptionChange = (subtaskIndex, checkpointIndex, value, fieldPath = 'selected') => {
@@ -231,8 +234,8 @@ const SubtaskManager = ({
   const renderCheckpointOptions = (subtaskIndex, checkpointIndex, checkpoint, isClosed) => {
     if (SIMPLE_QUESTIONS.includes(checkpoint.name)) {
       return (
-        <Box sx={{ mt: 2, p: 2, bgcolor: "rgba(0,0,0,0.2)", borderRadius: 2 }}>
-          <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 1, display: 'block', fontWeight: 'bold', textTransform: 'uppercase' }}>
+        <Box sx={{ mt: 2, p: 2, bgcolor: "rgba(255,255,255,0.03)", border: `1px solid ${colors.border}` }}>
+          <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 1, display: 'block', fontWeight: 'bold' }}>
             {checkpoint.options.question}
           </Typography>
           <RadioGroup
@@ -260,7 +263,7 @@ const SubtaskManager = ({
 
       return (
         <Box sx={{ mt: 1 }}>
-          <Box sx={{ p: 2, bgcolor: "rgba(0,0,0,0.15)", borderRadius: 2, mb: showActionTaken ? 2 : 0 }}>
+          <Box sx={{ p: 2, bgcolor: "rgba(255,255,255,0.03)", border: `1px solid ${colors.border}`, mb: showActionTaken ? 2 : 0 }}>
             <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 1, display: 'block', fontWeight: 'bold' }}>
               {checkpoint.options.question}
             </Typography>
@@ -285,7 +288,7 @@ const SubtaskManager = ({
 
           {showActionTaken && (
             <Collapse in={showActionTaken}>
-              <Box sx={{ p: 2, bgcolor: "rgba(14, 165, 233, 0.1)", borderRadius: 2, border: `1px solid ${colors.primary}44` }}>
+              <Box sx={{ p: 2, bgcolor: "rgba(25, 118, 210, 0.05)", border: `1px solid ${colors.primary}44` }}>
                 <Typography variant="caption" sx={{ color: colors.primary, mb: 1, display: 'block', fontWeight: 'bold' }}>
                   {checkpoint.options.actionTaken.question}
                 </Typography>
@@ -343,7 +346,7 @@ const SubtaskManager = ({
           )}
 
           {checkpoint.options.generalJustification && (
-            <Box sx={{ mt: 2, p: 2, bgcolor: "rgba(99, 102, 241, 0.15)", borderRadius: 2, border: `1px solid ${colors.secondary}44` }}>
+            <Box sx={{ mt: 2, p: 2, bgcolor: "rgba(123, 104, 238, 0.05)", border: `1px solid ${colors.secondary}44` }}>
               <Typography variant="caption" sx={{ color: colors.secondary, mb: 1, display: 'block', fontWeight: 'bold' }}>
                 {checkpoint.options.generalJustification.question}
               </Typography>
@@ -376,7 +379,7 @@ const SubtaskManager = ({
           )}
 
           {checkpoint.name === "Wi-Fi Repeater Setup" && checkpoint.options?.selected === "yes_working" && checkpoint.options?.followUpQuestion?.question && (
-            <Box sx={{ mt: 2, p: 2, bgcolor: "rgba(16, 185, 129, 0.1)", borderRadius: 2 }}>
+            <Box sx={{ mt: 2, p: 2, bgcolor: "rgba(46, 125, 80, 0.05)", border: `1px solid ${colors.success}44` }}>
               <Typography variant="caption" sx={{ color: colors.success, mb: 1, display: 'block', fontWeight: 'bold' }}>
                 {checkpoint.options.followUpQuestion.question}
               </Typography>
@@ -429,16 +432,45 @@ const SubtaskManager = ({
   };
 
   return (
-    <DialogContent sx={{ padding: 0, height: "calc(100vh - 128px)", overflowY: "auto", bgcolor: colors.bg }}>
-      <Box sx={{ maxWidth: "100%", padding: 2 }}>
-        <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ color: colors.textPrimary, fontWeight: 'bold', mb: 1 }}>
-            Execution Progress
-          </Typography>
-          <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-            {selectedOption.charAt(0).toUpperCase() + selectedOption.slice(1)} Mode Active
-          </Typography>
-        </Box>
+    <DialogContent sx={{ padding: 0, overflowY: "auto", bgcolor: colors.bg }}>
+      <Box sx={{ maxWidth: "100%" }}>
+        <Stack spacing={2} sx={{ mb: 3, alignItems: 'center' }}>
+          <Box sx={{
+            p: 0.5,
+            bgcolor: colors.card,
+            border: `1px solid ${colors.border}`,
+            display: 'inline-flex'
+          }}>
+            <RadioGroup row value={selectedOption} onChange={handleOptionChange}>
+              {predefinedOptions?.map((option) => (
+                <FormControlLabel
+                  key={option}
+                  value={option}
+                  control={<Radio size="small" sx={{ display: 'none' }} />}
+                  label={
+                    <Typography variant="body2" sx={{
+                      fontWeight: "bold",
+                      fontSize: '0.75rem',
+                      color: selectedOption === option ? '#fff' : colors.textSecondary
+                    }}>
+                      {option.toUpperCase()}
+                    </Typography>
+                  }
+                  sx={{
+                    px: 2, py: 0.5, m: 0,
+                    bgcolor: selectedOption === option ? colors.primary : 'transparent',
+                    '&:hover': { bgcolor: selectedOption === option ? colors.primaryDark : 'rgba(255,255,255,0.05)' }
+                  }}
+                />
+              ))}
+            </RadioGroup>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="subtitle2" sx={{ color: colors.textPrimary, fontWeight: 'bold' }}>
+              Subtask Execution Status: {selectedOption.toUpperCase()}
+            </Typography>
+          </Box>
+        </Stack>
 
         <List sx={{ width: "100%" }}>
           {subtasks.map((subtask, subtaskIndex) => {
@@ -449,49 +481,49 @@ const SubtaskManager = ({
             return (
               <Paper
                 key={subtaskIndex}
-                elevation={isExpanded ? 8 : 1}
+                elevation={0}
                 sx={{
-                  mb: 3,
+                  mb: 1.5,
                   backgroundColor: colors.card,
-                  borderRadius: 4,
+                  borderRadius: 0,
                   overflow: "hidden",
-                  transition: 'all 0.3s ease',
-                  border: isExpanded ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
-                  transform: isExpanded ? 'scale(1.01)' : 'scale(1)',
+                  border: `1px solid ${colors.border}`,
+                  borderLeft: isExpanded ? `4px solid ${colors.primary}` : `4px solid ${isClosed ? colors.success : inProgress ? colors.primary : colors.border}`,
                 }}
               >
                 <ListItemButton
                   onClick={() => toggleNoteExpand(subtaskIndex)}
                   sx={{
-                    p: 3,
+                    p: 1.5,
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    bgcolor: isExpanded ? "rgba(14, 165, 233, 0.1)" : "transparent",
+                    bgcolor: isExpanded ? "rgba(255,255,255,0.02)" : "transparent",
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box
                       sx={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 3,
+                        width: 32,
+                        height: 32,
+                        borderRadius: 0,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         bgcolor: isClosed ? colors.success : inProgress ? colors.primary : colors.bg,
                         color: "#fff",
-                        boxShadow: isClosed ? `0 0 15px ${colors.success}66` : 'none',
                       }}
                     >
-                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{subtaskIndex + 1}</Typography>
+                      <Typography variant="caption" sx={{ fontWeight: "bold" }}>
+                        {subtaskIndex + 1}
+                      </Typography>
                     </Box>
                     <Box>
-                      <Typography variant="subtitle1" sx={{ color: colors.textPrimary, fontWeight: 'bold' }}>
+                      <Typography variant="subtitle2" sx={{ color: colors.textPrimary, fontWeight: "bold" }}>
                         {subtask.title}
                       </Typography>
                       <Typography variant="caption" sx={{ color: colors.textSecondary }}>
-                        {isClosed ? `Completed: ${new Date(subtask.dateTime).toLocaleDateString()}` : (subtask.optional ? "Optional" : "Action Required")}
+                        {isClosed ? `Updated: ${new Date(subtask.dateTime).toLocaleDateString()}` : (subtask.optional ? "Optional Phase" : "Required Action")}
                       </Typography>
                     </Box>
                   </Box>
@@ -501,10 +533,12 @@ const SubtaskManager = ({
                       label={subtask.status}
                       size="small"
                       sx={{
-                        bgcolor: isClosed ? `${colors.success}22` : inProgress ? `${colors.primary}22` : `${colors.textSecondary}22`,
+                        bgcolor: "transparent",
                         color: isClosed ? colors.success : inProgress ? colors.primary : colors.textSecondary,
-                        fontWeight: 'bold',
-                        border: '1px solid currentColor',
+                        fontWeight: "bold",
+                        fontSize: '0.7rem',
+                        border: `1px solid ${isClosed ? colors.success : inProgress ? colors.primary : colors.border}`,
+                        borderRadius: 0
                       }}
                     />
                     {isExpanded ? <ExpandLess sx={{ color: colors.primary }} /> : <ExpandMore sx={{ color: colors.textSecondary }} />}
@@ -512,8 +546,8 @@ const SubtaskManager = ({
                 </ListItemButton>
 
                 <Collapse in={isExpanded}>
-                  <Box sx={{ px: 3, pb: 4, pt: 1 }}>
-                    <Divider sx={{ mb: 3, borderColor: `${colors.border}44` }} />
+                  <Box sx={{ px: 2, pb: 2, pt: 1 }}>
+                    <Divider sx={{ mb: 2, borderColor: `${colors.border}44` }} />
 
                     <Typography variant="overline" sx={{ color: colors.primary, fontWeight: 'bold', letterSpacing: 1.5 }}>
                       Checkpoints Checklisting
@@ -524,12 +558,11 @@ const SubtaskManager = ({
                         <Box
                           key={checkpointIndex}
                           sx={{
-                            p: 2,
-                            borderRadius: 3,
-                            bgcolor: "rgba(0,0,0,0.1)",
-                            border: `1px solid ${checkpoint.checked ? colors.success + '44' : colors.border + '22'}`,
+                            p: 1,
+                            borderRadius: 0,
+                            bgcolor: "transparent",
+                            border: `1px solid ${colors.border}`,
                             transition: 'all 0.2s ease',
-                            '&:hover': { bgcolor: "rgba(0,0,0,0.2)" }
                           }}
                         >
                           <ListItemButton
@@ -564,23 +597,20 @@ const SubtaskManager = ({
                       ))}
                     </Box>
 
-                    {/* Notes Section */}
-                    <Box sx={{ mt: 4 }}>
+                    <Box sx={{ mt: 2 }}>
                       <TextField
                         fullWidth
-                        variant="standard"
-                        label={selectedOption === "others" ? "OUT OF SCOPE REASONING" : "ACTIVITY FEEDBACK / NOTES"}
+                        variant="outlined"
+                        label={selectedOption === "others" ? "Explain reasoning" : "Audit Feedback"}
                         multiline
-                        rows={3}
+                        rows={2}
                         value={notes[subtaskIndex] || ""}
                         onChange={(e) => handleNoteChange(subtaskIndex, e.target.value)}
                         disabled={isClosed && editingIndex !== subtaskIndex}
                         sx={{
-                          bgcolor: 'rgba(0,0,0,0.1)',
-                          p: 2,
-                          borderRadius: 3,
-                          '& .MuiInputBase-root': { color: colors.textPrimary },
-                          '& .MuiInputLabel-root': { color: colors.primary, fontWeight: 'bold', px: 2 },
+                          bgcolor: 'transparent',
+                          '& .MuiInputBase-root': { borderRadius: 0, color: colors.textPrimary },
+                          '& .MuiOutlinedInput-notchedOutline': { borderColor: colors.border },
                           direction: "rtl",
                           textAlign: "right",
                         }}
@@ -592,16 +622,16 @@ const SubtaskManager = ({
                         fullWidth
                         variant="outlined"
                         size="small"
-                        placeholder="Short summary for quick overview..."
-                        label="DASHBOARD SHORT NOTE"
+                        placeholder="Short summary..."
+                        label="DASHBOARD NOTE"
                         value={subtask.shortNote || ""}
                         onChange={(e) => handleShortNoteChange(subtaskIndex, e.target.value)}
                         disabled={isClosed && editingIndex !== subtaskIndex}
-                        sx={{ mt: 3, bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 2 }}
+                        sx={{ mt: 2, bgcolor: 'transparent' }}
                       />
                     )}
 
-                    <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                    <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
                       {editingIndex === subtaskIndex ? (
                         <>
                           <Button
@@ -610,27 +640,34 @@ const SubtaskManager = ({
                             disabled={!isSubtaskClosable(subtaskIndex)}
                             onClick={() => handleStatusUpdate(subtaskIndex, "Closed")}
                             sx={{
-                              py: 1.5,
-                              borderRadius: 3,
+                              py: 1,
+                              borderRadius: 0,
                               bgcolor: colors.success,
-                              '&:hover': { bgcolor: colors.success },
-                              fontWeight: 'bold',
+                              '&:hover': {
+                                bgcolor: colors.success,
+                              },
+                              fontWeight: "bold",
                               textTransform: 'none',
-                              boxShadow: `0 4px 14px ${colors.success}66`,
+                              boxShadow: 'none',
                             }}
                           >
-                            Finalize and Close
+                            Mark Subtask Closed
                           </Button>
                           <Button
                             fullWidth
                             variant="outlined"
                             onClick={() => setEditingIndex(null)}
                             sx={{
-                              py: 1.5,
-                              borderRadius: 3,
+                              py: 1,
+                              borderRadius: 0,
                               color: colors.textSecondary,
                               borderColor: colors.border,
+                              fontWeight: "bold",
                               textTransform: 'none',
+                              '&:hover': {
+                                borderColor: colors.textPrimary,
+                                bgcolor: 'rgba(255,255,255,0.05)'
+                              }
                             }}
                           >
                             Cancel Edit
@@ -642,16 +679,19 @@ const SubtaskManager = ({
                           variant="contained"
                           onClick={() => setEditingIndex(subtaskIndex)}
                           sx={{
-                            py: 1.5,
-                            borderRadius: 3,
-                            bgcolor: isClosed ? colors.border : colors.primary,
-                            '&:hover': { bgcolor: isClosed ? colors.border : colors.primaryDark },
-                            fontWeight: 'bold',
+                            py: 1,
+                            borderRadius: 0,
+                            bgcolor: isClosed ? colors.textSecondary : colors.primary,
+                            '&:hover': {
+                              bgcolor: isClosed ? colors.textSecondary : colors.primaryDark,
+                            },
+                            color: '#fff',
+                            fontWeight: "bold",
                             textTransform: 'none',
-                            boxShadow: isClosed ? 'none' : `0 4px 14px ${colors.primary}66`,
+                            boxShadow: 'none',
                           }}
                         >
-                          {isClosed ? "Update/Edit Findings" : "Unlock to Start Execution"}
+                          {isClosed ? "Modify Data" : "Begin Verification"}
                         </Button>
                       )}
                     </Box>
@@ -665,26 +705,26 @@ const SubtaskManager = ({
         {/* Additional Info Section */}
         {(selectedOption === "visit" || selectedOption === "phone") && (
           <Paper
+            elevation={0}
             sx={{
-              p: 4,
-              mb: 4,
+              p: 2,
+              mb: 2,
               backgroundColor: colors.card,
               border: `1px solid ${colors.border}`,
-              borderRadius: 4,
+              borderRadius: 0,
             }}
           >
             <Typography
-              variant="h6"
+              variant="subtitle1"
               sx={{
                 color: colors.primary,
-                mb: 3,
-                fontWeight: 'bold',
+                mb: 2,
+                fontWeight: "bold",
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1.5
               }}
             >
-              <Box sx={{ width: 4, height: 24, bgcolor: colors.primary, borderRadius: 1 }} />
               Hardware & Equipment Specification
             </Typography>
             <Grid container spacing={3}>
@@ -706,7 +746,7 @@ const SubtaskManager = ({
                       "& .MuiOutlinedInput-notchedOutline": { borderColor: colors.border },
                     }}
                   >
-                    <MenuItem value="">Select ONT Type</MenuItem>
+                    <MenuItem value="">Select Type</MenuItem>
                     <MenuItem value="Nokia G-140W-H">Nokia G-140W-H</MenuItem>
                     <MenuItem value="Nokia G-140W-c">Nokia G-140W-C</MenuItem>
                     <MenuItem value="Nokia G-240W-c">Nokia G-240W-C</MenuItem>
@@ -731,7 +771,7 @@ const SubtaskManager = ({
                     setSubtasks(updatedSubtasks);
                     setAdditionalInfo(prev => ({ ...prev, speed: numericValue }));
                   }}
-                  sx={{ bgcolor: colors.bg, borderRadius: 1 }}
+                  sx={{ bgcolor: 'transparent', '& .MuiInputBase-root': { borderRadius: 0, color: colors.textPrimary }, '& .MuiOutlinedInput-notchedOutline': { borderColor: colors.border } }}
                 />
               </Grid>
               <Grid item xs={12} md={6}>

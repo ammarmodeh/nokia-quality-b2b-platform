@@ -52,9 +52,11 @@ const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, p
 
       const targetPromoters = 75;
       const targetDetractors = 9;
+      const npsTarget = 66;
 
       const isPromoterAlarm = promotersPercent < targetPromoters && totalSamples > 0;
       const isDetractorAlarm = detractorsPercent > targetDetractors && totalSamples > 0;
+      const isNPSAlarm = npsScore < npsTarget && totalSamples > 0;
 
       const criticalTasks = tasks.filter(t => t.priority === 'High' || t.priority === 'Medium').length;
       const mostCommonReason = tasks.reduce((acc, t) => {
@@ -84,7 +86,7 @@ Net Promoter Score (NPS) Analysis:
 - Promoters: ${promoterCount} (${promotersPercent}%) ${isPromoterAlarm ? '[ALARM: Below Target 75%]' : '[Target Met]'}
 - Detractors: ${detractorCount} (${detractorsPercent}%) ${isDetractorAlarm ? '[ALARM: Above Target 9%]' : '[Target Met]'}
 - Neutrals: ${neutralCount}
-- Overall NPS Score: ${npsScore}
+- Overall NPS Score: ${npsScore} ${isNPSAlarm ? '[ALARM: Below Target 66%]' : '[Target Met]'}
 
 Operational Key Performance Indicators:
 - Total Cases Recorded: ${totalTasks}
@@ -93,7 +95,7 @@ Operational Key Performance Indicators:
 - Total Evaluated Teams: ${teamsData.filter(t => t.isEvaluated).length} / ${teamsData.length} (${evaluatedPercent}%)
 
 Operational Insights:
-1. Customer Sentiment: ${isPromoterAlarm || isDetractorAlarm ? 'URGENT: Some NPS targets are currenty not met. Immediate focus on promoter growth is recommended.' : 'Our current NPS trends are within healthy operational targets.'}
+1. Customer Sentiment: ${isPromoterAlarm || isDetractorAlarm || isNPSAlarm ? 'URGENT: Some NPS targets are currenty not met. Immediate focus on quality improvement is recommended.' : 'Our current NPS trends are within healthy operational targets.'}
 2. Workforce Quality: Approximately ${evaluatedPercent}% of teams have undergone quality assessment.
 3. Risk Focus: "${topReason}" remains the primary reason for recorded violations.
 
@@ -114,7 +116,7 @@ ${greeting}
 - المروجون: ${promoterCount} (${promotersPercent}%) ${isPromoterAlarm ? '[تنبيه: أقل من المستهدف 75%]' : '[تم تحقيق المستهدف]'}
 - المنتقدون: ${detractorCount} (${detractorsPercent}%) ${isDetractorAlarm ? '[تنبيه: أعلى من المستهدف 9%]' : '[تم تحقيق المستهدف]'}
 - المحايدون: ${neutralCount}
-- صافي مؤشر الترويج (NPS): ${npsScore}
+- صافي مؤشر الترويج (NPS): ${npsScore} ${isNPSAlarm ? '[تنبيه: أقل من المستهدف 66%]' : '[تم تحقيق المستهدف]'}
 
 مؤشرات الأداء الرئيسية للعمليات:
 - إجمالي الحالات المسجلة: ${totalTasks}
@@ -123,7 +125,7 @@ ${greeting}
 - إجمالي الفرق التي تم تقييمها: ${teamsData.filter(t => t.isEvaluated).length} / ${teamsData.length} (${evaluatedPercent}%)
 
 رؤى تشغيلية:
-1. انطباع العملاء: ${isPromoterAlarm || isDetractorAlarm ? 'عاجل: تقييمات NPS حالياً خارج النطاق المستهدف. نوصي بالتركيز الفوري على تحسين رضا العملاء.' : 'اتجاهات NPS الحالية ضمن النطاق التشغيلي المستهدف.'}
+1. انطباع العملاء: ${isPromoterAlarm || isDetractorAlarm || isNPSAlarm ? 'عاجل: تقييمات NPS حالياً خارج النطاق المستهدف. نوصي بالتركيز الفوري على تحسين جودة العمل.' : 'اتجاهات NPS الحالية ضمن النطاق التشغيلي المستهدف.'}
 2. جودة القوى العاملة: خضع ما يقرب من ${evaluatedPercent}% من الفرق لتقييم الجودة.
 3. التركيز على المخاطر: لا يزال (${topReason}) هو السبب الرئيسي للمخالفات المسجلة.
 

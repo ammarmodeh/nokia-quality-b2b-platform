@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
+import * as XLSX from "xlsx";
+import moment from "moment";
 import {
   Select,
   MenuItem,
@@ -29,6 +31,7 @@ import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import TodayIcon from '@mui/icons-material/Today';
 import DateRangeIcon from '@mui/icons-material/DateRange';
+import { RiFileExcel2Fill } from "react-icons/ri";
 import api from "../api/api";
 import { ChartComponent } from "./ChartComponent";
 import { DataTable } from "./DataTable";
@@ -87,6 +90,28 @@ const prepareChartData = (groupedData, timeRange) => {
         borderWidth: 2.5,
         tension: 0.3,
         fill: false,
+        datalabels: {
+          align: category === 'NPS' ? 'top' : (category === 'Promoters' ? 'top' : (category === 'Neutrals' ? 45 : 'right')),
+          anchor: category === 'NPS' || category === 'Promoters' ? 'end' : 'center',
+          offset: category === 'NPS' ? 10 : 6,
+          backgroundColor: colors[category].replace('0.9', '0.15'), // Subtle background
+          borderColor: colors[category],
+          borderWidth: 1,
+          borderRadius: 4,
+          padding: { top: 2, bottom: 2, left: 4, right: 4 },
+          font: { weight: 'bold', size: 10 },
+          color: '#ffffff',
+          display: (context) => {
+            // Show all labels, but hide NPS if it's identical to Promoter (rare, but happens if detractors=0)
+            const val = context.parsed?.y;
+            const promoterVal = context.chart.data.datasets[1]?.data?.[context.dataIndex];
+
+            if (category === 'NPS' && val !== undefined && val === promoterVal) {
+              return 'auto'; // Only show if it doesn't collide
+            }
+            return true;
+          }
+        }
       })),
       // NPS Target Line (Promoters Target 75% - Detractors Target 9% = 66%)
       {
@@ -101,6 +126,7 @@ const prepareChartData = (groupedData, timeRange) => {
         pointRadius: 0,
         tension: 0,
         fill: false,
+        datalabels: { display: false }
       }
     ],
   };
@@ -123,7 +149,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
 
   // Advanced Time Range State
   const [timeFilterMode, setTimeFilterMode] = useState('weeks'); // 'weeks', 'days', 'months'
-  const [recentDaysValue, setRecentDaysValue] = useState(30);
+  const [recentDaysValue, setRecentDaysValue] = useState(70);
   const [selectedMonths, setSelectedMonths] = useState([]);
   const [monthOptions, setMonthOptions] = useState([]);
 
@@ -219,22 +245,25 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
     if (initialTasks && initialTasks.length > 0) {
       setTasks(initialTasks);
       const ranges = generateWeekRanges(initialTasks, settings || {});
-      setWeekRanges(ranges);
-
       const individualWeeks = ranges
         .filter(range => /Wk-\d+ \(\d+\)/.test(range))
         .sort((a, b) => {
           const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
           const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
+          if (!matchA || !matchB) return 0;
           const yearA = parseInt(matchA[2], 10);
           const yearB = parseInt(matchB[2], 10);
           const weekA = parseInt(matchA[1], 10);
           const weekB = parseInt(matchB[1], 10);
-          if (yearA !== yearB) return yearA - yearB;
-          return weekA - weekB;
+          if (yearA !== yearB) return yearB - yearA;
+          return weekB - weekA;
         });
 
-      const defaultWeeks = individualWeeks.slice(-10);
+      // Show latest weeks at the top of the selection list
+      setWeekRanges(individualWeeks);
+
+      // Default selection: Latest 10 weeks
+      const defaultWeeks = individualWeeks.slice(0, 10);
       setTimeRange(defaultWeeks);
 
       const { grouped, range: finalRange } = processData(initialTasks, defaultWeeks, queryFilters, settings, samplesData, timeFilterMode, recentDaysValue, selectedMonths);
@@ -244,27 +273,59 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
   }, [initialTasks, settings, samplesData]);
 
   const exportChartData = () => {
-    const csvRows = [];
-    const headers = ["Week", "Detractor", "NeutralPassive", "TotalViolations"];
-    csvRows.push(headers.join(","));
+    if (!groupedData || Object.keys(groupedData).length === 0) return;
 
-    Object.keys(groupedData).forEach((week) => {
-      const totalViolations = (groupedData[week].NeutralPassive || 0) + (groupedData[week].Detractor || 0);
-      const row = [
-        week,
-        groupedData[week].Detractor || 0,
-        groupedData[week].NeutralPassive || 0,
-        totalViolations,
-      ];
-      csvRows.push(row.join(","));
+    // Sort weeks descending for the report
+    const sortedWeeks = Object.keys(groupedData).sort((a, b) => {
+      const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
+      const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
+      if (!matchA || !matchB) return 0;
+      const yearA = parseInt(matchA[2], 10);
+      const yearB = parseInt(matchB[2], 10);
+      const weekA = parseInt(matchA[1], 10);
+      const weekB = parseInt(matchB[1], 10);
+      if (yearA !== yearB) return yearB - yearA;
+      return weekB - weekA;
     });
 
-    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.href = encodedUri;
-    link.download = "qos_violations_data.csv";
-    link.click();
+    const exportData = sortedWeeks.map((week) => {
+      const stats = groupedData[week];
+      const promoters = stats.Promoters || 0;
+      const detractors = stats.Detractors || 0;
+      const nps = promoters - detractors;
+      const status = nps >= 66 ? "Met Target" : "Out of Target";
+
+      return {
+        "Week": week,
+        "Total Samples": stats.sampleSize || 0,
+        "Promoters (%)": promoters,
+        "Neutrals (%)": stats.Neutrals || 0,
+        "Detractors (%)": detractors,
+        "NPS (%)": nps,
+        "Target NPS (%)": 66,
+        "Status": status
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Weekly QoS Trends");
+
+    // Auto-size columns
+    const wscols = [
+      { wch: 15 }, // Week
+      { wch: 15 }, // Total Samples
+      { wch: 15 }, // Promoters
+      { wch: 15 }, // Neutrals
+      { wch: 15 }, // Detractors
+      { wch: 10 }, // NPS
+      { wch: 15 }, // Target
+      { wch: 15 }  // Status
+    ];
+    worksheet['!cols'] = wscols;
+
+    const timestamp = moment().format("YYYY-MM-DD_HHmm");
+    XLSX.writeFile(workbook, `weekly_qos_trends_${timestamp}.xlsx`);
   };
 
   const handleReset = () => {
@@ -276,22 +337,24 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
       district: null
     });
     setTimeFilterMode('weeks');
-    setRecentDaysValue(30);
+    setRecentDaysValue(70);
     setSelectedMonths([]);
 
-    const individualWeeks = weekRanges.filter(range => /Wk-\d+ \(\d+\)/.test(range));
-    individualWeeks.sort((a, b) => {
-      const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
-      const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
-      const yearA = parseInt(matchA[2], 10);
-      const yearB = parseInt(matchB[2], 10);
-      const weekA = parseInt(matchA[1], 10);
-      const weekB = parseInt(matchB[1], 10);
-      if (yearA !== yearB) return yearA - yearB;
-      return weekA - weekB;
-    });
-    const defaultWeeks = individualWeeks.slice(-10);
+    const individualWeeks = weekRanges
+      .filter(range => /Wk-\d+ \(\d+\)/.test(range))
+      .sort((a, b) => {
+        const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
+        const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
+        if (!matchA || !matchB) return 0;
+        const yearA = parseInt(matchA[2], 10);
+        const yearB = parseInt(matchB[2], 10);
+        const weekA = parseInt(matchA[1], 10);
+        const weekB = parseInt(matchB[1], 10);
+        if (yearA !== yearB) return yearB - yearA;
+        return weekB - weekA;
+      });
 
+    const defaultWeeks = individualWeeks.slice(0, 10);
     setTimeRange(defaultWeeks);
   };
 
@@ -366,15 +429,15 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
           <Button
             variant="contained"
             size="small"
-            startIcon={<TodayIcon />}
+            startIcon={<RiFileExcel2Fill />}
             sx={{
-              backgroundColor: '#3b82f6',
+              backgroundColor: '#10b981',
               textTransform: 'none',
-              "&:hover": { backgroundColor: '#2563eb' }
+              "&:hover": { backgroundColor: '#059669' }
             }}
             onClick={exportChartData}
           >
-            Export CSV
+            Export Excel
           </Button>
         </Stack>
       </Stack>
