@@ -328,7 +328,7 @@ export const handleChat = async (req, res) => {
     const historyParts = [
       {
         role: "user",
-        parts: [{ text: "You are an AI assistant for the Nokia Quality Task Tracker app. You are currently analyzing the provided report context and answering questions about it. Do not discuss anything outside of the report context." }],
+        parts: [{ text: "You are an AI assistant for the Reach Quality Team app. You are currently analyzing the provided report context and answering questions about it. Do not discuss anything outside of the report context." }],
       },
       {
         role: "model",

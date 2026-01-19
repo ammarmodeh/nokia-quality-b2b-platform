@@ -44,6 +44,12 @@ const SidebarLinks = () => {
       title: "Audit & Tasks",
       links: [
         {
+          label: "Admin Portal",
+          link: "audit/admin",
+          icon: <img width={20} height={20} src="/security-2.svg" />,
+          isNew: true,
+        },
+        {
           label: "All Tasks List",
           link: "audit/tasks",
           icon: <img width={20} height={20} src="/all-tasks.png" />,

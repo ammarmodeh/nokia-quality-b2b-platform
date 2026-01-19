@@ -910,7 +910,7 @@ ${([theoreticalAvg, practicalAvg ? practicalAvg * 20 : null, labAvg].filter(v =>
           : "Focused technical workshops and practical drills are recommended to bridge identified gaps."}
 
 ---
-*Report generated automatically by Nokia Quality Management System*
+*Report generated automatically by Reach Quality Management System*
       `;
 
       const response = await api.post("/ai/report/download", {

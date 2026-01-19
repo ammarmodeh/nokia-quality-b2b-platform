@@ -26,6 +26,7 @@ import labAssessmentRoutes from "./routes/labAssessmentRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import docRoutes from "./routes/docRoutes.js";
 import userNoteRoutes from "./routes/userNoteRoutes.js";
+import fieldAuditRoutes from "./routes/fieldAuditRoutes.js";
 import path from "path";
 
 
@@ -111,6 +112,7 @@ app.use("/api/lab-assessments", labAssessmentRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/docs", docRoutes);
 app.use("/api/user-notes", userNoteRoutes);
+app.use("/api/audit", fieldAuditRoutes);
 
 // Static Uploads Folder
 const __dirname = path.resolve();

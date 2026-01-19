@@ -51,6 +51,13 @@ const IssuePreventionAnalytics = lazy(() => import("./pages/IssuePreventionAnaly
 const PreventionDeepDive = lazy(() => import("./pages/PreventionDeepDive"));
 const DocumentsPortal = lazy(() => import("./pages/DocumentsPortal"));
 
+// Audit System Imports
+const AuditLayout = lazy(() => import("./components/audit/AuditLayout"));
+const AuditLogin = lazy(() => import("./pages/audit/AuditLogin"));
+const AuditAdminDashboard = lazy(() => import("./pages/audit/AuditAdminDashboard"));
+const AuditorDashboard = lazy(() => import("./pages/audit/AuditorDashboard"));
+const AuditTaskInspection = lazy(() => import("./pages/audit/AuditTaskInspection"));
+
 
 const QuizRouteHandler = ({ children }) => {
   const { user } = useSelector((state) => state?.auth);
@@ -103,6 +110,14 @@ const App = () => {
         {/* Public Routes */}
         <Route path="/auth" element={<Auth />} />
         <Route path="/fieldteam-login" element={<FieldTeamLogin />} />
+
+        {/* Audit System Routes */}
+        <Route path="/audit/login" element={<AuditLogin />} />
+        <Route path="/audit" element={<AuditLayout />}>
+          <Route path="admin" element={<AuditAdminDashboard />} />
+          <Route path="tasks" element={<AuditorDashboard />} />
+          <Route path="tasks/:slid" element={<AuditTaskInspection />} />
+        </Route>
 
         {/* Quiz Routes */}
         <Route

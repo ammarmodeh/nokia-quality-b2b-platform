@@ -280,7 +280,7 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
           AUDIT_SERVICE_ACTIVE: SUCCESS
         </Typography>
         <Typography variant="caption" sx={{ color: '#444' }}>
-          C:\ROOT\NOKIA_QUALITY\CIN_LOGS\
+          C:\ROOT\Reach Quality\CIN_LOGS\
         </Typography>
       </Box>
     </Dialog>

@@ -50,7 +50,7 @@ const ActionPlanDialog = ({ open, onClose, plan, title, onRegenerate, metadata }
 
   const reportUrl = `${window.location.origin}/dashboard`;
   const whatsappText = encodeURIComponent(
-    `Nokia Quality Action Plan\n\n${plan?.substring(0, 800)}...\n\nView details: ${reportUrl}`
+    `Reach Quality Action Plan\n\n${plan?.substring(0, 800)}...\n\nView details: ${reportUrl}`
   );
   const whatsappLink = `https://wa.me/?text=${whatsappText}`;
 
