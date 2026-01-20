@@ -117,14 +117,13 @@ const AuditTaskInspection = () => {
         formData.append('checkpointName', checkpointName);
         formData.append('description', file.name); // Use filename as description
 
-        const { data } = await axios.post(`${API_URL}/tasks/${task._id}/photo`, formData, {
-          ...getAuthHeader().headers ? { headers: { ...getAuthHeader().headers, 'Content-Type': 'multipart/form-data' } } : {}
-        });
+        const { data } = await axios.post(`${API_URL}/tasks/${task._id}/photo`, formData, getAuthHeader());
         setTask(prev => ({ ...data, checklist: prev.checklist })); // Preserve local checklist state
       }
     } catch (error) {
       console.error("Photo upload failed", error);
-      alert("Upload failed partially or fully");
+      const errorMsg = error.response?.data?.message || error.message || "Upload failed partially or fully";
+      alert(`Upload failed: ${errorMsg}`);
     } finally {
       setUploading(false);
       event.target.value = null; // Clear input
@@ -217,7 +216,7 @@ const AuditTaskInspection = () => {
   if (!task) return <Typography>Task not found</Typography>;
 
   return (
-    <Box sx={{ pb: 12 }}>
+    <Box sx={{ pb: 16 }}>
       <Paper sx={{ p: 2, mb: 3, background: 'linear-gradient(135deg, #001f3f 0%, #001122 100%)', color: 'white', borderRadius: 0, border: 'none' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
           <IconButton onClick={() => navigate('/audit/tasks')} sx={{ color: 'white', mr: 1, p: 0 }}>
@@ -397,7 +396,8 @@ const AuditTaskInspection = () => {
                     startIcon={<PhotoCameraIcon />}
                     fullWidth
                     disabled={uploading}
-                    sx={{ mb: 2, py: 1, fontWeight: 'bold' }}
+                    size="small"
+                    sx={{ mb: 2, fontWeight: 'bold' }}
                   >
                     {uploading ? "Uploading..." : "Upload Evidence"}
                     <input
@@ -405,7 +405,6 @@ const AuditTaskInspection = () => {
                       hidden
                       multiple
                       accept="image/*"
-                      capture="environment"
                       onChange={(e) => handlePhotoUpload(e, item.checkpointName)}
                     />
                   </Button>
@@ -453,10 +452,11 @@ const AuditTaskInspection = () => {
         elevation={6}
         sx={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
-          p: 2, display: 'flex', gap: 1, justifyContent: 'space-between',
+          p: 1.5, display: 'flex', gap: 1, justifyContent: 'space-between',
           zIndex: 1000, bgcolor: 'background.paper',
           borderRadius: 0,
-          borderTop: '1px solid', borderColor: 'divider'
+          borderTop: '1px solid', borderColor: 'divider',
+          flexWrap: 'wrap'
         }}
       >
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
