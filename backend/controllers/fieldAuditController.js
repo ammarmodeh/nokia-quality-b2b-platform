@@ -570,36 +570,10 @@ export const uploadTaskPhoto = async (req, res) => {
     const task = await FieldAuditTask.findById(taskId).populate("auditor", "name");
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // Custom naming: [checkpointName]-[SLID#]-[auditor name]-[scheduled date]
-    const auditorName = task.auditor?.name || "UnknownAuditor";
-    const scheduledDate = task.scheduledDate ? new Date(task.scheduledDate).toISOString().split('T')[0] : "NoDate";
-    const ext = path.extname(req.file.originalname) || '.jpg';
-
-    // Sanitize names for filesystem safety
-    const safeCheckpoint = (checkpointName || "UnknownCheckpoint").replace(/[^a-z0-9]/gi, '_');
-    const safeAuditor = auditorName.replace(/[^a-z0-9]/gi, '_');
-
-    const newFileName = `${safeCheckpoint}-${task.slid}-${safeAuditor}-${scheduledDate}${ext}`;
-    const oldPath = req.file.path;
-    const newPath = path.join(path.dirname(oldPath), newFileName);
-
-    // Rename the file on disk
-    if (fs.existsSync(oldPath)) {
-      // If a file with the same name exists (very rare with this naming), append a tiny random string
-      const finalFileName = fs.existsSync(newPath)
-        ? `${safeCheckpoint}-${task.slid}-${safeAuditor}-${scheduledDate}-${Math.floor(Math.random() * 1000)}${ext}`
-        : newFileName;
-
-      const finalPath = path.join(path.dirname(oldPath), finalFileName);
-      fs.renameSync(oldPath, finalPath);
-
-      var photoUrl = `/uploads/audit-photos/${path.basename(finalPath)}`;
-    } else {
-      var photoUrl = `/uploads/audit-photos/${req.file.filename}`;
-    }
-
+    // The file is already on S3 at req.file.location
+    // We'll store this URL in the database
     const newPhoto = {
-      url: photoUrl,
+      url: req.file.location, // S3 URL
       checkpointName,
       description,
       uploadedAt: new Date()
@@ -610,6 +584,7 @@ export const uploadTaskPhoto = async (req, res) => {
 
     res.json(task);
   } catch (error) {
+    console.error("S3 Upload Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -624,10 +599,29 @@ export const deleteTaskPhoto = async (req, res) => {
     const photo = task.photos.id(photoId);
     if (!photo) return res.status(404).json({ message: "Photo not found" });
 
-    // Remove file from disk
-    const filePath = path.join(process.cwd(), photo.url);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    // Delete from S3
+    try {
+      const { S3Client, DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+      const s3Client = new S3Client({
+        region: process.env.AWS_REGION,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        },
+      });
+
+      // Extract key from URL (https://bucket.s3.region.amazonaws.com/key)
+      const urlParts = photo.url.split('/');
+      const key = urlParts.slice(3).join('/'); // Skip protocol, empty string, and bucket domain
+
+      await s3Client.send(new DeleteObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Key: key
+      }));
+      console.log(`Deleted S3 object: ${key}`);
+    } catch (s3Error) {
+      console.error("Error deleting from S3:", s3Error);
+      // We continue anyway to remove it from the DB
     }
 
     // Remove from task array

@@ -39,7 +39,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { Snackbar, Alert, Tooltip } from '@mui/material';
 
-const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/api/audit`;
+const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}/api/audit`;
 
 const AuditTaskInspection = () => {
   const { slid } = useParams();
@@ -83,6 +83,20 @@ const AuditTaskInspection = () => {
     }
 
     return (token && token !== "undefined" && token !== "null") ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  };
+
+  const getAuditorName = () => {
+    if (task?.auditor?.name) return task.auditor.name;
+    const userStr = localStorage.getItem('auditUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        return user.name || "Auditor";
+      } catch (e) {
+        return "Auditor";
+      }
+    }
+    return "Auditor";
   };
 
   useEffect(() => {
@@ -133,11 +147,14 @@ const AuditTaskInspection = () => {
           ctx.drawImage(img, 0, 0, width, height);
 
           canvas.toBlob((blob) => {
-            resolve(new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            }));
-          }, 'image/jpeg', 0.7); // 70% quality
+            if (!blob) {
+              console.error("Canvas toBlob failed");
+              resolve(file); // Fallback to original
+              return;
+            }
+            // Use Blob with name to satisfy backend
+            resolve(blob);
+          }, 'image/jpeg', 0.6); // Slightly lower quality for better speed/success
         };
       };
     });
@@ -158,9 +175,16 @@ const AuditTaskInspection = () => {
       for (const file of files) {
         const compressedFile = await compressImage(file);
         const formData = new FormData();
-        formData.append('image', compressedFile);
+        // Send metadata for S3 naming/pathing
+        formData.append('auditorName', getAuditorName());
+        formData.append('slid', task.slid);
+        formData.append('scheduledDate', task.scheduledDate || new Date().toISOString());
+        formData.append('actualName', file.name.replace(/\.[^/.]+$/, "")); // Send filename without extension
+
+        // Append as a Blob with a filename to ensure correct multipart boundary detection
+        formData.append('image', compressedFile, file.name.replace(/\.[^/.]+$/, "") + ".jpg");
         formData.append('checkpointName', checkpointName);
-        formData.append('description', file.name); // Use filename as description
+        formData.append('description', file.name);
 
         const { data } = await axios.post(`${API_URL}/tasks/${task._id}/photo`, formData, getAuthHeader());
         setTask(prev => ({ ...data, checklist: prev.checklist })); // Preserve local checklist state
@@ -460,7 +484,7 @@ const AuditTaskInspection = () => {
                     <Grid item xs={12} sm={6} key={pIdx}>
                       <Box sx={{ position: 'relative', borderRadius: 0, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
                         <img
-                          src={`${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}`}
+                          src={photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${photo.url}`}
                           alt="evidence"
                           style={{ width: '100%', height: '120px', objectFit: 'cover' }}
                         />

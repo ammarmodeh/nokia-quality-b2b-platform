@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import compression from "compression";
 import cors from "cors";
@@ -12,7 +13,6 @@ import archiveRoutes from "./routes/archiveRoutes.js";
 import fieldTeamsRoutes from "./routes/fieldTeamsRoutes.js";
 import policyRoutes from "./routes/policyRoutes.js";
 import suggestionsRoutes from "./routes/suggestionsRoutes.js";
-import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import customerIssueRoutes from "./routes/customerIssueRoutes.js";
 import onTheJobAssessmentRoutes from "./routes/onTheJobAssessmentRoutes.js";
@@ -30,7 +30,6 @@ import fieldAuditRoutes from "./routes/fieldAuditRoutes.js";
 import path from "path";
 
 
-dotenv.config();
 
 console.log('process.env.FRONTEND_URL:', process.env.FRONTEND_URL);
 
@@ -56,10 +55,13 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (like mobile apps or local development if needed)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+    // Dynamic verification for Nokia Quality Vercel domains
+    const isVercelDomain = origin.endsWith(".vercel.app") && origin.includes("nokia-quality");
+
+    if (allowedOrigins.includes(origin) || isVercelDomain) {
       callback(null, true);
     } else {
       console.warn(`[CORS] Blocked Origin: ${origin}`);

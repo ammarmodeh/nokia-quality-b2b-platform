@@ -86,6 +86,55 @@ import {
 } from 'recharts';
 
 
+// Expandable Note Component for long checklist comments
+const ExpandableNote = ({ text }) => {
+  const [expanded, setExpanded] = React.useState(false);
+  const maxLength = 60;
+
+  if (!text) return <Typography variant="body2" color="text.secondary">Consistent with standards.</Typography>;
+
+  const shouldShowMore = text.length > maxLength;
+  const displayedText = expanded ? text : text.slice(0, maxLength);
+
+  return (
+    <Box>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{
+          wordBreak: 'break-word',
+          whiteSpace: 'pre-wrap',
+          display: 'inline',
+          fontWeight: 400
+        }}
+      >
+        {displayedText}
+        {!expanded && shouldShowMore && "..."}
+      </Typography>
+      {shouldShowMore && (
+        <Button
+          size="small"
+          onClick={() => setExpanded(!expanded)}
+          sx={{
+            display: 'inline-block',
+            ml: 0.5,
+            p: 0,
+            minWidth: 'auto',
+            textTransform: 'none',
+            fontSize: '0.7rem',
+            color: 'primary.main',
+            verticalAlign: 'baseline',
+            height: 'auto',
+            '&:hover': { background: 'transparent', textDecoration: 'underline' }
+          }}
+        >
+          {expanded ? "read less" : "read more"}
+        </Button>
+      )}
+    </Box>
+  );
+};
+
 // Modern Glass Stat Card
 const StatCard = ({ title, value, color, icon, subtext }) => (
   <Paper
@@ -427,7 +476,7 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
           Item: item.checkpointName,
           Value: item.status,
           Notes: item.notes || "",
-          Evidence: photo ? `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}` : ""
+          Evidence: photo ? (photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${photo.url}`) : ""
         };
       })
     ];
@@ -450,7 +499,8 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
     // Use for...of loop for sequential processing to simplify name tracking (though parallel is faster, this is safer for naming)
     const downloadPromises = selectedTask.photos.map(async (photo) => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}`);
+        const imageUrl = photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${photo.url}`;
+        const response = await fetch(imageUrl);
         if (!response.ok) throw new Error("Network response was not ok");
         const blob = await response.blob();
         const extension = photo.url.split('.').pop().split(/\#|\?/)[0] || 'jpg';
@@ -514,7 +564,7 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
       {/* Detail Dialog */}
       <Dialog open={openDetail} onClose={() => setOpenDetail(false)} fullScreen>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'primary.main', color: '#000' }}>
-          Audit Report: {selectedTask?.slid}
+          <Typography variant="h6" component="span" fontWeight="bold">Audit Report: {selectedTask?.slid}</Typography>
           <IconButton onClick={() => setOpenDetail(false)} sx={{ color: '#000' }}><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent dividers sx={{ bgcolor: '#000', p: 0 }}>
@@ -636,8 +686,8 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
                                 <Typography variant="body2" sx={{ fontWeight: 900, color: isFail ? 'error.main' : 'success.main' }}>{item.status}</Typography>
                               </Box>
                             </TableCell>
-                            <TableCell sx={{ maxWidth: 300 }}>
-                              <Typography variant="body2" color="text.secondary">{item.notes || "Consistent with standards."}</Typography>
+                            <TableCell sx={{ maxWidth: 350 }}>
+                              <ExpandableNote text={item.notes} />
                             </TableCell>
                             <TableCell sx={{ textAlign: 'center', minWidth: 100 }}>
                               <Box sx={{
@@ -705,7 +755,7 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
                           onClick={() => setPreviewImage(photo)}
                         >
                           <img
-                            src={`${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}`}
+                            src={photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${photo.url}`}
                             alt={photo.checkpointName}
                             style={{ width: '100%', height: '120px', objectFit: 'cover' }}
                           />
@@ -751,7 +801,7 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
           <Box>
-            <Typography variant="h6" fontWeight="bold">
+            <Typography variant="h6" component="span" fontWeight="bold">
               {previewImage?.checkpointName}
             </Typography>
             <Typography variant="caption" color="gray">
@@ -763,7 +813,7 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
         <DialogContent sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 0, bgcolor: '#0a0a0a' }}>
           {previewImage && (
             <img
-              src={`${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${previewImage.url}`}
+              src={previewImage.url.startsWith('http') ? previewImage.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${previewImage.url}`}
               alt={previewImage.checkpointName}
               style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
             />
@@ -1520,7 +1570,7 @@ const AuditAdminDashboard = () => {
 
   const { auditUser } = useSelector((state) => state.audit);
 
-  const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/api/audit`;
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}/api/audit`;
 
   // Hardened token computation with fallback
   const token = (auditUser?.token && auditUser.token !== "undefined" && auditUser.token !== "null")

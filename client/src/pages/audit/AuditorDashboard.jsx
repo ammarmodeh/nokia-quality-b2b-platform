@@ -62,6 +62,55 @@ import api from "../../api/api";
 import { getCustomWeekNumber } from "../../utils/helpers";
 
 
+// Expandable Note Component for long checklist comments
+const ExpandableNote = ({ text }) => {
+  const [expanded, setExpanded] = React.useState(false);
+  const maxLength = 60;
+
+  if (!text) return <Typography variant="body2" color="text.secondary">Consistent with standards.</Typography>;
+
+  const shouldShowMore = text.length > maxLength;
+  const displayedText = expanded ? text : text.slice(0, maxLength);
+
+  return (
+    <Box>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{
+          wordBreak: 'break-word',
+          whiteSpace: 'pre-wrap',
+          display: 'inline',
+          fontWeight: 400
+        }}
+      >
+        {displayedText}
+        {!expanded && shouldShowMore && "..."}
+      </Typography>
+      {shouldShowMore && (
+        <Button
+          size="small"
+          onClick={() => setExpanded(!expanded)}
+          sx={{
+            display: 'inline-block',
+            ml: 0.5,
+            p: 0,
+            minWidth: 'auto',
+            textTransform: 'none',
+            fontSize: '0.7rem',
+            color: 'primary.main',
+            verticalAlign: 'baseline',
+            height: 'auto',
+            '&:hover': { background: 'transparent', textDecoration: 'underline' }
+          }}
+        >
+          {expanded ? "read less" : "read more"}
+        </Button>
+      )}
+    </Box>
+  );
+};
+
 const PersonalAnalytics = ({ tasks, settings }) => {
   const [interval, setInterval] = useState('daily');
   const submitted = tasks.filter(t => t.status === 'Submitted');
@@ -293,7 +342,7 @@ const AuditorDashboard = () => {
 
   const navigate = useNavigate();
 
-  const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/api/audit`;
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}/api/audit`;
 
   const [loading, setLoading] = useState(false);
 
@@ -411,7 +460,8 @@ const AuditorDashboard = () => {
 
     const downloadPromises = selectedTask.photos.map(async (photo) => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}`);
+        const imageUrl = photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${photo.url}`;
+        const response = await fetch(imageUrl);
         if (!response.ok) throw new Error("Network response was not ok");
         const blob = await response.blob();
         const extension = photo.url.split('.').pop().split(/\#|\?/)[0] || 'jpg';
@@ -755,7 +805,7 @@ const AuditorDashboard = () => {
       {/* Detailed Report Dialog */}
       <Dialog open={reportOpen} onClose={() => setReportOpen(false)} fullScreen>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'primary.main', color: '#000' }}>
-          <Typography variant="h6" fontWeight="bold">Audit Report: {selectedTask?.slid}</Typography>
+          <Typography variant="h6" component="span" fontWeight="bold">Audit Report: {selectedTask?.slid}</Typography>
           <IconButton onClick={() => setReportOpen(false)} sx={{ color: '#000' }}><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent dividers sx={{ bgcolor: '#000', p: 0 }}>
@@ -877,8 +927,8 @@ const AuditorDashboard = () => {
                                 <Typography variant="body2" sx={{ fontWeight: 900, color: isFail ? 'error.main' : 'success.main' }}>{item.status}</Typography>
                               </Box>
                             </TableCell>
-                            <TableCell sx={{ maxWidth: 300 }}>
-                              <Typography variant="body2" color="text.secondary">{item.notes || "Consistent with standards."}</Typography>
+                            <TableCell sx={{ maxWidth: 350 }}>
+                              <ExpandableNote text={item.notes} />
                             </TableCell>
                             <TableCell sx={{ textAlign: 'center', minWidth: 100 }}>
                               <Box sx={{
@@ -946,7 +996,7 @@ const AuditorDashboard = () => {
                           onClick={() => setPreviewImage(photo)}
                         >
                           <img
-                            src={`${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}`}
+                            src={photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${photo.url}`}
                             alt={photo.checkpointName}
                             style={{ width: '100%', height: '120px', objectFit: 'cover' }}
                           />
@@ -989,7 +1039,7 @@ const AuditorDashboard = () => {
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
           <Box>
-            <Typography variant="h6" fontWeight="bold">
+            <Typography variant="h6" component="span" fontWeight="bold">
               {previewImage?.checkpointName}
             </Typography>
             <Typography variant="caption" color="gray">
@@ -1001,7 +1051,7 @@ const AuditorDashboard = () => {
         <DialogContent sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 0, bgcolor: '#0a0a0a' }}>
           {previewImage && (
             <img
-              src={`${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${previewImage.url}`}
+              src={previewImage.url.startsWith('http') ? previewImage.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${previewImage.url}`}
               alt={previewImage.checkpointName}
               style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
             />
