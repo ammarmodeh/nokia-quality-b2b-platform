@@ -228,6 +228,33 @@ const parseToNoonUTC = (dateString) => {
   return new Date(Date.UTC(year, month, day, 12, 0, 0));
 };
 
+// Helper: Delete object from S3 by URL
+const deleteS3Object = async (url) => {
+  if (!url || !url.startsWith("http")) return;
+  try {
+    const { S3Client, DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+    const s3Client = new S3Client({
+      region: process.env.AWS_REGION,
+      credentials: {
+        accessKey_Id: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      },
+    });
+
+    // Extract key from URL (https://bucket.s3.region.amazonaws.com/key)
+    const urlParts = url.split('/');
+    const key = urlParts.slice(3).join('/'); // Skip protocol, empty string, and bucket domain
+
+    await s3Client.send(new DeleteObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET,
+      Key: key
+    }));
+    console.log(`Deleted S3 object: ${key}`);
+  } catch (s3Error) {
+    console.error("Error deleting from S3:", s3Error);
+  }
+};
+
 export const uploadTasks = async (req, res) => {
   try {
     const { tasks, scheduledDate } = req.body;
@@ -366,12 +393,22 @@ export const assignTask = async (req, res) => {
 export const deleteTask = async (req, res) => {
   try {
     const { id } = req.params;
+    const task = await FieldAuditTask.findById(id);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    // 1. Delete all associated photos from S3
+    if (task.photos && task.photos.length > 0) {
+      console.log(`Deleting ${task.photos.length} photos from S3 for task ${id}`);
+      await Promise.all(task.photos.map(photo => deleteS3Object(photo.url)));
+    }
+
+    // 2. Delete task from DB
     await FieldAuditTask.findByIdAndDelete(id);
-    res.json({ message: "Task removed" });
+    res.json({ message: "Task removed and S3 photos cleaned up" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 export const toggleTaskVisibility = async (req, res) => {
   try {
@@ -570,8 +607,15 @@ export const uploadTaskPhoto = async (req, res) => {
     const task = await FieldAuditTask.findById(taskId).populate("auditor", "name");
     if (!task) return res.status(404).json({ message: "Task not found" });
 
+    // [CLEANUP]: If a photo for this checkpoint already exists, delete it from S3
+    const existingPhoto = task.photos.find(p => p.checkpointName === checkpointName);
+    if (existingPhoto) {
+      console.log(`Replacing photo for checkpoint: ${checkpointName}. Deleting old S3 object...`);
+      await deleteS3Object(existingPhoto.url);
+      task.photos.pull(existingPhoto._id); // Remove from DB array before adding new one
+    }
+
     // The file is already on S3 at req.file.location
-    // We'll store this URL in the database
     const newPhoto = {
       url: req.file.location, // S3 URL
       checkpointName,
@@ -599,30 +643,8 @@ export const deleteTaskPhoto = async (req, res) => {
     const photo = task.photos.id(photoId);
     if (!photo) return res.status(404).json({ message: "Photo not found" });
 
-    // Delete from S3
-    try {
-      const { S3Client, DeleteObjectCommand } = await import("@aws-sdk/client-s3");
-      const s3Client = new S3Client({
-        region: process.env.AWS_REGION,
-        credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        },
-      });
-
-      // Extract key from URL (https://bucket.s3.region.amazonaws.com/key)
-      const urlParts = photo.url.split('/');
-      const key = urlParts.slice(3).join('/'); // Skip protocol, empty string, and bucket domain
-
-      await s3Client.send(new DeleteObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET,
-        Key: key
-      }));
-      console.log(`Deleted S3 object: ${key}`);
-    } catch (s3Error) {
-      console.error("Error deleting from S3:", s3Error);
-      // We continue anyway to remove it from the DB
-    }
+    // Delete from S3 using helper
+    await deleteS3Object(photo.url);
 
     // Remove from task array
     task.photos.pull(photoId);
