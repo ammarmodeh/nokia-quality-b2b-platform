@@ -417,7 +417,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
             <Grid item xs={12}>
               <Paper sx={{ p: 2.5, bgcolor: `${colors.secondary}05`, borderRadius: 3, border: `1px solid ${colors.secondary}20` }}>
                 <SectionTitle icon={MdOutlineDoneAll} title="Resolution Summary" />
-                <Typography variant="body2" sx={{ color: colors.textPrimary, lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                <Typography variant="body2" sx={{ direction: 'rtl', textAlign: 'right', color: colors.textPrimary, lineHeight: 1.6, whiteSpace: 'pre-line' }}>
                   {issue.resolutionDetails || "Issue resolved but no details provided."}
                 </Typography>
               </Paper>

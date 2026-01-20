@@ -33,26 +33,29 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
     textSecondary: "#b3b3b3",
   };
 
+  // Helper for deep copying to prevent mutation of the imported constant
+  const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
+
   const [selectedOption, setSelectedOption] = useState("visit");
-  const [subtasks, setSubtasks] = useState(predefinedSubtasks.visit);
-  const [checkpoints, setCheckpoints] = useState(predefinedSubtasks.visit.map((subtask) => (subtask.checkpoints ? [...subtask.checkpoints] : [])));
+  const [subtasks, setSubtasks] = useState(deepCopy(predefinedSubtasks.visit));
+  const [checkpoints, setCheckpoints] = useState(deepCopy(predefinedSubtasks.visit).map((subtask) => (subtask.checkpoints ? [...subtask.checkpoints] : [])));
   const [notes, setNotes] = useState({
-    visit: predefinedSubtasks.visit.map(() => ""),
-    phone: predefinedSubtasks.phone.map(() => ""),
-    original: predefinedSubtasks.original.map(() => ""),
-    others: predefinedSubtasks.others.map(() => "")
+    visit: deepCopy(predefinedSubtasks.visit).map(() => ""),
+    phone: deepCopy(predefinedSubtasks.phone).map(() => ""),
+    original: deepCopy(predefinedSubtasks.original).map(() => ""),
+    others: deepCopy(predefinedSubtasks.others).map(() => "")
   });
   const [subtasksByOption, setSubtasksByOption] = useState({
-    visit: predefinedSubtasks.visit,
-    phone: predefinedSubtasks.phone,
-    original: predefinedSubtasks.original,
-    others: predefinedSubtasks.others
+    visit: deepCopy(predefinedSubtasks.visit),
+    phone: deepCopy(predefinedSubtasks.phone),
+    original: deepCopy(predefinedSubtasks.original),
+    others: deepCopy(predefinedSubtasks.others)
   });
   const [checkpointsByOption, setCheckpointsByOption] = useState({
-    visit: predefinedSubtasks.visit.map((subtask) => (subtask.checkpoints ? [...subtask.checkpoints] : [])),
-    phone: predefinedSubtasks.phone.map((subtask) => (subtask.checkpoints ? [...subtask.checkpoints] : [])),
-    original: predefinedSubtasks.original.map((subtask) => [...subtask.checkpoints || []]),
-    others: predefinedSubtasks.others.map((subtask) => (subtask.checkpoints ? [...subtask.checkpoints] : []))
+    visit: deepCopy(predefinedSubtasks.visit).map((subtask) => (subtask.checkpoints ? [...subtask.checkpoints] : [])),
+    phone: deepCopy(predefinedSubtasks.phone).map((subtask) => (subtask.checkpoints ? [...subtask.checkpoints] : [])),
+    original: deepCopy(predefinedSubtasks.original).map((subtask) => [...subtask.checkpoints || []]),
+    others: deepCopy(predefinedSubtasks.others).map((subtask) => (subtask.checkpoints ? [...subtask.checkpoints] : []))
   });
   const [additionalInfoByOption, setAdditionalInfoByOption] = useState({
     visit: { ontType: null, speed: null, serviceRecipientInitial: null, serviceRecipientQoS: null },
@@ -64,9 +67,20 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [expandedNotes, setExpandedNotes] = useState([]);
   const [cancelState, setCancelState] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(task?.status || "Open");
 
   useEffect(() => {
     if (open && task?._id) {
+      setCurrentStatus(task.status); // Reset to prop value on open
+      // Reset local state for fresh start
+      setSubtasks(deepCopy(predefinedSubtasks[selectedOption || 'visit']));
+      setNotes({
+        visit: deepCopy(predefinedSubtasks.visit).map(() => ""),
+        phone: deepCopy(predefinedSubtasks.phone).map(() => ""),
+        original: deepCopy(predefinedSubtasks.original).map(() => ""),
+        others: deepCopy(predefinedSubtasks.others).map(() => "")
+      });
+      // Further resets happen in fetchSubtasks, but we ensure cleanliness here
       fetchSubtasks();
     }
   }, [open, task?._id, cancelState]);
@@ -80,8 +94,13 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
         },
       });
 
+      if (response.data.status) {
+        setCurrentStatus(response.data.status);
+      }
+
       let matchingOption = response.data.subtaskType || "visit";
       let fetchedSubtasks = response.data.subTasks || [];
+      // ... (rest of the logic remains similar but ensures we use currentStatus in UI)
 
       if (!response.data.subtaskType && fetchedSubtasks.length > 0) {
         matchingOption =
@@ -89,11 +108,11 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
             const predefinedTitles = predefinedSubtasks[option].map((s) => s.title);
             const fetchedTitles = fetchedSubtasks.map((s) => s.title);
             return JSON.stringify(predefinedTitles) === JSON.stringify(fetchedTitles);
-          }) || "visit";
+          }) || "original";
       }
 
       if (fetchedSubtasks.length === 0) {
-        fetchedSubtasks = predefinedSubtasks[matchingOption];
+        fetchedSubtasks = deepCopy(predefinedSubtasks[matchingOption]);
       }
 
       fetchedSubtasks = fetchedSubtasks.map((subtask, index) =>
@@ -265,7 +284,9 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
     if (!confirmation) return;
 
     try {
-      const resetSubtasks = predefinedSubtasks[selectedOption].map((subtask) => ({
+      // Force reset to 'original' as requested
+      const targetOption = "original";
+      const resetSubtasks = deepCopy(predefinedSubtasks[targetOption]).map((subtask) => ({
         ...subtask,
         note: "",
         shortNote: "",
@@ -292,7 +313,7 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
         {
           subtasks: resetSubtasks,
           notify: false,
-          subtaskType: selectedOption,
+          subtaskType: targetOption,
           ontType: null,
           speed: null,
           serviceRecipientInitial: null,
@@ -307,9 +328,12 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
 
       if (response.status === 200) {
         setCancelState((prev) => !prev);
-        if (setUpdateTasksList) setUpdateTasksList((prev) => !prev);
-        window.dispatchEvent(new CustomEvent('dashboard-refresh'));
-        alert(`${selectedOption.charAt(0).toUpperCase() + selectedOption.slice(1)} subtasks reset successfully!`);
+        if (setUpdateTasksList) {
+          setUpdateTasksList((prev) => !prev);
+        } else {
+          window.dispatchEvent(new CustomEvent('dashboard-refresh'));
+        }
+        alert(`Subtasks reset to Original successfully!`);
         onClose();
       }
     } catch (error) {
@@ -366,8 +390,11 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
 
       if (response.status === 200) {
         alert("Subtasks saved successfully!");
-        if (setUpdateTasksList) setUpdateTasksList((prev) => !prev);
-        window.dispatchEvent(new CustomEvent('dashboard-refresh'));
+        if (setUpdateTasksList) {
+          setUpdateTasksList((prev) => !prev);
+        } else {
+          window.dispatchEvent(new CustomEvent('dashboard-refresh'));
+        }
         onClose();
       }
     } catch (error) {
@@ -385,6 +412,9 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
       await api.put(`/tasks/update-task/${task._id}`, { ...task, status: newStatus }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
+
+      // Update Local State immediately
+      setCurrentStatus(newStatus);
 
       // Update Subtasks
       const updatedSubtasks = subtasks.map(st => ({
@@ -411,8 +441,11 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
         }
       );
 
-      if (setUpdateTasksList) setUpdateTasksList((prev) => !prev);
-      window.dispatchEvent(new CustomEvent('dashboard-refresh'));
+      if (setUpdateTasksList) {
+        setUpdateTasksList((prev) => !prev);
+      } else {
+        window.dispatchEvent(new CustomEvent('dashboard-refresh'));
+      }
       alert(isCompleting ? "Task marked as completed!" : "Task completion undone!");
       onClose();
 
@@ -460,6 +493,9 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
               </Typography>
               <Typography variant="caption" sx={{ color: "#b3b3b3" }}>
                 SLID: <span style={{ color: '#fff' }}>{task?.slid}</span>
+              </Typography>
+              <Typography variant="caption" sx={{ color: "#b3b3b3" }}>
+                Status: <span style={{ color: currentStatus === 'Closed' ? colors.success : colors.warning }}>{currentStatus}</span>
               </Typography>
             </Stack>
           </Box>
@@ -520,7 +556,7 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
         </Button>
 
         <Box sx={{ display: 'flex', gap: 2 }}>
-          {task?.status !== "Closed" && (
+          {currentStatus !== "Closed" && (
             <Button
               variant="outlined"
               onClick={() => handleToggleComplete(true)}
@@ -541,7 +577,7 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
             </Button>
           )}
 
-          {task?.status === "Closed" && (
+          {currentStatus === "Closed" && (
             <Button
               variant="outlined"
               onClick={() => handleToggleComplete(false)}

@@ -453,7 +453,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                     borderRadius: 1,
                     border: '1px solid #3d3d3d'
                   }}>
-                    <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff', whiteSpace: 'pre-line' }}>
+                    <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ direction: 'rtl', textAlign: 'right', color: '#ffffff', whiteSpace: 'pre-line' }}>
                       {selectedIssue.resolutionDetails}
                     </Typography>
                   </Box>

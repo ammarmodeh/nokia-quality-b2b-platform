@@ -153,12 +153,12 @@ const App = () => {
           />
           <Route path="/main-stats" element={<MainStats />} />
           <Route path="/my-suggestions" element={<MemberSuggestionsDashboard />} />
-          <Route path="/audit/tasks" element={<AllTasksList />} />
           <Route path="/policies" element={<PoliciesList />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/customer-issues" element={<CustomerIssuesList />} />
           <Route path="/change-password" element={<ChangePassword />} />
           <Route path="/assigned-to-me" element={<AssignedToMe />} />
+          <Route path="/tasks-list" element={<AllTasksList />} />
           <Route path="/assigned-to-me/detractor" element={<AssignedDetractor />} />
           <Route path="/assigned-to-me/neutrals" element={<AssignedNeutral />} />
           <Route path="/benchmark-tables" element={<BenchmarkTables />} />

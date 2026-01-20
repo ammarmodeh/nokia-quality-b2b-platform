@@ -138,15 +138,29 @@ export const addTask = async (req, res) => {
 
 
 export const updateTask = async (req, res) => {
-  // Sanitize empty strings to null to prevent CastErrors for Date/Number fields
-  Object.keys(req.body).forEach((key) => {
-    if (req.body[key] === "") {
-      req.body[key] = null;
+  const { _id, createdAt, updatedAt, __v, ...updatedData } = req.body;
+  const id = req.params.id;
+
+  // Flatten populated fields to IDs to avoid casting errors and noisy logs
+  if (Array.isArray(updatedData.assignedTo)) {
+    updatedData.assignedTo = updatedData.assignedTo.map(u => (u && u._id) ? u._id : u);
+  }
+  if (Array.isArray(updatedData.whomItMayConcern)) {
+    updatedData.whomItMayConcern = updatedData.whomItMayConcern.map(u => (u && u._id) ? u._id : u);
+  }
+  if (updatedData.createdBy && typeof updatedData.createdBy === 'object') {
+    updatedData.createdBy = updatedData.createdBy._id || updatedData.createdBy;
+  }
+  if (updatedData.teamId && typeof updatedData.teamId === 'object') {
+    updatedData.teamId = updatedData.teamId._id || updatedData.teamId;
+  }
+
+  // Sanitize empty strings to null
+  Object.keys(updatedData).forEach((key) => {
+    if (updatedData[key] === "") {
+      updatedData[key] = null;
     }
   });
-
-  const updatedData = req.body;
-  const id = req.params.id;
 
   try {
     const task = await TaskSchema.findById(id);

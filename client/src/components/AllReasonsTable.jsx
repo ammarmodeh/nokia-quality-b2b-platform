@@ -49,6 +49,7 @@ import {
 } from '../utils/dateFilterHelpers';
 import { getCustomWeekNumber } from '../utils/helpers';
 import api from "../api/api";
+import { TaskDetailsDialog } from "./TaskDetailsDialog";
 
 // Reusable DetailRow component
 const DetailRow = ({ label, value }) => (
@@ -248,22 +249,43 @@ export const AllReasonsTable = memo(({ tasks }) => {
 
   // Function to export table data to Excel
   const exportToExcel = () => {
-    const excelData = rows.map((row) => ({
-      Reason: row.reason,
-      "Total Violations": row.totalViolations,
-      Percentage: row.percentage,
-    }));
+    // 1. Determine Reported Period
+    let periodStr = "All Time";
+    if (filterType === 'week' && selectedPeriod !== 'all') {
+      const week = weeks.find(w => String(w.week) === selectedPeriod);
+      periodStr = week ? `Week ${week.week} (${week.label})` : `Week ${selectedPeriod}`;
+    } else if (filterType === 'month') {
+      const month = months.find(m => String(m.month) === selectedPeriod);
+      periodStr = month ? month.label : `Month ${selectedPeriod}`;
+    } else if (filterType === 'custom' && dateRange.start && dateRange.end) {
+      periodStr = `${format(dateRange.start, 'dd/MM/yyyy')} - ${format(dateRange.end, 'dd/MM/yyyy')}`;
+    }
 
-    excelData.push({
-      Reason: "Net Total",
-      "Total Violations": netTotal,
-      Percentage: "",
+    const excelData = rows.map((row) => {
+      const validatedCount = row.tasks.filter(t => t.validationStatus === 'Validated').length;
+      return {
+        Reason: row.reason,
+        "Total Audits": row.totalViolations,
+        "Validated": validatedCount,
+        "Compliance %": row.totalViolations > 0 ? `${((validatedCount / row.totalViolations) * 100).toFixed(1)}%` : "0%",
+        "Share %": row.percentage,
+      };
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    excelData.push({
+      Reason: "NET TOTAL",
+      "Total Audits": netTotal,
+      "Validated": rows.reduce((sum, row) => sum + row.tasks.filter(t => t.validationStatus === 'Validated').length, 0),
+      "Compliance %": "",
+      "Share %": "100%",
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData, { origin: "A2" });
+    XLSX.utils.sheet_add_aoa(worksheet, [[`Reported Period: ${periodStr}`]], { origin: "A1" });
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Reason Violations");
-    XLSX.writeFile(workbook, "Reason_Violations.xlsx");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Reason Analytics");
+    XLSX.writeFile(workbook, `Reason_Analytics_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   };
 
   // Function to export reason tasks to Excel
@@ -409,12 +431,14 @@ export const AllReasonsTable = memo(({ tasks }) => {
       {/* Main Content Stack (Table + Chart) */}
       <Stack spacing={3}>
         <Paper sx={{
-          height: 400,
+          height: 500, // Increased height slightly for better view
           width: "100%",
           borderRadius: "12px",
           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
           border: "1px solid #e2e8f0",
-          overflow: "hidden"
+          overflow: "hidden",
+          display: 'flex',
+          flexDirection: 'column'
         }}>
           {/* Header inside Paper */}
           <Stack
@@ -450,7 +474,7 @@ export const AllReasonsTable = memo(({ tasks }) => {
                 }}
               />
             </Typography>
-            <Tooltip title="Export to Excel">
+            <Tooltip title="Export to Excel (v2 - Enhanced)">
               <IconButton
                 onClick={exportToExcel}
                 size={isMobile ? "small" : "medium"}
@@ -459,10 +483,15 @@ export const AllReasonsTable = memo(({ tasks }) => {
                   bgcolor: alpha('#10b981', 0.1),
                   '&:hover': {
                     bgcolor: alpha('#10b981', 0.2),
-                  }
+                  },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.5,
+                  p: 1
                 }}
               >
                 <RiFileExcel2Fill />
+                <Typography variant="caption" sx={{ fontSize: '8px', fontWeight: 'bold' }}>V2</Typography>
               </IconButton>
             </Tooltip>
           </Stack>
@@ -470,7 +499,6 @@ export const AllReasonsTable = memo(({ tasks }) => {
           <DataGrid
             rows={rows}
             columns={columns}
-            disableVirtualization={true}
             disableColumnResize
             pageSizeOptions={[5, 10, 25]}
             paginationModel={paginationModel}
@@ -590,191 +618,12 @@ export const AllReasonsTable = memo(({ tasks }) => {
       </Stack>
 
       {/* Dialog to show reason tasks */}
-      <Dialog
+      <TaskDetailsDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        // maxWidth="md"
-        // fullWidth
-        fullScreen
-        sx={{
-          "& .MuiDialog-paper": {
-            backgroundColor: '#2d2d2d',
-            boxShadow: 'none',
-            borderRadius: fullScreen ? '0px' : '8px',
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '16px 24px',
-        }}>
-          <Typography variant="h6" component="div">
-            Tasks for Reason: {selectedReason}
-          </Typography>
-          <IconButton
-            onClick={() => setDialogOpen(false)}
-            sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              }
-            }}
-          >
-            <MdClose />
-          </IconButton>
-        </DialogTitle>
-
-        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
-        <DialogContent dividers sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          padding: '20px 24px',
-        }}>
-          <Stack spacing={3}>
-            {reasonTasks.map((task, index) => (
-              <Paper
-                key={index}
-                elevation={0}
-                sx={{
-                  p: 3,
-                  backgroundColor: '#2d2d2d',
-                  borderRadius: 2,
-                  border: '1px solid #3d3d3d'
-                }}
-              >
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
-                  Task {index + 1}
-                </Typography>
-
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-                  {/* Column 1 */}
-                  <Box>
-                    <DetailRow label="Request Number" value={task.requestNumber} />
-                    <DetailRow label="SLID" value={task.slid} />
-                    <DetailRow label="PIS Date" value={task.pisDate ? new Date(task.pisDate).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'numeric',
-                      day: 'numeric'
-                    }) : 'N/A'} />
-                    <DetailRow
-                      label="Satisfaction Score"
-                      value={
-                        <Chip
-                          label={task.evaluationScore}
-                          sx={{
-                            color: '#ffffff',
-                            backgroundColor:
-                              task.evaluationScore >= 9 ? '#4caf50' :
-                                task.evaluationScore >= 7 ? '#6b7280' : '#f44336',
-                            fontWeight: 'bold'
-                          }}
-                        />
-                      }
-                    />
-                    <DetailRow label="Customer Name" value={task.customerName} />
-                    <DetailRow label="Contact Number" value={task.contactNumber} />
-                  </Box>
-
-                  {/* Column 2 */}
-                  <Box>
-                    <DetailRow label="Tariff Name" value={task.tarrifName} />
-                    <DetailRow label="Customer Feedback" value={task.customerFeedback} />
-                    <DetailRow label="Reason" value={task.reason} />
-                    <DetailRow label="Sub Reason" value={task.subReason || 'N/A'} />
-                    <DetailRow label="Root Cause" value={task.rootCause || 'N/A'} />
-                    <DetailRow label="Customer Type" value={task.customerType} />
-                    <DetailRow label="Governorate" value={task.governorate} />
-                    <DetailRow label="District" value={task.district} />
-                  </Box>
-                </Box>
-
-                {/* Subtasks section */}
-                {task.subTasks && task.subTasks.length > 0 && (
-                  <Box sx={{ mt: 3 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#7b68ee', mb: 1 }}>
-                      Subtasks
-                    </Typography>
-                    <Box sx={{
-                      backgroundColor: '#2d2d2d',
-                      p: 2,
-                      borderRadius: 1,
-                      border: '1px solid #3d3d3d'
-                    }}>
-                      {task.subTasks.map((sub, index) => (
-                        <Box key={index} sx={{ mb: 1 }}>
-                          <Typography variant="body2" sx={{ color: '#ffffff' }}>
-                            <strong>Step {index + 1}:</strong> {sub.title} {sub.note && `- ${sub.note}`}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-                )}
-
-                {/* Team info at bottom */}
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  mt: 3,
-                  pt: 2,
-                  borderTop: '1px solid #e5e7eb',
-                  flexWrap: 'wrap',
-                  gap: 2
-                }}>
-                  <DetailRow label="Owner" value={task.responsible || 'N/A'} />
-                  <DetailRow label="Team Name" value={task.teamName} />
-                  <DetailRow label="Team Company" value={task.teamCompany} />
-                  <DetailRow label="Interview Date" value={task.interviewDate ? new Date(task.interviewDate).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'numeric',
-                    day: 'numeric'
-                  }) : 'N/A'} />
-                </Box>
-              </Paper>
-            ))}
-          </Stack>
-        </DialogContent>
-
-        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
-        <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
-          padding: '12px 24px',
-        }}>
-          <Button
-            onClick={exportReasonTasksToExcel}
-            variant="contained"
-            startIcon={<MdFileDownload />}
-            sx={{
-              backgroundColor: '#1d4ed8',
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#1e40af',
-              }
-            }}
-          >
-            Export to Excel
-          </Button>
-          <Button
-            onClick={() => setDialogOpen(false)}
-            sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              }
-            }}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+        tasks={reasonTasks}
+        title={`Tasks for Reason: ${selectedReason}`}
+      />
     </Stack>
   );
 });

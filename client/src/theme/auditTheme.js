@@ -4,34 +4,35 @@ const auditTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#3ea6ff', // Pro Blue
-      light: '#65b8ff',
-      dark: '#007acc',
-      contrastText: '#000000',
+      main: '#0070f3', // Elegant Professional Blue (Vercel-like)
+      light: '#3291ff',
+      dark: '#004fc0',
+      contrastText: '#ffffff',
     },
     secondary: {
-      main: '#00f5d4', // Cyber Teal
+      main: '#ffffff', // Clean White
     },
     background: {
-      default: '#000000', // True Black
-      paper: '#0a0a0a',   // Premium Dark Grey
-      subtle: '#141414'
+      default: '#000000', // Deep Black
+      paper: '#0a0a0a',   // Dark Graphite
+      subtle: '#111111'
     },
     text: {
       primary: '#ffffff',
-      secondary: '#9e9e9e',
+      secondary: '#888888',
     },
-    divider: 'rgba(255, 255, 255, 0.05)',
+    divider: 'rgba(255, 255, 255, 0.1)',
   },
   typography: {
-    fontFamily: '"Plus Jakarta Sans", "Inter", sans-serif',
-    h3: { fontWeight: 800, letterSpacing: '-1px' },
-    h4: { fontWeight: 700, letterSpacing: '-0.5px' },
-    h5: { fontWeight: 600, color: '#3ea6ff' },
-    h6: { fontWeight: 600, letterSpacing: '0.1px' },
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h3: { fontWeight: 800, letterSpacing: '-0.02em' },
+    h4: { fontWeight: 700, letterSpacing: '-0.02em' },
+    h5: { fontWeight: 600, letterSpacing: '-0.01em' },
+    h6: { fontWeight: 600, letterSpacing: '0.01em' },
+    button: { textTransform: 'none', fontWeight: 600 },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 0, // STICK TO SQUARE EDGES
   },
   components: {
     MuiPaper: {
@@ -39,33 +40,64 @@ const auditTheme = createTheme({
         root: {
           backgroundImage: 'none',
           backgroundColor: '#0a0a0a',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          '&:hover': {
-            borderColor: 'rgba(62, 166, 255, 0.3)',
-          },
+          borderRadius: 0, // Force Square
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: 'none',
         },
       },
     },
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 8,
-          textTransform: 'none',
-          fontWeight: 600,
+          borderRadius: 0, // Force Square
+          padding: '10px 20px',
         },
-        containedPrimary: {
-          backgroundColor: '#3ea6ff',
+        contained: {
+          boxShadow: 'none',
           '&:hover': {
-            backgroundColor: '#007acc',
-            boxShadow: '0 0 15px rgba(62, 166, 255, 0.4)',
+            boxShadow: 'none',
           },
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+          backgroundImage: 'none',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 0,
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 0,
+          },
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
         },
       },
     },
     MuiDataGrid: {
       styleOverrides: {
         root: {
-          border: 'none',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: 0,
           backgroundColor: '#0a0a0a',
           '& .MuiDataGrid-cell': {
             borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
@@ -73,6 +105,7 @@ const auditTheme = createTheme({
           '& .MuiDataGrid-columnHeaders': {
             backgroundColor: '#050505',
             borderBottom: '2px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: 0,
           },
           '& .MuiDataGrid-footerContainer': {
             backgroundColor: '#050505',

@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,21 +14,79 @@ import {
   IconButton,
   Tooltip,
   Avatar,
-  LinearProgress,
+  Grid,
+  useTheme,
+  useMediaQuery,
   alpha,
 } from '@mui/material';
 import * as XLSX from 'xlsx';
-import { MdClose, MdContentCopy, MdFileDownload } from 'react-icons/md';
+import {
+  MdClose,
+  MdContentCopy,
+  MdFileDownload,
+  MdPerson,
+  MdTimer,
+  MdInfoOutline,
+  MdBusiness,
+  MdLocationOn,
+  MdAssignment
+} from 'react-icons/md';
 import { FaWhatsapp } from 'react-icons/fa6';
-import { useTheme, useMediaQuery } from '@mui/material';
 import moment from 'moment';
 
-export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
+// Reusable Detail Item
+const DetailItem = ({ label, value, icon }) => (
+  <Box sx={{
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 0.5,
+    p: 1.5,
+    borderRadius: '8px',
+    bgcolor: (theme) => alpha(theme.palette.background.default, 0.05),
+    border: '1px solid',
+    borderColor: (theme) => alpha(theme.palette.divider, 0.1),
+    height: '100%'
+  }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary', mb: 0.5 }}>
+      {icon && <Box sx={{ display: 'flex', color: 'primary.main', opacity: 0.8 }}>{icon}</Box>}
+      <Typography variant="caption" fontWeight="600" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        {label}
+      </Typography>
+    </Box>
+    <Box>
+      {typeof value === 'string' || typeof value === 'number' ? (
+        <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary', wordBreak: 'break-word' }}>
+          {value || 'N/A'}
+        </Typography>
+      ) : (
+        value
+      )}
+    </Box>
+  </Box>
+);
+
+// Section Header
+const SectionHeader = ({ title, icon }) => (
+  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+    <Box sx={{ p: 0.5, borderRadius: 1, bgcolor: 'primary.main', color: 'white', display: 'flex' }}>
+      {icon}
+    </Box>
+    <Typography variant="subtitle2" fontWeight="700" color="text.primary">
+      {title}
+    </Typography>
+  </Stack>
+);
+
+export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => {
   const theme = useTheme();
+  // Use sm breakpoint for mobile check to match passed props usage or standard hook
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  // Use title prop if provided, else fall back to teamName logic
+  const displayTitle = title || `All Tasks for Team: ${teamName || 'Unknown'}`;
+
   const copyToClipboard = () => {
-    let textToCopy = `All Tasks for Team: ${teamName}\n\n`;
+    let textToCopy = `${displayTitle}\n\n`;
 
     tasks.forEach((task, index) => {
       textToCopy += `=== Task ${index + 1} ===\n`;
@@ -69,6 +128,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
     });
 
     navigator.clipboard.writeText(textToCopy).then(() => {
+      // In a real app we might want a snackbar, but keeping alert for now as per previous code
       alert('Task details copied to clipboard! You can now paste it anywhere.');
     }).catch(err => {
       console.error('Failed to copy text: ', err);
@@ -77,7 +137,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
   };
 
   const redirectToWhatsApp = () => {
-    const textToCopy = `All Tasks for Team: ${teamName}\n\n`;
+    const textToCopy = `${displayTitle}\n\n`;
     let formattedMessage = textToCopy;
 
     tasks.forEach((task, index) => {
@@ -138,6 +198,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       'Team Name': task.teamName,
       'Team Company': task.teamCompany,
       'Interview Date': new Date(task.interviewDate).toLocaleString(),
+      // Handle optional chaining safely
       'Dispatched': task.relatedIssues?.[0]?.dispatched === 'yes' ? 'Yes' : 'No',
       'Resolved Date': task.relatedIssues?.[0]?.resolveDate ? new Date(task.relatedIssues[0].resolveDate).toLocaleDateString() : 'N/A',
       'Closed Date': task.relatedIssues?.[0]?.closedAt ? new Date(task.relatedIssues[0].closedAt).toLocaleDateString() : 'N/A',
@@ -148,8 +209,12 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
     worksheet['!cols'] = colWidths;
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, `${tasks[0].slid}`);
-    XLSX.writeFile(workbook, `${tasks[0].slid}_${teamName}.xlsx`);
+    // Sanitize sheet name if needed
+    const sheetName = tasks[0]?.slid ? String(tasks[0].slid).substring(0, 30) : 'Tasks';
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+    const fileName = title ? `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.xlsx` : `${tasks[0]?.slid || 'tasks'}_${teamName || 'export'}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
 
   return (
@@ -157,632 +222,249 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, teamName }) => {
       open={open}
       onClose={onClose}
       fullScreen
-      // fullWidth
-      sx={{
-        "& .MuiDialog-paper": {
-          backgroundColor: '#2d2d2d',
-          boxShadow: 'none',
-          borderRadius: isMobile ? 0 : '8px',
+      PaperProps={{
+        sx: {
+          bgcolor: '#1a1a1a',
+          backgroundImage: 'none'
         }
       }}
     >
       <DialogTitle sx={{
-        backgroundColor: '#2d2d2d',
-        color: '#ffffff',
-        borderBottom: '1px solid #e5e7eb',
-        padding: isMobile ? '12px 16px' : '16px 24px',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        bgcolor: '#252525',
+        borderBottom: '1px solid #333',
+        py: 2,
+        px: 3
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontWeight: 500 }}>
-            All Tasks for Team: {teamName} ({tasks.length})
-          </Typography>
-        </Box>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.2),
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.palette.primary.main
+          }}>
+            <MdAssignment size={24} />
+          </Box>
+          <Box>
+            <Typography variant={isMobile ? "subtitle1" : "h6"} fontWeight="bold" color="white">
+              {displayTitle}
+            </Typography>
+            <Typography variant="caption" color="gray">
+              Showing {tasks.length} tasks details
+            </Typography>
+          </Box>
+        </Stack>
+
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Tooltip title="Copy to Clipboard">
-            <IconButton
-              onClick={copyToClipboard}
-              size={isMobile ? "small" : "medium"}
-              sx={{
-                mr: 1,
-                color: '#ffffff',
-                '&:hover': {
-                  backgroundColor: '#2a2a2a',
-                }
-              }}
-            >
-              <MdContentCopy fontSize={isMobile ? "18px" : "24px"} />
+            <IconButton onClick={copyToClipboard} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'white' } }}>
+              <MdContentCopy />
             </IconButton>
           </Tooltip>
           <Tooltip title="Export to Excel">
-            <IconButton
-              onClick={exportToExcel}
-              size={isMobile ? "small" : "medium"}
-              sx={{
-                mr: 1,
-                color: '#ffffff',
-                '&:hover': {
-                  backgroundColor: '#2a2a2a',
-                }
-              }}
-            >
-              <MdFileDownload fontSize={isMobile ? "18px" : "24px"} />
+            <IconButton onClick={exportToExcel} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'white' } }}>
+              <MdFileDownload />
             </IconButton>
           </Tooltip>
           {tasks[0]?.teamId?.contactNumber && (
             <Tooltip title="Contact via WhatsApp">
-              <IconButton
-                onClick={redirectToWhatsApp}
-                size={isMobile ? "small" : "medium"}
-                sx={{
-                  mr: 1,
-                  color: '#25D366',
-                  '&:hover': {
-                    backgroundColor: '#2a2a2a',
-                  }
-                }}
-              >
-                <FaWhatsapp fontSize={isMobile ? "18px" : "24px"} />
+              <IconButton onClick={redirectToWhatsApp} sx={{ mr: 1, color: '#25D366', '&:hover': { bgcolor: alpha('#25D366', 0.1) } }}>
+                <FaWhatsapp />
               </IconButton>
             </Tooltip>
           )}
-          <IconButton
-            onClick={onClose}
-            size={isMobile ? "small" : "medium"}
-            sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              }
-            }}
-          >
-            <MdClose fontSize={isMobile ? "18px" : "24px"} />
+          <IconButton onClick={onClose} sx={{ color: 'gray', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}>
+            <MdClose />
           </IconButton>
         </Box>
       </DialogTitle>
 
-      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
-      <DialogContent dividers sx={{
-        backgroundColor: '#2d2d2d',
-        color: '#ffffff',
-        padding: isMobile ? '12px 16px' : '20px 24px',
-        '&::-webkit-scrollbar': {
-          width: '4px',
-        },
-        '&::-webkit-scrollbar-thumb': {
-          backgroundColor: '#e5e7eb',
-          borderRadius: '2px',
-        },
-      }}>
-        <Stack spacing={isMobile ? 3 : 4}>
+      <DialogContent sx={{ bgcolor: '#121212', p: { xs: 2, md: 4 } }}>
+        <Stack spacing={4}>
           {tasks.map((task, index) => (
-            <Box
+            <Paper
               key={index}
+              elevation={0}
               sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                backgroundColor: '#353535',
-                borderRadius: 2,
-                border: '1px solid #454545',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.14)',
+                p: 0,
+                bgcolor: '#1e1e1e',
+                borderRadius: '16px',
+                border: '1px solid #333',
                 overflow: 'hidden',
-                transition: 'transform 0.2s ease-in-out',
+                transition: 'transform 0.2s',
                 '&:hover': {
-                  borderColor: '#7b68ee',
+                  borderColor: theme.palette.primary.main,
+                  boxShadow: `0 0 0 1px ${alpha(theme.palette.primary.main, 0.5)}`
                 }
               }}
             >
-              {/* Task Header */}
+              {/* Task Header Bar */}
               <Box sx={{
                 p: 2,
-                backgroundColor: alpha('#7b68ee', 0.1),
-                borderBottom: '1px solid #454545',
+                bgcolor: alpha(theme.palette.primary.main, 0.08),
+                borderBottom: '1px solid #333',
                 display: 'flex',
                 justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 2,
                 alignItems: 'center'
               }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#7b68ee' }}>
-                  TASK #{index + 1} - {task.requestNumber}
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Chip
+                    label={`#${index + 1}`}
+                    size="small"
+                    sx={{
+                      borderRadius: '8px',
+                      fontWeight: 'bold',
+                      bgcolor: theme.palette.primary.main,
+                      color: 'white'
+                    }}
+                  />
+                  <Typography variant="subtitle1" fontWeight="bold" color="white">
+                    Request #{task.requestNumber}
+                  </Typography>
+                  {task.slid && (
+                    <Chip
+                      label={task.slid}
+                      variant="outlined"
+                      size="small"
+                      sx={{ borderColor: '#555', color: '#aaa', fontWeight: 500 }}
+                    />
+                  )}
+                </Stack>
+                <Typography variant="body2" sx={{ color: '#aaa', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <MdTimer />
+                  PIS: {task.pisDate ? moment(task.pisDate).format("MMM DD, YYYY") : 'N/A'}
                 </Typography>
-                <Chip
-                  label={task.evaluationScore >= 9 ? 'Promoter' : task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'}
-                  size="small"
-                  sx={{
-                    color: '#ffffff',
-                    backgroundColor:
-                      task.evaluationScore >= 9 ? '#4caf50' :
-                        task.evaluationScore >= 7 ? '#6b7280' : '#f44336',
-                    fontWeight: 'bold',
-                    fontSize: '0.65rem'
-                  }}
-                />
               </Box>
 
-              <Box sx={{ p: isMobile ? 1.5 : 3, display: 'flex', flexDirection: 'column', gap: isMobile ? 2 : 3 }}>
-                {/* Basic Information Section */}
-                <Paper elevation={0} sx={{
-                  p: isMobile ? 1.5 : 2,
-                  backgroundColor: '#2d2d2d',
-                  borderRadius: 2,
-                  border: '1px solid #3d3d3d'
-                }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
-                    Basic Info
-                  </Typography>
-                  <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                    gap: isMobile ? 1.5 : 2
-                  }}>
-                    <DetailRow label="Request Number" value={task.requestNumber} isMobile={isMobile} />
-                    <DetailRow label="Operation" value={task.operation} isMobile={isMobile} />
-                    <DetailRow label="SLID" value={task.slid} isMobile={isMobile} />
-                    <DetailRow label="Category" value={task.category} isMobile={isMobile} />
-                    <DetailRow label="Customer Name" value={task.customerName} isMobile={isMobile} />
-                    <DetailRow label="Contact Number" value={task.contactNumber} isMobile={isMobile} />
-                    <DetailRow label="PIS Date" value={moment(task.pisDate).format("YYYY-MM-DD")} isMobile={isMobile} />
-                    <DetailRow label="Tariff Name" value={task.tarrifName} isMobile={isMobile} />
-                    <DetailRow label="Customer Type" value={task.customerType} isMobile={isMobile} />
-                    <DetailRow label="Interview Date" value={moment(task.interviewDate).format("YYYY-MM-DD")} isMobile={isMobile} />
-                  </Box>
-                </Paper>
-
-                <Paper elevation={0} sx={{
-                  p: isMobile ? 1.5 : 2,
-                  backgroundColor: '#2d2d2d',
-                  borderRadius: 2,
-                  border: '1px solid #3d3d3d'
-                }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
-                    Technical Details
-                  </Typography>
-                  <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                    gap: isMobile ? 1.5 : 2
-                  }}>
-                    <DetailRow label="ONT Type" value={task.ontType} isMobile={isMobile} />
-                    <DetailRow label="Speed Plan" value={task.speed ? `${task.speed} Mbps` : 'N/A'} isMobile={isMobile} />
-                    <DetailRow label="Free Extender" value={task.freeExtender} isMobile={isMobile} />
-                    {task.freeExtender === 'Yes' && (
-                      <>
-                        <DetailRow label="Extender Type" value={task.extenderType} isMobile={isMobile} />
-                        <DetailRow label="Number of Extenders" value={task.extenderNumber} isMobile={isMobile} />
-                      </>
-                    )}
-                  </Box>
-                </Paper>
-
-                <Paper elevation={0} sx={{
-                  p: isMobile ? 1.5 : 2,
-                  backgroundColor: '#2d2d2d',
-                  borderRadius: 2,
-                  border: '1px solid #3d3d3d'
-                }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
-                    Service Quality
-                  </Typography>
-                  <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                    gap: isMobile ? 1.5 : 2
-                  }}>
-                    <DetailRow label="Service Recipient (Initial)" value={task.serviceRecipientInitial} isMobile={isMobile} />
-                    <DetailRow label="Service Recipient (QoS)" value={task.serviceRecipientQoS} isMobile={isMobile} />
-                    <DetailRow label="Closure Call Evaluation" value={task.closureCallEvaluation} isMobile={isMobile} />
-                    <DetailRow label="Closure Call Feedback" value={task.closureCallFeedback} isMobile={isMobile} />
-                  </Box>
-                </Paper>
-
-                {/* Location Information Section */}
-                <Paper elevation={0} sx={{
-                  p: isMobile ? 1.5 : 2,
-                  backgroundColor: '#2d2d2d',
-                  borderRadius: 2,
-                  border: '1px solid #3d3d3d'
-                }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
-                    Location
-                  </Typography>
-                  <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                    gap: isMobile ? 1.5 : 2
-                  }}>
-                    <DetailRow label="Governorate" value={task.governorate} isMobile={isMobile} />
-                    <DetailRow label="District" value={task.district} isMobile={isMobile} />
-                  </Box>
-                </Paper>
-
-                {/* Team Information Section */}
-                <Paper elevation={0} sx={{
-                  p: isMobile ? 1.5 : 2,
-                  backgroundColor: '#2d2d2d',
-                  borderRadius: 2,
-                  border: '1px solid #3d3d3d'
-                }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
-                    Team Info
-                  </Typography>
-                  <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                    gap: isMobile ? 1.5 : 2
-                  }}>
-                    <DetailRow label="Team Name" value={task.teamName} isMobile={isMobile} />
-                    <DetailRow label="Team Company" value={task.teamCompany} isMobile={isMobile} />
-                    <DetailRow label="Responsible (Owner)" value={task.responsible} isMobile={isMobile} />
-                  </Box>
-                </Paper>
-
-                {/* Linked Customer Issue Stats (If Available) */}
-                {task.relatedIssues && task.relatedIssues.length > 0 && (
-                  <Paper elevation={0} sx={{
-                    p: isMobile ? 1.5 : 2,
-                    backgroundColor: alpha('#7b68ee', 0.05),
-                    borderRadius: 2,
-                    border: `1px solid ${alpha('#7b68ee', 0.2)}`
-                  }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
-                      Linked Customer Issue
-                    </Typography>
-                    <Box sx={{
-                      display: 'grid',
-                      gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                      gap: isMobile ? 1.5 : 2
-                    }}>
-                      <DetailRow label="Dispatched?" value={task.relatedIssues[0].dispatched === 'yes' ? 'Yes' : 'No'} isMobile={isMobile} />
-                      <DetailRow
-                        label="Resolved on"
-                        value={task.relatedIssues[0].resolveDate ? moment(task.relatedIssues[0].resolveDate).format("MMM DD, YYYY") : 'Not Resolved'}
-                        isMobile={isMobile}
+              <Box sx={{ p: 3 }}>
+                <Grid container spacing={3}>
+                  {/* Column 1: Customer & Location */}
+                  <Grid item xs={12} md={4}>
+                    <SectionHeader title="Customer & Location" icon={<MdPerson size={16} />} />
+                    <Stack spacing={2}>
+                      <DetailItem label="Customer Name" value={task.customerName} />
+                      <DetailItem label="Contact" value={task.contactNumber} />
+                      <DetailItem label="Type" value={task.customerType} />
+                      <DetailItem
+                        label="Location"
+                        icon={<MdLocationOn size={14} />}
+                        value={`${task.governorate || ''}${task.governorate && task.district ? ', ' : ''}${task.district || ''}`}
                       />
-                      <DetailRow
-                        label="Closed on"
-                        value={task.relatedIssues[0].closedAt ? moment(task.relatedIssues[0].closedAt).format("MMM DD, YYYY") : 'Not Closed'}
-                        isMobile={isMobile}
-                      />
-                      <DetailRow
-                        label="Report Source"
-                        value={`${task.relatedIssues[0].fromMain} (${task.relatedIssues[0].reporter})`}
-                        isMobile={isMobile}
-                      />
-                    </Box>
-                  </Paper>
-                )}
+                    </Stack>
+                  </Grid>
 
-                {/* Evaluation Section */}
-                <Paper elevation={0} sx={{
-                  p: isMobile ? 1.5 : 2,
-                  backgroundColor: '#2d2d2d',
-                  borderRadius: 2,
-                  border: '1px solid #3d3d3d'
-                }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
-                    Evaluation
-                  </Typography>
-                  <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                    gap: isMobile ? 1.5 : 2
-                  }}>
-                    <DetailRow
-                      label="Satisfaction Score"
-                      value={
-                        <Box component="span">
+                  {/* Column 2: Issue Details */}
+                  <Grid item xs={12} md={4}>
+                    <SectionHeader title="Issue Details" icon={<MdInfoOutline size={16} />} />
+                    <Stack spacing={2}>
+                      <DetailItem label="Tariff" value={task.tarrifName} />
+                      <DetailItem label="Reason" value={task.reason} />
+                      <DetailItem label="Sub Reason" value={task.subReason} />
+                      <DetailItem label="Root Cause" value={task.rootCause} />
+                      <DetailItem
+                        label="Customer Feedback"
+                        value={task.customerFeedback}
+                      />
+                    </Stack>
+                  </Grid>
+
+                  {/* Column 3: Outcome & Team */}
+                  <Grid item xs={12} md={4}>
+                    <SectionHeader title="Outcome & Team" icon={<MdBusiness size={16} />} />
+                    <Stack spacing={2}>
+                      <DetailItem
+                        label="Satisfaction Score"
+                        value={
                           <Chip
                             label={`${task.evaluationScore} (${task.evaluationScore >= 9 ? 'Promoter' :
-                              task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'
-                              })`}
-                            size={isMobile ? "small" : "medium"}
+                              task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'})`}
+                            size="small"
                             sx={{
-                              color: '#ffffff',
-                              backgroundColor:
-                                task.evaluationScore >= 9 ? '#4caf50' :
-                                  task.evaluationScore >= 7 ? '#6b7280' : '#f44336',
+                              fontWeight: 'bold',
+                              color: 'white',
+                              bgcolor: task.evaluationScore >= 9 ? '#10b981' :
+                                task.evaluationScore >= 7 ? '#64748b' : '#ef4444'
+                            }}
+                          />
+                        }
+                      />
+                      <DetailItem label="Owner" value={task.responsible || 'N/A'} icon={<MdPerson size={14} />} />
+                      <DetailItem label="Team" value={task.teamName} />
+                      <DetailItem label="Company" value={task.teamCompany} />
+                      <DetailItem
+                        label="Validation"
+                        value={
+                          <Chip
+                            label={task.validationStatus || 'Not Validated'}
+                            size="small"
+                            sx={{
+                              bgcolor: task.validationStatus === 'Validated' ? alpha('#10b981', 0.2) : alpha('#ef4444', 0.2),
+                              color: task.validationStatus === 'Validated' ? '#10b981' : '#ef4444',
                               fontWeight: 'bold'
                             }}
                           />
-                        </Box>
-                      }
-                      isMobile={isMobile}
-                    />
-                    <DetailRow label="Customer Feedback" value={task.customerFeedback} isMobile={isMobile} />
-                    <DetailRow label="Reason" value={task.reason} isMobile={isMobile} />
-                    <DetailRow label="Sub Reason" value={task.subReason} isMobile={isMobile} />
-                    <DetailRow label="Root Cause" value={task.rootCause} isMobile={isMobile} />
-                    <DetailRow
-                      label="Feedback Severity"
-                      value={
-                        <Chip
-                          label={task.priority || 'Not specified'}
-                          size={isMobile ? "small" : "medium"}
-                          sx={{
-                            color: '#ffffff',
-                            backgroundColor:
-                              task.priority === 'High' ? '#f44336' :
-                                task.priority === 'Medium' ? '#ff9800' : '#4caf50',
-                            fontWeight: 'bold'
-                          }}
-                        />
-                      }
-                      isMobile={isMobile}
-                    />
-                    <DetailRow
-                      label="Validation Status"
-                      value={
-                        <Chip
-                          label={task.validationStatus || 'Not specified'}
-                          size={isMobile ? "small" : "medium"}
-                          sx={{
-                            color: '#ffffff',
-                            backgroundColor:
-                              task.validationStatus === 'Validated' ? '#4caf50' :
-                                task.validationStatus === 'Not validated' ? '#ff9800' : '#6b7280',
-                            fontWeight: 'bold'
-                          }}
-                        />
-                      }
-                      isMobile={isMobile}
-                    />
-                  </Box>
-                </Paper>
-
-                {/* Metadata Section */}
-                <Paper elevation={0} sx={{
-                  p: isMobile ? 1.5 : 2,
-                  backgroundColor: '#2d2d2d',
-                  borderRadius: 2,
-                  border: '1px solid #3d3d3d'
-                }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
-                    Metadata
-                  </Typography>
-                  <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                    gap: isMobile ? 1.5 : 2
-                  }}>
-                    <DetailRow
-                      label="Created By"
-                      value={
-                        task.createdBy ? (
-                          <Chip
-                            label={task.createdBy.name}
-                            size="small"
-                            sx={{ backgroundColor: '#3a4044', color: 'white' }}
-                            avatar={<Avatar sx={{ bgcolor: '#7b68ee' }}>{task.createdBy.name?.charAt(0)}</Avatar>}
-                          />
-                        ) : 'N/A'
-                      }
-                      isMobile={isMobile}
-                    />
-                    <DetailRow
-                      label="Created At"
-                      value={moment(task.createdAt).format("YYYY-MM-DD HH:mm")}
-                      isMobile={isMobile}
-                    />
-                    <DetailRow
-                      label="Whom It May Concern"
-                      value={
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {task.whomItMayConcern?.length > 0 ? (
-                            task.whomItMayConcern.map((user, i) => (
-                              <Chip
-                                key={i}
-                                label={user.name}
-                                size="small"
-                                sx={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', color: '#ffffff' }}
-                              />
-                            ))
-                          ) : 'None'}
-                        </Box>
-                      }
-                      isMobile={isMobile}
-                    />
-                  </Box>
-                </Paper>
-
-                {/* Progress Section */}
-                {task.subTasks?.[0]?.note && (
-                  <Paper elevation={0} sx={{
-                    p: isMobile ? 1.5 : 2,
-                    backgroundColor: '#2d2d2d',
-                    borderRadius: 2,
-                    border: '1px solid #3d3d3d'
-                  }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#7b68ee', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
-                      Progress
-                    </Typography>
-
-                    {/* Progress Bar with Assigned Team Members */}
-                    <Box sx={{ mb: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant={isMobile ? "caption" : "body2"} sx={{ color: '#eff5ff' }}>
-                          Status: {Math.round((100 / task.subTasks.length) * task.subTasks.filter(t => t.note).length)}%
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          {task.assignedTo?.map((user, index) => (
-                            <Tooltip key={index} title={user.name}>
-                              <Avatar sx={{
-                                width: isMobile ? 24 : 28,
-                                height: isMobile ? 24 : 28,
-                                fontSize: isMobile ? '0.7rem' : '0.8rem',
-                                backgroundColor: '#3a4044',
-                                border: '2px solid',
-                                borderColor: task.subTasks.some(t => t.completedBy?._id === user._id) ? '#4caf50' : '#f44336'
-                              }}>
-                                {user?.name
-                                  ?.split(' ')
-                                  .map((part, i) => i < 2 ? part.charAt(0) : '')
-                                  .join('') || '?'}
-                              </Avatar>
-                            </Tooltip>
-                          ))}
-                        </Box>
-                      </Box>
-                      <LinearProgress
-                        variant="determinate"
-                        value={Math.round((100 / task.subTasks.length) * task.subTasks.filter(t => t.note).length)}
-                        sx={{
-                          height: isMobile ? 8 : 10,
-                          borderRadius: 5,
-                          '& .MuiLinearProgress-bar': {
-                            borderRadius: 5,
-                            backgroundColor: '#7b68ee'
-                          }
-                        }}
+                        }
                       />
-                    </Box>
+                    </Stack>
+                  </Grid>
 
-                    {/* Detailed Action Items */}
-                    <Paper sx={{
-                      p: isMobile ? 1 : 2,
-                      backgroundColor: '#2d2d2d',
-                      border: '1px solid #3d3d3d',
-                      borderRadius: '8px'
-                    }}>
-                      {task.subTasks.map((subtask, index) => (
-                        <Box
-                          key={index}
-                          sx={{
-                            mb: index < task.subTasks.length - 1 ? 2 : 0,
-                            pb: index < task.subTasks.length - 1 ? 2 : 0,
-                            borderBottom: index < task.subTasks.length - 1 ? '1px solid #3d3d3d' : 'none'
-                          }}
-                        >
-                          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                            <Typography variant={isMobile ? "body2" : "subtitle1"} sx={{ color: '#eff5ff', fontWeight: 600 }}>
-                              {index + 1}. {subtask.title || `Step ${index + 1}`}
-                            </Typography>
-                            {subtask.completedBy && (
-                              <Chip
-                                size="small"
-                                sx={{
-                                  backgroundColor: '#3a4044',
-                                  color: 'white',
-                                  fontSize: '0.7rem',
-                                  '& .MuiChip-avatar': {
-                                    width: 20,
-                                    height: 20,
-                                  }
-                                }}
-                                avatar={
-                                  <Avatar sx={{
-                                    backgroundColor: task.assignedTo?.some(u => u._id === subtask.completedBy._id)
-                                      ? '#7b68ee'
-                                      : '#f44336',
-                                    fontSize: '0.65rem'
-                                  }}>
-                                    {subtask.completedBy?.name
-                                      ?.split(' ')
-                                      .map((part, i) => i < 2 ? part.charAt(0) : '')
-                                      .join('') || '?'}
-                                  </Avatar>
-                                }
-                                label={subtask.completedBy.name}
-                              />
-                            )}
-                          </Stack>
-
-                          <Box sx={{
-                            backgroundColor: '#252525',
-                            p: isMobile ? 1 : 1.5,
-                            borderRadius: 1,
-                            borderLeft: '3px solid',
-                            borderColor: subtask.note ? '#7b68ee' : 'transparent'
-                          }}>
-                            <Typography variant={isMobile ? "caption" : "body2"} sx={{
-                              direction: 'rtl',
-                              textAlign: 'right',
-                              color: '#eff5ff',
-                              fontStyle: subtask.note ? 'normal' : 'italic'
-                            }}>
-                              {subtask.note || 'No action taken yet'}
-                            </Typography>
-                          </Box>
-
-                          {subtask.dateTime && (
-                            <Typography variant="caption" sx={{
-                              color: '#888',
-                              display: 'block',
-                              mt: 0.5,
-                              textAlign: 'right',
-                              fontSize: '0.65rem'
-                            }}>
-                              {subtask.dateTime}
-                            </Typography>
-                          )}
-                        </Box>
-                      ))}
-                    </Paper>
-                  </Paper>
-                )}
+                  {/* Subtasks / Activity */}
+                  {task.subTasks && task.subTasks.length > 0 && (
+                    <Grid item xs={12}>
+                      <Box sx={{ mt: 2, p: 2, bgcolor: '#252525', borderRadius: '12px', border: '1px solid #333' }}>
+                        <Typography variant="caption" fontWeight="bold" color="gray" sx={{ mb: 2, display: 'block', textTransform: 'uppercase' }}>
+                          ACTION STEPS TAKEN
+                        </Typography>
+                        <Stack spacing={1}>
+                          {task.subTasks.map((sub, idx) => (
+                            <Box key={idx} sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                              <Chip label={idx + 1} size="small" sx={{ minWidth: 24, height: 24, fontSize: '0.7rem' }} />
+                              <Box>
+                                <Typography variant="body2" color="white" fontWeight="500">
+                                  {sub.title || `Step ${idx + 1}`}
+                                </Typography>
+                                {sub.note && (
+                                  <Typography variant="body2" color="gray">
+                                    {sub.note}
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Box>
+                          ))}
+                        </Stack>
+                      </Box>
+                    </Grid>
+                  )}
+                </Grid>
               </Box>
-            </Box>
+            </Paper>
           ))}
         </Stack>
-
       </DialogContent>
 
-      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
       <DialogActions sx={{
-        backgroundColor: '#2d2d2d',
-        borderTop: '1px solid #e5e7eb',
-        padding: isMobile ? '8px 16px' : '12px 24px',
+        bgcolor: '#252525',
+        borderTop: '1px solid #333',
+        p: 2,
+        justifyContent: 'space-between'
       }}>
+        <Button onClick={onClose} sx={{ color: 'gray' }}>
+          Close Preview
+        </Button>
         <Button
-          onClick={onClose}
-          size={isMobile ? "small" : "medium"}
+          onClick={exportToExcel}
+          variant="contained"
+          startIcon={<MdFileDownload />}
           sx={{
-            color: '#ffffff',
-            '&:hover': {
-              backgroundColor: '#2a2a2a',
-            },
-            ml: 1
+            bgcolor: theme.palette.primary.main,
+            '&:hover': { bgcolor: theme.palette.primary.dark }
           }}
         >
-          Close
+          Export Details to Excel
         </Button>
       </DialogActions>
     </Dialog>
   );
 };
-
-// Reusable DetailRow component with isMobile prop
-const DetailRow = ({ label, value, isMobile }) => (
-  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-    <Typography
-      variant={isMobile ? "caption" : "body2"}
-      component="div"
-      sx={{
-        fontWeight: '500',
-        color: '#b3b3b3',
-      }}
-    >
-      {label}
-    </Typography>
-    {typeof value === 'string' || typeof value === 'number' ? (
-      <Typography
-        variant={isMobile ? "body2" : "body1"}
-        component="div"
-        sx={{
-          color: '#ffffff',
-          wordBreak: 'break-word',
-          textAlign: label === "Customer Feedback" ? "right" : "left",
-          direction: label === "Customer Feedback" ? "rtl" : "ltr"
-        }}
-      >
-        {value || 'N/A'}
-      </Typography>
-    ) : (
-      <Box sx={{ display: 'inline-block', mt: 0.5 }}>
-        {value}
-      </Box>
-    )}
-  </Box>
-);

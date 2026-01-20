@@ -205,8 +205,7 @@ const AllTasksList = () => {
 
       // 2. Status
       if (statusFilter !== 'all') {
-        if (statusFilter === 'Open' && !['Todo', 'In Progress'].includes(task.status)) return false;
-        if (statusFilter !== 'Open' && task.status !== statusFilter) return false;
+        if (task.status !== statusFilter) return false;
       }
 
       // 3. Location
@@ -486,27 +485,149 @@ const AllTasksList = () => {
   };
 
   const exportToExcel = () => {
-    const dataToExport = filteredTasks.map(task => ({
+    // 1. Determine Reported Period
+    let periodStr = "All Time";
+    if (dateFilter.type !== 'all' && dateFilter.start && dateFilter.end) {
+      try {
+        periodStr = `${format(dateFilter.start, 'dd/MM/yyyy')} - ${format(dateFilter.end, 'dd/MM/yyyy')}`;
+      } catch (e) {
+        periodStr = "Custom Period";
+      }
+    } else if (filteredTasks.length > 0) {
+      const dates = filteredTasks
+        .map(t => t.createdAt ? new Date(t.createdAt) : null)
+        .filter(d => d)
+        .sort((a, b) => a - b);
+      if (dates.length > 0) {
+        periodStr = `${format(dates[0], 'dd/MM/yyyy')} - ${format(dates[dates.length - 1], 'dd/MM/yyyy')}`;
+      }
+    }
+
+    const workbook = utils.book_new();
+
+    // 2. Executive Summary Sheet
+    const totalTasks = filteredTasks.length;
+    const validatedCount = filteredTasks.filter(t => t.validationStatus === 'Validated').length;
+    const detractorCount = filteredTasks.filter(t => t.evaluationScore !== null && t.evaluationScore <= 6).length;
+    const neutralCount = filteredTasks.filter(t => t.evaluationScore >= 7 && t.evaluationScore <= 8).length;
+    const promoterCount = filteredTasks.filter(t => t.evaluationScore >= 9).length;
+
+    const summaryData = [
+      ["EXECUTIVE AUDIT SUMMARY", ""],
+      ["Reported Period:", periodStr],
+      ["Export Date:", format(new Date(), 'dd/MM/yyyy HH:mm')],
+      ["", ""],
+      ["CORE KEY PERFORMANCE INDICATORS", "VALUE", "PERCENTAGE"],
+      ["Total Tasks Audited", totalTasks, "100%"],
+      ["Compliance Rate (Validated)", validatedCount, totalTasks > 0 ? `${((validatedCount / totalTasks) * 100).toFixed(1)}%` : "0%"],
+      ["Detractor Rate (Score <= 6)", detractorCount, totalTasks > 0 ? `${((detractorCount / totalTasks) * 100).toFixed(1)}%` : "0%"],
+      ["Promoter Rate (Score >= 9)", promoterCount, totalTasks > 0 ? `${((promoterCount / totalTasks) * 100).toFixed(1)}%` : "0%"],
+      ["", ""],
+      ["SCORE BREAKDOWN", "COUNT", "SHARE"],
+      ["Promoters (9-10)", promoterCount, totalTasks > 0 ? `${((promoterCount / totalTasks) * 100).toFixed(1)}%` : "0%"],
+      ["Neutrals (7-8)", neutralCount, totalTasks > 0 ? `${((neutralCount / totalTasks) * 100).toFixed(1)}%` : "0%"],
+      ["Detractors (0-6)", detractorCount, totalTasks > 0 ? `${((detractorCount / totalTasks) * 100).toFixed(1)}%` : "0%"],
+    ];
+
+    const wsSummary = utils.aoa_to_sheet(summaryData);
+    utils.book_append_sheet(workbook, wsSummary, 'Executive Summary');
+
+    // 3. Reason Overview Sheet (with Percentages)
+    const getCountsWithPercent = (field) => {
+      const counts = {};
+      filteredTasks.forEach(t => {
+        const val = t[field] || 'Unknown';
+        counts[val] = (counts[val] || 0) + 1;
+      });
+      return Object.entries(counts)
+        .map(([name, count]) => ({
+          Name: name,
+          Count: count,
+          Percentage: totalTasks > 0 ? `${((count / totalTasks) * 100).toFixed(1)}%` : "0%"
+        }))
+        .sort((a, b) => b.Count - a.Count);
+    };
+
+    const reasons = getCountsWithPercent('reason');
+    const subReasons = getCountsWithPercent('subReason');
+    const rootCauses = getCountsWithPercent('rootCause');
+
+    const wsReasons = utils.aoa_to_sheet([[`Reported Period: ${periodStr}`]]);
+    utils.sheet_add_aoa(wsReasons, [["REASON ANALYSIS"]], { origin: "A3" });
+    utils.sheet_add_json(wsReasons, reasons, { origin: "A4", skipHeader: false });
+    utils.sheet_add_aoa(wsReasons, [["SUB-REASON ANALYSIS"]], { origin: "E3" });
+    utils.sheet_add_json(wsReasons, subReasons, { origin: "E4", skipHeader: false });
+    utils.sheet_add_aoa(wsReasons, [["ROOT CAUSE ANALYSIS"]], { origin: "I3" });
+    utils.sheet_add_json(wsReasons, rootCauses, { origin: "I4", skipHeader: false });
+    utils.book_append_sheet(workbook, wsReasons, 'Reason Analytics');
+
+    // 4. Owner Overview Sheet (Enhanced)
+    const ownerStats = {};
+    filteredTasks.forEach(t => {
+      const owner = t.teamName || 'Unknown';
+      if (!ownerStats[owner]) {
+        ownerStats[owner] = {
+          'Owner': owner,
+          'Total Tasks': 0,
+          'Validated': 0,
+          'Pending': 0,
+          'Detractors': 0
+        };
+      }
+      ownerStats[owner]['Total Tasks']++;
+      if (t.validationStatus === 'Validated') ownerStats[owner]['Validated']++;
+      if (t.validationStatus === 'Not validated' || t.validationStatus === 'Pending') ownerStats[owner]['Pending']++;
+      if (t.evaluationScore !== null && t.evaluationScore <= 6) ownerStats[owner]['Detractors']++;
+    });
+
+    const ownerData = Object.values(ownerStats)
+      .sort((a, b) => b['Total Tasks'] - a['Total Tasks'])
+      .map(o => ({
+        ...o,
+        'Compliance %': o['Total Tasks'] > 0 ? `${((o['Validated'] / o['Total Tasks']) * 100).toFixed(1)}%` : "0%",
+        'Detractor %': o['Total Tasks'] > 0 ? `${((o['Detractors'] / o['Total Tasks']) * 100).toFixed(1)}%` : "0%"
+      }));
+
+    const wsOwners = utils.json_to_sheet(ownerData, { origin: "A2" });
+    utils.sheet_add_aoa(wsOwners, [[`Reported Period: ${periodStr}`]], { origin: "A1" });
+    utils.book_append_sheet(workbook, wsOwners, 'Owner Performance');
+
+    // 5. Trend Analysis Sheet (Weekly Breakdown)
+    if (trendData.data?.length > 0) {
+      const wsTrends = utils.json_to_sheet(trendData.data, { origin: "A2" });
+      utils.sheet_add_aoa(wsTrends, [[`Weekly Volume Trend - Reported Period: ${periodStr}`]], { origin: "A1" });
+      utils.book_append_sheet(workbook, wsTrends, 'Historical Trends');
+    }
+
+    // 6. Raw Data Sheet
+    const rawData = filteredTasks.map(task => ({
       'Created At': task.createdAt ? new Date(task.createdAt).toLocaleString() : '-',
       'Request Number': task.requestNumber || 'N/A',
       'SLID': task.slid || 'N/A',
+      'Status': task.status || 'N/A',
       'PIS Date': task.pisDate ? new Date(task.pisDate).toLocaleDateString() : 'N/A',
       'Customer Name': task.customerName || 'N/A',
       'Contact': task.contactNumber || 'N/A',
-      'Customer Feedback': task.customerFeedback || 'N/A',
       'Governorate': task.governorate || 'N/A',
       'District': task.district || 'N/A',
       'Team Name': task.teamName || 'N/A',
       'Subcon': task.teamCompany || 'N/A',
       'Satisfaction Score': task.evaluationScore || 'N/A',
       'Feedback Severity': task.priority || 'N/A',
-      'Interview Week': task.interviewDate ? getWeekDisplay(task.interviewDate) : 'N/A'
+      'Reason': task.reason || 'N/A',
+      'Sub-Reason': task.subReason || 'N/A',
+      'Root Cause': task.rootCause || 'N/A',
+      'Validation Status': task.validationStatus || 'Pending',
+      'Customer Feedback': task.customerFeedback || 'N/A',
+      'Management Note': task.subTasks?.filter(st => st.note).map(st => st.note).join(" | ") || 'N/A'
     }));
 
-    const worksheet = utils.json_to_sheet(dataToExport);
-    const workbook = utils.book_new();
-    utils.book_append_sheet(workbook, worksheet, 'Tasks');
-    writeFile(workbook, 'Tasks_Export.xlsx');
+    const wsRaw = utils.json_to_sheet(rawData, { origin: "A2" });
+    utils.sheet_add_aoa(wsRaw, [[`Raw Audit Data - ${periodStr}`]], { origin: "A1" });
+    utils.book_append_sheet(workbook, wsRaw, 'Raw Data');
+
+    // 7. Save Workbook
+    writeFile(workbook, `Executive_Audit_Report_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   };
 
   const handleTableContainerClick = (e) => {
@@ -516,7 +637,7 @@ const AllTasksList = () => {
     }
   };
 
-  if (loading) {
+  if (loading && allTasks.length === 0) {
     return <LoadingSpinner variant="page" />;
   }
 
@@ -1020,10 +1141,10 @@ const AllTasksList = () => {
                 <span>All Status</span>
               </Box>
             </MenuItem>
-            <MenuItem value="Open">
+            <MenuItem value="Todo">
               <Box display="flex" alignItems="center" gap={1}>
                 <MdError style={{ color: '#ff9800' }} />
-                <span>Open</span>
+                <span>Todo</span>
               </Box>
             </MenuItem>
             <MenuItem value="In Progress">
@@ -1351,15 +1472,17 @@ const AllTasksList = () => {
           },
         }}
       >
-        <Table size={isMobile ? 'small' : 'medium'}>
+        <Table size="small">
           <TableHead>
             <TableRow>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Created At</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>SLID</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 120 }}>Customer Name</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Contact</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 200, maxWidth: 300 }}>Customer Feedback</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 200, maxWidth: 300 }}>Management Note</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 150, maxWidth: 200 }}>Summary</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Status</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Feedback Severity</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Eval Score</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Week</TableCell>
@@ -1420,6 +1543,9 @@ const AllTasksList = () => {
                         <Typography fontWeight={500} sx={{ direction: 'rtl', textAlign: 'right', fontSize: '0.8rem' }}>
                           {task.customerName || "-"}
                         </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{task.contactNumber || '-'}</Typography>
                       </TableCell>
                       <TableCell>
                         {task.customerFeedback ? (
@@ -1520,6 +1646,14 @@ const AllTasksList = () => {
                             </Tooltip>
                           )}
                         </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={task.status}
+                          size="small"
+                          color={task.status === 'Completed' ? 'success' : task.status === 'In Progress' ? 'primary' : 'default'}
+                          variant={task.status === 'Todo' ? 'outlined' : 'filled'}
+                        />
                       </TableCell>
                       <TableCell>
                         {task.priority ? (
@@ -1887,6 +2021,7 @@ const AllTasksList = () => {
 
       {/* Detailed Subtask Dialog */}
       <DetailedSubtaskDialog
+        key={subtaskTask?._id || 'subtasks-dialog'}
         open={manageSubtasksDialogOpen}
         onClose={() => {
           setManageSubtasksDialogOpen(false);

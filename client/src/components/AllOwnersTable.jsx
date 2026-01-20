@@ -50,6 +50,7 @@ import {
 } from '../utils/dateFilterHelpers';
 import { getCustomWeekNumber } from '../utils/helpers';
 import api from "../api/api";
+import { TaskDetailsDialog } from "./TaskDetailsDialog";
 
 // Reusable DetailRow component
 const DetailRow = ({ label, value }) => (
@@ -247,22 +248,48 @@ export const AllOwnersTable = memo(({ tasks }) => {
 
   // Function to export table data to Excel
   const exportToExcel = () => {
-    const excelData = rows.map((row) => ({
-      Owner: row.owner,
-      "Total Violations": row.totalViolations,
-      Percentage: row.percentage,
-    }));
+    // 1. Determine Reported Period
+    let periodStr = "All Time";
+    if (filterType === 'week' && selectedPeriod !== 'all') {
+      const week = weeks.find(w => String(w.week) === selectedPeriod);
+      periodStr = week ? `Week ${week.week} (${week.label})` : `Week ${selectedPeriod}`;
+    } else if (filterType === 'month') {
+      const month = months.find(m => String(m.month) === selectedPeriod);
+      periodStr = month ? month.label : `Month ${selectedPeriod}`;
+    } else if (filterType === 'custom' && dateRange.start && dateRange.end) {
+      periodStr = `${format(dateRange.start, 'dd/MM/yyyy')} - ${format(dateRange.end, 'dd/MM/yyyy')}`;
+    }
 
-    excelData.push({
-      Owner: "Net Total",
-      "Total Violations": netTotal,
-      Percentage: "",
+    const excelData = rows.map((row) => {
+      const validatedCount = row.tasks.filter(t => t.validationStatus === 'Validated').length;
+      const detractorCount = row.tasks.filter(t => t.evaluationScore !== null && t.evaluationScore <= 6).length;
+      return {
+        Owner: row.owner,
+        "Total Audits": row.totalViolations,
+        "Validated": validatedCount,
+        "Compliance %": row.totalViolations > 0 ? `${((validatedCount / row.totalViolations) * 100).toFixed(1)}%` : "0%",
+        "Detractors": detractorCount,
+        "Detractor %": row.totalViolations > 0 ? `${((detractorCount / row.totalViolations) * 100).toFixed(1)}%` : "0%",
+        "Share %": row.percentage,
+      };
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    excelData.push({
+      Owner: "NET TOTAL",
+      "Total Audits": netTotal,
+      "Validated": rows.reduce((sum, row) => sum + row.tasks.filter(t => t.validationStatus === 'Validated').length, 0),
+      "Compliance %": "",
+      "Detractors": rows.reduce((sum, row) => sum + row.tasks.filter(t => t.evaluationScore !== null && t.evaluationScore <= 6).length, 0),
+      "Detractor %": "",
+      "Share %": "100%",
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData, { origin: "A2" });
+    XLSX.utils.sheet_add_aoa(worksheet, [[`Reported Period: ${periodStr}`]], { origin: "A1" });
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Owner Violations");
-    XLSX.writeFile(workbook, "Owner_Violations.xlsx");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Owner Performance");
+    XLSX.writeFile(workbook, `Owner_Performance_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   };
 
   // Function to export owner tasks to Excel
@@ -408,12 +435,14 @@ export const AllOwnersTable = memo(({ tasks }) => {
       {/* Main Content Stack (Table + Chart) */}
       <Stack spacing={3}>
         <Paper sx={{
-          height: 400,
+          height: 500, // Increased height slightly for better view
           width: "100%",
           borderRadius: "12px",
           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
           border: "1px solid #e2e8f0",
-          overflow: "hidden"
+          overflow: "hidden",
+          display: 'flex',
+          flexDirection: 'column'
         }}>
           {/* Header inside Paper */}
           <Stack
@@ -450,7 +479,7 @@ export const AllOwnersTable = memo(({ tasks }) => {
                 }}
               />
             </Typography>
-            <Tooltip title="Export to Excel">
+            <Tooltip title="Export to Excel (v2 - Enhanced)">
               <IconButton
                 onClick={exportToExcel}
                 size={isMobile ? "small" : "medium"}
@@ -459,10 +488,15 @@ export const AllOwnersTable = memo(({ tasks }) => {
                   bgcolor: alpha('#10b981', 0.1),
                   '&:hover': {
                     bgcolor: alpha('#10b981', 0.2),
-                  }
+                  },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.5,
+                  p: 1
                 }}
               >
                 <RiFileExcel2Fill />
+                <Typography variant="caption" sx={{ fontSize: '8px', fontWeight: 'bold' }}>V2</Typography>
               </IconButton>
             </Tooltip>
           </Stack>
@@ -470,7 +504,6 @@ export const AllOwnersTable = memo(({ tasks }) => {
           <DataGrid
             rows={rows}
             columns={columns}
-            disableVirtualization={true}
             disableColumnResize
             pageSizeOptions={[5, 10, 25]}
             paginationModel={paginationModel}
@@ -590,97 +623,12 @@ export const AllOwnersTable = memo(({ tasks }) => {
       </Stack>
 
       {/* Dialog to show owner tasks */}
-      <Dialog
+      <TaskDetailsDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        fullScreen
-        sx={{
-          "& .MuiDialog-paper": {
-            backgroundColor: '#1e293b',
-            boxShadow: 'none',
-            borderRadius: fullScreen ? '0px' : '8px',
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: '#0f172a',
-          color: '#ffffff',
-          borderBottom: '1px solid #334155',
-          padding: '16px 24px',
-        }}>
-          <Typography variant="h6" component="div">
-            Tasks for Owner: {selectedOwner}
-          </Typography>
-          <IconButton
-            onClick={() => setDialogOpen(false)}
-            sx={{ color: '#ffffff', '&:hover': { backgroundColor: '#334155' } }}
-          >
-            <MdClose />
-          </IconButton>
-        </DialogTitle>
-
-        <Divider sx={{ backgroundColor: '#334155' }} />
-
-        <DialogContent dividers sx={{ backgroundColor: '#1e293b', color: '#ffffff', padding: '20px 24px' }}>
-          <Stack spacing={3}>
-            {ownerTasks.map((task, index) => (
-              <Paper
-                key={index}
-                elevation={0}
-                sx={{
-                  p: 3,
-                  backgroundColor: '#334155',
-                  borderRadius: 2,
-                  border: '1px solid #475569'
-                }}
-              >
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#60a5fa' }}>
-                  Task {index + 1}
-                </Typography>
-
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-                  <Box>
-                    <DetailRow label="Request Number" value={task.requestNumber} />
-                    <DetailRow label="SLID" value={task.slid} />
-                    <DetailRow label="PIS Date" value={task.pisDate ? new Date(task.pisDate).toLocaleDateString() : 'N/A'} />
-                    <DetailRow label="Customer Name" value={task.customerName} />
-                    <DetailRow label="Contact Number" value={task.contactNumber} />
-                  </Box>
-                  <Box>
-                    <DetailRow label="Tariff Name" value={task.tarrifName} />
-                    <DetailRow label="Customer Feedback" value={task.customerFeedback} />
-                    <DetailRow label="Reason" value={task.reason} />
-                    <DetailRow label="Sub Reason" value={task.subReason || 'N/A'} />
-                    <DetailRow label="Root Cause" value={task.rootCause || 'N/A'} />
-                    <DetailRow label="Customer Type" value={task.customerType} />
-                    <DetailRow label="Governorate" value={task.governorate} />
-                    <DetailRow label="District" value={task.district} />
-                    <DetailRow label="Owner" value={task.responsible || 'N/A'} />
-                    <DetailRow label="Team Name" value={task.teamName} />
-                    <DetailRow label="Team Company" value={task.teamCompany} />
-                    <DetailRow label="Interview Date" value={task.interviewDate ? new Date(task.interviewDate).toLocaleDateString() : 'N/A'} />
-                  </Box>
-                </Box>
-              </Paper>
-            ))}
-          </Stack>
-        </DialogContent>
-
-        <DialogActions sx={{ backgroundColor: '#0f172a', borderTop: '1px solid #334155', padding: '12px 24px' }}>
-          <Button
-            onClick={exportOwnerTasksToExcel}
-            variant="contained"
-            startIcon={<MdFileDownload />}
-            sx={{ backgroundColor: '#2563eb', color: '#ffffff', '&:hover': { backgroundColor: '#1d4ed8' } }}
-          >
-            Export to Excel
-          </Button>
-          <Button onClick={() => setDialogOpen(false)} sx={{ color: '#94a3b8' }}>Close</Button>
-        </DialogActions>
-      </Dialog>
+        tasks={ownerTasks}
+        title={`Tasks for Owner: ${selectedOwner}`}
+      />
     </Stack>
   );
 });

@@ -43,14 +43,16 @@ const SidebarLinks = () => {
     {
       title: "Audit & Tasks",
       links: [
+        ...(user?.role === "Admin" ? [
+          {
+            label: "Audit Admin Portal",
+            link: "audit/admin",
+            icon: <img width={20} height={20} src="/all-tasks.png" />,
+            isNew: true,
+          }
+        ] : []),
         {
-          label: "Admin Portal",
-          link: "audit/admin",
-          icon: <img width={20} height={20} src="/security-2.svg" />,
-          isNew: true,
-        },
-        {
-          label: "All Tasks List",
+          label: "Auditor Portal",
           link: "audit/tasks",
           icon: <img width={20} height={20} src="/all-tasks.png" />,
           isNew: false,
@@ -65,6 +67,12 @@ const SidebarLinks = () => {
               { label: "Detractor", link: "assigned-to-me/detractor" },
               { label: "Neutrals", link: "assigned-to-me/neutrals" },
             ],
+          },
+          {
+            label: "All Tasks List",
+            link: "tasks-list",
+            icon: <img width={20} height={20} src="/all-tasks.png" />,
+            isNew: false,
           }
         ] : []),
       ]

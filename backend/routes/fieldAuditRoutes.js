@@ -12,12 +12,14 @@ import {
   updateTaskChecklist,
   submitTask,
   uploadTaskPhoto,
+  deleteTaskPhoto,
   createManualTask,
   getAuditorStats,
   deleteAuditUser,
   updateAuditUser,
   toggleTaskVisibility,
-  rescheduleTask
+  rescheduleTask,
+  checkSlid
 } from "../controllers/fieldAuditController.js";
 
 import multer from "multer";
@@ -57,6 +59,7 @@ router.post("/logout", logoutAuditUser);
 
 import jwt from "jsonwebtoken";
 import { FieldAuditUser } from "../models/fieldAuditUser.js";
+import { UserSchema as User } from "../models/userModel.js";
 
 const protectAuditor = async (req, res, next) => {
   let token;
@@ -67,19 +70,40 @@ const protectAuditor = async (req, res, next) => {
     token = req.headers.authorization.split(" ")[1];
   }
 
-  if (token) {
+  if (token && token !== "undefined" && token !== "null") {
     try {
+      // Basic sanity check to avoid malformed errors if cookie is messed up
+      if (typeof token !== 'string' || token.split('.').length !== 3) {
+        console.error("Malformed Token detected:", token);
+        return res.status(401).json({ message: "Not authorized, malformed token" });
+      }
+
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await FieldAuditUser.findById(decoded.id).select("-password");
-      if (!req.user) {
+
+      // Try finding in FieldAuditUser first
+      let user = await FieldAuditUser.findById(decoded.id).select("-password");
+
+      // If not found, try the main User model (for Admin bypass)
+      if (!user) {
+        user = await User.findById(decoded.id).select("-password");
+      }
+
+      if (!user) {
         return res.status(401).json({ message: "Not authorized, user not found" });
       }
+
+      if (user.isActive === false) {
+        return res.status(401).json({ message: "Not authorized, account is deactivated" });
+      }
+
+      req.user = user;
       next();
     } catch (error) {
-      console.error(error);
-      res.status(401).json({ message: "Not authorized, token failed" });
+      console.error("JWT Verification Error:", error.message);
+      res.status(401).json({ message: `Not authorized, token failed: ${error.message}` });
     }
   } else {
+    // If we're here, it means token was missing or literally the string "undefined"/"null"
     res.status(401).json({ message: "Not authorized, no token" });
   }
 };
@@ -99,6 +123,7 @@ router.get("/tasks/:slid", protectAuditor, getTaskBySlid);
 router.put("/tasks/:taskId/checklist", protectAuditor, updateTaskChecklist);
 router.put("/tasks/:taskId/submit", protectAuditor, submitTask);
 router.post("/tasks/:taskId/photo", protectAuditor, upload.single("image"), uploadTaskPhoto);
+router.delete("/tasks/:taskId/photo/:photoId", protectAuditor, deleteTaskPhoto);
 
 // Admin
 router.post("/register", protectAuditor, adminOnly, registerAuditUser); // Admin creates users
@@ -112,5 +137,6 @@ router.put("/tasks/:taskId/visibility", protectAuditor, adminOnly, toggleTaskVis
 router.delete("/tasks/:id", protectAuditor, adminOnly, deleteTask);
 router.put("/users/:id", protectAuditor, adminOnly, updateAuditUser);
 router.delete("/users/:id", protectAuditor, adminOnly, deleteAuditUser);
+router.get("/check-slid/:slid", protectAuditor, adminOnly, checkSlid);
 
 export default router;

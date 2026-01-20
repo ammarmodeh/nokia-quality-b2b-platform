@@ -2,6 +2,8 @@ import { FieldAuditUser } from "../models/fieldAuditUser.js";
 import { FieldAuditTask } from "../models/fieldAuditTask.js";
 import { generateToken } from "../utils/generateToken.js";
 import jwt from "jsonwebtoken";
+import fs from "fs";
+import path from "path";
 
 // --- AUTHENTICATION ---
 
@@ -112,107 +114,107 @@ export const deleteAuditUser = async (req, res) => {
 // Comprehensive Checklist Definition (Full 98 items)
 const DEFAULT_CHECKLIST = [
   // Info / Identification
-  { checkpointName: "INSTALLATION TEAM", status: "Pending" },
-  { checkpointName: "SPLICING TEAM", status: "Pending" },
-  { checkpointName: "REQ #", status: "Pending" },
-  { checkpointName: "INT #", status: "Pending" },
-  { checkpointName: "OPERATION", status: "Pending" },
-  { checkpointName: "CBU/EBU", status: "Pending" },
-  { checkpointName: "VOIP", status: "Pending" },
-  { checkpointName: "MODEM TYPE", status: "Pending" },
-  { checkpointName: "FREE AirTies", status: "Pending" },
-  { checkpointName: "CUST NAME", status: "Pending" },
-  { checkpointName: "FEEDBACK FOR ORANGE", status: "Pending" },
-  { checkpointName: "FEEDBACK DETAILS", status: "Pending" },
-  { checkpointName: "CUST CONT", status: "Pending" },
-  { checkpointName: "Governorate", status: "Pending" },
-  { checkpointName: "TOWN", status: "Pending" },
-  { checkpointName: "DISTRICT", status: "Pending" },
-  { checkpointName: "STREET", status: "Pending" },
-  { checkpointName: "BUILDING", status: "Pending" },
-  { checkpointName: "SPEED", status: "Pending" },
-  { checkpointName: "USERNAME", status: "Pending" },
-  { checkpointName: "PW", status: "Pending" },
-  { checkpointName: "DISPATSHER NAME", status: "Pending" },
-  { checkpointName: "APP DATE", status: "Pending" },
-  { checkpointName: "APP TIME", status: "Pending" },
-  { checkpointName: "ORANGE COMMENT", status: "Pending" },
-  { checkpointName: "FDB #", status: "Pending" },
+  { checkpointName: "INSTALLATION TEAM", status: "OK" },
+  { checkpointName: "SPLICING TEAM", status: "OK" },
+  { checkpointName: "REQ #", status: "OK" },
+  { checkpointName: "INT #", status: "OK" },
+  { checkpointName: "OPERATION", status: "OK" },
+  { checkpointName: "CBU/EBU", status: "OK" },
+  { checkpointName: "VOIP", status: "OK" },
+  { checkpointName: "MODEM TYPE", status: "OK" },
+  { checkpointName: "FREE AirTies", status: "OK" },
+  { checkpointName: "CUST NAME", status: "OK" },
+  { checkpointName: "FEEDBACK FOR ORANGE", status: "OK" },
+  { checkpointName: "FEEDBACK DETAILS", status: "OK" },
+  { checkpointName: "CUST CONT", status: "OK" },
+  { checkpointName: "Governorate", status: "OK" },
+  { checkpointName: "TOWN", status: "OK" },
+  { checkpointName: "DISTRICT", status: "OK" },
+  { checkpointName: "STREET", status: "OK" },
+  { checkpointName: "BUILDING", status: "OK" },
+  { checkpointName: "SPEED", status: "OK" },
+  { checkpointName: "USERNAME", status: "OK" },
+  { checkpointName: "PW", status: "OK" },
+  { checkpointName: "DISPATSHER NAME", status: "OK" },
+  { checkpointName: "APP DATE", status: "OK" },
+  { checkpointName: "APP TIME", status: "OK" },
+  { checkpointName: "ORANGE COMMENT", status: "OK" },
+  { checkpointName: "FDB #", status: "OK" },
 
   // Technical Quantities / Details
-  { checkpointName: "Splitter #", status: "Pending" },
-  { checkpointName: "Splitter Port #", status: "Pending" },
-  { checkpointName: "BEP #", status: "Pending" },
-  { checkpointName: "BEP Port #", status: "Pending" },
-  { checkpointName: "Comment", status: "Pending" },
-  { checkpointName: "New / Change", status: "Pending" },
-  { checkpointName: "Drop Cable", status: "Pending" },
-  { checkpointName: "No Of Drop Cable", status: "Pending" },
-  { checkpointName: "L1083-4 CABLE IMM 4FO MODULO 4 FTTH (N9730A)Drop Indoor/Outdoor", status: "Pending" },
-  { checkpointName: "Indoor Cable Type", status: "Pending" },
-  { checkpointName: "Indoor Cable", status: "Pending" },
-  { checkpointName: "Galvanized Steel Hook", status: "Pending" },
-  { checkpointName: "Drop Anchor", status: "Pending" },
-  { checkpointName: "Splicing Qty", status: "Pending" },
-  { checkpointName: "Poles", status: "Pending" },
-  { checkpointName: "Microtrenching", status: "Pending" },
-  { checkpointName: "Digging Asphalt", status: "Pending" },
-  { checkpointName: "Digging", status: "Pending" },
-  { checkpointName: "PVC Pipe", status: "Pending" },
-  { checkpointName: "BEP Floor MOUNTED BOX up to 12 Splices - Verthor Box", status: "Pending" },
-  { checkpointName: "Trunk", status: "Pending" },
-  { checkpointName: "Patch Cord", status: "Pending" },
-  { checkpointName: "Fiber Termination Box, 1 fibers (OTO)", status: "Pending" },
-  { checkpointName: "Plastic Elbow", status: "Pending" },
-  { checkpointName: "Rainy Protection Box", status: "Pending" },
-  { checkpointName: "PVC Coupler", status: "Pending" },
-  { checkpointName: "U gard", status: "Pending" },
-  { checkpointName: "ONT SN", status: "Pending" },
-  { checkpointName: "ONT Type", status: "Pending" },
-  { checkpointName: "Power ((-)dbm)", status: "Pending" },
-  { checkpointName: "Pigtail", status: "Pending" },
-  { checkpointName: "BEP STICKER", status: "Pending" },
-  { checkpointName: "AIRTIES SN", status: "Pending" },
-  { checkpointName: "Free AIRTIES SN", status: "Pending" }, // Added distinct label for 2nd airties if implies qty
-  { checkpointName: "Suspension Console", status: "Pending" },
-  { checkpointName: "EXT-Type", status: "Pending" },
-  { checkpointName: "OTO approval", status: "Pending" },
-  { checkpointName: "Area", status: "Pending" },
-  { checkpointName: "Lat", status: "Pending" },
-  { checkpointName: "Long", status: "Pending" },
+  { checkpointName: "Splitter #", status: "OK" },
+  { checkpointName: "Splitter Port #", status: "OK" },
+  { checkpointName: "BEP #", status: "OK" },
+  { checkpointName: "BEP Port #", status: "OK" },
+  { checkpointName: "Comment", status: "OK" },
+  { checkpointName: "New / Change", status: "OK" },
+  { checkpointName: "Drop Cable", status: "OK" },
+  { checkpointName: "No Of Drop Cable", status: "OK" },
+  { checkpointName: "L1083-4 CABLE IMM 4FO MODULO 4 FTTH (N9730A)Drop Indoor/Outdoor", status: "OK" },
+  { checkpointName: "Indoor Cable Type", status: "OK" },
+  { checkpointName: "Indoor Cable", status: "OK" },
+  { checkpointName: "Galvanized Steel Hook", status: "OK" },
+  { checkpointName: "Drop Anchor", status: "OK" },
+  { checkpointName: "Splicing Qty", status: "OK" },
+  { checkpointName: "Poles", status: "OK" },
+  { checkpointName: "Microtrenching", status: "OK" },
+  { checkpointName: "Digging Asphalt", status: "OK" },
+  { checkpointName: "Digging", status: "OK" },
+  { checkpointName: "PVC Pipe", status: "OK" },
+  { checkpointName: "BEP Floor MOUNTED BOX up to 12 Splices - Verthor Box", status: "OK" },
+  { checkpointName: "Trunk", status: "OK" },
+  { checkpointName: "Patch Cord", status: "OK" },
+  { checkpointName: "Fiber Termination Box, 1 fibers (OTO)", status: "OK" },
+  { checkpointName: "Plastic Elbow", status: "OK" },
+  { checkpointName: "Rainy Protection Box", status: "OK" },
+  { checkpointName: "PVC Coupler", status: "OK" },
+  { checkpointName: "U gard", status: "OK" },
+  { checkpointName: "ONT SN", status: "OK" },
+  { checkpointName: "ONT Type", status: "OK" },
+  { checkpointName: "Power ((-)dbm)", status: "OK" },
+  { checkpointName: "Pigtail", status: "OK" },
+  { checkpointName: "BEP STICKER", status: "OK" },
+  { checkpointName: "AIRTIES SN", status: "OK" },
+  { checkpointName: "Free AIRTIES SN", status: "OK" }, // Added distinct label for 2nd airties if implies qty
+  { checkpointName: "Suspension Console", status: "OK" },
+  { checkpointName: "EXT-Type", status: "OK" },
+  { checkpointName: "OTO approval", status: "OK" },
+  { checkpointName: "Area", status: "OK" },
+  { checkpointName: "Lat", status: "OK" },
+  { checkpointName: "Long", status: "OK" },
 
   // Core Inspection / Audit Points
-  { checkpointName: "DB Closing", status: "Pending" },
-  { checkpointName: "DB DF's Label", status: "Pending" },
-  { checkpointName: "DB Cabling system", status: "Pending" },
-  { checkpointName: "UG Installation", status: "Pending" },
-  { checkpointName: "DF Laying on Poles", status: "Pending" },
-  { checkpointName: "DF Accessories", status: "Pending" },
-  { checkpointName: "DF Laying to BEP/OTO", status: "Pending" },
-  { checkpointName: "BEP Install & location", status: "Pending" },
-  { checkpointName: "BEP label (Orange sticker)", status: "Pending" },
-  { checkpointName: "BEP Cabling system", status: "Pending" },
-  { checkpointName: "BEP DFs label", status: "Pending" },
-  { checkpointName: "BEP DF Indoor laying", status: "Pending" },
-  { checkpointName: "OTO Install", status: "Pending" },
-  { checkpointName: "OTO label", status: "Pending" },
-  { checkpointName: "Modem label", status: "Pending" },
-  { checkpointName: "Modem Location", status: "Pending" },
-  { checkpointName: "Modem Power level > -23", status: "Pending" },
-  { checkpointName: "Modem/Extender Config", status: "Pending" },
-  { checkpointName: "Wi-Fi Coverage", status: "Pending" },
-  { checkpointName: "(FTTH Offer) speed test", status: "Pending" },
-  { checkpointName: "VOIP Active", status: "Pending" },
-  { checkpointName: "Civil Work (HC) Status Restoration", status: "Pending" },
-  { checkpointName: "Indoor, Status Restoration", status: "Pending" },
-  { checkpointName: "Clean waste & material", status: "Pending" },
-  { checkpointName: "Technicians Skills", status: "Pending" },
-  { checkpointName: "Technicians Behavior", status: "Pending" },
-  { checkpointName: "Technicians Clothes", status: "Pending" },
-  { checkpointName: "Technicians Health & Safety", status: "Pending" },
-  { checkpointName: "Snags Solved By REACH", status: "Pending" },
-  { checkpointName: "RE_SOLVED COMMENT", status: "Pending" },
-  { checkpointName: "Overall Comment", status: "Pending" }
+  { checkpointName: "DB Closing", status: "OK" },
+  { checkpointName: "DB DF's Label", status: "OK" },
+  { checkpointName: "DB Cabling system", status: "OK" },
+  { checkpointName: "UG Installation", status: "OK" },
+  { checkpointName: "DF Laying on Poles", status: "OK" },
+  { checkpointName: "DF Accessories", status: "OK" },
+  { checkpointName: "DF Laying to BEP/OTO", status: "OK" },
+  { checkpointName: "BEP Install & location", status: "OK" },
+  { checkpointName: "BEP label (Orange sticker)", status: "OK" },
+  { checkpointName: "BEP Cabling system", status: "OK" },
+  { checkpointName: "BEP DFs label", status: "OK" },
+  { checkpointName: "BEP DF Indoor laying", status: "OK" },
+  { checkpointName: "OTO Install", status: "OK" },
+  { checkpointName: "OTO label", status: "OK" },
+  { checkpointName: "Modem label", status: "OK" },
+  { checkpointName: "Modem Location", status: "OK" },
+  { checkpointName: "Modem Power level > -23", status: "OK" },
+  { checkpointName: "Modem/Extender Config", status: "OK" },
+  { checkpointName: "Wi-Fi Coverage", status: "OK" },
+  { checkpointName: "(FTTH Offer) speed test", status: "OK" },
+  { checkpointName: "VOIP Active", status: "OK" },
+  { checkpointName: "Civil Work (HC) Status Restoration", status: "OK" },
+  { checkpointName: "Indoor, Status Restoration", status: "OK" },
+  { checkpointName: "Clean waste & material", status: "OK" },
+  { checkpointName: "Technicians Skills", status: "OK" },
+  { checkpointName: "Technicians Behavior", status: "OK" },
+  { checkpointName: "Technicians Clothes", status: "OK" },
+  { checkpointName: "Technicians Health & Safety", status: "OK" },
+  { checkpointName: "Snags Solved By REACH", status: "OK" },
+  { checkpointName: "RE_SOLVED COMMENT", status: "OK" },
+  { checkpointName: "Overall Comment", status: "OK" }
 ];
 
 // Helper for Noon UTC Date
@@ -239,12 +241,26 @@ export const uploadTasks = async (req, res) => {
     const targetDate = scheduledDate ? parseToNoonUTC(scheduledDate) : Date.now();
 
     const createdTasks = [];
+    const skippedTasks = [];
+
     for (const taskData of tasks) {
-      const slid = taskData.SLID || taskData.slid || taskData["REQ #"] || "UNKNOWN";
+      const slid = (taskData.SLID || taskData.slid || taskData["REQ #"] || "UNKNOWN").trim();
+
+      if (slid === "UNKNOWN") {
+        skippedTasks.push({ slid, reason: "Missing SLID" });
+        continue;
+      }
+
+      // Check if SLID already exists
+      const existingTask = await FieldAuditTask.findOne({ slid });
+      if (existingTask) {
+        skippedTasks.push({ slid, reason: "SLID already exists" });
+        continue;
+      }
 
       const newTask = await FieldAuditTask.create({
         slid,
-        scheduledDate: targetDate, // Use robust date
+        scheduledDate: targetDate,
         siteDetails: taskData,
         checklist: DEFAULT_CHECKLIST,
         uploadedBy: req.user?._id
@@ -252,7 +268,11 @@ export const uploadTasks = async (req, res) => {
       createdTasks.push(newTask);
     }
 
-    res.status(201).json({ message: `Uploaded ${createdTasks.length} tasks successfully`, tasks: createdTasks });
+    res.status(201).json({
+      message: `Successfully uploaded ${createdTasks.length} tasks. Skipped ${skippedTasks.length} duplicates/invalid.`,
+      tasks: createdTasks,
+      skipped: skippedTasks
+    });
 
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -262,6 +282,16 @@ export const uploadTasks = async (req, res) => {
 export const createManualTask = async (req, res) => {
   try {
     const { slid, To, scheduledDate, siteDetails, auditorId } = req.body;
+
+    if (!slid) {
+      return res.status(400).json({ message: "SLID is required" });
+    }
+
+    // Check if SLID already exists
+    const existingTask = await FieldAuditTask.findOne({ slid: slid.trim() });
+    if (existingTask) {
+      return res.status(400).json({ message: `A task with SLID "${slid}" already exists.` });
+    }
 
     // Use robust date or default to now
     const targetDate = scheduledDate ? parseToNoonUTC(scheduledDate) : Date.now();
@@ -502,14 +532,22 @@ export const updateTaskChecklist = async (req, res) => {
 export const submitTask = async (req, res) => {
   try {
     const { taskId } = req.params;
-    const { processSlid } = req.body; // User entered SLID
+    const { processSlid, checklist } = req.body; // User entered SLID and latest checklist state
 
     const task = await FieldAuditTask.findById(taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // SLID Validation logic
-    if (processSlid && processSlid.trim() !== task.slid.trim()) {
-      return res.status(400).json({ message: "SLID Verification Failed: The entered SLID does not match the task SLID." });
+    // Update checklist with the one sent from frontend if provided
+    if (checklist && Array.isArray(checklist)) {
+      task.checklist = checklist;
+    }
+
+    // Auto-convert any remaining "Pending" items to "OK" as per user request
+    if (task.checklist && Array.isArray(task.checklist)) {
+      task.checklist = task.checklist.map(item => ({
+        ...item,
+        status: item.status === 'Pending' ? 'OK' : item.status
+      }));
     }
 
     task.status = "Submitted";
@@ -529,10 +567,36 @@ export const uploadTaskPhoto = async (req, res) => {
       return res.status(400).json({ message: "No photo uploaded" });
     }
 
-    const task = await FieldAuditTask.findById(taskId);
+    const task = await FieldAuditTask.findById(taskId).populate("auditor", "name");
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    const photoUrl = `/uploads/audit-photos/${req.file.filename}`;
+    // Custom naming: [checkpointName]-[SLID#]-[auditor name]-[scheduled date]
+    const auditorName = task.auditor?.name || "UnknownAuditor";
+    const scheduledDate = task.scheduledDate ? new Date(task.scheduledDate).toISOString().split('T')[0] : "NoDate";
+    const ext = path.extname(req.file.originalname) || '.jpg';
+
+    // Sanitize names for filesystem safety
+    const safeCheckpoint = (checkpointName || "UnknownCheckpoint").replace(/[^a-z0-9]/gi, '_');
+    const safeAuditor = auditorName.replace(/[^a-z0-9]/gi, '_');
+
+    const newFileName = `${safeCheckpoint}-${task.slid}-${safeAuditor}-${scheduledDate}${ext}`;
+    const oldPath = req.file.path;
+    const newPath = path.join(path.dirname(oldPath), newFileName);
+
+    // Rename the file on disk
+    if (fs.existsSync(oldPath)) {
+      // If a file with the same name exists (very rare with this naming), append a tiny random string
+      const finalFileName = fs.existsSync(newPath)
+        ? `${safeCheckpoint}-${task.slid}-${safeAuditor}-${scheduledDate}-${Math.floor(Math.random() * 1000)}${ext}`
+        : newFileName;
+
+      const finalPath = path.join(path.dirname(oldPath), finalFileName);
+      fs.renameSync(oldPath, finalPath);
+
+      var photoUrl = `/uploads/audit-photos/${path.basename(finalPath)}`;
+    } else {
+      var photoUrl = `/uploads/audit-photos/${req.file.filename}`;
+    }
 
     const newPhoto = {
       url: photoUrl,
@@ -545,6 +609,42 @@ export const uploadTaskPhoto = async (req, res) => {
     await task.save();
 
     res.json(task);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteTaskPhoto = async (req, res) => {
+  try {
+    const { taskId, photoId } = req.params;
+
+    const task = await FieldAuditTask.findById(taskId);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    const photo = task.photos.id(photoId);
+    if (!photo) return res.status(404).json({ message: "Photo not found" });
+
+    // Remove file from disk
+    const filePath = path.join(process.cwd(), photo.url);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Remove from task array
+    task.photos.pull(photoId);
+    await task.save();
+
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const checkSlid = async (req, res) => {
+  try {
+    const { slid } = req.params;
+    const task = await FieldAuditTask.findOne({ slid: slid.trim() });
+    res.json({ exists: !!task });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

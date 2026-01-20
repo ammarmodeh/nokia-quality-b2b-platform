@@ -120,33 +120,58 @@ const Auth = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#0d1117',
+      position: 'relative',
+      backgroundImage: 'url("/login_bg.png")',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(13, 17, 23, 0.7)',
+        backdropFilter: 'blur(4px)',
+      },
       p: 2,
     }}>
-      <Container maxWidth="xs">
-        <Box sx={{ textAlign: 'center', mb: 4 }}>
+      <Container maxWidth="xs" sx={{ position: 'relative', zIndex: 1 }}>
+        <Box sx={{ textAlign: 'center', mb: 5 }}>
+          <Box sx={{ display: 'inline-flex', p: 1.5, borderRadius: '16px', background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(10px)', mb: 2, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <img src="/11319783.png" alt="Logo" style={{ width: '48px', height: '48px' }} />
+          </Box>
           <Typography
             variant="h4"
             sx={{
-              fontWeight: 600,
-              color: '#c9d1d9',
+              fontWeight: 800,
+              fontFamily: 'Outfit, sans-serif',
+              background: 'linear-gradient(135deg, #ffffff 0%, #8b949e 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
               mb: 1,
+              letterSpacing: '-0.5px'
             }}
           >
             QOps Tracker
           </Typography>
-          <Typography variant="body2" sx={{ color: '#8b949e' }}>
-            Sign in to your account
+          <Typography variant="body1" sx={{ color: '#8b949e', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>
+            Management Portal
           </Typography>
         </Box>
 
-        <Paper elevation={0} sx={{
-          bgcolor: '#0c0f13',
-          borderRadius: '6px',
-          border: '1px solid #30363d',
-          p: 4,
-          width: '100%',
-        }}>
+        <Paper
+          elevation={0}
+          sx={{
+            background: 'rgba(12, 15, 19, 0.6)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            p: 4,
+            width: '100%',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          }}
+        >
           <Box component="form" onSubmit={handleSubmit(submitHandler)} sx={{ width: '100%' }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <TextField
@@ -165,31 +190,34 @@ const Auth = () => {
                 helperText={errors.email?.message}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    backgroundColor: '#0d1117',
+                    backgroundColor: 'rgba(13, 17, 23, 0.4)',
+                    borderRadius: '12px',
                     '& fieldset': {
-                      borderColor: '#30363d',
+                      borderColor: 'rgba(255, 255, 255, 0.1)',
                     },
                     '&:hover fieldset': {
-                      borderColor: '#58a6ff',
+                      borderColor: 'rgba(88, 166, 255, 0.5)',
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: '#58a6ff',
+                      borderWidth: '2px',
                     },
                     color: '#c9d1d9',
+                    fontFamily: 'Inter, sans-serif',
                     '& input': {
-                      caretColor: '#58a6ff', // Changed to camelCase
+                      caretColor: '#58a6ff',
                     },
-                    // These target the dropdown and selection
                     '& input:-webkit-autofill': {
-                      WebkitBoxShadow: '0 0 0 100px #0d1117 inset !important', // Changed to camelCase
-                      WebkitTextFillColor: '#c9d1d9 !important', // Changed to camelCase
+                      WebkitBoxShadow: '0 0 0 100px rgba(13, 17, 23, 0.9) inset !important',
+                      WebkitTextFillColor: '#c9d1d9 !important',
                     },
                     '& input:-internal-autofill-selected': {
-                      backgroundColor: '#0d1117 !important',
+                      backgroundColor: 'rgba(13, 17, 23, 0.9) !important',
                     },
                   },
                   '& .MuiInputLabel-root': {
                     color: '#8b949e',
+                    fontFamily: 'Inter, sans-serif',
                   },
                   '& .MuiInputLabel-root.Mui-focused': {
                     color: '#58a6ff',
@@ -230,31 +258,34 @@ const Auth = () => {
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    backgroundColor: '#0d1117',
+                    backgroundColor: 'rgba(13, 17, 23, 0.4)',
+                    borderRadius: '12px',
                     '& fieldset': {
-                      borderColor: '#30363d',
+                      borderColor: 'rgba(255, 255, 255, 0.1)',
                     },
                     '&:hover fieldset': {
-                      borderColor: '#58a6ff',
+                      borderColor: 'rgba(88, 166, 255, 0.5)',
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: '#58a6ff',
+                      borderWidth: '2px',
                     },
                     color: '#c9d1d9',
+                    fontFamily: 'Inter, sans-serif',
                     '& input': {
-                      caretColor: '#58a6ff', // ✅ Fixed to camelCase
+                      caretColor: '#58a6ff',
                     },
-                    // These target the dropdown and selection
                     '& input:-webkit-autofill': {
-                      WebkitBoxShadow: '0 0 0 100px #0d1117 inset !important', // ✅ Fixed
-                      WebkitTextFillColor: '#c9d1d9 !important', // ✅ Fixed
+                      WebkitBoxShadow: '0 0 0 100px rgba(13, 17, 23, 0.9) inset !important',
+                      WebkitTextFillColor: '#c9d1d9 !important',
                     },
                     '& input:-internal-autofill-selected': {
-                      backgroundColor: '#0d1117 !important',
+                      backgroundColor: 'rgba(13, 17, 23, 0.9) !important',
                     },
                   },
                   '& .MuiInputLabel-root': {
                     color: '#8b949e',
+                    fontFamily: 'Inter, sans-serif',
                   },
                   '& .MuiInputLabel-root.Mui-focused': {
                     color: '#58a6ff',
@@ -272,40 +303,43 @@ const Auth = () => {
                 size="large"
                 disabled={isLoading}
                 sx={{
-                  py: 1.5,
-                  backgroundColor: '#1a1556',
+                  py: 1.8,
+                  borderRadius: '12px',
+                  backgroundColor: '#238636',
                   '&:hover': {
-                    backgroundColor: '#1a1556',
+                    backgroundColor: '#2ea043',
+                    boxShadow: '0 0 20px rgba(46, 160, 67, 0.4)',
                   },
-                  '&:disabled': {
-                    backgroundColor: '#1a1556',
-                    opacity: 0.7,
-                  },
-                  fontWeight: 600,
                   textTransform: 'none',
-                  position: 'relative',
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  fontFamily: 'Inter, sans-serif',
+                  transition: 'all 0.3s ease',
                 }}
               >
                 {isLoading ? (
-                  <>
-                    <CircularProgress
-                      size={24}
-                      sx={{
-                        color: '#ffffff',
-                        position: 'absolute',
-                        left: '50%',
-                        marginLeft: '-12px',
-                      }}
-                    />
-                    <span style={{ opacity: 0 }}>Sign in</span>
-                  </>
+                  <CircularProgress size={24} sx={{ color: '#ffffff' }} />
                 ) : (
-                  'Sign in'
+                  'Sign into Dashboard'
                 )}
               </Button>
             </Box>
           </Box>
         </Paper>
+
+        <Box sx={{ mt: 4, textAlign: 'center' }}>
+          <Button
+            onClick={() => navigate('/audit/login')}
+            sx={{
+              color: '#8b949e',
+              textTransform: 'none',
+              fontFamily: 'Inter, sans-serif',
+              '&:hover': { color: '#58a6ff', background: 'transparent' },
+            }}
+          >
+            Access Auditor Portal →
+          </Button>
+        </Box>
       </Container>
 
       <Snackbar

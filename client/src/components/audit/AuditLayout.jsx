@@ -1,8 +1,9 @@
 import React from 'react';
-import { Outlet, Navigate, useNavigate } from 'react-router-dom';
+import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { AppBar, Toolbar, Typography, Container, Box, IconButton, Button } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import { logoutAuditUser } from '../../redux/slices/auditSlice';
 
 import { ThemeProvider } from '@mui/material/styles';
@@ -10,16 +11,26 @@ import auditTheme from '../../theme/auditTheme';
 
 const AuditLayout = () => {
   const { auditUser } = useSelector((state) => state.audit);
+  const { user: mainUser } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     dispatch(logoutAuditUser());
     navigate('/audit/login');
   };
 
-  if (!auditUser) {
+  // Determine the effective user (either auditUser or main admin)
+  const effectiveUser = auditUser || (mainUser?.role === 'Admin' ? mainUser : null);
+
+  if (!effectiveUser) {
     return <Navigate to="/audit/login" replace />;
+  }
+
+  // Path-based role restriction: /audit/admin requires Admin role
+  if (location.pathname.startsWith('/audit/admin') && effectiveUser.role !== 'Admin') {
+    return <Navigate to="/audit/tasks" replace />;
   }
 
   return (
@@ -30,13 +41,35 @@ const AuditLayout = () => {
             <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 700 }}>
               Field Audit Portal
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' }, color: 'text.primary', fontWeight: 600 }}>
-                {auditUser.name}
+                {effectiveUser.name}
               </Typography>
-              <IconButton color="default" onClick={handleLogout}>
-                <LogoutIcon />
-              </IconButton>
+
+              {mainUser?.role === 'Admin' ? (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<DashboardIcon />}
+                  onClick={() => navigate('/dashboard')}
+                  sx={{
+                    textTransform: 'none',
+                    borderRadius: '8px',
+                    borderColor: 'rgba(0,0,0,0.12)',
+                    color: 'text.primary',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      bgcolor: 'rgba(0,0,0,0.04)'
+                    }
+                  }}
+                >
+                  Back to Dashboard
+                </Button>
+              ) : (
+                <IconButton color="default" onClick={handleLogout} title="Exit Portal">
+                  <LogoutIcon />
+                </IconButton>
+              )}
             </Box>
           </Toolbar>
         </AppBar>
