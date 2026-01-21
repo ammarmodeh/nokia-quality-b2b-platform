@@ -466,6 +466,7 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
       { Section: "METADATA", Item: "SLID", Value: selectedTask.slid },
       { Section: "METADATA", Item: "Auditor", Value: selectedTask.auditor?.name || "Unknown" },
       { Section: "METADATA", Item: "Date", Value: new Date(selectedTask.updatedAt).toLocaleDateString() },
+      { Section: "METADATA", Item: "Final Feedback", Value: selectedTask.finalFeedback || "" },
       {},
       ...Object.entries(selectedTask.siteDetails || {}).map(([key, value]) => ({ Section: "Site Details", Item: key, Value: value })),
       {},
@@ -771,6 +772,18 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
                       </Grid>
                     ))}
                   </Grid>
+                </Box>
+              )}
+
+              {/* Final Feedback Section */}
+              {selectedTask.finalFeedback && (
+                <Box sx={{ mt: 6, mb: 4 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 900, borderLeft: '4px solid', borderColor: 'primary.main', pl: 2, mb: 2 }}>FINAL AUDITOR FEEDBACK</Typography>
+                  <Paper sx={{ p: 3, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 0 }}>
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, opacity: 0.9 }}>
+                      {selectedTask.finalFeedback}
+                    </Typography>
+                  </Paper>
                 </Box>
               )}
 

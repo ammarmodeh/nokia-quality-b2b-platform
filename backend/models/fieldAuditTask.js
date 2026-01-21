@@ -46,6 +46,10 @@ const fieldAuditTaskSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // The global admin who uploaded this task
       required: false
+    },
+    finalFeedback: {
+      type: String,
+      default: ""
     }
   },
   { timestamps: true }

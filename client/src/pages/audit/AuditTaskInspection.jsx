@@ -212,7 +212,10 @@ const AuditTaskInspection = () => {
 
   const handleSave = async () => {
     try {
-      await axios.put(`${API_URL}/tasks/${task._id}/checklist`, { checklist: task.checklist }, getAuthHeader());
+      await axios.put(`${API_URL}/tasks/${task._id}/checklist`, {
+        checklist: task.checklist,
+        finalFeedback: task.finalFeedback
+      }, getAuthHeader());
       alert("Progress saved!");
     } catch (error) {
       console.error("Save failed", error);
@@ -273,7 +276,11 @@ const AuditTaskInspection = () => {
     }
 
     try {
-      await axios.put(`${API_URL}/tasks/${task._id}/submit`, { processSlid: verificationSlid, checklist: task.checklist }, getAuthHeader());
+      await axios.put(`${API_URL}/tasks/${task._id}/submit`, {
+        processSlid: verificationSlid,
+        checklist: task.checklist,
+        finalFeedback: task.finalFeedback
+      }, getAuthHeader());
       alert("Audit submitted successfully!");
       navigate('/audit/tasks');
     } catch (error) {
@@ -512,10 +519,29 @@ const AuditTaskInspection = () => {
           </Paper>
         ))
       ) : (
-        <Paper sx={{ p: 4, textAlign: 'center', opacity: 0.6 }}>
-          <Typography>No checkpoints match your filters</Typography>
         </Paper>
-      )}
+  )
+}
+
+{/* Final Feedback Section */ }
+      <Paper sx={{ p: 3, mb: 10, borderRadius: 0, borderTop: '4px solid #3ea6ff' }}>
+        <Typography variant="h6" fontWeight="bold" gutterBottom>
+          Final Site Feedback
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Add any general observations, site limitations, or overall comments regarding this audit.
+        </Typography>
+        <TextField
+          fullWidth
+          multiline
+          rows={4}
+          variant="outlined"
+          placeholder="Enter final feedback here..."
+          value={task.finalFeedback || ""}
+          onChange={(e) => setTask({ ...task, finalFeedback: e.target.value })}
+          sx={{ bgcolor: 'background.paper', borderRadius: 0 }}
+        />
+      </Paper>
 
       <Paper
         elevation={6}
@@ -566,53 +592,53 @@ const AuditTaskInspection = () => {
         </Box>
       </Paper>
 
-      {/* Validation Dialog */}
-      <Dialog open={openSubmitDialog} onClose={() => setOpenSubmitDialog(false)}>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <WarningAmberIcon color="warning" /> Verify Site Link ID
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            To ensure you are inspecting the correct site, please re-enter the SLID found on-site or in your work order.
-          </DialogContentText>
-          <TextField
-            autoFocus
-            margin="dense"
-            id="slid-verify"
-            label="Enter SLID to Validate"
-            fullWidth
-            variant="outlined"
-            value={verificationSlid}
-            onChange={(e) => setVerificationSlid(e.target.value)}
-            error={!!submitError}
-            helperText={submitError}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenSubmitDialog(false)}>Cancel</Button>
-          <Button onClick={confirmSubmit} variant="contained" color="primary">
-            Verify & Close Task
-          </Button>
-        </DialogActions>
-      </Dialog>
+{/* Validation Dialog */ }
+<Dialog open={openSubmitDialog} onClose={() => setOpenSubmitDialog(false)}>
+  <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <WarningAmberIcon color="warning" /> Verify Site Link ID
+  </DialogTitle>
+  <DialogContent>
+    <DialogContentText sx={{ mb: 2 }}>
+      To ensure you are inspecting the correct site, please re-enter the SLID found on-site or in your work order.
+    </DialogContentText>
+    <TextField
+      autoFocus
+      margin="dense"
+      id="slid-verify"
+      label="Enter SLID to Validate"
+      fullWidth
+      variant="outlined"
+      value={verificationSlid}
+      onChange={(e) => setVerificationSlid(e.target.value)}
+      error={!!submitError}
+      helperText={submitError}
+    />
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => setOpenSubmitDialog(false)}>Cancel</Button>
+    <Button onClick={confirmSubmit} variant="contained" color="primary">
+      Verify & Close Task
+    </Button>
+  </DialogActions>
+</Dialog>
 
-      {/* Snackbar for copy feedback */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%', borderRadius: 0 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+{/* Snackbar for copy feedback */ }
+<Snackbar
+  open={snackbar.open}
+  autoHideDuration={3000}
+  onClose={() => setSnackbar({ ...snackbar, open: false })}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+>
+  <Alert
+    onClose={() => setSnackbar({ ...snackbar, open: false })}
+    severity={snackbar.severity}
+    sx={{ width: '100%', borderRadius: 0 }}
+  >
+    {snackbar.message}
+  </Alert>
+</Snackbar>
 
-    </Box>
+    </Box >
   );
 };
 

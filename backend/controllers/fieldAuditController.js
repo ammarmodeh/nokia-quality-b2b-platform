@@ -552,12 +552,14 @@ export const getTaskBySlid = async (req, res) => {
 export const updateTaskChecklist = async (req, res) => {
   try {
     const { taskId } = req.params;
-    const { checklist } = req.body;
+    const { checklist, finalFeedback } = req.body;
 
     const task = await FieldAuditTask.findById(taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    task.checklist = checklist;
+    if (checklist) task.checklist = checklist;
+    if (finalFeedback !== undefined) task.finalFeedback = finalFeedback;
+
     await task.save();
     res.json(task);
 
@@ -569,7 +571,7 @@ export const updateTaskChecklist = async (req, res) => {
 export const submitTask = async (req, res) => {
   try {
     const { taskId } = req.params;
-    const { processSlid, checklist } = req.body; // User entered SLID and latest checklist state
+    const { processSlid, checklist, finalFeedback } = req.body; // User entered SLID and latest checklist state
 
     const task = await FieldAuditTask.findById(taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
@@ -577,6 +579,10 @@ export const submitTask = async (req, res) => {
     // Update checklist with the one sent from frontend if provided
     if (checklist && Array.isArray(checklist)) {
       task.checklist = checklist;
+    }
+
+    if (finalFeedback !== undefined) {
+      task.finalFeedback = finalFeedback;
     }
 
     // Auto-convert any remaining "Pending" items to "OK" as per user request
