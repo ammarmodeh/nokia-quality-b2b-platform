@@ -84,9 +84,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
   const handleCinSubmit = async (formData) => {
     try {
-      await api.post("/customer-issues-notifications", formData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
-      });
+      await api.post("/customer-issues-notifications", formData);
       toast.success("Issue reported successfully!");
       setCinDialogOpen(false);
       window.dispatchEvent(new CustomEvent('cin-refresh'));
@@ -105,7 +103,6 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
     setLoading(true);
     try {
       const response = await api.get("/tasks/search-tasks", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         params: { query },
       });
       setSearchResults(response.data.filter((task) => !task.isDeleted));

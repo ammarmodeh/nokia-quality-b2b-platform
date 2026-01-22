@@ -102,8 +102,38 @@ export const updateAuditUser = async (req, res) => {
 export const deleteAuditUser = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Check if user exists
+    const user = await FieldAuditUser.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if user has any assigned tasks
+    const assignedTasksCount = await FieldAuditTask.countDocuments({
+      "auditor._id": id
+    });
+
+    if (assignedTasksCount > 0) {
+      return res.status(400).json({
+        message: `Cannot delete auditor "${user.name}". They have ${assignedTasksCount} assigned task(s).`,
+        assignedTasks: assignedTasksCount,
+        auditorName: user.name,
+        suggestion: "Please reassign or complete these tasks before deleting the auditor."
+      });
+    }
+
+    // Safe to delete - no assigned tasks
     await FieldAuditUser.findByIdAndDelete(id);
-    res.json({ message: "Auditor removed" });
+
+    res.json({
+      message: `Auditor "${user.name}" has been successfully deleted.`,
+      deletedUser: {
+        _id: user._id,
+        name: user.name,
+        username: user.username
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -236,7 +266,7 @@ const deleteS3Object = async (url) => {
     const s3Client = new S3Client({
       region: process.env.AWS_REGION,
       credentials: {
-        accessKey_Id: process.env.AWS_ACCESS_KEY_ID,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       },
     });
@@ -255,21 +285,99 @@ const deleteS3Object = async (url) => {
   }
 };
 
+// Smart Assignment Helper Function
+const assignTasksToAuditors = async (tasks, strategy = 'round-robin') => {
+  // Get all active auditors
+  const auditors = await FieldAuditUser.find({ role: 'Auditor' });
+
+  if (auditors.length === 0) {
+    throw new Error('No auditors available for assignment');
+  }
+
+  // Get current workload for each auditor
+  const workloadPromises = auditors.map(async (auditor) => {
+    const pendingCount = await FieldAuditTask.countDocuments({
+      'auditor._id': auditor._id,
+      status: { $in: ['Pending', 'In Progress'] }
+    });
+    return { auditor, pendingCount };
+  });
+
+  const auditorsWithWorkload = await Promise.all(workloadPromises);
+
+  const assignments = [];
+  let currentIndex = 0;
+
+  for (const task of tasks) {
+    let selectedAuditor;
+
+    switch (strategy) {
+      case 'round-robin':
+        // Rotate through auditors equally
+        selectedAuditor = auditors[currentIndex % auditors.length];
+        currentIndex++;
+        break;
+
+      case 'workload-balanced':
+        // Assign to auditor with least pending tasks
+        auditorsWithWorkload.sort((a, b) => a.pendingCount - b.pendingCount);
+        selectedAuditor = auditorsWithWorkload[0].auditor;
+        auditorsWithWorkload[0].pendingCount++; // Update for next iteration
+        break;
+
+      case 'geographic':
+        // Assign based on town proximity (simple: same town first)
+        const taskTown = task.To?.toLowerCase() || '';
+        const matchingAuditor = auditorsWithWorkload.find(a =>
+          a.auditor.name.toLowerCase().includes(taskTown) ||
+          taskTown.includes(a.auditor.name.toLowerCase())
+        );
+        selectedAuditor = matchingAuditor ? matchingAuditor.auditor : auditors[currentIndex % auditors.length];
+        currentIndex++;
+        break;
+
+      case 'performance-based':
+        // Assign to highest-rated auditors (based on completion rate)
+        // For now, use workload as proxy - can enhance with actual performance metrics
+        auditorsWithWorkload.sort((a, b) => a.pendingCount - b.pendingCount);
+        selectedAuditor = auditorsWithWorkload[0].auditor;
+        auditorsWithWorkload[0].pendingCount++;
+        break;
+
+      default:
+        selectedAuditor = auditors[currentIndex % auditors.length];
+        currentIndex++;
+    }
+
+    assignments.push({
+      task,
+      auditor: {
+        _id: selectedAuditor._id,
+        name: selectedAuditor.name,
+        username: selectedAuditor.username
+      }
+    });
+  }
+
+  return assignments;
+};
+
 export const uploadTasks = async (req, res) => {
   try {
-    const { tasks, scheduledDate } = req.body;
+    const { tasks, scheduledDate, assignmentStrategy = 'round-robin', autoAssign = true } = req.body;
 
     if (!tasks || !Array.isArray(tasks)) {
       return res.status(400).json({ message: "Invalid tasks data" });
     }
 
     // Determine Scheduled Date (Noon UTC)
-    // If not provided, defaults to Now (which might be risky for boundary, but acceptable for 'immediate')
     const targetDate = scheduledDate ? parseToNoonUTC(scheduledDate) : Date.now();
 
     const createdTasks = [];
     const skippedTasks = [];
+    const tasksToAssign = [];
 
+    // First pass: validate and prepare tasks
     for (const taskData of tasks) {
       const slid = (taskData.SLID || taskData.slid || taskData["REQ #"] || "UNKNOWN").trim();
 
@@ -285,20 +393,99 @@ export const uploadTasks = async (req, res) => {
         continue;
       }
 
+      tasksToAssign.push({ slid, taskData, targetDate });
+    }
+
+    // Get smart assignments if auto-assign is enabled
+    let assignments = [];
+    if (autoAssign && tasksToAssign.length > 0) {
+      assignments = await assignTasksToAuditors(
+        tasksToAssign.map(t => t.taskData),
+        assignmentStrategy
+      );
+    }
+
+    // Create tasks with assignments
+    for (let i = 0; i < tasksToAssign.length; i++) {
+      const { slid, taskData, targetDate } = tasksToAssign[i];
+      const assignment = assignments[i];
+
       const newTask = await FieldAuditTask.create({
         slid,
         scheduledDate: targetDate,
         siteDetails: taskData,
         checklist: DEFAULT_CHECKLIST,
-        uploadedBy: req.user?._id
+        uploadedBy: req.user?._id,
+        ...(assignment && { auditor: assignment.auditor })
       });
       createdTasks.push(newTask);
     }
 
     res.status(201).json({
-      message: `Successfully uploaded ${createdTasks.length} tasks. Skipped ${skippedTasks.length} duplicates/invalid.`,
+      message: `Successfully uploaded ${createdTasks.length} tasks${autoAssign ? ` with ${assignmentStrategy} assignment` : ''}. Skipped ${skippedTasks.length} duplicates/invalid.`,
       tasks: createdTasks,
-      skipped: skippedTasks
+      skipped: skippedTasks,
+      assignmentStrategy: autoAssign ? assignmentStrategy : 'none'
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const previewTaskAssignments = async (req, res) => {
+  try {
+    const { tasks, assignmentStrategy = 'round-robin' } = req.body;
+
+    if (!tasks || !Array.isArray(tasks)) {
+      return res.status(400).json({ message: "Invalid tasks data" });
+    }
+
+    // Validate tasks and check for duplicates
+    const validTasks = [];
+    const invalidTasks = [];
+
+    for (const taskData of tasks) {
+      const slid = (taskData.SLID || taskData.slid || taskData["REQ #"] || "UNKNOWN").trim();
+
+      if (slid === "UNKNOWN") {
+        invalidTasks.push({ task: taskData, reason: "Missing SLID" });
+        continue;
+      }
+
+      // Check if SLID already exists
+      const existingTask = await FieldAuditTask.findOne({ slid });
+      if (existingTask) {
+        invalidTasks.push({ task: taskData, slid, reason: "SLID already exists" });
+        continue;
+      }
+
+      validTasks.push(taskData);
+    }
+
+    // Get assignment preview
+    let assignments = [];
+    if (validTasks.length > 0) {
+      assignments = await assignTasksToAuditors(validTasks, assignmentStrategy);
+    }
+
+    // Format preview data
+    const preview = assignments.map((assignment, index) => ({
+      slid: validTasks[index].SLID || validTasks[index].slid || validTasks[index]["REQ #"],
+      customerName: validTasks[index]["Customer Name"] || validTasks[index].customerName || "N/A",
+      town: validTasks[index].To || validTasks[index].town || "N/A",
+      assignedTo: assignment.auditor.name,
+      auditorUsername: assignment.auditor.username,
+      auditorId: assignment.auditor._id
+    }));
+
+    res.json({
+      strategy: assignmentStrategy,
+      totalTasks: tasks.length,
+      validTasks: validTasks.length,
+      invalidTasks: invalidTasks.length,
+      preview,
+      invalid: invalidTasks
     });
 
   } catch (error) {
@@ -613,13 +800,7 @@ export const uploadTaskPhoto = async (req, res) => {
     const task = await FieldAuditTask.findById(taskId).populate("auditor", "name");
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // [CLEANUP]: If a photo for this checkpoint already exists, delete it from S3
-    const existingPhoto = task.photos.find(p => p.checkpointName === checkpointName);
-    if (existingPhoto) {
-      console.log(`Replacing photo for checkpoint: ${checkpointName}. Deleting old S3 object...`);
-      await deleteS3Object(existingPhoto.url);
-      task.photos.pull(existingPhoto._id); // Remove from DB array before adding new one
-    }
+    // [SUPPORT MULTI-PHOTO]: Removed auto-replace logic. Multiple photos per checkpoint are now allowed.
 
     // The file is already on S3 at req.file.location
     const newPhoto = {

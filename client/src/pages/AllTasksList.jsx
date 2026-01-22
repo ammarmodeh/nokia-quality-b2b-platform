@@ -31,7 +31,8 @@ import {
   Stack,
   Grid,
   Collapse,
-  ButtonGroup
+  ButtonGroup,
+  Autocomplete
 } from '@mui/material';
 import { MoonLoader } from 'react-spinners';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -195,6 +196,17 @@ const AllTasksList = () => {
     setTempEndDate(dateFilter.end);
   }, [dateFilter]);
 
+  // Extract unique districts from all tasks
+  const uniqueDistricts = useMemo(() => {
+    const districts = new Set();
+    allTasks.forEach(task => {
+      if (task.district && task.district.trim()) {
+        districts.add(task.district.trim());
+      }
+    });
+    return Array.from(districts).sort();
+  }, [allTasks]);
+
   // --- UNIFIED FILTERING LOGIC ---
   const filteredTasks = useMemo(() => {
     if (!allTasks.length) return [];
@@ -246,6 +258,7 @@ const AllTasksList = () => {
         const searchMatch = (
           (task.slid?.toLowerCase().includes(lower)) ||
           (task.customerName?.toLowerCase().includes(lower)) ||
+          (String(task.contactNumber || '')?.toLowerCase().includes(lower)) ||
           (task.teamName?.toLowerCase().includes(lower)) ||
           (task.operation?.toLowerCase().includes(lower)) ||
           (String(task.requestNumber || '').includes(lower))
@@ -927,69 +940,6 @@ const AllTasksList = () => {
           </IconButton>
         </Tooltip>
 
-        <TextField
-          variant="outlined"
-          size="small"
-          placeholder="Search by SLID, Name, Contact, or Feedback..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <MdSearch style={{ color: '#b3b3b3' }} />
-              </InputAdornment>
-            ),
-            endAdornment: searchTerm && (
-              <IconButton
-                size="small"
-                onClick={() => setSearchTerm('')}
-                sx={{
-                  visibility: searchTerm ? 'visible' : 'hidden',
-                  color: '#b3b3b3',
-                  '&:hover': {
-                    backgroundColor: '#2a2a2a',
-                  }
-                }}
-              >
-                <MdClose />
-              </IconButton>
-            ),
-            sx: {
-              borderRadius: '20px',
-              backgroundColor: '#2d2d2d',
-              width: '100%',
-              '& fieldset': {
-                border: 'none',
-              },
-              '& input': {
-                color: '#ffffff',
-                overflow: 'hidden',        // Ensures text doesn't overflow visibly
-                textOverflow: 'ellipsis',  // Adds "..." when text overflows
-                whiteSpace: 'nowrap',      // Prevents text from wrapping
-                '&::placeholder': {
-                  color: '#666',
-                  opacity: 1,
-                  fontSize: '0.8rem',      // Smaller placeholder text
-                  overflow: 'hidden',      // Needed for ellipsis in placeholder
-                  textOverflow: 'ellipsis',// Ellipsis for placeholder
-                  whiteSpace: 'nowrap',    // Prevents wrapping
-                }
-              },
-            },
-          }}
-          sx={{
-            width: isMobile ? '100%' : 'auto',
-            flex: 1,
-            '& .MuiOutlinedInput-root': {
-              '&:hover fieldset': {
-                border: '1px solid #666 !important',
-              },
-              '&.Mui-focused fieldset': {
-                border: '1px solid #7b68ee !important',
-              },
-            },
-          }}
-        />
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
           <InputLabel id="filter-select-label" sx={{ color: '#b3b3b3' }}>
@@ -1202,25 +1152,45 @@ const AllTasksList = () => {
           </Select>
         </FormControl>
 
-        <TextField
-          variant="outlined"
-          size="small"
-          placeholder="District..."
-          value={districtFilter === 'all' ? '' : districtFilter}
-          onChange={(e) => setDistrictFilter(e.target.value || 'all')}
-          sx={{
-            minWidth: isMobile ? '100%' : 120,
-            '& .MuiOutlinedInput-root': {
+        <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
+          <InputLabel id="district-filter-label" sx={{ color: '#b3b3b3' }}>
+            District
+          </InputLabel>
+          <Select
+            labelId="district-filter-label"
+            id="district-filter"
+            value={districtFilter}
+            onChange={(e) => setDistrictFilter(e.target.value)}
+            label="District"
+            sx={{
+              color: '#ffffff',
               borderRadius: '20px',
               backgroundColor: '#2d2d2d',
-              color: '#ffffff',
-              '& fieldset': { border: 'none' },
-              '&:hover fieldset': { border: '1px solid #666 !important' },
-              '&.Mui-focused fieldset': { border: '1px solid #7b68ee !important' },
-            },
-            '& .MuiInputBase-input::placeholder': { color: '#b3b3b3', fontSize: '0.8rem' }
-          }}
-        />
+              '& .MuiOutlinedInput-notchedOutline': {
+                border: 'none',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #666 !important',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                border: '1px solid #7b68ee !important',
+              },
+            }}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  backgroundColor: '#2d2d2d',
+                  color: '#ffffff',
+                },
+              },
+            }}
+          >
+            <MenuItem value="all">All Districts</MenuItem>
+            {uniqueDistricts.map(district => (
+              <MenuItem key={district} value={district}>{district}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
           <InputLabel id="subcon-filter-label" sx={{ color: '#b3b3b3' }}>
@@ -1302,45 +1272,40 @@ const AllTasksList = () => {
           </Select>
         </FormControl>
 
-        <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
-          <InputLabel id="team-name-filter-label" sx={{ color: '#b3b3b3' }}>
-            Team Name
-          </InputLabel>
-          <Select
-            labelId="team-name-filter-label"
-            id="team-name-filter"
-            value={teamNameFilter}
-            onChange={(e) => setTeamNameFilter(e.target.value)}
-            label="Team Name"
-            sx={{
-              color: '#ffffff',
-              borderRadius: '20px',
-              backgroundColor: '#2d2d2d',
-              '& .MuiOutlinedInput-notchedOutline': {
-                border: 'none',
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #666 !important',
-              },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #7b68ee !important',
-              },
-            }}
-            MenuProps={{
-              PaperProps: {
-                sx: {
+        <Autocomplete
+          size="small"
+          sx={{ minWidth: isMobile ? '100%' : 150 }}
+          options={['all', ...(dropdownOptions['FIELD_TEAMS']?.map(opt => opt.value) || [])]}
+          getOptionLabel={(option) => option === 'all' ? 'All Teams' : option}
+          value={teamNameFilter}
+          onChange={(event, newValue) => {
+            setTeamNameFilter(newValue || 'all');
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Team Name"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '20px',
                   backgroundColor: '#2d2d2d',
                   color: '#ffffff',
+                  '& fieldset': { border: 'none' },
+                  '&:hover fieldset': { border: '1px solid #666 !important' },
+                  '&.Mui-focused fieldset': { border: '1px solid #7b68ee !important' },
                 },
-              },
-            }}
-          >
-            <MenuItem value="all">All Teams</MenuItem>
-            {dropdownOptions['FIELD_TEAMS']?.map(opt => (
-              <MenuItem key={opt._id} value={opt.value}>{opt.label}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+                '& .MuiInputLabel-root': { color: '#b3b3b3' },
+                '& .MuiSvgIcon-root': { color: '#ffffff' }
+              }}
+            />
+          )}
+          PaperProps={{
+            sx: {
+              backgroundColor: '#2d2d2d',
+              color: '#ffffff',
+            }
+          }}
+        />
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
           <InputLabel id="validation-filter-label" sx={{ color: '#b3b3b3' }}>
@@ -1380,6 +1345,69 @@ const AllTasksList = () => {
             <MenuItem value="Not validated">Not Validated</MenuItem>
           </Select>
         </FormControl>
+
+        <TextField
+          variant="outlined"
+          size="small"
+          placeholder="Search by SLID, Name, Contact, or Feedback..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <MdSearch style={{ color: '#b3b3b3' }} />
+              </InputAdornment>
+            ),
+            endAdornment: searchTerm && (
+              <IconButton
+                size="small"
+                onClick={() => setSearchTerm('')}
+                sx={{
+                  visibility: searchTerm ? 'visible' : 'hidden',
+                  color: '#b3b3b3',
+                  '&:hover': {
+                    backgroundColor: '#2a2a2a',
+                  }
+                }}
+              >
+                <MdClose />
+              </IconButton>
+            ),
+            sx: {
+              borderRadius: '20px',
+              backgroundColor: '#2d2d2d',
+              width: '100%',
+              '& fieldset': {
+                border: 'none',
+              },
+              '& input': {
+                color: '#ffffff',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                '&::placeholder': {
+                  color: '#666',
+                  opacity: 1,
+                  fontSize: '0.8rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }
+              },
+            },
+          }}
+          sx={{
+            width: '100%',
+            '& .MuiOutlinedInput-root': {
+              '&:hover fieldset': {
+                border: '1px solid #666 !important',
+              },
+              '&.Mui-focused fieldset': {
+                border: '1px solid #7b68ee !important',
+              },
+            },
+          }}
+        />
 
         <Button
           variant="outlined"

@@ -132,6 +132,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [teamCompany, setTeamCompany] = useState(dropdownOptions.TEAM_COMPANY[0]);
   const [evaluationScore, setEvaluationScore] = useState(dropdownOptions.EVALUATION_SCORE[0]);
   const [governorate, setGovernorate] = useState(dropdownOptions.GOVERNORATES[0]);
+  const [district, setDistrict] = useState("");
   const [customerType, setCustomerType] = useState(dropdownOptions.CUSTOMER_TYPE[0]);
   const [validationStatus, setValidationStatus] = useState(dropdownOptions.VALIDATION_STATUS[1] || dropdownOptions.VALIDATION_STATUS[0]);
   const [responsible, setResponsible] = useState("");
@@ -187,6 +188,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       ...data,
       slid: `INT${data.slid}`,
       governorate,
+      district,
       assignedTo,
       whomItMayConcern,
       // status,
@@ -338,7 +340,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             />
           </Stack>
 
-          {/* Row 3: Town (Governorate), District */}
+          {/* Row 3: Town (Governorate) & District */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <FormControl fullWidth variant="outlined">
               <InputLabel>Governorate</InputLabel>
@@ -354,13 +356,11 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             </FormControl>
             <TextField
               label="District"
+              placeholder="Enter District"
               fullWidth
               variant="outlined"
-              {...register('district')}
-              error={!!errors.district}
-              helperText={errors.district ? errors.district.message : ''}
-              inputProps={{ dir: "auto" }}
-              sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
             />
           </Stack>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import {
   Box,
@@ -33,8 +33,13 @@ import {
   CircularProgress,
   Tooltip,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  Autocomplete,
+  Alert,
+  Badge,
+  Divider // Added
 } from "@mui/material";
+import { styled } from "@mui/material/styles"; // Added for ScrollView
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
@@ -43,10 +48,12 @@ import AddCircleIcon from "@mui/icons-material/AddCircle";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import RateReviewIcon from "@mui/icons-material/RateReview";
 import CloseIcon from "@mui/icons-material/Close";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera"; // Added
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
-import CloudDownloadIcon from "@mui/icons-material/CloudDownload"; // Added
+import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import axios from "axios";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
@@ -84,6 +91,7 @@ import {
   Pie,
   Legend
 } from 'recharts';
+import AuditAssignmentWizard from './AuditAssignmentWizard';
 
 
 // Expandable Note Component for long checklist comments
@@ -179,226 +187,488 @@ const StatCard = ({ title, value, color, icon, subtext }) => (
 
 
 
+
+// Import Dialog Component
+// Helper to parse Excel dates
+const parseExcelDate = (value) => {
+  if (!value) return null;
+  // If number (Excel serial date)
+  if (typeof value === 'number') {
+    return new Date(Math.round((value - 25569) * 86400 * 1000)).toISOString().split('T')[0];
+  }
+  // If string, try standard parsing
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+};
+
+// Normalize keys (fuzzy match)
+const normalizeKey = (key) => {
+  const k = key.toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (['slid', 'siteid', 'site'].includes(k)) return 'slid';
+  if (['int', 'int#', 'intno', 'internalid'].includes(k)) return 'slid';
+  if (['scheduleddate', 'date', 'schedule', 'auditdate'].includes(k)) return 'scheduledDate';
+  if (['auditor', 'auditorname', 'assignedto'].includes(k)) return 'auditorName';
+  return key.toString().trim();
+};
+
+const ImportTaskDialog = ({ open, onClose, onSuccess, apiUrl, token }) => {
+  const [file, setFile] = useState(null);
+  const [analyzedData, setAnalyzedData] = useState({ valid: [], invalid: [], keys: [] });
+  const [uploading, setUploading] = useState(false);
+  const [assignmentStrategy, setAssignmentStrategy] = useState('round-robin');
+  const [step, setStep] = useState(0);
+
+  const resetState = () => {
+    setFile(null);
+    setAnalyzedData({ valid: [], invalid: [], keys: [] });
+    setStep(0);
+  };
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+    if (!selectedFile) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+
+        // Use defval: "" to ensure we get explicit empty strings for cells
+        const rawData = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+        const processed = { valid: [], invalid: [], keys: new Set() };
+
+        rawData.forEach((row, index) => {
+          // 1. Strict Empty Row Check: Join all values and check if empty
+          const rowString = Object.values(row).map(v => v.toString().trim()).join('');
+          if (rowString.length === 0) return;
+
+          const newRow = {};
+          let idValue = null;
+          let dateValue = null;
+
+          // Pass 1: Copy ALL data to newRow with trimmed keys AND look for ID/Date
+          Object.keys(row).forEach(key => {
+            const cleanVal = row[key];
+            const trimmedKey = key.trim();
+            if (!trimmedKey) return;
+
+            // Add to dynamic keys list for preview
+            processed.keys.add(trimmedKey);
+
+            // Always preserve original data
+            newRow[trimmedKey] = cleanVal;
+
+            // Check for Special meanings
+            const normKey = normalizeKey(trimmedKey);
+
+            if (normKey === 'slid') {
+              if (cleanVal && cleanVal.toString().trim().length > 0 && cleanVal.toString().trim() !== '-') {
+                idValue = cleanVal.toString().trim();
+              }
+            }
+            if (normKey === 'scheduledDate') {
+              const parsedDate = parseExcelDate(cleanVal);
+              if (parsedDate) dateValue = parsedDate;
+            }
+          });
+
+          // Pass 2: Assign core fields (slid, scheduledDate)
+          if (idValue) newRow.slid = idValue;
+          newRow.scheduledDate = dateValue || new Date().toISOString().split('T')[0]; // Default to today
+
+          // Store
+          if (newRow.slid) {
+            processed.valid.push(newRow);
+          } else {
+            processed.invalid.push({ row: index + 2, reason: "Missing / Invalid SLID or INT#", data: row });
+          }
+        });
+
+        setAnalyzedData({
+          valid: processed.valid,
+          invalid: processed.invalid,
+          keys: Array.from(processed.keys)
+        });
+        setStep(1);
+
+      } catch (err) {
+        alert("Error parsing file: " + err.message);
+      }
+    };
+    reader.readAsBinaryString(selectedFile);
+  };
+
+  const handleUpload = async () => {
+    if (analyzedData.valid.length === 0) return;
+    setUploading(true);
+    try {
+      const payload = {
+        tasks: analyzedData.valid,
+        assignmentStrategy,
+        autoAssign: true
+      };
+
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.post(`${apiUrl}/upload-tasks`, payload, config);
+
+      alert(`Successfully imported ${res.data.count || analyzedData.valid.length} tasks!`);
+      onSuccess();
+      onClose();
+      resetState();
+    } catch (error) {
+      console.error("Upload failed", error);
+      alert("Upload failed: " + (error.response?.data?.message || error.message));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={() => { onClose(); resetState(); }} fullWidth maxWidth="lg" PaperProps={{ sx: { background: '#0a0a0a', border: '1px solid #333', minHeight: '60vh' } }}>
+      <DialogTitle sx={{ color: '#fff', borderBottom: '1px solid #333' }}>
+        Bulk Task Import
+        {step === 1 && <Chip label={`${analyzedData.valid.length} Tasks Ready`} color="success" size="small" sx={{ ml: 2, fontWeight: 800 }} />}
+      </DialogTitle>
+      <DialogContent sx={{ p: 0 }}>
+        {step === 0 && (
+          <Box sx={{ p: 4, textAlign: 'center', mt: 4 }}>
+            <input accept=".xlsx, .xls, .csv" style={{ display: 'none' }} id="upload-file-input" type="file" onChange={handleFileChange} />
+            <label htmlFor="upload-file-input">
+              <Button variant="outlined" component="span" sx={{ p: 4, border: '2px dashed #444', borderRadius: 4, width: '100%', textTransform: 'none' }}>
+                <Box>
+                  <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h6" color="text.primary">Click to Select Excel File</Typography>
+                  <Typography variant="body2" color="text.secondary">Supported: .xlsx, .xls</Typography>
+                  <Typography variant="caption" display="block" sx={{ mt: 2, color: 'info.main' }}>
+                    Supports <b>SLID</b>, <b>INT#</b>, or <b>Site ID</b> as Identifier
+                  </Typography>
+                </Box>
+              </Button>
+            </label>
+          </Box>
+        )}
+
+        {step === 1 && (
+          <Box sx={{ p: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={3}>
+                <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', height: '100%' }}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, textTransform: 'uppercase' }}>Configuration</Typography>
+                  <FormControl fullWidth size="small" sx={{ mb: 3 }}>
+                    <InputLabel>Assignment Strategy</InputLabel>
+                    <Select value={assignmentStrategy} label="Assignment Strategy" onChange={(e) => setAssignmentStrategy(e.target.value)}>
+                      <MenuItem value="round-robin">Round Robin</MenuItem>
+                      <MenuItem value="workload-balanced">Workload Balanced</MenuItem>
+                      <MenuItem value="geographic">Geographic (Town)</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
+
+                  <Typography variant="subtitle2" color="error" sx={{ mb: 1 }}>Skipped Rows ({analyzedData.invalid.length})</Typography>
+                  <ScrollView sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                    {analyzedData.invalid.slice(0, 100).map((err, i) => (
+                      <Typography key={i} variant="caption" display="block" color="error" sx={{ mb: 0.5 }}>
+                        Row {err.row}: {err.reason}
+                      </Typography>
+                    ))}
+                    {analyzedData.invalid.length > 100 && <Typography variant="caption" color="text.secondary">...and {analyzedData.invalid.length - 100} more</Typography>}
+                    {analyzedData.invalid.length === 0 && <Typography variant="caption" color="text.secondary">No errors found.</Typography>}
+                  </ScrollView>
+                </Paper>
+              </Grid>
+
+              <Grid item xs={12} md={9}>
+                <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
+                  Preview ({analyzedData.valid.length} rows ready)
+                </Typography>
+                <TableContainer component={Paper} sx={{ height: 400, bgcolor: 'transparent', border: '1px solid #333' }}>
+                  <Table size="small" stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ bgcolor: '#111', color: '#fff', fontWeight: 800 }}>ID (SLID/INT#)</TableCell>
+                        <TableCell sx={{ bgcolor: '#111', color: '#fff', fontWeight: 800 }}>Date</TableCell>
+                        {analyzedData.keys.slice(0, 6).map(k => (
+                          <TableCell key={k} sx={{ bgcolor: '#111', color: '#aaa', whiteSpace: 'nowrap' }}>{k}</TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {analyzedData.valid.slice(0, 100).map((row, i) => (
+                        <TableRow key={i} hover>
+                          <TableCell sx={{ color: '#fff', fontWeight: 700 }}>{row.slid}</TableCell>
+                          <TableCell sx={{ color: '#aaa' }}>{row.scheduledDate}</TableCell>
+                          {analyzedData.keys.slice(0, 6).map((k, j) => (
+                            <TableCell key={j} sx={{ color: '#aaa', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {row[k]?.toString() || '-'}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Typography variant="caption" display="block" sx={{ mt: 1, textAlign: 'right', color: 'text.secondary' }}>
+                  * Showing first 100 tasks only
+                </Typography>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
+      </DialogContent>
+      <DialogActions sx={{ p: 2, borderTop: '1px solid #333' }}>
+        {step === 1 && <Button onClick={resetState} color="inherit">Back to Select File</Button>}
+        <Button onClick={() => { onClose(); resetState(); }} color="inherit">Cancel</Button>
+        <Button
+          onClick={handleUpload}
+          variant="contained"
+          disabled={step === 0 || analyzedData.valid.length === 0 || uploading}
+          startIcon={uploading ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+          sx={{ fontWeight: 800, px: 4 }}
+        >
+          {uploading ? "Importing..." : `Import ${analyzedData.valid.length} Tasks`}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+const ScrollView = styled(Box)({});
+
 const ManualTaskForm = ({ apiUrl, token, onSuccess, defaultDate }) => {
-  // Initial State including generic fields
-  const [task, setTask] = useState({
+  // Core Meta Fields
+  const [meta, setMeta] = useState({
     slid: "",
     auditorId: "",
-    req_no: "",
-    customer_name: "",
-    contact_number: "",
-    governorate: "",
-    town: "",
-    district: "",
-    street: "",
-    building: "",
-    speed: "",
-    modem_type: "",
-    ont_sn: "",
-    lat: "",
-    long: "",
-    scheduledDate: defaultDate || (() => {
-      const d = new Date();
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    })()
+    scheduledDate: defaultDate || new Date().toISOString().split('T')[0]
   });
 
+  // Dynamic Site Details - Initialized with empty strings for controlled inputs
+  const [details, setDetails] = useState({
+    "INSTALLATION TEAM": "", "SPLICING TEAM": "", "REQ #": "", "INT #": "", "OPERATION": "",
+    "CBU/EBU": "", "VOIP": "", "MODEM TYPE": "", "FREE AirTies": "", "CUST NAME": "",
+    "FEEDBACK FOR ORANGE": "", "FEEDBACK DETAILS": "", "CUST CONT": "", "Governorate": "",
+    "TOWN": "", "DISTRICT": "", "STREET": "", "BUILDING": "", "SPEED": "", "USERNAME": "",
+    "PW": "", "DISPATSHER NAME": "", "APP DATE": "", "APP TIME": "", "ORANGE COMMENT": "",
+    "FDB #": "", "Splitter #": "", "Splitter Port #": "", "BEP #": "", "BEP Port #": "",
+    "Comment": "", "New / Change": "", "Drop Cable": "", "No Of Drop Cable": "",
+    "L1083-4 CABLE IMM 4FO MODULO 4 FTTH (N9730A)Drop Indoor/Outdoor": "",
+    "Indoor Cable Type": "", "Indoor Cable": "", "Galvanized Steel Hook": "",
+    "Drop Anchor": "", "Splicing Qty": "", "Poles": "", "Microtrenching": "",
+    "Digging Asphalt": "", "Digging": "", "PVC Pipe": "",
+    "BEP Floor MOUNTED BOX up to 12 Splices - Verthor Box": "", "Trunk": "", "Patch Cord": "",
+    "Fiber Termination Box, 1 fibers (OTO)": "", "Plastic Elbow": "", "Rainy Protection Box": "",
+    "PVC Coupler": "", "U gard": "", "ONT SN": "", "ONT Type": "", "Power ((-)dbm)": "",
+    "Pigtail": "", "BEP STICKER": "", "AIRTIES SN": "", "Suspension Console": "",
+    "EXT-Type": "", "OTO approval": "", "Area": "", "Lat": "", "Long": ""
+  });
+
+  const [fieldTeams, setFieldTeams] = useState([]);
   const [auditors, setAuditors] = useState([]);
   const [slidExists, setSlidExists] = useState(false);
   const [checkingSlid, setCheckingSlid] = useState(false);
 
   useEffect(() => {
-    // Update date if defaultDate prop changes (e.g. user changes dashboard date)
-    if (defaultDate) {
-      setTask(prev => ({ ...prev, scheduledDate: defaultDate }));
-    }
+    if (defaultDate) setMeta(prev => ({ ...prev, scheduledDate: defaultDate }));
   }, [defaultDate]);
 
   useEffect(() => {
-    const fetchAuditors = async () => {
+    const fetchData = async () => {
       try {
         const config = { headers: { Authorization: `Bearer ${token}` } };
-        const { data } = await axios.get(`${apiUrl}/stats`, config);
-        setAuditors(data);
-      } catch (error) {
-        console.error("Failed to fetch auditors", error);
-      }
+        const [audData, teamData] = await Promise.all([
+          axios.get(`${apiUrl}/stats`, config),
+          api.get('/field-teams/get-field-teams')
+        ]);
+        setAuditors(audData.data);
+        setFieldTeams(teamData.data);
+      } catch (error) { console.error("Fetch Data Error", error); }
     };
-    fetchAuditors();
+    fetchData();
   }, [apiUrl, token]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (task.slid && task.slid.trim() !== "") {
+      if (meta.slid && meta.slid.trim() !== "") {
         setCheckingSlid(true);
         try {
           const config = { headers: { Authorization: `Bearer ${token}` } };
-          const { data } = await axios.get(`${apiUrl}/check-slid/${task.slid.trim()}`, config);
+          const { data } = await axios.get(`${apiUrl}/check-slid/${meta.slid.trim()}`, config);
           setSlidExists(data.exists);
-        } catch (error) {
-          console.error("SLID check failed", error);
-        } finally {
-          setCheckingSlid(false);
-        }
-      } else {
-        setSlidExists(false);
-      }
+        } catch (error) { console.error("SLID check failed", error); }
+        finally { setCheckingSlid(false); }
+      } else { setSlidExists(false); }
     }, 500);
-
     return () => clearTimeout(delayDebounceFn);
-  }, [task.slid, apiUrl, token]);
+  }, [meta.slid, apiUrl, token]);
 
-  const handleChange = (e) => {
-    setTask({ ...task, [e.target.name]: e.target.value });
-  };
+  const handleMetaChange = (e) => setMeta({ ...meta, [e.target.name]: e.target.value });
+  const handleDetailChange = (e) => setDetails({ ...details, [e.target.name]: e.target.value });
 
   const handleSubmit = async () => {
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      // Map flat fields to siteDetails structure
       const payload = {
-        slid: task.slid,
-        auditorId: task.auditorId,
-        scheduledDate: task.scheduledDate, // Send explicitly
-        siteDetails: {
-          "REQ #": task.req_no,
-          "CUST NAME": task.customer_name,
-          "CUST CONT": task.contact_number,
-          "Governorate": task.governorate,
-          "TOWN": task.town,
-          "DISTRICT": task.district,
-          "STREET": task.street,
-          "BUILDING": task.building,
-          "SPEED": task.speed,
-          "MODEM TYPE": task.modem_type,
-          "ONT SN": task.ont_sn,
-          "Lat": task.lat,
-          "Long": task.long
-        }
+        slid: meta.slid,
+        auditorId: meta.auditorId,
+        scheduledDate: meta.scheduledDate,
+        siteDetails: details
       };
       await axios.post(`${apiUrl}/manual-task`, payload, config);
-      alert("Task created manually for " + task.scheduledDate);
-      setTask({
-        slid: "", auditorId: "", req_no: "", customer_name: "",
-        contact_number: "", governorate: "", town: "", district: "", street: "",
-        building: "", speed: "", modem_type: "", ont_sn: "", lat: "", long: "",
-        scheduledDate: defaultDate // Reset to current default
-      });
+      alert("Task created manually!");
+
+      // Reset
+      setMeta(p => ({ ...p, slid: "", auditorId: "" })); // Keep date
+      const resetDetails = Object.keys(details).reduce((acc, key) => ({ ...acc, [key]: "" }), {});
+      setDetails(resetDetails);
+
       onSuccess();
     } catch (error) {
       alert("Error: " + (error.response?.data?.message || error.message));
     }
   };
 
+  const renderTextField = (label, name, width = 4) => (
+    <Grid item xs={12} sm={width} key={name}>
+      <TextField
+        fullWidth size="small"
+        label={label} name={name}
+        value={details[name] || ""}
+        onChange={handleDetailChange}
+        InputLabelProps={{ style: { fontSize: '0.8rem' } }}
+      />
+    </Grid>
+  );
+
   return (
-    <Paper sx={{ p: 4, mb: 4 }}>
-      <Typography variant="h6" gutterBottom color="primary" sx={{ mb: 3 }}>
+    <Paper sx={{ p: 4, mb: 4, border: '1px solid rgba(255,255,255,0.1)' }}>
+      <Typography variant="h6" gutterBottom color="primary" sx={{ mb: 3, fontWeight: 800 }}>
         Create New Field Audit Task
       </Typography>
 
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, mt: 1 }}>Job Identification</Typography>
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, mt: 1, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: 1 }}>Job Identification</Typography>
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={3}>
           <TextField
-            fullWidth
-            label="SLID"
-            name="slid"
-            required
-            value={task.slid}
-            onChange={handleChange}
-            error={slidExists}
-            helperText={slidExists ? "This SLID already exists in the system!" : (checkingSlid ? "Checking..." : "")}
-            InputProps={{
-              endAdornment: checkingSlid && (
-                <InputAdornment position="end">
-                  <CircularProgress size={20} />
-                </InputAdornment>
-              ),
-            }}
+            fullWidth size="small" label="SLID" name="slid" required
+            value={meta.slid} onChange={handleMetaChange}
+            error={slidExists} helperText={slidExists ? "Exists!" : ""}
+            InputProps={{ endAdornment: checkingSlid && <CircularProgress size={15} /> }}
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={3}>
           <TextField
-            type="date"
-            fullWidth
-            label="Scheduled Date"
-            name="scheduledDate"
-            value={task.scheduledDate}
-            onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
-            required
+            type="date" fullWidth size="small" label="Scheduled Date" name="scheduledDate"
+            value={meta.scheduledDate} onChange={handleMetaChange}
+            InputLabelProps={{ shrink: true }} required
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <TextField fullWidth label="REQ #" name="req_no" value={task.req_no} onChange={handleChange} />
-        </Grid>
-
-
-        <Grid item xs={12} sm={8}>
-          <TextField
-            select fullWidth label="Assign Auditor" name="auditorId"
-            value={task.auditorId} onChange={handleChange}
-            SelectProps={{ native: true }} InputLabelProps={{ shrink: true }}
-          >
-            <option value="">-- None (Pending) --</option>
-            {auditors.map((auditor) => (
-              <option key={auditor._id} value={auditor._id}>{auditor.name}</option>
-            ))}
+        <Grid item xs={12} sm={3}>
+          <TextField select fullWidth size="small" label="Auditor" name="auditorId" value={meta.auditorId} onChange={handleMetaChange} SelectProps={{ native: true }} InputLabelProps={{ shrink: true }}>
+            <option value="">-- Pending --</option>
+            {auditors.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
           </TextField>
         </Grid>
+        {renderTextField("REQ #", "REQ #", 3)}
+        {renderTextField("INT #", "INT #", 3)}
+        {renderTextField("Operation", "OPERATION", 3)}
+        {renderTextField("CBU/EBU", "CBU/EBU", 3)}
+        {renderTextField("App Date", "APP DATE", 3)}
+        {renderTextField("App Time", "APP TIME", 3)}
+        {renderTextField("Dispatcher", "DISPATSHER NAME", 3)}
       </Grid>
 
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>Customer & Location</Typography>
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: 1 }}>Customer & Location</Typography>
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6}>
-          <TextField fullWidth label="Customer Name" name="customer_name" value={task.customer_name} onChange={handleChange} />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField fullWidth label="Contact Number" name="contact_number" value={task.contact_number} onChange={handleChange} />
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <TextField fullWidth label="Governorate" name="governorate" value={task.governorate} onChange={handleChange} />
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <TextField fullWidth label="Town" name="town" value={task.town} onChange={handleChange} />
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <TextField fullWidth label="District" name="district" value={task.district} onChange={handleChange} />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField fullWidth label="Street" name="street" value={task.street} onChange={handleChange} />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField fullWidth label="Building" name="building" value={task.building} onChange={handleChange} />
-        </Grid>
+        {renderTextField("Customer Name", "CUST NAME", 6)}
+        {renderTextField("Contact #", "CUST CONT", 6)}
+        {renderTextField("Username", "USERNAME", 4)}
+        {renderTextField("Password", "PW", 4)}
+        {renderTextField("Governorate", "Governorate", 4)}
+        {renderTextField("Town", "TOWN", 4)}
+        {renderTextField("District", "DISTRICT", 4)}
+        {renderTextField("Area", "Area", 4)}
+        {renderTextField("Street", "STREET", 6)}
+        {renderTextField("Building", "BUILDING", 6)}
+        {renderTextField("Latitude", "Lat", 3)}
+        {renderTextField("Longitude", "Long", 3)}
       </Grid>
 
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>Technical Details</Typography>
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: 1 }}>Technical Specifications</Typography>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {renderTextField("Speed", "SPEED", 3)}
+        {renderTextField("Modem Type", "MODEM TYPE", 3)}
+        {renderTextField("VOIP", "VOIP", 3)}
+        {renderTextField("ONT Type", "ONT Type", 3)}
+        {renderTextField("ONT SN", "ONT SN", 4)}
+        {renderTextField("Power (dBm)", "Power ((-)dbm)", 4)}
+        {renderTextField("Pigtail", "Pigtail", 4)}
+        {renderTextField("Free AirTies", "FREE AirTies", 3)}
+        {renderTextField("AirTies SN", "AIRTIES SN", 3)}
+        {renderTextField("Extender Type", "EXT-Type", 3)}
+        {renderTextField("Suspension Console", "Suspension Console", 3)}
+      </Grid>
+
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: 1 }}>Infrastructure & Materials</Typography>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={4}>
+          <Autocomplete
+            options={fieldTeams} getOptionLabel={(o) => o.teamName || ""}
+            value={fieldTeams.find(t => t.teamName === details["INSTALLATION TEAM"]) || null}
+            onChange={(e, v) => setDetails({ ...details, "INSTALLATION TEAM": v ? v.teamName : "" })}
+            renderInput={(params) => <TextField {...params} label="Install Team" size="small" />}
+          />
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Autocomplete
+            options={fieldTeams} getOptionLabel={(o) => o.teamName || ""}
+            value={fieldTeams.find(t => t.teamName === details["SPLICING TEAM"]) || null}
+            onChange={(e, v) => setDetails({ ...details, "SPLICING TEAM": v ? v.teamName : "" })}
+            renderInput={(params) => <TextField {...params} label="Splice Team" size="small" />}
+          />
+        </Grid>
+        {renderTextField("Splitter #", "Splitter #", 4)}
+        {renderTextField("Splitter Port", "Splitter Port #", 3)}
+        {renderTextField("BEP #", "BEP #", 3)}
+        {renderTextField("BEP Port", "BEP Port #", 3)}
+        {renderTextField("FDB #", "FDB #", 3)}
+        {renderTextField("Trunk", "Trunk", 3)}
+        {renderTextField("Fiber Box (OTO)", "Fiber Termination Box, 1 fibers (OTO)", 3)}
+        {renderTextField("OTO Approval", "OTO approval", 3)}
+        {renderTextField("Drop Cable", "Drop Cable", 3)}
+        {renderTextField("Num Drop Cable", "No Of Drop Cable", 3)}
+        {renderTextField("Indoor Cable", "Indoor Cable", 3)}
+        {renderTextField("Poles", "Poles", 2)}
+        {renderTextField("Digging", "Digging", 2)}
+        {renderTextField("PVC Pipe", "PVC Pipe", 2)}
+        {renderTextField("Patch Cord", "Patch Cord", 3)}
+        {renderTextField("Galvanized Hook", "Galvanized Steel Hook", 3)}
+        {renderTextField("Drop Anchor", "Drop Anchor", 3)}
+        {renderTextField("Plastic Elbow", "Plastic Elbow", 3)}
+        {renderTextField("U-Guard", "U gard", 3)}
+        {renderTextField("Rainy Box", "Rainy Protection Box", 3)}
+        {renderTextField("BEP Sticker", "BEP STICKER", 3)}
+      </Grid>
+
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: 1 }}>Feedback</Typography>
       <Grid container spacing={2}>
-        <Grid item xs={12} sm={4}>
-          <TextField fullWidth label="Speed / Plan" name="speed" value={task.speed} onChange={handleChange} />
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <TextField fullWidth label="Modem Type" name="modem_type" value={task.modem_type} onChange={handleChange} />
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <TextField fullWidth label="ONT SN" name="ont_sn" value={task.ont_sn} onChange={handleChange} />
-        </Grid>
+        {renderTextField("Feedback for Orange", "FEEDBACK FOR ORANGE", 6)}
+        {renderTextField("Details", "FEEDBACK DETAILS", 6)}
+        {renderTextField("Orange Comment", "ORANGE COMMENT", 6)}
+        {renderTextField("General Comment", "Comment", 6)}
       </Grid>
 
       <Box sx={{ mt: 4 }}>
         <Button
-          variant="contained"
-          size="large"
-          onClick={handleSubmit}
-          startIcon={<AddCircleIcon />}
-          fullWidth
-          disabled={slidExists || checkingSlid || !task.slid}
+          variant="contained" size="large" onClick={handleSubmit} startIcon={<AddCircleIcon />} fullWidth
+          disabled={slidExists || checkingSlid || !meta.slid}
+          sx={{ fontWeight: 800, borderRadius: 2 }}
         >
-          Create & Assign Task
+          Create Task
         </Button>
       </Box>
     </Paper>
@@ -533,26 +803,80 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
 
 
   const columns = [
-    { field: 'slid', headerName: 'SLID', width: 150, renderCell: (p) => <Typography sx={{ fontWeight: 800, color: 'primary.main' }}>{p.value}</Typography> },
-    { field: 'auditor', headerName: 'Auditor', width: 200, renderCell: (p) => p.row.auditor?.name || "Unknown" },
+    { field: 'slid', headerName: 'SLID', width: 130, renderCell: (p) => <Typography variant="body2" sx={{ fontWeight: 800, color: 'primary.main', fontFamily: 'monospace' }}>{p.value}</Typography> },
+    {
+      field: 'auditor',
+      headerName: 'Auditor',
+      width: 180,
+      renderCell: (p) => p.row.auditor ?
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar sx={{ width: 24, height: 24, fontSize: '0.7rem', bgcolor: 'secondary.main' }}>{p.row.auditor.name.charAt(0)}</Avatar>
+          <Typography variant="body2">{p.row.auditor.name}</Typography>
+        </Box> : "Unknown"
+    },
+    {
+      field: 'compliance',
+      headerName: 'Compliance',
+      width: 140,
+      valueGetter: (params) => {
+        if (!params.row.checklist) return 0;
+        const total = params.row.checklist.length;
+        const ok = params.row.checklist.filter(c => c.status === 'OK').length;
+        return total > 0 ? (ok / total) * 100 : 0;
+      },
+      renderCell: (p) => (
+        <Box sx={{ width: '100%', pr: 2 }}>
+          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 700, color: p.value >= 90 ? '#00f5d4' : '#f44336' }}>
+            {Math.round(p.value)}%
+          </Typography>
+          <LinearProgress
+            variant="determinate"
+            value={p.value}
+            sx={{
+              height: 4,
+              borderRadius: 2,
+              bgcolor: 'rgba(255,255,255,0.1)',
+              '& .MuiLinearProgress-bar': { bgcolor: p.value >= 90 ? '#00f5d4' : '#f44336' }
+            }}
+          />
+        </Box>
+      )
+    },
+    {
+      field: 'issues',
+      headerName: 'Issues (N.OK)',
+      width: 130,
+      valueGetter: (params) => params.row.checklist?.filter(c => c.status === 'N.OK').length || 0,
+      renderCell: (p) => p.value > 0 ? <Chip label={`${p.value} Issues`} size="small" color="error" variant="outlined" /> : <Chip label="Pass" size="small" color="success" variant="outlined" />
+    },
+    {
+      field: 'photos',
+      headerName: 'Evidence',
+      width: 100,
+      renderCell: (p) => (
+        <Badge badgeContent={p.row.photos?.length || 0} color="primary" sx={{ '& .MuiBadge-badge': { fontSize: 9, height: 16, minWidth: 16 } }}>
+          <PhotoCameraIcon sx={{ color: 'text.secondary' }} />
+        </Badge>
+      )
+    },
     {
       field: 'updatedAt',
-      headerName: 'Submitted Date',
-      width: 180,
-      renderCell: (p) => new Date(p.value).toLocaleString()
+      headerName: 'Submitted',
+      width: 150,
+      renderCell: (p) => <Typography variant="caption" color="text.secondary">{new Date(p.value).toLocaleDateString()} {new Date(p.value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
     },
     {
       field: 'status',
       headerName: 'Status',
-      width: 150,
-      renderCell: (p) => <Chip label={p.value} color="success" size="small" sx={{ fontWeight: 800 }} />
+      width: 120,
+      renderCell: (p) => <Chip label={p.value} color={p.value === 'Approved' ? "success" : "info"} size="small" sx={{ fontWeight: 800 }} />
     },
     {
       field: 'action',
       headerName: 'Action',
-      width: 150,
+      width: 140,
       renderCell: (p) => (
-        <Button size="small" variant="contained" onClick={() => { setSelectedTask(p.row); setOpenDetail(true); }}>
+        <Button size="small" variant="contained" onClick={() => { setSelectedTask(p.row); setOpenDetail(true); }} sx={{ textTransform: 'none', borderRadius: 1 }}>
           View Report
         </Button>
       )
@@ -560,8 +884,26 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
   ];
 
   return (
-    <Box sx={{ height: 600, width: '100%' }}>
-      <DataGrid rows={submittedTasks} columns={columns} getRowId={(r) => r._id} slots={{ toolbar: GridToolbar }} />
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 800 }}>Audit Reports Portfolio</Typography>
+        <Tooltip title="Refresh Reports">
+          <IconButton onClick={fetchSubmitted} color="primary" sx={{ border: '1px solid', borderColor: 'divider' }}>
+            <RefreshIcon />
+          </IconButton>
+        </Tooltip>
+      </Box>
+      <Box sx={{ height: 600, width: '100%' }}>
+        <DataGrid
+          rows={submittedTasks}
+          columns={columns}
+          getRowId={(r) => r._id}
+          density="compact"
+          slots={{ toolbar: GridToolbar }}
+          checkboxSelection
+          disableRowSelectionOnClick
+        />
+      </Box>
       {/* Detail Dialog */}
       <Dialog open={openDetail} onClose={() => setOpenDetail(false)} fullScreen>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'primary.main', color: '#000' }}>
@@ -638,22 +980,21 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
                 <Grid item xs={12} md={8}>
                   <Grid container spacing={2}>
                     <Grid item xs={12}>
-                      <Typography variant="button" sx={{ color: 'primary.main', fontWeight: 800, mb: 1, display: 'block' }}>Identification & Ownership</Typography>
+                      <Typography variant="button" sx={{ color: 'primary.main', fontWeight: 800, mb: 1, display: 'block' }}>Identification & Site Details</Typography>
                     </Grid>
+                    {/* Render Primary Fields plus ALL dynamic details */}
                     {[
                       { l: 'SLID', v: selectedTask.slid },
                       { l: 'Auditor', v: selectedTask.auditor?.name },
-                      { l: 'Town', v: selectedTask.siteDetails?.TOWN },
-                      { l: 'District', v: selectedTask.siteDetails?.DISTRICT },
-                      { l: 'Customer', v: selectedTask.siteDetails?.["CUST NAME"] },
-                      { l: 'Contact', v: selectedTask.siteDetails?.["CUST CONT"] },
                       { l: 'Scheduled', v: new Date(selectedTask.scheduledDate).toLocaleDateString() },
-                      { l: 'Submitted', v: new Date(selectedTask.updatedAt).toLocaleDateString() }
+                      { l: 'Submitted', v: new Date(selectedTask.updatedAt).toLocaleDateString() },
+                      // Spread all other siteDetails here
+                      ...Object.entries(selectedTask.siteDetails || {}).filter(([k]) => k !== 'SLID').map(([k, v]) => ({ l: k, v }))
                     ].map(item => (
-                      <Grid item xs={6} sm={3} key={item.l}>
-                        <Paper sx={{ p: 2, bgcolor: 'transparent', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 0 }}>
-                          <Typography variant="caption" sx={{ display: 'block', opacity: 0.5, fontWeight: 700, fontSize: '0.65rem', textTransform: 'uppercase' }}>{item.l}</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 800 }}>{item.v || '-'}</Typography>
+                      <Grid item xs={6} sm={4} md={3} key={item.l}>
+                        <Paper sx={{ p: 2, bgcolor: 'transparent', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 0, height: '100%' }}>
+                          <Typography variant="caption" sx={{ display: 'block', opacity: 0.5, fontWeight: 700, fontSize: '0.65rem', textTransform: 'uppercase', mb: 0.5 }}>{item.l}</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 800, wordBreak: 'break-word', fontSize: '0.8rem' }}>{item.v || '-'}</Typography>
                         </Paper>
                       </Grid>
                     ))}
@@ -881,38 +1222,63 @@ const UserManagement = ({ apiUrl, token }) => {
     } catch (error) { alert(error.response?.data?.message || "Update failed"); }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Delete auditor?")) {
-      await axios.delete(`${apiUrl}/users/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-      fetchUsers();
+  const handleDelete = async (user) => {
+    if (window.confirm(`Are you sure you want to delete auditor: ${user.name}?\n\nThis action cannot be undone.`)) {
+      try {
+        const { data } = await axios.delete(`${apiUrl}/users/${user._id}`, { headers: { Authorization: `Bearer ${token}` } });
+        alert(data.message || "Auditor deleted successfully");
+        fetchUsers();
+      } catch (error) {
+        if (error.response?.status === 400) {
+          // Validation error - auditor has assigned tasks
+          const { message, assignedTasks, suggestion } = error.response.data;
+          alert(`${message}\n\n${suggestion}`);
+        } else {
+          alert(error.response?.data?.message || "Failed to delete auditor");
+        }
+      }
     }
   };
 
   const columns = [
-    { field: 'name', headerName: 'Full Name', flex: 1, renderCell: (p) => <Typography sx={{ fontWeight: 600 }}>{p.value}</Typography> },
-    { field: 'username', headerName: 'Username', width: 150 },
+    { field: 'username', headerName: 'Username', width: 120, renderCell: (p) => <Typography variant="body2" sx={{ fontWeight: 800, color: 'primary.main', fontFamily: 'monospace' }}>{p.value}</Typography> },
     {
-      field: 'stats',
-      headerName: 'Stats',
-      width: 200,
+      field: 'name',
+      headerName: 'Full Name',
+      flex: 1,
       renderCell: (p) => (
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Chip label={`${p.row.totalTasks || 0} T`} size="small" />
-          <Chip label={`${p.row.submittedTasks || 0} D`} size="small" color="success" />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ bgcolor: 'secondary.main', width: 28, height: 28, fontSize: '0.75rem' }}>{p.value.charAt(0)}</Avatar>
+          <Typography variant="body2" fontWeight="600">{p.value}</Typography>
         </Box>
+      )
+    },
+    { field: 'email', headerName: 'Email', flex: 1.2, renderCell: (p) => <Typography variant="caption" color="text.secondary">{p.value}</Typography> },
+    {
+      field: 'role',
+      headerName: 'Role',
+      width: 120,
+      renderCell: (params) => (
+        <Chip
+          label={params.value}
+          size="small"
+          variant="outlined"
+          color={params.value === 'admin' ? "error" : "default"}
+          sx={{ borderColor: params.value === 'admin' ? 'error.main' : 'rgba(255,255,255,0.2)', fontWeight: 700 }}
+        />
       )
     },
     {
       field: 'actions',
       headerName: 'Actions',
       width: 120,
-      renderCell: (p) => (
+      renderCell: (params) => (
         <Box>
-          <IconButton color="primary" onClick={() => { setEditingUser(p.row); setEditFormData({ name: p.row.name, username: p.row.username, password: "" }); setEditOpen(true); }}>
-            <EditIcon size="small" />
+          <IconButton color="primary" size="small" onClick={() => { setEditingUser(params.row); setEditFormData({ name: params.row.name, username: params.row.username, password: "" }); setEditOpen(true); }} sx={{ mr: 1, bgcolor: 'rgba(62,166,255,0.1)' }}>
+            <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton color="error" onClick={() => handleDelete(p.row._id)}>
-            <DeleteIcon size="small" />
+          <IconButton color="error" size="small" onClick={() => handleDelete(params.row)} sx={{ bgcolor: 'rgba(244,67,54,0.1)' }}>
+            <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>
       )
@@ -920,35 +1286,45 @@ const UserManagement = ({ apiUrl, token }) => {
   ];
 
   return (
-    <Grid container spacing={4}>
-      <Grid item xs={12} md={4}>
-        <Paper sx={{ p: 4, background: 'rgba(255,255,255,0.02)' }}>
-          <Typography variant="h6" gutterBottom><PersonAddIcon sx={{ mr: 1, verticalAlign: 'middle' }} /> New Auditor</Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <TextField label="Name" fullWidth value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
-            <TextField label="Username" fullWidth value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} />
-            <TextField label="Password" type="password" fullWidth value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
-            <Button variant="contained" onClick={handleRegister}>Register Account</Button>
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 800 }}>User & Access Control</Typography>
+        <Tooltip title="Refresh User List">
+          <IconButton onClick={fetchUsers} color="primary" sx={{ border: '1px solid', borderColor: 'divider' }}>
+            <RefreshIcon />
+          </IconButton>
+        </Tooltip>
+      </Box>
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 4, background: 'rgba(255,255,255,0.02)' }}>
+            <Typography variant="h6" gutterBottom><PersonAddIcon sx={{ mr: 1, verticalAlign: 'middle' }} /> New Auditor</Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+              <TextField label="Name" fullWidth value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
+              <TextField label="Username" fullWidth value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} />
+              <TextField label="Password" type="password" fullWidth value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
+              <Button variant="contained" onClick={handleRegister}>Register Account</Button>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={8}>
+          <Box sx={{ height: 500, width: '100%' }}>
+            <DataGrid rows={users} columns={columns} getRowId={(r) => r._id} disableRowSelectionOnClick />
           </Box>
-        </Paper>
+        </Grid>
+        <Dialog open={editOpen} onClose={() => setEditOpen(false)} PaperProps={{ sx: { background: '#0a0a0a' } }}>
+          <DialogTitle>Edit Profile</DialogTitle>
+          <DialogContent sx={{ minWidth: 320, pt: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField label="Name" fullWidth value={editFormData.name} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} />
+              <TextField label="Username" fullWidth value={editFormData.username} onChange={(e) => setEditFormData({ ...editFormData, username: e.target.value })} />
+              <TextField label="New Password (optional)" type="password" fullWidth value={editFormData.password} onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })} />
+            </Box>
+          </DialogContent>
+          <DialogActions><Button onClick={() => setEditOpen(false)}>Cancel</Button><Button variant="contained" onClick={handleUpdate}>Save Changes</Button></DialogActions>
+        </Dialog>
       </Grid>
-      <Grid item xs={12} md={8}>
-        <Box sx={{ height: 500, width: '100%' }}>
-          <DataGrid rows={users} columns={columns} getRowId={(r) => r._id} disableRowSelectionOnClick />
-        </Box>
-      </Grid>
-      <Dialog open={editOpen} onClose={() => setEditOpen(false)} PaperProps={{ sx: { background: '#0a0a0a' } }}>
-        <DialogTitle>Edit Profile</DialogTitle>
-        <DialogContent sx={{ minWidth: 320, pt: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField label="Name" fullWidth value={editFormData.name} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} />
-            <TextField label="Username" fullWidth value={editFormData.username} onChange={(e) => setEditFormData({ ...editFormData, username: e.target.value })} />
-            <TextField label="New Password (optional)" type="password" fullWidth value={editFormData.password} onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })} />
-          </Box>
-        </DialogContent>
-        <DialogActions><Button onClick={() => setEditOpen(false)}>Cancel</Button><Button variant="contained" onClick={handleUpdate}>Save Changes</Button></DialogActions>
-      </Dialog>
-    </Grid>
+    </Box>
   );
 };
 
@@ -1189,52 +1565,155 @@ const AnalyticsCharts = ({ tasks, settings }) => {
   );
 };
 
-const UserStatsTable = ({ stats }) => {
+const UserStatsTable = ({ tasks = [] }) => { // Changed prop from stats to tasks
+
+  // Compute aggregated stats per auditor
+  const rows = React.useMemo(() => {
+    const auditorMap = {};
+
+    tasks.forEach(task => {
+      if (!task.auditor) return;
+      const id = task.auditor._id || task.auditor.id || task.auditor.email;
+      const name = task.auditor.name || task.auditor.email || "Unknown";
+
+      if (!auditorMap[id]) {
+        auditorMap[id] = {
+          id,
+          name,
+          email: task.auditor.email,
+          total: 0,
+          pending: 0,
+          completed: 0,
+          okChecks: 0,
+          totalChecks: 0,
+          lastActive: null
+        };
+      }
+
+      const auditor = auditorMap[id];
+      auditor.total++;
+
+      if (task.status === 'Submitted' || task.status === 'Approved') {
+        auditor.completed++;
+        // Compliance calc
+        if (task.checklist) {
+          task.checklist.forEach(c => {
+            auditor.totalChecks++;
+            if (c.status === 'OK') auditor.okChecks++;
+          });
+        }
+      } else {
+        auditor.pending++;
+      }
+
+      // Last Active
+      const taskDate = new Date(task.updatedAt);
+      if (!auditor.lastActive || taskDate > auditor.lastActive) {
+        auditor.lastActive = taskDate;
+      }
+    });
+
+    return Object.values(auditorMap).map(a => {
+      const compliance = a.totalChecks > 0 ? (a.okChecks / a.totalChecks) * 100 : 0;
+      let grade = 'F';
+      if (compliance >= 95) grade = 'A+';
+      else if (compliance >= 90) grade = 'A';
+      else if (compliance >= 80) grade = 'B';
+      else if (compliance >= 70) grade = 'C';
+
+      return {
+        ...a,
+        compliance,
+        grade,
+        successRate: a.total > 0 ? (a.completed / a.total) * 100 : 0
+      };
+    });
+  }, [tasks]);
+
   const columns = [
     {
       field: 'name',
       headerName: 'Auditor',
-      flex: 1,
+      width: 250,
       renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', gap: 2 }}>
-          <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32, fontSize: '0.8rem', borderRadius: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', gap: 1.5 }}>
+          <Avatar sx={{ bgcolor: '#333', color: '#fff', width: 32, height: 32, fontSize: '0.8rem', borderRadius: 1, border: '1px solid #444' }}>
             {params.value.charAt(0)}
           </Avatar>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>{params.value}</Typography>
+          <Box sx={{ lineHeight: 1.2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>{params.value}</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{params.row.email}</Typography>
+          </Box>
         </Box>
       )
     },
-    { field: 'totalTasks', headerName: 'Assigned', width: 120, type: 'number' },
-    { field: 'pendingTasks', headerName: 'Pending', width: 120, type: 'number' },
-    { field: 'submittedTasks', headerName: 'Completed', width: 120, type: 'number' },
     {
-      field: 'performance',
-      headerName: 'Performance',
-      flex: 1,
-      minWidth: 200,
-      renderCell: (params) => {
-        const value = params.row.totalTasks > 0 ? (params.row.submittedTasks / params.row.totalTasks) * 100 : 0;
+      field: 'grade',
+      headerName: 'Grade',
+      width: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (p) => {
+        const color = p.value.startsWith('A') ? '#00f5d4' : p.value === 'B' ? '#4caf50' : p.value === 'C' ? '#ff9800' : '#f44336';
         return (
-          <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', height: '100%', gap: 2 }}>
-            <LinearProgress
-              variant="determinate"
-              value={value}
-              sx={{ flexGrow: 1, height: 4, borderRadius: 0, bgcolor: 'rgba(255,255,255,0.05)' }}
-              color={value > 80 ? "success" : value > 50 ? "warning" : "error"}
-            />
-            <Typography variant="body2" sx={{ minWidth: 40, fontWeight: 700 }}>{Math.round(value)}%</Typography>
+          <Box sx={{
+            bgcolor: `${color}22`,
+            color: color,
+            border: `1px solid ${color}44`,
+            borderRadius: 1,
+            width: 36,
+            height: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 800,
+            fontSize: '0.85rem'
+          }}>
+            {p.value}
           </Box>
-        );
+        )
       }
+    },
+    {
+      field: 'compliance',
+      headerName: 'Compliance',
+      width: 140,
+      renderCell: (p) => (
+        <Box sx={{ width: '100%' }}>
+          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 700, color: p.value >= 90 ? '#00f5d4' : '#f44336' }}>
+            {Math.round(p.value)}%
+          </Typography>
+          <LinearProgress
+            variant="determinate"
+            value={p.value}
+            sx={{
+              height: 4,
+              borderRadius: 2,
+              bgcolor: 'rgba(255,255,255,0.1)',
+              '& .MuiLinearProgress-bar': { bgcolor: p.value >= 90 ? '#00f5d4' : '#f44336' }
+            }}
+          />
+        </Box>
+      )
+    },
+    { field: 'total', headerName: 'Total', width: 90, type: 'number', headerAlign: 'center', align: 'center' },
+    { field: 'completed', headerName: 'Done', width: 90, type: 'number', headerAlign: 'center', align: 'center', renderCell: p => <span style={{ color: '#aaa' }}>{p.value}</span> },
+    { field: 'pending', headerName: 'Pending', width: 90, type: 'number', headerAlign: 'center', align: 'center', renderCell: p => <span style={{ color: '#f44336' }}>{p.value}</span> },
+    {
+      field: 'lastActive',
+      headerName: 'Last Active',
+      flex: 1,
+      minWidth: 150,
+      renderCell: (p) => p.value ? <Typography variant="caption" sx={{ color: '#aaa' }}>{format(p.value, 'MMM dd, HH:mm')}</Typography> : '-'
     }
   ];
 
   return (
     <Box sx={{ height: 500, width: '100%' }}>
       <DataGrid
-        rows={stats}
+        rows={rows}
         columns={columns}
-        getRowId={(row) => row._id}
+        getRowId={(row) => row.id}
         pageSizeOptions={[5, 10, 25]}
         initialState={{
           pagination: { paginationModel: { pageSize: 10 } },
@@ -1262,12 +1741,17 @@ const UserStatsTable = ({ stats }) => {
   );
 };
 
-const TaskManagement = ({ apiUrl, token }) => {
+const TaskManagement = ({ apiUrl, token, auditors }) => {
   const [tasks, setTasks] = useState([]);
   const [openUpload, setOpenUpload] = useState(false);
-  const [csvFile, setCsvFile] = useState(null);
   const [openReschedule, setOpenReschedule] = useState(false);
   const [taskToReschedule, setTaskToReschedule] = useState(null);
+
+  // New Features States
+  const [openImport, setOpenImport] = useState(false);
+  const [selectionModel, setSelectionModel] = useState([]);
+  const [openBulkAssign, setOpenBulkAssign] = useState(false);
+  const [bulkAuditorId, setBulkAuditorId] = useState("");
 
   const [selectedDate, setSelectedDate] = useState(() => {
     const d = new Date();
@@ -1281,9 +1765,11 @@ const TaskManagement = ({ apiUrl, token }) => {
   const [statusFilter, setStatusFilter] = useState("All");
   const [auditorFilter, setAuditorFilter] = useState("All");
   const [townFilter, setTownFilter] = useState("All");
+  const [teamFilter, setTeamFilter] = useState("All");
 
   const [uniqueTowns, setUniqueTowns] = useState([]);
   const [uniqueAuditors, setUniqueAuditors] = useState([]);
+  const [uniqueTeams, setUniqueTeams] = useState([]);
 
   const fetchTasks = async () => {
     try {
@@ -1297,6 +1783,9 @@ const TaskManagement = ({ apiUrl, token }) => {
 
       const auditors = [...new Set(data.map(t => t.auditor?.name).filter(Boolean))].sort();
       setUniqueAuditors(auditors);
+
+      const teams = [...new Set(data.map(t => t.siteDetails?.["INSTALLATION TEAM"]).filter(Boolean))].sort();
+      setUniqueTeams(teams);
     } catch (error) {
       console.error(error);
       if (error.response && error.response.status === 401) {
@@ -1308,12 +1797,14 @@ const TaskManagement = ({ apiUrl, token }) => {
 
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.slid.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (task.siteDetails?.["CUST NAME"] || "").toLowerCase().includes(searchQuery.toLowerCase());
+      (task.siteDetails?.["CUST NAME"] || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (task.siteDetails?.["CUST CONT"] || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "All" || task.status === statusFilter;
     const matchesAuditor = auditorFilter === "All" || task.auditor?.name === auditorFilter;
     const matchesTown = townFilter === "All" || (task.siteDetails?.TOWN || task.siteDetails?.town) === townFilter;
+    const matchesTeam = teamFilter === "All" || task.siteDetails?.["INSTALLATION TEAM"] === teamFilter;
 
-    return matchesSearch && matchesStatus && matchesAuditor && matchesTown;
+    return matchesSearch && matchesStatus && matchesAuditor && matchesTown && matchesTeam;
   });
 
   const handleDateChange = (days) => {
@@ -1332,30 +1823,6 @@ const TaskManagement = ({ apiUrl, token }) => {
   }, [token, selectedDate]);
 
 
-  const handleFileChange = (e) => setCsvFile(e.target.files[0]);
-
-  const handleUpload = () => {
-    if (!csvFile) return;
-    Papa.parse(csvFile, {
-      header: true,
-      complete: async (results) => {
-        try {
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          const { data } = await axios.post(`${apiUrl}/upload-tasks`, { tasks: results.data, scheduledDate: selectedDate }, config);
-          alert(data.message);
-          setOpenUpload(false);
-          fetchTasks();
-        } catch (error) {
-          alert(error.response?.data?.message || "Upload failed");
-          if (error.response && error.response.status === 401) {
-            dispatch(logoutAuditUser());
-            window.location.href = '/audit/login';
-          }
-        }
-      }
-    });
-  };
-
   const handleVisibilityToggle = async (task) => {
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -1364,9 +1831,9 @@ const TaskManagement = ({ apiUrl, token }) => {
     } catch (error) { console.error(error); }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Delete task?")) {
-      await axios.delete(`${apiUrl}/tasks/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+  const handleDelete = async (task) => {
+    if (window.confirm(`Are you sure you want to delete task: ${task.slid}?\n\nThis will permanently remove the task and all associated photos from the system.`)) {
+      await axios.delete(`${apiUrl}/tasks/${task._id}`, { headers: { Authorization: `Bearer ${token}` } });
       fetchTasks();
     }
   };
@@ -1388,24 +1855,68 @@ const TaskManagement = ({ apiUrl, token }) => {
     fetchTasks();
   };
 
+  const handleBulkAssign = async () => {
+    if (!bulkAuditorId || selectionModel.length === 0) return;
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await Promise.all(selectionModel.map(id => axios.put(`${apiUrl}/tasks/${id}/assign`, { auditorId: bulkAuditorId }, config)));
+      alert(`Successfully assigned ${selectionModel.length} tasks.`);
+      setOpenBulkAssign(false);
+      setSelectionModel([]);
+      setBulkAuditorId("");
+      fetchTasks();
+    } catch (error) { alert("Bulk assignment failed."); }
+  };
+
   const columns = [
-    { field: 'slid', headerName: 'SLID', width: 130, renderCell: (p) => <Typography variant="body2" sx={{ fontWeight: 800, color: 'primary.main' }}>{p.value}</Typography> },
+    { field: 'slid', headerName: 'SLID', width: 130, renderCell: (p) => <Typography variant="body2" sx={{ fontWeight: 800, color: 'primary.main', fontFamily: 'monospace' }}>{p.value}</Typography> },
     {
-      field: 'customer', headerName: 'Cust. / Location', flex: 1.5,
+      field: 'customer', headerName: 'Cust. / Location', flex: 1.5, minWidth: 200,
       renderCell: (p) => (
         <Box sx={{ py: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{p.row.siteDetails?.["CUST NAME"] || ' - '}</Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>{p.row.siteDetails?.TOWN}</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2, color: '#fff' }}>{p.row.siteDetails?.["CUST NAME"] || ' - '}</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <PlaceIcon sx={{ fontSize: 10 }} />
+            {p.row.siteDetails?.TOWN}
+          </Typography>
         </Box>
       )
     },
     {
-      field: 'contact_number', headerName: 'Contact', width: 120,
-      renderCell: (p) => <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{p.row.siteDetails?.["CUST CONT"] || '-'}</Typography>
+      field: 'installTeam',
+      headerName: 'Installation Team',
+      width: 150,
+      valueGetter: (params) => params.row?.siteDetails?.["INSTALLATION TEAM"] || "N/A",
+      renderCell: (p) => <Chip label={p.value} size="small" variant="outlined" sx={{ borderRadius: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+    },
+    {
+      field: 'daysPending',
+      headerName: 'Age',
+      width: 100,
+      valueGetter: (params) => {
+        const date = new Date(params.row.createdAt);
+        const diffTime = Math.abs(new Date() - date);
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      },
+      renderCell: (p) => (
+        <Typography variant="caption" sx={{
+          color: p.value > 7 ? '#f44336' : p.value > 3 ? '#ff9800' : 'text.secondary',
+          fontWeight: 700
+        }}>
+          {p.value} days
+        </Typography>
+      )
     },
     {
       field: 'auditor', headerName: 'Auditor', width: 150,
-      renderCell: (p) => p.row.auditor ? <Chip label={p.row.auditor.name} size="small" /> : <Typography variant="caption" color="text.secondary">Unassigned</Typography>
+      renderCell: (p) => p.row.auditor ?
+        <Chip
+          avatar={<Avatar sx={{ bgcolor: 'primary.dark' }}>{p.row.auditor.name.charAt(0)}</Avatar>}
+          label={p.row.auditor.name}
+          size="small"
+          sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}
+        /> :
+        <Chip label="Unassigned" size="small" variant="outlined" color="error" />
     },
     {
       field: 'status',
@@ -1416,23 +1927,37 @@ const TaskManagement = ({ apiUrl, token }) => {
         if (p.value === 'Submitted') color = 'success';
         if (p.value === 'In Progress') color = 'primary';
         if (p.value === 'Pending') color = 'warning';
-        return <Chip label={p.value} size="small" color={color} variant={p.value === 'Pending' ? 'outlined' : 'filled'} />;
+        return <Chip label={p.value} size="small" color={color} variant={p.value === 'Pending' ? 'outlined' : 'filled'} sx={{ fontWeight: 700 }} />;
       }
     },
     {
-      field: 'isVisible', headerName: 'Vis', width: 80,
+      field: 'updatedAt',
+      headerName: 'Last Updated',
+      width: 120,
+      renderCell: (p) => <Typography variant="caption" color="text.secondary">{new Date(p.value).toLocaleDateString()}</Typography>
+    },
+    {
+      field: 'isVisible', headerName: 'Vis', width: 60,
       renderCell: (p) => (
-        <IconButton size="small" onClick={() => handleVisibilityToggle(p.row)} color={p.value === false ? "default" : "primary"}>
+        <IconButton size="small" onClick={() => handleVisibilityToggle(p.row)} sx={{ opacity: p.value === false ? 0.3 : 1, color: p.value === false ? 'inherit' : 'primary.main' }}>
           {p.value === false ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
         </IconButton>
       )
     },
     {
-      field: 'actions', headerName: 'Actions', width: 120,
+      field: 'actions', headerName: 'Actions', width: 100,
       renderCell: (p) => (
-        <Box>
-          <IconButton color="primary" size="small" onClick={() => { setTaskToReschedule(p.row); setOpenReschedule(true); }}><CalendarTodayIcon fontSize="small" /></IconButton>
-          <IconButton color="error" size="small" onClick={() => handleDelete(p.row._id)}><DeleteIcon fontSize="small" /></IconButton>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Reschedule">
+            <IconButton color="primary" size="small" onClick={() => { setTaskToReschedule(p.row); setOpenReschedule(true); }} sx={{ bgcolor: 'rgba(62, 166, 255, 0.1)' }}>
+              <CalendarTodayIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete">
+            <IconButton color="error" size="small" onClick={() => handleDelete(p.row)} sx={{ bgcolor: 'rgba(244, 67, 54, 0.1)' }}>
+              <DeleteIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
         </Box>
       )
     }
@@ -1440,7 +1965,7 @@ const TaskManagement = ({ apiUrl, token }) => {
 
   return (
     <Box>
-      <Paper sx={{ p: 2, mb: 4, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+      <Paper sx={{ p: 2, mb: 4, bgcolor: 'background.paper', border: '1px solid rgba(255, 255, 255, 0.12)', boxShadow: 'none' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {/* Top Row: Date & Bulk Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1451,7 +1976,7 @@ const TaskManagement = ({ apiUrl, token }) => {
                 </IconButton>
                 <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1, borderRadius: 2, bgcolor: 'rgba(62, 166, 255, 0.1)' }}>
                   <CalendarTodayIcon sx={{ mr: 1, fontSize: 20, color: 'primary.main' }} />
-                  <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', fontWeight: 700 }} />
+                  <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ background: 'transparent', border: 'none', color: 'inherit', outline: 'none', fontWeight: 700 }} />
                 </Box>
                 <IconButton onClick={() => handleDateChange(1)} size="small" sx={{ color: 'primary.main', bgcolor: 'rgba(62, 166, 255, 0.05)' }}>
                   <ChevronRightIcon fontSize="small" />
@@ -1461,9 +1986,19 @@ const TaskManagement = ({ apiUrl, token }) => {
             </Box>
 
             <Box sx={{ display: 'flex', gap: 1 }}>
+              <Tooltip title="Refresh Tasks">
+                <IconButton onClick={fetchTasks} color="primary" size="small" sx={{ border: '1px solid', borderColor: 'divider' }}>
+                  <RefreshIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
               <Button variant="outlined" size="small" color="inherit" onClick={() => handleBulkVisibility(false)}>Hide All</Button>
               <Button variant="outlined" size="small" onClick={() => handleBulkVisibility(true)}>Show All</Button>
-              <Button variant="contained" size="small" startIcon={<CloudUploadIcon />} onClick={() => setOpenUpload(true)}>Import CSV</Button>
+              {selectionModel.length > 0 && (
+                <Button variant="contained" color="secondary" size="small" onClick={() => setOpenBulkAssign(true)} startIcon={<PersonAddIcon />}>
+                  Assign ({selectionModel.length})
+                </Button>
+              )}
+              <Button variant="contained" size="small" startIcon={<CloudUploadIcon />} onClick={() => setOpenImport(true)}>Import</Button>
             </Box>
           </Box>
 
@@ -1531,7 +2066,18 @@ const TaskManagement = ({ apiUrl, token }) => {
               </Select>
             </FormControl>
 
-            {(searchQuery || statusFilter !== "All" || townFilter !== "All" || auditorFilter !== "All") && (
+            <Autocomplete
+              size="small"
+              sx={{ minWidth: 200 }}
+              options={["All", ...uniqueTeams]}
+              value={teamFilter}
+              onChange={(event, newValue) => {
+                setTeamFilter(newValue || "All");
+              }}
+              renderInput={(params) => <TextField {...params} label="Team" />}
+            />
+
+            {(searchQuery || statusFilter !== "All" || townFilter !== "All" || auditorFilter !== "All" || teamFilter !== "All") && (
               <Button
                 size="small"
                 onClick={() => {
@@ -1539,6 +2085,7 @@ const TaskManagement = ({ apiUrl, token }) => {
                   setStatusFilter("All");
                   setTownFilter("All");
                   setAuditorFilter("All");
+                  setTeamFilter("All");
                 }}
               >
                 Clear Filters
@@ -1549,16 +2096,59 @@ const TaskManagement = ({ apiUrl, token }) => {
       </Paper>
       <Grid container spacing={3}>
         <Grid item xs={12} md={4}><ManualTaskForm apiUrl={apiUrl} token={token} onSuccess={fetchTasks} defaultDate={selectedDate} /></Grid>
-        <Grid item xs={12} md={8} sx={{ height: 600 }}><DataGrid rows={filteredTasks} columns={columns} getRowId={r => r._id} density="compact" slots={{ toolbar: GridToolbar }} /></Grid>
+        <Grid item xs={12} md={8} sx={{ height: 600 }}>
+          <DataGrid
+            rows={filteredTasks}
+            columns={columns}
+            getRowId={r => r._id}
+            density="compact"
+            slots={{ toolbar: GridToolbar }}
+            checkboxSelection
+            disableRowSelectionOnClick
+            rowSelectionModel={selectionModel}
+            onRowSelectionModelChange={(newSelection) => setSelectionModel(newSelection)}
+          />
+        </Grid>
       </Grid>
       <RescheduleDialog open={openReschedule} onClose={() => setOpenReschedule(false)} onConfirm={handleReschedule} initialDate={taskToReschedule?.scheduledDate?.split("T")[0]} />
-      <Dialog open={openUpload} onClose={() => setOpenUpload(false)} fullScreen>
-        <DialogTitle>Upload Tasks</DialogTitle>
-        <DialogContent dividers sx={{ textAlign: 'center', p: 4 }}>
-          <CloudUploadIcon sx={{ fontSize: 60, mb: 2, opacity: 0.5 }} />
-          <input type="file" accept=".csv" onChange={handleFileChange} style={{ width: '100%' }} />
+      <AuditAssignmentWizard
+        open={openUpload}
+        onClose={() => setOpenUpload(false)}
+        onSuccess={() => { fetchTasks(); setOpenUpload(false); }}
+        apiUrl={apiUrl}
+        token={token}
+        auditors={auditors}
+      />
+
+      {/* New Import Dialog */}
+      <ImportTaskDialog
+        open={openImport}
+        onClose={() => setOpenImport(false)}
+        onSuccess={() => { fetchTasks(); setOpenImport(false); }}
+        apiUrl={apiUrl}
+        token={token}
+      />
+
+      {/* Bulk Assign Dialog */}
+      <Dialog open={openBulkAssign} onClose={() => setOpenBulkAssign(false)} PaperProps={{ sx: { bgcolor: '#0a0a0a', border: '1px solid #333' } }}>
+        <DialogTitle sx={{ color: '#fff' }}>Assign {selectionModel.length} Tasks</DialogTitle>
+        <DialogContent sx={{ pt: 2, minWidth: 300 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Select an auditor to assign the selected tasks to.</Typography>
+          <TextField
+            select fullWidth label="Select Auditor"
+            value={bulkAuditorId} onChange={(e) => setBulkAuditorId(e.target.value)}
+            SelectProps={{ native: true }}
+            variant="filled"
+            sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}
+          >
+            <option value="">-- Select Auditor --</option>
+            {auditors.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
+          </TextField>
         </DialogContent>
-        <DialogActions><Button onClick={() => setOpenUpload(false)}>Cancel</Button><Button variant="contained" onClick={handleUpload}>Start Upload</Button></DialogActions>
+        <DialogActions>
+          <Button onClick={() => setOpenBulkAssign(false)} color="inherit">Cancel</Button>
+          <Button variant="contained" onClick={handleBulkAssign} disabled={!bulkAuditorId}>Assign</Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );
@@ -1567,9 +2157,16 @@ const TaskManagement = ({ apiUrl, token }) => {
 
 // Main Dashboard
 const AuditAdminDashboard = () => {
-  const [tabIndex, setTabIndex] = useState(0);
-  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
+
+  // Route-to-Index Map
+  const routes = ["performance", "tasks", "reports", "users"];
+  const currentPath = location.pathname.split("/").pop();
+  const initialTab = routes.indexOf(currentPath) !== -1 ? routes.indexOf(currentPath) : 0;
+
+  const [tabIndex, setTabIndex] = useState(initialTab);
   const [dashboardStats, setDashboardStats] = useState({
     total: 0,
     pending: 0,
@@ -1592,77 +2189,84 @@ const AuditAdminDashboard = () => {
       ? localStorage.getItem("accessToken")
       : null;
 
-  // Fetch Dashboard Data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const config = { headers: { Authorization: `Bearer ${token}` } };
+  // Reusable Fetch
+  const fetchData = async () => {
+    if (!token) return;
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const tasksReq = axios.get(`${API_URL}/all-tasks`, config);
+      const statsReq = axios.get(`${API_URL}/stats`, config);
+      const settingsReq = api.get("/settings");
 
-        // 1. Fetch Key Metrics (Using All Tasks to capture unassigned ones too)
-        const tasksReq = axios.get(`${API_URL}/all-tasks`, config);
-        // 2. Fetch Auditor Performance
-        const statsReq = axios.get(`${API_URL}/stats`, config);
-        // 3. Fetch Settings
-        const settingsReq = api.get("/settings");
+      const [tasksRes, statsRes, settingsRes] = await Promise.all([tasksReq, statsReq, settingsReq]);
+      const tasks = tasksRes.data;
+      const stats = statsRes.data;
+      const settingsData = settingsRes.data;
 
-        const [tasksRes, statsRes, settingsRes] = await Promise.all([tasksReq, statsReq, settingsReq]);
-        const tasks = tasksRes.data;
-        const stats = statsRes.data;
-        const settingsData = settingsRes.data;
+      const total = tasks.length;
+      const completed = tasks.filter(t => t.status === 'Submitted' || t.status === 'Approved').length;
+      const pending = tasks.length - completed;
+      const activeAuditors = stats.length;
 
-        // Compute Totals form All Tasks
-        const total = tasks.length;
-        const completed = tasks.filter(t => t.status === 'Submitted' || t.status === 'Approved').length;
-        const pending = tasks.length - completed;
-
-        // Active auditors from stats
-        const activeAuditors = stats.length;
-
-        setDashboardStats({ total, pending, completed, activeAuditors });
-        setAuditorStats(stats);
-        setAllTasks(tasks);
-        setSettings(settingsData);
-
-      } catch (error) {
-        console.error("Dashboard fetch failed", error);
-        if (error.response && error.response.status === 401) {
-          dispatch(logoutAuditUser());
-          navigate('/audit/login');
-        }
+      setDashboardStats({ total, pending, completed, activeAuditors });
+      setAuditorStats(stats);
+      setAllTasks(tasks);
+      setSettings(settingsData);
+    } catch (error) {
+      console.error("Dashboard fetch failed", error);
+      if (error.response && error.response.status === 401) {
+        dispatch(logoutAuditUser());
+        navigate('/audit/login');
       }
-    };
-
-    if (token && token !== "undefined" && token !== "null") {
-      fetchData();
     }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [token, API_URL]);
 
+  // Sync tab with route on path change (e.g. back button)
+  useEffect(() => {
+    const idx = routes.indexOf(currentPath);
+    if (idx !== -1 && idx !== tabIndex) {
+      setTabIndex(idx);
+    }
+  }, [currentPath]);
 
   const handleChange = (event, newValue) => {
     setTabIndex(newValue);
+    navigate(`/audit/admin/${routes[newValue]}`);
   };
 
   return (
     <ThemeProvider theme={auditTheme}>
-      <Box sx={{ width: "100%", bgcolor: 'background.default', minHeight: '100vh', p: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '90vh', p: 3, bgcolor: 'background.default' }}>
 
+        {/* Professional Header */}
+        {/* Professional Header */}
         <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
-            <Typography variant="h4" gutterBottom>Overview</Typography>
-            <Typography variant="subtitle1" color="text.secondary">Welcome back, {auditUser?.name}</Typography>
+            <Typography variant="h4" gutterBottom sx={{ color: 'text.primary', fontWeight: 700, letterSpacing: '-0.5px' }}>
+              Field Audit Admin Portal
+            </Typography>
+            <Typography variant="subtitle1" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
+              Welcome back, <span style={{ color: '#fff', fontWeight: 600 }}>{auditUser?.name}</span>
+            </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant="outlined"
-              color="primary"
               startIcon={<HomeIcon />}
               onClick={() => navigate("/dashboard")}
               sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 700,
-                borderWidth: 2,
-                '&:hover': { borderWidth: 2 }
+                color: 'text.secondary',
+                borderColor: 'divider',
+                backdropFilter: 'blur(10px)',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  bgcolor: 'rgba(255,255,255,0.05)'
+                }
               }}
             >
               Main Dashboard
@@ -1670,10 +2274,9 @@ const AuditAdminDashboard = () => {
           </Box>
         </Box>
 
-
-        {/* Top Stats Row */}
+        {/* Stats Row (Only on Performance Tab) */}
         {tabIndex === 0 && (
-          <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid container spacing={2} sx={{ mb: 4 }}>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard title="Total Tasks" value={dashboardStats.total} color="#3ea6ff" icon={<AssignmentTurnedInIcon />} subtext="System lifetime" />
             </Grid>
@@ -1689,32 +2292,53 @@ const AuditAdminDashboard = () => {
           </Grid>
         )}
 
-        <Paper sx={{ mb: 3 }}>
+        {/* Navigation Tabs */}
+        <Paper sx={{ mb: 3, bgcolor: 'background.paper', color: 'text.primary', borderRadius: 0, overflow: 'hidden', borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }}>
           <Tabs
             value={tabIndex}
             onChange={handleChange}
             aria-label="admin tabs"
             indicatorColor="primary"
-            textColor="primary"
-            sx={{ px: 2, borderBottom: '1px solid #f0f0f0' }}
+            textColor="inherit"
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTab-root': {
+                minHeight: 64,
+                textTransform: 'none',
+                fontSize: '0.95rem',
+                fontWeight: 500,
+                color: 'rgba(255,255,255,0.7)',
+                '&.Mui-selected': { color: '#fff', fontWeight: 700 }
+              }
+            }}
           >
-            <Tab label="Team Performance" icon={<AssessmentIcon fontSize="small" />} iconPosition="start" />
-            <Tab label="Task Operations" icon={<CloudUploadIcon fontSize="small" />} iconPosition="start" />
-            <Tab label="Review Reports" icon={<RateReviewIcon fontSize="small" />} iconPosition="start" />
-            <Tab label="User Management" icon={<PersonAddIcon fontSize="small" />} iconPosition="start" />
+            <Tab label="Team Performance" icon={<AssessmentIcon fontSize="small" sx={{ mb: 0.5 }} />} iconPosition="start" />
+            <Tab label="Task Operations" icon={<CloudUploadIcon fontSize="small" sx={{ mb: 0.5 }} />} iconPosition="start" />
+            <Tab label="Review Reports" icon={<RateReviewIcon fontSize="small" sx={{ mb: 0.5 }} />} iconPosition="start" />
+            <Tab label="User Management" icon={<PersonAddIcon fontSize="small" sx={{ mb: 0.5 }} />} iconPosition="start" />
           </Tabs>
         </Paper>
 
-        {/* Content Area */}
-        <Box sx={{ mt: 4 }}>
+        {/* Main Content Area */}
+        <Box sx={{ flexGrow: 1 }}>
           {tabIndex === 0 && (
             <Box>
               <AnalyticsCharts tasks={allTasks} settings={settings} />
-              <Typography variant="h6" sx={{ mb: 3, mt: 6, fontWeight: 800 }}>Detailed Auditor Performance</Typography>
-              <UserStatsTable stats={auditorStats} />
+              <Paper sx={{ p: 0, mt: 4, bgcolor: 'background.paper', overflow: 'hidden' }}>
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }}>
+                  <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 700 }}>Detailed Auditor Performance</Typography>
+                  <Tooltip title="Refresh Auditor Stats">
+                    <IconButton onClick={fetchData} sx={{ color: 'action.active' }}>
+                      <RefreshIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+                <UserStatsTable tasks={allTasks} />
+              </Paper>
             </Box>
           )}
-          {tabIndex === 1 && <TaskManagement apiUrl={API_URL} token={token} />}
+          {tabIndex === 1 && <TaskManagement apiUrl={API_URL} token={token} auditors={auditorStats} />}
           {tabIndex === 2 && <DetailedTaskReview apiUrl={API_URL} token={token} />}
           {tabIndex === 3 && <UserManagement apiUrl={API_URL} token={token} />}
         </Box>

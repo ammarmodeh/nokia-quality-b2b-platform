@@ -19,7 +19,8 @@ import {
   updateAuditUser,
   toggleTaskVisibility,
   rescheduleTask,
-  checkSlid
+  checkSlid,
+  previewTaskAssignments
 } from "../controllers/fieldAuditController.js";
 
 import multer from "multer";
@@ -61,8 +62,8 @@ const upload = multer({
       const cleanDate = scheduledDate.split('T')[0];
       const cleanActualName = actualName.replace(/[^a-z0-9]/gi, '_');
 
-      // Convention: [actualName]-[slid]-[checkpointName]-[auditorName]-[submittedDate]
-      const fileName = `${cleanActualName}-${cleanSlid}-${cleanCheckpoint}-${cleanAuditor}-${cleanDate}${path.extname(file.originalname)}`;
+      // Convention: [actualName]-[slid]-[checkpointName]-[auditorName]-[submittedDate]-[timestamp]
+      const fileName = `${cleanActualName}-${cleanSlid}-${cleanCheckpoint}-${cleanAuditor}-${cleanDate}-${Date.now()}${path.extname(file.originalname)}`;
       const fullPath = `${cleanAuditor}/${cleanSlid}/${fileName}`;
 
       cb(null, fullPath);
@@ -163,6 +164,7 @@ router.delete("/tasks/:taskId/photo/:photoId", protectAuditor, deleteTaskPhoto);
 // Admin
 router.post("/register", protectAuditor, adminOnly, registerAuditUser); // Admin creates users
 router.post("/upload-tasks", protectAuditor, adminOnly, uploadTasks);
+router.post("/preview-assignments", protectAuditor, adminOnly, previewTaskAssignments);
 router.post("/manual-task", protectAuditor, adminOnly, createManualTask);
 router.get("/all-tasks", protectAuditor, adminOnly, getAllTasks);
 router.get("/stats", protectAuditor, adminOnly, getAuditorStats);

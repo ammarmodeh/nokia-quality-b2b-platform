@@ -34,6 +34,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const [teamCompany, setTeamCompany] = useState('');
   const [evaluationScore, setEvaluationScore] = useState('');
   const [governorate, setGovernorate] = useState('');
+  const [district, setDistrict] = useState('');
   const [fieldTeams, setFieldTeams] = useState([]);
   const [teamInfo, setTeamInfo] = useState({ teamName: '', teamId: '' });
   const [customerType, setCustomerType] = useState('');
@@ -149,7 +150,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
         reason: task.reason || "",
         responsible: task.responsible || "",
         customerName: task.customerName || "",
-        district: task.district || "",
         operation: task.operation || "",
         date: formattedDate,
         interviewDate: formattedInterviewDate,
@@ -164,7 +164,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setValue("reason", task.reason || "");
       setValue("responsible", task.responsible || "");
       setValue("customerName", task.customerName || "");
-      setValue("district", task.district || "");
       setValue("operation", task.operation || "");
       setValue("dashboardShortNote", task.dashboardShortNote || "");
 
@@ -182,6 +181,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setTeamCompany(task.teamCompany || '');
       setEvaluationScore(task.evaluationScore || '');
       setGovernorate(task.governorate || '');
+      setDistrict(task.district || '');
       const teamIdVal = task.teamId && typeof task.teamId === 'object' ? task.teamId._id : task.teamId;
       const teamNameVal = task.teamName || (task.teamId && typeof task.teamId === 'object' ? task.teamId.teamName : '');
       setTeamInfo({
@@ -247,6 +247,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       evaluationScore,
       operation,
       governorate,
+      district,
       customerType,
       validationStatus,
       responsible,
@@ -345,7 +346,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               />
             </Stack>
 
-            {/* Row 3: Governorate, District */}
+            {/* Row 3: Governorate & District */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel>Governorate</InputLabel>
@@ -357,13 +358,11 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               </FormControl>
               <TextField
                 label="District"
+                placeholder="Enter District"
                 fullWidth
                 variant="outlined"
-                {...register('district', { required: 'District is required!' })}
-                error={!!errors.district}
-                helperText={errors.district ? errors.district.message : ''}
-                inputProps={{ dir: "auto" }}
-                sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
               />
             </Stack>
 

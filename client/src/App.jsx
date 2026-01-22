@@ -114,7 +114,7 @@ const App = () => {
         {/* Audit System Routes */}
         <Route path="/audit/login" element={<AuditLogin />} />
         <Route path="/audit" element={<AuditLayout />}>
-          <Route path="admin" element={<AuditAdminDashboard />} />
+          <Route path="admin/*" element={<AuditAdminDashboard />} />
           <Route path="tasks" element={<AuditorDashboard />} />
           <Route path="tasks/:slid" element={<AuditTaskInspection />} />
         </Route>

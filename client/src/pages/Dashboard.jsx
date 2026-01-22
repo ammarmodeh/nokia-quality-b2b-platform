@@ -68,12 +68,10 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       // Create a unified loading state or keep granular if needed, but parallelize the requests
       try {
-        const headers = { Authorization: `Bearer ${localStorage.getItem("accessToken")}` };
-
         const [tasksRes, teamsRes, samplesRes, settingsRes] = await Promise.all([
-          api.get("/tasks/get-all-tasks", { headers }),
-          api.get('/field-teams/get-field-teams', { headers }),
-          api.get(`/samples-token/${currentYear}`, { headers }),
+          api.get("/tasks/get-all-tasks"),
+          api.get('/field-teams/get-field-teams'),
+          api.get(`/samples-token/${currentYear}`),
           api.get("/settings")
         ]);
 

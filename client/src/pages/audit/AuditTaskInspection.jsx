@@ -187,7 +187,7 @@ const AuditTaskInspection = () => {
         formData.append('description', file.name);
 
         const { data } = await axios.post(`${API_URL}/tasks/${task._id}/photo`, formData, getAuthHeader());
-        setTask(prev => ({ ...data, checklist: prev.checklist })); // Preserve local checklist state
+        setTask(prev => ({ ...data, checklist: prev.checklist, finalFeedback: prev.finalFeedback })); // Preserve local unsaved state
       }
     } catch (error) {
       console.error("Photo upload failed", error);
@@ -293,42 +293,54 @@ const AuditTaskInspection = () => {
 
   return (
     <Box sx={{ pb: 16 }}>
-      <Paper sx={{ p: 2, mb: 3, background: 'linear-gradient(135deg, #001f3f 0%, #001122 100%)', color: 'white', borderRadius: 0, border: 'none' }}>
+      <Paper sx={{ p: 2, mb: 3, bgcolor: 'background.paper', color: 'text.primary', borderRadius: 0, border: 'none', borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <IconButton onClick={() => navigate('/audit/tasks')} sx={{ color: 'white', mr: 1, p: 0 }}>
+          <IconButton onClick={() => navigate('/audit/tasks')} sx={{ color: 'inherit', mr: 1, p: 0 }}>
             {/* want back icon from material ui */}
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="overline" color="secondary.light">Audit Inspection</Typography>
+          <Typography variant="overline" sx={{ opacity: 0.8, color: 'primary.main' }}>Audit Inspection</Typography>
         </Box>
         <Typography variant="h5" fontWeight="bold">SLID: {task.slid}</Typography>
-        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+        <Typography variant="body2" sx={{ opacity: 0.7 }}>
           {task.siteDetails?.TOWN || task.siteDetails?.town || 'Unknown Town'}
         </Typography>
         <Box sx={{ mt: 2 }}>
-          <Typography variant="caption" sx={{ opacity: 0.7 }}>
+          <Typography variant="caption" sx={{ opacity: 0.6 }}>
             {task.checklist.filter(i => i.status !== 'Pending').length} / {task.checklist.length} Checkpoints Completed
           </Typography>
         </Box>
       </Paper>
 
-      <Accordion defaultExpanded sx={{ mb: 3, boxShadow: 'none', borderRadius: 0, '&:before': { display: 'none' } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography fontWeight="bold" color="primary">Site Details</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Grid container spacing={2}>
-            {Object.entries(task.siteDetails || {}).map(([key, value]) => (
-              key !== "_id" && key !== "id" && key !== "__v" && (
-                <Grid item xs={6} key={key}>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ fontWeight: 600 }}>{key}</Typography>
-                  <Typography variant="body2">{String(value)}</Typography>
-                </Grid>
-              )
-            ))}
-          </Grid>
-        </AccordionDetails>
-      </Accordion>
+      {/* Parameter Summary Table (Reference Style) - Dark Mode */}
+      <Paper sx={{ mb: 4, border: '1px solid rgba(255, 255, 255, 0.12)', borderRadius: 0, overflow: 'hidden' }}>
+        <Box sx={{ p: 1, bgcolor: '#1e1e1e', borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }}>
+          <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 700 }}>Site Parameter Summary</Typography>
+        </Box>
+        <Grid container>
+          {Object.entries(task.siteDetails || {}).filter(([k]) => k !== "_id" && k !== "id" && k !== "__v").map(([key, value], index) => (
+            <React.Fragment key={key}>
+              <Grid item xs={6} md={2} sx={{
+                p: 1,
+                bgcolor: '#141414',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+                display: 'flex', alignItems: 'center'
+              }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>{key}</Typography>
+              </Grid>
+              <Grid item xs={6} md={4} sx={{
+                p: 1,
+                borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRight: { md: '1px solid rgba(255, 255, 255, 0.12)' },
+                display: 'flex', alignItems: 'center'
+              }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.primary' }}>{String(value)}</Typography>
+              </Grid>
+            </React.Fragment>
+          ))}
+        </Grid>
+      </Paper>
 
       <Box sx={{ mb: 3 }}>
         <TextField
@@ -400,7 +412,7 @@ const AuditTaskInspection = () => {
                 />
               }
               label={<Typography variant="body2" fontWeight="bold">Include Remote Service Assessment</Typography>}
-              sx={{ border: '1px solid rgba(255,255,255,0.1)', pr: 2, borderRadius: 1, bgcolor: 'rgba(255,255,255,0.02)' }}
+              sx={{ border: '1px solid rgba(255,255,255,0.1)', pr: 2, borderRadius: 0, bgcolor: 'rgba(255,255,255,0.02)' }}
             />
           )}
 
@@ -519,11 +531,12 @@ const AuditTaskInspection = () => {
           </Paper>
         ))
       ) : (
+        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 0, borderTop: '4px solid #eee' }}>
+          <Typography color="text.secondary">No checkpoints found for this category or search.</Typography>
         </Paper>
-  )
-}
+      )}
 
-{/* Final Feedback Section */ }
+      {/* Final Feedback Section */}
       <Paper sx={{ p: 3, mb: 10, borderRadius: 0, borderTop: '4px solid #3ea6ff' }}>
         <Typography variant="h6" fontWeight="bold" gutterBottom>
           Final Site Feedback
@@ -592,51 +605,51 @@ const AuditTaskInspection = () => {
         </Box>
       </Paper>
 
-{/* Validation Dialog */ }
-<Dialog open={openSubmitDialog} onClose={() => setOpenSubmitDialog(false)}>
-  <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-    <WarningAmberIcon color="warning" /> Verify Site Link ID
-  </DialogTitle>
-  <DialogContent>
-    <DialogContentText sx={{ mb: 2 }}>
-      To ensure you are inspecting the correct site, please re-enter the SLID found on-site or in your work order.
-    </DialogContentText>
-    <TextField
-      autoFocus
-      margin="dense"
-      id="slid-verify"
-      label="Enter SLID to Validate"
-      fullWidth
-      variant="outlined"
-      value={verificationSlid}
-      onChange={(e) => setVerificationSlid(e.target.value)}
-      error={!!submitError}
-      helperText={submitError}
-    />
-  </DialogContent>
-  <DialogActions>
-    <Button onClick={() => setOpenSubmitDialog(false)}>Cancel</Button>
-    <Button onClick={confirmSubmit} variant="contained" color="primary">
-      Verify & Close Task
-    </Button>
-  </DialogActions>
-</Dialog>
+      {/* Validation Dialog */}
+      <Dialog open={openSubmitDialog} onClose={() => setOpenSubmitDialog(false)}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningAmberIcon color="warning" /> Verify Site Link ID
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            To ensure you are inspecting the correct site, please re-enter the SLID found on-site or in your work order.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="slid-verify"
+            label="Enter SLID to Validate"
+            fullWidth
+            variant="outlined"
+            value={verificationSlid}
+            onChange={(e) => setVerificationSlid(e.target.value)}
+            error={!!submitError}
+            helperText={submitError}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenSubmitDialog(false)}>Cancel</Button>
+          <Button onClick={confirmSubmit} variant="contained" color="primary">
+            Verify & Close Task
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-{/* Snackbar for copy feedback */ }
-<Snackbar
-  open={snackbar.open}
-  autoHideDuration={3000}
-  onClose={() => setSnackbar({ ...snackbar, open: false })}
-  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
->
-  <Alert
-    onClose={() => setSnackbar({ ...snackbar, open: false })}
-    severity={snackbar.severity}
-    sx={{ width: '100%', borderRadius: 0 }}
-  >
-    {snackbar.message}
-  </Alert>
-</Snackbar>
+      {/* Snackbar for copy feedback */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%', borderRadius: 0 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
     </Box >
   );

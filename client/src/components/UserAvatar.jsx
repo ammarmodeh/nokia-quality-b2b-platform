@@ -63,10 +63,6 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
         ...data,
         userId,
         status: 'pending'
-      }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-        }
       });
       setSubmittedData(data);
       setSubmitSuccess(true);
