@@ -364,8 +364,7 @@ const CustomerIssuesList = () => {
       toast.info("Generating professional PDF report...");
 
       const reportTitle = "Customer Issue Notification (CIN) Analytics Report";
-      let markdownContent = `# ${reportTitle}\n\n`;
-      markdownContent += `**Date Range**: ${startDate || 'All Time'} to ${endDate || 'Now'}\n`;
+      let markdownContent = `**Date Range**: ${startDate || 'All Time'} to ${endDate || 'Now'}\n`;
       markdownContent += `**Total Records**: ${filteredIssues.length}\n`;
       markdownContent += `**Status Filter**: ${statusFilter.toUpperCase()}\n\n---\n\n`;
 

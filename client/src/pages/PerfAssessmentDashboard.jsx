@@ -525,8 +525,7 @@ const PerfAssessmentDashboard = () => {
     try {
       const { strengths, improvements } = analyzeCategoryPerformance(selectedResult.userAnswers);
 
-      let markdown = `## Assessment Details\n\n`;
-      markdown += `| Metric | Value |\n`;
+      let markdown = `| Metric | Value |\n`;
       markdown += `| :--- | :--- |\n`;
       const totalQCount = selectedResult.userAnswers?.length || selectedResult.totalQuestions;
       markdown += `| **Team Name** | ${selectedResult.teamName} |\n`;

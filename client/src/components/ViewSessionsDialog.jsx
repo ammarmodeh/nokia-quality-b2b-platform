@@ -96,25 +96,56 @@ const ViewSessionsDialog = ({ open, onClose, sessions, onEditSession, onDeleteSe
   };
 
   const handleExportExcel = () => {
-    const data = sessions.map(session => ({
-      Date: new Date(session.sessionDate).toLocaleDateString(),
-      Title: session.sessionTitle || "Training Session",
-      Type: session.sessionType || "N/A",
-      Status: session.status,
-      "Conducted By": Array.isArray(session.conductedBy) ? session.conductedBy.join(", ") : session.conductedBy,
-      Location: session.location || "N/A",
-      Duration: session.duration || "N/A",
-      "Violation Points": session.violationPoints || 0,
-      Notes: session.notes || "",
-      Reason: session.reason || "N/A",
-      Outlines: typeof session.outlines === 'string'
-        ? session.outlines
-        : Array.isArray(session.outlines)
-          ? session.outlines.map(o => `${o.mainTopic}${o.subTopics?.length > 0 ? ` (${o.subTopics.join(', ')})` : ''}`).join(' | ')
-          : "N/A"
-    }));
+    const data = sessions.map(session => {
+      // Format outlines into a readable string
+      let outlinesText = "None";
+      if (typeof session.outlines === 'string' && session.outlines.trim()) {
+        outlinesText = session.outlines;
+      } else if (Array.isArray(session.outlines) && session.outlines.length > 0) {
+        outlinesText = session.outlines.map((o, i) => {
+          let item = `${i + 1}. ${o.mainTopic}`;
+          if (o.subTopics && o.subTopics.length > 0) {
+            item += `\n   - ${o.subTopics.join('\n   - ')}`;
+          }
+          return item;
+        }).join('\n');
+      }
+
+      return {
+        "Date": new Date(session.sessionDate).toLocaleDateString(),
+        "Title": session.sessionTitle || "Training Session",
+        "Type": session.sessionType || "N/A",
+        "Status": session.status,
+        "Conducted By": Array.isArray(session.conductedBy) ? session.conductedBy.join(", ") : session.conductedBy,
+        "Location": session.location || "N/A",
+        "Duration": session.duration || "N/A",
+        "Violation Points": session.violationPoints || 0,
+        "Notes": session.notes || "",
+        "Reason for Status": session.reason || "N/A",
+        "Detailed Outlines": outlinesText,
+        "Created At": session.createdAt ? new Date(session.createdAt).toLocaleString() : "N/A"
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(data);
+
+    // Adjust column widths
+    const wscols = [
+      { wch: 15 }, // Date
+      { wch: 40 }, // Title
+      { wch: 20 }, // Type
+      { wch: 15 }, // Status
+      { wch: 30 }, // Conducted By
+      { wch: 20 }, // Location
+      { wch: 15 }, // Duration
+      { wch: 10 }, // Points
+      { wch: 50 }, // Notes
+      { wch: 40 }, // Reason
+      { wch: 80 }, // Outlines
+      { wch: 20 }, // Created At
+    ];
+    ws['!cols'] = wscols;
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sessions");
     const fileName = teamName
@@ -180,8 +211,6 @@ ${outlinesMd}
       }).join('\n');
 
       const markdownContent = `
-# ${reportTitle}
-
 **Team Name**: ${teamName || "N/A"}
 **Total Sessions**: ${sessions.length}
 **Export Date**: ${new Date().toLocaleString()}

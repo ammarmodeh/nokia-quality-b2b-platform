@@ -326,6 +326,11 @@ const taskSchema = new mongoose.Schema(
       enum: ["original", "visit", "phone", "no_answer", "others"],
       default: "original"
     },
+    resolutionStatus: {
+      type: String,
+      enum: ["No Answer", "Answered and resolved", "Appointment scheduled", "No action taken", "Pending", null],
+      default: "Pending"
+    },
     subTasks: [subtaskSchema],
     isDeleted: {
       type: Boolean,

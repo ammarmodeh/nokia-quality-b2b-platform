@@ -23,19 +23,22 @@ import { DataGrid, GridToolbarContainer, GridToolbarExport, GridToolbarQuickFilt
 import * as XLSX from 'xlsx';
 import { getReasonViolations2 } from "../utils/helpers";
 import { RiFileExcel2Fill } from "react-icons/ri";
-import { MdClose, MdFileDownload, MdTrendingUp, MdBarChart } from 'react-icons/md';
-import { useState, useMemo, useEffect, memo } from "react";
+import { MdClose, MdFileDownload, MdTrendingUp, MdBarChart, MdPhotoCamera } from 'react-icons/md';
+import { useState, useMemo, useEffect, memo, useRef } from "react";
+import html2canvas from 'html2canvas';
 import { useTheme, alpha } from '@mui/material';
 import {
-  BarChart,
+  ComposedChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Cell,
-  LabelList
+  LabelList,
+  Legend
 } from 'recharts';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -103,6 +106,7 @@ export const AllReasonsTable = memo(({ tasks }) => {
     pageSize: 10,
     page: 0,
   });
+  const chartRef = useRef(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedReason, setSelectedReason] = useState(null);
   const [reasonTasks, setReasonTasks] = useState([]);
@@ -163,6 +167,19 @@ export const AllReasonsTable = memo(({ tasks }) => {
 
     return filtered;
   }, [tasks, filterType, selectedPeriod, dateRange, currentYear, settings, months]);
+
+  const periodLabel = useMemo(() => {
+    if (filterType === 'all') return 'Full Year';
+    if (filterType === 'week') {
+      const week = weeks.find(w => String(w.week) === selectedPeriod);
+      return week ? week.label : `Week ${selectedPeriod}`;
+    }
+    if (filterType === 'month') return months.find(m => String(m.month) === selectedPeriod)?.label || 'Selected Month';
+    if (filterType === 'custom' && dateRange.start && dateRange.end) {
+      return `${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d')}`;
+    }
+    return '';
+  }, [filterType, selectedPeriod, weeks, months, dateRange]);
 
 
   // Get the total violations for each reason (using filtered tasks)
@@ -320,6 +337,22 @@ export const AllReasonsTable = memo(({ tasks }) => {
     XLSX.writeFile(workbook, `${selectedReason}_Tasks.xlsx`);
   };
 
+  const handleCaptureChart = async () => {
+    if (chartRef.current) {
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `Reason_Analysis_${periodLabel.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.png`;
+      link.href = dataUrl;
+      link.click();
+    }
+  };
+
   return (
     <Stack spacing={3} sx={{ width: "100%" }}>
       {/* Filters Header */}
@@ -450,30 +483,35 @@ export const AllReasonsTable = memo(({ tasks }) => {
               borderBottom: "1px solid #e2e8f0"
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{
-                color: "#475569",
-                fontSize: isMobile ? "0.9rem" : "1rem",
-                fontWeight: "600",
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}
-            >
-              <MdBarChart className="text-blue-500" size={24} />
-              Reason Overview
-              <Chip
-                label={netTotal}
-                size="small"
+            <Box>
+              <Typography
+                variant="h6"
                 sx={{
-                  ml: 1,
-                  bgcolor: alpha('#3b82f6', 0.1),
-                  color: '#3b82f6',
-                  fontWeight: 'bold'
+                  color: "#475569",
+                  fontSize: isMobile ? "0.9rem" : "1rem",
+                  fontWeight: "800",
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
                 }}
-              />
-            </Typography>
+              >
+                <MdBarChart className="text-blue-500" size={24} />
+                Reason Overview - {periodLabel}
+                <Chip
+                  label={netTotal}
+                  size="small"
+                  sx={{
+                    ml: 1,
+                    bgcolor: alpha('#3b82f6', 0.1),
+                    color: '#3b82f6',
+                    fontWeight: 'bold'
+                  }}
+                />
+              </Typography>
+              <Typography variant="caption" color="textSecondary" sx={{ ml: 4, fontWeight: 600 }}>
+                Categorized Issue Breakdown & Performance
+              </Typography>
+            </Box>
             <Tooltip title="Export to Excel (v2 - Enhanced)">
               <IconButton
                 onClick={exportToExcel}
@@ -561,21 +599,45 @@ export const AllReasonsTable = memo(({ tasks }) => {
 
         {/* Chart Section */}
         {sortedReasonViolations.length > 0 && (
-          <Paper sx={{
-            p: 3,
-            borderRadius: "12px",
-            height: 400,
-            // bgcolor: 'white',
-            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-          }}>
-            <Stack direction="row" alignItems="center" spacing={1} mb={3}>
-              <MdBarChart size={24} color="#3b82f6" />
-              <Typography variant="h6" fontWeight="700" color="#475569">
-                Top Reasons Analysis
-              </Typography>
+          <Paper
+            ref={chartRef}
+            sx={{
+              p: 3,
+              borderRadius: "12px",
+              height: 400,
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+              // bgcolor: 'white' // Removed to match dark theme
+            }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
+              <Box>
+                <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+                  <MdBarChart size={24} color="#3b82f6" />
+                  <Typography variant="h6" fontWeight="800" color="#475569">
+                    Top Reasons Analysis - {periodLabel}
+                  </Typography>
+                </Stack>
+                {/* <Typography variant="caption" color="textSecondary" sx={{ ml: 4, fontWeight: 600 }}>
+                  Volume Breakdown & Validation Performance Trends
+                </Typography> */}
+              </Box>
+              <Tooltip title="Capture Chart as Image">
+                <IconButton
+                  onClick={handleCaptureChart}
+                  size="small"
+                  sx={{
+                    color: '#7b68ee',
+                    bgcolor: alpha('#7b68ee', 0.1),
+                    '&:hover': {
+                      bgcolor: alpha('#7b68ee', 0.2),
+                    }
+                  }}
+                >
+                  <MdPhotoCamera size={20} />
+                </IconButton>
+              </Tooltip>
             </Stack>
             <ResponsiveContainer width="100%" height="90%">
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+              <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                 <XAxis
                   dataKey="name"
@@ -587,31 +649,47 @@ export const AllReasonsTable = memo(({ tasks }) => {
                   height={60}
                 />
                 <YAxis
+                  yAxisId="left"
                   type="number"
                   tick={{ fontSize: 11, fill: '#64748b' }}
+                  label={{ value: 'Violations', angle: -90, position: 'insideLeft', style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  type="number"
+                  domain={[0, 100]}
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  label={{ value: 'Validation %', angle: 90, position: 'insideRight', style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
                 />
                 <RechartsTooltip
                   contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                   cursor={{ fill: 'rgba(100, 116, 139, 0.1)' }}
                 />
-                <Bar dataKey="Violations" radius={[4, 4, 0, 0]} barSize={isMobile ? 15 : 30}>
+                <Bar yAxisId="left" dataKey="Violations" radius={[4, 4, 0, 0]} barSize={isMobile ? 15 : 30} name="Total Violations">
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]} />
                   ))}
                   <LabelList dataKey="Violations" position="top" style={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
                 </Bar>
-                <Bar dataKey="ValidationRate" radius={[4, 4, 0, 0]} barSize={isMobile ? 10 : 20}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-v-${index}`} fill={alpha(['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5], 0.4)} />
-                  ))}
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="ValidationRate"
+                  stroke="#7b68ee"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#7b68ee' }}
+                  activeDot={{ r: 6 }}
+                  name="Validation Rate (%)"
+                >
                   <LabelList
                     dataKey="ValidationRate"
                     position="top"
                     formatter={(val) => `${val}%`}
-                    style={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }}
+                    style={{ fill: '#7b68ee', fontSize: 10, fontWeight: 600 }}
                   />
-                </Bar>
-              </BarChart>
+                </Line>
+              </ComposedChart>
             </ResponsiveContainer>
           </Paper>
         )}

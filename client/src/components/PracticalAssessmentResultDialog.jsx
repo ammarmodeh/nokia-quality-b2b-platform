@@ -313,8 +313,6 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
       const improvementsText = improvements.map(i => `* **${i.category}** (${i.averageScore}%): ${i.checkPoints.map(cp => cp.name).join(', ')}`).join('\n');
 
       const reportMarkdown = `
-# Practical Assessment Report: ${teamName}
-
 **Date**: ${new Date(assessment.assessmentDate).toLocaleString()}
 **Conducted By**: ${assessment.conductedBy}
 **Overall Proficiency**: ${assessment.overallScore}%

@@ -49,11 +49,15 @@ import {
   MdFilterList,
   MdCheckCircle,
   MdRadioButtonUnchecked,
+  MdHourglassEmpty,
+  MdPhoneMissed,
+  MdCalendarToday,
+  MdBlock,
   MdError,
-  MdBarChart, // New Import
-  MdTimeline, // New Import
-  MdDateRange, // New Import
-  MdAssignmentTurnedIn // New Import
+  MdBarChart,
+  MdTimeline,
+  MdDateRange,
+  MdAssignmentTurnedIn,
 } from 'react-icons/md';
 import {
   BarChart,
@@ -370,6 +374,7 @@ const AllTasksList = () => {
     };
 
     return {
+      auditMethod: count('subtaskType'),
       reason: count('reason'),
       subReason: count('subReason'),
       rootCause: count('rootCause')
@@ -676,6 +681,51 @@ const AllTasksList = () => {
     }
   };
 
+  const renderResolutionIcon = (status) => {
+    switch (status) {
+      case "No Answer":
+        return (
+          <Tooltip title="No Answer">
+            <IconButton size="small" sx={{ color: '#ff9800', p: 0.5, cursor: 'default' }}>
+              <MdPhoneMissed size={20} />
+            </IconButton>
+          </Tooltip>
+        );
+      case "Answered and resolved":
+        return (
+          <Tooltip title="Answered and resolved">
+            <IconButton size="small" sx={{ color: '#4caf50', p: 0.5, cursor: 'default' }}>
+              <MdCheckCircle size={20} />
+            </IconButton>
+          </Tooltip>
+        );
+      case "Appointment scheduled":
+        return (
+          <Tooltip title="Appointment scheduled">
+            <IconButton size="small" sx={{ color: '#2196f3', p: 0.5, cursor: 'default' }}>
+              <MdCalendarToday size={20} />
+            </IconButton>
+          </Tooltip>
+        );
+      case "No action taken":
+        return (
+          <Tooltip title="No action taken">
+            <IconButton size="small" sx={{ color: '#f44336', p: 0.5, cursor: 'default' }}>
+              <MdBlock size={20} />
+            </IconButton>
+          </Tooltip>
+        );
+      default:
+        return (
+          <Tooltip title="Pending">
+            <IconButton size="small" sx={{ color: '#7b68ee', p: 0.5, cursor: 'default' }}>
+              <MdHourglassEmpty size={20} />
+            </IconButton>
+          </Tooltip>
+        );
+    }
+  };
+
   if (loading && allTasks.length === 0) {
     return <LoadingSpinner variant="page" />;
   }
@@ -794,15 +844,41 @@ const AllTasksList = () => {
         {/* Analytics Dashboard (Always Visible) */}
         <Box sx={{ mt: 3 }}>
           <Grid container spacing={3}>
+            {/* Audit Method Chart (Replacing one of the slots or adding a new Grid container row) */}
+            <Grid item xs={12} md={3}>
+              <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Audit Method Distribution</Typography>
+                <ResponsiveContainer width="100%" height="90%">
+                  <PieChart>
+                    <Pie
+                      data={analyticsData.auditMethod}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {analyticsData.auditMethod.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={['#7b68ee', '#4caf50', '#ff9800', '#f44336', '#2196f3'][index % 5]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Paper>
+            </Grid>
+
             {/* Reason Chart */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Reasons</Typography>
                 <ResponsiveContainer width="100%" height="90%">
-                  <BarChart data={analyticsData.reason} layout="vertical" margin={{ left: 40 }}>
+                  <BarChart data={analyticsData.reason} layout="vertical" margin={{ left: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11 }} />
+                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10 }} />
                     <RechartsTooltip />
                     <Bar dataKey="value" fill="#8884d8" radius={[0, 4, 4, 0]}>
                       {analyticsData.reason.map((entry, index) => (
@@ -814,14 +890,14 @@ const AllTasksList = () => {
               </Paper>
             </Grid>
             {/* Sub-Reason Chart */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Sub-Reasons</Typography>
                 <ResponsiveContainer width="100%" height="90%">
-                  <BarChart data={analyticsData.subReason} layout="vertical" margin={{ left: 40 }}>
+                  <BarChart data={analyticsData.subReason} layout="vertical" margin={{ left: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11 }} />
+                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10 }} />
                     <RechartsTooltip />
                     <Bar dataKey="value" fill="#82ca9d" radius={[0, 4, 4, 0]} />
                   </BarChart>
@@ -829,14 +905,14 @@ const AllTasksList = () => {
               </Paper>
             </Grid>
             {/* Root Cause Chart */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Root Causes</Typography>
                 <ResponsiveContainer width="100%" height="90%">
-                  <BarChart data={analyticsData.rootCause} layout="vertical" margin={{ left: 40 }}>
+                  <BarChart data={analyticsData.rootCause} layout="vertical" margin={{ left: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11 }} />
+                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10 }} />
                     <RechartsTooltip />
                     <Bar dataKey="value" fill="#ffc658" radius={[0, 4, 4, 0]} />
                   </BarChart>
@@ -1536,6 +1612,7 @@ const AllTasksList = () => {
               <TableCell style={{ fontSize: '0.875rem', minWidth: 200, maxWidth: 300 }}>Customer Feedback</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 200, maxWidth: 300 }}>Management Note</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 150, maxWidth: 200 }}>Summary</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Audit Method</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Status</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Feedback Severity</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Eval Score</TableCell>
@@ -1700,6 +1777,11 @@ const AllTasksList = () => {
                             </Tooltip>
                           )}
                         </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ color: '#7b68ee', fontWeight: 'bold', textTransform: 'capitalize' }}>
+                          {task.subtaskType || "visit"}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Chip

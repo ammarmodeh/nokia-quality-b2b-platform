@@ -79,23 +79,123 @@ export const generateReportFile = async (req, res) => {
             <head>
                 <title>${title}</title>
                 <style>
-                    body { font-family: 'Arial', sans-serif; line-height: 1.6; padding: 30px; color: #333; }
-                    h1 { color: #007bff; border-bottom: 3px solid #007bff; padding-bottom: 10px; margin-top: 40px; }
-                    h2 { color: #28a745; margin-top: 30px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
-                    h3 { color: #dc3545; margin-top: 20px; }
-                    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                    th { background-color: #f2f2f2; font-weight: bold; }
-                    strong { font-weight: 700; }
-                    img { max-width: 100%; height: auto; display: block; margin: 20px 0; border-radius: 8px; }
+                    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+                    
+                    body { 
+                        font-family: 'Roboto', 'Arial', sans-serif; 
+                        line-height: 1.6; 
+                        color: #333; 
+                        margin: 0;
+                        padding: 0;
+                    }
+                    
+                    @page {
+                        margin: 20px;
+                    }
+
+                    h1 { 
+                        color: #1a237e; 
+                        border-bottom: 3px solid #1a237e; 
+                        padding-bottom: 15px; 
+                        margin-top: 0; 
+                        font-size: 28px;
+                        text-align: center;
+                    }
+                    
+                    h2 { 
+                        color: #283593; 
+                        margin-top: 35px; 
+                        border-bottom: 2px solid #e0e0e0; 
+                        padding-bottom: 8px; 
+                        font-size: 22px;
+                        page-break-after: avoid;
+                    }
+                    
+                    h3 { 
+                        color: #c62828; 
+                        margin-top: 25px; 
+                        font-size: 18px;
+                        margin-bottom: 10px;
+                        page-break-after: avoid;
+                    }
+                    
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin: 20px 0; 
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                        page-break-inside: auto;
+                    }
+                    
+                    tr { 
+                        page-break-inside: avoid; 
+                        page-break-after: auto; 
+                    }
+                    
+                    th, td { 
+                        border: 1px solid #e0e0e0; 
+                        padding: 12px 15px; 
+                        text-align: left; 
+                        font-size: 14px;
+                    }
+                    
+                    th { 
+                        background-color: #f5f5f5; 
+                        font-weight: 700; 
+                        color: #333;
+                        text-transform: uppercase;
+                        font-size: 13px;
+                        letter-spacing: 0.5px;
+                    }
+                    
+                    tr:nth-child(even) {
+                        background-color: #fafafa;
+                    }
+                    
+                    strong { font-weight: 600; color: #424242; }
+                    
+                    img { 
+                        max-width: 100%; 
+                        height: auto; 
+                        display: block; 
+                        margin: 20px auto; 
+                        border-radius: 8px; 
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    }
+
+                    .report-meta {
+                        background-color: #f8f9fa;
+                        padding: 15px;
+                        border-radius: 6px;
+                        margin-bottom: 30px;
+                        border-left: 4px solid #1a237e;
+                        font-size: 0.9em;
+                    }
+
+                    .footer {
+                        margin-top: 50px;
+                        text-align: center;
+                        font-size: 12px;
+                        color: #757575;
+                        border-top: 1px solid #eee;
+                        padding-top: 20px;
+                    }
+
+                    ul { margin-top: 5px; margin-bottom: 5px; }
+                    li { margin-bottom: 5px; }
                 </style>
             </head>
             <body>
                 <h1>${title}</h1>
-                <div style="margin-bottom: 30px; font-size: 0.9em;">
-                    Report Generated on: ${new Date().toLocaleString()}
+                <div class="report-meta">
+                    <strong>Report Generated on:</strong> ${new Date().toLocaleString()}<br>
+                    <strong>System:</strong> QoS Track Manager
                 </div>
                 ${htmlContent}
+                
+                <div class="footer">
+                    Wait for Excellence • Reach Quality Operations
+                </div>
             </body>
             </html>
         `;
@@ -104,7 +204,18 @@ export const generateReportFile = async (req, res) => {
       try {
         console.log(`[PDF Gen] Starting PDF generation for: ${title}`);
         const file = { content: styledHtml };
-        const options = { format: 'A4', printBackground: true };
+
+        // Detailed PDF Options with Margins
+        const options = {
+          format: 'A4',
+          printBackground: true,
+          margin: {
+            top: '20mm',
+            bottom: '20mm',
+            left: '20mm',
+            right: '20mm'
+          }
+        };
 
         const pdfBuffer = await htmlPdfNode.generatePdf(file, options);
         console.log(`[PDF Gen] PDF generation successful. Buffer size: ${pdfBuffer.length}`);

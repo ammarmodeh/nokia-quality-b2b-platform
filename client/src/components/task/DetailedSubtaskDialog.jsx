@@ -68,6 +68,7 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
   const [expandedNotes, setExpandedNotes] = useState([]);
   const [cancelState, setCancelState] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(task?.status || "Open");
+  const [resolutionStatus, setResolutionStatus] = useState(task?.resolutionStatus || "Pending");
 
   useEffect(() => {
     if (open && task?._id) {
@@ -96,6 +97,10 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
 
       if (response.data.status) {
         setCurrentStatus(response.data.status);
+      }
+
+      if (response.data.resolutionStatus) {
+        setResolutionStatus(response.data.resolutionStatus);
       }
 
       let matchingOption = response.data.subtaskType || "visit";
@@ -194,6 +199,8 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
         serviceRecipientInitial: response.data.serviceRecipientInitial || null,
         serviceRecipientQoS: response.data.serviceRecipientQoS || null,
       });
+
+      setResolutionStatus(response.data.resolutionStatus || "Pending");
 
       const activeSteps = fetchedSubtasks.filter((subtask) => subtask.note !== "").length || 0;
       setActiveStep(activeSteps);
@@ -318,6 +325,7 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
           speed: null,
           serviceRecipientInitial: null,
           serviceRecipientQoS: null,
+          resolutionStatus: "Pending",
         },
         {
           headers: {
@@ -380,6 +388,7 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
           speed: additionalInfo.speed,
           serviceRecipientInitial: additionalInfo.serviceRecipientInitial,
           serviceRecipientQoS: additionalInfo.serviceRecipientQoS,
+          resolutionStatus: resolutionStatus,
         },
         {
           headers: {
@@ -433,6 +442,7 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
           speed: additionalInfo.speed,
           serviceRecipientInitial: additionalInfo.serviceRecipientInitial,
           serviceRecipientQoS: additionalInfo.serviceRecipientQoS,
+          resolutionStatus: resolutionStatus,
         },
         {
           headers: {
@@ -530,6 +540,8 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
           setSubtasks={setSubtasks}
           additionalInfo={additionalInfo}
           setAdditionalInfo={setAdditionalInfo}
+          resolutionStatus={resolutionStatus}
+          setResolutionStatus={setResolutionStatus}
         />
       </DialogContent>
 

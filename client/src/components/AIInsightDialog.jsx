@@ -225,7 +225,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
       const response = await api.post(
         endpoint,
         {
-          reportContent: insights,
+          reportContent: insights.replace(/^#\s+.*?\n/, ''),
           format: format,
           title: title || 'QoS Executive Report'
         },

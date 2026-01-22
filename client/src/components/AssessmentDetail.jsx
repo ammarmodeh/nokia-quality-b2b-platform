@@ -78,8 +78,6 @@ const AssessmentDetail = ({
         .join('\n');
 
       const reportMarkdown = `
-# Performance Audit Report: ${team.teamName}
-
 **Audit Date**: ${new Date(assessment.assessmentDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
 **Conducted By**: ${assessment.conductedBy}
 **Overall Proficiency**: ${Math.round(assessment.overallScore)}%

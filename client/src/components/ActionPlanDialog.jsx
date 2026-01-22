@@ -132,7 +132,7 @@ const ActionPlanDialog = ({ open, onClose, plan, title, onRegenerate, metadata }
       const response = await api.post(
         endpoint,
         {
-          reportContent: plan,
+          reportContent: plan.replace(/^#\s+.*?\n/, ''),
           format: format,
           title: title || 'Action Plan'
         },

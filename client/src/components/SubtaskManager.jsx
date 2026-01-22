@@ -50,6 +50,8 @@ const SubtaskManager = ({
   handleShortNoteChange,
   setSubtasks,
   setAdditionalInfo,
+  resolutionStatus,
+  setResolutionStatus,
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
   const colors = {
@@ -471,6 +473,57 @@ const SubtaskManager = ({
             </Typography>
           </Box>
         </Stack>
+
+        {/* Resolution Status Selection */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2,
+            mb: 3,
+            backgroundColor: 'rgba(123, 104, 238, 0.05)',
+            border: `1px dashed ${colors.secondary}`,
+            borderRadius: 0,
+          }}
+        >
+          <Typography
+            variant="subtitle2"
+            sx={{
+              color: colors.secondary,
+              mb: 2,
+              fontWeight: "bold",
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            Resolution Outcome
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {[
+              "No Answer",
+              "Answered and resolved",
+              "Appointment scheduled",
+              "No action taken",
+              "Pending"
+            ].map((status) => (
+              <Chip
+                key={status}
+                label={status}
+                onClick={() => setResolutionStatus(status)}
+                sx={{
+                  borderRadius: 0,
+                  bgcolor: resolutionStatus === status ? colors.secondary : 'transparent',
+                  color: resolutionStatus === status ? '#fff' : colors.textSecondary,
+                  border: `1px solid ${resolutionStatus === status ? colors.secondary : colors.border}`,
+                  fontWeight: 'bold',
+                  '&:hover': {
+                    bgcolor: resolutionStatus === status ? colors.secondary : 'rgba(255,255,255,0.05)',
+                  }
+                }}
+              />
+            ))}
+          </Box>
+        </Paper>
 
         <List sx={{ width: "100%" }}>
           {subtasks.map((subtask, subtaskIndex) => {
