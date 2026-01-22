@@ -1320,7 +1320,7 @@ export const clearNotifications = async (req, res) => {
 export const getAllTasks = async (req, res) => {
   try {
     const tasks = await TaskSchema.find()
-      .select("-taskLogs -notifications -readBy")
+      .select("-taskLogs -notifications -readBy -subTasks.checkpoints")
       .populate("assignedTo", "name email role")
       .populate("whomItMayConcern", "name email role")
       .populate("createdBy", "name email")

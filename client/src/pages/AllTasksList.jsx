@@ -160,21 +160,47 @@ const AllTasksList = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const [tasksRes, optionsRes, settingsRes, favRes] = await Promise.all([
+        const results = await Promise.allSettled([
           api.get("/tasks/get-all-tasks"),
           api.get('/dropdown-options/all'),
           api.get("/settings"),
           api.get("/favourites/get-favourites")
         ]);
 
-        const tasksData = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.tasks || []);
-        setAllTasks(tasksData);
-        setDropdownOptions(optionsRes.data);
-        setSettings(settingsRes.data);
-        setFavoriteTasks(favRes.data.favourites || []);
+        const [tasksRes, optionsRes, settingsRes, favRes] = results;
+
+        if (tasksRes.status === 'fulfilled') {
+          const tasksData = Array.isArray(tasksRes.value.data)
+            ? tasksRes.value.data
+            : (tasksRes.value.data.tasks || []);
+          setAllTasks(tasksData);
+        } else {
+          console.error("Error fetching tasks:", tasksRes.reason);
+          setError("Failed to load task data. Please check your connection.");
+        }
+
+        if (optionsRes.status === 'fulfilled') {
+          setDropdownOptions(optionsRes.value.data);
+        } else {
+          console.error("Error fetching options:", optionsRes.reason);
+        }
+
+        if (settingsRes.status === 'fulfilled') {
+          setSettings(settingsRes.value.data);
+        } else {
+          console.error("Error fetching settings:", settingsRes.reason);
+        }
+
+        if (favRes.status === 'fulfilled') {
+          setFavoriteTasks(favRes.value.data.favourites || []);
+        } else {
+          console.error("Error fetching favorites:", favRes.reason);
+        }
+
       } catch (err) {
-        console.error("Error fetching data:", err);
+        console.error("Unexpected error fetching data:", err);
         setError("Failed to load dashboard data.");
       } finally {
         setLoading(false);
