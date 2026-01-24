@@ -14,11 +14,13 @@ const generateToken = (user) => {
     { expiresIn: "12h" } // Token expires in 12 hours
   );
 
-  // const refreshToken = jwt.sign(
-  //   { id: user._id },
-  //   process.env.JWT_SECRET,
-  //   { expiresIn: "7d" } // Refresh token expires in 7 days
-  // );
+  const refreshToken = jwt.sign(
+    { id: user._id },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" } // Refresh token expires in 7 days
+  );
+
+  return { accessToken, refreshToken };
 
   return { accessToken };
 };
@@ -126,15 +128,15 @@ export const login = async (req, res) => {
     }
 
     // Generate tokens
-    const { accessToken } = generateToken(user);
+    const { accessToken, refreshToken } = generateToken(user);
 
     // Send the refresh token in a secure, HTTP-only cookie
-    // res.cookie("refreshToken", refreshToken, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === "production",
-    //   sameSite: "Strict",
-    //   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    // });
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
 
     // Send the access token and user data
     res.status(200).json({
@@ -148,39 +150,39 @@ export const login = async (req, res) => {
 };
 
 
-// export const refreshToken = async (req, res) => {
-//   try {
-//     // Extract refresh token from cookies
-//     const { refreshToken } = req.cookies;
+export const refreshToken = async (req, res) => {
+  try {
+    // Extract refresh token from cookies
+    const { refreshToken } = req.cookies;
 
-//     if (!refreshToken) {
-//       return res.status(403).json({ message: 'Refresh token not found' });
-//     }
+    if (!refreshToken) {
+      return res.status(403).json({ message: 'Refresh token not found' });
+    }
 
-//     // Verify the refresh token
-//     const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+    // Verify the refresh token
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
 
-//     // Find the user by the decoded ID
-//     const user = await UserSchema.findById(decoded.id);
+    // Find the user by the decoded ID
+    const user = await UserSchema.findById(decoded.id);
 
-//     if (!user) {
-//       return res.status(403).json({ message: 'User not found' });
-//     }
+    if (!user) {
+      return res.status(403).json({ message: 'User not found' });
+    }
 
-//     // Generate new access token
-//     const accessToken = jwt.sign(
-//       { id: user._id, role: user.role },
-//       process.env.JWT_SECRET,
-//       { expiresIn: '1h' }
-//     );
+    // Generate new access token
+    const accessToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
-//     // Send new access token
-//     res.status(200).json({ accessToken });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(403).json({ message: 'Invalid refresh token' });
-//   }
-// };
+    // Send new access token
+    res.status(200).json({ accessToken });
+  } catch (error) {
+    console.error(error);
+    res.status(403).json({ message: 'Invalid refresh token' });
+  }
+};
 
 export const getUsersByIds = async (req, res) => {
   try {

@@ -384,26 +384,26 @@ export const aggregateSamples = (samplesData, type, value, settings = {}) => {
 
     if (!targetRange) return 0;
 
-    // Now assume samples have a weekNumber.
-    // We need to approximate if the week falls in result range.
-    // This is imperfect without exact dates in samples, but we can try to use Week 1 Start + offset.
-    const { week1StartDate } = settings;
-
+    // Filter samples that fall within the month range
     return samplesData.filter(s => {
-      // If sample has a specific startDate, use it
-      if (s.startDate) {
-        const sDate = new Date(s.startDate);
-        return sDate >= targetRange.start && sDate <= targetRange.end;
-      }
-
-      // Fallback: Estimate from Week 1 (if available)
-      if (week1StartDate && s.weekNumber) {
-        const w1Start = new Date(week1StartDate);
+      // 1. Preferred: Calculate specific week start from settings (Consistency Guarantee)
+      // This ensures we verify the week number against the exact month definitions from settings
+      if (settings.week1StartDate && s.weekNumber) {
+        const w1Start = new Date(settings.week1StartDate);
         const estimatedStart = new Date(w1Start);
         estimatedStart.setDate(w1Start.getDate() + (s.weekNumber - 1) * 7);
-        // Check if ANY part of the week is in the month? Or start date?
-        // Let's check start date
-        return estimatedStart >= targetRange.start && estimatedStart <= targetRange.end;
+
+        // Check if week START falls within the month range based on calculation
+        // Strict assignment: A week belongs to the month that contains its start date
+        const startInRange = estimatedStart >= targetRange.start && estimatedStart <= targetRange.end;
+        return startInRange;
+      }
+
+      // 2. Fallback: If settings missing, use stored startDate if available
+      if (s.startDate) {
+        const sDate = new Date(s.startDate);
+        // Same logic: check if start date is in range
+        return sDate >= targetRange.start && sDate <= targetRange.end;
       }
 
       return false; // Can't determine

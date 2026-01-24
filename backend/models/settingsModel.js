@@ -38,6 +38,10 @@ const settingsSchema = new mongoose.Schema(
       quizPassScore: { type: Number, default: 70 },
       labPassScore: { type: Number, default: 75 },
     },
+    npsTargets: {
+      promoters: { type: Number, default: 75 },
+      detractors: { type: Number, default: 9 },
+    },
     notifications: {
       emailAlerts: { type: Boolean, default: true },
       pushNotifications: { type: Boolean, default: true },

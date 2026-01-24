@@ -1,3 +1,4 @@
+import { MdError } from "react-icons/md";
 // src/Dashboard.js
 import { useState, useEffect, Suspense, lazy } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -95,6 +96,12 @@ const Dashboard = () => {
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         setTasksError(error); // Using one error state to trigger error UI if any fails
+
+        // If it's a 401, we let the interceptor handle it, but we might still end up here if refresh fails.
+        // We don't want to show "Error fetching data" if we are about to redirect.
+        if (error.response?.status !== 401) {
+          console.error("Dashboard fetch error details:", error);
+        }
       } finally {
         setTasksLoading(false);
         setTeamsLoading(false);
@@ -124,10 +131,29 @@ const Dashboard = () => {
     );
   }
 
-  if (tasksError || teamsError) return <Box p={4}><Typography color="error">Error fetching data</Typography></Box>;
+  if (tasksError || teamsError) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh', gap: 2 }}>
+        <MdError size={48} color="#ef4444" />
+        <Typography variant="h6" color="error">
+          Unable to load dashboard data
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {tasksError?.message || "Please check your internet connection."}
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={() => setUpdateTasksList(prev => !prev)}
+          sx={{ mt: 2, textTransform: 'none' }}
+        >
+          Retry
+        </Button>
+      </Box>
+    );
+  }
 
   return (
-    <Box sx={{ pb: 4, minHeight: "100vh" }}>
+    <Box sx={{ pb: 4, px: { sm: 2 }, minHeight: "100vh" }}>
       <Box sx={{ pt: 3 }}>
         {/* Welcome Snackbar */}
         <Snackbar open={snackbarOpen} autoHideDuration={5000} onClose={handleSnackbarClose}>

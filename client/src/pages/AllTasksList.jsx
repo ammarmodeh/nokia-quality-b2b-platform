@@ -142,7 +142,7 @@ const AllTasksList = () => {
   const [dropdownOptions, setDropdownOptions] = useState({});
   const [settings, setSettings] = useState(null);
   const [favoriteTasks, setFavoriteTasks] = useState([]);
-  const [visitedRowIds, setVisitedRowIds] = useState([]);
+  // const [visitedRowIds, setVisitedRowIds] = useState([]); // Removed in favor of backend persistence
   const [hiddenSeries, setHiddenSeries] = useState(new Set());
   const [manageSubtasksDialogOpen, setManageSubtasksDialogOpen] = useState(false);
   const [subtaskTask, setSubtaskTask] = useState(null);
@@ -801,12 +801,12 @@ const AllTasksList = () => {
 
         <Divider sx={{ my: 2, borderColor: '#6366f1' }} />
 
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 3, width: '100%', overflowX: 'hidden' }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%', overflowX: 'auto', flexWrap: { xs: 'nowrap', md: 'wrap' } }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
               <MdDateRange /> Date Filter:
             </Typography>
-            <ButtonGroup size="small" variant="outlined">
+            <ButtonGroup size="small" variant="outlined" sx={{ flexShrink: 0 }}>
               <Button onClick={() => setDateFilter({ start: startOfWeek(subWeeks(new Date(), 2)), end: endOfWeek(new Date()), type: 'latest3Weeks' })} variant={dateFilter.type === 'latest3Weeks' ? 'contained' : 'outlined'}>Latest 3 Weeks</Button>
               <Button onClick={() => setDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()), type: 'thisWeek' })} variant={dateFilter.type === 'thisWeek' ? 'contained' : 'outlined'}>This Week</Button>
               <Button onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()), type: 'thisMonth' })} variant={dateFilter.type === 'thisMonth' ? 'contained' : 'outlined'}>This Month</Button>
@@ -815,28 +815,30 @@ const AllTasksList = () => {
             </ButtonGroup>
 
             <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Start"
-                value={tempStartDate}
-                onChange={(v) => setTempStartDate(v)}
-                slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
-              />
-              <DatePicker
-                label="End"
-                value={tempEndDate}
-                onChange={(v) => setTempEndDate(v)}
-                slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
-              />
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => {
-                  setDateFilter({ start: tempStartDate, end: tempEndDate, type: 'custom' });
-                }}
-                sx={{ borderRadius: '20px', textTransform: 'none' }}
-              >
-                Apply
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
+                <DatePicker
+                  label="Start"
+                  value={tempStartDate}
+                  onChange={(v) => setTempStartDate(v)}
+                  slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
+                />
+                <DatePicker
+                  label="End"
+                  value={tempEndDate}
+                  onChange={(v) => setTempEndDate(v)}
+                  slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
+                />
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => {
+                    setDateFilter({ start: tempStartDate, end: tempEndDate, type: 'custom' });
+                  }}
+                  sx={{ borderRadius: '20px', textTransform: 'none', flexShrink: 0 }}
+                >
+                  Apply
+                </Button>
+              </Box>
             </LocalizationProvider>
           </Box>
         </Stack>
@@ -1628,10 +1630,29 @@ const AllTasksList = () => {
                   return (
                     <TableRow
                       key={task._id}
+                      onClick={(e) => {
+                        if (!e.defaultPrevented) {
+                          setSelectedRowId(task._id);
+                          // Mark as read if not already
+                          if (!task.readBy?.includes(user?._id)) {
+                            const newReadBy = [...(task.readBy || []), user._id];
+                            setAllTasks(prev => prev.map(t =>
+                              t._id === task._id ? { ...t, readBy: newReadBy } : t
+                            ));
+                            api.put(`/tasks/update-task/${task._id}`, { readBy: newReadBy }).catch(err =>
+                              console.error("Failed to update read status", err)
+                            );
+                          }
+                        }
+                      }}
                       sx={{
-                        backgroundColor: task._id === selectedRowId ? '#eef2ff' : visitedRowIds.includes(task._id) ? '#fafafa' : '#ffffff',
+                        backgroundColor: task._id === selectedRowId
+                          ? 'rgba(123, 104, 238, 0.15) !important'
+                          : task.readBy?.includes(user?._id)
+                            ? '#f0f0f0'
+                            : '#ffffff',
                         transition: '0.2s',
-                        borderLeft: visitedRowIds.includes(task._id) ? '6px solid #7b68ee' : '6px solid transparent',
+                        borderLeft: task.readBy?.includes(user?._id) ? '6px solid #7b68ee' : '6px solid transparent',
                         '&:hover': { backgroundColor: '#f5f5f5' }
                       }}
                     >
@@ -1825,25 +1846,36 @@ const AllTasksList = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: "flex", gap: 1 }}>
-                          <Tooltip title={visitedRowIds.includes(task._id) ? "Mark as Unread" : "Mark as Read"}>
+                          <Tooltip title={task.readBy?.includes(user?._id) ? "Mark as Unread" : "Mark as Read"}>
                             <IconButton
                               size="small"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                setVisitedRowIds(prev =>
-                                  prev.includes(task._id)
-                                    ? prev.filter(id => id !== task._id)
-                                    : [...prev, task._id]
-                                );
+                                e.preventDefault();
+                                const isRead = task.readBy?.includes(user?._id);
+                                const newReadBy = isRead
+                                  ? (task.readBy || []).filter(id => id !== user?._id)
+                                  : [...(task.readBy || []), user?._id];
+
+                                // Optimistic update
+                                setAllTasks(prev => prev.map(t =>
+                                  t._id === task._id ? { ...t, readBy: newReadBy } : t
+                                ));
+
+                                try {
+                                  await api.put(`/tasks/update-task/${task._id}`, { readBy: newReadBy });
+                                } catch (err) {
+                                  console.error("Failed to update read status", err);
+                                }
                               }}
                               sx={{
-                                color: visitedRowIds.includes(task._id) ? '#7b68ee' : '#b0b0b0',
+                                color: task.readBy?.includes(user?._id) ? '#7b68ee' : '#b0b0b0',
                                 '&:hover': {
-                                  color: visitedRowIds.includes(task._id) ? '#6854d9' : '#7b68ee'
+                                  color: task.readBy?.includes(user?._id) ? '#6854d9' : '#7b68ee'
                                 }
                               }}
                             >
-                              {visitedRowIds.includes(task._id) ? <MdCheckCircle /> : <MdRadioButtonUnchecked />}
+                              {task.readBy?.includes(user?._id) ? <MdCheckCircle /> : <MdRadioButtonUnchecked />}
                             </IconButton>
                           </Tooltip>
                           <Tooltip title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}>

@@ -122,37 +122,20 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ------------------------------------------------------------------
 // 404 Handler
 // ------------------------------------------------------------------
-app.use((req, res, next) => {
-  console.log(`[404] Route not found: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({
-    success: false,
-    message: `Route not found: ${req.method} ${req.originalUrl}`,
-  });
-});
+import { errorHandler, routeNotFound } from "./middlewares/errorMiddleware.js";
+
+// ... existing code ...
 
 // ------------------------------------------------------------------
-// Global Error Handler
+// 404 Handler && Global Error Handler
 // ------------------------------------------------------------------
-app.use((err, req, res, next) => {
-  console.error(`[Error] ${err.message}`, err.stack);
-
-  // Handle CORS errors specifically
-  if (err.message.includes('Not allowed by CORS')) {
-    return res.status(403).json({
-      success: false,
-      message: err.message,
-    });
-  }
-
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  res.status(statusCode).json({
-    success: false,
-    message: err.message || "Server Error",
-    stack: process.env.NODE_ENV === "production" ? null : err.stack,
-  });
-});
+app.use(routeNotFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
 
 export default app;

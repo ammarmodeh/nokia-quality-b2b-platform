@@ -67,6 +67,10 @@ const SettingsPage = () => {
         quizPassScore: 70,
         labPassScore: 75,
       },
+      npsTargets: {
+        promoters: 75,
+        detractors: 9,
+      },
       notifications: {
         emailAlerts: true,
         pushNotifications: true,
@@ -360,6 +364,30 @@ const SettingsPage = () => {
                 {...register("thresholds.labPassScore", { min: 0, max: 100 })}
                 error={!!errors.thresholds?.labPassScore}
                 helperText={errors.thresholds?.labPassScore ? "Value must be between 0 and 100" : ""}
+                sx={textFieldStyles}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                type="number"
+                label="NPS Promoters Target (≥)"
+                disabled={!editMode}
+                {...register("npsTargets.promoters", { min: 0, max: 100 })}
+                error={!!errors.npsTargets?.promoters}
+                helperText={errors.npsTargets?.promoters ? "Value must be between 0 and 100" : ""}
+                sx={textFieldStyles}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                type="number"
+                label="NPS Detractors Target (≤)"
+                disabled={!editMode}
+                {...register("npsTargets.detractors", { min: 0, max: 100 })}
+                error={!!errors.npsTargets?.detractors}
+                helperText={errors.npsTargets?.detractors ? "Value must be between 0 and 100" : ""}
                 sx={textFieldStyles}
               />
             </Grid>

@@ -77,7 +77,7 @@ const Layout = () => {
           />
         </header>
         <div
-          className="h-[calc(100vh-55px)] w-full overflow-y-auto px-4 py-6 bg-[#1a1a1a] relative"
+          className="h-[calc(100vh-55px)] w-full overflow-y-auto overflow-x-auto px-4 py-6 bg-[#1a1a1a] relative"
         >
           <Outlet />
         </div>

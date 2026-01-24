@@ -118,20 +118,24 @@ const Users = () => {
   }, []);
 
   const isVisible = useCallback((member, currentUserId) => {
+    if (!member) return false;
     if (member._id === currentUserId) return true;
     return member.visibleTo && member.visibleTo.includes(currentUserId);
   }, []);
 
   // Filter & Sort
   const filteredTeam = useMemo(() => {
+    if (!Array.isArray(team)) return [];
     let result = team.filter((member) =>
-      member.name.toLowerCase().includes(search.toLowerCase()) ||
-      member.email.toLowerCase().includes(search.toLowerCase()) ||
-      member.title?.toLowerCase().includes(search.toLowerCase())
+      member && ( // Ensure member exists
+        (member.name && member.name.toLowerCase().includes(search.toLowerCase())) ||
+        (member.email && member.email.toLowerCase().includes(search.toLowerCase())) ||
+        (member.title && member.title.toLowerCase().includes(search.toLowerCase()))
+      )
     );
 
     if (sortBy === "name") {
-      result.sort((a, b) => a.name.localeCompare(b.name));
+      result.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     } else if (sortBy === "role") {
       result.sort((a, b) => (a.role || "").localeCompare(b.role || ""));
     }
@@ -152,7 +156,7 @@ const Users = () => {
   const columns = [
     {
       field: 'avatar', headerName: '', width: 70, sortable: false,
-      renderCell: (params) => <Avatar src={params.row.avatar} alt={params.row.name} sx={{ width: 32, height: 32 }} />
+      renderCell: (params) => <Avatar src={params.row?.avatar} alt={params.row?.name} sx={{ width: 32, height: 32 }} />
     },
     { field: 'name', headerName: 'Name', flex: 1, minWidth: 150, renderCell: (p) => <Typography fontWeight="500">{p.value}</Typography> },
     {
@@ -175,7 +179,7 @@ const Users = () => {
     },
     {
       field: 'phoneNumber', headerName: 'Phone', width: 150,
-      valueGetter: (params) => isVisible(params.row, currentUserId) ? params.value : '****'
+      valueGetter: (value, row) => isVisible(row, currentUserId) ? value : '****'
     },
     {
       field: 'actions', headerName: 'Visibility', width: 100, sortable: false,

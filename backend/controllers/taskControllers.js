@@ -190,8 +190,10 @@ export const updateTask = async (req, res) => {
       }
     }
 
-    task.readBy = [...new Set([...originalValues.readBy, ...(updatedData.readBy || [])])];
-    // task.readByWhenClosed = [...new Set([...originalValues.readByWhenClosed, ...(updatedData.readByWhenClosed || [])])];
+    // Handle readBy field - replace instead of merge to allow unmarking as read
+    if (updatedData.readBy !== undefined) {
+      task.readBy = updatedData.readBy;
+    }
 
     const updateLog = {
       action: "updated",
@@ -496,7 +498,7 @@ export const getCurrentYearTasks = async (req, res) => {
       isDeleted: false,
       interviewDate: { $gte: startOfYear }
     })
-      .select("-taskLogs -notifications -readBy")
+      .select("-taskLogs -notifications")
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email")
       .sort({ interviewDate: -1 });
@@ -578,7 +580,7 @@ export const getTasks = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const tasks = await TaskSchema.find(mongoQuery)
-      .select("-taskLogs -notifications -readBy")
+      .select("-taskLogs -notifications")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -1320,19 +1322,11 @@ export const clearNotifications = async (req, res) => {
 export const getAllTasks = async (req, res) => {
   try {
     const tasks = await TaskSchema.find()
-      .select("-taskLogs -notifications -readBy -subTasks.checkpoints")
+      .select("-taskLogs -notifications -subTasks.checkpoints")
       .populate("assignedTo", "name email role")
       .populate("whomItMayConcern", "name email role")
       .populate("createdBy", "name email")
       .sort({ createdAt: -1 });
-
-    // Debug: Check if subReason and rootCause are present
-    console.log("Sample task data (first task):", {
-      slid: tasks[0]?.slid,
-      subReason: tasks[0]?.subReason,
-      rootCause: tasks[0]?.rootCause,
-      reason: tasks[0]?.reason
-    });
 
     res.status(200).json(tasks);
   } catch (error) {

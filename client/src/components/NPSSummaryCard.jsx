@@ -138,8 +138,9 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
 
     const nps = promotersPercent - detractorsPercent;
 
-    const targetPromoters = 75;
-    const targetDetractors = 9;
+    // Use dynamic targets from settings, fallback to defaults if not available
+    const targetPromoters = settings?.npsTargets?.promoters ?? 75;
+    const targetDetractors = settings?.npsTargets?.detractors ?? 9;
 
     const isPromoterAlarm = promotersPercent < targetPromoters && totalSamples > 0;
     const isDetractorAlarm = detractorsPercent > targetDetractors && totalSamples > 0;
@@ -273,7 +274,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
               </Box>
               <Box>
                 <Typography variant="h6" fontWeight="800">NPS Performance</Typography>
-                <Typography variant="caption" color="textSecondary">Interactive Sentiment Scoring</Typography>
+                {/* <Typography variant="caption" color="textSecondary">Interactive Sentiment Scoring</Typography> */}
               </Box>
             </Stack>
 
@@ -281,7 +282,22 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
               <ToggleButtonGroup
                 value={filterType}
                 exclusive
-                onChange={(e, v) => { if (v) { setFilterType(v); setSelectedPeriod('all'); } }}
+                onChange={(e, v) => {
+                  if (v) {
+                    setFilterType(v);
+                    if (v === 'week') {
+                      // Default to latest available week or current
+                      const latestWeek = weeks.length > 0 ? weeks[0].week.toString() : (defaultWeek ? defaultWeek.toString() : 'all');
+                      setSelectedPeriod(latestWeek);
+                    } else if (v === 'month') {
+                      // Default to latest available month
+                      const latestMonth = months.length > 0 ? months[0].month.toString() : '1';
+                      setSelectedPeriod(latestMonth);
+                    } else {
+                      setSelectedPeriod('all');
+                    }
+                  }
+                }}
                 size="small"
                 sx={{
                   // bgcolor: '#f8fafc',
@@ -302,7 +318,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
                     onChange={(e) => setSelectedPeriod(e.target.value)}
                     sx={{ borderRadius: 2 }}
                   >
-                    <MenuItem value="all">Full Year</MenuItem>
+                    {weeks.length === 0 && <MenuItem value="all" disabled>No Weeks</MenuItem>}
                     {weeks.map(w => <MenuItem key={w.key} value={w.week.toString()}>{w.label}</MenuItem>)}
                   </Select>
                 </FormControl>
@@ -315,7 +331,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
                     onChange={(e) => setSelectedPeriod(e.target.value)}
                     sx={{ borderRadius: 2 }}
                   >
-                    <MenuItem value="all">Full Year</MenuItem>
+                    {months.length === 0 && <MenuItem value="all" disabled>No Months</MenuItem>}
                     {months.map(m => <MenuItem key={m.key} value={m.month.toString()}>{m.label}</MenuItem>)}
                   </Select>
                 </FormControl>

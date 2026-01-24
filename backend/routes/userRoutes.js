@@ -1,5 +1,5 @@
 import express from "express";
-import { login, register, getUsersByIds, getAllUsers, updateUserProfile, changePassword, getAllUnhashedUsers, updateVisibility } from "../controllers/userControllers.js";
+import { login, register, getUsersByIds, getAllUsers, updateUserProfile, changePassword, getAllUnhashedUsers, updateVisibility, refreshToken } from "../controllers/userControllers.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -20,7 +20,7 @@ router.post("/register", register);
 router.post("/login", login);
 
 // Refresh Token
-// router.post("/refresh-token", refreshToken);
+router.post("/refresh-token", refreshToken);
 
 // Update User Profile
 router.put("/profile", protect, updateUserProfile);
