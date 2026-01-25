@@ -806,13 +806,26 @@ const AllTasksList = () => {
             <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
               <MdDateRange /> Date Filter:
             </Typography>
-            <ButtonGroup size="small" variant="outlined" sx={{ flexShrink: 0 }}>
-              <Button onClick={() => setDateFilter({ start: startOfWeek(subWeeks(new Date(), 2)), end: endOfWeek(new Date()), type: 'latest3Weeks' })} variant={dateFilter.type === 'latest3Weeks' ? 'contained' : 'outlined'}>Latest 3 Weeks</Button>
-              <Button onClick={() => setDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()), type: 'thisWeek' })} variant={dateFilter.type === 'thisWeek' ? 'contained' : 'outlined'}>This Week</Button>
-              <Button onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()), type: 'thisMonth' })} variant={dateFilter.type === 'thisMonth' ? 'contained' : 'outlined'}>This Month</Button>
-              <Button onClick={() => setDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()), type: 'thisYear' })} variant={dateFilter.type === 'thisYear' ? 'contained' : 'outlined'}>This Year</Button>
-              <Button onClick={() => setDateFilter({ start: null, end: null, type: 'all' })} variant={dateFilter.type === 'all' ? 'contained' : 'outlined'}>All Time</Button>
-            </ButtonGroup>
+            <Box sx={{
+              display: 'flex',
+              gap: 1,
+              flexWrap: 'wrap',
+              flexShrink: 0,
+              '& .MuiButton-root': {
+                whiteSpace: 'nowrap',
+                minWidth: 'auto',
+                px: 1.5,
+                borderRadius: '20px',
+                textTransform: 'none',
+                fontWeight: 600
+              }
+            }}>
+              <Button onClick={() => setDateFilter({ start: startOfWeek(subWeeks(new Date(), 2)), end: endOfWeek(new Date()), type: 'latest3Weeks' })} variant={dateFilter.type === 'latest3Weeks' ? 'contained' : 'outlined'} size="small">Latest 3 Weeks</Button>
+              <Button onClick={() => setDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()), type: 'thisWeek' })} variant={dateFilter.type === 'thisWeek' ? 'contained' : 'outlined'} size="small">This Week</Button>
+              <Button onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()), type: 'thisMonth' })} variant={dateFilter.type === 'thisMonth' ? 'contained' : 'outlined'} size="small">This Month</Button>
+              <Button onClick={() => setDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()), type: 'thisYear' })} variant={dateFilter.type === 'thisYear' ? 'contained' : 'outlined'} size="small">This Year</Button>
+              <Button onClick={() => setDateFilter({ start: null, end: null, type: 'all' })} variant={dateFilter.type === 'all' ? 'contained' : 'outlined'} size="small">All Time</Button>
+            </Box>
 
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
@@ -1450,112 +1463,132 @@ const AllTasksList = () => {
           </Select>
         </FormControl>
 
-        <TextField
-          variant="outlined"
-          size="small"
-          placeholder="Search by SLID, Name, Contact, or Feedback..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <MdSearch style={{ color: '#b3b3b3' }} />
-              </InputAdornment>
-            ),
-            endAdornment: searchTerm && (
-              <IconButton
-                size="small"
-                onClick={() => setSearchTerm('')}
-                sx={{
-                  visibility: searchTerm ? 'visible' : 'hidden',
-                  color: '#b3b3b3',
-                  '&:hover': {
-                    backgroundColor: '#2a2a2a',
-                  }
-                }}
-              >
-                <MdClose />
-              </IconButton>
-            ),
-            sx: {
-              borderRadius: '20px',
-              backgroundColor: '#2d2d2d',
-              width: '100%',
-              '& fieldset': {
-                border: 'none',
-              },
-              '& input': {
-                color: '#ffffff',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                '&::placeholder': {
-                  color: '#666',
-                  opacity: 1,
-                  fontSize: '0.8rem',
+        <Box sx={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          flexWrap: 'wrap',
+          gap: 2,
+          alignItems: 'center',
+          width: isMobile ? '100%' : 'auto',
+          flexGrow: 1
+        }}>
+          <TextField
+            variant="outlined"
+            size="small"
+            placeholder="Search by SLID, Name, Contact, or Feedback..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <MdSearch style={{ color: '#b3b3b3' }} />
+                </InputAdornment>
+              ),
+              endAdornment: searchTerm && (
+                <IconButton
+                  size="small"
+                  onClick={() => setSearchTerm('')}
+                  sx={{
+                    visibility: searchTerm ? 'visible' : 'hidden',
+                    color: '#b3b3b3',
+                    '&:hover': {
+                      backgroundColor: '#2a2a2a',
+                    }
+                  }}
+                >
+                  <MdClose />
+                </IconButton>
+              ),
+              sx: {
+                borderRadius: '20px',
+                backgroundColor: '#2d2d2d',
+                width: '100%',
+                '& fieldset': {
+                  border: 'none',
+                },
+                '& input': {
+                  color: '#ffffff',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                }
+                  '&::placeholder': {
+                    color: '#666',
+                    opacity: 1,
+                    fontSize: '0.8rem',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }
+                },
               },
-            },
-          }}
-          sx={{
-            width: '100%',
-            '& .MuiOutlinedInput-root': {
-              '&:hover fieldset': {
-                border: '1px solid #666 !important',
-              },
-              '&.Mui-focused fieldset': {
-                border: '1px solid #7b68ee !important',
-              },
-            },
-          }}
-        />
-
-        <Button
-          variant="outlined"
-          onClick={exportToExcel}
-          startIcon={<MdFileDownload />}
-          sx={{
-            borderColor: '#3d3d3d',
-            color: '#1976d2',
-            '&:hover': {
-              backgroundColor: 'rgba(25, 118, 210, 0.08)',
-              borderColor: '#666',
-            },
-            textTransform: 'none',
-            borderRadius: '20px',
-            px: 3,
-            whiteSpace: 'nowrap',
-            width: isMobile ? '100%' : 'auto'
-          }}
-        >
-          Export to Excel
-        </Button>
-
-        {user && user.role === 'Admin' && (
-          <Button
-            variant="outlined"
-            onClick={() => setOpenAddTask(true)}
-            startIcon={<IoMdAdd />}
-            sx={{
-              borderColor: '#3d3d3d',
-              color: '#4caf50',
-              '&:hover': {
-                backgroundColor: 'rgba(76, 175, 80, 0.08)',
-                borderColor: '#666',
-              },
-              textTransform: 'none',
-              borderRadius: '20px',
-              px: 3,
-              whiteSpace: 'nowrap',
-              width: isMobile ? '100%' : 'auto'
             }}
-          >
-            Create Task
-          </Button>
-        )}
+            sx={{
+              flexGrow: 1,
+              width: isMobile ? '100%' : 'auto',
+              minWidth: isMobile ? '100%' : '300px',
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': {
+                  border: '1px solid #666 !important',
+                },
+                '&.Mui-focused fieldset': {
+                  border: '1px solid #7b68ee !important',
+                },
+              },
+            }}
+          />
+
+          <Box sx={{
+            display: 'flex',
+            gap: 1,
+            width: isMobile ? '100%' : 'auto',
+            justifyContent: isMobile ? 'space-between' : 'flex-start',
+            flexWrap: 'wrap'
+          }}>
+            <Button
+              variant="outlined"
+              onClick={exportToExcel}
+              startIcon={<MdFileDownload />}
+              sx={{
+                borderColor: '#3d3d3d',
+                color: '#1976d2',
+                '&:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                  borderColor: '#666',
+                },
+                textTransform: 'none',
+                borderRadius: '20px',
+                px: 3,
+                whiteSpace: 'nowrap',
+                flexGrow: isMobile ? 1 : 0
+              }}
+            >
+              Export to Excel
+            </Button>
+
+            {user && user.role === 'Admin' && (
+              <Button
+                variant="outlined"
+                onClick={() => setOpenAddTask(true)}
+                startIcon={<IoMdAdd />}
+                sx={{
+                  borderColor: '#3d3d3d',
+                  color: '#4caf50',
+                  '&:hover': {
+                    backgroundColor: 'rgba(76, 175, 80, 0.08)',
+                    borderColor: '#666',
+                  },
+                  textTransform: 'none',
+                  borderRadius: '20px',
+                  px: 3,
+                  whiteSpace: 'nowrap',
+                  flexGrow: isMobile ? 1 : 0
+                }}
+              >
+                Create Task
+              </Button>
+            )}
+          </Box>
+        </Box>
       </Box>
 
       {/* Tasks Table */}

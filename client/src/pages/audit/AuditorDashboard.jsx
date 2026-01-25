@@ -347,7 +347,8 @@ const AuditorDashboard = () => {
 
   const navigate = useNavigate();
 
-  const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}/api/audit`;
+  // const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/api/audit`;
+  const API_URL = "/audit";
 
   const [loading, setLoading] = useState(false);
 
@@ -367,7 +368,8 @@ const AuditorDashboard = () => {
 
       // Pass date filter to backend for scheduledDate filtering
       const url = `${API_URL}/my-tasks${dateFilter ? `?date=${dateFilter}` : ''}`;
-      const { data } = await axios.get(url, config);
+      // Use the centralized api instance which handles base URL and auth headers
+      const { data } = await api.get(url);
       setTasks(data);
       setFilteredTasks(data);
     } catch (error) {
@@ -469,7 +471,7 @@ const AuditorDashboard = () => {
 
     const downloadPromises = selectedTask.photos.map(async (photo) => {
       try {
-        const imageUrl = photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${photo.url}`;
+        const imageUrl = photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}`;
         const response = await fetch(imageUrl);
         if (!response.ok) throw new Error("Network response was not ok");
         const blob = await response.blob();
@@ -534,6 +536,8 @@ const AuditorDashboard = () => {
             onChange={(e, v) => setTabIndex(v)}
             textColor="primary"
             indicatorColor="primary"
+            variant="scrollable"
+            scrollButtons="auto"
             sx={{ '& .MuiTab-root': { color: 'text.secondary', fontWeight: 600, '&.Mui-selected': { color: 'primary.main' } } }}
           >
             <Tab label="My Tasks" icon={<AssignmentIcon />} iconPosition="start" />
@@ -978,7 +982,7 @@ const AuditorDashboard = () => {
                             onClick={() => setPreviewImage(photo)}
                           >
                             <img
-                              src={photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${photo.url}`}
+                              src={photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}`}
                               alt={photo.checkpointName}
                               style={{ width: '100%', height: '120px', objectFit: 'cover' }}
                             />
@@ -1045,7 +1049,7 @@ const AuditorDashboard = () => {
           <DialogContent sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 0, bgcolor: '#0a0a0a' }}>
             {previewImage && (
               <img
-                src={previewImage.url.startsWith('http') ? previewImage.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${previewImage.url}`}
+                src={previewImage.url.startsWith('http') ? previewImage.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${previewImage.url}`}
                 alt={previewImage.checkpointName}
                 style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
               />

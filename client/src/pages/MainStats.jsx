@@ -55,6 +55,8 @@ const MainStats = () => {
     reasonStats: {},
     governorateStats: {},
   });
+  const [governorateStats, setGovernorateStats] = useState({});
+  const [updateTrigger, setUpdateTrigger] = useState(false);
   // console.log('stats.governorateStats:', stats.governorateStats);
 
   const [reasonView, setReasonView] = useState('highest'); // State to manage the current view
@@ -74,6 +76,8 @@ const MainStats = () => {
 
   useEffect(() => {
     const fetchTasksData = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const response = await api.get('/tasks/get-all-tasks', {
           headers: {
@@ -85,14 +89,14 @@ const MainStats = () => {
         const processedData = processTasksData(tasks);
         setStats(processedData);
       } catch (err) {
-        setError(err.message);
+        setError(err.message || "Failed to fetch task data");
       } finally {
         setLoading(false);
       }
     };
 
     fetchTasksData();
-  }, []);
+  }, [updateTrigger]);
 
   const handleReasonClick = (reason) => {
     // Filter tasks that have this reason
@@ -727,8 +731,15 @@ const MainStats = () => {
   );
 
   if (error) return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
       <Typography sx={{ color: colors.error }}>Error: {error}</Typography>
+      <Button
+        variant="contained"
+        onClick={() => setUpdateTrigger(prev => !prev)}
+        sx={{ backgroundColor: colors.primary, '&:hover': { backgroundColor: colors.primaryHover } }}
+      >
+        Retry
+      </Button>
     </Box>
   );
 

@@ -64,6 +64,7 @@ const TeamsPerformancePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [tabValue, setTabValue] = useState(0);
   const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [updateTrigger, setUpdateTrigger] = useState(false);
 
   const calculateDaysBetween = (startDate, endDate) => {
     if (!startDate || !endDate) return 0;
@@ -75,6 +76,8 @@ const TeamsPerformancePage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const [assessmentsResponse, fieldTeamsResponse, violations] = await Promise.all([
           api.get('/on-the-job-assessments', {
@@ -164,14 +167,14 @@ const TeamsPerformancePage = () => {
         console.log('Updated Data:', updatedData);
         setTeamsData(updatedData);
       } catch (err) {
-        setError(err.message);
+        setError(err.message || "Failed to fetch performance data");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [updateTrigger]);
 
   const fetchTasksData = async () => {
     try {
@@ -977,8 +980,15 @@ const TeamsPerformancePage = () => {
   );
 
   if (error) return (
-    <Box sx={{ backgroundColor: colors.background, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+    <Box sx={{ backgroundColor: 'background.paper', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
       <Typography sx={{ color: colors.error }}>Error: {error}</Typography>
+      <Button
+        variant="contained"
+        onClick={() => setUpdateTrigger(prev => !prev)}
+        sx={{ backgroundColor: colors.primary, '&:hover': { backgroundColor: '#2d8ada' } }}
+      >
+        Retry
+      </Button>
     </Box>
   );
 

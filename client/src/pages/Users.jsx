@@ -84,22 +84,30 @@ const Users = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [selectedView, setSelectedView] = useState(0); // 0 = Board, 1 = List
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [updateTrigger, setUpdateTrigger] = useState(false);
   const currentUserId = useSelector((state) => state?.auth?.user?._id);
 
   // Fetch team members
   useEffect(() => {
     const fetchTeam = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const { data } = await api.get("/users/get-all-users", {
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         });
         setTeam(data);
       } catch (error) {
-        // console.error("Error fetching team members:", error);
+        console.error("Error fetching team members:", error);
+        setError(error.message || "Failed to load team members");
+      } finally {
+        setLoading(false);
       }
     };
     fetchTeam();
-  }, []);
+  }, [updateTrigger]);
 
   const handleCopyEmail = useCallback((email) => {
     navigator.clipboard.writeText(email)
@@ -192,6 +200,25 @@ const Users = () => {
       )
     }
   ];
+
+  if (loading) {
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <LinearProgress sx={{ width: '50%' }} />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
+        <Typography color="error">Error: {error}</Typography>
+        <Button variant="contained" onClick={() => setUpdateTrigger(prev => !prev)}>
+          Retry
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: isMobile ? 0 : 3, minHeight: '100vh' }}>

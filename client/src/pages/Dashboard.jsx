@@ -67,15 +67,26 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      // Create a unified loading state or keep granular if needed, but parallelize the requests
+      console.log("Dashboard: Fetch initiated...");
+      setTasksLoading(true);
+      setTeamsLoading(true);
+      setTasksError(null);
+      setTeamsError(null);
+      setTasks([]); // Clear existing tasks to force refresh
+      setTeamsData([]); // Clear existing teams to force refresh
+      setSamplesData([]); // Clear existing samples to force refresh
+
       try {
+        const timestamp = Date.now();
+        console.log("Dashboard: Initiating parallel API requests (cache-buster:", timestamp, ")...");
         const [tasksRes, teamsRes, samplesRes, settingsRes] = await Promise.all([
-          api.get("/tasks/get-all-tasks"),
-          api.get('/field-teams/get-field-teams'),
-          api.get(`/samples-token/${currentYear}`),
-          api.get("/settings")
+          api.get(`/tasks/get-all-tasks?_t=${timestamp}`),
+          api.get(`/field-teams/get-field-teams?_t=${timestamp}`),
+          api.get(`/samples-token/${currentYear}?_t=${timestamp}`),
+          api.get(`/settings?_t=${timestamp}`)
         ]);
 
+        console.log("Dashboard: API success, data received.");
         // Process Tasks
         setTasks(tasksRes.data);
 
@@ -94,17 +105,13 @@ const Dashboard = () => {
         setSettings(settingsRes.data);
 
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        setTasksError(error); // Using one error state to trigger error UI if any fails
-
-        // If it's a 401, we let the interceptor handle it, but we might still end up here if refresh fails.
-        // We don't want to show "Error fetching data" if we are about to redirect.
-        if (error.response?.status !== 401) {
-          console.error("Dashboard fetch error details:", error);
-        }
+        console.error("Dashboard: Fetch ERROR:", error);
+        setTasksError(error);
+        // ... rest of error logic
       } finally {
         setTasksLoading(false);
         setTeamsLoading(false);
+        console.log("Dashboard: Fetch complete.");
       }
     };
 

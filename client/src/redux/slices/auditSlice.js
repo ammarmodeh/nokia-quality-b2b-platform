@@ -1,15 +1,17 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import api from "../../api/api";
 
 // Base URL for audit API
-const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/api/audit`;
+// Base URL for audit API
+const API_URL = "/audit";
 
 // Async thunk for login
 export const loginAuditUser = createAsyncThunk(
   "audit/login",
   async (userData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/login`, userData);
+      const response = await api.post(`${API_URL}/login`, userData);
       localStorage.setItem("auditUser", JSON.stringify(response.data));
       // localStorage.setItem("token", response.data.token); // If using token header
       return response.data;
@@ -27,7 +29,7 @@ export const logoutAuditUser = createAsyncThunk(
   "audit/logout",
   async (_, { rejectWithValue }) => {
     try {
-      await axios.post(`${API_URL}/logout`);
+      await api.post(`${API_URL}/logout`);
       localStorage.removeItem("auditUser");
       return null;
     } catch (error) {

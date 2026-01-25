@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import api from '../../api/api';
 import {
   Box,
   Typography,
@@ -39,7 +40,8 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { Snackbar, Alert, Tooltip } from '@mui/material';
 
-const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}/api/audit`;
+// const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/api/audit`;
+const API_URL = "/audit";
 
 const AuditTaskInspection = () => {
   const { slid } = useParams();
@@ -102,7 +104,7 @@ const AuditTaskInspection = () => {
   useEffect(() => {
     const fetchTask = async () => {
       try {
-        const { data } = await axios.get(`${API_URL}/tasks/${slid}`, getAuthHeader());
+        const { data } = await api.get(`${API_URL}/tasks/${slid}`);
         setTask(data);
         setLoading(false);
       } catch (error) {
@@ -186,7 +188,9 @@ const AuditTaskInspection = () => {
         formData.append('checkpointName', checkpointName);
         formData.append('description', file.name);
 
-        const { data } = await axios.post(`${API_URL}/tasks/${task._id}/photo`, formData, getAuthHeader());
+        const { data } = await api.post(`${API_URL}/tasks/${task._id}/photo`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
         setTask(prev => ({ ...data, checklist: prev.checklist, finalFeedback: prev.finalFeedback })); // Preserve local unsaved state
       }
     } catch (error) {
@@ -202,7 +206,7 @@ const AuditTaskInspection = () => {
   const handleDeletePhoto = async (photoId) => {
     if (!window.confirm("Are you sure you want to remove this photo?")) return;
     try {
-      const { data } = await axios.delete(`${API_URL}/tasks/${task._id}/photo/${photoId}`, getAuthHeader());
+      const { data } = await api.delete(`${API_URL}/tasks/${task._id}/photo/${photoId}`);
       setTask(prev => ({ ...data, checklist: prev.checklist })); // Preserve local checklist state
     } catch (error) {
       console.error("Failed to delete photo", error);
@@ -212,10 +216,10 @@ const AuditTaskInspection = () => {
 
   const handleSave = async () => {
     try {
-      await axios.put(`${API_URL}/tasks/${task._id}/checklist`, {
+      await api.put(`${API_URL}/tasks/${task._id}/checklist`, {
         checklist: task.checklist,
         finalFeedback: task.finalFeedback
-      }, getAuthHeader());
+      });
       alert("Progress saved!");
     } catch (error) {
       console.error("Save failed", error);
@@ -276,11 +280,11 @@ const AuditTaskInspection = () => {
     }
 
     try {
-      await axios.put(`${API_URL}/tasks/${task._id}/submit`, {
+      await api.put(`${API_URL}/tasks/${task._id}/submit`, {
         processSlid: verificationSlid,
         checklist: task.checklist,
         finalFeedback: task.finalFeedback
-      }, getAuthHeader());
+      });
       alert("Audit submitted successfully!");
       navigate('/audit/tasks');
     } catch (error) {
@@ -503,7 +507,7 @@ const AuditTaskInspection = () => {
                     <Grid item xs={12} sm={6} key={pIdx}>
                       <Box sx={{ position: 'relative', borderRadius: 0, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
                         <img
-                          src={photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${photo.url}`}
+                          src={photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}`}
                           alt="evidence"
                           style={{ width: '100%', height: '120px', objectFit: 'cover' }}
                         />
