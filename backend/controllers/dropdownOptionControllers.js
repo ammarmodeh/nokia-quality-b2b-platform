@@ -242,7 +242,7 @@ export const seedOptions = async (req, res) => {
       { category: "TRANSACTION_TYPE", value: "RESOLVE", label: "Resolution", order: 5 },
 
       // Transaction States (Outcome Codes)
-      { category: "TRANSACTION_STATE", value: "APPT_SET", label: "Appointment Set", order: 1 },
+      { category: "TRANSACTION_STATE", value: "APPT_SET", label: "Appointment Set / Visit Scheduled", order: 1 },
       { category: "TRANSACTION_STATE", value: "SOLVED_REMOTE", label: "Solved by Phone", order: 2 },
       { category: "TRANSACTION_STATE", value: "NO_ANSWER", label: "No Answer", order: 3 },
       { category: "TRANSACTION_STATE", value: "REFUSED", label: "Customer Refused Solutions", order: 4 },
@@ -253,6 +253,9 @@ export const seedOptions = async (req, res) => {
       { category: "TRANSACTION_STATE", value: "PENDING_CONTACT", label: "Pending Customer Contact", order: 9 },
       { category: "TRANSACTION_STATE", value: "ANGRY_CLOSE", label: "Customer Angry / Hung Up", order: 10 },
       { category: "TRANSACTION_STATE", value: "AWAITING_REPLY", label: "Awaiting Customer Reply", order: 11 },
+      { category: "TRANSACTION_STATE", value: "NEED_SCHEDULE", label: "Need to Schedule an Appointment", order: 12 },
+      { category: "TRANSACTION_STATE", value: "TEAM_CONTACTED", label: "Team Contacted", order: 13 },
+      { category: "TRANSACTION_STATE", value: "REASSIGNED", label: "Reassigned", order: 14 },
 
       // Unfulfillment Reason Codes (Failure Reason Codes)
       // 100 Series: Customer Requests & Availability

@@ -93,13 +93,15 @@ import AddTask from '../components/task/AddTask';
 import AdvancedSearch from '../components/common/AdvancedSearch';
 import moment from 'moment';
 
+const DEFAULT_SETTINGS_STATE = { settings: {} };
+
 const AllTasksList = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const user = useSelector((state) => state?.auth?.user);
 
   // --- Consolidated State ---
-  const { settings } = useSelector((state) => state.settings || { settings: {} });
+  const { settings } = useSelector((state) => state.settings || DEFAULT_SETTINGS_STATE);
 
   const getWeekDisplay = (date) => {
     if (!date) return "-";
@@ -1377,10 +1379,12 @@ const AllTasksList = () => {
               }}
             />
           )}
-          PaperProps={{
-            sx: {
-              backgroundColor: '#2d2d2d',
-              color: '#ffffff',
+          slotProps={{
+            paper: {
+              sx: {
+                backgroundColor: '#2d2d2d',
+                color: '#ffffff',
+              }
             }
           }}
         />

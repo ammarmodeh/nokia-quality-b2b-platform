@@ -46,10 +46,11 @@ api.interceptors.response.use(
     // Check for 401 and specific conditions
     if (error.response?.status === 401) {
       const isLoginRequest = originalRequest.url.includes('/login');
+      const isRefreshRequest = originalRequest.url.includes('/refresh-token');
       const isAuditRequest = originalRequest.url.includes('/audit');
 
-      // If it's a login request or we already tried to retry, don't loop
-      if (isLoginRequest || originalRequest._retry) {
+      // If it's a login/refresh request or we already tried to retry, don't loop
+      if (isLoginRequest || isRefreshRequest || originalRequest._retry) {
         return Promise.reject(error);
       }
 

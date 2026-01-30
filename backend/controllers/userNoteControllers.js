@@ -4,8 +4,14 @@ import { UserNote } from "../models/userNoteModel.js";
 // @route   GET /api/user-notes
 // @access  Private
 export const getUserNotes = async (req, res) => {
+  const { archived } = req.query;
+  const isArchived = archived === "true";
+
   try {
-    const notes = await UserNote.find({ user: req.user._id, isArchived: false }).sort({
+    const notes = await UserNote.find({
+      user: req.user._id,
+      isArchived: isArchived
+    }).sort({
       isPinned: -1,
       updatedAt: -1,
     });
@@ -95,6 +101,27 @@ export const togglePin = async (req, res) => {
     }
 
     note.isPinned = !note.isPinned;
+    await note.save();
+
+    res.status(200).json(note);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Toggle archive status
+// @route   PATCH /api/user-notes/:id/archive
+// @access  Private
+export const toggleArchive = async (req, res) => {
+  try {
+    const note = await UserNote.findOne({ _id: req.params.id, user: req.user._id });
+
+    if (!note) {
+      return res.status(404).json({ message: "Note not found" });
+    }
+
+    note.isArchived = !note.isArchived;
+    if (note.isArchived) note.isPinned = false; // Unpin if archived
     await note.save();
 
     res.status(200).json(note);

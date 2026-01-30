@@ -73,7 +73,7 @@ const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, p
       const dateStr = period || todayDate;
 
       // Check if period string already contains year/dates to avoid redundancy
-      const hasDates = /\d{4}|\//.test(dateStr);
+      const hasDates = /\d{4}|\/|[A-Z][a-z]{2}\s\d+/.test(dateStr);
       const explicitDates = (startDate && endDate && !hasDates)
         ? `(${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})`
         : '';
@@ -302,7 +302,7 @@ ${trendSection}
 
       const dateStr = period || todayDate;
       // Check if period string already contains year/dates to avoid redundancy
-      const hasDates = /\d{4}|\//.test(dateStr);
+      const hasDates = /\d{4}|\/|[A-Z][a-z]{2}\s\d+/.test(dateStr);
       const explicitDates = (startDate && endDate && !hasDates)
         ? `(${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})`
         : '';

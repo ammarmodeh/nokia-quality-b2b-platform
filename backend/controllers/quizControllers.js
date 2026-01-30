@@ -4,7 +4,9 @@ import { QuizSchema } from "../models/quizModel.js";
 // Get All questions
 export const getAllQuestions = async (req, res) => {
   try {
-    const questions = await QuizSchema.find().sort({ order: 1 });
+    const { quizType } = req.query;
+    const filter = quizType ? { quizType } : { quizType: 'Performance' }; // Default to Performance if not specified for safety with old clients
+    const questions = await QuizSchema.find(filter).sort({ order: 1 });
     res.json(questions);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -13,7 +15,7 @@ export const getAllQuestions = async (req, res) => {
 
 // Add a new question
 export const addQuestion = async (req, res) => {
-  const { question, questionImage, options, optionsImages, correctAnswer, category, type, guideline } = req.body;
+  const { question, questionImage, options, optionsImages, correctAnswer, category, type, guideline, quizType } = req.body;
   const newQuestion = new QuizSchema({
     question,
     questionImage,
@@ -22,7 +24,8 @@ export const addQuestion = async (req, res) => {
     correctAnswer,
     category,
     type,
-    guideline
+    guideline,
+    quizType: quizType || 'Performance'
   });
 
   try {

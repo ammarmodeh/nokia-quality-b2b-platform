@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { IoMdAdd } from "react-icons/io";
 import { FaList, FaUserClock, FaRegCalendarAlt, FaSortAmountDown } from "react-icons/fa";
-import { MdClose, MdGridView, MdOutlineSearch, MdFilterList } from "react-icons/md";
+import { MdClose, MdGridView, MdOutlineSearch, MdFilterList, MdBarChart } from "react-icons/md";
 import {
   Tabs, Tab, Stack, Typography, TextField, IconButton, Box, Button,
   CircularProgress, useMediaQuery, Card, CardContent, Grid, LinearProgress,
@@ -18,19 +18,31 @@ import { useInView } from "react-intersection-observer";
 import TaskCard from "../components/TaskCard";
 import { useSelector } from "react-redux";
 import { format } from "date-fns";
+
 import { useNavigate } from "react-router-dom";
+import {
+  BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
+} from 'recharts';
 
 // --- Components ---
 
 const StatCard = ({ title, count, total, color, icon, percentage }) => (
-  <Card sx={{ height: '100%', position: 'relative', overflow: 'visible', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+  <Card sx={{
+    height: '100%',
+    position: 'relative',
+    overflow: 'visible',
+    borderRadius: 3,
+    bgcolor: 'rgba(30, 41, 59, 0.5)',
+    border: '1px solid rgba(255, 255, 255, 0.05)',
+    backdropFilter: 'blur(10px)'
+  }}>
     <CardContent sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="start" mb={2}>
         <Box>
-          <Typography variant="subtitle2" color="textSecondary" fontWeight="600" gutterBottom>
+          <Typography variant="subtitle2" color="#94a3b8" fontWeight="600" gutterBottom>
             {title}
           </Typography>
-          <Typography variant="h4" fontWeight="800" color="textPrimary">
+          <Typography variant="h4" fontWeight="800" color="#fff">
             {count}
           </Typography>
         </Box>
@@ -66,7 +78,7 @@ const StatCard = ({ title, count, total, color, icon, percentage }) => (
           {percentage.toFixed(0)}%
         </Typography>
       </Box>
-      <Typography variant="caption" color="textSecondary">
+      <Typography variant="caption" color="#64748b">
         {count} of {total} tasks
       </Typography>
     </CardContent>
@@ -199,6 +211,79 @@ const AssignedToMe = () => {
   };
 
   const statusStats = calculateStatusStats();
+
+  // Analytics aggregation
+  const analytics = useMemo(() => {
+    const stats = {
+      byOwner: {},
+      byReason: {},
+      bySubReason: {},
+      byRootCause: {},
+      byFieldTeam: {},
+      fieldTeamDetails: {}
+    };
+
+    filteredTasks.forEach(task => {
+      // For AssignedToMe, "owner" is usually me, but maybe we want "Responsible" or "Created By"? 
+      // Let's stick to the same pattern: responsible or assignedTo name.
+      const owner = task.responsible || task.assignedTo?.name || 'Unassigned';
+      const reason = task.reason || 'N/A';
+      const subReason = task.subReason || 'N/A';
+      const rootCause = task.rootCause || 'N/A';
+      const fieldTeam = task.teamName || 'Unassigned';
+      const category = task.category || 'N/A';
+
+      stats.byOwner[owner] = (stats.byOwner[owner] || 0) + 1;
+      stats.byReason[reason] = (stats.byReason[reason] || 0) + 1;
+      stats.bySubReason[subReason] = (stats.bySubReason[subReason] || 0) + 1;
+      stats.byRootCause[rootCause] = (stats.byRootCause[rootCause] || 0) + 1;
+      stats.byFieldTeam[fieldTeam] = (stats.byFieldTeam[fieldTeam] || 0) + 1;
+
+      if (!stats.fieldTeamDetails[fieldTeam]) {
+        stats.fieldTeamDetails[fieldTeam] = {
+          total: 0,
+          byCategory: {},
+          byOwner: {},
+          byReason: {},
+          bySubReason: {},
+          byRootCause: {}
+        };
+      }
+
+      const teamStats = stats.fieldTeamDetails[fieldTeam];
+      teamStats.total += 1;
+      teamStats.byCategory[category] = (teamStats.byCategory[category] || 0) + 1;
+      teamStats.byOwner[owner] = (teamStats.byOwner[owner] || 0) + 1;
+      teamStats.byReason[reason] = (teamStats.byReason[reason] || 0) + 1;
+      teamStats.bySubReason[subReason] = (teamStats.bySubReason[subReason] || 0) + 1;
+      teamStats.byRootCause[rootCause] = (teamStats.byRootCause[rootCause] || 0) + 1;
+    });
+
+    const toChartData = (obj) => Object.entries(obj)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    // Get top 5 field teams (offenders)
+    const topFieldTeams = toChartData(stats.byFieldTeam).slice(0, 5);
+
+    const fieldTeamAnalytics = topFieldTeams.map(team => ({
+      teamName: team.name,
+      totalIssues: team.value,
+      categories: toChartData(stats.fieldTeamDetails[team.name]?.byCategory || {}),
+      owners: toChartData(stats.fieldTeamDetails[team.name]?.byOwner || {}).slice(0, 5),
+      reasons: toChartData(stats.fieldTeamDetails[team.name]?.byReason || {}).slice(0, 5),
+      subReasons: toChartData(stats.fieldTeamDetails[team.name]?.bySubReason || {}).slice(0, 5),
+      rootCauses: toChartData(stats.fieldTeamDetails[team.name]?.byRootCause || {}).slice(0, 5)
+    }));
+
+    return {
+      ownerData: toChartData(stats.byOwner).slice(0, 10),
+      reasonData: toChartData(stats.byReason).slice(0, 8),
+      subReasonData: toChartData(stats.bySubReason).slice(0, 10),
+      rootCauseData: toChartData(stats.byRootCause).slice(0, 10),
+      fieldTeamAnalytics
+    };
+  }, [filteredTasks]);
 
   const handleSearch = (term) => {
     setSearchTerm(term);
@@ -465,19 +550,28 @@ const AssignedToMe = () => {
       </Grid>
 
       {/* Toolbar & Tabs */}
-      <Paper sx={{ mb: 3, borderRadius: 3, p: 2, overflow: 'hidden' }} elevation={0}>
+      <Paper sx={{
+        mb: 3,
+        borderRadius: 3,
+        p: 2,
+        overflow: 'hidden',
+        bgcolor: 'rgba(30, 41, 59, 0.3)',
+        border: '1px solid rgba(255, 255, 255, 0.05)'
+      }} elevation={0}>
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems="center" spacing={2}>
 
           <Tabs
             value={selected}
             onChange={handleTabChange}
             sx={{
-              '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 48 },
-              '& .Mui-selected': { color: '#2563eb' }
+              '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 48, color: 'rgba(255, 255, 255, 0.6)' },
+              '& .Mui-selected': { color: '#3b82f6' },
+              '& .MuiTabs-indicator': { bgcolor: '#3b82f6' }
             }}
           >
             <Tab icon={<MdGridView />} iconPosition="start" label="Board View" />
             <Tab icon={<FaList />} iconPosition="start" label="List View" />
+            <Tab icon={<MdBarChart />} iconPosition="start" label="Analytics" />
           </Tabs>
 
           <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', md: 'auto' } }}>
@@ -490,16 +584,22 @@ const AssignedToMe = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <MdOutlineSearch color="action" />
+                    <MdOutlineSearch color="inherit" sx={{ opacity: 0.6 }} />
                   </InputAdornment>
                 ),
                 endAdornment: searchTerm && (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={handleClearSearch}><MdClose /></IconButton>
+                    <IconButton size="small" onClick={handleClearSearch} sx={{ color: '#fff', opacity: 0.6 }}><MdClose /></IconButton>
                   </InputAdornment>
                 )
               }}
-              sx={{ width: { xs: '100%', md: 240 }, bgcolor: '#f1f5f9', borderRadius: 2, '& fieldset': { border: 'none' } }}
+              sx={{
+                width: { xs: '100%', md: 240 },
+                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: 2,
+                '& .MuiOutlinedInput-root': { color: '#fff' },
+                '& fieldset': { border: 'none' }
+              }}
             />
 
             <TextField
@@ -508,11 +608,18 @@ const AssignedToMe = () => {
               value={validationFilter}
               onChange={(e) => setValidationFilter(e.target.value)}
               size="small"
-              sx={{ minWidth: 150, bgcolor: '#f1f5f9', borderRadius: 2, '& fieldset': { border: 'none' } }}
+              sx={{
+                minWidth: 150,
+                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: 2,
+                '& .MuiOutlinedInput-root': { color: '#fff' },
+                '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.5)' },
+                '& fieldset': { border: 'none' }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <MdFilterList color="action" size={18} />
+                    <MdFilterList color="inherit" sx={{ opacity: 0.6 }} size={18} />
                   </InputAdornment>
                 ),
               }}
@@ -536,7 +643,13 @@ const AssignedToMe = () => {
                   </InputAdornment>
                 ),
               }}
-              sx={{ minWidth: 150, bgcolor: '#f1f5f9', borderRadius: 2, '& fieldset': { border: 'none' } }}
+              sx={{
+                minWidth: 150,
+                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: 2,
+                '& .MuiOutlinedInput-root': { color: '#fff' },
+                '& fieldset': { border: 'none' }
+              }}
             >
               <MenuItem value="newest">Newest First</MenuItem>
               <MenuItem value="oldest">Oldest First</MenuItem>
@@ -584,7 +697,7 @@ const AssignedToMe = () => {
             </>
           )}
         </Box>
-      ) : (
+      ) : selected === 1 ? (
         // List View (DataGrid)
         <Paper sx={{ height: 600, width: '100%', borderRadius: 3, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
           <DataGrid
@@ -603,10 +716,234 @@ const AssignedToMe = () => {
             sx={{
               border: 'none',
               '& .MuiDataGrid-cell': { borderBottom: '1px solid #f1f5f9' },
-              '& .MuiDataGrid-columnHeaders': { bgcolor: '#f8fafc', fontWeight: 'bold' }
+              '& .MuiDataGrid-columnHeaders': { bgcolor: 'rgba(30, 41, 59, 0.8)', color: '#fff', fontWeight: 'bold' }
             }}
           />
         </Paper>
+      ) : (
+        // Analytics View
+        <Box sx={{
+          p: 2,
+          mb: 2,
+          bgcolor: 'rgba(30, 41, 59, 0.5)',
+          borderRadius: 3,
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(8px)'
+        }}>
+          <Grid container spacing={3}>
+            {/* Owner Analysis */}
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.2)', borderRadius: 2, border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
+                <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
+                  Owner Distribution
+                </Typography>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={analytics.ownerData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} stroke="#94a3b8" />
+                    <YAxis stroke="#94a3b8" />
+                    <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                    <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Paper>
+            </Grid>
+
+            {/* Reason Breakdown */}
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.2)', borderRadius: 2, border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
+                <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
+                  Reason Breakdown
+                </Typography>
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={analytics.reasonData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {analytics.reasonData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'][index % 8]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Paper>
+            </Grid>
+
+            {/* Sub-reason Distribution */}
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.2)', borderRadius: 2, border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
+                <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
+                  Sub-reason Distribution
+                </Typography>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={analytics.subReasonData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} stroke="#94a3b8" />
+                    <YAxis stroke="#94a3b8" />
+                    <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                    <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Paper>
+            </Grid>
+
+            {/* Root Cause Analysis */}
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.2)', borderRadius: 2, border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
+                <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
+                  Root Cause Analysis
+                </Typography>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={analytics.rootCauseData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} stroke="#94a3b8" />
+                    <YAxis stroke="#94a3b8" />
+                    <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                    <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Paper>
+            </Grid>
+          </Grid>
+
+          {/* Field Team Offenders Section using Blue Theme */}
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="h5" fontWeight="700" mb={3} color="#3b82f6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              🚨 Top Field Team Offenders
+            </Typography>
+
+            {analytics.fieldTeamAnalytics && analytics.fieldTeamAnalytics.length > 0 ? (
+              <Grid container spacing={2}>
+                {analytics.fieldTeamAnalytics.map((team, idx) => (
+                  <Grid item xs={12} key={idx}>
+                    <Paper sx={{
+                      p: 2,
+                      bgcolor: 'rgba(15, 23, 42, 0.6)',
+                      borderRadius: 2,
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      transition: 'all 0.3s',
+                      backdropFilter: 'blur(4px)',
+                      '&:hover': { borderColor: '#3b82f6', transform: 'translateY(-2px)' }
+                    }} elevation={0}>
+                      {/* Team Header */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Box>
+                          <Typography variant="h6" fontWeight="700" color="#fff">
+                            #{idx + 1} {team.teamName}
+                          </Typography>
+                          <Typography variant="body2" color="#94a3b8">
+                            Total Issues: <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{team.totalIssues}</span>
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      {/* Categories Breakdown */}
+                      <Grid container spacing={2}>
+                        {/* Category Distribution */}
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="subtitle2" fontWeight="600" mb={1} color="#f59e0b">
+                            📊 Issue Categories
+                          </Typography>
+                          <ResponsiveContainer width="100%" height={150}>
+                            <PieChart>
+                              <Pie
+                                data={team.categories}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                outerRadius={50}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {team.categories.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'][index % 5]} />
+                                ))}
+                              </Pie>
+                              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </Grid>
+
+                        {/* Top Owners */}
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="subtitle2" fontWeight="600" mb={1} color="#3b82f6">
+                            👤 Top Owners
+                          </Typography>
+                          <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
+                            {team.owners.map((owner, i) => (
+                              <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(59, 130, 246, 0.1)', borderRadius: 1 }}>
+                                <Typography variant="caption" color="#e2e8f0">{owner.name}</Typography>
+                                <Typography variant="caption" fontWeight="bold" color="#3b82f6">{owner.value}</Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Grid>
+
+                        {/* Top Reasons */}
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="subtitle2" fontWeight="600" mb={1} color="#f59e0b">
+                            📋 Top Reasons
+                          </Typography>
+                          <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
+                            {team.reasons.map((reason, i) => (
+                              <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(245, 158, 11, 0.1)', borderRadius: 1 }}>
+                                <Typography variant="caption" color="#e2e8f0">{reason.name}</Typography>
+                                <Typography variant="caption" fontWeight="bold" color="#f59e0b">{reason.value}</Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Grid>
+
+                        {/* Top Sub-reasons */}
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="subtitle2" fontWeight="600" mb={1} color="#a78bfa">
+                            📌 Top Sub-reasons
+                          </Typography>
+                          <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
+                            {team.subReasons.map((subReason, i) => (
+                              <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(167, 139, 250, 0.1)', borderRadius: 1 }}>
+                                <Typography variant="caption" color="#e2e8f0">{subReason.name}</Typography>
+                                <Typography variant="caption" fontWeight="bold" color="#a78bfa">{subReason.value}</Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Grid>
+
+                        {/* Top Root Causes */}
+                        <Grid item xs={12}>
+                          <Typography variant="subtitle2" fontWeight="600" mb={1} color="#10b981">
+                            🔍 Top Root Causes
+                          </Typography>
+                          <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
+                            {team.rootCauses.map((rootCause, i) => (
+                              <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(16, 185, 129, 0.1)', borderRadius: 1 }}>
+                                <Typography variant="caption" color="#e2e8f0">{rootCause.name}</Typography>
+                                <Typography variant="caption" fontWeight="bold" color="#10b981">{rootCause.value}</Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Typography variant="body2" color="#64748b" textAlign="center" py={4}>
+                No field team data available
+              </Typography>
+            )}
+          </Box>
+        </Box>
       )}
 
       <AddTask open={open} setOpen={setOpen} setUpdateRefetchTasks={setUpdateRefetchTasks} />

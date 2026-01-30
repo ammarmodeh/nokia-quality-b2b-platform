@@ -100,7 +100,7 @@ const Quiz = () => {
     const loadQuestions = async () => {
       try {
         const [questionsRes, settingsRes] = await Promise.all([
-          api.get('/quiz/questions'),
+          api.get('/quiz/questions?quizType=Performance'),
           api.get('/settings')
         ]);
 

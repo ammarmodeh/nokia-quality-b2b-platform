@@ -474,17 +474,6 @@ export const getTasksAssignedToMe = async (req, res) => {
       .populate("createdBy", "name email")
       .populate("teamId", "contactNumber");
 
-    // Self-healing: Ensure all tasks have correct status based on subtasks
-    let hasChanges = false;
-    for (const task of tasks) {
-      const correctStatus = getStatusFromCheckpoints(task.subTasks);
-      if (task.status !== correctStatus) {
-        task.status = correctStatus;
-        await task.save();
-        hasChanges = true;
-      }
-    }
-
     return res.json(tasks);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -515,15 +504,6 @@ export const getTasksAssignedToMePaginated = async (req, res) => {
       .limit(limit)
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email");
-
-    // Self-healing: Ensure all tasks have correct status based on subtasks
-    for (const task of tasks) {
-      const correctStatus = getStatusFromCheckpoints(task.subTasks);
-      if (task.status !== correctStatus) {
-        task.status = correctStatus;
-        await task.save();
-      }
-    }
 
     return res.json(tasks);
   } catch (error) {

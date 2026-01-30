@@ -8,6 +8,11 @@ dotenv.config();
 
 // Generate JWT Token
 const generateToken = (user) => {
+  if (!process.env.JWT_SECRET) {
+    console.error("JWT_SECRET is missing in environment variables!");
+    throw new Error("JWT_SECRET is missing");
+  }
+
   const accessToken = jwt.sign(
     { id: user._id, role: user.role }, // Payload
     process.env.JWT_SECRET, // Secret key
@@ -21,8 +26,6 @@ const generateToken = (user) => {
   );
 
   return { accessToken, refreshToken };
-
-  return { accessToken };
 };
 
 // List of predefined colors
@@ -127,7 +130,6 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    // Generate tokens
     const { accessToken, refreshToken } = generateToken(user);
 
     // Send the refresh token in a secure, HTTP-only cookie
@@ -144,8 +146,12 @@ export const login = async (req, res) => {
       user,
     });
   } catch (error) {
-    // console.error('Error during login:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error during login:', error);
+    res.status(500).json({
+      message: "An error occurred during login",
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -173,7 +179,7 @@ export const refreshToken = async (req, res) => {
     const accessToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '12h' }
     );
 
     // Send new access token

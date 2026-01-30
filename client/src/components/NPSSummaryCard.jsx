@@ -145,12 +145,47 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
     const isPromoterAlarm = promotersPercent < targetPromoters && totalSamples > 0;
     const isDetractorAlarm = detractorsPercent > targetDetractors && totalSamples > 0;
 
+    // Analytics aggregation helper
+    const aggregateAnalytics = (taskList) => {
+      const stats = { byOwner: {}, byReason: {}, bySubReason: {}, byRootCause: {} };
+
+      taskList.forEach(task => {
+        const owner = task.responsible || 'Unassigned';
+        const reason = task.reason || 'N/A';
+        const subReason = task.subReason || 'N/A';
+        const rootCause = task.rootCause || 'N/A';
+
+        stats.byOwner[owner] = (stats.byOwner[owner] || 0) + 1;
+        stats.byReason[reason] = (stats.byReason[reason] || 0) + 1;
+        stats.bySubReason[subReason] = (stats.bySubReason[subReason] || 0) + 1;
+        stats.byRootCause[rootCause] = (stats.byRootCause[rootCause] || 0) + 1;
+      });
+
+      const toTopItems = (obj, limit = 2) => Object.entries(obj)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([label, value]) => ({ label, value, percentage: Math.round((value / taskList.length) * 100) }));
+
+      return {
+        topOwners: toTopItems(stats.byOwner, 2),
+        topReasons: toTopItems(stats.byReason, 2),
+        topSubReasons: toTopItems(stats.bySubReason, 2),
+        topRootCauses: toTopItems(stats.byRootCause, 2)
+      };
+    };
+
+    // Calculate analytics for each category
+    const allTasksAnalytics = aggregateAnalytics(filteredTasks);
+    const detractorsAnalytics = aggregateAnalytics(detractorsTasks);
+    const neutralsAnalytics = aggregateAnalytics(neutralsTasks);
+
     return {
       totalSamples, promoters, neutrals, detractors, nps, filteredTasks,
       promotersPercent, detractorsPercent, targetPromoters, targetDetractors,
       isPromoterAlarm, isDetractorAlarm,
       periodStart, periodEnd,
-      detractorsTasks, neutralsTasks
+      detractorsTasks, neutralsTasks,
+      allTasksAnalytics, detractorsAnalytics, neutralsAnalytics
     };
   }, [tasks, samplesData, filterType, selectedPeriod, dateRange, currentYear, weeksInterval, weeks, months]);
 
@@ -176,7 +211,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
     }
   };
 
-  const StatItem = ({ label, value, icon, color, target, current, isAlarm, isClickable = false }) => (
+  const StatItem = ({ label, value, icon, color, target, current, isAlarm, isClickable = false, subStats = null }) => (
     <Box
       onClick={() => isClickable && handleCardClick(label)}
       sx={{
@@ -245,6 +280,20 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
         }}>
           {current}% (Goal: {label === 'Promoters' ? '≥' : '≤'}{target}%)
         </Typography>
+      )}
+      {subStats && subStats.topOwners && subStats.topOwners.length > 0 && (
+        <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+          {subStats.topOwners.slice(0, 1).map((stat, idx) => (
+            <Typography key={idx} variant="caption" sx={{ fontSize: '0.6rem', display: 'block', color: 'text.secondary' }}>
+              👤 {stat.label}: {stat.value}
+            </Typography>
+          ))}
+          {subStats.topReasons.slice(0, 1).map((stat, idx) => (
+            <Typography key={idx} variant="caption" sx={{ fontSize: '0.6rem', display: 'block', color: 'text.secondary' }}>
+              📋 {stat.label}: {stat.value}
+            </Typography>
+          ))}
+        </Box>
       )}
     </Box>
   );
@@ -411,6 +460,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
                     icon={<FaMeh size={20} />}
                     color="#f59e0b"
                     isClickable={true}
+                    subStats={stats.neutralsAnalytics}
                   />
                 </Grid>
                 <Grid item xs={4} sm={4}>
@@ -423,6 +473,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
                     current={stats.detractorsPercent}
                     isAlarm={stats.isDetractorAlarm}
                     isClickable={true}
+                    subStats={stats.detractorsAnalytics}
                   />
                 </Grid>
               </Grid>

@@ -21,6 +21,7 @@ const AssignedDetractor = lazy(() => import("./pages/AssignedDetractor"));
 const AssignedNeutral = lazy(() => import("./pages/AssignedNeutral"));
 const BenchmarkTables = lazy(() => import("./pages/BenchmarkTables"));
 const Quiz = lazy(() => import("./pages/Quiz"));
+const IQQuiz = lazy(() => import("./pages/IQQuiz"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Profile = lazy(() => import("./pages/Profile"));
 const ChangePassword = lazy(() => import("./pages/ChangePassword"));
@@ -126,6 +127,14 @@ const App = () => {
           element={
             <QuizRouteHandler>
               <Quiz />
+            </QuizRouteHandler>
+          }
+        />
+        <Route
+          path="/iq-test"
+          element={
+            <QuizRouteHandler>
+              <IQQuiz />
             </QuizRouteHandler>
           }
         />

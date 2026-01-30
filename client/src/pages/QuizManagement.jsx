@@ -196,6 +196,7 @@ const QuizManagement = () => {
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [isViewMode, setIsViewMode] = useState(false);
   const [availableCategories, setAvailableCategories] = useState([]);
+  const [selectedQuizType, setSelectedQuizType] = useState('Performance');
   const [stats, setStats] = useState({
     totalQuestions: 0,
     totalCategories: 0,
@@ -211,7 +212,8 @@ const QuizManagement = () => {
     correctAnswer: '',
     category: '',
     type: 'options',
-    guideline: ''
+    guideline: '',
+    quizType: 'Performance'
   });
 
   const handleImageUpload = (e, target, index = null) => {
@@ -251,7 +253,7 @@ const QuizManagement = () => {
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/quiz/questions');
+      const response = await api.get(`/quiz/questions?quizType=${selectedQuizType}`);
       const data = response.data;
       setQuestions(data);
 
@@ -289,7 +291,7 @@ const QuizManagement = () => {
 
   useEffect(() => {
     fetchQuestions();
-  }, []);
+  }, [selectedQuizType]);
 
   const handleDuplicate = async (questionToDuplicate) => {
     const duplicatedData = {
@@ -300,7 +302,8 @@ const QuizManagement = () => {
       correctAnswer: questionToDuplicate.correctAnswer,
       category: questionToDuplicate.category,
       type: questionToDuplicate.type,
-      guideline: questionToDuplicate.guideline
+      guideline: questionToDuplicate.guideline,
+      quizType: questionToDuplicate.quizType || selectedQuizType
     };
 
     try {
@@ -345,7 +348,8 @@ const QuizManagement = () => {
         correctAnswer: q.correctAnswer,
         category: q.category || '',
         type: q.type || 'options',
-        guideline: q.guideline || ''
+        guideline: q.guideline || '',
+        quizType: q.quizType || 'Performance'
       });
     } else {
       setEditingQuestion(null);
@@ -357,7 +361,8 @@ const QuizManagement = () => {
         correctAnswer: '',
         category: '',
         type: 'options',
-        guideline: ''
+        guideline: '',
+        quizType: selectedQuizType
       });
     }
     setOpenDialog(true);
@@ -451,6 +456,32 @@ const QuizManagement = () => {
               Configure, analyze, and reorder questions for field team assessments.
             </Typography>
           </Box>
+          <Stack direction="row" spacing={1} sx={{ bgcolor: 'rgba(255,255,255,0.05)', p: 0.5, borderRadius: '12px' }}>
+            <Button
+              size="small"
+              onClick={() => setSelectedQuizType('Performance')}
+              sx={{
+                bgcolor: selectedQuizType === 'Performance' ? colors.primary : 'transparent',
+                color: selectedQuizType === 'Performance' ? 'white' : colors.textSecondary,
+                fontWeight: 'bold',
+                '&:hover': { bgcolor: selectedQuizType === 'Performance' ? colors.primary : 'rgba(255,255,255,0.1)' }
+              }}
+            >
+              Performance
+            </Button>
+            <Button
+              size="small"
+              onClick={() => setSelectedQuizType('IQ')}
+              sx={{
+                bgcolor: selectedQuizType === 'IQ' ? colors.primary : 'transparent',
+                color: selectedQuizType === 'IQ' ? 'white' : colors.textSecondary,
+                fontWeight: 'bold',
+                '&:hover': { bgcolor: selectedQuizType === 'IQ' ? colors.primary : 'rgba(255,255,255,0.1)' }
+              }}
+            >
+              IQ Test
+            </Button>
+          </Stack>
           <Stack direction={isMobile ? "column" : "row"} spacing={2} width={isMobile ? "100%" : "auto"}>
             <Button
               variant="outlined"
@@ -750,6 +781,24 @@ const QuizManagement = () => {
                   }}
                 />
               </Stack>
+
+              <TextField
+                select
+                fullWidth
+                label="Quiz Type"
+                value={formData.quizType}
+                disabled={isViewMode}
+                onChange={(e) => setFormData({ ...formData, quizType: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderColor: colors.border },
+                  },
+                  '& .MuiInputLabel-root': { color: colors.textSecondary },
+                }}
+              >
+                <MenuItem value="Performance">Performance Assessment</MenuItem>
+                <MenuItem value="IQ">IQ Test</MenuItem>
+              </TextField>
 
               {formData.type === 'options' && (
                 <Box>

@@ -27,6 +27,7 @@ import settingsRoutes from "./routes/settingsRoutes.js";
 import docRoutes from "./routes/docRoutes.js";
 import userNoteRoutes from "./routes/userNoteRoutes.js";
 import fieldAuditRoutes from "./routes/fieldAuditRoutes.js";
+import healthRoutes from "./routes/healthRoutes.js";
 import path from "path";
 import { errorHandler, routeNotFound } from "./middlewares/errorMiddleware.js";
 
@@ -111,6 +112,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/docs", docRoutes);
 app.use("/api/user-notes", userNoteRoutes);
 app.use("/api/audit", fieldAuditRoutes);
+app.use("/api/health", healthRoutes);
 
 // Static Uploads Folder
 const __dirname = path.resolve();
@@ -131,6 +133,21 @@ app.use(routeNotFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5001;
+
+// ------------------------------------------------------------------
+// Global Error Handlers
+// ------------------------------------------------------------------
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Promise Rejection:', reason);
+  console.error('Promise:', promise);
+  // Don't exit the process, just log the error
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  console.error('Stack:', error.stack);
+  // Don't exit the process, just log the error
+});
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

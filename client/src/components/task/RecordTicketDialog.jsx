@@ -22,12 +22,13 @@ const isArabicText = (text) => {
 const QUICK_PRESETS = [
     // FLOW: Initial & Engagement
     { label: "Contacted: No Answer", type: "CONTACT", state: "NO_ANSWER", status: "In Progress", note: "Called customer; no answer.", color: "#FF9800" },
-    { label: "Contacted: Appt Set", type: "CONTACT", state: "APPT_SET", status: "In Progress", note: "Customer contacted; appointment scheduled.", color: "#06b6d4" },
+    { label: "Contacted: Appt Set / Visit Scheduled", type: "CONTACT", state: "APPT_SET", status: "In Progress", note: "Customer contacted; appointment scheduled for visit.", color: "#06b6d4" },
     { label: "Contacted: Awaiting Reply", type: "CONTACT", state: "AWAITING_REPLY", status: "In Progress", note: "Customer contacted; awaiting customer to check and get back to us.", color: "#8b5cf6" },
     { label: "Contacted: Refused", type: "CONTACT", state: "REFUSED", status: "In Progress", note: "Customer refused the introduced solutions.", color: "#ef4444" },
 
     // FLOW: Dispatch & Visit
-    { label: "Reflected to Team", type: "REFLECT", state: "APPT_SET", status: "In Progress", note: "Task reflected to field team for visit.", color: "#6366f1" },
+    { label: "Reflected to Team / Visit Scheduled", type: "REFLECT", state: "APPT_SET", status: "In Progress", note: "Task reflected to field team for visit.", color: "#6366f1" },
+    { label: "Reflect: ONT Relocation / Follow-up", type: "REFLECT", state: "NEED_SCHEDULE", status: "In Progress", note: "Visit occurred but issue unresolved; task reflected to team to schedule an appointment for ONT relocation.", color: "#f59e0b" },
     { label: "Visit: Success", type: "VISIT", state: "VISIT_OK", status: "In Progress", note: "Technician visited site; visit successful.", color: "#8b5cf6" },
     { label: "Visit: Resolved", type: "VISIT", state: "ISSUE_RESOLVED", status: "Closed", note: "Customer visited and issue fully resolved.", color: "#10b981" },
 
@@ -123,10 +124,19 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
 
     const fetchTeams = async () => {
         try {
-            const { data } = await api.get("/field-teams/get-field-teams");
-            setTeams(data.map(team => team.teamName));
+            const [teamsRes, usersRes] = await Promise.all([
+                api.get("/field-teams/get-field-teams"),
+                api.get("/users/get-all-users")
+            ]);
+
+            const teamNames = teamsRes.data.map(team => team.teamName);
+            const userNames = usersRes.data.map(u => u.name);
+
+            // Merge and de-duplicate
+            const merged = Array.from(new Set([...teamNames, ...userNames])).sort();
+            setTeams(merged);
         } catch (error) {
-            console.error("Error fetching teams:", error);
+            console.error("Error fetching teams/users:", error);
         }
     };
 
@@ -136,7 +146,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
         setNote("");
         setEventDate(new Date().toISOString().split('T')[0]);
         setStatus(task?.status || "In Progress");
-        setAgentName("");
+        setAgentName(user?.name || ""); // Include current user session
         setIsNaDate(false);
         setEditingTicket(null);
     };
@@ -154,24 +164,6 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
         setStatus(preset.status);
     };
 
-    const getFilteredStates = () => {
-        const allStates = dropdowns.TRANSACTION_STATE;
-        switch (transactionType) {
-            case "INIT":
-                return allStates.filter(s => ["PENDING_CONTACT", "APPT_SET", "SOLVED_REMOTE", "NO_ANSWER", "WAIT", "ANGRY_CLOSE"].includes(s.value));
-            case "CONTACT":
-                return allStates.filter(s => ["APPT_SET", "SOLVED_REMOTE", "NO_ANSWER", "REFUSED", "WAIT", "ANGRY_CLOSE", "AWAITING_REPLY"].includes(s.value));
-            case "REFLECT":
-                return allStates.filter(s => ["APPT_SET", "VISIT_FAIL"].includes(s.value));
-            case "VISIT":
-                return allStates.filter(s => ["VISIT_OK", "VISIT_FAIL", "ISSUE_RESOLVED"].includes(s.value));
-            case "RESOLVE":
-                return allStates.filter(s => ["ISSUE_RESOLVED"].includes(s.value));
-            default:
-                return allStates;
-        }
-    };
-
     const handleStateSelection = (val) => {
         setTransactionState(val);
         if (val === "ISSUE_RESOLVED" || val === "SOLVED_REMOTE") {
@@ -181,12 +173,12 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
         }
     };
 
-    // Ensure valid state when type changes
+    // Maintain special case for "Ticket Initiated" (INIT)
     useEffect(() => {
-        const allowed = getFilteredStates();
-        if (allowed.length > 0 && !allowed.find(s => s.value === transactionState)) {
-            // Use manual selection to trigger status update if meaningful
-            handleStateSelection(allowed[0].value);
+        if (transactionType === "INIT" && !editingTicket) {
+            setTransactionState("PENDING_CONTACT");
+            setStatus("Todo");
+            setNote("Ticket initated by the system");
         }
     }, [transactionType]);
 
@@ -347,6 +339,9 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
                                             <Typography variant="body1" fontWeight={900} sx={{ color: 'primary.main' }}>
                                                 {task?.customerName || "SYSTEM ORDER"}
                                             </Typography>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mt: 0.5 }}>
+                                                Contact: {task?.contactNumber || task?.customer?.contactNumber || "N/A"}
+                                            </Typography>
                                         </Grid>
                                         <Grid item xs={6} sx={{ textAlign: 'right' }}>
                                             <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ letterSpacing: 1 }}>PRIMARY SLID / CASE</Typography>
@@ -417,7 +412,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
                                                 value={transactionState}
                                                 onChange={(e) => handleStateSelection(e.target.value)}
                                             >
-                                                {getFilteredStates().map(opt => (
+                                                {dropdowns.TRANSACTION_STATE.map(opt => (
                                                     <MenuItem key={opt._id} value={opt.value} sx={{ py: 1 }}>
                                                         <Typography variant="subtitle2" sx={{ fontWeight: 900, mr: 1 }}>{opt.value}</Typography>
                                                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>{opt.label}</Typography>

@@ -32,7 +32,6 @@ const SidebarLinks = () => {
           icon: <img width={20} height={20} src="/statistics.png" />,
           isNew: true,
           subpaths: [
-            { label: "Insights", link: "analytics" },
             { label: "Data Management", link: "excel-portal" },
             { label: "Issue Prevention", link: "issue-prevention", isNew: true },
             { label: "Prevention Deep Dive", link: "prevention-deep-dive", isNew: true },
@@ -57,24 +56,22 @@ const SidebarLinks = () => {
           icon: <img width={20} height={20} src="/all-tasks.png" />,
           isNew: false,
         },
-        ...(user?.title === "Field Technical Support - QoS" ? [
-          {
-            label: "Assigned To Me",
-            icon: <img width={20} height={20} src="/assigned.png" />,
-            isNew: false,
-            subpaths: [
-              { label: "All Tasks", link: "assigned-to-me" },
-              { label: "Detractor", link: "assigned-to-me/detractor" },
-              { label: "Neutrals", link: "assigned-to-me/neutrals" },
-            ],
-          },
-          {
-            label: "All Tasks List",
-            link: "tasks-list",
-            icon: <img width={20} height={20} src="/all-tasks.png" />,
-            isNew: false,
-          }
-        ] : []),
+        {
+          label: "All Tasks List",
+          link: "tasks-list",
+          icon: <img width={20} height={20} src="/all-tasks.png" />,
+          isNew: false,
+        },
+        {
+          label: "Assigned To Me",
+          icon: <img width={20} height={20} src="/assigned.png" />,
+          isNew: false,
+          subpaths: [
+            { label: "All Tasks", link: "assigned-to-me" },
+            { label: "Detractor", link: "assigned-to-me/detractor" },
+            { label: "Neutrals", link: "assigned-to-me/neutrals" },
+          ],
+        },
       ]
     },
     {
@@ -116,6 +113,7 @@ const SidebarLinks = () => {
           subpaths: [
             { label: "Dashboard", link: "assessment-dashboard" },
             { label: "Quiz Link", link: "quiz" },
+            { label: "IQ Test Link", link: "iq-test" },
           ],
         },
         {
