@@ -38,24 +38,11 @@ export const addFavourite = async (req, res) => {
       });
     }
 
+    // Clean up taskData before saving to Favourite
     delete taskData._id;
-
-    // Remove _id from subTasks and taskLogs if they exist
-    if (taskData.subTasks) {
-      taskData.subTasks = taskData.subTasks.map(subTask => {
-        const newSubTask = { ...subTask };
-        delete newSubTask._id;
-        return newSubTask;
-      });
-    }
-
-    if (taskData.taskLogs) {
-      taskData.taskLogs = taskData.taskLogs.map(log => {
-        const newLog = { ...log };
-        delete newLog._id;
-        return newLog;
-      });
-    }
+    delete taskData.createdAt;
+    delete taskData.updatedAt;
+    delete taskData.__v;
 
     const body = {
       userId: user._id,

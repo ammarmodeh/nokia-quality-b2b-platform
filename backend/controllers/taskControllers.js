@@ -3,136 +3,48 @@ import { CustomerIssueSchema } from "../models/customerIssueModel.js";
 import { FavouriteSchema } from "../models/favouriteModel.js";
 import { TrashSchema } from "../models/trashModel.js";
 import { ArchiveSchema } from "../models/archiveModel.js";
+import { TaskTicket } from "../models/taskTicketModel.js";
 import mongoose from "mongoose";
 
 export const addTask = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    console.log("addTask Request Body (Raw):", req.body);
-
-    // Sanitize empty strings to null to prevent CastErrors for Date/Number fields
     Object.keys(req.body).forEach((key) => {
       if (req.body[key] === "") {
         req.body[key] = null;
       }
     });
 
-    const {
-      slid,
-      operation,
-      contactNumber,
-      customerName,
-      requestNumber,
-      governorate,
-      district,
-      date,
-      priority,
-      assignedTo,
-      whomItMayConcern,
-      reason,
-      interviewDate,
-      category,
-      tarrifName,
-      teamName,
-      teamId,
-      customerFeedback,
-      customerType,
-      teamCompany,
-      evaluationScore,
-      pisDate,
-      validationStatus,
-      responsible,
-      subReason,
-      rootCause,
-      ontType,
-      freeExtender,
-      extenderType,
-      extenderNumber,
-      closureCallEvaluation,
-      closureCallFeedback,
-    } = req.body;
-
-    // Define the predefined subtasks with the desired structure
-    const predefinedSubtasks = [
-      {
-        title: "Task Reception",
-        note: "",
-        progress: 0,
-        status: "Open",
-      },
-      {
-        title: "Customer Contact and Appointment Scheduling",
-        note: "",
-        progress: 0,
-        status: "Open",
-      },
-      {
-        title: "On-Site Problem Resolution",
-        note: "",
-        progress: 0,
-        status: "Open",
-      },
-      {
-        title: "Task Closure for Declined Visits",
-        note: "",
-        progress: 0,
-        status: "Open",
-      },
-    ];
-
     const task = new TaskSchema({
-      slid,
-      operation,
-      pisDate,
-      contactNumber,
-      requestNumber,
-      governorate,
-      district,
-      tarrifName,
-      customerFeedback,
-      customerName,
-      customerType,
-      reason,
-      interviewDate,
-      date,
-      priority,
-      validationStatus,
-      assignedTo,
-      whomItMayConcern,
-      category,
-      teamName,
-      teamId,
-      teamCompany,
-      evaluationScore,
+      ...req.body,
       createdBy: req.user._id,
-      subTasks: predefinedSubtasks,
-      responsible,
-      subReason,
-      rootCause,
-      ontType,
-      freeExtender,
-      extenderType,
-      extenderNumber,
-      closureCallEvaluation,
-      closureCallFeedback,
-      subtaskType: "original", // Set the default subtask type to "original"
     });
 
-    task.taskLogs.push({
-      action: "created",
-      user: req.user._id,
-      description: `Ticket created with SLID "${slid}"`,
+    const initialTicket = new TaskTicket({
+      taskId: task._id,
+      mainCategory: "Todo",
+      status: "Todo",
+      note: "Initial task creation",
+      agentName: "SYSTEM",
+      recordedBy: req.user._id,
     });
 
-    await task.save();
+    await task.save({ session });
+    await initialTicket.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
     res.status(201).json({ message: "Task created successfully!", task });
   } catch (error) {
-    console.error("Add Task Error:", error);
+    await session.abortTransaction();
+    session.endSession();
     if (error.code === 11000) {
-      // Extract duplicate field
       const field = Object.keys(error.keyPattern)[0];
-      return res.status(400).json({ message: `${field} already exists. Please use a unique value.` });
+      return res.status(400).json({ message: `${field} already exists.` });
     }
-    res.status(500).json({ error: error.message, stack: error.stack });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -141,7 +53,7 @@ export const updateTask = async (req, res) => {
   const { _id, createdAt, updatedAt, __v, ...updatedData } = req.body;
   const id = req.params.id;
 
-  // Flatten populated fields to IDs to avoid casting errors and noisy logs
+  // Flatten populated fields to IDs
   if (Array.isArray(updatedData.assignedTo)) {
     updatedData.assignedTo = updatedData.assignedTo.map(u => (u && u._id) ? u._id : u);
   }
@@ -163,118 +75,17 @@ export const updateTask = async (req, res) => {
   });
 
   try {
-    const task = await TaskSchema.findById(id);
-    if (!task) {
+    const updatedTask = await TaskSchema.findByIdAndUpdate(id, updatedData, { new: true })
+      .populate("assignedTo", "name email")
+      .populate("createdBy", "name email");
+
+    if (!updatedTask) {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    const originalValues = {
-      slid: task.slid,
-      readBy: [...(task.readBy || [])],
-      // readByWhenClosed: [...(task.readByWhenClosed || [])],
-      ...Object.keys(updatedData).reduce((acc, key) => {
-        if (task[key] !== undefined) acc[key] = task[key];
-        return acc;
-      }, {})
-    };
-
-    let changes = [];
-    for (let key in updatedData) {
-      if (key !== "readBy") {
-        const oldValue = JSON.stringify(task[key]);
-        const newValue = JSON.stringify(updatedData[key]);
-        if (oldValue !== newValue) {
-          changes.push(`${key} changed from ${oldValue} to ${newValue}`);
-          task[key] = updatedData[key];
-        }
-      }
-    }
-
-    // Handle readBy field - replace instead of merge to allow unmarking as read
-    if (updatedData.readBy !== undefined) {
-      task.readBy = updatedData.readBy;
-    }
-
-    const updateLog = {
-      action: "updated",
-      user: req.user._id,
-      description: changes.length > 0
-        ? `Task updated: ${changes.join(", ")}`
-        : "Task fields updated",
-      timestamp: new Date()
-    };
-
-    if (changes.length > 0) {
-      task.taskLogs.push(updateLog);
-    }
-
-    const updateOperation = {
-      $set: {},
-      $addToSet: { readBy: { $each: originalValues.readBy } },
-      $push: {
-        taskLogs: {
-          $each: [updateLog],
-          $position: 0
-        }
-      }
-    };
-
-    const syncFields = [
-      'slid', 'operation', 'pisDate', 'contactNumber', 'requestNumber', 'governorate',
-      'district', 'teamName', 'teamCompany', 'date', 'tarrifName',
-      'customerType', 'customerFeedback', 'customerName', 'interviewDate',
-      'priority', 'status', 'assignedTo', 'whomItMayConcern',
-      'category', 'validationStatus', 'responsible', 'reason', 'subReason', 'rootCause',
-      'ontType', 'freeExtender', 'extenderType', 'extenderNumber',
-      'closureCallEvaluation', 'closureCallFeedback',
-      'subTasks', 'evaluationScore', 'isDeleted',
-    ];
-
-    syncFields.forEach(field => {
-      if (updatedData[field] !== undefined) {
-        updateOperation.$set[field] = updatedData[field];
-      } else {
-        updateOperation.$set[field] = task[field];
-      }
-    });
-
-    if (originalValues.slid) {
-      const favourites = await FavouriteSchema.find({ slid: originalValues.slid });
-      for (const favourite of favourites) {
-        for (const field of syncFields) {
-          if (updatedData[field] !== undefined) {
-            favourite[field] = updatedData[field];
-          } else if (task[field] !== undefined) {
-            favourite[field] = task[field];
-          }
-        }
-        favourite.readBy = [...new Set([...favourite.readBy, ...originalValues.readBy])];
-        favourite.taskLogs = [...(favourite.taskLogs || []), updateLog];
-        await favourite.save();
-      }
-    }
-
-    if (originalValues.slid) {
-      await TaskSchema.updateMany(
-        {
-          $or: [
-            { slid: originalValues.slid, _id: { $ne: task._id } },
-            ...(task.slid !== originalValues.slid ? [{ slid: task.slid }] : [])
-          ]
-        },
-        updateOperation
-      );
-    }
-
-    const updatedTask = await task.save();
     res.status(200).json(updatedTask);
-
   } catch (error) {
-    res.status(500).json({
-      message: "Error updating task",
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    res.status(500).json({ message: "Error updating task", error: error.message });
   }
 };
 
@@ -292,200 +103,7 @@ export const getTask = async (req, res) => {
 };
 
 
-// backend/controllers/taskController.js
-export const updateSubtask = async (req, res) => {
-  try {
-    const taskId = req.params.id;
-    if (!taskId) {
-      return res.status(400).json({ message: "Task ID is required" });
-    }
-    if (!mongoose.Types.ObjectId.isValid(taskId)) {
-      return res.status(400).json({ message: "Invalid Task ID" });
-    }
 
-    const { subtasks: newSubtasks, subtaskType, ontType, speed, serviceRecipientInitial, serviceRecipientQoS } = req.body;
-
-    if (!newSubtasks || !Array.isArray(newSubtasks)) {
-      return res.status(400).json({ message: "Subtasks must be a non-empty array" });
-    }
-
-    const task = await TaskSchema.findById(taskId);
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-
-    // Validate subtaskType
-    const validSubtaskTypes = ["original", "visit", "phone", "no_answer", "others"];
-    if (subtaskType && !validSubtaskTypes.includes(subtaskType)) {
-      return res.status(400).json({ message: "Invalid subtaskType" });
-    }
-
-    // Update task with the correct subtaskType
-    if (subtaskType) {
-      task.subtaskType = subtaskType;
-    }
-
-    // Validate and normalize subtasks structure
-    const normalizedSubtasks = newSubtasks.map((subtask, index) => {
-      if (!subtask.title) {
-        throw new Error(`Subtask at index ${index} is missing required field: title`);
-      }
-
-      return {
-        _id: subtask._id || undefined,
-        title: subtask.title,
-        note: subtask.note || "",
-        dateTime: subtask.dateTime || null,
-        status: subtask.status || "Open",
-        shortNote: subtask.shortNote || "",
-        checkpoints: subtask.checkpoints ? subtask.checkpoints.map((checkpoint, cpIndex) => {
-          if (!checkpoint.name) {
-            throw new Error(`Checkpoint at index ${cpIndex} in subtask "${subtask.title}" is missing required field: name`);
-          }
-          return {
-            _id: checkpoint._id || undefined,
-            name: checkpoint.name,
-            checked: checkpoint.checked || false,
-            score: checkpoint.score || 0,
-            options: checkpoint.options ? {
-              type: checkpoint.options.type || null,
-              question: checkpoint.options.question || "",
-              choices: checkpoint.options.choices || [],
-              selected: checkpoint.options.selected || null,
-              value: checkpoint.options.value || "",
-              followUpQuestion: checkpoint.options.followUpQuestion ? {
-                question: checkpoint.options.followUpQuestion.question || "",
-                choices: checkpoint.options.followUpQuestion.choices || [],
-                selected: checkpoint.options.followUpQuestion.selected || null,
-                actionTaken: checkpoint.options.followUpQuestion.actionTaken ? {
-                  question: checkpoint.options.followUpQuestion.actionTaken.question || "",
-                  choices: checkpoint.options.followUpQuestion.actionTaken.choices || [],
-                  selected: checkpoint.options.followUpQuestion.actionTaken.selected || null,
-                  justification: checkpoint.options.followUpQuestion.actionTaken.justification ? {
-                    question: checkpoint.options.followUpQuestion.actionTaken.justification.question || "",
-                    choices: checkpoint.options.followUpQuestion.actionTaken.justification.choices || [],
-                    selected: checkpoint.options.followUpQuestion.actionTaken.justification.selected || null,
-                    notes: checkpoint.options.followUpQuestion.actionTaken.justification.notes ? {
-                      question: checkpoint.options.followUpQuestion.actionTaken.justification.notes.question || "",
-                      value: checkpoint.options.followUpQuestion.actionTaken.justification.notes.value || ""
-                    } : null
-                  } : null
-                } : null
-              } : null,
-              actionTaken: checkpoint.options.actionTaken ? {
-                question: checkpoint.options.actionTaken.question || "",
-                choices: checkpoint.options.actionTaken.choices || [],
-                selected: checkpoint.options.actionTaken.selected || null,
-                justification: checkpoint.options.actionTaken.justification ? {
-                  question: checkpoint.options.actionTaken.justification.question || "",
-                  choices: checkpoint.options.actionTaken.justification.choices || [],
-                  selected: checkpoint.options.actionTaken.justification.selected || null,
-                  notes: checkpoint.options.actionTaken.justification.notes ? {
-                    question: checkpoint.options.actionTaken.justification.notes.question || "",
-                    value: checkpoint.options.actionTaken.justification.notes.value || ""
-                  } : null
-                } : null
-              } : null,
-            } : null,
-            signalTestNotes: checkpoint.signalTestNotes || "",
-          };
-        }) : [],
-      };
-    });
-
-    // After normalizing checkpoints, add validation
-    // In your updateSubtask controller:
-    normalizedSubtasks.forEach((subtask) => {
-      subtask.checkpoints.forEach((checkpoint) => {
-        if (checkpoint.options?.simpleQuestion) return;
-        // Check followUpQuestion actionTaken justification
-        const followUpAction = checkpoint.options?.followUpQuestion?.actionTaken;
-        if (followUpAction?.selected === "no_action" &&
-          followUpAction.justification &&
-          !followUpAction.justification.selected) {
-          throw new Error(`Justification required for "No corrective action" in ${checkpoint.name}`);
-        }
-
-        // Check main actionTaken justification
-        const mainAction = checkpoint.options?.actionTaken;
-        if (mainAction?.selected === "no_action" &&
-          mainAction.justification &&
-          !mainAction.justification.selected) {
-          throw new Error(`Justification required for "No corrective action" in ${checkpoint.name}`);
-        }
-      });
-    });
-
-    task.subTasks = normalizedSubtasks;
-    if (subtaskType && ["original", "visit", "phone"].includes(subtaskType)) {
-      task.subtaskType = subtaskType;
-    }
-    // Update task-level fields
-    task.ontType = ontType || null;
-    task.speed = speed || null;
-    task.serviceRecipientInitial = serviceRecipientInitial || null;
-    task.serviceRecipientQoS = serviceRecipientQoS || null;
-
-    task.status = getStatusFromCheckpoints(task.subTasks);
-
-    const updateOperation = {
-      $set: {
-        subTasks: task.subTasks,
-        status: task.status,
-        subtaskType: task.subtaskType,
-        ontType: task.ontType,
-        speed: task.speed,
-        serviceRecipientInitial: task.serviceRecipientInitial,
-        serviceRecipientQoS: task.serviceRecipientQoS,
-      },
-    };
-
-    await Promise.all([
-      task.save(),
-      task.slid && TaskSchema.updateMany(
-        { slid: task.slid, _id: { $ne: task._id } },
-        updateOperation
-      ),
-      task.slid && FavouriteSchema.updateMany(
-        { slid: task.slid },
-        updateOperation
-      ),
-    ]);
-    console.log("Saved task:", JSON.stringify(task.subTasks, null, 2)); // Debug log
-
-    res.status(200).json(task);
-  } catch (error) {
-    console.error("Update subtask error:", error);
-    res.status(500).json({
-      message: "Error updating subtasks",
-      error: error.message,
-      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
-    });
-  }
-};
-
-// Helper function to determine status based on checkpoints
-// Helper function to determine status based on checkpoints and activity
-function getStatusFromCheckpoints(subtasks) {
-  if (!subtasks || subtasks.length === 0) return "Todo";
-
-  // Check if all subtasks are "Closed"
-  const allSubtasksClosed = subtasks.every(subtask => subtask.status === "Closed");
-
-  if (allSubtasksClosed) return "Closed";
-
-  // Check if any subtask is active
-  // A subtask is active if it's "Closed", has a note, or has any checked checkpoints.
-  const someSubtasksActive = subtasks.some(subtask => {
-    const hasNote = subtask.note && subtask.note.trim().length > 0;
-    const hasCheckedCheckpoints = subtask.checkpoints && subtask.checkpoints.some(cp => cp.checked);
-    return subtask.status === "Closed" || hasNote || hasCheckedCheckpoints;
-  });
-
-  if (someSubtasksActive) return "In Progress";
-
-  return "Todo";
-}
 
 
 
@@ -495,10 +113,8 @@ export const getCurrentYearTasks = async (req, res) => {
     const startOfYear = new Date(currentYear, 0, 1);
 
     const tasks = await TaskSchema.find({
-      isDeleted: false,
       interviewDate: { $gte: startOfYear }
     })
-      .select("-taskLogs -notifications")
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email")
       .sort({ interviewDate: -1 });
@@ -519,7 +135,7 @@ export const getTasks = async (req, res) => {
     const limit = parseInt(req.query.limit, 10) || 5;
     const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus, teamId } = req.query;
 
-    const mongoQuery = { isDeleted: false };
+    const mongoQuery = {};
 
     if (teamId && teamId !== 'all') {
       mongoQuery.teamId = teamId;
@@ -579,18 +195,42 @@ export const getTasks = async (req, res) => {
     const totalTasks = await TaskSchema.countDocuments(mongoQuery);
     const skip = (page - 1) * limit;
 
-    const tasks = await TaskSchema.find(mongoQuery)
-      .select("-taskLogs -notifications")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate("assignedTo", "name email")
-      .populate("createdBy", "name email")
-      .populate("teamId", "contactNumber");
+    const pipeline = [
+      { $match: mongoQuery },
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "tasktickets",
+          localField: "_id",
+          foreignField: "taskId",
+          as: "tickets"
+        }
+      },
+      {
+        $addFields: {
+          latestGaia: { $arrayElemAt: [{ $sortArray: { input: "$tickets", sortBy: { timestamp: -1 } } }, 0] }
+        }
+      },
+      { $project: { tickets: 0 } }
+    ];
+
+    const tasks = await TaskSchema.aggregate(pipeline);
+
+    // Convert aggregation results (POJOs) to populated documents if needed, 
+    // but since we only need a few fields, we can just return these.
+    // However, for consistency with existing frontend expectations (populated users),
+    // we should populate the IDs in the aggregation results.
+    const populatedTasks = await TaskSchema.populate(tasks, [
+      { path: "assignedTo", select: "name email" },
+      { path: "createdBy", select: "name email" },
+      { path: "teamId", select: "contactNumber" }
+    ]);
 
     return res.json({
       success: true,
-      data: tasks,
+      data: populatedTasks,
       pagination: {
         total: totalTasks,
         page,
@@ -623,7 +263,6 @@ export const getDetractorTasksPaginated = async (req, res) => {
     const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus, teamId } = req.query;
 
     const mongoQuery = {
-      isDeleted: false,
       evaluationScore: { $gte: 1, $lte: 6 }
     };
 
@@ -731,7 +370,6 @@ export const getNeutralTasksPaginated = async (req, res) => {
     const { search, priority, status, governorate, district, teamCompany, assignedTo, teamName, validationStatus, teamId } = req.query;
 
     const mongoQuery = {
-      isDeleted: false,
       evaluationScore: { $gte: 7, $lte: 8 }
     };
 
@@ -831,7 +469,7 @@ export const getTasksAssignedToMe = async (req, res) => {
 
     const tasks = await TaskSchema.find(mongoQuery)
       .sort({ createdAt: -1 })
-      .select("-taskLogs -notifications -readBy")
+      .select("-notifications")
       .populate("assignedTo", "name email")
       .populate("createdBy", "name email")
       .populate("teamId", "contactNumber");
@@ -997,7 +635,8 @@ export const getNeutralTasksAssignedToMePaginated = async (req, res) => {
       .skip(skip)
       .limit(limit)
       .populate("assignedTo", "name email")
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email")
+      .populate("teamId", "contactNumber");
 
     return res.json(tasks);
   } catch (error) {
@@ -1007,7 +646,7 @@ export const getNeutralTasksAssignedToMePaginated = async (req, res) => {
 
 export const getDeletedTasks = async (req, res) => {
   try {
-    const deletedTasks = await TaskSchema.find({ isDeleted: true });
+    const deletedTasks = await TrashSchema.find({}); // Fetch from Trash collection instead
 
     if (!deletedTasks.length) {
       return res.status(404).json({ message: "Deleted tasks not found" });
@@ -1072,18 +711,6 @@ export const deleteTask = async (req, res) => {
     const task = await TaskSchema.findById(req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    const taskLog = {
-      action: "deleted",
-      user: req.user._id,
-      description: `Task deleted by user ${req.user.name}`,
-      timestamp: new Date(),
-    };
-
-    await TaskSchema.updateOne(
-      { _id: req.params.id },
-      { $push: { taskLogs: taskLog } }
-    );
-
     await TaskSchema.deleteOne({ _id: req.params.id });
 
     res.status(200).json({ status: 204, message: "Task deleted successfully!" });
@@ -1095,68 +722,26 @@ export const deleteTask = async (req, res) => {
 export const softDeleteTask = async (req, res) => {
   try {
     const task = await TaskSchema.findById(req.params.id);
-
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-
-    const taskLog = {
-      action: "deleted",
-      user: req.user._id,
-      description: `Task deleted by user ${req.user.name}`,
-      timestamp: new Date(),
-    };
-
-    const updatedTask = await TaskSchema.updateOne(
-      { _id: req.params.id },
-      { $set: { isDeleted: true } }
-    );
-
-    res.status(200).json({ status: 204, message: "Task deleted successfully!", updatedTask });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-export const viewTask = async (req, res) => {
-  try {
-    const { id: taskId } = req.params;
-    const userId = req.user._id;
-
-    const task = await TaskSchema.findById(taskId)
-      .populate("createdBy", "name")
-      .populate("taskLogs.user", "name");
-
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    if (!task.readBy.includes(userId)) {
-      task.readBy.push(userId);
-      task.taskLogs.push({
-        action: "read",
-        user: userId,
-        description: `Task viewed by user ${req.user.name}`,
-      });
+    // Move to Trash
+    await TrashSchema.create({
+      ...task.toObject(),
+      deletedBy: req.user._id,
+      deletedAt: new Date()
+    });
 
-      await task.save({ timestamps: false });
-    }
-
-    res.status(200).json(task);
+    await TaskSchema.findByIdAndDelete(req.params.id);
+    res.status(200).json({ status: 204, message: "Task moved to trash successfully!" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const notifications = async (req, res) => {
-  const userId = req.user._id;
 
-  try {
-    const unreadNotifications = await TaskSchema.find({
-      readBy: { $nin: [userId] },
-    }).sort({ createdAt: -1 });
-    res.status(200).json(unreadNotifications);
-  } catch (error) {
-    res.status(500).json({ error: 'Error fetching notifications' });
-  }
+
+export const notifications = async (req, res) => {
+  res.status(501).json({ message: "Notifications removed in flat model" });
 };
 
 export const unreadCount = async (req, res) => {
@@ -1190,147 +775,189 @@ export const updateTaskByTeamId = async (req, res) => {
 }
 
 export const getUnreadNotificationsCount = async (req, res) => {
-  try {
-    const count = await TaskSchema.countDocuments({
-      'notifications.recipient': req.user._id,
-      'notifications.read': false
-    });
-    res.status(200).json({ count });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  res.status(501).json({ message: "Notifications removed in flat model" });
 };
 
 export const getNotifications = async (req, res) => {
-  try {
-    const tasksWithNotifications = await TaskSchema.find({
-      'notifications.recipient': req.user._id
-    })
-      .select('slid notifications')
-      .populate('notifications.recipient', 'name');
-
-    const notifications = tasksWithNotifications.flatMap(task =>
-      task.notifications
-        .filter(notification => notification.recipient._id.equals(req.user._id))
-        .map(notification => ({
-          ...notification.toObject(),
-          taskSlid: task.slid,
-          taskId: task._id
-        }))
-    );
-
-    res.status(200).json(notifications);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  res.status(501).json({ message: "Notifications removed in flat model" });
 };
 
 export const markNotificationAsRead = async (req, res) => {
-  try {
-    const { taskId, notificationId } = req.params;
-
-    const updatedTask = await TaskSchema.findOneAndUpdate(
-      {
-        _id: taskId,
-        'notifications._id': notificationId,
-        'notifications.recipient': req.user._id
-      },
-      { $set: { 'notifications.$.read': true } },
-      { new: true }
-    );
-
-    if (!updatedTask) {
-      return res.status(404).json({ message: "Notification not found" });
-    }
-
-    res.status(200).json({ message: "Notification marked as read" });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  res.status(501).json({ message: "Notifications removed in flat model" });
 };
 
-
 export const createNotification = async (req, res) => {
-  try {
-    const { taskId } = req.params;
-    const { recipient, message } = req.body;
-    console.log({ taskId, recipient, message });
-
-    // Validate input
-    if (!recipient || !message) {
-      return res.status(400).json({ message: "Recipient and message are required" });
-    }
-
-    const task = await TaskSchema.findById(taskId);
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-
-    // Log the creation of a notification for debugging and monitoring purposes
-    console.log(`Creating notification for task: ${taskId}`);
-
-    const notification = {
-      recipient,
-      message,
-      read: false,
-      createdAt: new Date()
-    };
-
-    task.notifications.push(notification);
-    await task.save();
-
-    // Log successful creation of notification
-    console.log(`Notification created successfully for task: ${taskId}`);
-
-    res.status(201).json(notification);
-  } catch (error) {
-    // Log the error for debugging purposes
-    console.error(`Error creating notification for task ${taskId}:`, error);
-
-    res.status(500).json({ error: error.message });
-  }
+  res.status(501).json({ message: "Notifications removed in flat model" });
 };
 
 export const clearNotifications = async (req, res) => {
-  try {
-    const { taskId } = req.params;
-
-    const task = await TaskSchema.findById(taskId);
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-
-    // Log the clearing of notifications for debugging and monitoring purposes
-    console.log(`Clearing notifications for task: ${taskId}`);
-
-    // Clear the notifications array
-    task.notifications = [];
-    await task.save();
-
-    // Log successful clearing of notifications
-    console.log(`Notifications cleared successfully for task: ${taskId}`);
-
-    res.status(200).json({ message: "Notifications cleared successfully" });
-  } catch (error) {
-    // Log the error for debugging purposes
-    console.error(`Error clearing notifications for task ${taskId}:`, error);
-
-    res.status(500).json({ error: error.message });
-  }
+  res.status(501).json({ message: "Notifications removed in flat model" });
 };
 
 export const getAllTasks = async (req, res) => {
   try {
-    const tasks = await TaskSchema.find()
-      .select("-taskLogs -notifications -subTasks.checkpoints")
-      .populate("assignedTo", "name email role")
-      .populate("whomItMayConcern", "name email role")
-      .populate("createdBy", "name email")
-      .sort({ createdAt: -1 });
+    const pipeline = [
+      { $match: {} },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: "tasktickets",
+          localField: "_id",
+          foreignField: "taskId",
+          as: "tickets"
+        }
+      },
+      {
+        $addFields: {
+          latestGaia: { $arrayElemAt: [{ $sortArray: { input: "$tickets", sortBy: { timestamp: -1 } } }, 0] }
+        }
+      },
+      { $project: { "subTasks.checkpoints": 0, tickets: 0 } }
+    ];
 
-    res.status(200).json(tasks);
+    const tasks = await TaskSchema.aggregate(pipeline);
+    const populatedTasks = await TaskSchema.populate(tasks, [
+      { path: "assignedTo", select: "name email role" },
+      { path: "whomItMayConcern", select: "name email role" },
+      { path: "createdBy", select: "name email" }
+    ]);
+
+    res.status(200).json(populatedTasks);
   } catch (error) {
     console.error("Error fetching all tasks:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const viewTask = async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const task = await TaskSchema.findById(taskId)
+      .populate("assignedTo", "name email title role phoneNumber")
+      .populate("whomItMayConcern", "name email title role phoneNumber")
+      .populate("createdBy", "name email title role phoneNumber")
+      .populate("teamId");
+
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    const tickets = await TaskTicket.find({ taskId }).populate("recordedBy", "name").sort({ timestamp: -1 });
+
+    res.status(200).json({ task, tickets });
+  } catch (error) {
+    console.error("View Task Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const addTaskTicket = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const {
+      taskId, taskType, mainCategory, status, note,
+      eventDate, resolutionDate, closureDate,
+      rootCause, subReason, actionTaken,
+      followUpRequired, followUpDate,
+      transactionType, transactionState, unfReasonCode, agentName
+    } = req.body;
+
+    const ticket = new TaskTicket({
+      taskId,
+      taskType: taskType || 'Task',
+      mainCategory,
+      status,
+      note,
+      eventDate,
+      resolutionDate,
+      closureDate,
+      rootCause,
+      subReason,
+      actionTaken,
+      followUpRequired,
+      followUpDate,
+      transactionType,
+      transactionState,
+      unfReasonCode,
+      agentName,
+      recordedBy: req.user._id
+    });
+
+    await ticket.save({ session });
+
+    // Update task status if it changed
+    await TaskSchema.findByIdAndUpdate(taskId, { status }, { session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    const populatedTicket = await TaskTicket.findById(ticket._id).populate("recordedBy", "name");
+    res.status(201).json(populatedTicket);
+  } catch (error) {
+    if (session.inTransaction()) await session.abortTransaction();
+    session.endSession();
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateTaskTicket = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const updatedTicket = await TaskTicket.findByIdAndUpdate(id, updateData, { new: true })
+      .populate("recordedBy", "name");
+
+    if (!updatedTicket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    // Sync task status if provided
+    if (updateData.status) {
+      await TaskSchema.findByIdAndUpdate(updatedTicket.taskId, { status: updateData.status });
+    }
+
+    res.status(200).json(updatedTicket);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const deleteTaskTicket = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedTicket = await TaskTicket.findByIdAndDelete(id);
+
+    if (!deletedTicket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    // If we deleted the ticket, we might need to update the task status based on the NEW latest ticket
+    const latestTicket = await TaskTicket.findOne({ taskId: deletedTicket.taskId })
+      .sort({ eventDate: -1, timestamp: -1 });
+
+    if (latestTicket) {
+      await TaskSchema.findByIdAndUpdate(deletedTicket.taskId, { status: latestTicket.status });
+    } else {
+      // If no tickets left, maybe default to "Todo" or keep as is? 
+      // User request implies syncing with logs, so if logs are gone, "Todo" is reasonable.
+      await TaskSchema.findByIdAndUpdate(deletedTicket.taskId, { status: "Todo" });
+    }
+
+    res.status(200).json({ message: "Ticket deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getTaskTickets = async (req, res) => {
+  try {
+    const tickets = await TaskTicket.find({ taskId: req.params.taskId })
+      .populate("recordedBy", "name")
+      .sort({ eventDate: 1, timestamp: 1 });
+    res.status(200).json(tickets);
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
@@ -1341,8 +968,7 @@ export const getIssuePreventionStats = async (req, res) => {
 
     // Build query
     const query = {
-      evaluationScore: { $lte: 8 },
-      isDeleted: false
+      evaluationScore: { $lte: 8 }
     };
 
     if (startDate && endDate) {
@@ -1354,7 +980,7 @@ export const getIssuePreventionStats = async (req, res) => {
 
     // 1. Fetch all Detractor and Neutral tasks (score <= 8)
     const criticalTasks = await TaskSchema.find(query)
-      .select('slid evaluationScore customerFeedback createdAt interviewDate pisDate status teamName teamCompany subReason rootCause reason requestNumber operation customerName contactNumber tarrifName customerType governorate district priority validationStatus assignedTo subTasks')
+      .select('slid evaluationScore customerFeedback createdAt interviewDate pisDate status teamName teamCompany subReason rootCause reason requestNumber operation customerName contactNumber tarrifName customerType governorate district priority validationStatus assignedTo')
       .populate('assignedTo', 'name email');
 
     const taskSlids = criticalTasks.map(t => t.slid);

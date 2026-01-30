@@ -6,7 +6,6 @@ import {
   getTasks,
   getTask,
   updateTask,
-  updateSubtask,
   viewTask,
   unreadCount,
   notifications,
@@ -16,9 +15,6 @@ import {
   getTasksAssignedToMe,
   getDetractorTasks,
   getNeutralTasks,
-  softDeleteTask,
-  getDeletedTasks,
-  // restoreDeletedTask,
   restoreTask,
   restoreTaskFromArchive,
   getNeutralTasksPaginated,
@@ -36,6 +32,10 @@ import {
   getUnreadNotificationsCount,
   getIssuePreventionStats,
   getPreventionDeepDiveStats,
+  addTaskTicket,
+  getTaskTickets,
+  updateTaskTicket,
+  deleteTaskTicket,
 } from "../controllers/taskControllers.js";
 
 const router = express.Router();
@@ -69,11 +69,7 @@ router.get('/get-neutral-assigned-tasks', protect, getNeutralTasksAssignedToMe);
 router.get('/get-paginated-neutral-assigned-tasks', protect, getNeutralTasksAssignedToMePaginated);
 
 
-// Get deleted tasks
-router.get("/get-deleted-tasks", protect, getDeletedTasks);
-
-// Restore deleted task (set isDeleted to false)
-// router.patch("/:taskId/restore", restoreDeletedTask);
+// Restore a task from trash to tasks collection
 
 
 // Restore a task from trash to tasks collection
@@ -88,13 +84,8 @@ router.get("/search-tasks", protect, searchTasks);
 // Hard Delete Task (Admin deletes any)
 router.delete("/delete-task/:id", protect, deleteTask);
 
-// Soft Delete Task (Admin deletes any)
-router.delete("/soft-delete-task/:id", protect, softDeleteTask);
-
 // Update Task (Admin updates any)
 router.put("/update-task/:id", protect, updateTask);
-
-router.put('/update-subtask/:id', protect, updateSubtask);
 
 router.get('/get-task/:id', protect, getTask)
 
@@ -115,6 +106,11 @@ router.post("/:taskId/notifications", protect, createNotification);
 router.put("/:taskId/clear-notifications", protect, clearNotifications);
 router.get("/prevention-stats", protect, getIssuePreventionStats);
 router.get("/prevention-deep-dive", protect, getPreventionDeepDiveStats);
+
+router.post("/tickets", protect, addTaskTicket);
+router.get("/tickets/:taskId", protect, getTaskTickets);
+router.put("/tickets/:id", protect, updateTaskTicket);
+router.delete("/tickets/:id", protect, deleteTaskTicket);
 
 
 export default router;

@@ -114,11 +114,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   // Initialize form and state when the task is loaded
   useEffect(() => {
     if (open && task) {
-      const dueDate = task.date ? new Date(task.date) : null;
-      const formattedDate = dueDate
-        ? `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}-${String(dueDate.getDate()).padStart(2, "0")}T${String(dueDate.getHours()).padStart(2, "0")}:${String(dueDate.getMinutes()).padStart(2, "0")}`
-        : "";
-
       const pisDueDate = task.pisDate ? new Date(task.pisDate) : null;
       const formattedPISDate = pisDueDate
         ? `${pisDueDate.getFullYear()}-${String(pisDueDate.getMonth() + 1).padStart(2, "0")}-${String(pisDueDate.getDate()).padStart(2, "0")}T${String(pisDueDate.getHours()).padStart(2, "0")}:${String(pisDueDate.getMinutes()).padStart(2, "0")}`
@@ -151,11 +146,9 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
         responsible: task.responsible || "",
         customerName: task.customerName || "",
         operation: task.operation || "",
-        date: formattedDate,
         interviewDate: formattedInterviewDate,
       });
 
-      setValue("date", formattedDate);
       setValue("pisDate", formattedPISDate);
       setValue("interviewDate", formattedInterviewDate);
       setValue("contactNumber", task.contactNumber || "");
@@ -175,7 +168,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       const categoryValue = task.category || "";
       setCategory(categoryValue);
 
-      setDate(formattedDate);
       setPisDate(formattedPISDate);
       setInterviewDate(formattedInterviewDate);
       setTeamCompany(task.teamCompany || '');

@@ -50,6 +50,7 @@ const QuizManagement = lazy(() => import("./pages/QuizManagement"));
 const IssuePreventionAnalytics = lazy(() => import("./pages/IssuePreventionAnalytics"));
 const PreventionDeepDive = lazy(() => import("./pages/PreventionDeepDive"));
 const DocumentsPortal = lazy(() => import("./pages/DocumentsPortal"));
+const TechnicalGlossary = lazy(() => import("./pages/TechnicalGlossary"));
 
 // Audit System Imports
 const AuditLayout = lazy(() => import("./components/audit/AuditLayout"));
@@ -182,6 +183,7 @@ const App = () => {
           <Route path="/issue-prevention" element={<IssuePreventionAnalytics />} />
           <Route path="/prevention-deep-dive" element={<PreventionDeepDive />} />
           <Route path="/documents" element={<DocumentsPortal />} />
+          <Route path="/technical-glossary" element={<TechnicalGlossary />} />
           <Route
             path="/dropdown-management"
             element={

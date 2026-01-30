@@ -28,8 +28,7 @@ import docRoutes from "./routes/docRoutes.js";
 import userNoteRoutes from "./routes/userNoteRoutes.js";
 import fieldAuditRoutes from "./routes/fieldAuditRoutes.js";
 import path from "path";
-
-
+import { errorHandler, routeNotFound } from "./middlewares/errorMiddleware.js";
 
 console.log('process.env.FRONTEND_URL:', process.env.FRONTEND_URL);
 
@@ -108,7 +107,6 @@ app.use("/api/action-plan", actionPlanRoutes);
 app.use("/api/dropdown-options", dropdownOptionRoutes);
 app.use("/api/ont-types", ontTypeRoutes);
 app.use("/api/lab-assessments", labAssessmentRoutes);
-app.use("/api/lab-assessments", labAssessmentRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/docs", docRoutes);
 app.use("/api/user-notes", userNoteRoutes);
@@ -122,7 +120,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ------------------------------------------------------------------
 // 404 Handler
 // ------------------------------------------------------------------
-import { errorHandler, routeNotFound } from "./middlewares/errorMiddleware.js";
+// ------------------------------------------------------------------
 
 // ... existing code ...
 

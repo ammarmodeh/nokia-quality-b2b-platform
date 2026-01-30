@@ -8,7 +8,6 @@ export const connectDB = async () => {
     const options = {
       serverSelectionTimeoutMS: 10000, // Timeout after 10s instead of 30s
       socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-      family: 4, // Use IPv4, skip trying IPv6
     };
 
     await mongoose.connect(process.env.MONGO_URI, options);
@@ -22,6 +21,6 @@ export const connectDB = async () => {
       syscall: error.syscall,
       hostname: error.hostname
     });
-    process.exit(1);
+    // process.exit(1); // Do not exit process, allow server to run for debugging or retry
   }
 };

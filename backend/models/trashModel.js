@@ -2,158 +2,26 @@ import mongoose from "mongoose";
 
 const trashSchema = new mongoose.Schema(
   {
-    // Copy all fields from TaskSchema
+    // Snapshot of the task data (Flexible storage)
     slid: { type: String, required: [true, "SLID is required"], trim: true },
-    pisDate: { type: Date, required: [true, "PIS Date is required"] },
-    contactNumber: { type: Number, required: [true, "Contact number is required"] },
-    requestNumber: { type: Number, required: [true, "Request number is required"] },
-    governorate: { type: String, required: [true, "Governorate is required"] },
-    district: { type: String, required: [true, "District is required"] },
-    teamName: { type: String, required: [true, "Team name is required"], trim: true },
-    teamId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "FieldTeams",
-      required: [true, "Team ID is required"],
-      validate: {
-        validator: function (id) {
-          return mongoose.Types.ObjectId.isValid(id);
-        },
-        message: "Invalid team ID",
-      },
-    },
-    teamCompany: { type: String, required: [true, "Team company is required"] },
-    date: { type: Date },
-    tarrifName: { type: String, trim: true, required: [true, "Tariff Name is required"] },
-    customerType: { type: String, trim: true, required: [true, "Customer Type is required"] },
-    customerFeedback: { type: String, trim: true, required: [true, "Customer feedback is required"] },
-    customerName: { type: String, trim: true, required: [true, "Customer name is required"] },
-    reason: { type: String, trim: true, required: [true, "Reason is required"] },
-    interviewDate: { type: Date, required: [true, "Interview Date is required"] },
-    priority: {
-      type: String,
-      enum: {
-        values: ["High", "Medium", "Normal", "Low"],
-        message: "Priority must be one of High, Medium, Normal, or Low",
-      },
-      default: "Normal",
-    },
-    status: {
-      type: String,
-      enum: {
-        values: ["Todo", "In Progress", "Closed"],
-        message: "Status must be one of Todo, In Progress, or Closed",
-      },
-      default: "Todo",
-    },
-    assignedTo: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-        validate: {
-          validator: function (value) {
-            const ids = Array.isArray(value) ? value : [value];
-            return ids.every((id) => mongoose.Types.ObjectId.isValid(id));
-          },
-          message: "Invalid user ID in assignedTo field",
-        },
-      },
-    ],
-    whomItMayConcern: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-        validate: {
-          validator: function (value) {
-            const ids = Array.isArray(value) ? value : [value];
-            return ids.every((id) => mongoose.Types.ObjectId.isValid(id));
-          },
-          message: "Invalid user ID in whomItMayConcern field",
-        },
-      },
-    ],
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: [true, "CreatedBy is required"],
-      validate: {
-        validator: function (id) {
-          return mongoose.Types.ObjectId.isValid(id);
-        },
-        message: "Invalid createdBy user ID",
-      },
-    },
-    category: {
-      type: String,
-      enum: {
-        values: [
-          "Orange HC detractor",
-          "Orange Closure",
-          "Orange Joint",
-          "Nokia MS detractor",
-          "Nokia FAT",
-          "Nokia Closure",
-          "TRC",
-          "TCRM",
-          "Others",
-        ],
-        message: "Invalid category",
-      },
-      required: [true, "Category is required"],
-    },
-    validationStatus: {
-      type: String,
-      enum: {
-        values: ["Validated", "Not validated"],
-        message: "Validation status must be either Pending, Approved, or Rejected",
-      },
-    },
-    validationCat: { type: String, required: [true, "Validation category is required"] },
-    responsibility: { type: String, required: [true, "Responsibility is required"] },
-    readBy: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-    taskLogs: [
-      {
-        action: {
-          type: String,
-          enum: ["created", "updated", "read", "deleted", "assigned"],
-          required: true,
-        },
-        user: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true,
-        },
-        timestamp: {
-          type: Date,
-          default: Date.now,
-        },
-        description: String,
-      },
-    ],
-    subTasks: [
-      {
-        title: { type: String },
-        note: { type: String },
-        progress: { type: Number },
-        dateTime: { type: String },
-      },
-    ],
-    evaluationScore: { type: Number, default: 1, required: [true, "Satisfaction score is required"] },
-    // readByWhenClosed: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    notifications: [{
-      recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-      message: { type: String, required: true },
-      read: { type: Boolean, default: false },
-      createdAt: { type: Date, default: Date.now }
-    }],
+    requestNumber: { type: Number },
 
-    // Add deletion metadata
+    // Original Task Metadata
+    originalTaskId: { type: mongoose.Schema.Types.ObjectId, ref: "Task" },
+
+    // Store the entire task object as a flexible field to ensure nothing is lost
+    taskData: { type: mongoose.Schema.Types.Mixed },
+
+    // Denormalized search-friendly fields (Optional for trash visibility)
+    customerName: { type: String },
+    contactNumber: { type: String },
+    operation: { type: String },
+    teamName: { type: String },
+    status: { type: String },
+    priority: { type: String },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
+    // Deletion Metadata
     deletedAt: { type: Date, default: Date.now },
     deletedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -161,7 +29,10 @@ const trashSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    strict: false // Allow saving fields not explicitly defined
+  }
 );
 
 export const TrashSchema = mongoose.model("Trash", trashSchema);

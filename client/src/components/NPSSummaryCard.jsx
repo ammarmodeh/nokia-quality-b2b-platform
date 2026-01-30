@@ -140,7 +140,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
 
     // Use dynamic targets from settings, fallback to defaults if not available
     const targetPromoters = settings?.npsTargets?.promoters ?? 75;
-    const targetDetractors = settings?.npsTargets?.detractors ?? 9;
+    const targetDetractors = settings?.npsTargets?.detractors ?? 8;
 
     const isPromoterAlarm = promotersPercent < targetPromoters && totalSamples > 0;
     const isDetractorAlarm = detractorsPercent > targetDetractors && totalSamples > 0;
@@ -440,10 +440,10 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
                   <Box sx={{ width: `${(stats.neutrals / (stats.totalSamples || 1)) * 100}%`, bgcolor: '#f59e0b' }} />
                   <Box sx={{ width: `${(stats.detractors / (stats.totalSamples || 1)) * 100}%`, bgcolor: '#ef4444' }} />
                 </Box>
-                <Stack direction="row" justifyContent="space-between" mt={1}>
+                {/* <Stack direction="row" justifyContent="space-between" mt={1}>
                   <Typography variant="caption" color="textSecondary">Sentiment Balance</Typography>
                   <Typography variant="caption" fontWeight="bold">NPS Score: {stats.nps}</Typography>
-                </Stack>
+                </Stack> */}
               </Box>
             </Grid>
           </Grid>
@@ -466,11 +466,12 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
         <ManagementEmailDialog
           open={showEmailDialog}
           onClose={() => setShowEmailDialog(false)}
-          data={{ tasks: stats.filteredTasks, teamsData, samplesData, totalSamples: stats.totalSamples }}
+          data={{ tasks: stats.filteredTasks, teamsData, samplesData, totalSamples: stats.totalSamples, allTasks: tasks }}
           type="dashboard"
           period={periodLabel}
           startDate={stats.periodStart}
           endDate={stats.periodEnd}
+          settings={settings}
         />
 
         {/* NPS Details Dialog */}

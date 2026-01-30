@@ -146,11 +146,10 @@ export const reorderOptions = async (req, res) => {
 // Seed initial options if the collection is empty
 export const seedOptions = async (req, res) => {
   try {
-    const count = await DropdownOption.countDocuments();
-    if (count > 0) {
-      return res.status(200).json({ message: "Database already seeded" });
-    }
+    // For GAIA specific categories, we want to ensure the new workflow is present
+    const gaiaCategories = ["TRANSACTION_TYPE", "TRANSACTION_STATE"];
 
+    // Define the options to seed
     const initialOptions = [
       // Priority
       { category: "PRIORITY", value: "High", label: "High", order: 1 },
@@ -233,10 +232,70 @@ export const seedOptions = async (req, res) => {
       // CIN Supervisors (Quality Supervisors)
       { category: "CIN_SUPERVISORS", value: "Supervisor 1", label: "Supervisor 1", order: 1 },
       { category: "CIN_SUPERVISORS", value: "Supervisor 2", label: "Supervisor 2", order: 2 },
+
+      // --- GAIA SYSTEM PARAMETERS ---
+      // Transaction Types (Activity Codes)
+      { category: "TRANSACTION_TYPE", value: "INIT", label: "Ticket Initiated", order: 1 },
+      { category: "TRANSACTION_TYPE", value: "CONTACT", label: "Customer Contacted", order: 2 },
+      { category: "TRANSACTION_TYPE", value: "REFLECT", label: "Reflected to Team (Dispatch)", order: 3 },
+      { category: "TRANSACTION_TYPE", value: "VISIT", label: "Site Visit", order: 4 },
+      { category: "TRANSACTION_TYPE", value: "RESOLVE", label: "Resolution", order: 5 },
+
+      // Transaction States (Outcome Codes)
+      { category: "TRANSACTION_STATE", value: "APPT_SET", label: "Appointment Set", order: 1 },
+      { category: "TRANSACTION_STATE", value: "SOLVED_REMOTE", label: "Solved by Phone", order: 2 },
+      { category: "TRANSACTION_STATE", value: "NO_ANSWER", label: "No Answer", order: 3 },
+      { category: "TRANSACTION_STATE", value: "REFUSED", label: "Customer Refused Solutions", order: 4 },
+      { category: "TRANSACTION_STATE", value: "WAIT", label: "Customer Wait for Solutions", order: 5 },
+      { category: "TRANSACTION_STATE", value: "VISIT_OK", label: "Visit Success", order: 6 },
+      { category: "TRANSACTION_STATE", value: "ISSUE_RESOLVED", label: "Issue Resolved", order: 7 },
+      { category: "TRANSACTION_STATE", value: "VISIT_FAIL", label: "Visit Failed / No Show", order: 8 },
+      { category: "TRANSACTION_STATE", value: "PENDING_CONTACT", label: "Pending Customer Contact", order: 9 },
+      { category: "TRANSACTION_STATE", value: "ANGRY_CLOSE", label: "Customer Angry / Hung Up", order: 10 },
+      { category: "TRANSACTION_STATE", value: "AWAITING_REPLY", label: "Awaiting Customer Reply", order: 11 },
+
+      // Unfulfillment Reason Codes (Failure Reason Codes)
+      // 100 Series: Customer Requests & Availability
+      { category: "UNF_REASON_CODE", value: "101", label: "Callback Requested by Customer", order: 1 },
+      { category: "UNF_REASON_CODE", value: "102", label: "Visit Postponed by Customer Request", order: 2 },
+      { category: "UNF_REASON_CODE", value: "103", label: "Customer Busy / Requested Later Contact", order: 3 },
+      { category: "UNF_REASON_CODE", value: "104", label: "Customer Refused Visit / Cancellation", order: 4 },
+      { category: "UNF_REASON_CODE", value: "105", label: "Customer No Show / Absent", order: 5 },
+
+      // 200 Series: Resolutions & Findings
+      { category: "UNF_REASON_CODE", value: "201", label: "No Issue Found / False Alarm", order: 6 },
+      { category: "UNF_REASON_CODE", value: "202", label: "Issue Resolved via Phone Call", order: 7 },
+      { category: "UNF_REASON_CODE", value: "203", label: "Technical Team Visited & Resolved", order: 8 },
+      { category: "UNF_REASON_CODE", value: "204", label: "Scheduled for Site Survey / Inspection", order: 9 },
+      { category: "UNF_REASON_CODE", value: "205", label: "Documentation Updated / Completed", order: 10 },
+      { category: "UNF_REASON_CODE", value: "206", label: "Issue Fully Resolved / Ticket Closed", order: 11 },
+
+      // 300 Series: Status & Monitoring
+      { category: "UNF_REASON_CODE", value: "301", label: "Customer Will Monitor & Report", order: 11 },
+      { category: "UNF_REASON_CODE", value: "302", label: "Escalated to Higher Level Support", order: 12 },
+      { category: "UNF_REASON_CODE", value: "303", label: "Pending Equipment/Parts Arrival", order: 13 },
+      { category: "UNF_REASON_CODE", value: "304", label: "Waiting for Civil Works / Third Party", order: 14 },
+      { category: "UNF_REASON_CODE", value: "305", label: "Technical Impediment / Network Issue", order: 15 },
+      { category: "UNF_REASON_CODE", value: "001", label: "Reason Specified in Remarks", order: 16 },
+      { category: "UNF_REASON_CODE", value: "002", label: "Generic Minor Unfreeze Reason", order: 17 },
+
+      // System Flow Status
+      { category: "SYSTEM_FLOW_STATUS", value: "Todo", label: "Todo", order: 1 },
+      { category: "SYSTEM_FLOW_STATUS", value: "In Progress", label: "In Progress", order: 2 },
+      { category: "SYSTEM_FLOW_STATUS", value: "Closed", label: "Closed", order: 3 },
+      { category: "SYSTEM_FLOW_STATUS", value: "Completed", label: "Completed", order: 4 },
     ];
 
-    await DropdownOption.insertMany(initialOptions);
-    res.status(201).json({ message: "Database seeded successfully" });
+    const bulkOps = initialOptions.map(opt => ({
+      updateOne: {
+        filter: { category: opt.category, value: opt.value },
+        update: { $set: opt },
+        upsert: true
+      }
+    }));
+
+    await DropdownOption.bulkWrite(bulkOps);
+    res.status(201).json({ message: "Database seeded/updated successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

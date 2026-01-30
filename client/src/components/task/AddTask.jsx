@@ -147,11 +147,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [closureCallFeedback, setClosureCallFeedback] = useState("");
 
   // Conditional field toggles
-  const [includeFieldTeam, setIncludeFieldTeam] = useState(false);
-  const [includeOntType, setIncludeOntType] = useState(false);
-  const [includeFreeExtender, setIncludeFreeExtender] = useState(false);
-  const [includeClosureEvaluation, setIncludeClosureEvaluation] = useState(false);
-  const [includeClosureFeedback, setIncludeClosureFeedback] = useState(false);
+
   // const [rootCause, setRootCause] = useState("");
 
   // This watchTitle is used to get the value of the title field (registered in the form)
@@ -450,91 +446,61 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
           </Stack>
 
           {/* Row 8: Free Extender (Yes/No) */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={includeFreeExtender}
-                  onChange={(e) => setIncludeFreeExtender(e.target.checked)}
-                />
-              }
-              label="Include Free Extender"
-            />
-            {includeFreeExtender && (
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Free Extender</InputLabel>
+              <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
+                <MenuItem value="Yes">Yes</MenuItem>
+                <MenuItem value="No">No</MenuItem>
+              </Select>
+            </FormControl>
+            {freeExtender === 'Yes' && (
+              <>
                 <FormControl fullWidth variant="outlined">
-                  <InputLabel>Free Extender</InputLabel>
-                  <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
-                    <MenuItem value="Yes">Yes</MenuItem>
-                    <MenuItem value="No">No</MenuItem>
+                  <InputLabel>Extender Type</InputLabel>
+                  <Select value={extenderType} onChange={(e) => setExtenderType(e.target.value)} label="Extender Type">
+                    {dropdownOptions.EXTENDER_TYPE.map((list) => (
+                      <MenuItem key={list} value={list}>{list}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
-                {freeExtender === 'Yes' && (
-                  <>
-                    <FormControl fullWidth variant="outlined">
-                      <InputLabel>Extender Type</InputLabel>
-                      <Select value={extenderType} onChange={(e) => setExtenderType(e.target.value)} label="Extender Type">
-                        {dropdownOptions.EXTENDER_TYPE.map((list) => (
-                          <MenuItem key={list} value={list}>{list}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <TextField
-                      label="Extender Number"
-                      type="number"
-                      fullWidth
-                      variant="outlined"
-                      value={extenderNumber}
-                      onChange={(e) => setExtenderNumber(parseInt(e.target.value) || 0)}
-                    />
-                  </>
-                )}
-              </Stack>
-            )}
-          </Box>
-
-          {/* Row 9: Subcon (Team Company) + Include Field Team */}
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Subcon</InputLabel>
-                <Select
-                  value={teamCompany}
-                  onChange={(e) => setTeamCompany(e.target.value)}
-                  label="Subcon"
-                >
-                  {dropdownOptions.TEAM_COMPANY.map((list) => (
-                    <MenuItem key={list} value={list}>{list}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={includeFieldTeam}
-                      onChange={(e) => setIncludeFieldTeam(e.target.checked)}
-                    />
-                  }
-                  label="Include Field Team"
+                <TextField
+                  label="Extender Number"
+                  type="number"
+                  fullWidth
+                  variant="outlined"
+                  value={extenderNumber}
+                  onChange={(e) => setExtenderNumber(parseInt(e.target.value) || 0)}
                 />
-                {includeFieldTeam && (
-                  <Autocomplete
-                    options={fieldTeams}
-                    getOptionLabel={(option) => option.teamName || ""}
-                    value={fieldTeams.find(t => t._id === teamInfo.teamId) || null}
-                    onChange={(e, newValue) => {
-                      setTeamInfo(newValue ? { teamName: newValue.teamName, teamId: newValue._id } : { teamName: '', teamId: '' });
-                    }}
-                    renderInput={(params) => <TextField {...params} label="Field Team Name" variant="outlined" />}
-                    fullWidth
-                  />
-                )}
-              </Box>
-            </Grid>
-          </Grid>
+              </>
+            )}
+          </Stack>
+
+          {/* Row 9: Subcon (Team Company) + Field Team */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Subcon</InputLabel>
+              <Select
+                value={teamCompany}
+                onChange={(e) => setTeamCompany(e.target.value)}
+                label="Subcon"
+              >
+                {dropdownOptions.TEAM_COMPANY.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Autocomplete
+              options={fieldTeams}
+              getOptionLabel={(option) => option.teamName || ""}
+              value={fieldTeams.find(t => t._id === teamInfo.teamId) || null}
+              onChange={(e, newValue) => {
+                setTeamInfo(newValue ? { teamName: newValue.teamName, teamId: newValue._id } : { teamName: '', teamId: '' });
+              }}
+              renderInput={(params) => <TextField {...params} label="Field Team Name" variant="outlined" />}
+              fullWidth
+            />
+          </Stack>
 
           {/* Row 10: RCA (Responsibility, Reason, SubReason, RootCause) */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -607,94 +573,46 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             </FormControl>
           </Stack>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Validation Status</InputLabel>
-                <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
-                  {dropdownOptions.VALIDATION_STATUS.map((list) => (
-                    <MenuItem key={list} value={list}>{list}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Validation Status</InputLabel>
+              <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
+                {dropdownOptions.VALIDATION_STATUS.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>ONT Type</InputLabel>
+              <Select value={ontType} onChange={(e) => setOntType(e.target.value)} label="ONT Type">
+                {dropdownOptions.ONT_TYPE.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
 
-            <Grid item xs={12} md={4}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={includeOntType}
-                      onChange={(e) => setIncludeOntType(e.target.checked)}
-                    />
-                  }
-                  label="Include ONT Type"
-                />
-                {includeOntType && (
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel>ONT Type</InputLabel>
-                    <Select value={ontType} onChange={(e) => setOntType(e.target.value)} label="ONT Type">
-                      {dropdownOptions.ONT_TYPE.map((list) => (
-                        <MenuItem key={list} value={list}>{list}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )}
-              </Box>
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={includeClosureEvaluation}
-                      onChange={(e) => setIncludeClosureEvaluation(e.target.checked)}
-                    />
-                  }
-                  label="Include Closure Call Evaluation"
-                />
-                {includeClosureEvaluation && (
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
-                    <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                        <MenuItem key={num} value={num}>{num}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )}
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={includeClosureFeedback}
-                      onChange={(e) => setIncludeClosureFeedback(e.target.checked)}
-                    />
-                  }
-                  label="Include Closure Call Feedback"
-                />
-                {includeClosureFeedback && (
-                  <TextField
-                    label="Closure Call Feedback"
-                    fullWidth
-                    variant="outlined"
-                    multiline
-                    rows={2}
-                    value={closureCallFeedback}
-                    onChange={(e) => setClosureCallFeedback(e.target.value)}
-                    inputProps={{ dir: "auto" }}
-                    sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
-                  />
-                )}
-              </Box>
-            </Grid>
-          </Grid>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
+              <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                  <MenuItem key={num} value={num}>{num}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label="Closure Call Feedback"
+              fullWidth
+              variant="outlined"
+              multiline
+              rows={2}
+              value={closureCallFeedback}
+              onChange={(e) => setClosureCallFeedback(e.target.value)}
+              inputProps={{ dir: "auto" }}
+              sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+            />
+          </Stack>
 
           <Divider sx={{ my: 2 }} />
 

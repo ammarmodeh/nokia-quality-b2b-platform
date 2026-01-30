@@ -5,41 +5,7 @@ import mongoose from "mongoose";
 // Add task to trash
 export const addToTrash = async (req, res) => {
   try {
-    const {
-      slid,
-      pisDate,
-      contactNumber,
-      requestNumber,
-      governorate,
-      district,
-      teamName,
-      teamId,
-      teamCompany,
-      date,
-      tarrifName,
-      customerType,
-      customerFeedback,
-      customerName,
-      reason,
-      interviewDate,
-      priority,
-      status,
-      assignedTo,
-      whomItMayConcern,
-      createdBy,
-      category,
-      validationStatus,
-      validationCat,
-      responsibility,
-      readBy,
-      taskLogs,
-      subTasks,
-      evaluationScore,
-      // readByWhenClosed,
-      notifications,
-      deletedBy,
-
-    } = req.body;
+    const { slid, deletedBy, ...taskData } = req.body;
 
     if (!slid || !deletedBy) {
       return res.status(400).json({
@@ -48,39 +14,20 @@ export const addToTrash = async (req, res) => {
       });
     }
 
+    // Create trash item with a snapshot of all data
     const trashItem = new TrashSchema({
       slid,
-      pisDate,
-      contactNumber,
-      requestNumber,
-      governorate,
-      district,
-      teamName,
-      teamId,
-      teamCompany,
-      date,
-      tarrifName,
-      customerType,
-      customerFeedback,
-      customerName,
-      reason,
-      interviewDate,
-      priority,
-      status,
-      assignedTo,
-      whomItMayConcern,
-      createdBy,
-      category,
-      validationStatus,
-      validationCat,
-      responsibility,
-      readBy,
-      taskLogs,
-      subTasks,
-      evaluationScore,
-      // readByWhenClosed,
-      notifications,
-      deletedBy,
+      requestNumber: taskData.requestNumber,
+      originalTaskId: taskData._id || taskData.id,
+      customerName: taskData.customerName || taskData.customer?.customerName,
+      contactNumber: taskData.contactNumber || taskData.customer?.contactNumber,
+      operation: taskData.operation || taskData.technicalDetails?.operation,
+      teamName: taskData.teamName,
+      status: taskData.status,
+      priority: taskData.priority,
+      createdBy: taskData.createdBy,
+      taskData: taskData, // Store the full object for restoration
+      deletedBy
     });
 
     await trashItem.save();
@@ -91,7 +38,7 @@ export const addToTrash = async (req, res) => {
       data: trashItem
     });
   } catch (error) {
-    // console.error("Error adding to trash:", error);
+    console.error("Error adding to trash:", error);
     res.status(500).json({
       success: false,
       message: "Failed to move task to trash",
@@ -213,75 +160,20 @@ export const restoreFromTrash = async (req, res) => {
       });
     }
 
-    // 2. Create new task from trash data
-    const {
-      slid,
-      pisDate,
-      contactNumber,
-      requestNumber,
-      governorate,
-      district,
-      teamName,
-      teamId,
-      teamCompany,
-      date,
-      tarrifName,
-      customerType,
-      customerFeedback,
-      customerName,
-      reason,
-      interviewDate,
-      priority,
-      status,
-      assignedTo,
-      whomItMayConcern,
-      createdBy,
-      category,
-      validationStatus,
-      validationCat,
-      responsibility,
-      readBy,
-      taskLogs,
-      subTasks,
-      evaluationScore,
-      // readByWhenClosed,
-      notifications
-    } = trashItem;
+    // 2. Create new task from trash data snapshot
+    const { taskData } = trashItem;
+
+    if (!taskData) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "This trash item is using an old format and cannot be restored."
+      });
+    }
 
     const newTask = new TaskSchema({
-      slid,
-      pisDate,
-      contactNumber,
-      requestNumber,
-      governorate,
-      district,
-      teamName,
-      teamId,
-      teamCompany,
-      date,
-      tarrifName,
-      customerType,
-      customerFeedback,
-      customerName,
-      reason,
-      interviewDate,
-      priority,
-      status,
-      assignedTo,
-      whomItMayConcern,
-      createdBy,
-      category,
-      validationStatus,
-      validationCat,
-      responsibility,
-      readBy,
-      taskLogs,
-      subTasks,
-      evaluationScore,
-      // readByWhenClosed,
-      notifications,
+      ...taskData,
       isDeleted: false,
-      createdAt: new Date(),
       updatedAt: new Date()
     });
 

@@ -156,33 +156,31 @@ const subtaskSchema = new mongoose.Schema({
 const taskSchema = new mongoose.Schema(
   {
     slid: { type: String, required: [true, "SLID is required"], trim: true },
-    operation: { type: String, default: "" },
-    interviewDate: { type: Date, default: null },
-    pisDate: {
-      type: Date,
-      required: false,
-      default: null
-    },
-    contactNumber: {
-      type: Number,
-      required: false,
-      default: null
-    },
     requestNumber: {
       type: Number,
       required: [true, "Request number is required"],
       unique: true
     },
-    governorate: {
-      type: String,
-      required: false,
-      default: null
-    },
-    district: {
-      type: String,
-      required: false,
-      default: null
-    },
+    subtaskType: { type: String, trim: true, default: null },
+    // Search-optimized flat fields
+    customerName: { type: String, trim: true },
+    customerType: { type: String, trim: true, default: null },
+    contactNumber: { type: String, trim: true },
+    governorate: { type: String, default: null },
+    district: { type: String, default: null },
+    customerFeedback: { type: String, trim: true, default: null },
+
+    operation: { type: String, trim: true },
+    tarrifName: { type: String, trim: true, default: null },
+    speed: { type: Number, default: null },
+    ontType: { type: String, trim: true, default: null },
+    freeExtender: { type: String, enum: ["Yes", "No", null], default: null },
+    extenderType: { type: String, trim: true, default: null },
+    extenderNumber: { type: Number, default: 0 },
+    reason: { type: String, trim: true, default: null },
+    subReason: { type: String, trim: true, default: null },
+    rootCause: { type: String, trim: true, default: null },
+
     teamName: {
       type: String,
       required: false,
@@ -194,37 +192,18 @@ const taskSchema = new mongoose.Schema(
       ref: "FieldTeams",
       required: false,
       default: null,
-      validate: {
-        validator: function (id) {
-          return !id || mongoose.Types.ObjectId.isValid(id);
-        },
-        message: "Invalid team ID",
-      },
     },
     teamCompany: {
       type: String,
       required: false,
       default: null
     },
-    date: {
+    pisDate: {
       type: Date,
+      required: false,
       default: null
     },
-    tarrifName: { type: String, trim: true, required: false, default: null },
-    customerType: { type: String, trim: true, required: false, default: null },
-    customerFeedback: { type: String, trim: true, required: false, default: null },
-    dashboardShortNote: { type: String, trim: true, default: "" },
-    customerName: { type: String, trim: true, required: false, default: null },
     responsible: { type: String, trim: true, default: null },
-    reason: { type: String, trim: true, required: false, default: null },
-    subReason: { type: String, trim: true, default: null },
-    rootCause: { type: String, trim: true, default: null },
-    ontType: { type: String, trim: true, default: null },
-    freeExtender: { type: String, enum: ["Yes", "No", null], default: null },
-    extenderType: { type: String, trim: true, default: null },
-    extenderNumber: { type: Number, default: 0 },
-    closureCallEvaluation: { type: Number, min: 1, max: 10, default: null },
-    closureCallFeedback: { type: String, trim: true, default: null },
     interviewDate: {
       type: Date,
       required: false,
@@ -241,23 +220,22 @@ const taskSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ["Todo", "In Progress", "Closed"],
-        message: "Status must be one of Todo, In Progress, or Closed",
+        values: ["Todo", "In Progress", "Closed", "Completed"],
+        message: "Status must be one of Todo, In Progress, Closed, or Completed",
       },
       default: "Todo",
     },
+    readBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     assignedTo: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true,
-        validate: {
-          validator: function (value) {
-            const ids = Array.isArray(value) ? value : [value];
-            return ids.every((id) => mongoose.Types.ObjectId.isValid(id));
-          },
-          message: "Invalid user ID in assignedTo field",
-        },
       },
     ],
     whomItMayConcern: [
@@ -265,25 +243,12 @@ const taskSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true,
-        validate: {
-          validator: function (value) {
-            const ids = Array.isArray(value) ? value : [value];
-            return ids.every((id) => mongoose.Types.ObjectId.isValid(id));
-          },
-          message: "Invalid user ID in whomItMayConcern field",
-        },
       },
     ],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: [true, "CreatedBy is required"],
-      validate: {
-        validator: function (id) {
-          return mongoose.Types.ObjectId.isValid(id);
-        },
-        message: "Invalid createdBy user ID",
-      },
     },
     category: {
       type: String,
@@ -296,77 +261,14 @@ const taskSchema = new mongoose.Schema(
         message: "Validation status must be either Validated or Not validated",
       },
     },
-    readBy: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-    taskLogs: [
-      {
-        action: {
-          type: String,
-          enum: ["created", "updated", "read", "deleted", "assigned"],
-          required: true,
-        },
-        user: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true,
-        },
-        timestamp: {
-          type: Date,
-          default: Date.now,
-        },
-        description: String,
-      },
-    ],
-    subtaskType: {
-      type: String,
-      enum: ["original", "visit", "phone", "no_answer", "others"],
-      default: "original"
-    },
-    resolutionStatus: {
-      type: String,
-      enum: ["No Answer", "Answered and resolved", "Appointment scheduled", "No action taken", "Pending", null],
-      default: "Pending"
-    },
-    subTasks: [subtaskSchema],
-    isDeleted: {
-      type: Boolean,
-      default: false,
-    },
     evaluationScore: {
       type: Number,
       default: 1,
       required: false,
     },
-    notifications: [{
-      recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-      message: { type: String, required: true },
-      read: { type: Boolean, default: false },
-      createdAt: { type: Date, default: Date.now }
-    }],
-
-    speed: {
-      type: Number,
-      default: null
-    },
-    serviceRecipientInitial: {
-      type: String,
-      enum: ["Authorized Representative", "Primary Subscriber"],
-      default: null
-    },
-    serviceRecipientQoS: {
-      type: String,
-      enum: ["Authorized Representative", "Primary Subscriber"],
-      default: null
-    }
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true }
   }
 );
 
@@ -376,7 +278,6 @@ taskSchema.index({ status: 1 });
 taskSchema.index({ priority: 1 });
 taskSchema.index({ createdBy: 1 });
 taskSchema.index({ assignedTo: 1 });
-taskSchema.index({ isDeleted: 1 });
 taskSchema.index({ interviewDate: -1 });
 taskSchema.index({ pisDate: -1 });
 

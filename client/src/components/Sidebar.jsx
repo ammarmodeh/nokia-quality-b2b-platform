@@ -2,7 +2,7 @@ import { ExpandMore, Assessment } from "@mui/icons-material";
 import { Accordion, AccordionDetails, AccordionSummary, Stack, useMediaQuery } from "@mui/material";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { MdSettings, MdPsychology, MdDescription } from "react-icons/md";
+import { MdSettings, MdPsychology, MdDescription, MdBook } from "react-icons/md";
 import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 
@@ -183,6 +183,12 @@ const SidebarLinks = () => {
           label: "Docs",
           link: "documents",
           icon: <MdDescription size={20} />,
+          isNew: true,
+        },
+        {
+          label: "Technical Glossary",
+          link: "technical-glossary",
+          icon: <MdBook size={20} />,
           isNew: true,
         },
       ]

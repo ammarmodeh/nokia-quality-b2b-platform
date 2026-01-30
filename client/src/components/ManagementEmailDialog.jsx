@@ -22,8 +22,11 @@ import {
 } from '@mui/icons-material';
 import { TextField } from '@mui/material';
 import { toast } from 'sonner';
+import { getWeekNumber, getCustomWeekNumber } from '../utils/helpers';
+import { filterTasksByWeek, aggregateSamples } from '../utils/dateFilterHelpers';
+import { startOfWeek, subWeeks, format } from 'date-fns';
 
-const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, period = '', startDate = null, endDate = null }) => {
+const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, period = '', startDate = null, endDate = null, settings = {} }) => {
   const [tab, setTab] = useState(0);
   const [managementName, setManagementName] = useState('Management');
   const [managementNameAr, setManagementNameAr] = useState('الإدارة الموقرة');
@@ -34,7 +37,7 @@ const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, p
 
   const generateEmail = (lang) => {
     if (type === 'dashboard') {
-      const { tasks = [], teamsData = [], samplesData = [] } = data;
+      const { tasks = [], teamsData = [], samplesData = [], allTasks = [] } = data;
       const totalTasks = tasks.length;
 
       const detractorCount = tasks.filter(t => t.evaluationScore >= 1 && t.evaluationScore <= 6).length;
@@ -48,10 +51,11 @@ const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, p
       const promoterCount = Math.max(0, totalSamples - (detractorCount + neutralCount));
       const promotersPercent = totalSamples > 0 ? Math.round((promoterCount / totalSamples) * 100) : 0;
       const detractorsPercent = totalSamples > 0 ? Math.round((detractorCount / totalSamples) * 100) : 0;
+      const neutralsPercent = totalSamples > 0 ? Math.round((neutralCount / totalSamples) * 100) : 0;
       const npsScore = promotersPercent - detractorsPercent;
 
       const targetPromoters = 75;
-      const targetDetractors = 9;
+      const targetDetractors = 8;
       const npsTarget = 66;
 
       const isPromoterAlarm = promotersPercent < targetPromoters && totalSamples > 0;
@@ -67,27 +71,161 @@ const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, p
       const evaluatedPercent = ((teamsData.filter(t => t.isEvaluated).length / (teamsData.length || 1)) * 100).toFixed(1);
 
       const dateStr = period || todayDate;
-      const explicitDates = (startDate && endDate)
+
+      // Check if period string already contains year/dates to avoid redundancy
+      const hasDates = /\d{4}|\//.test(dateStr);
+      const explicitDates = (startDate && endDate && !hasDates)
         ? `(${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})`
         : '';
 
+      // Calculate included weeks if we have a range and it's likely a month/period view
+      let weeksList = '';
+      if (startDate && endDate && (period.includes('Month') || !period.includes('Wk'))) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const uniqueWeeks = new Set();
+
+        // Iterate through days to find all unique weeks
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const { week } = getWeekNumber(d);
+          uniqueWeeks.add(String(week).padStart(2, '0'));
+        }
+        weeksList = Array.from(uniqueWeeks).sort().join(', ');
+      }
+
+      // --- 4-Week Trend Analysis ---
+      let trendSection = '';
+      if (allTasks.length > 0) { // Only if we have the full dataset
+        const getStatsForWeek = (targetDate) => {
+          const year = targetDate.getFullYear();
+          const weekNum = getCustomWeekNumber(targetDate, year, settings);
+
+          const weeklyTasks = filterTasksByWeek(allTasks, year, weekNum, settings);
+
+          // Should use aggregateSamples for this week to be accurate on total samples
+          // We can construct a "value" object for aggregateSamples('week', ...)
+          const weekStart = startOfWeek(targetDate, { weekStartsOn: settings.weekStartDay || 0 });
+          const weeklySamples = aggregateSamples(samplesData, 'week', {
+            weekNumber: weekNum,
+            year: year,
+            startDate: weekStart
+          }, settings);
+
+          const wDet = weeklyTasks.filter(t => t.evaluationScore >= 1 && t.evaluationScore <= 6).length;
+          const wNeu = weeklyTasks.filter(t => t.evaluationScore >= 7 && t.evaluationScore <= 8).length;
+          const wProm = Math.max(0, weeklySamples - (wDet + wNeu));
+
+          const pPct = weeklySamples > 0 ? Math.round((wProm / weeklySamples) * 100) : 0;
+          const dPct = weeklySamples > 0 ? Math.round((wDet / weeklySamples) * 100) : 0;
+          const nPct = weeklySamples > 0 ? Math.round((wNeu / weeklySamples) * 100) : 0;
+          const nps = pPct - dPct;
+
+          // Calculate Response Rate (Unique Teams Evaluated / Total Teams)
+          const uniqueTeamsEvaluated = new Set(weeklyTasks.map(t => t.teamName)).size;
+          const totalTeamsCount = teamsData.length > 0 ? teamsData.length : 1;
+          const respRate = Math.round((uniqueTeamsEvaluated / totalTeamsCount) * 100);
+
+          return {
+            weekNum,
+            year,
+            nps,
+            pPct,
+            dPct,
+            nPct,
+            samples: weeklySamples,
+            respRate
+          };
+        };
+
+        // Determine anchor date. Use endDate if available, else today.
+        const anchor = endDate ? new Date(endDate) : new Date();
+        const statsHistory = [];
+
+        // Collect stats for last 4 weeks (Anchor, -1, -2, -3)
+        for (let i = 0; i < 4; i++) {
+          const d = subWeeks(anchor, i);
+          statsHistory.push(getStatsForWeek(d));
+        }
+
+        const buildRow = (s, prev) => {
+          const npsDiff = prev ? s.nps - prev.nps : 0;
+          const promDiff = prev ? s.pPct - prev.pPct : 0;
+          const detDiff = prev ? s.dPct - prev.dPct : 0;
+          const pasDiff = prev ? s.nPct - prev.nPct : 0;
+
+          const npsSign = npsDiff > 0 ? '+' : '';
+          const promSign = promDiff > 0 ? '+' : '';
+          const detSign = detDiff > 0 ? '+' : '';
+          const pasSign = pasDiff > 0 ? '+' : '';
+
+          // User requested format:
+          // Wk-04 (2026)
+          // 63 75% (+15) Met Target 83% (+13) 8% (-2) 10% (-10)
+
+          // Replicating the columns visually in text
+          // Week | NPS | Resp | Target | Prom | Det | Pass
+          const wkLabel = `Wk-${String(s.weekNum).padStart(2, '0')} (${s.year})`;
+          const npsStr = `${s.nps}`;
+          // For delta, user put it in a separate visual column or next to it. 
+          // "63 ... (+15)"
+
+          // To make it look like the requested table behavior:
+          // Wk-XX | NPS: 63 (+15) | Resp: 75% | Prom: 83% (+13) | Det: 8% (-2) | Pas: 10% (-10)
+
+          // Logic for "Met Target" (NPS Target)
+          const npsTargetStatus = s.nps >= npsTarget ? (lang === 'en' ? 'Met Target' : 'حقق المستهدف') : (lang === 'en' ? 'Below Target' : 'أقل من المستهدف');
+
+          if (lang === 'en') {
+            return `${wkLabel}\n` +
+              `NPS: ${npsStr} (${npsSign}${npsDiff !== 0 ? npsDiff : 0}) | ${npsTargetStatus}\n` +
+              `Response: ${s.respRate}% | Promoters: ${s.pPct}% (${promSign}${promDiff}) | Detractors: ${s.dPct}% (${detSign}${detDiff}) | Passives: ${s.nPct}% (${pasSign}${pasDiff})\n`;
+          } else {
+            return `${wkLabel}\n` +
+              `NPS: ${npsStr} (${npsSign}${npsDiff}) | ${npsTargetStatus}\n` +
+              `الاستجابة: ${s.respRate}% | مروجون: ${s.pPct}% (${promSign}${promDiff}) | منتقدون: ${s.dPct}% (${detSign}${detDiff}) | محايدون: ${s.nPct}% (${pasSign}${pasDiff})\n`;
+          }
+        };
+
+        // Note: statsHistory is [Current, -1, -2, -3]. 
+        // We need to compare Current with -1, -1 with -2, etc.
+        // But for the report, we iterate 0..3. The "prev" for 0 is 1.
+
+        // Wait, to calculate delta for week X, I need week X-1.
+        // So I actually need 5 weeks of data to compute deltas for the 4 displayed weeks.
+        const prevWeekStats = getStatsForWeek(subWeeks(anchor, 4));
+        statsHistory.push(prevWeekStats);
+
+        if (lang === 'en') {
+          trendSection = `\nMonthly Performance Trend (Last 4 Weeks):\n----------------------------------------\n`;
+          for (let i = 0; i < 4; i++) {
+            trendSection += buildRow(statsHistory[i], statsHistory[i + 1]) + '\n';
+          }
+        } else {
+          trendSection = `\nاتجاه الأداء الشهري (آخر 4 أسابيع):\n----------------------------------------\n`;
+          for (let i = 0; i < 4; i++) {
+            trendSection += buildRow(statsHistory[i], statsHistory[i + 1]) + '\n';
+          }
+        }
+      }
+
       if (lang === 'en') {
         const greeting = `Dear ${managementName},`;
-        return `Subject: NPS & Workforce Analytics
+        return `Subject: NPS & Workforce Analytics Report
 
 ${greeting}
 
 Please find attached the NPS analysis and high-level operations performance summary for the mentioned period, based on the latest field and workforce data.
 
 Reporting Period: ${dateStr} ${explicitDates}
+${weeksList ? `Weeks Included: ${weeksList}` : ''}
 
 Net Promoter Score (NPS) Analysis:
 - Total Samples Taken: ${totalSamples}
-- Promoters: ${promoterCount} (${promotersPercent}%) ${isPromoterAlarm ? '[ALARM: Below Target 75%]' : '[Target Met]'}
-- Detractors: ${detractorCount} (${detractorsPercent}%) ${isDetractorAlarm ? '[ALARM: Above Target 9%]' : '[Target Met]'}
+- Promoters: ${promoterCount} (${promotersPercent}%) ${isPromoterAlarm ? `[ALARM: Below Target ${targetPromoters}%]` : `[Target Met: ≥${targetPromoters}%]`}
+- Detractors: ${detractorCount} (${detractorsPercent}%) ${isDetractorAlarm ? `[ALARM: Above Target ${targetDetractors}%]` : `[Target Met: ≤${targetDetractors}%]`}
 - Neutrals: ${neutralCount}
-- Overall NPS Score: ${npsScore} ${isNPSAlarm ? '[ALARM: Below Target 66%]' : '[Target Met]'}
-
+- Overall NPS Score: ${npsScore} ${isNPSAlarm ? `[ALARM: Below Target ${npsTarget}]` : `[Target Met: ≥${npsTarget}]`}
+${trendSection}
 Operational Key Performance Indicators:
 - Total Cases Recorded: ${totalTasks}
 - High / Medium Priority Issues: ${criticalTasks}
@@ -98,6 +236,11 @@ Operational Insights:
 1. Customer Sentiment: ${isPromoterAlarm || isDetractorAlarm || isNPSAlarm ? 'URGENT: Some NPS targets are currenty not met. Immediate focus on quality improvement is recommended.' : 'Our current NPS trends are within healthy operational targets.'}
 2. Workforce Quality: Approximately ${evaluatedPercent}% of teams have undergone quality assessment.
 3. Risk Focus: "${topReason}" remains the primary reason for recorded violations.
+
+Strategic Action Plan:
+1. Immediate Focus: Initiate a targeted review of "${topReason}" cases to identify and mitigate recurring root causes.
+2. Training Reinforcement: Schedule refresher training sessions specifically addressing the skills gaps related to "${topReason}".
+3. Process Optimization: Review current standard operating procedures (SOPs) to ensure they adequately cover scenarios leading to "${topReason}".
 
 Best Regards,
 Quality Team`;
@@ -110,14 +253,15 @@ ${greeting}
 نرفق لكم ملخصاً رفيع المستوى للعمليات بناءً على أحدث البيانات الميدانية.
 
 فترة التقرير: ${dateStr} ${explicitDates}
+${weeksList ? `الأسابيع المشمولة: ${weeksList}` : ''}
 
 تحليل مؤشر صافي الترويج (NPS):
 - إجمالي العينات المأخوذة: ${totalSamples}
-- المروجون: ${promoterCount} (${promotersPercent}%) ${isPromoterAlarm ? '[تنبيه: أقل من المستهدف 75%]' : '[تم تحقيق المستهدف]'}
-- المنتقدون: ${detractorCount} (${detractorsPercent}%) ${isDetractorAlarm ? '[تنبيه: أعلى من المستهدف 9%]' : '[تم تحقيق المستهدف]'}
+- المروجون: ${promoterCount} (${promotersPercent}%) ${isPromoterAlarm ? `[تنبيه: أقل من المستهدف ${targetPromoters}%]` : `[تم تحقيق المستهدف: ≥${targetPromoters}%]`}
+- المنتقدون: ${detractorCount} (${detractorsPercent}%) ${isDetractorAlarm ? `[تنبيه: أعلى من المستهدف ${targetDetractors}%]` : `[تم تحقيق المستهدف: ≤${targetDetractors}%]`}
 - المحايدون: ${neutralCount}
-- صافي مؤشر الترويج (NPS): ${npsScore} ${isNPSAlarm ? '[تنبيه: أقل من المستهدف 66%]' : '[تم تحقيق المستهدف]'}
-
+- صافي مؤشر الترويج (NPS): ${npsScore} ${isNPSAlarm ? `[تنبيه: أقل من المستهدف ${npsTarget}]` : `[تم تحقيق المستهدف: ≥${npsTarget}]`}
+${trendSection}
 مؤشرات الأداء الرئيسية للعمليات:
 - إجمالي الحالات المسجلة: ${totalTasks}
 - المشكلات ذات الأولوية العالية / المتوسطة: ${criticalTasks}
@@ -128,6 +272,11 @@ ${greeting}
 1. انطباع العملاء: ${isPromoterAlarm || isDetractorAlarm || isNPSAlarm ? 'عاجل: تقييمات NPS حالياً خارج النطاق المستهدف. نوصي بالتركيز الفوري على تحسين جودة العمل.' : 'اتجاهات NPS الحالية ضمن النطاق التشغيلي المستهدف.'}
 2. جودة القوى العاملة: خضع ما يقرب من ${evaluatedPercent}% من الفرق لتقييم الجودة.
 3. التركيز على المخاطر: لا يزال (${topReason}) هو السبب الرئيسي للمخالفات المسجلة.
+
+خطة العمل الاستراتيجية:
+1. التركيز الفوري: البدء بمراجعة مستهدفة لحالات "${topReason}" لتحديد الأسباب الجذرية المتكررة ومعالجتها.
+2. تعزيز التدريب: جدولة جلسات تدريب تنشيطية تتناول بشكل خاص الفجوات المهارية المتعلقة بـ "${topReason}".
+3. تحسين العمليات: مراجعة إجراءات التشغيل القياسية الحالية (SOPs) لضمان تغطيتها بشكل كافٍ للسيناريوهات المؤدية إلى "${topReason}".
 
 مع خالص التقدير،
 فريق العمليات`;
@@ -152,7 +301,9 @@ ${greeting}
         .slice(0, 2);
 
       const dateStr = period || todayDate;
-      const explicitDates = (startDate && endDate)
+      // Check if period string already contains year/dates to avoid redundancy
+      const hasDates = /\d{4}|\//.test(dateStr);
+      const explicitDates = (startDate && endDate && !hasDates)
         ? `(${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()})`
         : '';
 

@@ -136,10 +136,35 @@ export const getAllIssues = async (req, res) => {
     }
 
     const total = await CustomerIssueSchema.countDocuments(query);
-    const issues = await CustomerIssueSchema.find(query)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit);
+
+    // Aggregation pipeline for GAIA metrics
+    const pipeline = [
+      { $match: query },
+      { $sort: sortOptions },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "tasktickets",
+          localField: "_id",
+          foreignField: "taskId",
+          as: "tickets"
+        }
+      },
+      {
+        $addFields: {
+          latestGaia: {
+            $arrayElemAt: [
+              { $sortArray: { input: "$tickets", sortBy: { timestamp: -1 } } },
+              0
+            ]
+          }
+        }
+      },
+      { $project: { tickets: 0 } }
+    ];
+
+    const issues = await CustomerIssueSchema.aggregate(pipeline);
 
     res.status(200).json({
       success: true,

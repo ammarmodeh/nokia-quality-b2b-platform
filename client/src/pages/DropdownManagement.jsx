@@ -100,6 +100,15 @@ const FORM_GROUPS = [
       REASON_SUB: "Sub-Reason Analysis (L2)",
       ROOT_CAUSE: "Final Root Cause (L3)",
     }
+  },
+  {
+    title: "7. GAIA Master Tracking",
+    categories: {
+      TRANSACTION_TYPE: "GAIA: Transaction Types",
+      TRANSACTION_STATE: "GAIA: Outcome States",
+      UNF_REASON_CODE: "GAIA: Unfulfillment Reasons",
+      SYSTEM_FLOW_STATUS: "GAIA: Flow Statuses",
+    }
   }
 ];
 

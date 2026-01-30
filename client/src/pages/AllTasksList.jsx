@@ -32,7 +32,8 @@ import {
   Grid,
   Collapse,
   ButtonGroup,
-  Autocomplete
+  Autocomplete,
+  alpha
 } from '@mui/material';
 import { MoonLoader } from 'react-spinners';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -58,6 +59,7 @@ import {
   MdTimeline,
   MdDateRange,
   MdAssignmentTurnedIn,
+  MdHistory,
 } from 'react-icons/md';
 import {
   BarChart,
@@ -83,11 +85,12 @@ import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYea
 import { IoMdAdd } from "react-icons/io";
 import api from '../api/api';
 import EditTaskDialog from '../components/task/EditTaskDialog';
-import DetailedSubtaskDialog from '../components/task/DetailedSubtaskDialog';
+import RecordTicketDialog from '../components/task/RecordTicketDialog';
 import { TaskDetailsDialog } from '../components/TaskDetailsDialog';
 import { getCustomWeekNumber as getAggregatedWeekNumber } from '../utils/helpers';
 import { utils, writeFile } from 'xlsx';
 import AddTask from '../components/task/AddTask';
+import AdvancedSearch from '../components/common/AdvancedSearch';
 import moment from 'moment';
 
 const AllTasksList = () => {
@@ -96,6 +99,17 @@ const AllTasksList = () => {
   const user = useSelector((state) => state?.auth?.user);
 
   // --- Consolidated State ---
+  const { settings } = useSelector((state) => state.settings || { settings: {} });
+
+  const getWeekDisplay = (date) => {
+    if (!date) return "-";
+    try {
+      return getAggregatedWeekNumber(new Date(date), new Date(date).getFullYear(), settings);
+    } catch (e) {
+      return "-";
+    }
+  };
+
   const [allTasks, setAllTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -103,8 +117,6 @@ const AllTasksList = () => {
   // UI State
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
   // Filter State
   const [dateFilter, setDateFilter] = useState({
@@ -131,6 +143,7 @@ const AllTasksList = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
+  const [confirmSlid, setConfirmSlid] = useState('');
   const [openAddTask, setOpenAddTask] = useState(false);
   const [updateRefetchTasks, setUpdateRefetchTasks] = useState(false);
 
@@ -140,12 +153,22 @@ const AllTasksList = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const [dropdownOptions, setDropdownOptions] = useState({});
-  const [settings, setSettings] = useState(null);
   const [favoriteTasks, setFavoriteTasks] = useState([]);
   // const [visitedRowIds, setVisitedRowIds] = useState([]); // Removed in favor of backend persistence
   const [hiddenSeries, setHiddenSeries] = useState(new Set());
-  const [manageSubtasksDialogOpen, setManageSubtasksDialogOpen] = useState(false);
-  const [subtaskTask, setSubtaskTask] = useState(null);
+  const [recordTicketDialogOpen, setRecordTicketDialogOpen] = useState(false);
+  const [ticketTask, setTicketTask] = useState(null);
+
+  // Advanced Search State
+  const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
+  const [advSearchFields, setAdvSearchFields] = useState({
+    slid: '',
+    gaiaId: '',
+    requestNumber: '',
+    customerName: '',
+    contactNumber: ''
+  });
+  const [activeAdvSearch, setActiveAdvSearch] = useState(false);
 
   const handleLegendClick = (e) => {
     const { dataKey } = e;
@@ -169,11 +192,10 @@ const AllTasksList = () => {
         const results = await Promise.allSettled([
           api.get("/tasks/get-all-tasks"),
           api.get('/dropdown-options/all'),
-          api.get("/settings"),
           api.get("/favourites/get-favourites")
         ]);
 
-        const [tasksRes, optionsRes, settingsRes, favRes] = results;
+        const [tasksRes, optionsRes, favRes] = results;
 
         if (tasksRes.status === 'fulfilled') {
           const tasksData = Array.isArray(tasksRes.value.data)
@@ -191,11 +213,7 @@ const AllTasksList = () => {
           console.error("Error fetching options:", optionsRes.reason);
         }
 
-        if (settingsRes.status === 'fulfilled') {
-          setSettings(settingsRes.value.data);
-        } else {
-          console.error("Error fetching settings:", settingsRes.reason);
-        }
+
 
         if (favRes.status === 'fulfilled') {
           setFavoriteTasks(favRes.value.data.favourites || []);
@@ -282,18 +300,14 @@ const AllTasksList = () => {
         if (task.evaluationScore > 6) return false;
       }
 
-      // 8. Search
-      if (debouncedSearchTerm) {
-        const lower = debouncedSearchTerm.toLowerCase();
-        const searchMatch = (
-          (task.slid?.toLowerCase().includes(lower)) ||
-          (task.customerName?.toLowerCase().includes(lower)) ||
-          (String(task.contactNumber || '')?.toLowerCase().includes(lower)) ||
-          (task.teamName?.toLowerCase().includes(lower)) ||
-          (task.operation?.toLowerCase().includes(lower)) ||
-          (String(task.requestNumber || '').includes(lower))
-        );
-        if (!searchMatch) return false;
+
+      // 10. Advanced Search
+      if (activeAdvSearch) {
+        if (advSearchFields.slid && !task.slid?.toLowerCase().includes(advSearchFields.slid.toLowerCase())) return false;
+        if (advSearchFields.gaiaId && !task.latestGaia?.ticketId?.toLowerCase().includes(advSearchFields.gaiaId.toLowerCase())) return false;
+        if (advSearchFields.requestNumber && !String(task.requestNumber || '').includes(advSearchFields.requestNumber)) return false;
+        if (advSearchFields.customerName && !task.customerName?.toLowerCase().includes(advSearchFields.customerName.toLowerCase())) return false;
+        if (advSearchFields.contactNumber && !String(task.contactNumber || '').includes(advSearchFields.contactNumber)) return false;
       }
 
       // 9. Date Filter
@@ -307,7 +321,7 @@ const AllTasksList = () => {
 
       return true;
     });
-  }, [allTasks, priorityFilter, statusFilter, governorateFilter, districtFilter, subconFilter, supervisorFilter, teamNameFilter, validationFilter, filter, debouncedSearchTerm, dateFilter]);
+  }, [allTasks, priorityFilter, statusFilter, governorateFilter, districtFilter, subconFilter, supervisorFilter, teamNameFilter, validationFilter, filter, dateFilter, advSearchFields, activeAdvSearch]);
 
   // Pagination
   const paginatedTasks = useMemo(() => {
@@ -321,17 +335,7 @@ const AllTasksList = () => {
 
 
 
-  const getWeekDisplay = (dateString) => {
-    if (!dateString) return "-";
-    try {
-      const date = moment(dateString);
-      const year = date.year();
-      const weekNum = getAggregatedWeekNumber(date.toDate(), year, settings || {});
-      return `${weekNum}`;
-    } catch (e) {
-      return "-";
-    }
-  };
+
 
   const handleRowClick = (taskId) => {
     setSelectedRowId(prevId => {
@@ -344,14 +348,6 @@ const AllTasksList = () => {
     });
   };
 
-  // Debounce search term
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      setPage(0); // Reset to first page on search
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
 
 
@@ -374,7 +370,6 @@ const AllTasksList = () => {
     };
 
     return {
-      auditMethod: count('subtaskType'),
       reason: count('reason'),
       subReason: count('subReason'),
       rootCause: count('rootCause')
@@ -649,21 +644,13 @@ const AllTasksList = () => {
       'Request Number': task.requestNumber || 'N/A',
       'SLID': task.slid || 'N/A',
       'Status': task.status || 'N/A',
-      'PIS Date': task.pisDate ? new Date(task.pisDate).toLocaleDateString() : 'N/A',
-      'Customer Name': task.customerName || 'N/A',
-      'Contact': task.contactNumber || 'N/A',
-      'Governorate': task.governorate || 'N/A',
-      'District': task.district || 'N/A',
-      'Team Name': task.teamName || 'N/A',
-      'Subcon': task.teamCompany || 'N/A',
-      'Satisfaction Score': task.evaluationScore || 'N/A',
-      'Feedback Severity': task.priority || 'N/A',
-      'Reason': task.reason || 'N/A',
-      'Sub-Reason': task.subReason || 'N/A',
-      'Root Cause': task.rootCause || 'N/A',
+      'GAIA Type': task.latestGaia?.transactionType || 'N/A',
+      'GAIA State': task.latestGaia?.transactionState || 'N/A',
+      'GAIA Reason': task.latestGaia?.unfReasonCode || 'N/A',
+      'Follow-up Needed': task.technicalDetails?.followUpRequired ? 'Yes' : 'No',
+      'Follow-up Date': task.technicalDetails?.followUpDate ? format(new Date(task.technicalDetails.followUpDate), 'yyyy-MM-dd') : 'N/A',
       'Validation Status': task.validationStatus || 'Pending',
-      'Customer Feedback': task.customerFeedback || 'N/A',
-      'Management Note': task.subTasks?.filter(st => st.note).map(st => st.note).join(" | ") || 'N/A'
+      'Customer Feedback': task.customer?.customerFeedback || 'N/A',
     }));
 
     const wsRaw = utils.json_to_sheet(rawData, { origin: "A2" });
@@ -859,34 +846,8 @@ const AllTasksList = () => {
         {/* Analytics Dashboard (Always Visible) */}
         <Box sx={{ mt: 3 }}>
           <Grid container spacing={3}>
-            {/* Audit Method Chart (Replacing one of the slots or adding a new Grid container row) */}
-            <Grid item xs={12} md={3}>
-              <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Audit Method Distribution</Typography>
-                <ResponsiveContainer width="100%" height="90%">
-                  <PieChart>
-                    <Pie
-                      data={analyticsData.auditMethod}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {analyticsData.auditMethod.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#7b68ee', '#4caf50', '#ff9800', '#f44336', '#2196f3'][index % 5]} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-
             {/* Reason Chart */}
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={4}>
               <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Reasons</Typography>
                 <ResponsiveContainer width="100%" height="90%">
@@ -905,7 +866,7 @@ const AllTasksList = () => {
               </Paper>
             </Grid>
             {/* Sub-Reason Chart */}
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={4}>
               <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Sub-Reasons</Typography>
                 <ResponsiveContainer width="100%" height="90%">
@@ -920,7 +881,7 @@ const AllTasksList = () => {
               </Paper>
             </Grid>
             {/* Root Cause Chart */}
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={4}>
               <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Root Causes</Typography>
                 <ResponsiveContainer width="100%" height="90%">
@@ -1472,70 +1433,42 @@ const AllTasksList = () => {
           width: isMobile ? '100%' : 'auto',
           flexGrow: 1
         }}>
-          <TextField
-            variant="outlined"
-            size="small"
-            placeholder="Search by SLID, Name, Contact, or Feedback..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <MdSearch style={{ color: '#b3b3b3' }} />
-                </InputAdornment>
-              ),
-              endAdornment: searchTerm && (
-                <IconButton
-                  size="small"
-                  onClick={() => setSearchTerm('')}
-                  sx={{
-                    visibility: searchTerm ? 'visible' : 'hidden',
-                    color: '#b3b3b3',
-                    '&:hover': {
-                      backgroundColor: '#2a2a2a',
-                    }
-                  }}
-                >
-                  <MdClose />
-                </IconButton>
-              ),
-              sx: {
-                borderRadius: '20px',
-                backgroundColor: '#2d2d2d',
-                width: '100%',
-                '& fieldset': {
-                  border: 'none',
-                },
-                '& input': {
-                  color: '#ffffff',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  '&::placeholder': {
-                    color: '#666',
-                    opacity: 1,
-                    fontSize: '0.8rem',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }
-                },
-              },
-            }}
+          <Button
+            variant="contained"
+            startIcon={<MdSearch />}
+            onClick={() => setAdvancedSearchOpen(true)}
             sx={{
-              flexGrow: 1,
-              width: isMobile ? '100%' : 'auto',
-              minWidth: isMobile ? '100%' : '300px',
-              '& .MuiOutlinedInput-root': {
-                '&:hover fieldset': {
-                  border: '1px solid #666 !important',
-                },
-                '&.Mui-focused fieldset': {
-                  border: '1px solid #7b68ee !important',
-                },
+              bgcolor: activeAdvSearch ? '#4caf50' : '#7b68ee',
+              color: '#fff',
+              borderRadius: '20px',
+              px: 3,
+              '&:hover': {
+                bgcolor: activeAdvSearch ? '#388e3c' : '#6854d9'
               },
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap'
             }}
-          />
+          >
+            {activeAdvSearch ? "Advanced Filers Active" : "Advanced Search"}
+          </Button>
+
+          {activeAdvSearch && (
+            <Button
+              variant="text"
+              startIcon={<MdClose />}
+              onClick={() => {
+                setAdvSearchFields({ slid: '', gaiaId: '', requestNumber: '', customerName: '', contactNumber: '' });
+                setActiveAdvSearch(false);
+              }}
+              sx={{
+                color: '#f44336',
+                fontWeight: 'bold',
+                '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.08)' }
+              }}
+            >
+              Clear Search
+            </Button>
+          )}
 
           <Box sx={{
             display: 'flex',
@@ -1641,16 +1574,16 @@ const AllTasksList = () => {
           <TableHead>
             <TableRow>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Created At</TableCell>
-              <TableCell style={{ fontSize: '0.875rem', width: 100 }}>SLID</TableCell>
-              <TableCell style={{ fontSize: '0.875rem', minWidth: 120 }}>Customer Name</TableCell>
-              <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Contact</TableCell>
-              <TableCell style={{ fontSize: '0.875rem', minWidth: 200, maxWidth: 300 }}>Customer Feedback</TableCell>
-              <TableCell style={{ fontSize: '0.875rem', minWidth: 200, maxWidth: 300 }}>Management Note</TableCell>
-              <TableCell style={{ fontSize: '0.875rem', minWidth: 150, maxWidth: 200 }}>Summary</TableCell>
-              <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Audit Method</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 120 }}>SLID / REQ #</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Customer Info</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 200 }}>Feedback</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Operation / Tariff</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Priority</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Status</TableCell>
-              <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Feedback Severity</TableCell>
-              <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Eval Score</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Location</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Team / Subcon</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Root Cause</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Score</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Week</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Actions</TableCell>
             </TableRow>
@@ -1666,16 +1599,6 @@ const AllTasksList = () => {
                       onClick={(e) => {
                         if (!e.defaultPrevented) {
                           setSelectedRowId(task._id);
-                          // Mark as read if not already
-                          if (!task.readBy?.includes(user?._id)) {
-                            const newReadBy = [...(task.readBy || []), user._id];
-                            setAllTasks(prev => prev.map(t =>
-                              t._id === task._id ? { ...t, readBy: newReadBy } : t
-                            ));
-                            api.put(`/tasks/update-task/${task._id}`, { readBy: newReadBy }).catch(err =>
-                              console.error("Failed to update read status", err)
-                            );
-                          }
                         }
                       }}
                       sx={{
@@ -1695,6 +1618,9 @@ const AllTasksList = () => {
                       <TableCell>
                         <Box display="flex" flexDirection="column" gap={0.5}>
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{task.slid || "-"}</Typography>
+                          <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 'bold' }}>
+                            REQ: {task.requestNumber || "-"}
+                          </Typography>
                           {task.validationStatus === 'Validated' ? (
                             <Chip
                               label="Validated"
@@ -1725,142 +1651,130 @@ const AllTasksList = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography fontWeight={500} sx={{ direction: 'rtl', textAlign: 'right', fontSize: '0.8rem' }}>
-                          {task.customerName || "-"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{task.contactNumber || '-'}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        {task.customerFeedback ? (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, maxWidth: 300 }}>
-                            <Typography
-                              sx={{
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                textAlign: 'right',
-                                direction: 'rtl',
-                                fontSize: '0.8rem'
-                              }}
-                            >
-                              {task.customerFeedback}
-                            </Typography>
-                            <Tooltip title="Read More">
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDialogContent(task.customerFeedback);
-                                  setDialogTitle('Customer Feedback');
-                                  setDialogOpen(true);
-                                }}
-                                sx={{ color: '#fff', p: 0.5 }}
-                              >
-                                <MdVisibility size={16} />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        ) : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, maxWidth: 300 }}>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontSize: '0.8rem',
-                              color: '#4caf50',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
-                            }}
-                          >
-                            {task.subTasks?.filter(st => st.note).map(st => st.note).join(" | ") || "-"}
+                        <Box display="flex" flexDirection="column" gap={0.2}>
+                          <Typography fontWeight={700} sx={{ direction: 'rtl', textAlign: 'right', fontSize: '0.85rem' }}>
+                            {task.customerName || task.customer?.customerName || "-"}
                           </Typography>
-                          {task.subTasks?.some(st => st.note) && (
-                            <Tooltip title="Read More">
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const fullNote = task.subTasks?.filter(st => st.note).map(st => st.note).join(" | ");
-                                  setDialogContent(fullNote);
-                                  setDialogTitle('Management Note');
-                                  setDialogOpen(true);
-                                }}
-                                sx={{ color: '#4caf50', p: 0.5 }}
-                              >
-                                <MdVisibility size={16} />
-                              </IconButton>
-                            </Tooltip>
-                          )}
+                          <Typography variant="caption" sx={{ fontFamily: 'monospace', opacity: 0.7 }}>
+                            {task.contactNumber || task.customer?.contactNumber || '-'}
+                          </Typography>
+                          <Typography variant="caption" color="primary" sx={{ fontSize: '0.7rem' }}>
+                            {task.customerType || "-"}
+                          </Typography>
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, maxWidth: 200 }}>
-                          <Typography variant="caption" sx={{
-                            color: '#2196f3',
-                            fontWeight: '500',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}>
-                            {task.subTasks?.[0]?.title === "Task Reception" ? task.subTasks[0].shortNote : ""}
+                        <Box sx={{ direction: 'rtl', textAlign: 'right' }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem', whiteSpace: 'pre-wrap' }}>
+                            {(() => {
+                              const feedback = task.customerFeedback || task.customer?.customerFeedback;
+                              if (feedback) {
+                                return feedback.length > 80 ? (
+                                  <>
+                                    {feedback.substring(0, 80)}...
+                                    <Button
+                                      size="small"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDialogTitle("Customer Feedback");
+                                        setDialogContent(feedback);
+                                        setDialogOpen(true);
+                                      }}
+                                      sx={{
+                                        minWidth: 'auto',
+                                        p: 0,
+                                        ml: 1,
+                                        textTransform: 'none',
+                                        color: '#7b68ee',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
+                                        '&:hover': { background: 'transparent', textDecoration: 'underline' }
+                                      }}
+                                    >
+                                      Read More
+                                    </Button>
+                                  </>
+                                ) : (
+                                  feedback
+                                );
+                              }
+                              return <Typography variant="caption" sx={{ color: '#aaa' }}>-</Typography>;
+                            })()}
                           </Typography>
-                          {task.subTasks?.[0]?.title === "Task Reception" && task.subTasks[0].shortNote && (
-                            <Tooltip title="Read More">
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDialogContent(task.subTasks[0].shortNote);
-                                  setDialogTitle('Summary');
-                                  setDialogOpen(true);
-                                }}
-                                sx={{ color: '#2196f3', p: 0.5 }}
-                              >
-                                <MdVisibility size={16} />
-                              </IconButton>
-                            </Tooltip>
-                          )}
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ color: '#7b68ee', fontWeight: 'bold', textTransform: 'capitalize' }}>
-                          {task.subtaskType || "visit"}
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#2196f3' }}>
+                          {task.operation || task.technicalDetails?.operation || "-"}
                         </Typography>
+                        <Typography variant="caption" sx={{ display: 'block', color: '#9c27b0', fontWeight: 'bold' }}>
+                          {task.tarrifName || "-"}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">{task.category}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={task.priority || "Normal"}
+                          size="small"
+                          sx={{
+                            fontWeight: 'bold',
+                            fontSize: '0.7rem',
+                            height: '24px',
+                            backgroundColor: task.priority === 'High' ? 'rgba(244, 67, 54, 0.15)' :
+                              task.priority === 'Medium' ? 'rgba(255, 152, 0, 0.15)' :
+                                task.priority === 'Low' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                            color: task.priority === 'High' ? '#f44336' :
+                              task.priority === 'Medium' ? '#ff9800' :
+                                task.priority === 'Low' ? '#4caf50' : '#fff',
+                            border: '1px solid',
+                            borderColor: 'divider'
+                          }}
+                        />
                       </TableCell>
                       <TableCell>
                         <Chip
                           label={task.status}
                           size="small"
-                          color={task.status === 'Completed' ? 'success' : task.status === 'In Progress' ? 'primary' : 'default'}
-                          variant={task.status === 'Todo' ? 'outlined' : 'filled'}
+                          sx={{
+                            fontWeight: 800,
+                            borderRadius: '6px',
+                            bgcolor: (task.status === 'Closed' || task.status === 'Completed') ? 'rgba(76, 175, 80, 0.15)' :
+                              task.status === 'In Progress' ? 'rgba(33, 150, 243, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                            color: (task.status === 'Closed' || task.status === 'Completed') ? '#4caf50' :
+                              task.status === 'In Progress' ? '#2196f3' : '#fff',
+                            border: '1px solid',
+                            borderColor: 'divider'
+                          }}
                         />
                       </TableCell>
+
                       <TableCell>
-                        {task.priority ? (
-                          <Chip
-                            label={task.priority}
-                            size="small"
-                            color={
-                              task.priority === 'High' ? 'error' :
-                                task.priority === 'Medium' ? 'warning' :
-                                  task.priority === 'Low' ? 'success' : 'default'
-                            }
-                            sx={{
-                              fontWeight: 'bold',
-                              minWidth: 80
-                            }}
-                          />
-                        ) : "-"}
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {task.governorate || "-"}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            {task.district || "-"}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#7b68ee' }}>
+                            {task.teamName || "-"}
+                          </Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
+                            {task.teamCompany || "-"}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#f44336', fontSize: '0.8rem' }}>
+                          {task.rootCause || task.technicalDetails?.rootCause || task.reason || "-"}
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: 'block', opacity: 0.7, fontSize: '0.7rem' }}>
+                          {task.subReason || task.technicalDetails?.subReason || ""}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         {task.evaluationScore ? (
@@ -1928,20 +1842,20 @@ const AllTasksList = () => {
                               {isFavorited ? <MdStar /> : <MdStarOutline />}
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Manage Subtasks">
+                          <Tooltip title="Record Performance Ticket / History">
                             <IconButton
                               size="small"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSubtaskTask(task);
-                                setManageSubtasksDialogOpen(true);
+                                setTicketTask(task);
+                                setRecordTicketDialogOpen(true);
                               }}
                               sx={{
                                 color: '#10b981',
                                 '&:hover': { color: '#059669' }
                               }}
                             >
-                              <MdAssignmentTurnedIn />
+                              <MdHistory />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="View Details">
@@ -1982,6 +1896,7 @@ const AllTasksList = () => {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setTaskToDelete(task);
+                                      setConfirmSlid('');
                                       setDeleteDialogOpen(true);
                                     }}
                                     sx={{ color: '#f44336' }}
@@ -2000,16 +1915,16 @@ const AllTasksList = () => {
             ) : (
               <TableRow>
                 <TableCell colSpan={8} align="center" sx={{ py: 4, color: '#ffffff' }}>
-                  {searchTerm ? 'No matching tasks found' : 'No tasks available'}
+                  {activeAdvSearch ? 'No matching tasks found for your advanced search' : 'No tasks available'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </TableContainer >
 
       {/* Pagination */}
-      <Box sx={{
+      < Box sx={{
         display: 'flex',
         justifyContent: 'flex-start',
         mt: 0,
@@ -2055,35 +1970,39 @@ const AllTasksList = () => {
             }
           }}
         />
-      </Box>
+      </Box >
 
       {/* Edit Task Dialog */}
-      {selectedTask && (
-        <EditTaskDialog
-          open={editDialogOpen}
-          setOpen={setEditDialogOpen}
-          task={selectedTask}
-          handleTaskUpdate={(updatedTask) => {
-            setAllTasks(allTasks.map(t =>
-              t._id === updatedTask._id ? updatedTask : t
-            ));
-            setSelectedTask(null);
-          }}
-        />
-      )}
+      {
+        selectedTask && (
+          <EditTaskDialog
+            open={editDialogOpen}
+            setOpen={setEditDialogOpen}
+            task={selectedTask}
+            handleTaskUpdate={(updatedTask) => {
+              setAllTasks(allTasks.map(t =>
+                t._id === updatedTask._id ? updatedTask : t
+              ));
+              setSelectedTask(null);
+            }}
+          />
+        )
+      }
 
       {/* View Task Dialog */}
-      {selectedTask && (
-        <TaskDetailsDialog
-          open={viewDialogOpen}
-          onClose={() => {
-            setViewDialogOpen(false);
-            setSelectedTask(null);
-          }}
-          tasks={[selectedTask]}
-          teamName={selectedTask.teamName || "Unknown Team"}
-        />
-      )}
+      {
+        selectedTask && (
+          <TaskDetailsDialog
+            open={viewDialogOpen}
+            onClose={() => {
+              setViewDialogOpen(false);
+              setSelectedTask(null);
+            }}
+            tasks={[selectedTask]}
+            teamName={selectedTask.teamName || "Unknown Team"}
+          />
+        )
+      }
 
       {/* Delete Confirmation Dialog */}
       <Dialog
@@ -2096,87 +2015,118 @@ const AllTasksList = () => {
           "& .MuiDialog-paper": {
             backgroundColor: '#2d2d2d',
             boxShadow: 'none',
-            borderRadius: isMobile ? 0 : '8px',
+            borderRadius: isMobile ? 0 : '12px',
+            border: '1px solid #3d3d3d'
           }
         }}
       >
         <DialogTitle sx={{
           display: 'flex',
           alignItems: 'center',
+          gap: 1.5,
           backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: isMobile ? '12px 16px' : '16px 24px',
+          color: '#f44336',
+          borderBottom: '1px solid #3d3d3d',
+          padding: isMobile ? '12px 16px' : '20px 24px',
         }}>
-          <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontWeight: 500 }}>
-            Confirm Deletion
+          <MdDelete size={28} />
+          <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontWeight: 900, letterSpacing: -0.5 }}>
+            Critical Protocol: Confirm Deletion
           </Typography>
         </DialogTitle>
 
-        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
         <DialogContent sx={{
           backgroundColor: '#2d2d2d',
-          padding: isMobile ? '16px' : '20px 24px',
-          '&::-webkit-scrollbar': {
-            width: '4px',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#e5e7eb',
-            borderRadius: '2px',
-          },
+          padding: isMobile ? '16px' : '24px 24px',
         }}>
-          <Typography variant={isMobile ? "body2" : "body1"} sx={{ color: '#ffffff' }}>
-            Are you sure you want to delete task {taskToDelete?.slid}?
-          </Typography>
-          <Typography
-            variant={isMobile ? "caption" : "body2"}
-            color="error"
-            sx={{
-              mt: 2,
-              display: 'inline-block',
-              padding: '8px 12px',
-              backgroundColor: 'rgba(244, 67, 54, 0.1)',
-              borderRadius: '4px',
-              borderLeft: '3px solid #f44336'
-            }}
-          >
-            This action will move the task to trash and cannot be undone.
-          </Typography>
+          <Stack spacing={3}>
+            <Box>
+              <Typography variant="body1" sx={{ color: '#ffffff', mb: 1.5, fontWeight: 500 }}>
+                Are you sure you want to delete this task?
+              </Typography>
+              <Box sx={{
+                p: 1.5,
+                bgcolor: alpha('#f44336', 0.1),
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: alpha('#f44336', 0.3),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                mb: 2
+              }}>
+                <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 900, textTransform: 'uppercase' }}>Target SLID:</Typography>
+                <Typography variant="h6" sx={{ color: '#f44336', fontWeight: 900, fontFamily: 'monospace' }}>{taskToDelete?.slid}</Typography>
+              </Box>
+              <Typography variant="body2" sx={{ color: '#aaa' }}>
+                This action will move the task and all its technical sub-logs to the trash. It will no longer appear in active dashboards.
+              </Typography>
+            </Box>
+
+            <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha('#f44336', 0.05), borderStyle: 'dashed', borderColor: '#f44336' }}>
+              <Typography variant="caption" sx={{ color: '#f44336', fontWeight: 900, display: 'block', mb: 1, textTransform: 'uppercase' }}>
+                Required Authorization
+              </Typography>
+              <TextField
+                fullWidth
+                label="Enter SLID to Confirm"
+                placeholder={taskToDelete?.slid}
+                value={confirmSlid}
+                onChange={(e) => setConfirmSlid(e.target.value)}
+                autoFocus
+                size="small"
+                variant="outlined"
+                helperText="Enter the exact SLID displayed above to enable deletion."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: '#fff',
+                    '& fieldset': { borderColor: alpha('#fff', 0.2) },
+                    '&:hover fieldset': { borderColor: '#f44336' },
+                    '&.Mui-focused fieldset': { borderColor: '#f44336' }
+                  },
+                  '& .MuiInputLabel-root': { color: '#aaa' },
+                  '& .MuiFormHelperText-root': { color: '#888' }
+                }}
+              />
+            </Paper>
+          </Stack>
         </DialogContent>
 
-        <Divider sx={{ backgroundColor: '#e5e7eb' }} />
-
         <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
-          padding: isMobile ? '8px 16px' : '12px 24px',
+          backgroundColor: alpha('#000', 0.2),
+          borderTop: '1px solid #3d3d3d',
+          padding: isMobile ? '8px 16px' : '16px 24px',
         }}>
           <Button
             onClick={() => setDeleteDialogOpen(false)}
-            size={isMobile ? "small" : "medium"}
             sx={{
-              color: '#ffffff',
-              '&:hover': {
-                backgroundColor: '#2a2a2a',
-              }
+              color: '#aaa',
+              fontWeight: 900,
+              '&:hover': { color: '#fff' }
             }}
           >
-            Cancel
+            ABORT
           </Button>
+          <Box sx={{ flexGrow: 1 }} />
           <Button
             onClick={handleDeleteTask}
             variant="contained"
             color="error"
-            size={isMobile ? "small" : "medium"}
+            disabled={confirmSlid !== taskToDelete?.slid}
             sx={{
               backgroundColor: '#f44336',
+              fontWeight: 900,
+              px: 4,
               '&:hover': {
                 backgroundColor: '#d32f2f',
+              },
+              '&.Mui-disabled': {
+                backgroundColor: alpha('#f44336', 0.1),
+                color: alpha('#fff', 0.2)
               }
             }}
           >
-            Delete
+            CONFIRM PURGE
           </Button>
         </DialogActions>
       </Dialog>
@@ -2220,18 +2170,35 @@ const AllTasksList = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Detailed Subtask Dialog */}
-      <DetailedSubtaskDialog
-        key={subtaskTask?._id || 'subtasks-dialog'}
-        open={manageSubtasksDialogOpen}
+      {/* Record Performance Ticket Dialog */}
+      <RecordTicketDialog
+        key={ticketTask?._id || 'ticket-dialog'}
+        open={recordTicketDialogOpen}
         onClose={() => {
-          setManageSubtasksDialogOpen(false);
-          setSubtaskTask(null);
+          setRecordTicketDialogOpen(false);
+          setTicketTask(null);
         }}
-        task={subtaskTask}
-        setUpdateTasksList={setUpdateRefetchTasks}
+        task={ticketTask}
+        onTicketAdded={() => setUpdateRefetchTasks(prev => !prev)}
       />
-    </Box>
+
+      {/* Advanced Search Dialog */}
+      <AdvancedSearch
+        open={advancedSearchOpen}
+        onClose={() => setAdvancedSearchOpen(false)}
+        fields={advSearchFields}
+        setFields={setAdvSearchFields}
+        onInitiate={() => {
+          setActiveAdvSearch(true);
+          setAdvancedSearchOpen(false);
+        }}
+        onClear={() => {
+          setAdvSearchFields({ slid: '', gaiaId: '', requestNumber: '', customerName: '', contactNumber: '' });
+          setActiveAdvSearch(false);
+          setAdvancedSearchOpen(false);
+        }}
+      />
+    </Box >
   );
 };
 

@@ -24,7 +24,6 @@ import {
 import { useSelector } from "react-redux";
 import ManagedAutocomplete from "./common/ManagedAutocomplete";
 import { MdAdd, MdDelete, MdHistory, MdTerminal } from "react-icons/md";
-import CustomerIssueLogTerminal from "./CustomerIssueLogTerminal";
 import api from "../api/api";
 import { FaUser } from "react-icons/fa";
 
@@ -66,7 +65,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   };
 
   const [formData, setFormData] = useState(initialFormState);
-  const [openLogTerminal, setOpenLogTerminal] = useState(false);
   const [duplicateIssues, setDuplicateIssues] = useState([]);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
 
@@ -1023,11 +1021,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           </Button>
         </Box>
       </DialogActions>
-      <CustomerIssueLogTerminal
-        open={openLogTerminal}
-        onClose={() => setOpenLogTerminal(false)}
-        slidFilter={formData.slid}
-      />
 
       {/* Duplicate Issue Warning Dialog */}
       <Dialog

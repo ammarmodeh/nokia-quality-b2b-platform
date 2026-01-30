@@ -38,21 +38,13 @@ import {
   Pagination,
   Badge
 } from '@mui/material';
-import {
-  MdSearch,
-  MdMoreVert,
-  MdEdit,
-  MdDelete,
-  MdAdd,
-  MdClose,
-  MdVisibility,
-  MdFileDownload,
-  MdViewList,
-  MdViewModule,
-  MdBarChart,
-  MdRefresh,
-  MdTerminal
-} from 'react-icons/md';
+import { FaFilePdf, FaWhatsapp } from 'react-icons/fa6';
+import { toast } from 'sonner';
+import LoadingSpinner from './common/LoadingSpinner';
+import RecordTicketDialog from './task/RecordTicketDialog';
+import AdvancedSearch from './common/AdvancedSearch';
+import { MdHistory, MdEmail, MdSearch, MdClose, MdFilterList, MdMoreVert, MdEdit, MdDelete, MdAdd, MdVisibility, MdFileDownload, MdViewList, MdViewModule, MdBarChart, MdRefresh, MdTerminal } from 'react-icons/md';
+import { alpha } from '@mui/material/styles';
 import api from '../api/api';
 import CustomerIssueDialog from './CustomerIssueDialog';
 import CustomerIssuesAnalytics from './CustomerIssuesAnalytics';
@@ -60,15 +52,6 @@ import ViewIssueDetailsDialog from './ViewIssueDetailsDialog';
 import { utils, writeFile } from 'xlsx';
 import { useSelector } from 'react-redux';
 import ManagedAutocomplete from "./common/ManagedAutocomplete";
-import { FaFilePdf } from 'react-icons/fa6';
-import { toast } from 'sonner';
-import CustomerIssueLogTerminal from './CustomerIssueLogTerminal';
-import LoadingSpinner from './common/LoadingSpinner';
-
-import { MdEmail } from 'react-icons/md';
-import { FaWhatsapp } from 'react-icons/fa6';
-import { alpha } from '@mui/material/styles';
-
 
 
 const CustomerIssuesList = () => {
@@ -91,12 +74,26 @@ const CustomerIssuesList = () => {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
-  const [openLogTerminal, setOpenLogTerminal] = useState(false);
 
   // Pagination & Source Filter State
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sourceFilter, setSourceFilter] = useState('Overall');
+
+  // --- GAIA & Advanced Search State ---
+  const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
+  const [activeAdvSearch, setActiveAdvSearch] = useState(false);
+  const [advSearchFields, setAdvSearchFields] = useState({
+    slid: '',
+    gaiaId: '',
+    requestNumber: '',
+    customerName: '',
+    contactNumber: '',
+    teamName: ''
+  });
+  const [recordTicketDialogOpen, setRecordTicketDialogOpen] = useState(false);
+  const [selectedIssueForTicket, setSelectedIssueForTicket] = useState(null);
+  const [dropdownOptions, setDropdownOptions] = useState({});
 
 
   const handleChangePage = (event, newPage) => {
@@ -125,8 +122,18 @@ const CustomerIssuesList = () => {
     }
   };
 
+  const fetchDropdowns = async () => {
+    try {
+      const { data } = await api.get("/dropdown-options/all");
+      setDropdownOptions(data || {});
+    } catch (error) {
+      console.error("Error fetching dropdowns:", error);
+    }
+  };
+
   useEffect(() => {
     fetchIssues();
+    fetchDropdowns();
   }, []);
 
   useEffect(() => {
@@ -197,8 +204,24 @@ const CustomerIssuesList = () => {
       filtered = filtered.filter(issue => (issue.fromMain === sourceFilter) || (issue.from === sourceFilter));
     }
 
+    // --- Advanced Search Engine Filtering ---
+    if (activeAdvSearch) {
+      filtered = filtered.filter(issue => {
+        const matchesSlid = !advSearchFields.slid || issue.slid?.toLowerCase().includes(advSearchFields.slid.toLowerCase());
+        const matchesGaiaId = !advSearchFields.gaiaId || issue.latestGaia?.ticketId?.toLowerCase().includes(advSearchFields.gaiaId.toLowerCase());
+        const matchesRequest = !advSearchFields.requestNumber || issue.ticketId?.toLowerCase().includes(advSearchFields.requestNumber.toLowerCase()); // CustomerIssues use ticketId for request number sometimes
+        const matchesName = !advSearchFields.customerName || issue.customerName?.toLowerCase().includes(advSearchFields.customerName.toLowerCase());
+        const matchesContact = !advSearchFields.contactNumber || issue.customerContact?.toLowerCase().includes(advSearchFields.contactNumber.toLowerCase());
+        const matchesTeam = !advSearchFields.teamName ||
+          issue.teamCompany?.toLowerCase().includes(advSearchFields.teamName.toLowerCase()) ||
+          issue.installingTeam?.toLowerCase().includes(advSearchFields.teamName.toLowerCase());
+
+        return matchesSlid && matchesGaiaId && matchesRequest && matchesName && matchesContact && matchesTeam;
+      });
+    }
+
     setFilteredIssues(filtered);
-  }, [searchTerm, issues, statusFilter, startDate, endDate, sourceFilter]);
+  }, [searchTerm, issues, statusFilter, startDate, endDate, sourceFilter, activeAdvSearch, advSearchFields]);
 
   const handleMenuOpen = (event, issue) => {
     setAnchorEl(event.currentTarget);
@@ -608,47 +631,6 @@ const CustomerIssuesList = () => {
             {isMobile ? 'PDF' : 'Pro Report'}
           </Button>
 
-          <Badge
-            badgeContent="NEW"
-            color="error"
-            sx={{
-              '& .MuiBadge-badge': {
-                fontSize: '10px',
-                height: '18px',
-                minWidth: '28px',
-                backgroundColor: '#7b68ee', // Reach-style purple
-                top: 5,
-                right: 5,
-                animation: 'pulse-animation 2s infinite',
-                boxShadow: '0 0 0 0 rgba(123, 104, 238, 0.7)',
-                '@keyframes pulse-animation': {
-                  '0%': { boxShadow: '0 0 0 0 rgba(123, 104, 238, 0.7)' },
-                  '70%': { boxShadow: '0 0 0 4px rgba(123, 104, 238, 0)' },
-                  '100%': { boxShadow: '0 0 0 0 rgba(123, 104, 238, 0)' }
-                }
-              }
-            }}
-          >
-            <Button
-              variant="outlined"
-              onClick={() => setOpenLogTerminal(true)}
-              startIcon={<MdTerminal />}
-              size={isMobile ? 'small' : 'medium'}
-              sx={{
-                borderColor: '#3d3d3d',
-                color: '#00ff41',
-                backgroundColor: 'rgba(0, 255, 65, 0.05)',
-                '&:hover': { borderColor: '#00ff41', backgroundColor: 'rgba(0, 255, 65, 0.1)' },
-                textTransform: 'none',
-                borderRadius: '8px',
-                px: isMobile ? 1.5 : 2,
-                fontFamily: 'monospace'
-              }}
-            >
-              {isMobile ? 'Logs' : 'System Logs'}
-            </Button>
-          </Badge>
-
         </Box>
       </Box>
 
@@ -692,37 +674,41 @@ const CustomerIssuesList = () => {
           mb: 2,
           alignItems: isMobile ? 'stretch' : 'center'
         }}>
-          <TextField
+          <Button
             variant="outlined"
-            size="small"
-            placeholder="Search by SLID, Reporter, Team, or Category..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            fullWidth={isMobile}
+            onClick={() => setAdvancedSearchOpen(true)}
+            startIcon={<MdFilterList />}
             sx={{
-              flexGrow: 1,
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: '#1e1e1e',
-                borderRadius: '8px',
-                color: '#ffffff',
-                '& fieldset': { borderColor: '#3d3d3d' },
-                '&:hover fieldset': { borderColor: '#666' },
-                '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
-              }
+              borderColor: activeAdvSearch ? '#7b68ee' : '#3d3d3d',
+              color: activeAdvSearch ? '#7b68ee' : '#b3b3b3',
+              '&:hover': { borderColor: '#7b68ee', backgroundColor: 'rgba(123, 104, 238, 0.05)' },
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: 2,
+              fontWeight: 'bold',
+              minWidth: 'fit-content'
             }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <MdSearch style={{ color: '#b3b3b3' }} />
-                </InputAdornment>
-              ),
-              endAdornment: searchTerm && (
-                <IconButton size="small" onClick={() => setSearchTerm('')} sx={{ color: '#b3b3b3' }}>
-                  <MdClose />
-                </IconButton>
-              )
-            }}
-          />
+          >
+            {activeAdvSearch ? 'Refine Search' : 'Advanced Search'}
+          </Button>
+
+          {activeAdvSearch && (
+            <Button
+              size="small"
+              onClick={() => {
+                setAdvSearchFields({ slid: '', gaiaId: '', requestNumber: '', customerName: '', contactNumber: '', teamName: '' });
+                setActiveAdvSearch(false);
+              }}
+              sx={{
+                color: '#f44336',
+                textTransform: 'none',
+                fontWeight: 'bold',
+                '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.08)' }
+              }}
+            >
+              Clear Search
+            </Button>
+          )}
 
           <Box sx={{
             display: 'flex',
@@ -914,6 +900,8 @@ const CustomerIssuesList = () => {
                     <TableCell>Installing Team</TableCell>
                   </Hidden>
                   <TableCell>Issues</TableCell>
+                  <TableCell>GAIA Status</TableCell>
+                  <TableCell>GAIA Reason</TableCell>
                   <Hidden mdDown>
                     <TableCell>Assigned</TableCell>
                     <TableCell>Supervisor</TableCell>
@@ -981,6 +969,30 @@ const CustomerIssuesList = () => {
                           <Typography variant="body2" sx={{ fontSize: '0.85rem', color: '#666' }}>No Category</Typography>
                         )}
                       </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Tooltip title={dropdownOptions['TRANSACTION_TYPE']?.find(opt => opt.value === issue.latestGaia?.transactionType)?.label || issue.latestGaia?.transactionType || "N/A"}>
+                            <Typography variant="body2" sx={{ fontWeight: 900, color: 'primary.main', fontSize: '0.85rem' }}>
+                              {issue.latestGaia?.transactionType || "-"}
+                            </Typography>
+                          </Tooltip>
+                          <Tooltip title={dropdownOptions['TRANSACTION_STATE']?.find(opt => opt.value === issue.latestGaia?.transactionState)?.label || issue.latestGaia?.transactionState || "N/A"}>
+                            <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary', mt: -0.5, fontSize: '0.7rem' }}>
+                              {issue.latestGaia?.transactionState || "-"}
+                            </Typography>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={dropdownOptions['UNF_REASON_CODE']?.find(opt => opt.value === issue.latestGaia?.unfReasonCode)?.label || issue.latestGaia?.unfReasonCode || "N/A"}>
+                          <Typography variant="caption" sx={{ color: '#FF5722', fontWeight: 900, fontSize: '0.8rem' }}>
+                            {issue.latestGaia?.unfReasonCode || "—"}
+                          </Typography>
+                        </Tooltip>
+                        <Typography variant="caption" sx={{ display: 'block', fontSize: '0.65rem', opacity: 0.6 }}>
+                          {issue.latestGaia?.agentName || ""}
+                        </Typography>
+                      </TableCell>
                       <Hidden mdDown>
                         <TableCell sx={{ fontSize: '0.85rem' }}>{issue.assignedTo}</TableCell>
                         <TableCell sx={{ fontSize: '0.85rem' }}>{issue.closedBy || '-'}</TableCell>
@@ -1043,6 +1055,22 @@ const CustomerIssuesList = () => {
                               </IconButton>
                             </Tooltip>
                           )}
+                          <Tooltip title="Record Transaction / History">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedIssueForTicket(issue);
+                                setRecordTicketDialogOpen(true);
+                              }}
+                              sx={{
+                                color: '#10b981',
+                                '&:hover': { color: '#059669', backgroundColor: 'rgba(16, 185, 129, 0.1)' }
+                              }}
+                            >
+                              <MdHistory size={18} />
+                            </IconButton>
+                          </Tooltip>
                           <IconButton
                             size="small"
                             onClick={(e) => handleMenuOpen(e, issue)}
@@ -1059,7 +1087,7 @@ const CustomerIssuesList = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={isMobile ? 6 : 9} align="center" sx={{ color: '#ffffff' }}>
+                    <TableCell colSpan={isMobile ? 6 : 12} align="center" sx={{ color: '#ffffff' }}>
                       {searchTerm ? 'No matching issues found' : 'No issues available'}
                     </TableCell>
                   </TableRow>
@@ -1239,25 +1267,42 @@ const CustomerIssuesList = () => {
           >
             <MdDelete style={{ marginRight: 8, color: '#f44336' }} />
             <Typography variant="body1" color="#f44336">Delete</Typography>
+          </MenuItem>,
+
+          <Divider key="div" sx={{ my: 1, borderColor: '#3d3d3d' }} />,
+
+          <MenuItem
+            key="record"
+            onClick={() => {
+              setSelectedIssueForTicket(currentIssue);
+              setRecordTicketDialogOpen(true);
+              handleMenuClose();
+            }}
+            sx={{
+              '&:hover': {
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              },
+              '&.MuiMenuItem-root': {
+                padding: '8px 16px',
+              },
+              color: '#10b981',
+            }}
+          >
+            <MdHistory style={{ marginRight: 8, color: '#10b981' }} />
+            <Typography variant="body1" color="#10b981">Record Transaction</Typography>
           </MenuItem>
         ]}
       </Menu>
 
 
 
-      <CustomerIssueLogTerminal
-        open={openLogTerminal}
-        onClose={() => setOpenLogTerminal(false)}
-      />
 
-      {/* Add Issue Dialog */}
       <CustomerIssueDialog
         open={openAddDialog}
         onClose={() => setOpenAddDialog(false)}
         onSubmit={handleIssueSubmit}
       />
 
-      {/* Edit Dialog */}
       <CustomerIssueDialog
         open={openEditDialog}
         onClose={() => setOpenEditDialog(false)}
@@ -1265,7 +1310,6 @@ const CustomerIssuesList = () => {
         issue={currentIssue}
       />
 
-      {/* View Dialog */}
       <ViewIssueDetailsDialog
         open={openViewDialog}
         onClose={() => setOpenViewDialog(false)}
@@ -1275,7 +1319,6 @@ const CustomerIssuesList = () => {
       />
 
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
@@ -1304,7 +1347,37 @@ const CustomerIssuesList = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+
+      {/* Record Performance Ticket Dialog */}
+      <RecordTicketDialog
+        key={selectedIssueForTicket?._id || 'issue-ticket-dialog'}
+        open={recordTicketDialogOpen}
+        onClose={() => {
+          setRecordTicketDialogOpen(false);
+          setSelectedIssueForTicket(null);
+        }}
+        task={selectedIssueForTicket}
+        taskType="CustomerIssue"
+        onTicketAdded={() => fetchIssues(true)}
+      />
+
+      {/* Advanced Search Dialog */}
+      <AdvancedSearch
+        open={advancedSearchOpen}
+        onClose={() => setAdvancedSearchOpen(false)}
+        fields={advSearchFields}
+        setFields={setAdvSearchFields}
+        onInitiate={() => {
+          setActiveAdvSearch(true);
+          setAdvancedSearchOpen(false);
+        }}
+        onClear={() => {
+          setAdvSearchFields({ slid: '', gaiaId: '', requestNumber: '', customerName: '', contactNumber: '', teamName: '' });
+          setActiveAdvSearch(false);
+          setAdvancedSearchOpen(false);
+        }}
+      />
+    </Box >
   );
 };
 
