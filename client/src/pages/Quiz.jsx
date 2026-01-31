@@ -426,15 +426,16 @@ const Quiz = () => {
           </div>
 
           <div className="space-y-3">
+            {currentQ.showGuideline && currentQ.guideline && (
+              <div className="p-3 bg-white/5 border-l-4 border-white mb-6">
+                <p className="text-xs text-gray-400 italic">
+                  <strong>ملاحظة:</strong> {currentQ.guideline}
+                </p>
+              </div>
+            )}
+
             {currentQ.type === 'essay' ? (
               <div>
-                {currentQ.guideline && (
-                  <div className="p-3 bg-white/5 border-l-4 border-white mb-4">
-                    <p className="text-xs text-gray-400 italic">
-                      <strong>ملاحظة:</strong> {currentQ.guideline}
-                    </p>
-                  </div>
-                )}
                 <textarea
                   className="w-full p-4 text-white bg-[#000000] border-2 border-white focus:bg-white/5 transition-colors outline-none placeholder-white/20 min-h-[150px] text-base leading-relaxed text-right"
                   value={essayAnswer}

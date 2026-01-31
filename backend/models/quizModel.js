@@ -9,6 +9,7 @@ const quizSchema = new mongoose.Schema({
   category: { type: String },
   type: { type: String, enum: ['options', 'essay'], default: 'options' },
   guideline: { type: String },
+  showGuideline: { type: Boolean, default: false },
   order: { type: Number, default: 0 },
   quizType: { type: String, enum: ['Performance', 'IQ'], default: 'Performance' }
 });

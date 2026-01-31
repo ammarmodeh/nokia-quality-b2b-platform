@@ -26,7 +26,9 @@ import {
   Autocomplete,
   Grid,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -213,6 +215,7 @@ const QuizManagement = () => {
     category: '',
     type: 'options',
     guideline: '',
+    showGuideline: false,
     quizType: 'Performance'
   });
 
@@ -303,6 +306,7 @@ const QuizManagement = () => {
       category: questionToDuplicate.category,
       type: questionToDuplicate.type,
       guideline: questionToDuplicate.guideline,
+      showGuideline: questionToDuplicate.showGuideline || false,
       quizType: questionToDuplicate.quizType || selectedQuizType
     };
 
@@ -349,6 +353,7 @@ const QuizManagement = () => {
         category: q.category || '',
         type: q.type || 'options',
         guideline: q.guideline || '',
+        showGuideline: q.showGuideline || false,
         quizType: q.quizType || 'Performance'
       });
     } else {
@@ -362,6 +367,7 @@ const QuizManagement = () => {
         category: '',
         type: 'options',
         guideline: '',
+        showGuideline: false,
         quizType: selectedQuizType
       });
     }
@@ -664,8 +670,8 @@ const QuizManagement = () => {
           }}
         >
           <DialogTitle sx={{ borderBottom: `1px solid ${colors.border}`, px: 4, py: 3 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-              {isViewMode ? 'View Question' : (editingQuestion ? 'Edit Question' : 'Add New Question')}
+            <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'red' }}>
+              !!! VERSION 5 - REFRESH IF YOU DONT SEE THIS !!!
             </Typography>
           </DialogTitle>
           <DialogContent sx={{ p: 4 }}>
@@ -916,20 +922,44 @@ const QuizManagement = () => {
                 </Box>
               )}
 
-              {formData.type === 'essay' && (
-                <TextField
-                  fullWidth
-                  label="Guideline / Hint (Optional)"
-                  placeholder="Enter any guidance for the team..."
-                  value={formData.guideline}
-                  onChange={(e) => setFormData({ ...formData, guideline: e.target.value })}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: colors.border },
-                    },
-                  }}
-                />
-              )}
+              <Box sx={{ border: '2px solid red', p: 2, borderRadius: '8px', mt: 2 }}>
+                <Typography variant="caption" sx={{ color: 'red', fontWeight: 'bold', mb: 1, display: 'block' }}>
+                  DEBUG: GUIDELINE CONTROL AREA
+                </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+                  <TextField
+                    fullWidth
+                    label="Guideline / Hint"
+                    placeholder="Enter any guidance or hint for the team..."
+                    value={formData.guideline}
+                    onChange={(e) => setFormData({ ...formData, guideline: e.target.value })}
+                    disabled={isViewMode}
+                    multiline
+                    rows={2}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': { borderColor: colors.border },
+                      },
+                    }}
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.showGuideline}
+                        onChange={(e) => setFormData({ ...formData, showGuideline: e.target.checked })}
+                        disabled={isViewMode}
+                        color="secondary"
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" sx={{ color: colors.textSecondary, fontWeight: 'bold' }}>
+                        Show Guideline in Quiz
+                      </Typography>
+                    }
+                    sx={{ minWidth: '220px', ml: 0 }}
+                  />
+                </Stack>
+              </Box>
             </Stack>
           </DialogContent>
           <DialogActions sx={{ p: 4, borderTop: `1px solid ${colors.border}`, gap: 2 }}>
