@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -52,6 +52,93 @@ import ViewIssueDetailsDialog from './ViewIssueDetailsDialog';
 import { utils, writeFile } from 'xlsx';
 import { useSelector } from 'react-redux';
 import ManagedAutocomplete from "./common/ManagedAutocomplete";
+
+
+const TruncatedCell = ({ value, label, theme }) => {
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const [open, setOpen] = useState(false);
+  const textRef = useRef(null);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (textRef.current) {
+        setIsOverflowing(textRef.current.scrollWidth > textRef.current.clientWidth);
+      }
+    };
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [value]);
+
+  return (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', overflow: 'hidden' }}>
+        <Typography
+          ref={textRef}
+          variant="body2"
+          sx={{
+            fontSize: '0.85rem',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            flex: 1
+          }}
+        >
+          {value || '-'}
+        </Typography>
+        {isOverflowing && (
+          <Tooltip title={`View full ${label}`}>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(true);
+              }}
+              sx={{
+                ml: 0.5,
+                p: 0.25,
+                color: '#7b68ee',
+                '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.1)' }
+              }}
+            >
+              <MdVisibility size={14} />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Box>
+
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        onClick={(e) => e.stopPropagation()}
+        PaperProps={{
+          sx: {
+            bgcolor: '#2d2d2d',
+            color: '#ffffff',
+            border: '1px solid #3d3d3d',
+            maxWidth: '500px',
+            width: '100%'
+          }
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid #3d3d3d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ color: '#7b68ee', fontWeight: 'bold' }}>{label}</Typography>
+          <IconButton onClick={() => setOpen(false)} sx={{ color: '#b3b3b3' }}>
+            <MdClose size={20} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: '#ffffff' }}>
+            {value}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: '1px solid #3d3d3d', p: 2 }}>
+          <Button onClick={() => setOpen(false)} sx={{ color: '#7b68ee' }}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+};
 
 
 const CustomerIssuesList = () => {
@@ -692,6 +779,37 @@ const CustomerIssuesList = () => {
             {activeAdvSearch ? 'Refine Search' : 'Advanced Search'}
           </Button>
 
+          <TextField
+            size="small"
+            placeholder="Quick Search (SLID, Name, Number...)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <MdSearch size={20} color={theme.palette.text.secondary} />
+                </InputAdornment>
+              ),
+              endAdornment: searchTerm && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearchTerm('')}>
+                    <MdClose size={16} />
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+            sx={{
+              width: isMobile ? '100%' : '300px',
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: '#1e1e1e',
+                borderRadius: '8px',
+                '& fieldset': { borderColor: '#3d3d3d' },
+                '&:hover fieldset': { borderColor: '#7b68ee' },
+                '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+              }
+            }}
+          />
+
           {activeAdvSearch && (
             <Button
               size="small"
@@ -862,6 +980,7 @@ const CustomerIssuesList = () => {
               "& .MuiTableCell-root": {
                 borderBottom: "1px solid #e5e7eb",
                 color: "#ffffff",
+                maxWidth: "180px", // Increased slightly for visibility
               },
               "& .MuiTableRow-root": {
                 backgroundColor: "#2d2d2d",
@@ -890,6 +1009,8 @@ const CustomerIssuesList = () => {
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ pl: 3 }}>SLID</TableCell>
+                  <TableCell>Customer</TableCell>
+                  <TableCell>Contact</TableCell>
                   <Hidden smDown>
                     <TableCell>From (Main)</TableCell>
                     <TableCell>From (Sub)</TableCell>
@@ -922,15 +1043,27 @@ const CustomerIssuesList = () => {
                       key={issue._id}
                       sx={{
                         '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.05) !important' },
-                        transition: 'background-color 0.2s'
+                        transition: 'background-color 0.2s',
                       }}
                     >
                       <TableCell sx={{ pl: 3, fontWeight: 500, color: '#7b68ee !important' }}>{issue.slid}</TableCell>
+                      <TableCell>
+                        <TruncatedCell value={issue.customerName} label="Customer Name" theme={theme} />
+                      </TableCell>
+                      <TableCell>
+                        <TruncatedCell value={issue.customerContact} label="Contact Number" theme={theme} />
+                      </TableCell>
                       <Hidden smDown>
-                        <TableCell sx={{ fontSize: '0.85rem' }}>{issue.fromMain || issue.from}</TableCell>
-                        <TableCell sx={{ fontSize: '0.85rem' }}>{issue.fromSub || '-'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>
+                          <TruncatedCell value={issue.fromMain || issue.from} label="From (Main)" theme={theme} />
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>
+                          <TruncatedCell value={issue.fromSub} label="From (Sub)" theme={theme} />
+                        </TableCell>
                       </Hidden>
-                      <TableCell sx={{ fontSize: '0.85rem' }}>{issue.reporter}</TableCell>
+                      <TableCell sx={{ fontSize: '0.85rem' }}>
+                        <TruncatedCell value={issue.reporter} label="Reporter" theme={theme} />
+                      </TableCell>
                       <Hidden smDown>
                         <TableCell sx={{ fontSize: '0.85rem' }}>
                           <Chip
@@ -945,7 +1078,9 @@ const CustomerIssuesList = () => {
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={{ fontSize: '0.85rem' }}>{issue.installingTeam || '-'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>
+                          <TruncatedCell value={issue.installingTeam} label="Installing Team" theme={theme} />
+                        </TableCell>
                       </Hidden>
                       <TableCell>
                         {issue.issues && issue.issues.length > 0 ? (
@@ -994,8 +1129,12 @@ const CustomerIssuesList = () => {
                         </Typography>
                       </TableCell>
                       <Hidden mdDown>
-                        <TableCell sx={{ fontSize: '0.85rem' }}>{issue.assignedTo}</TableCell>
-                        <TableCell sx={{ fontSize: '0.85rem' }}>{issue.closedBy || '-'}</TableCell>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>
+                          <TruncatedCell value={issue.assignedTo} label="Assigned To" theme={theme} />
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>
+                          <TruncatedCell value={issue.closedBy} label="Supervisor" theme={theme} />
+                        </TableCell>
                         <TableCell>
                           <Chip
                             label={issue.dispatched === 'yes' ? 'Yes' : 'No'}
@@ -1009,17 +1148,8 @@ const CustomerIssuesList = () => {
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={{ fontSize: '0.85rem', maxWidth: 150 }}>
-                          <Tooltip title={issue.assigneeNote || ''}>
-                            <span style={{
-                              display: 'block',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {issue.assigneeNote || '-'}
-                            </span>
-                          </Tooltip>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>
+                          <TruncatedCell value={issue.assigneeNote} label="Assignee Note" theme={theme} />
                         </TableCell>
                       </Hidden>
                       <TableCell>
@@ -1048,7 +1178,10 @@ const CustomerIssuesList = () => {
                             <Tooltip title="Contact Team via WhatsApp">
                               <IconButton
                                 size="small"
-                                onClick={() => handleWhatsAppContact(issue)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleWhatsAppContact(issue);
+                                }}
                                 sx={{ color: '#25D366', '&:hover': { backgroundColor: 'rgba(37, 211, 102, 0.1)' } }}
                               >
                                 <FaWhatsapp size={16} />
@@ -1073,7 +1206,10 @@ const CustomerIssuesList = () => {
                           </Tooltip>
                           <IconButton
                             size="small"
-                            onClick={(e) => handleMenuOpen(e, issue)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMenuOpen(e, issue);
+                            }}
                             sx={{
                               color: '#b3b3b3',
                               '&:hover': { color: '#ffffff', backgroundColor: 'rgba(255,255,255,0.05)' }

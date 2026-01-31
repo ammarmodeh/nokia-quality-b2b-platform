@@ -392,7 +392,7 @@ const DropdownManagement = () => {
                 </AccordionSummary>
                 <AccordionDetails sx={{ p: 0 }}>
                   <Tabs
-                    value={activeTab}
+                    value={hasActiveTab ? activeTab : false}
                     onChange={(e, newVal) => setActiveTab(newVal)}
                     variant="scrollable"
                     scrollButtons="auto"
