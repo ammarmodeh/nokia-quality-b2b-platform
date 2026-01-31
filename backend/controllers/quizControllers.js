@@ -5,7 +5,21 @@ import { QuizSchema } from "../models/quizModel.js";
 export const getAllQuestions = async (req, res) => {
   try {
     const { quizType } = req.query;
-    const filter = quizType ? { quizType } : { quizType: 'Performance' }; // Default to Performance if not specified for safety with old clients
+
+    let filter = {};
+    if (quizType === 'IQ') {
+      filter = { quizType: 'IQ' };
+    } else {
+      // Default to Performance, and include any questions that might be missing the quizType field
+      filter = {
+        $or: [
+          { quizType: 'Performance' },
+          { quizType: { $exists: false } },
+          { quizType: null }
+        ]
+      };
+    }
+
     const questions = await QuizSchema.find(filter).sort({ order: 1 });
     res.json(questions);
   } catch (err) {

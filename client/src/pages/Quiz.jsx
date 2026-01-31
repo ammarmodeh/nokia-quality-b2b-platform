@@ -35,7 +35,7 @@ const Quiz = () => {
   const [settings, setSettings] = useState(null);
   const answersRef = useRef([]);
 
-  // Navigation Blocker
+  // Navigation Blocker (Arabic)
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       !quizState.hasSubmitted && currentLocation.pathname !== nextLocation.pathname
@@ -46,7 +46,7 @@ const Quiz = () => {
   }, [quizState.userAnswers]);
 
   useEffect(() => {
-    // Security measures (unchanged)
+    // Security measures
     const preventDefault = (e) => {
       e.preventDefault();
       return false;
@@ -234,14 +234,9 @@ const Quiz = () => {
       return answer.isCorrect ? score + 2 : score;
     }, 0);
 
-    // Count total questions and calculate max score (2 points per question)
     const totalQuestionsCount = quizState.questions.length;
     const maxScore = totalQuestionsCount * 2;
-
-    // Calculate percentage based on all questions (max score = total * 2)
     const percentage = maxScore > 0 ? Math.round((finalScore / maxScore) * 100) : 0;
-
-    // Result string shows score normalized to 100% scale
     const result = `${percentage}/100`;
 
     const resultsData = {
@@ -252,6 +247,7 @@ const Quiz = () => {
       teamCode: quizState.teamCode,
       correctAnswers: finalScore,
       totalQuestions: totalQuestionsCount,
+      quizType: 'Performance',
       userAnswers: userAnswers.map((answer, index) => ({
         question: quizState.questions[index].question,
         options: quizState.questions[index].options,
@@ -273,19 +269,16 @@ const Quiz = () => {
       sessionStorage.removeItem('quizProgress');
       sessionStorage.removeItem('quizTimer');
       sessionStorage.removeItem('quizInProgress');
-      sessionStorage.removeItem('fieldTeamAuth'); // Force relogin on next attempt
+      sessionStorage.removeItem('fieldTeamAuth');
     };
 
     try {
       await api.post('/quiz-results', resultsData);
-
       localStorage.setItem('quizResultsFallback', JSON.stringify({
         ...resultsData,
         isFieldTeam: true
       }));
-
       clearQuizSession();
-
       navigate('/quiz-results', {
         state: {
           quizResults: resultsData,
@@ -299,7 +292,6 @@ const Quiz = () => {
         ...resultsData,
         isFieldTeam: true
       }));
-
       clearQuizSession();
       navigate('/quiz-results', {
         state: {
@@ -343,14 +335,16 @@ const Quiz = () => {
       }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* Header Section - Compact Inverted */}
       <div className="max-w-3xl mx-auto w-full mb-4">
         <div className="flex justify-between items-center py-3 border-b-2 border-white">
           <div className="flex items-center gap-4">
             <div className="h-8 w-px bg-white/20"></div>
             <div>
-              <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Team</span>
+              <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">الفريق</span>
               <h2 className="text-lg font-black text-white leading-none uppercase">{teamName}</h2>
+            </div>
+            <div className="bg-white px-2 py-0.5 ml-2">
+              <span className="text-[10px] text-black font-black uppercase">اختبار فني</span>
             </div>
           </div>
           <Timer
@@ -364,7 +358,6 @@ const Quiz = () => {
           />
         </div>
 
-        {/* Question Navigator - New Feature */}
         <div className="mt-4 flex flex-wrap gap-2 justify-center">
           {questions.map((_, idx) => {
             const isAnswered = userAnswers[idx]?.selectedAnswer || userAnswers[idx]?.essayAnswer;
@@ -395,10 +388,9 @@ const Quiz = () => {
       </div>
 
       <div className="max-w-3xl mx-auto w-full flex-grow">
-        {/* Progress Bar - Minimalist Dark */}
         <div className="mb-6">
           <div className="flex justify-between text-[11px] font-bold text-white uppercase mb-1">
-            <span>Question {currentQuestion + 1}/{questions.length}</span>
+            <span>سؤال {currentQuestion + 1}/{questions.length}</span>
             <span>{Math.round(((currentQuestion + 1) / questions.length) * 100)}%</span>
           </div>
           <div className="h-1 w-full bg-white/10 overflow-hidden">
@@ -408,19 +400,18 @@ const Quiz = () => {
             />
           </div>
           <div className="mt-2 text-[10px] text-gray-500 text-center uppercase tracking-widest">
-            {userAnswers.filter(a => a.selectedAnswer || a.essayAnswer).length} of {questions.length} answered
+            تمت الإجابة على {userAnswers.filter(a => a.selectedAnswer || a.essayAnswer).length} من {questions.length}
           </div>
         </div>
       </div>
 
-      {/* Question Area - Classic Dark Card */}
       <div className="max-w-3xl mx-auto w-full">
         <div className="bg-[#111111] border-2 border-white p-6 md:p-10 shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]">
           <div className="mb-8">
             <span className="inline-block px-2 py-0.5 bg-white text-black text-[10px] font-bold uppercase tracking-tighter mb-4">
-              {currentQ.category || 'General'}
+              {currentQ.category || 'عام'}
             </span>
-            <h3 className="text-xl md:text-2xl font-black text-white leading-tight mb-4">
+            <h3 className="text-xl md:text-2xl font-black text-white leading-tight mb-4 text-right">
               {currentQ.question}
             </h3>
             {currentQ.questionImage && (
@@ -440,15 +431,15 @@ const Quiz = () => {
                 {currentQ.guideline && (
                   <div className="p-3 bg-white/5 border-l-4 border-white mb-4">
                     <p className="text-xs text-gray-400 italic">
-                      <strong>Note:</strong> {currentQ.guideline}
+                      <strong>ملاحظة:</strong> {currentQ.guideline}
                     </p>
                   </div>
                 )}
                 <textarea
-                  className="w-full p-4 text-white bg-[#000000] border-2 border-white focus:bg-white/5 transition-colors outline-none placeholder-white/20 min-h-[150px] text-base leading-relaxed"
+                  className="w-full p-4 text-white bg-[#000000] border-2 border-white focus:bg-white/5 transition-colors outline-none placeholder-white/20 min-h-[150px] text-base leading-relaxed text-right"
                   value={essayAnswer}
                   onChange={handleEssayChange}
-                  placeholder="Type your response here..."
+                  placeholder="اكتب إجابتك هنا..."
                 />
               </div>
             ) : (
@@ -472,18 +463,18 @@ const Quiz = () => {
                         className="hidden"
                       />
                       <div className={`
-                        w-4 h-4 rounded-full border-2 mr-3 shrink-0 flex items-center justify-center
+                        w-4 h-4 rounded-full border-2 ml-3 shrink-0 flex items-center justify-center
                         ${selectedOption === option ? 'border-black bg-black' : 'border-white/20'}
                       `}>
                         {selectedOption === option && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
                       </div>
-                      <span className={`text-base font-bold transition-colors ${selectedOption === option ? 'text-black' : 'text-white/70 group-hover:text-white'}`}>
+                      <span className={`text-base font-bold transition-colors ${selectedOption === option ? 'text-black' : 'text-white/70 group-hover:text-white'} text-right w-full`}>
                         {option}
                       </span>
                     </div>
 
                     {currentQ.optionsImages && currentQ.optionsImages[index] && (
-                      <div className="mt-2 sm:mt-0 sm:ml-auto shrink-0">
+                      <div className="mt-2 sm:mt-0 sm:mr-auto shrink-0">
                         <img
                           src={currentQ.optionsImages[index]}
                           alt={`Option ${index + 1}`}
@@ -496,14 +487,13 @@ const Quiz = () => {
               </div>
             )}
           </div>
-          {/* Navigation - Distinct Dark */}
 
           <div className="flex flex-row-reverse justify-between items-center mt-10 pt-6 border-t border-white/10">
             <button
               className="px-6 py-3 bg-white text-black font-black uppercase text-sm tracking-widest hover:bg-gray-200 transition-colors flex items-center gap-2 group shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] active:translate-y-0.5 active:shadow-none font-bold"
               onClick={handleSubmit}
             >
-              <span>{currentQuestion === questions.length - 1 ? "Finish Quiz" : "Next Question"}</span>
+              <span>{currentQuestion === questions.length - 1 ? "إنهاء الاختبار" : "السؤال التالي"}</span>
               <span className="text-lg group-hover:translate-x-[-4px] transition-transform">←</span>
             </button>
 
@@ -525,12 +515,11 @@ const Quiz = () => {
               disabled={currentQuestion === 0}
             >
               <span className="text-lg">→</span>
-              <span>Back</span>
+              <span>رجوع</span>
             </button>
           </div>
         </div>
       </div>
-      {/* Navigation Confirmation Dialog */}
       <Dialog
         open={blocker.state === "blocked"}
         onClose={() => blocker.reset && blocker.reset()}
@@ -546,13 +535,11 @@ const Quiz = () => {
         }}
       >
         <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)', fontWeight: '900', textTransform: 'uppercase' }}>
-          Leave Quiz?
+          مغادرة الاختبار؟
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <DialogContentText sx={{ color: 'rgba(255,255,255,0.7)', textAlign: 'right', direction: 'rtl' }}>
             هل أنت متأكد أنك تريد مغادرة الاختبار؟ سيتم فقدان تقدمك الحالي وغير المسجل.
-            <br />
-            Are you sure you want to leave? Your unsaved progress will be lost.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 3, gap: 2 }}>
@@ -565,7 +552,7 @@ const Quiz = () => {
               '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
             }}
           >
-            Stay (البقاء)
+            البقاء
           </Button>
           <Button
             onClick={() => blocker.proceed && blocker.proceed()}
@@ -576,7 +563,7 @@ const Quiz = () => {
               '&:hover': { bgcolor: '#eee' }
             }}
           >
-            Leave (المغادرة)
+            المغادرة
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/api';
 import {
   Box,
@@ -26,6 +26,8 @@ const FieldTeamLogin = () => {
   });
   const [settings, setSettings] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || '/quiz';
 
   const fetchSettings = async () => {
     try {
@@ -78,7 +80,7 @@ const FieldTeamLogin = () => {
       sessionStorage.setItem('fieldTeamAuth', JSON.stringify(authData));
       sessionStorage.removeItem('quizResults');
 
-      navigate('/quiz', {
+      navigate(from, {
         state: { fieldTeamAuth: authData },
         replace: true
       });

@@ -35,7 +35,7 @@ const IQQuiz = () => {
     const [settings, setSettings] = useState(null);
     const answersRef = useRef([]);
 
-    // Navigation Blocker
+    // Navigation Blocker (English)
     const blocker = useBlocker(
         ({ currentLocation, nextLocation }) =>
             !quizState.hasSubmitted && currentLocation.pathname !== nextLocation.pathname
@@ -78,12 +78,12 @@ const IQQuiz = () => {
         };
         window.addEventListener('blur', handleBlur);
 
-        // Load quiz data
+        // Load IQ quiz data
         const authData = locationState?.fieldTeamAuth ||
             JSON.parse(sessionStorage.getItem('fieldTeamAuth'));
 
         if (!authData) {
-            setQuizState(prev => ({ ...prev, error: 'غير مصرح بالوصول', loading: false }));
+            setQuizState(prev => ({ ...prev, error: 'Unauthorized Access', loading: false }));
             return;
         }
 
@@ -128,7 +128,7 @@ const IQQuiz = () => {
                     essayAnswer: initialUserAnswers[savedProgress.currentQuestion || 0]?.essayAnswer || ''
                 }));
             } catch (err) {
-                setQuizState(prev => ({ ...prev, error: 'فشل تحميل الأسئلة أو الإعدادات' }));
+                setQuizState(prev => ({ ...prev, error: 'Failed to load questions or settings' }));
             }
         };
 
@@ -212,9 +212,9 @@ const IQQuiz = () => {
                 return !a.selectedAnswer;
             }).length;
 
-            let message = 'هل أنت متأكد أنك تريد إنهاء اختبار الذكاء؟ لا يمكنك العودة بعد الإرسال.';
+            let message = 'Are you sure you want to finish the IQ Test? You cannot go back after submitting.';
             if (unansweredCount > 0) {
-                message = `لديك ${unansweredCount} أسئلة لم يتم الإجابة عليها. هل أنت متأكد أنك تريد إنهاء الاختبار؟`;
+                message = `You have ${unansweredCount} unanswered questions. Are you sure you want to finish the IQ Test?`;
             }
 
             const confirmSubmit = window.confirm(message);
@@ -228,6 +228,7 @@ const IQQuiz = () => {
         if (quizState.hasSubmitted) return;
         setQuizState(prev => ({ ...prev, hasSubmitted: true }));
 
+        // Calculate score: 2 points for correct MCQ, essay initialized to 0
         const finalScore = userAnswers.reduce((score, answer, index) => {
             if (quizState.questions[index].type === 'essay') return score;
             return answer.isCorrect ? score + 2 : score;
@@ -235,7 +236,6 @@ const IQQuiz = () => {
 
         const totalQuestionsCount = quizState.questions.length;
         const maxScore = totalQuestionsCount * 2;
-
         const percentage = maxScore > 0 ? Math.round((finalScore / maxScore) * 100) : 0;
         const result = `${percentage}/100`;
 
@@ -247,6 +247,7 @@ const IQQuiz = () => {
             teamCode: quizState.teamCode,
             correctAnswers: finalScore,
             totalQuestions: totalQuestionsCount,
+            quizType: 'IQ',
             userAnswers: userAnswers.map((answer, index) => ({
                 question: quizState.questions[index].question,
                 options: quizState.questions[index].options,
@@ -257,13 +258,11 @@ const IQQuiz = () => {
                 isScored: quizState.questions[index].type === 'options',
                 isCorrect: answer.isCorrect,
                 category: quizState.questions[index].category,
-                type: quizState.questions[index].type || 'options',
-                quizType: 'IQ'
+                type: quizState.questions[index].type || 'options'
             })),
             questions: quizState.questions,
             percentage,
-            score: result,
-            quizType: 'IQ'
+            score: result
         };
 
         const clearQuizSession = () => {
@@ -275,14 +274,11 @@ const IQQuiz = () => {
 
         try {
             await api.post('/quiz-results', resultsData);
-
             localStorage.setItem('quizResultsFallback', JSON.stringify({
                 ...resultsData,
                 isFieldTeam: true
             }));
-
             clearQuizSession();
-
             navigate('/quiz-results', {
                 state: {
                     quizResults: resultsData,
@@ -291,12 +287,11 @@ const IQQuiz = () => {
                 replace: true
             });
         } catch (error) {
-            console.error('Error saving results:', error);
+            console.error('Error saving IQ results:', error);
             sessionStorage.setItem('quizResultsFallback', JSON.stringify({
                 ...resultsData,
                 isFieldTeam: true
             }));
-
             clearQuizSession();
             navigate('/quiz-results', {
                 state: {
@@ -312,21 +307,12 @@ const IQQuiz = () => {
         return <Navigate to="/fieldteam-login" replace />;
     }
 
-    if (quizState.loading || (quizState.questions.length === 0 && !quizState.error) || !settings) {
+    if (quizState.loading || quizState.questions.length === 0 || !settings) {
         return (
-            <div className="p-4 bg-[#f9fafb] min-h-screen flex items-center justify-center text-white" dir="rtl">
-                جار التحميل...
+            <div className="p-4 bg-[#f9fafb] min-h-screen flex items-center justify-center text-white" dir="ltr">
+                Loading...
             </div>
         );
-    }
-
-    if (quizState.questions.length === 0) {
-        return (
-            <div className="p-4 bg-[#000000] min-h-screen flex flex-col items-center justify-center text-white" dir="rtl">
-                <h2 className="text-2xl font-bold mb-4">لا توجد أسئلة حالياً لاختبار الذكاء</h2>
-                <Button variant="contained" onClick={() => navigate('/')} sx={{ bgcolor: 'white', color: 'black' }}>العودة للرئيسية</Button>
-            </div>
-        )
     }
 
     const { questions, currentQuestion, selectedOption, essayAnswer, teamName, userAnswers } = quizState;
@@ -342,21 +328,22 @@ const IQQuiz = () => {
     return (
         <div
             className="min-h-screen flex flex-col py-6 px-4 md:px-6 bg-[#000000]"
-            dir="rtl"
+            dir="ltr"
             style={{
                 ...quizStyles,
                 fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
             }}
             onContextMenu={(e) => e.preventDefault()}
         >
-            {/* Header Section */}
             <div className="max-w-3xl mx-auto w-full mb-4">
                 <div className="flex justify-between items-center py-3 border-b-2 border-white">
                     <div className="flex items-center gap-4">
-                        <div className="h-8 w-px bg-white/20"></div>
                         <div>
-                            <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Team IQ Test</span>
+                            <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Team</span>
                             <h2 className="text-lg font-black text-white leading-none uppercase">{teamName}</h2>
+                        </div>
+                        <div className="bg-white px-2 py-0.5 ml-2">
+                            <span className="text-[10px] text-black font-black uppercase">IQ Test</span>
                         </div>
                     </div>
                     <Timer
@@ -370,7 +357,6 @@ const IQQuiz = () => {
                     />
                 </div>
 
-                {/* Question Navigator */}
                 <div className="mt-4 flex flex-wrap gap-2 justify-center">
                     {questions.map((_, idx) => {
                         const isAnswered = userAnswers[idx]?.selectedAnswer || userAnswers[idx]?.essayAnswer;
@@ -401,7 +387,6 @@ const IQQuiz = () => {
             </div>
 
             <div className="max-w-3xl mx-auto w-full flex-grow">
-                {/* Progress Bar */}
                 <div className="mb-6">
                     <div className="flex justify-between text-[11px] font-bold text-white uppercase mb-1">
                         <span>Question {currentQuestion + 1}/{questions.length}</span>
@@ -413,15 +398,17 @@ const IQQuiz = () => {
                             style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
                         />
                     </div>
+                    <div className="mt-2 text-[10px] text-gray-500 text-center uppercase tracking-widest">
+                        {userAnswers.filter(a => a.selectedAnswer || a.essayAnswer).length} of {questions.length} answered
+                    </div>
                 </div>
             </div>
 
-            {/* Question Area */}
             <div className="max-w-3xl mx-auto w-full">
                 <div className="bg-[#111111] border-2 border-white p-6 md:p-10 shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]">
                     <div className="mb-8">
                         <span className="inline-block px-2 py-0.5 bg-white text-black text-[10px] font-bold uppercase tracking-tighter mb-4">
-                            {currentQ.category || 'IQ Assessment'}
+                            {currentQ.category || 'IQ Question'}
                         </span>
                         <h3 className="text-xl md:text-2xl font-black text-white leading-tight mb-4">
                             {currentQ.question}
@@ -440,6 +427,13 @@ const IQQuiz = () => {
                     <div className="space-y-3">
                         {currentQ.type === 'essay' ? (
                             <div>
+                                {currentQ.guideline && (
+                                    <div className="p-3 bg-white/5 border-l-4 border-white mb-4">
+                                        <p className="text-xs text-gray-400 italic">
+                                            <strong>Note:</strong> {currentQ.guideline}
+                                        </p>
+                                    </div>
+                                )}
                                 <textarea
                                     className="w-full p-4 text-white bg-[#000000] border-2 border-white focus:bg-white/5 transition-colors outline-none placeholder-white/20 min-h-[150px] text-base leading-relaxed"
                                     value={essayAnswer}
@@ -477,21 +471,23 @@ const IQQuiz = () => {
                                                 {option}
                                             </span>
                                         </div>
+
+                                        {currentQ.optionsImages && currentQ.optionsImages[index] && (
+                                            <div className="mt-2 sm:mt-0 sm:ml-auto shrink-0">
+                                                <img
+                                                    src={currentQ.optionsImages[index]}
+                                                    alt={`Option ${index + 1}`}
+                                                    className="max-h-[120px] max-w-full sm:max-w-[150px] rounded border border-gray-500 object-cover"
+                                                />
+                                            </div>
+                                        )}
                                     </label>
                                 ))}
                             </div>
                         )}
                     </div>
 
-                    <div className="flex flex-row-reverse justify-between items-center mt-10 pt-6 border-t border-white/10">
-                        <button
-                            className="px-6 py-3 bg-white text-black font-black uppercase text-sm tracking-widest hover:bg-gray-200 transition-colors flex items-center gap-2 group shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] active:translate-y-0.5 active:shadow-none font-bold"
-                            onClick={handleSubmit}
-                        >
-                            <span>{currentQuestion === questions.length - 1 ? "Finish IQ Test" : "Next Question"}</span>
-                            <span className="text-lg group-hover:translate-x-[-4px] transition-transform">←</span>
-                        </button>
-
+                    <div className="flex justify-between items-center mt-10 pt-6 border-t border-white/10">
                         <button
                             className={`
                 px-6 py-3 font-bold uppercase text-sm tracking-widest transition-colors flex items-center gap-2
@@ -509,14 +505,20 @@ const IQQuiz = () => {
                             }}
                             disabled={currentQuestion === 0}
                         >
-                            <span className="text-lg">→</span>
+                            <span className="text-lg">←</span>
                             <span>Back</span>
+                        </button>
+
+                        <button
+                            className="px-6 py-3 bg-white text-black font-black uppercase text-sm tracking-widest hover:bg-gray-200 transition-colors flex items-center gap-2 group shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] active:translate-y-0.5 active:shadow-none font-bold"
+                            onClick={handleSubmit}
+                        >
+                            <span>{currentQuestion === questions.length - 1 ? "Finish Test" : "Next Question"}</span>
+                            <span className="text-lg group-hover:translate-x-1 transition-transform">→</span>
                         </button>
                     </div>
                 </div>
             </div>
-
-            {/* Navigation Confirmation Dialog */}
             <Dialog
                 open={blocker.state === "blocked"}
                 onClose={() => blocker.reset && blocker.reset()}
@@ -535,10 +537,8 @@ const IQQuiz = () => {
                     Leave IQ Test?
                 </DialogTitle>
                 <DialogContent sx={{ mt: 2 }}>
-                    <DialogContentText sx={{ color: 'rgba(255,255,255,0.7)', textAlign: 'right', direction: 'rtl' }}>
-                        هل أنت متأكد أنك تريد مغادرة اختبار الذكاء؟ سيتم فقدان تقدمك الحالي وغير المسجل.
-                        <br />
-                        Are you sure you want to leave? Your unsaved progress will be lost.
+                    <DialogContentText sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                        Are you sure you want to leave the IQ Test? Your unsaved progress will be lost.
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions sx={{ p: 3, gap: 2 }}>
@@ -551,7 +551,7 @@ const IQQuiz = () => {
                             '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
                         }}
                     >
-                        Stay (البقاء)
+                        Stay
                     </Button>
                     <Button
                         onClick={() => blocker.proceed && blocker.proceed()}
@@ -562,7 +562,7 @@ const IQQuiz = () => {
                             '&:hover': { bgcolor: '#eee' }
                         }}
                     >
-                        Leave (المغادرة)
+                        Leave
                     </Button>
                 </DialogActions>
             </Dialog>

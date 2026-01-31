@@ -112,8 +112,8 @@ const SidebarLinks = () => {
           isNew: false,
           subpaths: [
             { label: "Dashboard", link: "assessment-dashboard" },
-            { label: "Quiz Link", link: "quiz" },
-            { label: "IQ Test Link", link: "iq-test" },
+            { label: "Technical Assessment", link: "quiz" },
+            { label: "IQ Test", link: "iq-test" },
           ],
         },
         {
