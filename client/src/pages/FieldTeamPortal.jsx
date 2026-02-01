@@ -252,8 +252,11 @@ const FieldTeamPortal = () => {
 
     // NPS Tickets evaluation
     technicalTasks.forEach(t => {
-      const score = t.evaluationScore || 0;
+      let score = t.evaluationScore || 0;
       if (score > 0) { // Only count if evaluated
+        // Normalize 1-10 scale to 0-100
+        if (score <= 10) score = score * 10;
+
         if (score <= 60) {
           technicalDetractors++;
           totalDetractors++;
@@ -378,18 +381,21 @@ const FieldTeamPortal = () => {
         priority: i.priority || 'Medium',
         metadata: `Reporter: ${i.reporter || 'N/A'} | Area: ${i.area || 'N/A'}`
       })),
-      ...technicalTasks.map(t => ({
-        id: t._id,
-        type: 'task',
-        title: 'Technical Task',
-        detail: `${t.slid} - ${t.customerName}`,
-        date: t.pisDate || t.createdAt,
-        color: colors.warning,
-        icon: <Assignment sx={{ fontSize: '1.2rem' }} />,
-        status: t.validationStatus || 'Pending',
-        priority: t.priority || 'Medium',
-        metadata: t.evaluationScore ? `Score: ${t.evaluationScore}% | Tech: ${t.technician || 'N/A'}` : `Tech: ${t.technician || 'N/A'}`
-      })),
+      ...technicalTasks.map(t => {
+        const isSmallScale = t.evaluationScore && t.evaluationScore <= 10;
+        return {
+          id: t._id,
+          type: 'task',
+          title: 'Technical Task',
+          detail: `${t.slid} - ${t.customerName}`,
+          date: t.pisDate || t.createdAt,
+          color: colors.warning,
+          icon: <Assignment sx={{ fontSize: '1.2rem' }} />,
+          status: t.validationStatus || 'Pending',
+          priority: t.priority || 'Medium',
+          metadata: t.evaluationScore ? `Score: ${t.evaluationScore}${isSmallScale ? '/10' : '%'} | Tech: ${t.technician || 'N/A'}` : `Tech: ${t.technician || 'N/A'}`
+        };
+      }),
       ...quizResults.map(q => ({
         id: q._id,
         type: 'quiz',
@@ -1103,25 +1109,43 @@ ${data.map((a, i) => `
     XLSX.utils.book_append_sheet(wb, wsSummary, "Overview Summary");
 
     // 2. NPS Tickets Sheet
-    const techTasksData = technicalTasks.map(t => ({
-      'Ticket Request': t.requestNumber || 'N/A',
-      'Ticket ID': t.ticketId || '-',
-      'Customer Name': t.customerName,
-      'Customer Contact': t.customerContact || 'N/A',
-      'Customer Feedback': t.customerFeedback || '-',
-      'SLID': t.slid,
-      'PIS Date': t.pisDate ? new Date(t.pisDate).toLocaleDateString() : 'N/A',
-      'Task Date': formatDate(t.createdAt),
-      'Priority': t.priority,
-      'Status': t.validationStatus,
-      'Validation Notes': t.validationNotes || '-',
-      'Evaluation Score': t.evaluationScore ? `${t.evaluationScore}%` : 'Not Evaluated',
-      'Satisfaction Level': t.evaluationScore ? (t.evaluationScore <= 60 ? 'Detractor' : (t.evaluationScore <= 80 ? 'Neutral' : 'Promoter')) : 'N/A',
-      'Technician': t.technician || t.primaryTechnician || '-',
-      'Subtasks Count': t.subtasks?.length || 0,
-      'Region': t.governorate || '-',
-      'City': t.city || '-'
-    }));
+    const techTasksData = technicalTasks.map(t => {
+      let score = t.evaluationScore || 0;
+      let satisfaction = 'N/A';
+      let displayScore = 'Not Evaluated';
+
+      if (score > 0) {
+        const isSmallScale = score <= 10;
+        displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
+
+        // Normalize for calculation
+        const normalizedScore = isSmallScale ? score * 10 : score;
+
+        if (normalizedScore <= 60) satisfaction = 'Detractor';
+        else if (normalizedScore <= 80) satisfaction = 'Neutral';
+        else satisfaction = 'Promoter';
+      }
+
+      return {
+        'Ticket Request': t.requestNumber || 'N/A',
+        'Ticket ID': t.ticketId || '-',
+        'Customer Name': t.customerName,
+        'Customer Contact': t.customerContact || 'N/A',
+        'Customer Feedback': t.customerFeedback || '-',
+        'SLID': t.slid,
+        'PIS Date': t.pisDate ? new Date(t.pisDate).toLocaleDateString() : 'N/A',
+        'Task Date': formatDate(t.createdAt),
+        'Priority': t.priority,
+        'Status': t.validationStatus,
+        'Validation Notes': t.validationNotes || '-',
+        'Evaluation Score': displayScore,
+        'Satisfaction Level': satisfaction,
+        'Technician': t.technician || t.primaryTechnician || '-',
+        'Subtasks Count': t.subtasks?.length || 0,
+        'Region': t.governorate || '-',
+        'City': t.city || '-'
+      };
+    });
     const wsTech = XLSX.utils.json_to_sheet(techTasksData);
     XLSX.utils.book_append_sheet(wb, wsTech, "NPS Tickets");
 
@@ -2192,8 +2216,8 @@ ${data.map((a, i) => `
                               }}
                             />
                           </td>
-                          <td style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold', color: task.evaluationScore >= 80 ? colors.success : colors.warning }}>
-                            {task.evaluationScore ? `${task.evaluationScore}%` : '-'}
+                          <td style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold', color: (task.evaluationScore && (task.evaluationScore > 80 || (task.evaluationScore <= 10 && task.evaluationScore > 8))) ? colors.success : colors.warning }}>
+                            {task.evaluationScore ? `${task.evaluationScore}${task.evaluationScore <= 10 ? '/10' : '%'}` : '-'}
                           </td>
                         </tr>
                       ))}

@@ -22,8 +22,10 @@ import { format } from "date-fns";
 
 import { useNavigate } from "react-router-dom";
 import {
-  BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
+  BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend
 } from 'recharts';
+import * as XLSX from 'xlsx';
+import { FaFileExcel } from 'react-icons/fa';
 
 // --- Components ---
 
@@ -260,6 +262,21 @@ const AssignedToMe = () => {
       teamStats.byReason[reason] = (teamStats.byReason[reason] || 0) + 1;
       teamStats.bySubReason[subReason] = (teamStats.bySubReason[subReason] || 0) + 1;
       teamStats.byRootCause[rootCause] = (teamStats.byRootCause[rootCause] || 0) + 1;
+
+      // Calculate NPS stats (Detractor/Neutral/Promoter)
+      if (!teamStats.npsBreakdown) {
+        teamStats.npsBreakdown = { Detractor: 0, Neutral: 0, Promoter: 0, NotEvaluated: 0 };
+      }
+
+      let score = task.evaluationScore;
+      if (score && score > 0) {
+        if (score <= 10) score = score * 10; // Normalize
+        if (score <= 60) teamStats.npsBreakdown.Detractor++;
+        else if (score <= 80) teamStats.npsBreakdown.Neutral++;
+        else teamStats.npsBreakdown.Promoter++;
+      } else {
+        teamStats.npsBreakdown.NotEvaluated++;
+      }
     });
 
     const toChartData = (obj) => Object.entries(obj)
@@ -276,7 +293,12 @@ const AssignedToMe = () => {
       owners: toChartData(stats.fieldTeamDetails[team.name]?.byOwner || {}).slice(0, 5),
       reasons: toChartData(stats.fieldTeamDetails[team.name]?.byReason || {}).slice(0, 5),
       subReasons: toChartData(stats.fieldTeamDetails[team.name]?.bySubReason || {}).slice(0, 5),
-      rootCauses: toChartData(stats.fieldTeamDetails[team.name]?.byRootCause || {}).slice(0, 5)
+      rootCauses: toChartData(stats.fieldTeamDetails[team.name]?.byRootCause || {}).slice(0, 5),
+      npsBreakdown: [
+        { name: 'Detractor', value: stats.fieldTeamDetails[team.name]?.npsBreakdown?.Detractor || 0, color: '#ef4444' },
+        { name: 'Neutral', value: stats.fieldTeamDetails[team.name]?.npsBreakdown?.Neutral || 0, color: '#f59e0b' },
+        { name: 'Promoter', value: stats.fieldTeamDetails[team.name]?.npsBreakdown?.Promoter || 0, color: '#10b981' }
+      ]
     }));
 
     return {
@@ -412,6 +434,232 @@ const AssignedToMe = () => {
       alert("Failed to add to favorites.");
     }
   };
+
+  // --- Export Functions ---
+
+  const generateInsights = (tasks) => {
+    let totalTasks = tasks.length;
+    let detractors = 0;
+    let neutrals = 0;
+    let promoters = 0;
+    let ratedCount = 0;
+    let validatedCount = 0;
+    let highPriority = 0;
+    let medPriority = 0;
+    let lowPriority = 0;
+
+    const reasons = {};
+    const subReasons = {};
+    const rootCauses = {};
+    const owners = {};
+
+    tasks.forEach(t => {
+      // NPS Stats
+      let score = t.evaluationScore;
+      if (score && score > 0) {
+        if (score <= 10) score = score * 10;
+        if (score <= 60) detractors++;
+        else if (score <= 80) neutrals++;
+        else promoters++;
+        ratedCount++;
+      }
+
+      // Validation
+      if (t.validationStatus === 'Validated') validatedCount++;
+
+      // Priority
+      if (t.priority === 'High') highPriority++;
+      else if (t.priority === 'Low') lowPriority++;
+      else medPriority++;
+
+      if (t.subReason) subReasons[t.subReason] = (subReasons[t.subReason] || 0) + 1;
+      const owner = t.responsible || t.assignedTo?.name || 'Unassigned';
+      owners[owner] = (owners[owner] || 0) + 1;
+    });
+
+    // True NPS calculation: %Promoters - %Detractors
+    // const promoterPct = ratedCount > 0 ? (promoters / ratedCount) * 100 : 0;
+    // const detractorPct = ratedCount > 0 ? (detractors / ratedCount) * 100 : 0;
+    // const npsScore = (promoterPct - detractorPct).toFixed(1);
+
+    // Top 5 Sorting (Deprecated for full view, but kept for summary)
+    const getTop5 = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 5).map(e => `${e[0]} (${e[1]})`).join(', ');
+
+    return {
+      summaryMetrics: [
+        { Metric: "Total Tasks Analyzed", Value: totalTasks },
+        { Metric: "Validation Rate", Value: `${((validatedCount / totalTasks) * 100).toFixed(1)}%` },
+        { Metric: "Evaluated Tasks", Value: ratedCount },
+        // { Metric: "True NPS Score", Value: npsScore }, 
+        { Metric: "Promoters", Value: promoters },
+        { Metric: "Neutrals", Value: neutrals },
+        { Metric: "Detractors", Value: detractors },
+        { Metric: "High Priority Issues", Value: highPriority },
+      ],
+      breakdowns: {
+        reasons,
+        subReasons,
+        rootCauses,
+        owners
+      }
+    };
+  };
+
+  const writeBreakdownTable = (wb, ws, title, dataMap, startRow, startCol) => {
+    // Convert Map to Sorted Array
+    const data = Object.entries(dataMap)
+      .map(([name, count]) => ({ Name: name, Count: count }))
+      .sort((a, b) => b.Count - a.Count);
+
+    // Write Title
+    XLSX.utils.sheet_add_aoa(ws, [[title]], { origin: { r: startRow, c: startCol } });
+
+    // Write Header
+    XLSX.utils.sheet_add_aoa(ws, [["Name", "Count"]], { origin: { r: startRow + 1, c: startCol } });
+
+    // Write Data
+    XLSX.utils.sheet_add_json(ws, data, { origin: { r: startRow + 2, c: startCol }, skipHeader: true });
+
+    return data.length + 3; // Return items written + header/title spacing
+  };
+
+  const handleExportTeam = (team) => {
+    // 1. Filter tasks for this team
+    const teamTasks = filteredTasks.filter(t => t.teamName === team.teamName);
+
+    // 2. Prepare Data
+    const data = teamTasks.map(t => {
+      let displayScore = 'Not Evaluated';
+      let satisfaction = 'N/A';
+      let score = t.evaluationScore || 0;
+      if (score > 0) {
+        const isSmallScale = score <= 10;
+        displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
+        const normalized = isSmallScale ? score * 10 : score;
+        if (normalized <= 60) satisfaction = 'Detractor';
+        else if (normalized <= 80) satisfaction = 'Neutral';
+        else satisfaction = 'Promoter';
+      }
+
+      return {
+        'SLID': t.slid,
+        'Customer': t.customerName,
+        'Status': t.status,
+        'Category': t.category,
+        'Reason': t.reason,
+        'Root Cause': t.rootCause,
+        'Technician': t.technician || t.primaryTechnician,
+        'Score': displayScore,
+        'Satisfaction': satisfaction,
+        'Date': formatDate(t.createdAt)
+      };
+    });
+
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Insights & Full Breakdowns
+    const { summaryMetrics, breakdowns } = generateInsights(teamTasks);
+    const wsInsights = XLSX.utils.json_to_sheet(summaryMetrics);
+
+    // Stack Breakdown Tables
+    // Note: append_sheet is not used here because we are writing to the SAME sheet at different offsets
+    let currentRow = summaryMetrics.length + 3; // Start after summary metrics
+
+    XLSX.utils.sheet_add_aoa(wsInsights, [["--- DETAILED BREAKDOWNS ---"]], { origin: { r: currentRow, c: 0 } });
+    currentRow += 2;
+
+    const tableSpacing = 4; // Columns between tables
+
+    // We will place tables side-by-side or stacked? 
+    // Let's stack them to handle variable length gracefully without overwriting
+
+    // Table 1: Reasons
+    writeBreakdownTable(wb, wsInsights, "ALL REASONS", breakdowns.reasons, currentRow, 0);
+
+    // Table 2: Sub-Reasons (Placed in next columns for better visibility)
+    writeBreakdownTable(wb, wsInsights, "ALL SUB-REASONS", breakdowns.subReasons, currentRow, 3);
+
+    // Table 3: Root Causes
+    writeBreakdownTable(wb, wsInsights, "ALL ROOT CAUSES", breakdowns.rootCauses, currentRow, 6);
+
+    // Table 4: Owners
+    writeBreakdownTable(wb, wsInsights, "ALL OWNERS", breakdowns.owners, currentRow, 9);
+
+    // Auto-width attempt for first few columns
+    wsInsights['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }];
+
+    XLSX.utils.book_append_sheet(wb, wsInsights, "Summary & Insights");
+
+    // Sheet 2: Tasks
+    const wsTasks = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, wsTasks, "Detailed Tasks");
+
+    XLSX.writeFile(wb, `${team.teamName}_Performance_Report.xlsx`);
+  };
+
+  const handleExportAllTeams = () => {
+    const allOffenderTasks = filteredTasks.filter(t => t.teamName);
+
+    // Flatten all data
+    const data = allOffenderTasks.map(t => {
+      let displayScore = 'Not Evaluated';
+      let satisfaction = 'N/A';
+      let score = t.evaluationScore || 0;
+      if (score > 0) {
+        const isSmallScale = score <= 10;
+        displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
+        const normalized = isSmallScale ? score * 10 : score;
+        if (normalized <= 60) satisfaction = 'Detractor';
+        else if (normalized <= 80) satisfaction = 'Neutral';
+        else satisfaction = 'Promoter';
+      }
+
+      return {
+        'Team Name': t.teamName,
+        'Company': t.teamCompany,
+        'SLID': t.slid,
+        'Customer': t.customerName,
+        'Status': t.status,
+        'Category': t.category,
+        'Reason': t.reason,
+        'Sub-Reason': t.subReason,
+        'Root Cause': t.rootCause,
+        'Technician': t.technician || t.primaryTechnician,
+        'Score': displayScore,
+        'Satisfaction': satisfaction,
+        'Date': formatDate(t.createdAt)
+      };
+    });
+
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Global Insights
+    const { summaryMetrics, breakdowns } = generateInsights(allOffenderTasks);
+    const wsGlobal = XLSX.utils.json_to_sheet(summaryMetrics);
+
+    // Detailed Tables layout
+    let currentRow = summaryMetrics.length + 3;
+    XLSX.utils.sheet_add_aoa(wsGlobal, [["--- GLOBAL DETAILED BREAKDOWNS ---"]], { origin: { r: currentRow, c: 0 } });
+    currentRow += 2;
+
+    // Side-by-side layout for maximum information density
+    writeBreakdownTable(wb, wsGlobal, "ALL REASONS", breakdowns.reasons, currentRow, 0);
+    writeBreakdownTable(wb, wsGlobal, "ALL SUB-REASONS", breakdowns.subReasons, currentRow, 3);
+    writeBreakdownTable(wb, wsGlobal, "ALL ROOT CAUSES", breakdowns.rootCauses, currentRow, 6);
+    writeBreakdownTable(wb, wsGlobal, "ALL OWNERS", breakdowns.owners, currentRow, 9);
+
+    wsGlobal['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }];
+
+    XLSX.utils.book_append_sheet(wb, wsGlobal, "Global Executive Summary");
+
+    // Sheet 2: All Tasks
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, "All Teams Details");
+
+    XLSX.writeFile(wb, "All_Field_Teams_Detailed_Report.xlsx");
+  };
+
+  const formatDate = (date) => date ? new Date(date).toLocaleDateString() : 'N/A';
 
   // --- Columns for DataGrid ---
   const columns = [
@@ -819,9 +1067,19 @@ const AssignedToMe = () => {
 
           {/* Field Team Offenders Section using Blue Theme */}
           <Box sx={{ mt: 4 }}>
-            <Typography variant="h5" fontWeight="700" mb={3} color="#3b82f6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              🚨 Top Field Team Offenders
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h5" fontWeight="700" color="#3b82f6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                🚨 Top Field Team Offenders
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<FaFileExcel />}
+                onClick={handleExportAllTeams}
+                sx={{ borderColor: '#10b981', color: '#10b981', '&:hover': { borderColor: '#059669', bgcolor: 'rgba(16, 185, 129, 0.1)' } }}
+              >
+                Export All Teams Detailed Report
+              </Button>
+            </Box>
 
             {analytics.fieldTeamAnalytics && analytics.fieldTeamAnalytics.length > 0 ? (
               <Grid container spacing={2}>
@@ -846,6 +1104,14 @@ const AssignedToMe = () => {
                               Total Issues: <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{team.totalIssues}</span>
                             </Typography>
                           </Box>
+                          <Button
+                            size="small"
+                            startIcon={<FaFileExcel />}
+                            onClick={() => handleExportTeam(team)}
+                            sx={{ color: '#94a3b8', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' } }}
+                          >
+                            Export
+                          </Button>
                         </Box>
 
                         {/* Categories Breakdown */}
@@ -922,7 +1188,7 @@ const AssignedToMe = () => {
                           </Grid>
 
                           {/* Top Root Causes */}
-                          <Grid item xs={12}>
+                          <Grid item xs={12} md={6}>
                             <Typography variant="subtitle2" fontWeight="600" mb={1} color="#10b981">
                               🔍 Top Root Causes
                             </Typography>
@@ -935,6 +1201,28 @@ const AssignedToMe = () => {
                               ))}
                             </Box>
                           </Grid>
+
+                          {/* NPS Breakdown Chart */}
+                          <Grid item xs={12}>
+                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#fff">
+                              ❤️ Customer Satisfaction (NPS)
+                            </Typography>
+                            <Paper sx={{ p: 1, bgcolor: 'rgba(0,0,0,0.3)', borderRadius: 2 }}>
+                              <ResponsiveContainer width="100%" height={200}>
+                                <BarChart data={team.npsBreakdown} layout="vertical" barSize={20}>
+                                  <XAxis type="number" hide />
+                                  <YAxis dataKey="name" type="category" width={80} stroke="#94a3b8" fontSize={12} />
+                                  <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: 8 }} />
+                                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                                    {team.npsBreakdown.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </Paper>
+                          </Grid>
+
                         </Grid>
                       </Paper>
                     </Grid>

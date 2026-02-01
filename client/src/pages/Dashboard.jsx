@@ -341,7 +341,7 @@ const Dashboard = () => {
               <AIHistoryButton />
             </Stack>
           </Box>
-          <Paper sx={{ p: 0, overflow: 'hidden', borderRadius: 3, bgcolor: '#1a1a1a', border: '1px solid #e2e8f0' }} elevation={0}>
+          <Paper sx={{ p: 0, overflow: 'hidden', borderRadius: 3, bgcolor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.05)' }} elevation={0}>
             <Box p={3}>
               <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
                 <Chart tasks={tasks} samplesData={samplesData} />
