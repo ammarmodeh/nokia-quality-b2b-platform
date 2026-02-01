@@ -935,7 +935,7 @@ export const getTaskTickets = async (req, res) => {
   try {
     const tickets = await TaskTicket.find({ taskId: req.params.taskId })
       .populate("recordedBy", "name")
-      .sort({ eventDate: 1, timestamp: 1 });
+      .sort({ eventDate: 1, createdAt: 1 });
     res.status(200).json(tickets);
   } catch (error) {
     res.status(500).json({ error: error.message });

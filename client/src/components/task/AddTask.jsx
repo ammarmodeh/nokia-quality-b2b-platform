@@ -145,6 +145,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [extenderNumber, setExtenderNumber] = useState(0);
   const [closureCallEvaluation, setClosureCallEvaluation] = useState("");
   const [closureCallFeedback, setClosureCallFeedback] = useState("");
+  const [gaiaCheck, setGaiaCheck] = useState("No");
 
   // Conditional field toggles
 
@@ -182,7 +183,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
     // console.log({ data });
     const formData = {
       ...data,
-      slid: `INT${data.slid}`,
+      slid: data.slid,
       governorate,
       district,
       assignedTo,
@@ -206,6 +207,11 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       extenderNumber: freeExtender === 'Yes' ? extenderNumber : 0,
       closureCallEvaluation,
       closureCallFeedback,
+      gaiaCheck,
+      contractDate: data.contractDate,
+      inDate: data.inDate,
+      appDate: data.appDate,
+      closeDate: data.closeDate,
       operation: data.operation,
     };
 
@@ -320,16 +326,12 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
 
             <TextField
               label="SLID"
-              placeholder="Enter 7 digits"
+              placeholder="Enter SLID"
               fullWidth
               variant="outlined"
               value={watchSLID}
-              onInput={(e) => {
-                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 7);
-              }}
               {...register('slid', {
                 required: 'SLID is required',
-                pattern: { value: /^\d{7}$/, message: 'SLID must be 7 digits' },
               })}
               error={!!errors.slid}
               helperText={errors.slid ? errors.slid.message : ''}
@@ -445,11 +447,75 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             />
           </Stack>
 
+          {/* New Row: GAIA Check & Contract Date */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>GAIA Check</InputLabel>
+              <Select
+                value={gaiaCheck}
+                onChange={(e) => setGaiaCheck(e.target.value)}
+                label="GAIA Check"
+              >
+                <MenuItem value="Yes">Yes</MenuItem>
+                <MenuItem value="No">No</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="Contract date (RE Date)"
+              type="date"
+              fullWidth
+              variant="outlined"
+              {...register('contractDate')}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
+
+          {/* New Row: In Date & App Date */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <TextField
+              label="In date (send to Subcon)"
+              type="date"
+              fullWidth
+              variant="outlined"
+              {...register('inDate')}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="App. Date"
+              type="date"
+              fullWidth
+              variant="outlined"
+              {...register('appDate')}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
+
+          {/* New Row: Close Date */}
+          <TextField
+            label="Close Date (Online)"
+            type="date"
+            fullWidth
+            variant="outlined"
+            {...register('closeDate')}
+            InputLabelProps={{ shrink: true }}
+          />
+
           {/* Row 8: Free Extender (Yes/No) */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <FormControl fullWidth variant="outlined">
               <InputLabel>Free Extender</InputLabel>
-              <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
+              <Select
+                value={freeExtender}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFreeExtender(val);
+                  if (val === 'No') {
+                    setExtenderType("");
+                    setExtenderNumber(0);
+                  }
+                }}
+                label="Free Extender"
+              >
                 <MenuItem value="Yes">Yes</MenuItem>
                 <MenuItem value="No">No</MenuItem>
               </Select>
@@ -596,6 +662,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             <FormControl fullWidth variant="outlined">
               <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
               <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
+                <MenuItem value=""><em>None</em></MenuItem>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                   <MenuItem key={num} value={num}>{num}</MenuItem>
                 ))}

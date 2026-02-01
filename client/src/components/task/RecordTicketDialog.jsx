@@ -533,19 +533,19 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
                             </Stack>
                         </Box>
                     ) : (
-                        <TableContainer sx={{ borderTop: '1px solid', borderColor: 'divider', minHeight: 400 }}>
-                            <Table size="small" stickyHeader>
+                        <TableContainer sx={{ borderTop: '1px solid', borderColor: 'divider', minHeight: 400, overflowX: 'auto' }}>
+                            <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', minWidth: 1300 }}>
                                 <TableHead>
                                     <TableRow sx={{ bgcolor: alpha('#7b68ee', 0.05) }}>
-                                        <TableCell sx={{ fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Ticket ID</TableCell>
-                                        <TableCell sx={{ fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Execution Date</TableCell>
-                                        <TableCell sx={{ fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Agent / Participant</TableCell>
-                                        <TableCell sx={{ fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Type / State</TableCell>
-                                        <TableCell sx={{ fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Unf. Reason</TableCell>
-                                        <TableCell sx={{ fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Ticket Status</TableCell>
-                                        <TableCell sx={{ fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Detailed Technical Log</TableCell>
-                                        <TableCell sx={{ fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Metadata</TableCell>
-                                        <TableCell sx={{ fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase' }} align="center">Actions</TableCell>
+                                        <TableCell sx={{ width: '130px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Ticket ID</TableCell>
+                                        <TableCell sx={{ width: '120px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Execution Date</TableCell>
+                                        <TableCell sx={{ width: '180px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Agent / Participant</TableCell>
+                                        <TableCell sx={{ width: '150px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Type / State</TableCell>
+                                        <TableCell sx={{ width: '110px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Unf. Reason</TableCell>
+                                        <TableCell sx={{ width: '100px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Ticket Status</TableCell>
+                                        <TableCell sx={{ width: '250px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Detailed Technical Log</TableCell>
+                                        <TableCell sx={{ width: '160px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Metadata</TableCell>
+                                        <TableCell sx={{ width: '100px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase' }} align="center">Actions</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -560,7 +560,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
                                     ) : (
                                         tickets.map((ticket, index) => (
                                             <TableRow key={ticket._id} hover sx={{ bgcolor: index % 2 === 0 ? 'inherit' : alpha('#f0f0f0', 0.5) }}>
-                                                <TableCell sx={{ minWidth: 100, borderRight: '1px solid', borderColor: 'divider' }}>
+                                                <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
                                                         <Typography variant="caption" noWrap sx={{ fontWeight: 900, color: '#7b68ee', flex: 1 }}>{ticket.ticketId}</Typography>
                                                         {ticket.ticketId?.length > 10 && (
@@ -571,23 +571,19 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
                                                         </IconButton>
                                                     </Stack>
                                                 </TableCell>
-                                                <TableCell sx={{ minWidth: 100, borderRight: '1px solid', borderColor: 'divider' }}>
+                                                <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
                                                         <Typography variant="body2" noWrap sx={{ fontSize: '0.7rem', fontWeight: 600, flex: 1 }}>
-                                                            {index === 0 ? (
-                                                                <span style={{ color: '#ccc', fontWeight: 900 }}>—</span>
-                                                            ) : (
-                                                                ticket.eventDate ? format(new Date(ticket.eventDate), "dd MMM, yy") : "N/A"
-                                                            )}
+                                                            {ticket.eventDate ? format(new Date(ticket.eventDate), "dd MMM, yy") : "N/A"}
                                                         </Typography>
-                                                        {index !== 0 && ticket.eventDate && (
+                                                        {ticket.eventDate && (
                                                             <IconButton size="small" onClick={() => copyToClipboard(format(new Date(ticket.eventDate), "dd MMM, yy"))} sx={{ opacity: 0.5 }}>
                                                                 <MdContentCopy size={10} />
                                                             </IconButton>
                                                         )}
                                                     </Stack>
                                                 </TableCell>
-                                                <TableCell sx={{ maxWidth: 150, borderRight: '1px solid', borderColor: 'divider' }}>
+                                                <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
                                                         <Typography
                                                             variant="caption"
@@ -608,7 +604,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
                                                         </IconButton>
                                                     </Stack>
                                                 </TableCell>
-                                                <TableCell sx={{ maxWidth: 150, borderRight: '1px solid', borderColor: 'divider' }}>
+                                                <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
                                                         <Box sx={{ flex: 1, minWidth: 0 }}>
                                                             <Typography variant="caption" noWrap sx={{ fontWeight: 900, color: '#7b68ee', display: 'block' }}>
@@ -653,7 +649,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
                                                         </IconButton>
                                                     </Stack>
                                                 </TableCell>
-                                                <TableCell sx={{ maxWidth: 250, borderRight: '1px solid', borderColor: 'divider' }}>
+                                                <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
                                                         <Typography
                                                             variant="caption"
@@ -692,7 +688,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
                                                         )}
                                                     </Stack>
                                                 </TableCell>
-                                                <TableCell sx={{ maxWidth: 180, borderRight: '1px solid', borderColor: 'divider' }}>
+                                                <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
                                                         <Typography variant="caption" noWrap sx={{ fontSize: '0.65rem', color: '#999', flex: 1 }}>
                                                             {`C: ${format(new Date(ticket.createdAt), "dd/MM/yy HH:mm")} | U: ${format(new Date(ticket.updatedAt), "dd/MM/yy HH:mm")}`}

@@ -300,6 +300,13 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 <Typography variant="caption" sx={{ px: 3, py: 1, color: '#6b7280', display: 'block', fontWeight: 'bold' }}>TASK CATEGORIES</Typography>
                 <MenuItem
                   component={Link}
+                  to="/assigned-to-me"
+                  onClick={handleMobileMenuClose}
+                >
+                  <Typography variant="body1">Assigned To Me</Typography>
+                </MenuItem>
+                <MenuItem
+                  component={Link}
                   to="/detractor-tasks"
                   onClick={handleMobileMenuClose}
                 >
@@ -455,7 +462,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 },
               }}
             >
-              Task Reviews
+              NPS Reviews
             </Button>
             <Menu
               id="reviews-menu"
@@ -467,6 +474,9 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               sx={menuStyles}
               PaperProps={{ sx: { width: '200px' } }}
             >
+              <MenuItem component={Link} to="/assigned-to-me" onClick={handleReviewsMenuClose}>
+                Assigned To Me
+              </MenuItem>
               <MenuItem component={Link} to="/detractor-tasks" onClick={handleReviewsMenuClose}>
                 Detractor Tasks
               </MenuItem>

@@ -50,6 +50,11 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const [closureCallEvaluation, setClosureCallEvaluation] = useState("");
   const [closureCallFeedback, setClosureCallFeedback] = useState("");
   const [operation, setOperation] = useState("");
+  const [gaiaCheck, setGaiaCheck] = useState("No");
+  const [contractDate, setContractDate] = useState("");
+  const [inDate, setInDate] = useState("");
+  const [appDate, setAppDate] = useState("");
+  const [closeDate, setCloseDate] = useState("");
 
   // Dynamic dropdown options
   const [dropdownOptions, setDropdownOptions] = useState({
@@ -136,7 +141,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       }
 
       reset({
-        slid: task.slid ? task.slid.replace("INT", "") : "",
+        slid: task.slid || "",
         pisDate: formattedPISDate,
         contactNumber: task.contactNumber || "",
         requestNumber: task.requestNumber || "",
@@ -147,6 +152,10 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
         customerName: task.customerName || "",
         operation: task.operation || "",
         interviewDate: formattedInterviewDate,
+        contractDate: task.contractDate ? new Date(task.contractDate).toISOString().split('T')[0] : "",
+        inDate: task.inDate ? new Date(task.inDate).toISOString().split('T')[0] : "",
+        appDate: task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : "",
+        closeDate: task.closeDate ? new Date(task.closeDate).toISOString().split('T')[0] : "",
       });
 
       setValue("pisDate", formattedPISDate);
@@ -159,6 +168,10 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setValue("customerName", task.customerName || "");
       setValue("operation", task.operation || "");
       setValue("dashboardShortNote", task.dashboardShortNote || "");
+      setValue("contractDate", task.contractDate ? new Date(task.contractDate).toISOString().split('T')[0] : "");
+      setValue("inDate", task.inDate ? new Date(task.inDate).toISOString().split('T')[0] : "");
+      setValue("appDate", task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : "");
+      setValue("closeDate", task.closeDate ? new Date(task.closeDate).toISOString().split('T')[0] : "");
 
       const priorityValue = task.priority || "";
       setPriority(priorityValue);
@@ -193,6 +206,11 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setClosureCallEvaluation(task.closureCallEvaluation || "");
       setClosureCallFeedback(task.closureCallFeedback || "");
       setOperation(task.operation || "");
+      setGaiaCheck(task.gaiaCheck || "No");
+      setContractDate(task.contractDate ? new Date(task.contractDate).toISOString().split('T')[0] : "");
+      setInDate(task.inDate ? new Date(task.inDate).toISOString().split('T')[0] : "");
+      setAppDate(task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : "");
+      setCloseDate(task.closeDate ? new Date(task.closeDate).toISOString().split('T')[0] : "");
     }
   }, [task, open, reset, setValue, user, dropdownOptions]);
 
@@ -227,7 +245,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const handleSubmitForm = async (data) => {
     const formData = {
       ...data,
-      slid: `INT${data.slid}`,
+      slid: data.slid,
       assignedTo,
       whomItMayConcern,
       priority,
@@ -252,6 +270,11 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       extenderNumber: freeExtender === 'Yes' ? extenderNumber : 0,
       closureCallEvaluation,
       closureCallFeedback,
+      gaiaCheck,
+      contractDate,
+      inDate,
+      appDate,
+      closeDate,
     };
 
     // console.log({ formData });
@@ -327,12 +350,12 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               />
               <TextField
                 label="SLID"
-                placeholder="Enter 7 digits"
+                placeholder="Enter SLID"
                 fullWidth
                 variant="outlined"
                 value={watch("slid")}
-                onChange={(e) => setValue("slid", e.target.value.replace(/\D/g, "").slice(0, 7))}
-                {...register("slid", { required: "SLID is required", pattern: { value: /^\d{7}$/, message: "Task SLID must be 7 digits" } })}
+                onChange={(e) => setValue("slid", e.target.value)}
+                {...register("slid", { required: "SLID is required" })}
                 error={!!errors.slid}
                 helperText={errors.slid ? errors.slid.message : ""}
               />
@@ -439,11 +462,83 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               />
             </Stack>
 
+            {/* New Row: GAIA Check & Contract Date */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>GAIA Check</InputLabel>
+                <Select
+                  value={gaiaCheck}
+                  onChange={(e) => setGaiaCheck(e.target.value)}
+                  label="GAIA Check"
+                >
+                  <MenuItem value="Yes">Yes</MenuItem>
+                  <MenuItem value="No">No</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                label="Contract date (RE Date)"
+                type="date"
+                fullWidth
+                variant="outlined"
+                {...register('contractDate')}
+                value={contractDate}
+                onChange={(e) => setContractDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Stack>
+
+            {/* New Row: In Date & App Date */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                label="In date (send to Subcon)"
+                type="date"
+                fullWidth
+                variant="outlined"
+                {...register('inDate')}
+                value={inDate}
+                onChange={(e) => setInDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="App. Date"
+                type="date"
+                fullWidth
+                variant="outlined"
+                {...register('appDate')}
+                value={appDate}
+                onChange={(e) => setAppDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Stack>
+
+            {/* New Row: Close Date */}
+            <TextField
+              label="Close Date (Online)"
+              type="date"
+              fullWidth
+              variant="outlined"
+              {...register('closeDate')}
+              value={closeDate}
+              onChange={(e) => setCloseDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+
             {/* Row 8: Free Extender (Yes/No) */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel>Free Extender</InputLabel>
-                <Select value={freeExtender} onChange={(e) => setFreeExtender(e.target.value)} label="Free Extender">
+                <Select
+                  value={freeExtender}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFreeExtender(val);
+                    if (val === 'No') {
+                      setExtenderType("");
+                      setExtenderNumber(0);
+                    }
+                  }}
+                  label="Free Extender"
+                >
                   <MenuItem value="Yes">Yes</MenuItem>
                   <MenuItem value="No">No</MenuItem>
                 </Select>
@@ -570,6 +665,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               <FormControl fullWidth variant="outlined">
                 <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
                 <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
+                  <MenuItem value=""><em>None</em></MenuItem>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                     <MenuItem key={num} value={num}>{num}</MenuItem>
                   ))}

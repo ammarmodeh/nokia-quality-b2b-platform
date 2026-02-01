@@ -6,7 +6,8 @@ import {
   Tabs, Tab, Stack, Typography, TextField, IconButton, Box, Button,
   CircularProgress, useMediaQuery, Card, CardContent, Grid, LinearProgress,
   MenuItem, Select, InputAdornment, Chip, Tooltip, Avatar,
-  Paper
+  Paper, Checkbox, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  TableSortLabel, Divider, FormControl, InputLabel, Collapse, Pagination, Badge
 } from "@mui/material";
 import { HourglassEmpty, PlayCircle, CheckCircle, Cancel } from "@mui/icons-material";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
@@ -94,7 +95,9 @@ const AssignedToMe = () => {
   const user = useSelector((state) => state?.auth?.user);
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
-  const [selected, setSelected] = useState(0); // 0 = Board, 1 = List
+  const [selected, setSelected] = useState(0);
+  const [offendersPage, setOffendersPage] = useState(1);
+  // 0 = Board, 1 = List
   const [open, setOpen] = useState(false);
   const [updateRefetchTasks, setUpdateRefetchTasks] = useState(false);
   const [updateStateDuringSave, setUpdateStateDuringSave] = useState(false);
@@ -263,8 +266,8 @@ const AssignedToMe = () => {
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
-    // Get top 5 field teams (offenders)
-    const topFieldTeams = toChartData(stats.byFieldTeam).slice(0, 5);
+    // Get all field teams (offenders)
+    const topFieldTeams = toChartData(stats.byFieldTeam);
 
     const fieldTeamAnalytics = topFieldTeams.map(team => ({
       teamName: team.name,
@@ -332,9 +335,9 @@ const AssignedToMe = () => {
 
   const handleTabChange = (event, newValue) => {
     setSelected(newValue);
-    // When switching to List view, show all tasks (client side paging)
-    // When switching to Board view, show infinite scroll tasks or filtered result
-    if (newValue === 1) {
+    // When switching to List view (1) or Analytics view (2), show all tasks
+    // When switching to Board view (0), show infinite scroll tasks or filtered result
+    if (newValue === 1 || newValue === 2) {
       setFilteredTasks(allTasks);
     } else {
       if (searchTerm) {
@@ -822,125 +825,141 @@ const AssignedToMe = () => {
 
             {analytics.fieldTeamAnalytics && analytics.fieldTeamAnalytics.length > 0 ? (
               <Grid container spacing={2}>
-                {analytics.fieldTeamAnalytics.map((team, idx) => (
-                  <Grid item xs={12} key={idx}>
-                    <Paper sx={{
-                      p: 2,
-                      bgcolor: 'rgba(15, 23, 42, 0.6)',
-                      borderRadius: 2,
-                      border: '1px solid rgba(59, 130, 246, 0.3)',
-                      transition: 'all 0.3s',
-                      backdropFilter: 'blur(4px)',
-                      '&:hover': { borderColor: '#3b82f6', transform: 'translateY(-2px)' }
-                    }} elevation={0}>
-                      {/* Team Header */}
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Box>
-                          <Typography variant="h6" fontWeight="700" color="#fff">
-                            #{idx + 1} {team.teamName}
-                          </Typography>
-                          <Typography variant="body2" color="#94a3b8">
-                            Total Issues: <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{team.totalIssues}</span>
-                          </Typography>
+                {analytics.fieldTeamAnalytics
+                  .slice((offendersPage - 1) * 10, offendersPage * 10)
+                  .map((team, idx) => (
+                    <Grid item xs={12} key={idx}>
+                      <Paper sx={{
+                        p: 2,
+                        bgcolor: 'rgba(30,30,30,0.8)',
+                        borderRadius: 2,
+                        border: '2px solid rgba(59, 130, 246, 0.3)',
+                        '&:hover': { borderColor: 'rgba(59, 130, 246, 0.6)' }
+                      }} elevation={0}>
+                        {/* Team Header */}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                          <Box>
+                            <Typography variant="h6" fontWeight="700" color="#fff">
+                              #{(offendersPage - 1) * 10 + idx + 1} {team.teamName}
+                            </Typography>
+                            <Typography variant="body2" color="#b3b3b3">
+                              Total Issues: <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{team.totalIssues}</span>
+                            </Typography>
+                          </Box>
                         </Box>
-                      </Box>
 
-                      {/* Categories Breakdown */}
-                      <Grid container spacing={2}>
-                        {/* Category Distribution */}
-                        <Grid item xs={12} md={6}>
-                          <Typography variant="subtitle2" fontWeight="600" mb={1} color="#f59e0b">
-                            📊 Issue Categories
-                          </Typography>
-                          <ResponsiveContainer width="100%" height={150}>
-                            <PieChart>
-                              <Pie
-                                data={team.categories}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                outerRadius={50}
-                                fill="#8884d8"
-                                dataKey="value"
-                              >
-                                {team.categories.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'][index % 5]} />
-                                ))}
-                              </Pie>
-                              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </Grid>
+                        {/* Categories Breakdown */}
+                        <Grid container spacing={2}>
+                          {/* Category Distribution */}
+                          <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#f59e0b">
+                              📊 Issue Categories
+                            </Typography>
+                            <ResponsiveContainer width="100%" height={150}>
+                              <PieChart>
+                                <Pie
+                                  data={team.categories}
+                                  cx="50%"
+                                  cy="50%"
+                                  labelLine={false}
+                                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                  outerRadius={50}
+                                  fill="#8884d8"
+                                  dataKey="value"
+                                >
+                                  {team.categories.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'][index % 5]} />
+                                  ))}
+                                </Pie>
+                                <RechartsTooltip contentStyle={{ backgroundColor: '#1e1e1e', border: 'none' }} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </Grid>
 
-                        {/* Top Owners */}
-                        <Grid item xs={12} md={6}>
-                          <Typography variant="subtitle2" fontWeight="600" mb={1} color="#3b82f6">
-                            👤 Top Owners
-                          </Typography>
-                          <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
-                            {team.owners.map((owner, i) => (
-                              <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(59, 130, 246, 0.1)', borderRadius: 1 }}>
-                                <Typography variant="caption" color="#e2e8f0">{owner.name}</Typography>
-                                <Typography variant="caption" fontWeight="bold" color="#3b82f6">{owner.value}</Typography>
-                              </Box>
-                            ))}
-                          </Box>
-                        </Grid>
+                          {/* Top Owners - Show all but scrollable if many */}
+                          <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#3b82f6">
+                              👤 Top Owners
+                            </Typography>
+                            <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
+                              {team.owners.map((owner, i) => (
+                                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(59, 130, 246, 0.1)', borderRadius: 1 }}>
+                                  <Typography variant="caption" color="#fff">{owner.name}</Typography>
+                                  <Typography variant="caption" fontWeight="bold" color="#3b82f6">{owner.value}</Typography>
+                                </Box>
+                              ))}
+                            </Box>
+                          </Grid>
 
-                        {/* Top Reasons */}
-                        <Grid item xs={12} md={6}>
-                          <Typography variant="subtitle2" fontWeight="600" mb={1} color="#f59e0b">
-                            📋 Top Reasons
-                          </Typography>
-                          <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
-                            {team.reasons.map((reason, i) => (
-                              <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(245, 158, 11, 0.1)', borderRadius: 1 }}>
-                                <Typography variant="caption" color="#e2e8f0">{reason.name}</Typography>
-                                <Typography variant="caption" fontWeight="bold" color="#f59e0b">{reason.value}</Typography>
-                              </Box>
-                            ))}
-                          </Box>
-                        </Grid>
+                          {/* Top Reasons */}
+                          <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#f59e0b">
+                              📋 Top Reasons
+                            </Typography>
+                            <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
+                              {team.reasons.map((reason, i) => (
+                                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(245, 158, 11, 0.1)', borderRadius: 1 }}>
+                                  <Typography variant="caption" color="#fff">{reason.name}</Typography>
+                                  <Typography variant="caption" fontWeight="bold" color="#f59e0b">{reason.value}</Typography>
+                                </Box>
+                              ))}
+                            </Box>
+                          </Grid>
 
-                        {/* Top Sub-reasons */}
-                        <Grid item xs={12} md={6}>
-                          <Typography variant="subtitle2" fontWeight="600" mb={1} color="#a78bfa">
-                            📌 Top Sub-reasons
-                          </Typography>
-                          <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
-                            {team.subReasons.map((subReason, i) => (
-                              <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(167, 139, 250, 0.1)', borderRadius: 1 }}>
-                                <Typography variant="caption" color="#e2e8f0">{subReason.name}</Typography>
-                                <Typography variant="caption" fontWeight="bold" color="#a78bfa">{subReason.value}</Typography>
-                              </Box>
-                            ))}
-                          </Box>
-                        </Grid>
+                          {/* Top Sub-reasons */}
+                          <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#a78bfa">
+                              📌 Top Sub-reasons
+                            </Typography>
+                            <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
+                              {team.subReasons.map((subReason, i) => (
+                                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(167, 139, 250, 0.1)', borderRadius: 1 }}>
+                                  <Typography variant="caption" color="#fff">{subReason.name}</Typography>
+                                  <Typography variant="caption" fontWeight="bold" color="#a78bfa">{subReason.value}</Typography>
+                                </Box>
+                              ))}
+                            </Box>
+                          </Grid>
 
-                        {/* Top Root Causes */}
-                        <Grid item xs={12}>
-                          <Typography variant="subtitle2" fontWeight="600" mb={1} color="#10b981">
-                            🔍 Top Root Causes
-                          </Typography>
-                          <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
-                            {team.rootCauses.map((rootCause, i) => (
-                              <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(16, 185, 129, 0.1)', borderRadius: 1 }}>
-                                <Typography variant="caption" color="#e2e8f0">{rootCause.name}</Typography>
-                                <Typography variant="caption" fontWeight="bold" color="#10b981">{rootCause.value}</Typography>
-                              </Box>
-                            ))}
-                          </Box>
+                          {/* Top Root Causes */}
+                          <Grid item xs={12}>
+                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#10b981">
+                              🔍 Top Root Causes
+                            </Typography>
+                            <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
+                              {team.rootCauses.map((rootCause, i) => (
+                                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(16, 185, 129, 0.1)', borderRadius: 1 }}>
+                                  <Typography variant="caption" color="#fff">{rootCause.name}</Typography>
+                                  <Typography variant="caption" fontWeight="bold" color="#10b981">{rootCause.value}</Typography>
+                                </Box>
+                              ))}
+                            </Box>
+                          </Grid>
                         </Grid>
-                      </Grid>
-                    </Paper>
-                  </Grid>
-                ))}
+                      </Paper>
+                    </Grid>
+                  ))}
               </Grid>
             ) : (
-              <Typography variant="body2" color="#64748b" textAlign="center" py={4}>
+              <Typography variant="body2" color="#b3b3b3" textAlign="center" py={4}>
                 No field team data available
               </Typography>
+            )}
+
+            {/* Pagination Controls */}
+            {analytics.fieldTeamAnalytics && analytics.fieldTeamAnalytics.length > 10 && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 2 }}>
+                <Pagination
+                  count={Math.ceil(analytics.fieldTeamAnalytics.length / 10)}
+                  page={offendersPage}
+                  onChange={(e, v) => setOffendersPage(v)}
+                  color="primary"
+                  sx={{
+                    '& .MuiPaginationItem-root': { color: '#fff' },
+                    '& .Mui-selected': { bgcolor: 'rgba(59, 130, 246, 0.3) !important' }
+                  }}
+                />
+              </Box>
             )}
           </Box>
         </Box>

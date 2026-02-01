@@ -180,6 +180,11 @@ const taskSchema = new mongoose.Schema(
     reason: { type: String, trim: true, default: null },
     subReason: { type: String, trim: true, default: null },
     rootCause: { type: String, trim: true, default: null },
+    gaiaCheck: { type: String, enum: ["Yes", "No", null], default: null },
+    contractDate: { type: Date, default: null },
+    inDate: { type: Date, default: null },
+    appDate: { type: Date, default: null },
+    closeDate: { type: Date, default: null },
 
     teamName: {
       type: String,
@@ -280,5 +285,6 @@ taskSchema.index({ createdBy: 1 });
 taskSchema.index({ assignedTo: 1 });
 taskSchema.index({ interviewDate: -1 });
 taskSchema.index({ pisDate: -1 });
+taskSchema.index({ contractDate: -1 });
 
 export const TaskSchema = mongoose.model("Task", taskSchema);

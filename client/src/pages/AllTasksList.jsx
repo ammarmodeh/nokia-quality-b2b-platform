@@ -86,6 +86,7 @@ import { IoMdAdd } from "react-icons/io";
 import api from '../api/api';
 import EditTaskDialog from '../components/task/EditTaskDialog';
 import RecordTicketDialog from '../components/task/RecordTicketDialog';
+import GaiaStepsDialog from '../components/task/GaiaStepsDialog';
 import { TaskDetailsDialog } from '../components/TaskDetailsDialog';
 import { getCustomWeekNumber as getAggregatedWeekNumber } from '../utils/helpers';
 import { utils, writeFile } from 'xlsx';
@@ -160,6 +161,8 @@ const AllTasksList = () => {
   const [hiddenSeries, setHiddenSeries] = useState(new Set());
   const [recordTicketDialogOpen, setRecordTicketDialogOpen] = useState(false);
   const [ticketTask, setTicketTask] = useState(null);
+  const [gaiaStepsDialogOpen, setGaiaStepsDialogOpen] = useState(false);
+  const [gaiaStepsTask, setGaiaStepsTask] = useState(null);
 
   // Advanced Search State
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
@@ -649,6 +652,11 @@ const AllTasksList = () => {
       'GAIA Type': task.latestGaia?.transactionType || 'N/A',
       'GAIA State': task.latestGaia?.transactionState || 'N/A',
       'GAIA Reason': task.latestGaia?.unfReasonCode || 'N/A',
+      'GAIA Check': task.gaiaCheck || 'N/A',
+      'RE Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
+      'In Date': task.inDate ? format(new Date(task.inDate), 'yyyy-MM-dd') : 'N/A',
+      'App Date': task.appDate ? format(new Date(task.appDate), 'yyyy-MM-dd') : 'N/A',
+      'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
       'Follow-up Needed': task.technicalDetails?.followUpRequired ? 'Yes' : 'No',
       'Follow-up Date': task.technicalDetails?.followUpDate ? format(new Date(task.technicalDetails.followUpDate), 'yyyy-MM-dd') : 'N/A',
       'Validation Status': task.validationStatus || 'Pending',
@@ -1579,7 +1587,8 @@ const AllTasksList = () => {
             <TableRow>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Created At</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>SLID / REQ #</TableCell>
-              <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Customer Info</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Customer Name</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 120 }}>Contact Number</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 200 }}>Feedback</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Operation / Tariff</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Priority</TableCell>
@@ -1589,6 +1598,8 @@ const AllTasksList = () => {
               <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Root Cause</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Score</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Week</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 100 }}>GAIA Check</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Q-OPS Steps</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -1659,13 +1670,15 @@ const AllTasksList = () => {
                           <Typography fontWeight={700} sx={{ direction: 'rtl', textAlign: 'right', fontSize: '0.85rem' }}>
                             {task.customerName || task.customer?.customerName || "-"}
                           </Typography>
-                          <Typography variant="caption" sx={{ fontFamily: 'monospace', opacity: 0.7 }}>
-                            {task.contactNumber || task.customer?.contactNumber || '-'}
-                          </Typography>
                           <Typography variant="caption" color="primary" sx={{ fontSize: '0.7rem' }}>
                             {task.customerType || "-"}
                           </Typography>
                         </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
+                          {task.contactNumber || task.customer?.contactNumber || '-'}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Box sx={{ direction: 'rtl', textAlign: 'right' }}>
@@ -1794,6 +1807,43 @@ const AllTasksList = () => {
                       </TableCell>
                       <TableCell>
                         {getWeekDisplay(task.interviewDate)}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={task.gaiaCheck || "No"}
+                          size="small"
+                          sx={{
+                            fontWeight: 'bold',
+                            fontSize: '0.7rem',
+                            bgcolor: task.gaiaCheck === 'Yes' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)',
+                            color: task.gaiaCheck === 'Yes' ? '#4caf50' : '#f44336',
+                            border: '1px solid',
+                            borderColor: 'divider'
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setGaiaStepsTask(task);
+                            setGaiaStepsDialogOpen(true);
+                          }}
+                          sx={{
+                            fontSize: '0.7rem',
+                            textTransform: 'none',
+                            borderColor: '#7b68ee',
+                            color: '#7b68ee',
+                            '&:hover': {
+                              borderColor: '#6854d9',
+                              backgroundColor: 'rgba(123, 104, 238, 0.08)'
+                            }
+                          }}
+                        >
+                          View Log
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: "flex", gap: 1 }}>
@@ -2184,6 +2234,16 @@ const AllTasksList = () => {
         }}
         task={ticketTask}
         onTicketAdded={() => setUpdateRefetchTasks(prev => !prev)}
+      />
+
+      {/* GAIA Steps Dialog */}
+      <GaiaStepsDialog
+        open={gaiaStepsDialogOpen}
+        onClose={() => {
+          setGaiaStepsDialogOpen(false);
+          setGaiaStepsTask(null);
+        }}
+        task={gaiaStepsTask}
       />
 
       {/* Advanced Search Dialog */}
