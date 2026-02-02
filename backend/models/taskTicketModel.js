@@ -20,7 +20,7 @@ const taskTicketSchema = new mongoose.Schema(
                 "Called", "Postponed", "Visited", "Resolved", "Ticket Reopened", "Closed", "No Answer", "Todo",
                 "MOD", "DMOK", "VAL", "SWO", "LWO", "RWO", "PSR", "MUTIN", "DNEn",
                 "FMC", "Remote", "Visit Success", "No Show",
-                "INIT", "CONTACT", "REFLECT", "VISIT", "RESOLVE"
+                "INIT", "CONTACT", "REFLECT", "VISIT", "RESOLVE", "WO"
             ],
             required: true,
         },

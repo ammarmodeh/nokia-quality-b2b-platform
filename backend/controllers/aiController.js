@@ -797,7 +797,7 @@ ${allTeamsStatsText}
 
     // Standard Prompt for YTD/Month (Detailed Structured Report)
     const standardPrompt = `
-        You are an ** AI Senior Quality Advisor ** for the OrangeJO–Nokia FTTH Project. 
+        You are an ** AI Senior Quality Advisor ** for the OrangeJO FTTH Project. 
         Your mission is to convert detractor/neutral cases(scores 1–8) into a ** high - authority, trend - driven, executive report ** with deep operational insights.
         
         ** REPORT PERIOD: ${periodTitle} **
@@ -878,7 +878,7 @@ ${allTeamsStatsText}
     if (period === 'custom' || period === 'current_week' || period === 'last_week') {
       const endStr = endDate ? endDate.toLocaleDateString() : new Date().toLocaleDateString();
       customPrompt = `
-        You are an ** AI Senior Quality Intelligence Advisor ** for the OrangeJO–Nokia FTTH Project.
+        You are an ** AI Senior Quality Intelligence Advisor ** for the OrangeJO FTTH Project.
         
         ** CUSTOM REPORT PERIOD: ${periodTitle} **
         (Please explicitly mention "AI Model: Gemini 2.5 Flash" at the top of the report)
@@ -1160,7 +1160,7 @@ export const analyzeTrendData = async (req, res) => {
       : `\n**FULL VIEW**: Analysis includes all ${analysisType}s with violations in the period`;
 
     const prompt = `
-You are an **AI Senior Quality Advisor** for the OrangeJO–Nokia FTTH Project.
+You are an **AI Senior Quality Advisor** for the OrangeJO FTTH Project.
 
 **TREND ANALYSIS REPORT**
 (Please explicitly mention "AI Model: Gemini 2.5 Flash" at the top of the report)

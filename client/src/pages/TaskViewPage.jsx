@@ -90,7 +90,7 @@ const TaskViewPage = () => {
   if (!task) return <Typography sx={{ p: 4, color: 'text.secondary' }}>No task found.</Typography>;
 
   return (
-    <Box sx={{ minHeight: '100vh', p: isMobile ? 1 : 4, bgcolor: theme.palette.mode === 'dark' ? '#0f172a' : '#f8fafc' }}>
+    <Box sx={{ minHeight: '100vh', p: isMobile ? 1 : 4 }}>
       <Paper elevation={0} sx={{
         bgcolor: theme.palette.background.paper,
         borderRadius: 4,
@@ -224,10 +224,27 @@ const TaskViewPage = () => {
                 <DetailItem label="Speed (Mbps)" value={task.speed} />
                 <DetailItem label="ONT Type" value={task.ontType} />
                 <DetailItem label="Extender" value={task.freeExtender === 'Yes' ? `${task.extenderType} (x${task.extenderNumber})` : 'No'} />
-                <DetailItem label="Main Reason" value={task.reason} />
-                <DetailItem label="Sub Reason" value={task.subReason} />
-                <DetailItem label="Root Cause" value={task.rootCause} fullWidth />
               </DetailGrid>
+
+              <Divider sx={{ my: 4, borderColor: 'rgba(255,255,255,0.05)' }} />
+
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
+                ROOT CAUSE ANALYSIS
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <DetailItem label="Main Reason" value={task.reason} />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <DetailItem label="Sub Reason" value={task.subReason} />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <DetailItem label="Root Cause" value={task.rootCause} />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <DetailItem label="Owner" value={task.responsible} />
+                </Grid>
+              </Grid>
             </DataSection>
           )}
 
@@ -370,8 +387,28 @@ const DetailGrid = ({ children }) => (
 
 const DetailItem = ({ label, value, fullWidth }) => (
   <Box sx={{ gridColumn: fullWidth ? '1 / -1' : 'auto' }}>
-    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block' }}>{label}</Typography>
-    <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5 }}>{value || "—"}</Typography>
+    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.5 }}>{label}</Typography>
+    {Array.isArray(value) && value.length > 0 ? (
+      <Stack direction="column" spacing={1} alignItems="flex-start">
+        {value.map((item, index) => (
+          <Chip
+            key={index}
+            label={item}
+            size="small"
+            sx={{
+              height: 'auto',
+              py: 0.5,
+              whiteSpace: 'normal',
+              textAlign: 'left',
+              bgcolor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
+          />
+        ))}
+      </Stack>
+    ) : (
+      <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5 }}>{value || "—"}</Typography>
+    )}
   </Box>
 );
 

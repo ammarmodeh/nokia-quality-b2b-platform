@@ -39,10 +39,10 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const [teamInfo, setTeamInfo] = useState({ teamName: '', teamId: '' });
   const [customerType, setCustomerType] = useState('');
   const [validationStatus, setValidationStatus] = useState("");
-  const [responsible, setResponsible] = useState("");
-  const [reason, setReason] = useState("");
-  const [subReason, setSubReason] = useState("");
-  const [rootCause, setRootCause] = useState("");
+  const [responsible, setResponsible] = useState([]);
+  const [reason, setReason] = useState([]);
+  const [subReason, setSubReason] = useState([]);
+  const [rootCause, setRootCause] = useState([]);
   const [ontType, setOntType] = useState("");
   const [freeExtender, setFreeExtender] = useState("No");
   const [extenderType, setExtenderType] = useState("");
@@ -195,10 +195,10 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       });
       setCustomerType(task.customerType || '');
       setValidationStatus(task.validationStatus || "");
-      setResponsible(task.responsible || "");
-      setReason(task.reason || "");
-      setSubReason(task.subReason || "");
-      setRootCause(task.rootCause || "");
+      setResponsible(Array.isArray(task.responsible) ? task.responsible : (task.responsible ? [task.responsible] : []));
+      setReason(Array.isArray(task.reason) ? task.reason : (task.reason ? [task.reason] : []));
+      setSubReason(Array.isArray(task.subReason) ? task.subReason : (task.subReason ? [task.subReason] : []));
+      setRootCause(Array.isArray(task.rootCause) ? task.rootCause : (task.rootCause ? [task.rootCause] : []));
       setOntType(task.ontType || "");
       setFreeExtender(task.freeExtender || "No");
       setExtenderType(task.extenderType || "");
@@ -585,39 +585,39 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             {/* RCA Section: Row 10 */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <Autocomplete
+                multiple
                 freeSolo
                 fullWidth
                 options={dropdownOptions.RESPONSIBILITY?.map(item => item.value) || []}
                 value={responsible}
-                onChange={(e, newValue) => setResponsible(newValue || "")}
-                onInputChange={(e, newValue) => setResponsible(newValue || "")}
+                onChange={(e, newValue) => setResponsible(newValue || [])}
                 renderInput={(params) => <TextField {...params} label="Owner" variant="outlined" />}
               />
               <Autocomplete
+                multiple
                 freeSolo
                 fullWidth
                 options={dropdownOptions.REASON?.map(item => item.value) || []}
                 value={reason}
-                onChange={(e, newValue) => setReason(newValue || "")}
-                onInputChange={(e, newValue) => setReason(newValue || "")}
+                onChange={(e, newValue) => setReason(newValue || [])}
                 renderInput={(params) => <TextField {...params} label="Main Reason" variant="outlined" />}
               />
               <Autocomplete
+                multiple
                 freeSolo
                 fullWidth
                 options={dropdownOptions.REASON_SUB?.map(item => item.value) || []}
                 value={subReason}
-                onChange={(e, newValue) => setSubReason(newValue || "")}
-                onInputChange={(e, newValue) => setSubReason(newValue || "")}
+                onChange={(e, newValue) => setSubReason(newValue || [])}
                 renderInput={(params) => <TextField {...params} label="Sub Reason" variant="outlined" />}
               />
               <Autocomplete
+                multiple
                 freeSolo
                 fullWidth
                 options={dropdownOptions.ROOT_CAUSE?.map(item => item.value) || []}
                 value={rootCause}
-                onChange={(e, newValue) => setRootCause(newValue || "")}
-                onInputChange={(e, newValue) => setRootCause(newValue || "")}
+                onChange={(e, newValue) => setRootCause(newValue || [])}
                 renderInput={(params) => <TextField {...params} label="Root Cause" variant="outlined" />}
               />
             </Stack>

@@ -179,17 +179,24 @@ export const getReasonViolations2 = (tasks) => {
   const reasonMap = {};
 
   tasks.forEach(task => {
-    const reason = task.reason || 'Unspecified';
-
-    if (!reasonMap[reason]) {
-      reasonMap[reason] = {
-        total: 0,
-        tasks: []
-      };
+    let reasons = [];
+    if (Array.isArray(task.reason)) {
+      reasons = task.reason.length > 0 ? task.reason : ['Unspecified'];
+    } else {
+      reasons = [task.reason || 'Unspecified'];
     }
 
-    reasonMap[reason].total++;
-    reasonMap[reason].tasks.push(task);
+    reasons.forEach(reason => {
+      if (!reasonMap[reason]) {
+        reasonMap[reason] = {
+          total: 0,
+          tasks: []
+        };
+      }
+
+      reasonMap[reason].total++;
+      reasonMap[reason].tasks.push(task);
+    });
   });
 
   const totalT = Object.values(reasonMap).reduce((sum, { total }) => sum + total, 0);
@@ -207,17 +214,24 @@ export const getOwnerViolations = (tasks) => {
   const ownerMap = {};
 
   tasks.forEach(task => {
-    const owner = task.responsible || 'Unspecified';
-
-    if (!ownerMap[owner]) {
-      ownerMap[owner] = {
-        total: 0,
-        tasks: []
-      };
+    let owners = [];
+    if (Array.isArray(task.responsible)) {
+      owners = task.responsible.length > 0 ? task.responsible : ['Unspecified'];
+    } else {
+      owners = [task.responsible || 'Unspecified'];
     }
 
-    ownerMap[owner].total++;
-    ownerMap[owner].tasks.push(task);
+    owners.forEach(owner => {
+      if (!ownerMap[owner]) {
+        ownerMap[owner] = {
+          total: 0,
+          tasks: []
+        };
+      }
+
+      ownerMap[owner].total++;
+      ownerMap[owner].tasks.push(task);
+    });
   });
 
   const totalT = Object.values(ownerMap).reduce((sum, { total }) => sum + total, 0);

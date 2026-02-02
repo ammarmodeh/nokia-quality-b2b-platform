@@ -123,7 +123,7 @@ export const DataTable = ({ groupedData }) => {
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
           <Typography variant="body2" fontWeight="700" color={params.row.npsStatus.color}>
-            {params.value}%
+            {params.value}
           </Typography>
           {params.row.npsTrend}
           {params.row.npsChange && (

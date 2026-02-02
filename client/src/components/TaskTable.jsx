@@ -424,8 +424,8 @@ const TaskTable = ({ tasks, fieldTeams }) => {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => (
-        <Tooltip title={params.value || 'N/A'}>
-          <span>{params.value || 'N/A'}</span>
+        <Tooltip title={Array.isArray(params.value) ? params.value.join(", ") : (params.value || 'N/A')}>
+          <span>{Array.isArray(params.value) ? params.value.join(", ") : (params.value || 'N/A')}</span>
         </Tooltip>
       ),
     },
@@ -436,8 +436,8 @@ const TaskTable = ({ tasks, fieldTeams }) => {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => (
-        <Tooltip title={params.value || 'N/A'}>
-          <span>{params.value || 'N/A'}</span>
+        <Tooltip title={Array.isArray(params.value) ? params.value.join(", ") : (params.value || 'N/A')}>
+          <span>{Array.isArray(params.value) ? params.value.join(", ") : (params.value || 'N/A')}</span>
         </Tooltip>
       ),
     },

@@ -1599,6 +1599,8 @@ const AllTasksList = () => {
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Score</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Week</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>GAIA Check</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Q-Ops Status</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Q-Ops Reason</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Q-OPS Steps</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Actions</TableCell>
             </TableRow>
@@ -1821,6 +1823,30 @@ const AllTasksList = () => {
                             borderColor: 'divider'
                           }}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Tooltip title={dropdownOptions['TRANSACTION_TYPE']?.find(opt => opt.value === task.latestGaia?.transactionType)?.label || task.latestGaia?.transactionType || "N/A"}>
+                            <Typography variant="body2" sx={{ fontWeight: 900, color: 'primary.main', fontSize: '0.85rem' }}>
+                              {task.latestGaia?.transactionType || "-"}
+                            </Typography>
+                          </Tooltip>
+                          <Tooltip title={dropdownOptions['TRANSACTION_STATE']?.find(opt => opt.value === task.latestGaia?.transactionState)?.label || task.latestGaia?.transactionState || "N/A"}>
+                            <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary', mt: -0.5, fontSize: '0.7rem' }}>
+                              {task.latestGaia?.transactionState || "-"}
+                            </Typography>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={dropdownOptions['UNF_REASON_CODE']?.find(opt => opt.value === task.latestGaia?.unfReasonCode)?.label || task.latestGaia?.unfReasonCode || "N/A"}>
+                          <Typography variant="caption" sx={{ color: '#FF5722', fontWeight: 900, fontSize: '0.8rem' }}>
+                            {task.latestGaia?.unfReasonCode || "—"}
+                          </Typography>
+                        </Tooltip>
+                        <Typography variant="caption" sx={{ display: 'block', fontSize: '0.65rem', opacity: 0.6 }}>
+                          {task.latestGaia?.agentName || ""}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Button

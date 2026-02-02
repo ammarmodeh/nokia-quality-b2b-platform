@@ -47,6 +47,7 @@ import { MdHistory, MdEmail, MdSearch, MdClose, MdFilterList, MdMoreVert, MdEdit
 import { alpha } from '@mui/material/styles';
 import api from '../api/api';
 import CustomerIssueDialog from './CustomerIssueDialog';
+import GaiaStepsDialog from './task/GaiaStepsDialog';
 import CustomerIssuesAnalytics from './CustomerIssuesAnalytics';
 import ViewIssueDetailsDialog from './ViewIssueDetailsDialog';
 import { utils, writeFile } from 'xlsx';
@@ -180,6 +181,8 @@ const CustomerIssuesList = () => {
   });
   const [recordTicketDialogOpen, setRecordTicketDialogOpen] = useState(false);
   const [selectedIssueForTicket, setSelectedIssueForTicket] = useState(null);
+  const [gaiaStepsDialogOpen, setGaiaStepsDialogOpen] = useState(false);
+  const [gaiaStepsTask, setGaiaStepsTask] = useState(null);
   const [dropdownOptions, setDropdownOptions] = useState({});
 
 
@@ -1021,8 +1024,9 @@ const CustomerIssuesList = () => {
                     <TableCell>Installing Team</TableCell>
                   </Hidden>
                   <TableCell>Issues</TableCell>
-                  <TableCell>GAIA Status</TableCell>
-                  <TableCell>GAIA Reason</TableCell>
+                  <TableCell>Q-Ops Status</TableCell>
+                  <TableCell>Q-Ops Reason</TableCell>
+                  <TableCell>Q-Ops Log</TableCell>
                   <Hidden mdDown>
                     <TableCell>Assigned</TableCell>
                     <TableCell>Supervisor</TableCell>
@@ -1127,6 +1131,29 @@ const CustomerIssuesList = () => {
                         <Typography variant="caption" sx={{ display: 'block', fontSize: '0.65rem', opacity: 0.6 }}>
                           {issue.latestGaia?.agentName || ""}
                         </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setGaiaStepsTask(issue);
+                            setGaiaStepsDialogOpen(true);
+                          }}
+                          sx={{
+                            fontSize: '0.7rem',
+                            textTransform: 'none',
+                            borderColor: '#7b68ee',
+                            color: '#7b68ee',
+                            '&:hover': {
+                              borderColor: '#6854d9',
+                              backgroundColor: 'rgba(123, 104, 238, 0.08)'
+                            }
+                          }}
+                        >
+                          View Log
+                        </Button>
                       </TableCell>
                       <Hidden mdDown>
                         <TableCell sx={{ fontSize: '0.85rem' }}>
@@ -1452,6 +1479,15 @@ const CustomerIssuesList = () => {
         issue={currentIssue}
         onUpdate={handleIssueSubmit}
         fullScreen={isMobile}
+      />
+
+      <GaiaStepsDialog
+        open={gaiaStepsDialogOpen}
+        onClose={() => {
+          setGaiaStepsDialogOpen(false);
+          setGaiaStepsTask(null);
+        }}
+        task={gaiaStepsTask}
       />
 
 

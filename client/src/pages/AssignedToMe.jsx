@@ -231,17 +231,29 @@ const AssignedToMe = () => {
     filteredTasks.forEach(task => {
       // For AssignedToMe, "owner" is usually me, but maybe we want "Responsible" or "Created By"? 
       // Let's stick to the same pattern: responsible or assignedTo name.
+      // Helper to increment counts for single or array values
+      const increment = (map, value) => {
+        if (Array.isArray(value)) {
+          value.forEach(v => { if (v) map[v] = (map[v] || 0) + 1; });
+        } else if (value) {
+          map[value] = (map[value] || 0) + 1;
+        } else {
+          // map['N/A'] = (map['N/A'] || 0) + 1; // Optional: count missing as N/A
+        }
+      };
+
       const owner = task.responsible || task.assignedTo?.name || 'Unassigned';
-      const reason = task.reason || 'N/A';
-      const subReason = task.subReason || 'N/A';
-      const rootCause = task.rootCause || 'N/A';
+      const reason = task.reason;
+      const subReason = task.subReason;
+      const rootCause = task.rootCause;
       const fieldTeam = task.teamName || 'Unassigned';
       const category = task.category || 'N/A';
 
-      stats.byOwner[owner] = (stats.byOwner[owner] || 0) + 1;
-      stats.byReason[reason] = (stats.byReason[reason] || 0) + 1;
-      stats.bySubReason[subReason] = (stats.bySubReason[subReason] || 0) + 1;
-      stats.byRootCause[rootCause] = (stats.byRootCause[rootCause] || 0) + 1;
+      increment(stats.byOwner, owner);
+      increment(stats.byReason, reason);
+      increment(stats.bySubReason, subReason);
+      increment(stats.byRootCause, rootCause);
+
       stats.byFieldTeam[fieldTeam] = (stats.byFieldTeam[fieldTeam] || 0) + 1;
 
       if (!stats.fieldTeamDetails[fieldTeam]) {
@@ -258,10 +270,11 @@ const AssignedToMe = () => {
       const teamStats = stats.fieldTeamDetails[fieldTeam];
       teamStats.total += 1;
       teamStats.byCategory[category] = (teamStats.byCategory[category] || 0) + 1;
-      teamStats.byOwner[owner] = (teamStats.byOwner[owner] || 0) + 1;
-      teamStats.byReason[reason] = (teamStats.byReason[reason] || 0) + 1;
-      teamStats.bySubReason[subReason] = (teamStats.bySubReason[subReason] || 0) + 1;
-      teamStats.byRootCause[rootCause] = (teamStats.byRootCause[rootCause] || 0) + 1;
+
+      increment(teamStats.byOwner, owner);
+      increment(teamStats.byReason, reason);
+      increment(teamStats.bySubReason, subReason);
+      increment(teamStats.byRootCause, rootCause);
 
       // Calculate NPS stats (Detractor/Neutral/Promoter)
       if (!teamStats.npsBreakdown) {
@@ -472,9 +485,23 @@ const AssignedToMe = () => {
       else if (t.priority === 'Low') lowPriority++;
       else medPriority++;
 
-      if (t.subReason) subReasons[t.subReason] = (subReasons[t.subReason] || 0) + 1;
+      // Multi-value handling helper
+      const countValues = (fieldValue, targetMap) => {
+        if (Array.isArray(fieldValue)) {
+          fieldValue.forEach(val => {
+            if (val) targetMap[val] = (targetMap[val] || 0) + 1;
+          });
+        } else if (fieldValue) {
+          targetMap[fieldValue] = (targetMap[fieldValue] || 0) + 1;
+        }
+      };
+
+      if (t.reason) countValues(t.reason, reasons);
+      if (t.subReason) countValues(t.subReason, subReasons);
+      if (t.rootCause) countValues(t.rootCause, rootCauses);
+
       const owner = t.responsible || t.assignedTo?.name || 'Unassigned';
-      owners[owner] = (owners[owner] || 0) + 1;
+      countValues(owner, owners);
     });
 
     // True NPS calculation: %Promoters - %Detractors
@@ -546,8 +573,8 @@ const AssignedToMe = () => {
         'Customer': t.customerName,
         'Status': t.status,
         'Category': t.category,
-        'Reason': t.reason,
-        'Root Cause': t.rootCause,
+        'Reason': Array.isArray(t.reason) ? t.reason.join(", ") : t.reason,
+        'Root Cause': Array.isArray(t.rootCause) ? t.rootCause.join(", ") : t.rootCause,
         'Technician': t.technician || t.primaryTechnician,
         'Score': displayScore,
         'Satisfaction': satisfaction,
@@ -621,9 +648,9 @@ const AssignedToMe = () => {
         'Customer': t.customerName,
         'Status': t.status,
         'Category': t.category,
-        'Reason': t.reason,
-        'Sub-Reason': t.subReason,
-        'Root Cause': t.rootCause,
+        'Reason': Array.isArray(t.reason) ? t.reason.join(", ") : t.reason,
+        'Sub-Reason': Array.isArray(t.subReason) ? t.subReason.join(", ") : t.subReason,
+        'Root Cause': Array.isArray(t.rootCause) ? t.rootCause.join(", ") : t.rootCause,
         'Technician': t.technician || t.primaryTechnician,
         'Score': displayScore,
         'Satisfaction': satisfaction,

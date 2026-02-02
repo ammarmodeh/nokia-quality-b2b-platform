@@ -177,9 +177,9 @@ const taskSchema = new mongoose.Schema(
     freeExtender: { type: String, enum: ["Yes", "No", null], default: null },
     extenderType: { type: String, trim: true, default: null },
     extenderNumber: { type: Number, default: 0 },
-    reason: { type: String, trim: true, default: null },
-    subReason: { type: String, trim: true, default: null },
-    rootCause: { type: String, trim: true, default: null },
+    reason: { type: [String], default: [] },
+    subReason: { type: [String], default: [] },
+    rootCause: { type: [String], default: [] },
     gaiaCheck: { type: String, enum: ["Yes", "No", null], default: null },
     contractDate: { type: Date, default: null },
     inDate: { type: Date, default: null },
@@ -208,7 +208,7 @@ const taskSchema = new mongoose.Schema(
       required: false,
       default: null
     },
-    responsible: { type: String, trim: true, default: null },
+    responsible: { type: [String], default: [] },
     interviewDate: {
       type: Date,
       required: false,

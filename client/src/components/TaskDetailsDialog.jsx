@@ -54,13 +54,17 @@ const DetailItem = ({ label, value, icon }) => (
       </Typography>
     </Box>
     <Box>
-      {typeof value === 'string' || typeof value === 'number' ? (
+      {Array.isArray(value) ? (
+        <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary', wordBreak: 'break-word' }}>
+          {value.length > 0 ? value.join(", ") : 'N/A'}
+        </Typography>
+      ) : (typeof value === 'string' || typeof value === 'number' ? (
         <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary', wordBreak: 'break-word' }}>
           {value || 'N/A'}
         </Typography>
       ) : (
         value
-      )}
+      ))}
     </Box>
   </Box>
 );

@@ -11,20 +11,41 @@ export const addTask = async (req, res) => {
   session.startTransaction();
   try {
     Object.keys(req.body).forEach((key) => {
+      // Skip array fields from being setting to null if they are empty strings
+      // or specifically convert them to empty arrays
+      if (["reason", "subReason", "rootCause", "responsible"].includes(key)) {
+        if (!Array.isArray(req.body[key])) {
+          req.body[key] = req.body[key] ? [req.body[key]] : [];
+        }
+        return;
+      }
+
       if (req.body[key] === "") {
         req.body[key] = null;
       }
     });
+
+    // --- SOW Automation Logic ---
+    let initialTransactionState = "VA"; // Default: Valid/Validated/Approved
+
+    // Check case-insensitive "SOW" in operation or other relevant fields if needed
+    if (req.body.operation && req.body.operation.toUpperCase().trim() === "SOW") {
+      req.body.operation = "WO"; // Auto-convert to WO
+      initialTransactionState = "PENDING_CONTACT";
+    }
 
     const task = new TaskSchema({
       ...req.body,
       createdBy: req.user._id,
     });
 
+    // Create the initial "Ticket Initiated" ticket
     const initialTicket = new TaskTicket({
       taskId: task._id,
-      mainCategory: "Todo",
-      status: "Todo",
+      mainCategory: "INIT", // Correct GAIA Code
+      transactionType: "INIT",
+      transactionState: initialTransactionState,
+      status: "Todo", // System Flow Status
       note: "Initial task creation",
       agentName: "SYSTEM",
       recordedBy: req.user._id,
@@ -69,6 +90,19 @@ export const updateTask = async (req, res) => {
 
   // Sanitize empty strings to null
   Object.keys(updatedData).forEach((key) => {
+    // Skip array fields from being setting to null if they are empty strings
+    if (["reason", "subReason", "rootCause", "responsible"].includes(key)) {
+      if (!Array.isArray(updatedData[key])) {
+        // If legacy string comes in, wrap it; if null/empty, make empty array
+        if (updatedData[key] === "" || updatedData[key] === null) {
+          updatedData[key] = [];
+        } else {
+          updatedData[key] = [updatedData[key]];
+        }
+      }
+      return;
+    }
+
     if (updatedData[key] === "") {
       updatedData[key] = null;
     }
