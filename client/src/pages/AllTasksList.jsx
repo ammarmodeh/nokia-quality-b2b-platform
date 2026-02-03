@@ -33,7 +33,9 @@ import {
   Collapse,
   ButtonGroup,
   Autocomplete,
-  alpha
+  alpha,
+  Card,
+  CardContent
 } from '@mui/material';
 import { MoonLoader } from 'react-spinners';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -351,12 +353,7 @@ const AllTasksList = () => {
       // Otherwise select the new row
       return taskId;
     });
-  };
-
-
-
-
-  // Chart Data Processing
+  };  // Chart Data Processing
   const analyticsData = useMemo(() => {
     const sourceData = filteredTasks;
     if (!sourceData.length) return { reason: [], subReason: [], rootCause: [] };
@@ -380,6 +377,76 @@ const AllTasksList = () => {
       rootCause: count('rootCause')
     };
   }, [filteredTasks]);
+
+  // --- ADVANCED KPI CALCULATIONS ---
+  const dashboardStats = useMemo(() => {
+    const total = filteredTasks.length;
+    if (total === 0) return {
+      total: 0,
+      complianceRate: 0,
+      promoterRate: 0,
+      neutralRate: 0,
+      detractorRate: 0,
+      avgScore: 0
+    };
+
+    const validatedCount = filteredTasks.filter(t => t.validationStatus === 'Validated').length;
+    const promoterCount = filteredTasks.filter(t => t.evaluationScore >= 9).length;
+    const neutralCount = filteredTasks.filter(t => t.evaluationScore >= 7 && t.evaluationScore <= 8).length;
+    const detractorCount = filteredTasks.filter(t => t.evaluationScore !== null && t.evaluationScore <= 6).length;
+    const scores = filteredTasks.filter(t => t.evaluationScore !== null).map(t => t.evaluationScore);
+    const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 0;
+
+    return {
+      total,
+      complianceRate: ((validatedCount / total) * 100).toFixed(1),
+      promoterRate: ((promoterCount / total) * 100).toFixed(1),
+      neutralRate: ((neutralCount / total) * 100).toFixed(1),
+      detractorRate: ((detractorCount / total) * 100).toFixed(1),
+      avgScore
+    };
+  }, [filteredTasks]);
+
+  const StatCard = ({ title, value, icon, color, subtitle }) => (
+    <Card sx={{
+      background: 'rgba(45, 45, 45, 0.6)',
+      backdropFilter: 'blur(10px)',
+      border: `1px solid ${alpha(color, 0.2)}`,
+      borderRadius: '20px',
+      color: '#fff',
+      height: '100%',
+      transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+      '&:hover': {
+        transform: 'translateY(-5px)',
+        boxShadow: `0 10px 20px ${alpha(color, 0.2)}`,
+      }
+    }}>
+      <CardContent sx={{ p: 2.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box sx={{
+            p: 1.5,
+            borderRadius: '12px',
+            background: alpha(color, 0.1),
+            color: color,
+            display: 'flex'
+          }}>
+            {icon}
+          </Box>
+          {subtitle && (
+            <Typography variant="caption" sx={{ color: alpha('#fff', 0.6), fontWeight: 500 }}>
+              {subtitle}
+            </Typography>
+          )}
+        </Box>
+        <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5, letterSpacing: '-1px' }}>
+          {value}
+        </Typography>
+        <Typography variant="body2" sx={{ color: alpha('#fff', 0.7), fontWeight: 500 }}>
+          {title}
+        </Typography>
+      </CardContent>
+    </Card>
+  );
 
   // Weekly Trend Data Processing
   const trendData = useMemo(() => {
@@ -605,23 +672,29 @@ const AllTasksList = () => {
     utils.sheet_add_json(wsReasons, rootCauses, { origin: "I4", skipHeader: false });
     utils.book_append_sheet(workbook, wsReasons, 'Reason Analytics');
 
-    // 4. Owner Overview Sheet (Enhanced)
+    // 4. Owner & Team Performance Sheet
     const ownerStats = {};
     filteredTasks.forEach(t => {
-      const owner = t.teamName || 'Unknown';
-      if (!ownerStats[owner]) {
-        ownerStats[owner] = {
-          'Owner': owner,
-          'Total Tasks': 0,
-          'Validated': 0,
-          'Pending': 0,
-          'Detractors': 0
-        };
-      }
-      ownerStats[owner]['Total Tasks']++;
-      if (t.validationStatus === 'Validated') ownerStats[owner]['Validated']++;
-      if (t.validationStatus === 'Not validated' || t.validationStatus === 'Pending') ownerStats[owner]['Pending']++;
-      if (t.evaluationScore !== null && t.evaluationScore <= 6) ownerStats[owner]['Detractors']++;
+      const responsibles = Array.isArray(t.responsible) && t.responsible.length > 0 ? t.responsible : ['Unspecified'];
+      const fieldTeam = t.teamName || 'Unknown Team';
+
+      responsibles.forEach(resp => {
+        const key = `${resp} | ${fieldTeam}`;
+        if (!ownerStats[key]) {
+          ownerStats[key] = {
+            'Responsible (Owner)': resp,
+            'Field Team': fieldTeam,
+            'Total Tasks': 0,
+            'Validated': 0,
+            'Pending/Failed': 0,
+            'Detractors': 0
+          };
+        }
+        ownerStats[key]['Total Tasks']++;
+        if (t.validationStatus === 'Validated') ownerStats[key]['Validated']++;
+        if (t.validationStatus === 'Not validated' || t.validationStatus === 'Pending') ownerStats[key]['Pending/Failed']++;
+        if (t.evaluationScore !== null && t.evaluationScore <= 6) ownerStats[key]['Detractors']++;
+      });
     });
 
     const ownerData = Object.values(ownerStats)
@@ -633,7 +706,7 @@ const AllTasksList = () => {
       }));
 
     const wsOwners = utils.json_to_sheet(ownerData, { origin: "A2" });
-    utils.sheet_add_aoa(wsOwners, [[`Reported Period: ${periodStr}`]], { origin: "A1" });
+    utils.sheet_add_aoa(wsOwners, [[`Owner & Team Performance Analysis - Period: ${periodStr}`]], { origin: "A1" });
     utils.book_append_sheet(workbook, wsOwners, 'Owner Performance');
 
     // 5. Trend Analysis Sheet (Weekly Breakdown)
@@ -643,29 +716,94 @@ const AllTasksList = () => {
       utils.book_append_sheet(workbook, wsTrends, 'Historical Trends');
     }
 
-    // 6. Raw Data Sheet
+    // 6. Deep Raw Data Sheet
     const rawData = filteredTasks.map(task => ({
-      'Created At': task.createdAt ? new Date(task.createdAt).toLocaleString() : '-',
-      'Request Number': task.requestNumber || 'N/A',
+      // --- TASK CORE ---
       'SLID': task.slid || 'N/A',
+      'Request Number': task.requestNumber || 'N/A',
       'Status': task.status || 'N/A',
-      'GAIA Type': task.latestGaia?.transactionType || 'N/A',
-      'GAIA State': task.latestGaia?.transactionState || 'N/A',
-      'GAIA Reason': task.latestGaia?.unfReasonCode || 'N/A',
+      'Priority': task.priority || 'Normal',
+      'Operation': task.operation || 'N/A',
+      'Tariff Name': task.tarrifName || 'N/A',
+      'Speed (Mbps)': task.speed || 'N/A',
+      'Validation Status': task.validationStatus || 'Pending',
+      'Evaluation Score': task.evaluationScore !== null ? task.evaluationScore : 'N/A',
+
+      // --- CUSTOMER DETAILS ---
+      'Customer Name': task.customerName || 'N/A',
+      'Customer Type': task.customerType || 'N/A',
+      'Contact Number': task.contactNumber || 'N/A',
+      'Governorate': task.governorate || 'N/A',
+      'District': task.district || 'N/A',
+      'Customer Feedback': task.customerFeedback || 'N/A',
+
+      // --- TECHNICAL DETAILS ---
+      'ONT Type': task.ontType || 'N/A',
+      'Free Extender': task.freeExtender || 'N/A',
+      'Extender Type': task.extenderType || 'N/A',
+      'Extender Count': task.extenderNumber || 0,
       'GAIA Check': task.gaiaCheck || 'N/A',
-      'RE Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
+
+      // --- AUDIT METADATA ---
+      'Reasons': Array.isArray(task.reason) ? task.reason.join(', ') : (task.reason || 'N/A'),
+      'Sub-Reasons': Array.isArray(task.subReason) ? task.subReason.join(', ') : (task.subReason || 'N/A'),
+      'Root Causes': Array.isArray(task.rootCause) ? task.rootCause.join(', ') : (task.rootCause || 'N/A'),
+      'Responsible Party': Array.isArray(task.responsible) ? task.responsible.join(', ') : (task.responsible || 'N/A'),
+
+      // --- TEAM & ASSIGNMENT ---
+      'Field Team Name': task.teamName || 'N/A',
+      'Team Company': task.teamCompany || 'N/A',
+      'Assigned To': task.assignedTo?.map(u => u.name).join(', ') || 'Unassigned',
+      'Created By': task.createdBy?.name || 'System',
+
+      // --- LATEST GAIA STATUS (Latest Ticket) ---
+      'Latest GAIA Type': task.latestGaia?.transactionType || 'N/A',
+      'Latest GAIA State': task.latestGaia?.transactionState || 'N/A',
+      'Latest GAIA Reason Code': task.latestGaia?.unfReasonCode || 'N/A',
+      'Latest Action Taken': task.latestGaia?.actionTaken || 'N/A',
+      'Latest Agent Note': task.latestGaia?.note || 'N/A',
+
+      // --- TIMELINE ---
+      'Created At': task.createdAt ? format(new Date(task.createdAt), 'yyyy-MM-dd HH:mm') : '-',
+      'Contract Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
       'In Date': task.inDate ? format(new Date(task.inDate), 'yyyy-MM-dd') : 'N/A',
       'App Date': task.appDate ? format(new Date(task.appDate), 'yyyy-MM-dd') : 'N/A',
       'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
-      'Follow-up Needed': task.technicalDetails?.followUpRequired ? 'Yes' : 'No',
-      'Follow-up Date': task.technicalDetails?.followUpDate ? format(new Date(task.technicalDetails.followUpDate), 'yyyy-MM-dd') : 'N/A',
-      'Validation Status': task.validationStatus || 'Pending',
-      'Customer Feedback': task.customer?.customerFeedback || 'N/A',
+      'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
+      'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
     }));
 
     const wsRaw = utils.json_to_sheet(rawData, { origin: "A2" });
-    utils.sheet_add_aoa(wsRaw, [[`Raw Audit Data - ${periodStr}`]], { origin: "A1" });
-    utils.book_append_sheet(workbook, wsRaw, 'Raw Data');
+    utils.sheet_add_aoa(wsRaw, [[`DEEP RAW AUDIT DATA - ${periodStr}`]], { origin: "A1" });
+    utils.book_append_sheet(workbook, wsRaw, 'Deep Raw Data');
+
+    // 7. Full Ticket History Sheet
+    const ticketHistoryData = [];
+    filteredTasks.forEach(task => {
+      const tickets = task.tickets || [];
+      tickets.forEach(ticket => {
+        ticketHistoryData.push({
+          'Request Number': task.requestNumber,
+          'SLID': task.slid,
+          'Ticket ID': ticket.ticketId || 'N/A',
+          'Date': ticket.timestamp ? format(new Date(ticket.timestamp), 'yyyy-MM-dd HH:mm') : '-',
+          'Category': ticket.mainCategory || 'N/A',
+          'Transaction Type': ticket.transactionType || 'N/A',
+          'Transaction State': ticket.transactionState || 'N/A',
+          'Reason Code': ticket.unfReasonCode || 'N/A',
+          'Status': ticket.status || 'N/A',
+          'Action Taken': ticket.actionTaken || 'N/A',
+          'Agent Note': ticket.note || 'N/A',
+          'Recorded By User ID': ticket.recordedBy || 'N/A'
+        });
+      });
+    });
+
+    if (ticketHistoryData.length > 0) {
+      const wsHistory = utils.json_to_sheet(ticketHistoryData, { origin: "A2" });
+      utils.sheet_add_aoa(wsHistory, [[`COMPLETE TRANSACTION LOG HISTORY - ${periodStr}`]], { origin: "A1" });
+      utils.book_append_sheet(workbook, wsHistory, 'Ticket History');
+    }
 
     // 7. Save Workbook
     writeFile(workbook, `Executive_Audit_Report_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
@@ -853,22 +991,74 @@ const AllTasksList = () => {
           </Box>
         </Stack>
 
+        {/* Premium KPI Cards */}
+        <Box sx={{
+          mt: 3,
+          mb: 4,
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2, 1fr)',
+            md: 'repeat(3, 1fr)',
+            lg: 'repeat(4, 1fr)'
+          },
+          gap: 3
+        }}>
+          <StatCard
+            title="Total Audits"
+            value={dashboardStats.total}
+            icon={<MdHistory size={24} />}
+            color="#7b68ee"
+            subtitle="Volume"
+          />
+          <StatCard
+            title="Compliance"
+            value={`${dashboardStats.complianceRate}%`}
+            icon={<MdCheckCircle size={24} />}
+            color="#10b981"
+            subtitle="Validated"
+          />
+          <StatCard
+            title="Neutrals"
+            value={`${dashboardStats.neutralRate}%`}
+            icon={<MdRadioButtonUnchecked size={24} />}
+            color="#f59e0b"
+            subtitle="7-8 Score"
+          />
+          <StatCard
+            title="Detractors"
+            value={`${dashboardStats.detractorRate}%`}
+            icon={<MdError size={24} />}
+            color="#ef4444"
+            subtitle="0-6 Score"
+          />
+        </Box>
+
         {/* Analytics Dashboard (Always Visible) */}
         <Box sx={{ mt: 3 }}>
           <Grid container spacing={3}>
             {/* Reason Chart */}
             <Grid item xs={12} md={4}>
-              <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Reasons</Typography>
-                <ResponsiveContainer width="100%" height="90%">
+              <Paper sx={{
+                p: 2.5,
+                borderRadius: '20px',
+                background: 'rgba(45, 45, 45, 0.4)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid #3d3d3d',
+                height: 400,
+                color: '#fff'
+              }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#7b68ee' }}>Top Reasons Analysis</Typography>
+                <ResponsiveContainer width="100%" height="85%">
                   <BarChart data={analyticsData.reason} layout="vertical" margin={{ left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10 }} />
-                    <RechartsTooltip />
-                    <Bar dataKey="value" fill="#8884d8" radius={[0, 4, 4, 0]}>
+                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fill: '#b3b3b3' }} />
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
+                    />
+                    <Bar dataKey="value" fill="#7b68ee" radius={[0, 10, 10, 0]}>
                       {analyticsData.reason.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#8884d8', '#82ca9d', '#ffc658', '#ff8042'][index % 4]} />
+                        <Cell key={`cell-${index}`} fill={[alpha('#7b68ee', 1), alpha('#7b68ee', 0.8), alpha('#7b68ee', 0.6)][index % 3]} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -877,30 +1067,48 @@ const AllTasksList = () => {
             </Grid>
             {/* Sub-Reason Chart */}
             <Grid item xs={12} md={4}>
-              <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Sub-Reasons</Typography>
-                <ResponsiveContainer width="100%" height="90%">
+              <Paper sx={{
+                p: 2.5,
+                borderRadius: '20px',
+                background: 'rgba(45, 45, 45, 0.4)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid #3d3d3d',
+                height: 400,
+                color: '#fff'
+              }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#10b981' }}>Sub-Reason Breakdown</Typography>
+                <ResponsiveContainer width="100%" height="85%">
                   <BarChart data={analyticsData.subReason} layout="vertical" margin={{ left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10 }} />
-                    <RechartsTooltip />
-                    <Bar dataKey="value" fill="#82ca9d" radius={[0, 4, 4, 0]} />
+                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fill: '#b3b3b3' }} />
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
+                    />
+                    <Bar dataKey="value" fill="#10b981" radius={[0, 10, 10, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </Paper>
             </Grid>
             {/* Root Cause Chart */}
             <Grid item xs={12} md={4}>
-              <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 350 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Root Causes</Typography>
-                <ResponsiveContainer width="100%" height="90%">
+              <Paper sx={{
+                p: 2.5,
+                borderRadius: '20px',
+                background: 'rgba(45, 45, 45, 0.4)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid #3d3d3d',
+                height: 400,
+                color: '#fff'
+              }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#f59e0b' }}>Root Cause Identification</Typography>
+                <ResponsiveContainer width="100%" height="85%">
                   <BarChart data={analyticsData.rootCause} layout="vertical" margin={{ left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10 }} />
-                    <RechartsTooltip />
-                    <Bar dataKey="value" fill="#ffc658" radius={[0, 4, 4, 0]} />
+                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fill: '#b3b3b3' }} />
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
+                    />
+                    <Bar dataKey="value" fill="#f59e0b" radius={[0, 10, 10, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </Paper>
@@ -911,29 +1119,39 @@ const AllTasksList = () => {
         {/* Weekly Trend Analytics (NEW) */}
         {trendData.data?.length > 0 && (
           <Box sx={{ mt: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 3, display: 'flex', alignItems: 'center', gap: 1, color: '#7b68ee' }}>
-              <MdTimeline /> Weekly Performance Trends
+            <Typography variant="h6" sx={{ fontWeight: 800, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5, color: '#7b68ee', letterSpacing: '-0.5px' }}>
+              <MdTimeline /> Weekly Performance Insights
             </Typography>
             <Grid container spacing={3}>
               {/* Reason Trends */}
               <Grid item xs={12} md={6}>
-                <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 400 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Reasons Trend (Volume)</Typography>
-                  <ResponsiveContainer width="100%" height="90%">
+                <Paper sx={{
+                  p: 3,
+                  borderRadius: '20px',
+                  background: 'rgba(45, 45, 45, 0.4)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid #3d3d3d',
+                  height: 450,
+                  color: '#fff'
+                }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Categorized Trend Analysis</Typography>
+                  <ResponsiveContainer width="100%" height="85%">
                     <LineChart data={trendData.data}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <RechartsTooltip />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
+                      <RechartsTooltip
+                        contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
+                      />
                       <Legend
                         iconType="circle"
-                        wrapperStyle={{ fontSize: '11px', paddingTop: '10px', cursor: 'pointer' }}
+                        wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
                         onClick={handleLegendClick}
                         formatter={(value) => {
                           const item = trendData.topReasons.find(r => r.name === value);
                           const isHidden = hiddenSeries.has(value);
                           return (
-                            <span style={{ color: isHidden ? '#999' : 'inherit', textDecoration: isHidden ? 'line-through' : 'none' }}>
+                            <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
                               {value} ({item?.total || 0})
                             </span>
                           );
@@ -944,10 +1162,10 @@ const AllTasksList = () => {
                           key={item.name}
                           type="monotone"
                           dataKey={item.name}
-                          stroke={['#6366f1', '#10b981', '#f59e0b', '#d946ef', '#ec4899'][index % 5]}
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
+                          stroke={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
+                          strokeWidth={3}
+                          dot={{ r: 4, fill: '#2d2d2d', strokeWidth: 2 }}
+                          activeDot={{ r: 6, strokeWidth: 0 }}
                           hide={hiddenSeries.has(item.name)}
                         />
                       ))}
@@ -958,23 +1176,33 @@ const AllTasksList = () => {
 
               {/* Owner Trends */}
               <Grid item xs={12} md={6}>
-                <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #eee', height: 400 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>Top Owners Load Trend</Typography>
-                  <ResponsiveContainer width="100%" height="90%">
+                <Paper sx={{
+                  p: 3,
+                  borderRadius: '20px',
+                  background: 'rgba(45, 45, 45, 0.4)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid #3d3d3d',
+                  height: 450,
+                  color: '#fff'
+                }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Team Operational Load</Typography>
+                  <ResponsiveContainer width="100%" height="85%">
                     <AreaChart data={trendData.data}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <RechartsTooltip />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
+                      <RechartsTooltip
+                        contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
+                      />
                       <Legend
                         iconType="circle"
-                        wrapperStyle={{ fontSize: '11px', paddingTop: '10px', cursor: 'pointer' }}
+                        wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
                         onClick={handleLegendClick}
                         formatter={(value) => {
                           const item = trendData.topOwners.find(o => o.name === value);
                           const isHidden = hiddenSeries.has(value);
                           return (
-                            <span style={{ color: isHidden ? '#999' : 'inherit', textDecoration: isHidden ? 'line-through' : 'none' }}>
+                            <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
                               {value} ({item?.total || 0})
                             </span>
                           );
@@ -986,9 +1214,9 @@ const AllTasksList = () => {
                           type="monotone"
                           dataKey={item.name}
                           stackId="1"
-                          stroke={['#0369a1', '#15803d', '#a16207', '#be123c', '#6d28d9'][index % 5]}
-                          fill={['#0369a1', '#15803d', '#a16207', '#be123c', '#6d28d9'][index % 5]}
-                          fillOpacity={0.6}
+                          stroke={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
+                          fill={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
+                          fillOpacity={0.4}
                           hide={hiddenSeries.has(item.name)}
                         />
                       ))}

@@ -23,7 +23,7 @@ const Layout = () => {
   };
 
   return (
-    <div className="h-screen w-screen flex relative overflow-y-auto" style={{ backgroundColor: '#1a1a1a' }}>
+    <div className="h-screen w-full relative overflow-y-auto" style={{ backgroundColor: '#1a1a1a' }}>
       <div
         // fixed positions the sidebar relative to the viewport, but since you haven't specified right-0 (to stick it to the right), it defaults to the left edge of the screen.
         className={clsx(

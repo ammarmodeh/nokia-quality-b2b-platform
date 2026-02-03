@@ -143,11 +143,11 @@ const BenchmarkTables = () => {
         bgcolor: colors.background,
         minHeight: "100vh",
         color: colors.textPrimary,
-        pb: 8
+        pb: 4
       }}
     >
       <Fade in={true} timeout={800}>
-        <Box sx={{ px: { xs: 2, md: 4 }, py: { xs: 3, md: 4 } }}>
+        <Box sx={{ px: { xs: 2, sm: 2, md: 4 }, py: { xs: 3, md: 4 } }}>
           <Stack spacing={4}>
             {/* Header Section */}
             <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={3}>

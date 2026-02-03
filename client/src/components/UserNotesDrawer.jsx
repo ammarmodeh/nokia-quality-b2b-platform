@@ -42,7 +42,8 @@ import {
   MdSort,
   MdHistory,
   MdPriorityHigh,
-  MdCalendarToday
+  MdCalendarToday,
+  MdContentCopy
 } from "react-icons/md";
 import { format } from "date-fns";
 import api from "../api/api";
@@ -163,6 +164,18 @@ const UserNotesDrawer = ({ open, onClose }) => {
     } catch (error) {
       console.error("Error toggling archive:", error);
     }
+  };
+
+  const handleCopyNote = (note) => {
+    const textToCopy = `${note.title}\n\n${note.content}`;
+    navigator.clipboard.writeText(textToCopy)
+      .then(() => {
+        toast.success("Note copied to clipboard");
+      })
+      .catch((err) => {
+        console.error("Could not copy text: ", err);
+        toast.error("Failed to copy note");
+      });
   };
 
   const resetForm = () => {
@@ -382,6 +395,11 @@ const UserNotesDrawer = ({ open, onClose }) => {
                         </Typography>
                       </Stack>
                       <Box>
+                        <Tooltip title="Copy Content">
+                          <IconButton size="small" onClick={() => handleCopyNote(note)} sx={{ color: "rgba(255,255,255,0.4)" }}>
+                            <MdContentCopy />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title={note.isArchived ? "Unarchive" : "Archive"}>
                           <IconButton size="small" onClick={() => handleToggleArchive(note)} sx={{ color: "rgba(255,255,255,0.4)" }}>
                             {note.isArchived ? <MdUnarchive /> : <MdArchive />}

@@ -246,8 +246,7 @@ export const getTasks = async (req, res) => {
         $addFields: {
           latestGaia: { $arrayElemAt: [{ $sortArray: { input: "$tickets", sortBy: { timestamp: -1 } } }, 0] }
         }
-      },
-      { $project: { tickets: 0 } }
+      }
     ];
 
     const tasks = await TaskSchema.aggregate(pipeline);
@@ -980,38 +979,60 @@ export const getIssuePreventionStats = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
 
-    // Build query
+    // Build query for critical tasks
     const query = {
       evaluationScore: { $lte: 8 }
     };
 
+    // Use interviewDate for filtering as requested
     if (startDate && endDate) {
-      query.createdAt = {
+      query.interviewDate = {
         $gte: new Date(startDate),
         $lte: new Date(endDate)
       };
+    } else if (startDate) {
+      query.interviewDate = { $gte: new Date(startDate) };
+    } else if (endDate) {
+      query.interviewDate = { $lte: new Date(endDate) };
     }
 
-    // 1. Fetch all Detractor and Neutral tasks (score <= 8)
+    // 1. Fetch all Detractor and Neutral tasks (score <= 8) within the period
     const criticalTasks = await TaskSchema.find(query)
       .select('slid evaluationScore customerFeedback createdAt interviewDate pisDate status teamName teamCompany subReason rootCause reason requestNumber operation customerName contactNumber tarrifName customerType governorate district priority validationStatus assignedTo')
       .populate('assignedTo', 'name email');
 
     const taskSlids = criticalTasks.map(t => t.slid);
 
-    // 3. Find matching CustomerIssue records for these SLIDs
-    // distinct issues categories
+    // 2. Find matching CustomerIssue records for these SLIDs
+    // We don't filter reports by date here because we want to see ALL prior history for these SLIDs
     const priorReports = await CustomerIssueSchema.find({
       slid: { $in: taskSlids }
     }).select('slid fromMain fromSub reporter reporterNote createdAt date solved issues resolveDate closedAt dispatched dispatchedAt closedBy');
 
-    // 3. Aggregate data
+    // 3. Optimize overlap detection using a Map for O(N + M) performance
+    const reportsBySlid = new Map();
+    priorReports.forEach(report => {
+      if (!reportsBySlid.has(report.slid)) {
+        reportsBySlid.set(report.slid, []);
+      }
+      reportsBySlid.get(report.slid).push(report);
+    });
+
     const overlaps = criticalTasks.map(task => {
-      const reports = priorReports.filter(r => r.slid === task.slid);
-      if (reports.length > 0) {
+      const reports = reportsBySlid.get(task.slid) || [];
+
+      // Filter for reports that happened BEFORE the task's interview/creation
+      // This is the definition of an overlap/prevention failure
+      const priorToTask = reports.filter(r => {
+        const reportDate = new Date(r.date || r.createdAt);
+        const taskDate = new Date(task.interviewDate || task.createdAt);
+        return reportDate < taskDate;
+      });
+
+      if (priorToTask.length > 0) {
         return {
           task,
-          reports
+          reports: priorToTask.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
         };
       }
       return null;
@@ -1048,8 +1069,9 @@ export const getIssuePreventionStats = async (req, res) => {
 
     // 7. Trend Data (Overlaps by Month)
     const trendData = overlaps.reduce((acc, item) => {
-      if (!item.task.interviewDate) return acc;
-      const date = new Date(item.task.interviewDate);
+      const interviewDate = item.task.interviewDate || item.task.createdAt;
+      if (!interviewDate) return acc;
+      const date = new Date(interviewDate);
       const key = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
       acc[key] = (acc[key] || 0) + 1;
       return acc;
@@ -1057,8 +1079,11 @@ export const getIssuePreventionStats = async (req, res) => {
 
     // 8. Reason Stats (Root Cause Analysis)
     const reasonStats = overlaps.reduce((acc, item) => {
-      const reason = item.task.reason || 'Unknown';
-      acc[reason] = (acc[reason] || 0) + 1;
+      const reasons = Array.isArray(item.task.reason) ? item.task.reason : [item.task.reason || 'Unknown'];
+      reasons.forEach(r => {
+        const reason = r || 'Unknown';
+        acc[reason] = (acc[reason] || 0) + 1;
+      });
       return acc;
     }, {});
 
@@ -1101,8 +1126,9 @@ export const getIssuePreventionStats = async (req, res) => {
     // Removed impactStats as requested
 
     overlaps.forEach(item => {
-      const taskReason = item.task.reason || "Unknown Task Reason";
-      const interviewDate = item.task.interviewDate ? new Date(item.task.interviewDate) : null;
+      // Handle reason as potentially an array
+      const taskReasons = Array.isArray(item.task.reason) ? item.task.reason : [item.task.reason || "Unknown Task Reason"];
+      const interviewDate = item.task.interviewDate ? new Date(item.task.interviewDate) : (item.task.createdAt ? new Date(item.task.createdAt) : null);
 
       item.reports.forEach(report => {
         const reporter = report.reporter || "Unknown Reporter";
@@ -1158,9 +1184,6 @@ export const getIssuePreventionStats = async (req, res) => {
           });
         }
 
-        // Calculate Gap (Days)
-        const gap = interviewDate ? Math.abs((interviewDate - reportDate) / (1000 * 60 * 60 * 24)) : 0;
-
         // Get all categories from report
         const reportedCategories = report.issues && report.issues.length > 0
           ? report.issues.map(i => i.category)
@@ -1169,11 +1192,12 @@ export const getIssuePreventionStats = async (req, res) => {
         const reportedCategoriesString = reportedCategories.join(", ");
 
         // Check for Match (Case-insensitive, simplistic check)
-        // We assume "Match" if ANY reported category includes the task reason string, or vice versa
-        // Ideally this should be a mapped comparison (e.g. "Slow Net" -> "QoS")
+        // We assume "Match" if ANY reported category matches ANY task reason
         const isMatch = reportedCategories.some(cat =>
-          cat.toLowerCase().includes(taskReason.toLowerCase()) ||
-          taskReason.toLowerCase().includes(cat.toLowerCase())
+          taskReasons.some(tr =>
+            cat.toLowerCase().includes(tr.toLowerCase()) ||
+            tr.toLowerCase().includes(cat.toLowerCase())
+          )
         );
 
         totalComparisons++;
@@ -1181,7 +1205,7 @@ export const getIssuePreventionStats = async (req, res) => {
 
         // QoS Analysis
         const reportedQoS = reportedCategories.some(cat => cat.toLowerCase().includes("qos"));
-        const actualQoS = taskReason.toLowerCase().includes("qos");
+        const actualQoS = taskReasons.some(tr => tr.toLowerCase().includes("qos"));
 
         if (reportedQoS && actualQoS) qosMatrix.confirmed++;
         else if (reportedQoS && !actualQoS) qosMatrix.falseAlarm++;
@@ -1189,7 +1213,7 @@ export const getIssuePreventionStats = async (req, res) => {
 
         // Installation Analysis
         const reportedInstall = reportedCategories.some(cat => cat.toLowerCase().includes("install"));
-        const actualInstall = taskReason.toLowerCase().includes("install");
+        const actualInstall = taskReasons.some(tr => tr.toLowerCase().includes("install"));
 
         if (reportedInstall && actualInstall) installationMatrix.confirmed++;
         else if (reportedInstall && !actualInstall) installationMatrix.falseAlarm++;
@@ -1206,8 +1230,10 @@ export const getIssuePreventionStats = async (req, res) => {
 
         reporterComparisonMap[reporter].totalNonPrevented++;
 
+        // Find match for this specific comparison (using joined categories)
+        const taskReasonsString = taskReasons.join(", ");
         const existingComp = reporterComparisonMap[reporter].comparisons.find(
-          c => c.reportedCategory === reportedCategoriesString && c.actualReason === taskReason
+          c => c.reportedCategory === reportedCategoriesString && c.actualReason === taskReasonsString
         );
 
         if (existingComp) {
@@ -1215,7 +1241,7 @@ export const getIssuePreventionStats = async (req, res) => {
         } else {
           reporterComparisonMap[reporter].comparisons.push({
             reportedCategory: reportedCategoriesString,
-            actualReason: taskReason,
+            actualReason: taskReasonsString,
             count: 1
           });
         }
@@ -1223,7 +1249,7 @@ export const getIssuePreventionStats = async (req, res) => {
     });
 
     const globalCategoryReasonMatrix = overlaps.reduce((acc, item) => {
-      const taskReason = item.task.reason || "Unknown Task Reason";
+      const taskReasons = Array.isArray(item.task.reason) ? item.task.reason : [item.task.reason || "Unknown Task Reason"];
       item.reports.forEach(report => {
         const reportedCategories = report.issues && report.issues.length > 0
           ? report.issues.map(i => i.category)
@@ -1231,7 +1257,9 @@ export const getIssuePreventionStats = async (req, res) => {
 
         reportedCategories.forEach(cat => {
           if (!acc[cat]) acc[cat] = {};
-          acc[cat][taskReason] = (acc[cat][taskReason] || 0) + 1;
+          taskReasons.forEach(tr => {
+            acc[cat][tr] = (acc[cat][tr] || 0) + 1;
+          });
         });
       });
       return acc;
@@ -1268,7 +1296,7 @@ export const getIssuePreventionStats = async (req, res) => {
         countResolution,
         countClosure
       },
-      overlaps: overlaps.sort((a, b) => b.task.createdAt - a.task.createdAt),
+      overlaps: overlaps.sort((a, b) => new Date(b.task.interviewDate || b.task.createdAt) - new Date(a.task.interviewDate || a.task.createdAt)),
       preventionRate: criticalTasks.length > 0
         ? ((overlaps.length / criticalTasks.length) * 100).toFixed(2)
         : 0
@@ -1288,11 +1316,16 @@ export const getPreventionDeepDiveStats = async (req, res) => {
       evaluationScore: { $gte: 1, $lte: 8 }
     };
 
+    // Use interviewDate for filtering as requested
     if (startDate && endDate) {
-      query.createdAt = {
+      query.interviewDate = {
         $gte: new Date(startDate),
         $lte: new Date(endDate)
       };
+    } else if (startDate) {
+      query.interviewDate = { $gte: new Date(startDate) };
+    } else if (endDate) {
+      query.interviewDate = { $lte: new Date(endDate) };
     }
 
     const tasks = await TaskSchema.find(query)

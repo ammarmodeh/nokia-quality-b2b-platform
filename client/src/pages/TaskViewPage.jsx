@@ -57,8 +57,21 @@ const TaskViewPage = () => {
   };
 
   const handleTicketAdded = (newTicket) => {
-    setTickets([newTicket, ...tickets]);
-    setTask({ ...task, status: newTicket.status });
+    // For TaskViewPage, we specifically want to update the history tab.
+    // Since updates and deletes are now triggering this, we should handle them.
+    if (newTicket && newTicket._id) {
+      // Check if it's an update
+      const exists = tickets.find(t => t._id === newTicket._id);
+      if (exists) {
+        setTickets(prev => prev.map(t => t._id === newTicket._id ? newTicket : t));
+      } else {
+        setTickets(prev => [newTicket, ...prev]);
+      }
+      setTask(prev => ({ ...prev, status: newTicket.status }));
+    } else {
+      // It's a deletion or we don't have the ticket object, refetch everything
+      fetchTaskData();
+    }
   };
 
   const handleTaskDelete = async (taskId) => {

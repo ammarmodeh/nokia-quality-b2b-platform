@@ -36,7 +36,7 @@ const QUICK_PRESETS = [
     { label: "Ticket Closed", type: "RESOLVE", state: "ISSUE_RESOLVED", status: "Closed", reason: "206", note: "Issue fully resolved; ticket closed.", color: "#4f46e5" },
 ];
 
-const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
+const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdated, onTicketDeleted }) => {
     const { user } = useSelector((state) => state.auth);
     const [tabValue, setTabValue] = useState(0);
     const [transactionType, setTransactionType] = useState("");
@@ -200,12 +200,16 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
 
             if (editingTicket) {
                 await api.put(`/tasks/tickets/${editingTicket._id}`, ticketData);
+                if (onTicketUpdated) onTicketUpdated(editingTicket);
+                if (onTicketAdded) onTicketAdded(editingTicket); // Fallback for components only using onTicketAdded
+                window.dispatchEvent(new CustomEvent('dashboard-refresh'));
                 fetchTickets();
                 setTabValue(1); // Switch to list tab to see the updated sequence
                 alert("Ticket updated successfully");
             } else {
                 const { data } = await api.post("/tasks/tickets", ticketData);
                 if (onTicketAdded) onTicketAdded(data);
+                window.dispatchEvent(new CustomEvent('dashboard-refresh'));
                 fetchTickets();
                 setTabValue(1);
             }
@@ -244,6 +248,9 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded }) => {
         setLoading(true);
         try {
             await api.delete(`/tasks/tickets/${deletingTicket._id}`);
+            if (onTicketDeleted) onTicketDeleted(deletingTicket._id);
+            if (onTicketAdded) onTicketAdded(); // Fallback for components only using onTicketAdded
+            window.dispatchEvent(new CustomEvent('dashboard-refresh'));
             setTickets(tickets.filter(t => t._id !== deletingTicket._id));
             setDeletingTicket(null);
             alert("Ticket deleted successfully.");

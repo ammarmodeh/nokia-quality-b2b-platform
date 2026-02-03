@@ -122,6 +122,12 @@ const AssignedToMe = () => {
   // --- Data Fetching ---
 
   useEffect(() => {
+    const handleGlobalRefresh = () => setUpdateRefetchTasks(prev => !prev);
+    window.addEventListener('dashboard-refresh', handleGlobalRefresh);
+    return () => window.removeEventListener('dashboard-refresh', handleGlobalRefresh);
+  }, []);
+
+  useEffect(() => {
     const fetchUsers = async () => {
       try {
         const { data } = await api.get("/users/get-all-users", {
