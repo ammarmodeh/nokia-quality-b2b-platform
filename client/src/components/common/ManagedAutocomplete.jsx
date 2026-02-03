@@ -25,18 +25,18 @@ const ManagedAutocomplete = ({
       if (!category) return;
       setLoading(true);
       try {
-        const response = await api.get('/dropdown-options/all');
-        const allOptions = response.data;
+        // optimized: fetch only the needed category
+        const response = await api.get(`/dropdown-options/category/${category}`);
+        const data = response.data;
 
-        if (allOptions && allOptions[category]) {
-          // Sort by order and extract values
-          const sorted = allOptions[category]
-            .sort((a, b) => (a.order || 0) - (b.order || 0))
-            .map(opt => opt.value);
-
-          setOptions(sorted);
+        if (Array.isArray(data)) {
+           // Sort by order and extract values
+           const sorted = data
+             .sort((a, b) => (a.order || 0) - (b.order || 0))
+             .map(opt => opt.value);
+           setOptions(sorted);
         } else {
-          setOptions([]);
+           setOptions([]);
         }
       } catch (error) {
         console.error(`Failed to fetch options for ${category}:`, error);

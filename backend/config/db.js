@@ -1,10 +1,16 @@
 import mongoose from "mongoose"
+import dns from "dns"
 
 export const connectDB = async () => {
   try {
     console.log("========================================");
     console.log("🔄 Attempting to connect to MongoDB...");
     console.log("========================================");
+
+    console.log("========================================");
+
+    // FIX: Force Google DNS to resolve 'querySrv ECONNREFUSED' errors
+    dns.setServers(['8.8.8.8', '8.8.4.4']);
 
     // Verify MONGO_URI exists
     if (!process.env.MONGO_URI) {

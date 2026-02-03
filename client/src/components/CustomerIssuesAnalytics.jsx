@@ -264,6 +264,22 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     // Sort bottlenecks by age
     const oldestPending = pendingBottlenecks.sort((a, b) => b.age - a.age);
 
+    // FIX: Calculate Average Daily Issues based on actual duration
+    let durationDays = 1;
+    if (dateFilter.start && dateFilter.end) {
+      const start = new Date(dateFilter.start);
+      const end = new Date(dateFilter.end);
+      // Add 1 day to be inclusive
+      durationDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1);
+    } else if (issuesToProcess.length > 0) {
+      const dates = issuesToProcess.map(i => new Date(i.date || i.createdAt).getTime());
+      const min = Math.min(...dates);
+      const max = Math.max(...dates);
+      durationDays = Math.max(1, Math.ceil((max - min) / (1000 * 60 * 60 * 24)) + 1);
+    }
+
+    const avgDailyIssues = (totalIssuesHighlighted / durationDays).toFixed(1);
+
     return {
       totalTransactions,
       totalIssuesHighlighted,
@@ -274,9 +290,10 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       avgDispatchTime,
       avgResolutionTime,
       avgLifecycleTime,
-      oldestPending
+      oldestPending,
+      avgDailyIssues // Added field
     };
-  }, [filteredIssuesByDate]);
+  }, [filteredIssuesByDate, dateFilter]);
 
   // --- Export Handlers ---
   const handleExportAllAssignees = () => {
@@ -1108,7 +1125,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         <Grid item xs={12} sm={6} md={2.4}><StatCard title="Issues Highlighted" value={stats.totalIssuesHighlighted} icon={<FaExclamationCircle />} color="#ffc107" subtext={`Avg: ${stats.issueDensity} per txn`} /></Grid>
         <Grid item xs={12} sm={6} md={2.4}><StatCard title="Closed" value={stats.closed} icon={<FaCheckCircle />} color="#4caf50" subtext={`${stats.resolutionRate}% Rate`} /></Grid>
         <Grid item xs={12} sm={6} md={2.4}><StatCard title="Open" value={stats.open} icon={<FaExclamationCircle />} color="#f44336" subtext="Require attention" /></Grid>
-        <Grid item xs={12} sm={6} md={2.4}><StatCard title="Avg. Daily Issues" value={(stats.totalTransactions / (trendData.labels.length || 1)).toFixed(1)} icon={<FaChartLine />} color="#ff9800" subtext="Trend metric" /></Grid>
+        <Grid item xs={12} sm={6} md={2.4}><StatCard title="Avg. Daily Issues" value={stats.avgDailyIssues} icon={<FaChartLine />} color="#ff9800" subtext="Issues / Day" /></Grid>
       </Grid>
 
       {/* Process Efficiency Spotlight */}
