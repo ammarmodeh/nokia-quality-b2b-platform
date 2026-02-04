@@ -177,6 +177,30 @@ const AllTasksList = () => {
   });
   const [activeAdvSearch, setActiveAdvSearch] = useState(false);
 
+  // Column Filters State
+  const [columnFilters, setColumnFilters] = useState({
+    createdAt: '',
+    slid: '',
+    customerName: '',
+    contactNumber: '',
+    customerFeedback: '',
+    operation: '',
+    priority: '',
+    status: '',
+    location: '',
+    team: '',
+    rootCause: '',
+    evaluationScore: '',
+    gaiaCheck: '',
+    latestGaiaType: '',
+    latestGaiaReason: ''
+  });
+
+  const handleColumnFilterChange = (column, value) => {
+    setColumnFilters(prev => ({ ...prev, [column]: value }));
+    setPage(0); // Reset to first page when filtering
+  };
+
   const handleLegendClick = (e) => {
     const { dataKey } = e;
     setHiddenSeries((prev) => {
@@ -326,9 +350,26 @@ const AllTasksList = () => {
         }
       }
 
+      // 11. Column Filters
+      if (columnFilters.createdAt && !format(new Date(task.createdAt), 'dd/MM/yyyy').includes(columnFilters.createdAt)) return false;
+      if (columnFilters.slid && !(task.slid || "").toLowerCase().includes(columnFilters.slid.toLowerCase()) && !(task.requestNumber || "").toString().toLowerCase().includes(columnFilters.slid.toLowerCase())) return false;
+      if (columnFilters.customerName && !(task.customerName || task.customer?.customerName || "").toLowerCase().includes(columnFilters.customerName.toLowerCase())) return false;
+      if (columnFilters.contactNumber && !(task.contactNumber || task.customer?.contactNumber || "").toString().toLowerCase().includes(columnFilters.contactNumber.toLowerCase())) return false;
+      if (columnFilters.customerFeedback && !(task.customerFeedback || task.customer?.customerFeedback || "").toLowerCase().includes(columnFilters.customerFeedback.toLowerCase())) return false;
+      if (columnFilters.operation && !(task.operation || "").toLowerCase().includes(columnFilters.operation.toLowerCase()) && !(task.tarrifName || "").toLowerCase().includes(columnFilters.operation.toLowerCase())) return false;
+      if (columnFilters.priority && !(task.priority || "Normal").toLowerCase().includes(columnFilters.priority.toLowerCase())) return false;
+      if (columnFilters.status && !(task.status || "").toLowerCase().includes(columnFilters.status.toLowerCase())) return false;
+      if (columnFilters.location && !(task.governorate || "").toLowerCase().includes(columnFilters.location.toLowerCase()) && !(task.district || "").toLowerCase().includes(columnFilters.location.toLowerCase())) return false;
+      if (columnFilters.team && !(task.teamName || "").toLowerCase().includes(columnFilters.team.toLowerCase()) && !(task.teamCompany || "").toLowerCase().includes(columnFilters.team.toLowerCase())) return false;
+      if (columnFilters.rootCause && !(task.rootCause || "").toLowerCase().includes(columnFilters.rootCause.toLowerCase()) && !(task.subReason || "").toLowerCase().includes(columnFilters.rootCause.toLowerCase())) return false;
+      if (columnFilters.evaluationScore && !(task.evaluationScore || "").toString().toLowerCase().includes(columnFilters.evaluationScore.toLowerCase())) return false;
+      if (columnFilters.gaiaCheck && !(task.gaiaCheck || "No").toLowerCase().includes(columnFilters.gaiaCheck.toLowerCase())) return false;
+      if (columnFilters.latestGaiaType && !(task.latestGaia?.transactionType || "").toLowerCase().includes(columnFilters.latestGaiaType.toLowerCase())) return false;
+      if (columnFilters.latestGaiaReason && !(task.latestGaia?.unfReasonCode || "").toLowerCase().includes(columnFilters.latestGaiaReason.toLowerCase())) return false;
+
       return true;
     });
-  }, [allTasks, priorityFilter, statusFilter, governorateFilter, districtFilter, subconFilter, supervisorFilter, teamNameFilter, validationFilter, filter, dateFilter, advSearchFields, activeAdvSearch]);
+  }, [allTasks, priorityFilter, statusFilter, governorateFilter, districtFilter, subconFilter, supervisorFilter, teamNameFilter, validationFilter, filter, dateFilter, advSearchFields, activeAdvSearch, columnFilters]);
 
   // Pagination
   const paginatedTasks = useMemo(() => {
@@ -1831,6 +1872,62 @@ const AllTasksList = () => {
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Q-Ops Reason</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Q-OPS Steps</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Actions</TableCell>
+            </TableRow>
+            <TableRow sx={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.createdAt} onChange={(e) => handleColumnFilterChange('createdAt', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.slid} onChange={(e) => handleColumnFilterChange('slid', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.customerName} onChange={(e) => handleColumnFilterChange('customerName', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.contactNumber} onChange={(e) => handleColumnFilterChange('contactNumber', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.customerFeedback} onChange={(e) => handleColumnFilterChange('customerFeedback', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.operation} onChange={(e) => handleColumnFilterChange('operation', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.priority} onChange={(e) => handleColumnFilterChange('priority', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.status} onChange={(e) => handleColumnFilterChange('status', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.location} onChange={(e) => handleColumnFilterChange('location', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.team} onChange={(e) => handleColumnFilterChange('team', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.rootCause} onChange={(e) => handleColumnFilterChange('rootCause', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.evaluationScore} onChange={(e) => handleColumnFilterChange('evaluationScore', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                {/* Week column - no filter for now or can add one if needed */}
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.gaiaCheck} onChange={(e) => handleColumnFilterChange('gaiaCheck', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.latestGaiaType} onChange={(e) => handleColumnFilterChange('latestGaiaType', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                <TextField size="small" placeholder="Filter..." value={columnFilters.latestGaiaReason} onChange={(e) => handleColumnFilterChange('latestGaiaReason', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                {/* Steps - no filter */}
+              </TableCell>
+              <TableCell sx={{ p: '4px !important' }}>
+                {/* Actions - no filter */}
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
