@@ -201,6 +201,71 @@ const AllTasksList = () => {
     setPage(0); // Reset to first page when filtering
   };
 
+  // Unique Options for Autocomplete Filters
+  const columnUniqueOptions = useMemo(() => {
+    const options = {
+      createdAt: new Set(),
+      slid: new Set(),
+      customerName: new Set(),
+      contactNumber: new Set(),
+      customerFeedback: new Set(),
+      operation: new Set(),
+      priority: new Set(),
+      status: new Set(),
+      location: new Set(),
+      team: new Set(),
+      rootCause: new Set(),
+      evaluationScore: new Set(),
+      gaiaCheck: new Set(),
+      latestGaiaType: new Set(),
+      latestGaiaReason: new Set()
+    };
+
+    allTasks.forEach(task => {
+      if (task.createdAt) options.createdAt.add(format(new Date(task.createdAt), 'dd/MM/yyyy'));
+      if (task.slid) options.slid.add(task.slid);
+      if (task.requestNumber) options.slid.add(String(task.requestNumber));
+
+      const cName = task.customerName || task.customer?.customerName;
+      if (cName) options.customerName.add(cName);
+
+      const cNumber = task.contactNumber || task.customer?.contactNumber;
+      if (cNumber) options.contactNumber.add(String(cNumber));
+
+      const feedback = task.customerFeedback || task.customer?.customerFeedback;
+      if (feedback) options.customerFeedback.add(feedback);
+
+      if (task.operation) options.operation.add(task.operation);
+      if (task.tarrifName) options.operation.add(task.tarrifName);
+
+      options.priority.add(task.priority || "Normal");
+      if (task.status) options.status.add(task.status);
+
+      if (task.governorate) options.location.add(task.governorate);
+      if (task.district) options.location.add(task.district);
+
+      if (task.teamName) options.team.add(task.teamName);
+      if (task.teamCompany) options.team.add(task.teamCompany);
+
+      if (task.rootCause) options.rootCause.add(task.rootCause);
+      if (task.subReason) options.rootCause.add(task.subReason);
+
+      if (task.evaluationScore !== null && task.evaluationScore !== undefined) options.evaluationScore.add(String(task.evaluationScore));
+
+      options.gaiaCheck.add(task.gaiaCheck || "No");
+
+      if (task.latestGaia?.transactionType) options.latestGaiaType.add(task.latestGaia.transactionType);
+      if (task.latestGaia?.unfReasonCode) options.latestGaiaReason.add(task.latestGaia.unfReasonCode);
+    });
+
+    // Convert Sets to sorted Arrays
+    const result = {};
+    Object.keys(options).forEach(key => {
+      result[key] = Array.from(options[key]).sort();
+    });
+    return result;
+  }, [allTasks]);
+
   const handleLegendClick = (e) => {
     const { dataKey } = e;
     setHiddenSeries((prev) => {
@@ -1874,60 +1939,78 @@ const AllTasksList = () => {
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Actions</TableCell>
             </TableRow>
             <TableRow sx={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.createdAt} onChange={(e) => handleColumnFilterChange('createdAt', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.slid} onChange={(e) => handleColumnFilterChange('slid', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.customerName} onChange={(e) => handleColumnFilterChange('customerName', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.contactNumber} onChange={(e) => handleColumnFilterChange('contactNumber', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.customerFeedback} onChange={(e) => handleColumnFilterChange('customerFeedback', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.operation} onChange={(e) => handleColumnFilterChange('operation', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.priority} onChange={(e) => handleColumnFilterChange('priority', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.status} onChange={(e) => handleColumnFilterChange('status', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.location} onChange={(e) => handleColumnFilterChange('location', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.team} onChange={(e) => handleColumnFilterChange('team', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.rootCause} onChange={(e) => handleColumnFilterChange('rootCause', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.evaluationScore} onChange={(e) => handleColumnFilterChange('evaluationScore', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                {/* Week column - no filter for now or can add one if needed */}
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.gaiaCheck} onChange={(e) => handleColumnFilterChange('gaiaCheck', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.latestGaiaType} onChange={(e) => handleColumnFilterChange('latestGaiaType', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                <TextField size="small" placeholder="Filter..." value={columnFilters.latestGaiaReason} onChange={(e) => handleColumnFilterChange('latestGaiaReason', e.target.value)} sx={{ '& .MuiInputBase-root': { fontSize: '0.7rem', color: '#fff' } }} />
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                {/* Steps - no filter */}
-              </TableCell>
-              <TableCell sx={{ p: '4px !important' }}>
-                {/* Actions - no filter */}
-              </TableCell>
+              {[
+                { key: 'createdAt', placeholder: 'Date' },
+                { key: 'slid', placeholder: 'SLID/REQ' },
+                { key: 'customerName', placeholder: 'Name' },
+                { key: 'contactNumber', placeholder: 'Contact' },
+                { key: 'customerFeedback', placeholder: 'Feedback' },
+                { key: 'operation', placeholder: 'Op/Tariff' },
+                { key: 'priority', placeholder: 'Priority' },
+                { key: 'status', placeholder: 'Status' },
+                { key: 'location', placeholder: 'Location' },
+                { key: 'team', placeholder: 'Team/Sub' },
+                { key: 'rootCause', placeholder: 'Root/Sub' },
+                { key: 'evaluationScore', placeholder: 'Score' }
+              ].map((col) => (
+                <TableCell key={col.key} sx={{ p: '4px !important', minWidth: 100 }}>
+                  <Autocomplete
+                    freeSolo
+                    size="small"
+                    options={columnUniqueOptions[col.key] || []}
+                    value={columnFilters[col.key]}
+                    onInputChange={(event, newValue) => handleColumnFilterChange(col.key, newValue)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder={col.placeholder}
+                        sx={{
+                          '& .MuiInputBase-root': {
+                            fontSize: '0.7rem',
+                            color: '#fff',
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            borderRadius: '4px'
+                          },
+                          '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                        }}
+                      />
+                    )}
+                  />
+                </TableCell>
+              ))}
+              <TableCell sx={{ p: '4px !important' }} /> {/* Week column */}
+              {[
+                { key: 'gaiaCheck', placeholder: 'GAIA' },
+                { key: 'latestGaiaType', placeholder: 'Type' },
+                { key: 'latestGaiaReason', placeholder: 'Reason' }
+              ].map((col) => (
+                <TableCell key={col.key} sx={{ p: '4px !important', minWidth: 100 }}>
+                  <Autocomplete
+                    freeSolo
+                    size="small"
+                    options={columnUniqueOptions[col.key] || []}
+                    value={columnFilters[col.key]}
+                    onInputChange={(event, newValue) => handleColumnFilterChange(col.key, newValue)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder={col.placeholder}
+                        sx={{
+                          '& .MuiInputBase-root': {
+                            fontSize: '0.7rem',
+                            color: '#fff',
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            borderRadius: '4px'
+                          },
+                          '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                        }}
+                      />
+                    )}
+                  />
+                </TableCell>
+              ))}
+              <TableCell sx={{ p: '4px !important' }} /> {/* Steps */}
+              <TableCell sx={{ p: '4px !important' }} /> {/* Actions */}
             </TableRow>
           </TableHead>
           <TableBody>

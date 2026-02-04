@@ -804,7 +804,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             </Grid>
           </Box>
           {/* Section: Caller Details - Separately after Assignment */}
-          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
+          {/* <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
             <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Caller Information</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -843,7 +843,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                 />
               </Grid>
             </Grid>
-          </Box>
+          </Box> */}
 
           {/* Section 5: Dispatch & Closure */}
           <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
