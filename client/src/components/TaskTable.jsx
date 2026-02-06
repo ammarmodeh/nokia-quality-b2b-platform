@@ -210,6 +210,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
         { header: "Feedback Severity", field: "impactLevel" },
         { header: "Team", field: "teamName" },
         { header: "Group", field: "teamCompany" },
+        { header: "GAIA Content", field: "gaiaContent" },
         { header: "PIS Date", field: "pisDate" },
         { header: "Last Session", field: "lastSession" },
         { header: "Neutrals (7-8)", field: "neutrals" },
@@ -291,6 +292,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
           impactLevel: task.priority,
           teamName: task.teamName,
           teamCompany: task.teamCompany,
+          gaiaContent: task.gaiaContent || 'N/A',
           pisDate: newFormatDate(task.pisDate?.$date || task.pisDate),
           lastSession: sessionInfo,
           isEvaluated: teamData ? (teamData.isEvaluated ? 'Yes' : 'No') : 'N/A',
@@ -529,6 +531,63 @@ const TaskTable = ({ tasks, fieldTeams }) => {
       )
     },
     {
+      field: "gaiaContent",
+      headerName: "GAIA Content",
+      minWidth: 200,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => (
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          width: '100%',
+          direction: 'ltr',
+          py: 1
+        }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: '0.8rem',
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              whiteSpace: 'pre-wrap',
+              lineHeight: '1.2em',
+              maxHeight: '3.6em',
+              textAlign: 'left'
+            }}
+          >
+            {params.value || "-"}
+          </Typography>
+          {params.value && params.value !== "N/A" && (params.value.length > 50 || params.value.split('\n').length > 3) && (
+            <Button
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedTask(params.row);
+                setOpenDialog(true);
+              }}
+              sx={{
+                minWidth: 'auto',
+                p: 0,
+                mt: 0.5,
+                textTransform: 'none',
+                color: '#7b68ee',
+                fontSize: '0.7rem',
+                fontWeight: 'bold',
+                '&:hover': { background: 'transparent', textDecoration: 'underline' }
+              }}
+            >
+              Read More
+            </Button>
+          )}
+        </Box>
+      ),
+    },
+    {
       field: "pisDate",
       headerName: "PIS Date",
       align: 'center',
@@ -715,6 +774,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
     evaluationScore: task.evaluationScore,
     team: task.teamName,
     company: task.teamCompany,
+    gaiaContent: task.gaiaContent,
     pisDate: task.pisDate,
     status: task._id,
     teamId: task.teamId?.$oid || task.teamId,
@@ -1052,8 +1112,9 @@ const TaskTable = ({ tasks, fieldTeams }) => {
                     }
                   />
                   <DetailRow label="Customer Feedback" value={selectedTask.customerFeedback} />
+                  <DetailRow label="GAIA Content" value={selectedTask.gaiaContent} direction="ltr" />
                   <DetailRow label="Reason" value={selectedTask.reason} />
-                  <DetailRow label="Customer Feedback" value={selectedTask.priority} />
+                  <DetailRow label="Priority" value={selectedTask.priority} />
                 </Box>
               </Paper>
             </Box>
@@ -1085,8 +1146,8 @@ const TaskTable = ({ tasks, fieldTeams }) => {
 };
 
 // Helper component for consistent detail rows
-const DetailRow = ({ label, value }) => (
-  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+const DetailRow = ({ label, value, direction }) => (
+  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, direction: direction || 'inherit' }}>
     <Typography
       variant="body2"
       component="div"
@@ -1103,7 +1164,8 @@ const DetailRow = ({ label, value }) => (
         component="div"
         sx={{
           color: '#ffffff',
-          wordBreak: 'break-word'
+          wordBreak: 'break-word',
+          textAlign: direction === 'ltr' ? 'left' : 'inherit'
         }}
       >
         {value || 'N/A'}

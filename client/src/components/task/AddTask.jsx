@@ -146,6 +146,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [closureCallEvaluation, setClosureCallEvaluation] = useState("");
   const [closureCallFeedback, setClosureCallFeedback] = useState("");
   const [gaiaCheck, setGaiaCheck] = useState("No");
+  const [gaiaContent, setGaiaContent] = useState("");
 
   // Conditional field toggles
 
@@ -208,6 +209,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       closureCallEvaluation,
       closureCallFeedback,
       gaiaCheck,
+      gaiaContent: gaiaCheck === "Yes" ? gaiaContent : null,
       contractDate: data.contractDate,
       inDate: data.inDate,
       appDate: data.appDate,
@@ -460,6 +462,19 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
                 <MenuItem value="No">No</MenuItem>
               </Select>
             </FormControl>
+            {gaiaCheck === 'Yes' && (
+              <TextField
+                label="GAIA Content"
+                placeholder="Content to be added from GAIA system"
+                fullWidth
+                variant="outlined"
+                value={gaiaContent}
+                onChange={(e) => setGaiaContent(e.target.value)}
+                multiline
+                rows={2}
+                inputProps={{ style: { direction: 'ltr' } }}
+              />
+            )}
             <TextField
               label="Contract date (RE Date)"
               type="date"

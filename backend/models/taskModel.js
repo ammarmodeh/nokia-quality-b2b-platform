@@ -181,6 +181,7 @@ const taskSchema = new mongoose.Schema(
     subReason: { type: [String], default: [] },
     rootCause: { type: [String], default: [] },
     gaiaCheck: { type: String, enum: ["Yes", "No", null], default: null },
+    gaiaContent: { type: String, trim: true, default: null },
     contractDate: { type: Date, default: null },
     inDate: { type: Date, default: null },
     appDate: { type: Date, default: null },

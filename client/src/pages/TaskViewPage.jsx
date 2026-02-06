@@ -237,6 +237,7 @@ const TaskViewPage = () => {
                 <DetailItem label="Speed (Mbps)" value={task.speed} />
                 <DetailItem label="ONT Type" value={task.ontType} />
                 <DetailItem label="Extender" value={task.freeExtender === 'Yes' ? `${task.extenderType} (x${task.extenderNumber})` : 'No'} />
+                <DetailItem label="GAIA Content" value={task.gaiaContent} fullWidth direction="ltr" />
               </DetailGrid>
 
               <Divider sx={{ my: 4, borderColor: 'rgba(255,255,255,0.05)' }} />
@@ -398,8 +399,8 @@ const DetailGrid = ({ children }) => (
   </Box>
 );
 
-const DetailItem = ({ label, value, fullWidth }) => (
-  <Box sx={{ gridColumn: fullWidth ? '1 / -1' : 'auto' }}>
+const DetailItem = ({ label, value, fullWidth, direction }) => (
+  <Box sx={{ gridColumn: fullWidth ? '1 / -1' : 'auto', direction: direction || 'inherit' }}>
     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.5 }}>{label}</Typography>
     {Array.isArray(value) && value.length > 0 ? (
       <Stack direction="column" spacing={1} alignItems="flex-start">
@@ -420,7 +421,7 @@ const DetailItem = ({ label, value, fullWidth }) => (
         ))}
       </Stack>
     ) : (
-      <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5 }}>{value || "—"}</Typography>
+      <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5, textAlign: direction === 'ltr' ? 'left' : 'inherit' }}>{value || "—"}</Typography>
     )}
   </Box>
 );

@@ -51,6 +51,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const [closureCallFeedback, setClosureCallFeedback] = useState("");
   const [operation, setOperation] = useState("");
   const [gaiaCheck, setGaiaCheck] = useState("No");
+  const [gaiaContent, setGaiaContent] = useState("");
   const [contractDate, setContractDate] = useState("");
   const [inDate, setInDate] = useState("");
   const [appDate, setAppDate] = useState("");
@@ -172,6 +173,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setValue("inDate", task.inDate ? new Date(task.inDate).toISOString().split('T')[0] : "");
       setValue("appDate", task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : "");
       setValue("closeDate", task.closeDate ? new Date(task.closeDate).toISOString().split('T')[0] : "");
+      setValue("gaiaContent", task.gaiaContent || "");
 
       const priorityValue = task.priority || "";
       setPriority(priorityValue);
@@ -207,6 +209,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setClosureCallFeedback(task.closureCallFeedback || "");
       setOperation(task.operation || "");
       setGaiaCheck(task.gaiaCheck || "No");
+      setGaiaContent(task.gaiaContent || "");
       setContractDate(task.contractDate ? new Date(task.contractDate).toISOString().split('T')[0] : "");
       setInDate(task.inDate ? new Date(task.inDate).toISOString().split('T')[0] : "");
       setAppDate(task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : "");
@@ -271,6 +274,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       closureCallEvaluation,
       closureCallFeedback,
       gaiaCheck,
+      gaiaContent: gaiaCheck === "Yes" ? gaiaContent : null,
       contractDate,
       inDate,
       appDate,
@@ -475,6 +479,19 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
                   <MenuItem value="No">No</MenuItem>
                 </Select>
               </FormControl>
+              {gaiaCheck === 'Yes' && (
+                <TextField
+                  label="GAIA Content"
+                  placeholder="Content to be added from GAIA system"
+                  fullWidth
+                  variant="outlined"
+                  value={gaiaContent}
+                  onChange={(e) => setGaiaContent(e.target.value)}
+                  multiline
+                  rows={2}
+                  inputProps={{ style: { direction: 'ltr' } }}
+                />
+              )}
               <TextField
                 label="Contract date (RE Date)"
                 type="date"

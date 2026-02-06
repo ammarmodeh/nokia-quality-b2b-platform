@@ -150,7 +150,7 @@ const AllTasksList = () => {
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [confirmSlid, setConfirmSlid] = useState('');
   const [openAddTask, setOpenAddTask] = useState(false);
-  const [updateRefetchTasks, setUpdateRefetchTasks] = useState(false);
+  const [updateRefetchTasks, setUpdateRefetchTasks] = useState(0);
 
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [dialogContent, setDialogContent] = useState('');
@@ -244,11 +244,27 @@ const AllTasksList = () => {
       if (task.governorate) options.location.add(task.governorate);
       if (task.district) options.location.add(task.district);
 
-      if (task.teamName) options.team.add(task.teamName);
-      if (task.teamCompany) options.team.add(task.teamCompany);
+      if (task.teamName) options.team.add(String(task.teamName));
+      if (task.teamCompany) options.team.add(String(task.teamCompany));
 
-      if (task.rootCause) options.rootCause.add(task.rootCause);
-      if (task.subReason) options.rootCause.add(task.subReason);
+      const addToRootCause = (val) => {
+        if (!val) return;
+        if (Array.isArray(val)) {
+          val.forEach(v => {
+            if (v && typeof v === 'string' && v.trim()) options.rootCause.add(v.trim());
+          });
+        } else if (typeof val === 'string' && val.trim()) {
+          options.rootCause.add(val.trim());
+        }
+      };
+
+      addToRootCause(task.reason);
+      addToRootCause(task.subReason);
+      addToRootCause(task.rootCause);
+      if (task.technicalDetails) {
+        addToRootCause(task.technicalDetails.rootCause);
+        addToRootCause(task.technicalDetails.subReason);
+      }
 
       if (task.evaluationScore !== null && task.evaluationScore !== undefined) options.evaluationScore.add(String(task.evaluationScore));
 
@@ -329,7 +345,7 @@ const AllTasksList = () => {
 
   // Global refresh listener for navbar-based task creation
   useEffect(() => {
-    const handleGlobalRefresh = () => setUpdateRefetchTasks(prev => !prev);
+    const handleGlobalRefresh = () => setUpdateRefetchTasks(prev => prev + 1);
     window.addEventListener('dashboard-refresh', handleGlobalRefresh);
     return () => window.removeEventListener('dashboard-refresh', handleGlobalRefresh);
   }, []);
@@ -849,6 +865,7 @@ const AllTasksList = () => {
       'Extender Type': task.extenderType || 'N/A',
       'Extender Count': task.extenderNumber || 0,
       'GAIA Check': task.gaiaCheck || 'N/A',
+      'GAIA Content': task.gaiaContent || 'N/A',
 
       // --- AUDIT METADATA ---
       'Reasons': Array.isArray(task.reason) ? task.reason.join(', ') : (task.reason || 'N/A'),
@@ -1933,6 +1950,7 @@ const AllTasksList = () => {
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Score</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Week</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>GAIA Check</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>GAIA Content</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Q-Ops Status</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Q-Ops Reason</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Q-OPS Steps</TableCell>
@@ -1980,7 +1998,35 @@ const AllTasksList = () => {
               ))}
               <TableCell sx={{ p: '4px !important' }} /> {/* Week column */}
               {[
-                { key: 'gaiaCheck', placeholder: 'GAIA' },
+                { key: 'gaiaCheck', placeholder: 'GAIA' }
+              ].map((col) => (
+                <TableCell key={col.key} sx={{ p: '4px !important', minWidth: 100 }}>
+                  <Autocomplete
+                    freeSolo
+                    size="small"
+                    options={columnUniqueOptions[col.key] || []}
+                    value={columnFilters[col.key]}
+                    onInputChange={(event, newValue) => handleColumnFilterChange(col.key, newValue)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder={col.placeholder}
+                        sx={{
+                          '& .MuiInputBase-root': {
+                            fontSize: '0.7rem',
+                            color: '#fff',
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            borderRadius: '4px'
+                          },
+                          '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                        }}
+                      />
+                    )}
+                  />
+                </TableCell>
+              ))}
+              <TableCell sx={{ p: '4px !important' }} /> {/* GAIA Content column */}
+              {[
                 { key: 'latestGaiaType', placeholder: 'Type' },
                 { key: 'latestGaiaReason', placeholder: 'Reason' }
               ].map((col) => (
@@ -2009,6 +2055,7 @@ const AllTasksList = () => {
                   />
                 </TableCell>
               ))}
+              <TableCell sx={{ p: '4px !important' }} /> {/* GAIA Content column */}
               <TableCell sx={{ p: '4px !important' }} /> {/* Steps */}
               <TableCell sx={{ p: '4px !important' }} /> {/* Actions */}
             </TableRow>
@@ -2231,6 +2278,49 @@ const AllTasksList = () => {
                             borderColor: 'divider'
                           }}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ direction: 'ltr', textAlign: 'left', minWidth: 200 }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontSize: '0.8rem',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              whiteSpace: 'pre-wrap',
+                              lineHeight: '1.2em',
+                              maxHeight: '3.6em',
+                              direction: 'ltr',
+                            }}
+                          >
+                            {task.gaiaContent || "-"}
+                          </Typography>
+                          {task.gaiaContent && (task.gaiaContent.length > 60 || task.gaiaContent.split('\n').length > 3) && (
+                            <Button
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDialogTitle("GAIA Content");
+                                setDialogContent(task.gaiaContent);
+                                setDialogOpen(true);
+                              }}
+                              sx={{
+                                minWidth: 'auto',
+                                p: 0,
+                                mt: 0.5,
+                                textTransform: 'none',
+                                color: '#7b68ee',
+                                fontSize: '0.75rem',
+                                fontWeight: 'bold',
+                                '&:hover': { background: 'transparent', textDecoration: 'underline' }
+                              }}
+                            >
+                              Read More
+                            </Button>
+                          )}
+                        </Box>
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -2623,7 +2713,7 @@ const AllTasksList = () => {
       <AddTask
         open={openAddTask}
         setOpen={setOpenAddTask}
-        setUpdateRefetchTasks={setUpdateRefetchTasks}
+        setUpdateRefetchTasks={() => setUpdateRefetchTasks(prev => prev + 1)}
       />
       {/* Read More Dialog */}
       <Dialog
@@ -2648,7 +2738,11 @@ const AllTasksList = () => {
             <MdClose />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ mt: 2, direction: 'rtl', textAlign: 'right' }}>
+        <DialogContent sx={{
+          mt: 2,
+          direction: dialogTitle === "GAIA Content" ? 'ltr' : 'rtl',
+          textAlign: dialogTitle === "GAIA Content" ? 'left' : 'right'
+        }}>
           <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
             {dialogContent || "No content available."}
           </Typography>
@@ -2667,7 +2761,7 @@ const AllTasksList = () => {
           setTicketTask(null);
         }}
         task={ticketTask}
-        onTicketAdded={() => setUpdateRefetchTasks(prev => !prev)}
+        onTicketAdded={() => setUpdateRefetchTasks(prev => prev + 1)}
       />
 
       {/* GAIA Steps Dialog */}
