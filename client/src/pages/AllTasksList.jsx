@@ -90,7 +90,7 @@ import EditTaskDialog from '../components/task/EditTaskDialog';
 import RecordTicketDialog from '../components/task/RecordTicketDialog';
 import GaiaStepsDialog from '../components/task/GaiaStepsDialog';
 import { TaskDetailsDialog } from '../components/TaskDetailsDialog';
-import { getCustomWeekNumber as getAggregatedWeekNumber } from '../utils/helpers';
+import { getCustomWeekNumber as getAggregatedWeekNumber, getCustomWeekRange } from '../utils/helpers';
 import { utils, writeFile } from 'xlsx';
 import AddTask from '../components/task/AddTask';
 import AdvancedSearch from '../components/common/AdvancedSearch';
@@ -125,12 +125,30 @@ const AllTasksList = () => {
 
   // Filter State
   const [dateFilter, setDateFilter] = useState({
-    start: startOfWeek(subWeeks(new Date(), 2)),
-    end: endOfWeek(new Date()),
-    type: 'latest3Weeks'
+    start: null, // Will be set in useEffect once settings load
+    end: null,
+    type: 'thisWeek'
   });
-  const [tempStartDate, setTempStartDate] = useState(startOfWeek(subWeeks(new Date(), 2)));
-  const [tempEndDate, setTempEndDate] = useState(endOfWeek(new Date()));
+  const [tempStartDate, setTempStartDate] = useState(null);
+  const [tempEndDate, setTempEndDate] = useState(null);
+
+  // Sync initial date filter with settings
+  useEffect(() => {
+    if (settings) {
+      const today = new Date();
+      const thisWeek = getCustomWeekRange(today, settings);
+      setDateFilter(prev => {
+        if (prev.type === 'thisWeek' && !prev.start) {
+          return { ...thisWeek, type: 'thisWeek' };
+        }
+        return prev;
+      });
+      if (!tempStartDate) {
+        setTempStartDate(thisWeek.start);
+        setTempEndDate(thisWeek.end);
+      }
+    }
+  }, [settings]);
 
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -839,62 +857,75 @@ const AllTasksList = () => {
     }
 
     // 6. Deep Raw Data Sheet
-    const rawData = filteredTasks.map(task => ({
-      // --- TASK CORE ---
-      'SLID': task.slid || 'N/A',
-      'Request Number': task.requestNumber || 'N/A',
-      'Status': task.status || 'N/A',
-      'Priority': task.priority || 'Normal',
-      'Operation': task.operation || 'N/A',
-      'Tariff Name': task.tarrifName || 'N/A',
-      'Speed (Mbps)': task.speed || 'N/A',
-      'Validation Status': task.validationStatus || 'Pending',
-      'Evaluation Score': task.evaluationScore !== null ? task.evaluationScore : 'N/A',
+    const maxTickets = filteredTasks.reduce((max, t) => Math.max(max, (t.tickets || []).length), 0);
 
-      // --- CUSTOMER DETAILS ---
-      'Customer Name': task.customerName || 'N/A',
-      'Customer Type': task.customerType || 'N/A',
-      'Contact Number': task.contactNumber || 'N/A',
-      'Governorate': task.governorate || 'N/A',
-      'District': task.district || 'N/A',
-      'Customer Feedback': task.customerFeedback || 'N/A',
+    const rawData = filteredTasks.map(task => {
+      const baseData = {
+        // --- TASK CORE ---
+        'SLID': task.slid || 'N/A',
+        'Request Number': task.requestNumber || 'N/A',
+        'Status': task.status || 'N/A',
+        'Priority': task.priority || 'Normal',
+        'Operation': task.operation || 'N/A',
+        'Tariff Name': task.tarrifName || 'N/A',
+        'Speed (Mbps)': task.speed || 'N/A',
+        'Validation Status': task.validationStatus || 'Pending',
+        'Evaluation Score': task.evaluationScore !== null ? task.evaluationScore : 'N/A',
 
-      // --- TECHNICAL DETAILS ---
-      'ONT Type': task.ontType || 'N/A',
-      'Free Extender': task.freeExtender || 'N/A',
-      'Extender Type': task.extenderType || 'N/A',
-      'Extender Count': task.extenderNumber || 0,
-      'GAIA Check': task.gaiaCheck || 'N/A',
-      'GAIA Content': task.gaiaContent || 'N/A',
+        // --- CUSTOMER DETAILS ---
+        'Customer Name': task.customerName || 'N/A',
+        'Customer Type': task.customerType || 'N/A',
+        'Contact Number': task.contactNumber || 'N/A',
+        'Governorate': task.governorate || 'N/A',
+        'District': task.district || 'N/A',
+        'Customer Feedback': task.customerFeedback || 'N/A',
 
-      // --- AUDIT METADATA ---
-      'Reasons': Array.isArray(task.reason) ? task.reason.join(', ') : (task.reason || 'N/A'),
-      'Sub-Reasons': Array.isArray(task.subReason) ? task.subReason.join(', ') : (task.subReason || 'N/A'),
-      'Root Causes': Array.isArray(task.rootCause) ? task.rootCause.join(', ') : (task.rootCause || 'N/A'),
-      'Responsible Party': Array.isArray(task.responsible) ? task.responsible.join(', ') : (task.responsible || 'N/A'),
+        // --- TECHNICAL DETAILS ---
+        'ONT Type': task.ontType || 'N/A',
+        'Free Extender': task.freeExtender || 'N/A',
+        'Extender Type': task.extenderType || 'N/A',
+        'Extender Count': task.extenderNumber || 0,
+        'GAIA Check': task.gaiaCheck || 'N/A',
+        'GAIA Content': task.gaiaContent || 'N/A',
 
-      // --- TEAM & ASSIGNMENT ---
-      'Field Team Name': task.teamName || 'N/A',
-      'Team Company': task.teamCompany || 'N/A',
-      'Assigned To': task.assignedTo?.map(u => u.name).join(', ') || 'Unassigned',
-      'Created By': task.createdBy?.name || 'System',
+        // --- AUDIT METADATA ---
+        'Reasons': Array.isArray(task.reason) ? task.reason.join(', ') : (task.reason || 'N/A'),
+        'Sub-Reasons': Array.isArray(task.subReason) ? task.subReason.join(', ') : (task.subReason || 'N/A'),
+        'Root Causes': Array.isArray(task.rootCause) ? task.rootCause.join(', ') : (task.rootCause || 'N/A'),
+        'Responsible Party': Array.isArray(task.responsible) ? task.responsible.join(', ') : (task.responsible || 'N/A'),
 
-      // --- LATEST GAIA STATUS (Latest Ticket) ---
-      'Latest GAIA Type': task.latestGaia?.transactionType || 'N/A',
-      'Latest GAIA State': task.latestGaia?.transactionState || 'N/A',
-      'Latest GAIA Reason Code': task.latestGaia?.unfReasonCode || 'N/A',
-      'Latest Action Taken': task.latestGaia?.actionTaken || 'N/A',
-      'Latest Agent Note': task.latestGaia?.note || 'N/A',
+        // --- TEAM & ASSIGNMENT ---
+        'Field Team Name': task.teamName || 'N/A',
+        'Team Company': task.teamCompany || 'N/A',
+        'Assigned To': task.assignedTo?.map(u => u.name).join(', ') || 'Unassigned',
+        'Created By': task.createdBy?.name || 'System',
 
-      // --- TIMELINE ---
-      'Created At': task.createdAt ? format(new Date(task.createdAt), 'yyyy-MM-dd HH:mm') : '-',
-      'Contract Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
-      'In Date': task.inDate ? format(new Date(task.inDate), 'yyyy-MM-dd') : 'N/A',
-      'App Date': task.appDate ? format(new Date(task.appDate), 'yyyy-MM-dd') : 'N/A',
-      'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
-      'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
-      'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
-    }));
+        // --- LATEST GAIA STATUS (Latest Ticket) ---
+        'Latest GAIA Type': task.latestGaia?.transactionType || 'N/A',
+        'Latest GAIA State': task.latestGaia?.transactionState || 'N/A',
+        'Latest GAIA Reason Code': task.latestGaia?.unfReasonCode || 'N/A',
+        'Latest Action Taken': task.latestGaia?.actionTaken || 'N/A',
+      };
+
+      // --- ALL AGENT NOTES ---
+      const sortedTickets = [...(task.tickets || [])].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      for (let i = 0; i < maxTickets; i++) {
+        baseData[`Agent Note ${i + 1}`] = sortedTickets[i]?.note || '';
+      }
+
+      const timelineData = {
+        // --- TIMELINE ---
+        'Created At': task.createdAt ? format(new Date(task.createdAt), 'yyyy-MM-dd HH:mm') : '-',
+        'Contract Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
+        'In Date': task.inDate ? format(new Date(task.inDate), 'yyyy-MM-dd') : 'N/A',
+        'App Date': task.appDate ? format(new Date(task.appDate), 'yyyy-MM-dd') : 'N/A',
+        'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
+        'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
+        'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
+      };
+
+      return { ...baseData, ...timelineData };
+    });
 
     const wsRaw = utils.json_to_sheet(rawData, { origin: "A2" });
     utils.sheet_add_aoa(wsRaw, [[`DEEP RAW AUDIT DATA - ${periodStr}`]], { origin: "A1" });
@@ -1059,60 +1090,6 @@ const AllTasksList = () => {
 
         <Divider sx={{ my: 2, borderColor: '#6366f1' }} />
 
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 3, width: '100%', overflowX: 'hidden' }}>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%', overflowX: 'auto', flexWrap: { xs: 'nowrap', md: 'wrap' } }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-              <MdDateRange /> Date Filter:
-            </Typography>
-            <Box sx={{
-              display: 'flex',
-              gap: 1,
-              flexWrap: 'wrap',
-              flexShrink: 0,
-              '& .MuiButton-root': {
-                whiteSpace: 'nowrap',
-                minWidth: 'auto',
-                px: 1.5,
-                borderRadius: '20px',
-                textTransform: 'none',
-                fontWeight: 600
-              }
-            }}>
-              <Button onClick={() => setDateFilter({ start: startOfWeek(subWeeks(new Date(), 2)), end: endOfWeek(new Date()), type: 'latest3Weeks' })} variant={dateFilter.type === 'latest3Weeks' ? 'contained' : 'outlined'} size="small">Latest 3 Weeks</Button>
-              <Button onClick={() => setDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()), type: 'thisWeek' })} variant={dateFilter.type === 'thisWeek' ? 'contained' : 'outlined'} size="small">This Week</Button>
-              <Button onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()), type: 'thisMonth' })} variant={dateFilter.type === 'thisMonth' ? 'contained' : 'outlined'} size="small">This Month</Button>
-              <Button onClick={() => setDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()), type: 'thisYear' })} variant={dateFilter.type === 'thisYear' ? 'contained' : 'outlined'} size="small">This Year</Button>
-              <Button onClick={() => setDateFilter({ start: null, end: null, type: 'all' })} variant={dateFilter.type === 'all' ? 'contained' : 'outlined'} size="small">All Time</Button>
-            </Box>
-
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
-                <DatePicker
-                  label="Start"
-                  value={tempStartDate}
-                  onChange={(v) => setTempStartDate(v)}
-                  slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
-                />
-                <DatePicker
-                  label="End"
-                  value={tempEndDate}
-                  onChange={(v) => setTempEndDate(v)}
-                  slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
-                />
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => {
-                    setDateFilter({ start: tempStartDate, end: tempEndDate, type: 'custom' });
-                  }}
-                  sx={{ borderRadius: '20px', textTransform: 'none', flexShrink: 0 }}
-                >
-                  Apply
-                </Button>
-              </Box>
-            </LocalizationProvider>
-          </Box>
-        </Stack>
 
         {/* Premium KPI Cards */}
         <Box sx={{
@@ -1364,8 +1341,115 @@ const AllTasksList = () => {
         flexDirection: isMobile ? 'column' : 'row',
         flexWrap: 'wrap',
         gap: 2,
-        alignItems: 'center'
+        alignItems: 'center',
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        '&::-webkit-scrollbar': { height: '4px' },
+        '&::-webkit-scrollbar-track': { background: '#1e1e1e' },
+        '&::-webkit-scrollbar-thumb': { background: '#555', borderRadius: '4px' }
       }}>
+        {/* Date Filters Merged */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
+          <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#7b68ee', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <MdDateRange /> Date:
+          </Typography>
+          <Box sx={{
+            display: 'flex',
+            gap: 0.5,
+            flexShrink: 0,
+            '& .MuiButton-root': {
+              whiteSpace: 'nowrap',
+              minWidth: 'auto',
+              px: 1,
+              py: 0.5,
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              backgroundColor: '#1e1e1e',
+              borderColor: '#3d3d3d',
+              color: '#b3b3b3',
+              '&:hover': { borderColor: '#7b68ee', backgroundColor: 'rgba(123, 104, 238, 0.08)' },
+              '&.MuiButton-contained': {
+                backgroundColor: '#7b68ee',
+                color: '#fff',
+                '&:hover': { backgroundColor: '#6854d9' }
+              }
+            }
+          }}>
+            <Button onClick={() => setDateFilter({ ...getCustomWeekRange(new Date(), settings), type: 'thisWeek' })} variant={dateFilter.type === 'thisWeek' ? 'contained' : 'outlined'} size="small">This Week</Button>
+            <Button onClick={() => setDateFilter({ ...getCustomWeekRange(subWeeks(new Date(), 1), settings), type: 'lastWeek' })} variant={dateFilter.type === 'lastWeek' ? 'contained' : 'outlined'} size="small">Last Week</Button>
+            <Button onClick={() => setDateFilter({ start: getCustomWeekRange(subWeeks(new Date(), 2), settings).start, end: getCustomWeekRange(new Date(), settings).end, type: 'latest3Weeks' })} variant={dateFilter.type === 'latest3Weeks' ? 'contained' : 'outlined'} size="small">Latest 3W</Button>
+            <Button onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()), type: 'thisMonth' })} variant={dateFilter.type === 'thisMonth' ? 'contained' : 'outlined'} size="small">This Month</Button>
+            <Button onClick={() => setDateFilter({ start: null, end: null, type: 'all' })} variant={dateFilter.type === 'all' ? 'contained' : 'outlined'} size="small">All Time</Button>
+          </Box>
+
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
+              <DatePicker
+                label="Start"
+                value={tempStartDate}
+                onChange={(v) => setTempStartDate(v)}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    sx: {
+                      width: 110,
+                      '& .MuiInputBase-root': {
+                        fontSize: '0.75rem',
+                        backgroundColor: '#1e1e1e',
+                        borderRadius: '12px',
+                        color: '#fff'
+                      },
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: '#b3b3b3' },
+                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #3d3d3d' }
+                    }
+                  }
+                }}
+              />
+              <DatePicker
+                label="End"
+                value={tempEndDate}
+                onChange={(v) => setTempEndDate(v)}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    sx: {
+                      width: 110,
+                      '& .MuiInputBase-root': {
+                        fontSize: '0.75rem',
+                        backgroundColor: '#1e1e1e',
+                        borderRadius: '12px',
+                        color: '#fff'
+                      },
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: '#b3b3b3' },
+                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #3d3d3d' }
+                    }
+                  }
+                }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => {
+                  setDateFilter({ start: tempStartDate, end: tempEndDate, type: 'custom' });
+                }}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  flexShrink: 0,
+                  fontSize: '0.75rem',
+                  backgroundColor: '#7b68ee',
+                  '&:hover': { backgroundColor: '#6854d9' }
+                }}
+              >
+                Apply
+              </Button>
+            </Box>
+          </LocalizationProvider>
+        </Box>
+
+        <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#3d3d3d' }} />
         <Tooltip title="Refresh data">
           <IconButton
             onClick={() => setUpdateRefetchTasks(prev => !prev)}

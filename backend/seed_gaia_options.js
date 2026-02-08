@@ -52,9 +52,12 @@ const GAIA_OPTIONS = [
     { category: "UNF_REASON_CODE", value: "304", label: "Waiting for Civil Works / Third Party", order: 19 },
     { category: "UNF_REASON_CODE", value: "305", label: "Technical Impediment / Network Issue", order: 20 },
     { category: "UNF_REASON_CODE", value: "306", label: "Pending Customer Reply / Information", order: 21 },
+    { category: "UNF_REASON_CODE", value: "401", label: "ITN Related (Installation/Cabling/Behavior)", order: 22 },
+    { category: "UNF_REASON_CODE", value: "402", label: "Non-ITN Related (Customer/ISP/Third Party)", order: 23 },
+    { category: "UNF_REASON_CODE", value: "708", label: "Pure Neutral (Score 7-8 / No Issue Reported)", order: 24 },
 
-    { category: "UNF_REASON_CODE", value: "001", label: "Reason Specified in Remarks", order: 22 },
-    { category: "UNF_REASON_CODE", value: "002", label: "Generic Minor Unfreeze Reason", order: 23 },
+    { category: "UNF_REASON_CODE", value: "001", label: "Reason Specified in Remarks", order: 25 },
+    { category: "UNF_REASON_CODE", value: "002", label: "Generic Minor Unfreeze Reason", order: 26 },
 
     // System Flow Status
     { category: "SYSTEM_FLOW_STATUS", value: "Todo", label: "Todo", order: 1 },

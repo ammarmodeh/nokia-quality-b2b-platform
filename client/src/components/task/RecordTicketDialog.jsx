@@ -183,7 +183,6 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
     }, [transactionType]);
 
     const handleSubmit = async () => {
-        if (!note.trim()) return;
         setLoading(true);
         try {
             const ticketData = {
@@ -527,7 +526,6 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                                     value={note}
                                     onChange={(e) => setNote(e.target.value)}
                                     placeholder="Enter exhaustive technical or logistic details..."
-                                    required
                                     sx={{
                                         '& textarea': {
                                             fontSize: '0.9rem',
@@ -751,7 +749,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                         <Button
                             variant="contained"
                             onClick={handleSubmit}
-                            disabled={!note.trim() || loading}
+                            disabled={loading}
                             sx={{ borderRadius: 2, fontWeight: 900, bgcolor: '#7b68ee', px: 4, '&:hover': { bgcolor: '#6854d9' } }}
                         >
                             {loading ? "TRANSMITTING..." : (editingTicket ? "UPDATE RECORD" : "COMMIT TRANSACTION")}

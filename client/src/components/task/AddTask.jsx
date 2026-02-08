@@ -25,9 +25,89 @@ import UserList from './UserList';
 import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useState } from 'react';
 import api from '../../api/api';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
+import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 
 // Fallback constants removed. Powered by dynamic API data.
 
+
+const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, handleChange }) => {
+  return (
+    <Box sx={{ width: '100%' }}>
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main', fontSize: '1rem' }}>
+        RCA & Responsibility
+      </Typography>
+      <Stack spacing={2}>
+        {rcaRows.map((row, index) => (
+          <Box key={index} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'rgba(0,0,0,0.02)' }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} sm={2.7}>
+                <Autocomplete
+                  freeSolo
+                  fullWidth
+                  size="small"
+                  options={dropdownOptions.REASON?.map(item => item.value) || []}
+                  value={row.reason}
+                  onChange={(e, nv) => handleChange(index, 'reason', nv || '')}
+                  onInputChange={(e, nv) => handleChange(index, 'reason', nv || '')}
+                  renderInput={(params) => <TextField {...params} label="Main Reason" variant="outlined" />}
+                />
+              </Grid>
+              <Grid item xs={12} sm={2.7}>
+                <Autocomplete
+                  freeSolo
+                  fullWidth
+                  size="small"
+                  options={dropdownOptions.REASON_SUB?.map(item => item.value) || []}
+                  value={row.subReason}
+                  onChange={(e, nv) => handleChange(index, 'subReason', nv || '')}
+                  onInputChange={(e, nv) => handleChange(index, 'subReason', nv || '')}
+                  renderInput={(params) => <TextField {...params} label="Sub Reason" variant="outlined" />}
+                />
+              </Grid>
+              <Grid item xs={12} sm={2.7}>
+                <Autocomplete
+                  freeSolo
+                  fullWidth
+                  size="small"
+                  options={dropdownOptions.ROOT_CAUSE?.map(item => item.value) || []}
+                  value={row.rootCause}
+                  onChange={(e, nv) => handleChange(index, 'rootCause', nv || '')}
+                  onInputChange={(e, nv) => handleChange(index, 'rootCause', nv || '')}
+                  renderInput={(params) => <TextField {...params} label="Root Cause" variant="outlined" />}
+                />
+              </Grid>
+              <Grid item xs={12} sm={2.7}>
+                <Autocomplete
+                  freeSolo
+                  fullWidth
+                  size="small"
+                  options={dropdownOptions.RESPONSIBILITY?.map(item => item.value) || []}
+                  value={row.responsible}
+                  onChange={(e, nv) => handleChange(index, 'responsible', nv || '')}
+                  onInputChange={(e, nv) => handleChange(index, 'responsible', nv || '')}
+                  renderInput={(params) => <TextField {...params} label="Owner" variant="outlined" />}
+                />
+              </Grid>
+              <Grid item xs={12} sm={1.2}>
+                <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                  <IconButton color="primary" onClick={handleAdd} size="small">
+                    <AddCircleIcon />
+                  </IconButton>
+                  {rcaRows.length > 1 && (
+                    <IconButton color="error" onClick={() => handleRemove(index)} size="small">
+                      <RemoveCircleIcon />
+                    </IconButton>
+                  )}
+                </Stack>
+              </Grid>
+            </Grid>
+          </Box>
+        ))}
+      </Stack>
+    </Box>
+  );
+};
 
 const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   // const user = useSelector((state) => state?.auth?.user);
@@ -135,10 +215,9 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [district, setDistrict] = useState("");
   const [customerType, setCustomerType] = useState(dropdownOptions.CUSTOMER_TYPE[0]);
   const [validationStatus, setValidationStatus] = useState(dropdownOptions.VALIDATION_STATUS[1] || dropdownOptions.VALIDATION_STATUS[0]);
-  const [responsible, setResponsible] = useState([]);
-  const [reason, setReason] = useState([]);
-  const [subReason, setSubReason] = useState([]);
-  const [rootCause, setRootCause] = useState([]);
+  const [rcaRows, setRcaRows] = useState([
+    { responsible: '', reason: '', subReason: '', rootCause: '' }
+  ]);
   const [ontType, setOntType] = useState("");
   const [freeExtender, setFreeExtender] = useState("No");
   const [extenderType, setExtenderType] = useState("");
@@ -198,10 +277,10 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       evaluationScore,
       customerType,
       validationStatus,
-      responsible,
-      reason,
-      subReason,
-      rootCause,
+      responsible: rcaRows.map(r => r.responsible).filter(v => v),
+      reason: rcaRows.map(r => r.reason).filter(v => v),
+      subReason: rcaRows.map(r => r.subReason).filter(v => v),
+      rootCause: rcaRows.map(r => r.rootCause).filter(v => v),
       ontType,
       freeExtender,
       extenderType: freeExtender === 'Yes' ? extenderType : null,
@@ -254,6 +333,14 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
 
   const handleClose = () => {
     setOpen(false);
+  };
+
+  const handleAddRcaRow = () => setRcaRows([...rcaRows, { responsible: '', reason: '', subReason: '', rootCause: '' }]);
+  const handleRemoveRcaRow = (index) => setRcaRows(rcaRows.filter((_, i) => i !== index));
+  const handleChangeRcaRow = (index, field, newValue) => {
+    const updated = [...rcaRows];
+    updated[index][field] = newValue;
+    setRcaRows(updated);
   };
 
   return (
@@ -583,45 +670,15 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             />
           </Stack>
 
-          {/* Row 10: RCA (Responsibility, Reason, SubReason, RootCause) */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <Autocomplete
-              multiple
-              freeSolo
-              fullWidth
-              options={dropdownOptions.RESPONSIBILITY?.map(item => item.value) || []}
-              value={responsible}
-              onChange={(e, newValue) => setResponsible(newValue || [])}
-              renderInput={(params) => <TextField {...params} label="Owner" variant="outlined" />}
-            />
-            <Autocomplete
-              multiple
-              freeSolo
-              fullWidth
-              options={dropdownOptions.REASON?.map(item => item.value) || []}
-              value={reason}
-              onChange={(e, newValue) => setReason(newValue || [])}
-              renderInput={(params) => <TextField {...params} label="Main Reason" variant="outlined" />}
-            />
-            <Autocomplete
-              multiple
-              freeSolo
-              fullWidth
-              options={dropdownOptions.REASON_SUB?.map(item => item.value) || []}
-              value={subReason}
-              onChange={(e, newValue) => setSubReason(newValue || [])}
-              renderInput={(params) => <TextField {...params} label="Sub Reason" variant="outlined" />}
-            />
-            <Autocomplete
-              multiple
-              freeSolo
-              fullWidth
-              options={dropdownOptions.ROOT_CAUSE?.map(item => item.value) || []}
-              value={rootCause}
-              onChange={(e, newValue) => setRootCause(newValue || [])}
-              renderInput={(params) => <TextField {...params} label="Root Cause" variant="outlined" />}
-            />
-          </Stack>
+          {/* Row 10: Unified RCA Rows (Responsibility, Reason, SubReason, RootCause) */}
+          <UnifiedRCARows
+            rcaRows={rcaRows}
+            setRcaRows={setRcaRows}
+            dropdownOptions={dropdownOptions}
+            handleAdd={handleAddRcaRow}
+            handleRemove={handleRemoveRcaRow}
+            handleChange={handleChangeRcaRow}
+          />
 
           <Divider sx={{ my: 2 }} />
           <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 2 }}>Additional Details (Priority, Validation, etc.)</Typography>

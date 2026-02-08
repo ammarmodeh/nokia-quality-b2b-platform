@@ -449,6 +449,33 @@ export const getCustomWeekNumber = (date, year, settings = {}) => {
   return Math.floor(diffDays / 7) + 1;
 };
 
+/**
+ * Get the start and end dates for a week that results in the same week number 
+ * as the given date, using the provided settings.
+ */
+export const getCustomWeekRange = (date, settings = {}) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const targetWeek = getCustomWeekNumber(d, d.getFullYear(), settings);
+
+  // Find start: move backwards until week changes
+  let start = new Date(d);
+  while (getCustomWeekNumber(start, start.getFullYear(), settings) === targetWeek) {
+    start.setDate(start.getDate() - 1);
+    // Safety break for Jan 1st transitions or very old dates
+    if (start.getFullYear() < d.getFullYear() - 1) break;
+  }
+  start.setDate(start.getDate() + 1);
+  start.setHours(0, 0, 0, 0);
+
+  // Find end: start + 6 days (weeks are always 7 days in this logic)
+  let end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+};
+
 
 
 

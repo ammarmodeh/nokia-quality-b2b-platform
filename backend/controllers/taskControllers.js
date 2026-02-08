@@ -49,10 +49,25 @@ export const addTask = async (req, res) => {
       note: "Initial task creation",
       agentName: "SYSTEM",
       recordedBy: req.user._id,
+      eventDate: null, // N/A Execution Date
+    });
+
+    // Create the second "Work order initiated" ticket
+    const secondaryTicket = new TaskTicket({
+      taskId: task._id,
+      mainCategory: "WO",
+      transactionType: "WO",
+      transactionState: "OP",
+      status: "In Progress",
+      note: "Work order initiated.",
+      agentName: req.user.name,
+      recordedBy: req.user._id,
+      eventDate: null, // N/A Execution Date
     });
 
     await task.save({ session });
     await initialTicket.save({ session });
+    await secondaryTicket.save({ session });
 
     await session.commitTransaction();
     session.endSession();
@@ -825,7 +840,7 @@ export const getAllTasks = async (req, res) => {
           latestGaia: { $arrayElemAt: [{ $sortArray: { input: "$tickets", sortBy: { timestamp: -1 } } }, 0] }
         }
       },
-      { $project: { "subTasks.checkpoints": 0, tickets: 0 } }
+      { $project: { "subTasks.checkpoints": 0 } }
     ];
 
     const tasks = await TaskSchema.aggregate(pipeline);
