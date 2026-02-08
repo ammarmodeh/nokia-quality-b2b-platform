@@ -57,15 +57,13 @@ import {
   MdCalendarToday,
   MdBlock,
   MdError,
-  MdBarChart,
   MdTimeline,
+  MdInsights,
   MdDateRange,
   MdAssignmentTurnedIn,
   MdHistory,
 } from 'react-icons/md';
 import {
-  BarChart,
-  Bar,
   LineChart,
   Line,
   AreaChart,
@@ -95,6 +93,7 @@ import { utils, writeFile } from 'xlsx';
 import AddTask from '../components/task/AddTask';
 import AdvancedSearch from '../components/common/AdvancedSearch';
 import moment from 'moment';
+import AllTasksDeepDiveAnalytics from '../components/task/AllTasksDeepDiveAnalytics';
 
 const DEFAULT_SETTINGS_STATE = { settings: {} };
 
@@ -159,6 +158,7 @@ const AllTasksList = () => {
   const [teamNameFilter, setTeamNameFilter] = useState('all');
   const [validationFilter, setValidationFilter] = useState('all');
   const [filter, setFilter] = useState('all'); // Eval score filter
+  const [analyticsView, setAnalyticsView] = useState('basic'); // 'basic' or 'deep'
 
   // Dialogs & Selection
   const [selectedTask, setSelectedTask] = useState(null);
@@ -547,50 +547,74 @@ const AllTasksList = () => {
     };
   }, [filteredTasks]);
 
-  const StatCard = ({ title, value, icon, color, subtitle }) => (
+  const StatCard = ({ title, value, icon, color, subtitle, extra }) => (
     <Card sx={{
       background: 'rgba(45, 45, 45, 0.6)',
       backdropFilter: 'blur(10px)',
-      border: `1px solid ${alpha(color, 0.2)}`,
-      borderRadius: '20px',
+      border: `1px solid ${alpha(color, 0.3)}`,
+      borderRadius: '24px',
       color: '#fff',
       height: '100%',
-      transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+      position: 'relative',
+      overflow: 'hidden',
+      transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
       '&:hover': {
-        transform: 'translateY(-5px)',
-        boxShadow: `0 10px 20px ${alpha(color, 0.2)}`,
+        transform: 'translateY(-8px)',
+        boxShadow: `0 15px 30px ${alpha(color, 0.3)}`,
+        borderColor: color,
+        '& .stat-icon': {
+          transform: 'scale(1.1) rotate(5deg)',
+          boxShadow: `0 0 20px ${alpha(color, 0.4)}`,
+        }
+      },
+      '&::after': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: '100px',
+        height: '100px',
+        background: `radial-gradient(circle at top right, ${alpha(color, 0.1)}, transparent 70%)`,
+        zIndex: 0
       }
     }}>
-      <CardContent sx={{ p: 2.5 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <Box sx={{
+      <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+          <Box className="stat-icon" sx={{
             p: 1.5,
-            borderRadius: '12px',
-            background: alpha(color, 0.1),
+            borderRadius: '16px',
+            background: alpha(color, 0.15),
             color: color,
-            display: 'flex'
+            display: 'flex',
+            transition: 'all 0.3s ease',
+            border: `1px solid ${alpha(color, 0.2)}`
           }}>
             {icon}
           </Box>
           {subtitle && (
-            <Typography variant="caption" sx={{ color: alpha('#fff', 0.6), fontWeight: 500 }}>
+            <Typography variant="overline" sx={{ color: alpha('#fff', 0.5), fontWeight: 900, fontSize: '0.65rem', letterSpacing: 1.5 }}>
               {subtitle}
             </Typography>
           )}
         </Box>
-        <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5, letterSpacing: '-1px' }}>
+        <Typography variant="h3" sx={{ fontWeight: 900, mb: 0.5, letterSpacing: '-1.5px', color: '#fff' }}>
           {value}
         </Typography>
-        <Typography variant="body2" sx={{ color: alpha('#fff', 0.7), fontWeight: 500 }}>
+        <Typography variant="subtitle2" sx={{ color: alpha('#fff', 0.6), fontWeight: 700, mb: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>
           {title}
         </Typography>
+        {extra && (
+          <Box sx={{ mt: 'auto', pt: 2, borderTop: `1px solid ${alpha('#fff', 0.05)}` }}>
+            {extra}
+          </Box>
+        )}
       </CardContent>
     </Card>
   );
 
   // Weekly Trend Data Processing
   const trendData = useMemo(() => {
-    if (!filteredTasks.length) return [];
+    if (!filteredTasks.length) return { data: [], topReasons: [], topOwners: [] };
 
     // 1. Group by Week
     const weekMap = {};
@@ -1054,278 +1078,327 @@ const AllTasksList = () => {
       {/* Advanced Analytics & Filter Section */}
       <Paper sx={{ mb: 3, p: 2, borderRadius: 3, border: '1px dashed #6366f1', bgcolor: 'rgba(99, 102, 241, 0.04)' }}>
 
-        {/* KPI Cards */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#2d2d2d', color: '#fff' }}>
-              <Typography variant="h4" color="primary">{filteredTasks.length}</Typography>
-              <Typography variant="caption" color="gray">Tasks Found</Typography>
-            </Paper>
+        {/* Consolidated Premium KPI Cards */}
+        <Grid container spacing={4} sx={{ mt: 1, mb: 5 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Total Audits"
+              value={dashboardStats.total}
+              icon={<MdHistory size={28} />}
+              color="#7b68ee"
+              subtitle="Efficiency"
+              extra={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 800 }}>
+                    {dashboardStats.complianceRate}% Compliance
+                  </Typography>
+                  <Box sx={{ flexGrow: 1, height: 4, bgcolor: alpha('#fff', 0.1), borderRadius: 2 }}>
+                    <Box sx={{ width: `${dashboardStats.complianceRate}%`, height: '100%', bgcolor: '#10b981', borderRadius: 2 }} />
+                  </Box>
+                </Box>
+              }
+            />
           </Grid>
-          <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#2d2d2d', color: '#fff' }}>
-              <Typography variant="h4" color="secondary">
-                {filteredTasks.filter(t => t.validationStatus === 'Validated').length}
-              </Typography>
-              <Typography variant="caption" color="gray">Validated</Typography>
-            </Paper>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Health Status"
+              value={filteredTasks.filter(t => t.status === 'Closed').length}
+              icon={<MdCheckCircle size={28} />}
+              color="#10b981"
+              subtitle="Resolution"
+              extra={
+                <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), fontWeight: 500 }}>
+                  <span style={{ color: '#ff9800', fontWeight: 800 }}>
+                    {filteredTasks.filter(t => ['Todo', 'In Progress'].includes(t.status)).length}
+                  </span> Active / Open Issues
+                </Typography>
+              }
+            />
           </Grid>
-          <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#2d2d2d', color: '#fff' }}>
-              <Typography variant="h4" sx={{ color: '#ff9800' }}>
-                {filteredTasks.filter(t => ['Todo', 'In Progress'].includes(t.status)).length}
-              </Typography>
-              <Typography variant="caption" color="gray">Open Issues</Typography>
-            </Paper>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Customer Pulse"
+              value={dashboardStats.promoterRate + '%'}
+              icon={<MdStar size={28} />}
+              color="#f59e0b"
+              subtitle="Sentiment"
+              extra={
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="caption" sx={{ color: '#ef4444' }}>
+                    Destractors: <strong>{dashboardStats.detractorRate}%</strong>
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#f59e0b' }}>
+                    Neutrals: <strong>{dashboardStats.neutralRate}%</strong>
+                  </Typography>
+                </Box>
+              }
+            />
           </Grid>
-          <Grid item xs={6} sm={3}>
-            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#2d2d2d', color: '#fff' }}>
-              <Typography variant="h4" color="error">
-                {filteredTasks.filter(t => t.evaluationScore <= 6).length}
-              </Typography>
-              <Typography variant="caption" color="gray">Detractors</Typography>
-            </Paper>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title="Excellence Score"
+              value={dashboardStats.avgScore}
+              icon={<MdAssignmentTurnedIn size={28} />}
+              color="#06b6d4"
+              subtitle="Performance"
+              extra={
+                <Typography variant="caption" sx={{ color: alpha('#fff', 0.5) }}>
+                  Top Performer: <strong style={{ color: '#fff' }}>{trendData?.topOwners?.[0]?.name || 'N/A'}</strong>
+                </Typography>
+              }
+            />
           </Grid>
         </Grid>
 
-        <Divider sx={{ my: 2, borderColor: '#6366f1' }} />
+        {/* View Selection Toggle */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
+          <ButtonGroup variant="outlined" sx={{ borderRadius: '12px', overflow: 'hidden', mb: 2 }}>
+            <Button
+              onClick={() => setAnalyticsView('basic')}
+              variant={analyticsView === 'basic' ? 'contained' : 'outlined'}
+              sx={{ px: 4, py: 1, textTransform: 'none', fontWeight: 600 }}
+              startIcon={<MdInsights />}
+            >
+              Basic Overview
+            </Button>
+            <Button
+              onClick={() => setAnalyticsView('deep')}
+              variant={analyticsView === 'deep' ? 'contained' : 'outlined'}
+              sx={{ px: 4, py: 1, textTransform: 'none', fontWeight: 600 }}
+              startIcon={<MdVisibility />}
+            >
+              Deep Dive Analysis
+            </Button>
+          </ButtonGroup>
 
-
-        {/* Premium KPI Cards */}
-        <Box sx={{
-          mt: 3,
-          mb: 4,
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(2, 1fr)',
-            md: 'repeat(3, 1fr)',
-            lg: 'repeat(4, 1fr)'
-          },
-          gap: 3
-        }}>
-          <StatCard
-            title="Total Audits"
-            value={dashboardStats.total}
-            icon={<MdHistory size={24} />}
-            color="#7b68ee"
-            subtitle="Volume"
-          />
-          <StatCard
-            title="Compliance"
-            value={`${dashboardStats.complianceRate}%`}
-            icon={<MdCheckCircle size={24} />}
-            color="#10b981"
-            subtitle="Validated"
-          />
-          <StatCard
-            title="Neutrals"
-            value={`${dashboardStats.neutralRate}%`}
-            icon={<MdRadioButtonUnchecked size={24} />}
-            color="#f59e0b"
-            subtitle="7-8 Score"
-          />
-          <StatCard
-            title="Detractors"
-            value={`${dashboardStats.detractorRate}%`}
-            icon={<MdError size={24} />}
-            color="#ef4444"
-            subtitle="0-6 Score"
-          />
+          <Typography variant="caption" sx={{ color: alpha('#fff', 0.4), fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+            Reporting Period: <span style={{ color: '#7b68ee' }}>{
+              dateFilter.label || (dateFilter.type === 'all' ? 'All Time' : `${format(dateFilter.start, 'dd MMM')} - ${format(dateFilter.end, 'dd MMM')}`)
+            }</span>
+          </Typography>
         </Box>
 
-        {/* Analytics Dashboard (Always Visible) */}
-        <Box sx={{ mt: 3 }}>
-          <Grid container spacing={3}>
-            {/* Reason Chart */}
-            <Grid item xs={12} md={4}>
-              <Paper sx={{
-                p: 2.5,
-                borderRadius: '20px',
-                background: 'rgba(45, 45, 45, 0.4)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid #3d3d3d',
-                height: 400,
-                color: '#fff'
-              }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#7b68ee' }}>Top Reasons Analysis</Typography>
-                <ResponsiveContainer width="100%" height="85%">
-                  <BarChart data={analyticsData.reason} layout="vertical" margin={{ left: 20 }}>
-                    <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fill: '#b3b3b3' }} />
-                    <RechartsTooltip
-                      contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                    />
-                    <Bar dataKey="value" fill="#7b68ee" radius={[0, 10, 10, 0]}>
-                      {analyticsData.reason.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={[alpha('#7b68ee', 1), alpha('#7b68ee', 0.8), alpha('#7b68ee', 0.6)][index % 3]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-            {/* Sub-Reason Chart */}
-            <Grid item xs={12} md={4}>
-              <Paper sx={{
-                p: 2.5,
-                borderRadius: '20px',
-                background: 'rgba(45, 45, 45, 0.4)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid #3d3d3d',
-                height: 400,
-                color: '#fff'
-              }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#10b981' }}>Sub-Reason Breakdown</Typography>
-                <ResponsiveContainer width="100%" height="85%">
-                  <BarChart data={analyticsData.subReason} layout="vertical" margin={{ left: 20 }}>
-                    <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fill: '#b3b3b3' }} />
-                    <RechartsTooltip
-                      contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                    />
-                    <Bar dataKey="value" fill="#10b981" radius={[0, 10, 10, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-            {/* Root Cause Chart */}
-            <Grid item xs={12} md={4}>
-              <Paper sx={{
-                p: 2.5,
-                borderRadius: '20px',
-                background: 'rgba(45, 45, 45, 0.4)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid #3d3d3d',
-                height: 400,
-                color: '#fff'
-              }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#f59e0b' }}>Root Cause Identification</Typography>
-                <ResponsiveContainer width="100%" height="85%">
-                  <BarChart data={analyticsData.rootCause} layout="vertical" margin={{ left: 20 }}>
-                    <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fill: '#b3b3b3' }} />
-                    <RechartsTooltip
-                      contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                    />
-                    <Bar dataKey="value" fill="#f59e0b" radius={[0, 10, 10, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Box>
-
-        {/* Weekly Trend Analytics (NEW) */}
-        {trendData.data?.length > 0 && (
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="h6" sx={{ fontWeight: 800, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5, color: '#7b68ee', letterSpacing: '-0.5px' }}>
-              <MdTimeline /> Weekly Performance Insights
-            </Typography>
-            <Grid container spacing={3}>
-              {/* Reason Trends */}
-              <Grid item xs={12} md={6}>
-                <Paper sx={{
-                  p: 3,
-                  borderRadius: '20px',
-                  background: 'rgba(45, 45, 45, 0.4)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid #3d3d3d',
-                  height: 450,
-                  color: '#fff'
-                }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Categorized Trend Analysis</Typography>
-                  <ResponsiveContainer width="100%" height="85%">
-                    <LineChart data={trendData.data}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                      <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                      <RechartsTooltip
-                        contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                      />
-                      <Legend
-                        iconType="circle"
-                        wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
-                        onClick={handleLegendClick}
-                        formatter={(value) => {
-                          const item = trendData.topReasons.find(r => r.name === value);
-                          const isHidden = hiddenSeries.has(value);
-                          return (
-                            <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
-                              {value} ({item?.total || 0})
-                            </span>
-                          );
-                        }}
-                      />
-                      {trendData.topReasons.map((item, index) => (
-                        <Line
-                          key={item.name}
-                          type="monotone"
-                          dataKey={item.name}
-                          stroke={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
-                          strokeWidth={3}
-                          dot={{ r: 4, fill: '#2d2d2d', strokeWidth: 2 }}
-                          activeDot={{ r: 6, strokeWidth: 0 }}
-                          hide={hiddenSeries.has(item.name)}
+        {/* Basic Analytics Dashboard */}
+        {analyticsView === 'basic' && (
+          <>
+            <Box sx={{ mt: 3 }}>
+              <Grid container spacing={3}>
+                {/* Reason Chart */}
+                <Grid item xs={12} md={4}>
+                  <Paper sx={{
+                    p: 2.5,
+                    borderRadius: '20px',
+                    background: 'rgba(45, 45, 45, 0.4)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid #3d3d3d',
+                    height: 400,
+                    color: '#fff'
+                  }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#7b68ee' }}>Top Reasons Analysis</Typography>
+                    <ResponsiveContainer width="100%" height="85%">
+                      <AreaChart data={analyticsData.reason} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorReason" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#7b68ee" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#7b68ee" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
+                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#b3b3b3' }} />
+                        <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} />
+                        <RechartsTooltip
+                          contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
                         />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Paper>
-              </Grid>
-
-              {/* Owner Trends */}
-              <Grid item xs={12} md={6}>
-                <Paper sx={{
-                  p: 3,
-                  borderRadius: '20px',
-                  background: 'rgba(45, 45, 45, 0.4)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid #3d3d3d',
-                  height: 450,
-                  color: '#fff'
-                }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Team Operational Load</Typography>
-                  <ResponsiveContainer width="100%" height="85%">
-                    <AreaChart data={trendData.data}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                      <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                      <RechartsTooltip
-                        contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                      />
-                      <Legend
-                        iconType="circle"
-                        wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
-                        onClick={handleLegendClick}
-                        formatter={(value) => {
-                          const item = trendData.topOwners.find(o => o.name === value);
-                          const isHidden = hiddenSeries.has(value);
-                          return (
-                            <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
-                              {value} ({item?.total || 0})
-                            </span>
-                          );
-                        }}
-                      />
-                      {trendData.topOwners.map((item, index) => (
-                        <Area
-                          key={item.name}
-                          type="monotone"
-                          dataKey={item.name}
-                          stackId="1"
-                          stroke={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
-                          fill={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
-                          fillOpacity={0.4}
-                          hide={hiddenSeries.has(item.name)}
+                        <Area type="monotone" dataKey="value" stroke="#7b68ee" strokeWidth={3} fillOpacity={1} fill="url(#colorReason)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </Paper>
+                </Grid>
+                {/* Sub-Reason Chart */}
+                <Grid item xs={12} md={4}>
+                  <Paper sx={{
+                    p: 2.5,
+                    borderRadius: '20px',
+                    background: 'rgba(45, 45, 45, 0.4)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid #3d3d3d',
+                    height: 400,
+                    color: '#fff'
+                  }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#10b981' }}>Sub-Reason Breakdown</Typography>
+                    <ResponsiveContainer width="100%" height="85%">
+                      <AreaChart data={analyticsData.subReason} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorSub" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
+                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#b3b3b3' }} />
+                        <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} />
+                        <RechartsTooltip
+                          contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
                         />
-                      ))}
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </Paper>
+                        <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorSub)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </Paper>
+                </Grid>
+                {/* Root Cause Chart */}
+                <Grid item xs={12} md={4}>
+                  <Paper sx={{
+                    p: 2.5,
+                    borderRadius: '20px',
+                    background: 'rgba(45, 45, 45, 0.4)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid #3d3d3d',
+                    height: 400,
+                    color: '#fff'
+                  }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#f59e0b' }}>Root Cause Identification</Typography>
+                    <ResponsiveContainer width="100%" height="85%">
+                      <AreaChart data={analyticsData.rootCause} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorRoot" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
+                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#b3b3b3' }} />
+                        <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} />
+                        <RechartsTooltip
+                          contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
+                        />
+                        <Area type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorRoot)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </Paper>
+                </Grid>
               </Grid>
-            </Grid>
-          </Box>
+            </Box>
+
+            {/* Weekly Trend Analytics (NEW) */}
+            {trendData.data?.length > 0 && (
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" sx={{ fontWeight: 800, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5, color: '#7b68ee', letterSpacing: '-0.5px' }}>
+                  <MdTimeline /> Weekly Performance Insights
+                </Typography>
+                <Grid container spacing={3}>
+                  {/* Reason Trends */}
+                  <Grid item xs={12} md={6}>
+                    <Paper sx={{
+                      p: 3,
+                      borderRadius: '20px',
+                      background: 'rgba(45, 45, 45, 0.4)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid #3d3d3d',
+                      height: 450,
+                      color: '#fff'
+                    }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Categorized Trend Analysis</Typography>
+                      <ResponsiveContainer width="100%" height="85%">
+                        <LineChart data={trendData.data}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
+                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
+                          <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
+                          <RechartsTooltip
+                            contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
+                          />
+                          <Legend
+                            iconType="circle"
+                            wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
+                            onClick={handleLegendClick}
+                            formatter={(value) => {
+                              const item = trendData.topReasons.find(r => r.name === value);
+                              const isHidden = hiddenSeries.has(value);
+                              return (
+                                <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
+                                  {value} ({item?.total || 0})
+                                </span>
+                              );
+                            }}
+                          />
+                          {trendData.topReasons.map((item, index) => (
+                            <Line
+                              key={item.name}
+                              type="monotone"
+                              dataKey={item.name}
+                              stroke={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
+                              strokeWidth={3}
+                              dot={{ r: 4, fill: '#2d2d2d', strokeWidth: 2 }}
+                              activeDot={{ r: 6, strokeWidth: 0 }}
+                              hide={hiddenSeries.has(item.name)}
+                            />
+                          ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </Paper>
+                  </Grid>
+
+                  {/* Owner Trends */}
+                  <Grid item xs={12} md={6}>
+                    <Paper sx={{
+                      p: 3,
+                      borderRadius: '20px',
+                      background: 'rgba(45, 45, 45, 0.4)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid #3d3d3d',
+                      height: 450,
+                      color: '#fff'
+                    }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Team Operational Load</Typography>
+                      <ResponsiveContainer width="100%" height="85%">
+                        <AreaChart data={trendData.data}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
+                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
+                          <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
+                          <RechartsTooltip
+                            contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
+                          />
+                          <Legend
+                            iconType="circle"
+                            wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
+                            onClick={handleLegendClick}
+                            formatter={(value) => {
+                              const item = trendData.topOwners.find(o => o.name === value);
+                              const isHidden = hiddenSeries.has(value);
+                              return (
+                                <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
+                                  {value} ({item?.total || 0})
+                                </span>
+                              );
+                            }}
+                          />
+                          {trendData.topOwners.map((item, index) => (
+                            <Area
+                              key={item.name}
+                              type="monotone"
+                              dataKey={item.name}
+                              stackId="1"
+                              stroke={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
+                              fill={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
+                              fillOpacity={0.4}
+                              hide={hiddenSeries.has(item.name)}
+                            />
+                          ))}
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              </Box>
+            )}
+          </>
+        )}
+
+        {/* Deep Dive Analytics Component */}
+        {analyticsView === 'deep' && (
+          <AllTasksDeepDiveAnalytics
+            tasks={filteredTasks}
+            periodLabel={dateFilter.label || (dateFilter.type === 'all' ? 'All Time' : `${format(dateFilter.start, 'dd MMM')} - ${format(dateFilter.end, 'dd MMM')}`)}
+          />
         )}
       </Paper>
 

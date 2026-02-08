@@ -167,6 +167,7 @@ const CustomerIssuesList = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sourceFilter, setSourceFilter] = useState('Overall');
+  const [supervisorFilter, setSupervisorFilter] = useState('all');
 
   // --- GAIA & Advanced Search State ---
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
@@ -235,21 +236,21 @@ const CustomerIssuesList = () => {
     return () => window.removeEventListener('cin-refresh', handleSyncRefresh);
   }, []);
 
-  useEffect(() => {
+  // --- Refactored Filtering Logic ---
+  const filteredByBaseOptions = useMemo(() => {
     let filtered = issues;
 
-    // Filter by status
-    if (statusFilter === 'resolved') {
-      filtered = filtered.filter(issue => issue.solved === 'yes');
-    } else if (statusFilter === 'unresolved') {
-      filtered = filtered.filter(issue => issue.solved === 'no');
-    } else if (statusFilter === 'dispatchedOpen') {
-      filtered = filtered.filter(issue => issue.dispatched === 'yes' && issue.solved === 'no');
-    } else if (statusFilter === 'notDispatchedOpen') {
-      filtered = filtered.filter(issue => issue.dispatched !== 'yes' && issue.solved === 'no');
+    // Filter by Source Tab
+    if (sourceFilter !== 'Overall') {
+      filtered = filtered.filter(issue => (issue.fromMain === sourceFilter) || (issue.from === sourceFilter));
     }
 
-    // Filter by search term
+    // Filter by Supervisor
+    if (supervisorFilter !== 'all') {
+      filtered = filtered.filter(issue => issue.closedBy === supervisorFilter);
+    }
+
+    // Filter by search term (existing quick search)
     if (searchTerm.trim() !== '') {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(issue =>
@@ -289,17 +290,12 @@ const CustomerIssuesList = () => {
       filtered = filtered.filter(issue => new Date(issue.date) <= end);
     }
 
-    // Filter by Source Tab
-    if (sourceFilter !== 'Overall') {
-      filtered = filtered.filter(issue => (issue.fromMain === sourceFilter) || (issue.from === sourceFilter));
-    }
-
-    // --- Advanced Search Engine Filtering ---
+    // Advanced Search Engine Filtering
     if (activeAdvSearch) {
       filtered = filtered.filter(issue => {
         const matchesSlid = !advSearchFields.slid || issue.slid?.toLowerCase().includes(advSearchFields.slid.toLowerCase());
         const matchesGaiaId = !advSearchFields.gaiaId || issue.latestGaia?.ticketId?.toLowerCase().includes(advSearchFields.gaiaId.toLowerCase());
-        const matchesRequest = !advSearchFields.requestNumber || issue.ticketId?.toLowerCase().includes(advSearchFields.requestNumber.toLowerCase()); // CustomerIssues use ticketId for request number sometimes
+        const matchesRequest = !advSearchFields.requestNumber || issue.ticketId?.toLowerCase().includes(advSearchFields.requestNumber.toLowerCase());
         const matchesName = !advSearchFields.customerName || issue.customerName?.toLowerCase().includes(advSearchFields.customerName.toLowerCase());
         const matchesContact = !advSearchFields.contactNumber || issue.customerContact?.toLowerCase().includes(advSearchFields.contactNumber.toLowerCase());
         const matchesTeam = !advSearchFields.teamName ||
@@ -310,8 +306,25 @@ const CustomerIssuesList = () => {
       });
     }
 
+    return filtered;
+  }, [issues, sourceFilter, supervisorFilter, searchTerm, startDate, endDate, activeAdvSearch, advSearchFields]);
+
+  useEffect(() => {
+    let filtered = filteredByBaseOptions;
+
+    // Filter by status
+    if (statusFilter === 'resolved') {
+      filtered = filtered.filter(issue => issue.solved === 'yes');
+    } else if (statusFilter === 'unresolved') {
+      filtered = filtered.filter(issue => issue.solved === 'no');
+    } else if (statusFilter === 'dispatchedOpen') {
+      filtered = filtered.filter(issue => issue.dispatched === 'yes' && issue.solved === 'no');
+    } else if (statusFilter === 'notDispatchedOpen') {
+      filtered = filtered.filter(issue => issue.dispatched !== 'yes' && issue.solved === 'no');
+    }
+
     setFilteredIssues(filtered);
-  }, [searchTerm, issues, statusFilter, startDate, endDate, sourceFilter, activeAdvSearch, advSearchFields]);
+  }, [filteredByBaseOptions, statusFilter]);
 
   const handleMenuOpen = (event, issue) => {
     setAnchorEl(event.currentTarget);
@@ -623,11 +636,12 @@ const CustomerIssuesList = () => {
 
   const availableSources = ['Overall', ...new Set(issues.map(i => i.fromMain || i.from).filter(Boolean))];
 
-  // Calculate counts based on Source Filter
-  const sourceFilteredForCounts = useMemo(() => {
-    if (sourceFilter === 'Overall') return issues;
-    return issues.filter(i => (i.fromMain === sourceFilter) || (i.from === sourceFilter));
-  }, [issues, sourceFilter]);
+  const availableSupervisors = useMemo(() => {
+    const listSupervisors = issues.map(i => i.closedBy).filter(Boolean);
+    const dropdownSupervisors = (dropdownOptions['CIN_SUPERVISORS'] || []).map(opt => opt.value);
+    return ['all', ...new Set([...dropdownSupervisors, ...listSupervisors])];
+  }, [issues, dropdownOptions]);
+
 
 
 
@@ -916,6 +930,32 @@ const CustomerIssuesList = () => {
               Clear Dates
             </Button>
           )}
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#3d3d3d', display: isMobile ? 'none' : 'block' }} />
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+            <Typography variant="body2" sx={{ color: '#b3b3b3', minWidth: 'fit-content' }}>Supervisor:</Typography>
+            <FormControl size="small" sx={{ minWidth: 200, flex: isMobile ? 1 : 0 }}>
+              <Select
+                value={supervisorFilter}
+                onChange={(e) => { setSupervisorFilter(e.target.value); setPage(0); }}
+                sx={{
+                  backgroundColor: '#1e1e1e',
+                  color: '#ffffff',
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
+                  '& .MuiSvgIcon-root': { color: '#b3b3b3' }
+                }}
+              >
+                {availableSupervisors.map(sup => (
+                  <MenuItem key={sup} value={sup}>
+                    {sup === 'all' ? 'All Supervisors' : sup}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         </Box>
 
         <Divider sx={{ mb: 2, borderColor: '#3d3d3d' }} />
@@ -944,11 +984,11 @@ const CustomerIssuesList = () => {
             }
           }}
         >
-          <Tab value="all" label={`All (${sourceFilteredForCounts.length})`} />
-          <Tab value="resolved" label={`Closed (${sourceFilteredForCounts.filter(i => i.solved === 'yes').length})`} />
-          <Tab value="unresolved" label={`Open (${sourceFilteredForCounts.filter(i => i.solved === 'no').length})`} />
-          <Tab value="dispatchedOpen" label={`Dispatched (Open) (${sourceFilteredForCounts.filter(i => i.dispatched === 'yes' && i.solved === 'no').length})`} />
-          <Tab value="notDispatchedOpen" label={`Not Dispatched (Open) (${sourceFilteredForCounts.filter(i => i.dispatched !== 'yes' && i.solved === 'no').length})`} />
+          <Tab value="all" label={`All (${filteredByBaseOptions.length})`} />
+          <Tab value="resolved" label={`Closed (${filteredByBaseOptions.filter(i => i.solved === 'yes').length})`} />
+          <Tab value="unresolved" label={`Open (${filteredByBaseOptions.filter(i => i.solved === 'no').length})`} />
+          <Tab value="dispatchedOpen" label={`Dispatched (Open) (${filteredByBaseOptions.filter(i => i.dispatched === 'yes' && i.solved === 'no').length})`} />
+          <Tab value="notDispatchedOpen" label={`Not Dispatched (Open) (${filteredByBaseOptions.filter(i => i.dispatched !== 'yes' && i.solved === 'no').length})`} />
         </Tabs>
       </Box>
 
