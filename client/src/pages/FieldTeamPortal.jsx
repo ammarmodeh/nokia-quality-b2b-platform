@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+﻿import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -28,7 +28,12 @@ import {
   Select,
   MenuItem,
   LinearProgress,
-  Stack
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton
 } from "@mui/material";
 import {
   ArrowBack,
@@ -41,6 +46,8 @@ import {
   Schedule,
   Info,
   PriorityHigh,
+  Leaderboard as LeaderboardIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import api from "../api/api";
 import {
@@ -111,6 +118,10 @@ import FieldTeamTicketsForPortalReview from "../components/FieldTeamTicketsForPo
 
 const FieldTeamPortal = () => {
   // const user = useSelector((state) => state?.auth?.user);
+  const { teamId } = useParams();
+  const navigate = useNavigate();
+
+  // Field Teams state
   const [fieldTeams, setFieldTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   // console.log({ selectedTeam });
@@ -132,11 +143,32 @@ const FieldTeamPortal = () => {
   const [labPage, setLabPage] = useState(0);
   const [labRowsPerPage, setLabRowsPerPage] = useState(10);
 
+  // Navigation and UI state
+  const [activeTab, setActiveTab] = useState(0);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const isMobile = useMediaQuery('(max-width:600px)');
+
+  // Drill-down state
+  const [drillDownOpen, setDrillDownOpen] = useState(false);
+  const [drillDownTitle, setDrillDownTitle] = useState('');
+  const [drillDownItems, setDrillDownItems] = useState([]);
+  const [drillDownType, setDrillDownType] = useState('issue'); // 'issue' or 'task'
+
   // Customer Issues state
   const [customerIssues, setCustomerIssues] = useState([]);
   const [technicalTasks, setTechnicalTasks] = useState([]);
   const [issuesPage, setIssuesPage] = useState(0);
   const [issuesRowsPerPage, setIssuesRowsPerPage] = useState(10);
+
+  // Cross-team data for Leaderboard
+  const [allTechnicalTasksGlobal, setAllTechnicalTasksGlobal] = useState([]);
+  const [allCustomerIssuesGlobal, setAllCustomerIssuesGlobal] = useState([]);
+  const [loadingGlobal, setLoadingGlobal] = useState(false);
+
+  // Leaderboard 'Magic Table' state
+  const [leaderboardSearchQuery, setLeaderboardSearchQuery] = useState('');
+  const [leaderboardPage, setLeaderboardPage] = useState(0);
+  const [leaderboardRowsPerPage, setLeaderboardRowsPerPage] = useState(10);
 
   // Updated Premium Colors & Glassmorphism Theme
   const colors = {
@@ -566,10 +598,7 @@ const FieldTeamPortal = () => {
     </Card>
   );
 
-  const [activeTab, setActiveTab] = useState(0);
-  const [generatingReport, setGeneratingReport] = useState(false);
-  const navigate = useNavigate();
-  const isMobile = useMediaQuery('(max-width:600px)');
+
 
 
   useEffect(() => {
@@ -619,8 +648,74 @@ const FieldTeamPortal = () => {
       }
     };
 
+    const fetchGlobalData = async () => {
+      try {
+        setLoadingGlobal(true);
+        const [techRes, issuesRes] = await Promise.all([
+          api.get("/tasks/get-all-tasks", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          }),
+          api.get("/customer-issues-notifications", {
+            params: { limit: 10000 },
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          })
+        ]);
+        setAllTechnicalTasksGlobal(techRes.data || []);
+        setAllCustomerIssuesGlobal(issuesRes.data.data || []);
+      } catch (err) {
+        console.error("Error fetching global leaderboard data:", err);
+      } finally {
+        setLoadingGlobal(false);
+      }
+    };
+
+    fetchGlobalData();
     fetchFieldTeams();
   }, []);
+
+  const handleDrillDown = (team, type) => {
+    let items = [];
+    let title = '';
+    let dataType = 'issue';
+
+    if (type === 'detractors') {
+      items = team.rawDetractors;
+      title = `${team.teamName} - NPS Detractors`;
+      dataType = 'task';
+    } else if (type === 'neutrals') {
+      items = team.rawNeutrals;
+      title = `${team.teamName} - NPS Neutrals`;
+      dataType = 'task';
+    } else if (type === 'open') {
+      items = team.rawOpen;
+      title = `${team.teamName} - Total Open Cases (Dispatched but not closed)`;
+      dataType = 'issue';
+    } else if (type === 'violations') {
+      items = [
+        ...team.rawIssues.map(i => ({ ...i, __drillType: 'issue' })),
+        ...team.rawDetractors.map(t => ({ ...t, __drillType: 'task' }))
+      ];
+      title = `${team.teamName} - Total Violations Detail`;
+      dataType = 'mixed';
+    }
+
+    setDrillDownItems(items);
+    setDrillDownTitle(title);
+    setDrillDownType(dataType);
+    setDrillDownOpen(true);
+  };
+
+  // Sync selectedTeam with URL teamId
+  useEffect(() => {
+    if (teamId && fieldTeams.length > 0) {
+      const team = fieldTeams.find(t => t._id === teamId);
+      if (team) {
+        setSelectedTeam(team);
+      }
+    } else if (!teamId) {
+      setSelectedTeam(null);
+    }
+  }, [teamId, fieldTeams]);
 
   useEffect(() => {
     if (selectedTeam) {
@@ -1200,15 +1295,6 @@ ${data.map((a, i) => `
     const wsAssessments = XLSX.utils.json_to_sheet(consolidatedAssessments);
     XLSX.utils.book_append_sheet(wb, wsAssessments, "Assessments History");
 
-    // 5. Activity Log
-    const logData = allActivities.map(a => ({
-      Date: formatDate(a.date),
-      Type: a.title,
-      Description: a.detail
-    }));
-    const wsLog = XLSX.utils.json_to_sheet(logData);
-    XLSX.utils.book_append_sheet(wb, wsLog, "Master Activity Log");
-
     XLSX.writeFile(wb, `${selectedTeam.teamName.replace(/\s+/g, '_')}_Full_Performance_Report.xlsx`);
   };
 
@@ -1306,6 +1392,91 @@ ${data.map((a, i) => `
     range,
     count: jobDistribution[range]
   }));
+
+  const leaderboardData = useMemo(() => {
+    if (!fieldTeams.length) return [];
+
+    const processed = fieldTeams.map(team => {
+      const teamTechTasks = allTechnicalTasksGlobal.filter(t => t.teamId === team._id || t.teamName === team.teamName);
+      const teamIssues = allCustomerIssuesGlobal.filter(i => i.installingTeam === team.teamName || i.assignedTo === team.teamName);
+
+      // NPS Violations Breakdown
+      const npsDetractors = teamTechTasks.filter(t => {
+        let score = t.evaluationScore || 0;
+        if (score > 0) {
+          if (score <= 10) score = score * 10;
+          return score <= 60;
+        }
+        return false;
+      });
+
+      const npsNeutrals = teamTechTasks.filter(t => {
+        let score = t.evaluationScore || 0;
+        if (score > 0) {
+          if (score <= 10) score = score * 10;
+          return score > 60 && score <= 80;
+        }
+        return false;
+      });
+
+      // Customer Issues Breakdown
+      const totalIssues = teamIssues.length;
+      const resolvedCount = teamIssues.filter(i => i.solved === 'yes').length;
+      const resPercent = totalIssues > 0 ? ((resolvedCount / totalIssues) * 100).toFixed(1) : 0;
+
+      const openCases = teamIssues.filter(i => {
+        return i.dispatched === 'yes' && i.solved === 'no';
+      });
+
+      const totalNpsTickets = teamTechTasks.length;
+
+      const reachViolationsCount = [
+        ...npsDetractors,
+        ...npsNeutrals
+      ].filter(t => (t.responsible && t.responsible.includes('Reach')) || t.owner === 'Reach').length;
+
+      // Avg Resolution Time (Days)
+      const solvedIssuesForAvg = teamIssues.filter(i => i.solved === 'yes' && i.resolveDate && (i.pisDate || i.createdAt));
+      const totalDays = solvedIssuesForAvg.reduce((sum, i) => {
+        const reportDate = new Date(i.pisDate || i.createdAt);
+        const resolvedDate = new Date(i.resolveDate);
+        return sum + (resolvedDate - reportDate) / (1000 * 60 * 60 * 24);
+      }, 0);
+      const avgResolutionTime = solvedIssuesForAvg.length > 0 ? (totalDays / solvedIssuesForAvg.length).toFixed(1) : '-';
+
+      return {
+        ...team,
+        totalNpsTickets,
+        reachViolationsCount,
+        npsDetractors: npsDetractors.length,
+        npsNeutrals: npsNeutrals.length,
+        issueViolations: totalIssues,
+        resPercent,
+        openCount: openCases.length,
+        avgResolutionTime,
+        totalViolations: totalNpsTickets + totalIssues, // Total violations = Total NPS Tickets + Total Customer Issues
+        // Raw data for drill-down
+        rawDetractors: npsDetractors,
+        rawNeutrals: npsNeutrals,
+        rawIssues: teamIssues,
+        rawOpen: openCases
+      };
+    });
+
+    // Apply search filter
+    const filtered = processed.filter(team =>
+      team.teamName?.toLowerCase().includes(leaderboardSearchQuery.toLowerCase()) ||
+      team.teamCompany?.toLowerCase().includes(leaderboardSearchQuery.toLowerCase()) ||
+      team.governorate?.toLowerCase().includes(leaderboardSearchQuery.toLowerCase())
+    );
+
+    return filtered.sort((a, b) => b.totalViolations - a.totalViolations);
+  }, [fieldTeams, allTechnicalTasksGlobal, allCustomerIssuesGlobal, leaderboardSearchQuery]);
+
+  const paginatedLeaderboardData = useMemo(() => {
+    const startIndex = leaderboardPage * leaderboardRowsPerPage;
+    return leaderboardData.slice(startIndex, startIndex + leaderboardRowsPerPage);
+  }, [leaderboardData, leaderboardPage, leaderboardRowsPerPage]);
 
   // Custom styles for MUI components to ensure dark mode consistency
   const darkThemeStyles = {
@@ -1448,7 +1619,11 @@ ${data.map((a, i) => `
           getOptionLabel={(option) => `${option.teamName} (${option.teamCompany})`}
           value={selectedTeam}
           onChange={(event, newValue) => {
-            setSelectedTeam(newValue);
+            if (newValue) {
+              navigate(`/fieldTeams-portal/${newValue._id}`);
+            } else {
+              navigate('/fieldTeams-portal');
+            }
             setQuizPage(0);
             setJobPage(0);
           }}
@@ -1480,12 +1655,322 @@ ${data.map((a, i) => `
         />
       </Paper>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: '12px', bgcolor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-          {error}
-        </Alert>
+      {/* 8. LEADERBOARD (Visible only when no team is selected) */}
+      {!selectedTeam && (
+        <Box sx={{ animation: 'fadeIn 0.5s ease-in', mb: 6 }}>
+          <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="h4" sx={{ color: '#fff', fontWeight: 900, letterSpacing: -1 }}>
+                Team <span style={{ color: colors.primary }}>Leaderboard</span>
+              </Typography>
+              <Typography variant="body1" sx={{ color: colors.textSecondary }}>
+                Global ranking of teams by total violations (NPS Detractors + Customer Issues)
+              </Typography>
+            </Box>
+            {loadingGlobal && <CircularProgress size={24} sx={{ color: colors.primary }} />}
+          </Box>
+
+          {/* Magic Table Controls: Advanced Search */}
+          <Paper sx={{
+            p: 2,
+            mb: 3,
+            ...colors.glass,
+            borderRadius: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <FaSearch style={{ color: colors.primary, marginRight: '16px', fontSize: '1.2rem' }} />
+            <TextField
+              placeholder="Search by Team Name, Company, or Region..."
+              variant="standard"
+              fullWidth
+              value={leaderboardSearchQuery}
+              onChange={(e) => {
+                setLeaderboardSearchQuery(e.target.value);
+                setLeaderboardPage(0); // Reset to first page on search
+              }}
+              InputProps={{
+                disableUnderline: true,
+                sx: { color: '#fff', fontSize: '1.1rem', fontWeight: 500 }
+              }}
+            />
+            {leaderboardSearchQuery && (
+              <IconButton onClick={() => setLeaderboardSearchQuery('')} sx={{ color: colors.textSecondary }}>
+                <FaTimes />
+              </IconButton>
+            )}
+            <Divider orientation="vertical" flexItem sx={{ mx: 2, bgcolor: 'rgba(255,255,255,0.1)' }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', color: colors.textSecondary }}>
+              <FaFilter style={{ marginRight: '8px' }} />
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {leaderboardData.length} Results
+              </Typography>
+            </Box>
+          </Paper>
+
+          <TableContainer component={Paper} sx={{
+            ...colors.glass,
+            borderRadius: '24px',
+            overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.08)'
+          }}>
+            <Table>
+              <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
+                <TableRow>
+                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>RANK</TableCell>
+                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>TEAM NAME</TableCell>
+                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>TOTAL NPS</TableCell>
+                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>NPS DETRACTORS</TableCell>
+                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>NPS NEUTRALS</TableCell>
+                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>TOTAL ISSUES</TableCell>
+                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>OPEN CASES</TableCell>
+                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>AVG RESOLUTION</TableCell>
+                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>ISSUE RES %</TableCell>
+                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>TOTAL VIOLATIONS</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedLeaderboardData.map((team, index) => (
+                  <TableRow
+                    key={team._id}
+                    sx={{
+                      bgcolor: 'transparent',
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                      transition: 'background 0.2s'
+                    }}
+                  >
+                    <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Box sx={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: index + (leaderboardPage * leaderboardRowsPerPage) === 0 ? 'rgba(245, 158, 11, 0.2)' : index + (leaderboardPage * leaderboardRowsPerPage) === 1 ? 'rgba(209, 213, 219, 0.2)' : index + (leaderboardPage * leaderboardRowsPerPage) === 2 ? 'rgba(180, 83, 9, 0.2)' : 'rgba(255,255,255,0.05)',
+                        color: index + (leaderboardPage * leaderboardRowsPerPage) === 0 ? '#f59e0b' : index + (leaderboardPage * leaderboardRowsPerPage) === 1 ? '#d1d5db' : index + (leaderboardPage * leaderboardRowsPerPage) === 2 ? '#b45309' : colors.textSecondary,
+                        fontWeight: 800
+                      }}>
+                        {index + 1 + (leaderboardPage * leaderboardRowsPerPage)}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Box sx={{ cursor: 'pointer' }} onClick={() => navigate(`/fieldTeams-portal/${team._id}`)}>
+                        <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{team.teamName}</Typography>
+                        <Typography variant="caption" sx={{ color: colors.textSecondary }}>{team.teamCompany} | {team.governorate}</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: colors.info, fontWeight: 800 }}>
+                      {team.totalNpsTickets}
+                      {team.reachViolationsCount > 0 && (
+                        <span style={{ color: colors.warning, marginLeft: '4px', fontSize: '0.85rem' }}>
+                          ({team.reachViolationsCount})
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: colors.error, fontWeight: 800, cursor: 'pointer' }} onClick={() => handleDrillDown(team, 'detractors')}>
+                      {team.npsDetractors}
+                    </TableCell>
+                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: colors.warning, fontWeight: 800, cursor: 'pointer' }} onClick={() => handleDrillDown(team, 'neutrals')}>
+                      {team.npsNeutrals}
+                    </TableCell>
+                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff', fontWeight: 700 }}>
+                      {team.issueViolations}
+                    </TableCell>
+                    <TableCell align="center" sx={{
+                      borderBottom: '1px solid rgba(255,255,255,0.05)',
+                      color: team.openCount > 0 ? colors.error : colors.textSecondary,
+                      fontWeight: 800,
+                      cursor: team.openCount > 0 ? 'pointer' : 'default'
+                    }} onClick={() => team.openCount > 0 && handleDrillDown(team, 'open')}>
+                      {team.openCount}
+                    </TableCell>
+                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff', fontWeight: 600 }}>
+                      {team.avgResolutionTime !== '-' ? `${team.avgResolutionTime} d` : '-'}
+                    </TableCell>
+                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                        <Typography sx={{
+                          color: team.resPercent >= 80 ? colors.success : team.resPercent >= 50 ? colors.warning : colors.error,
+                          fontWeight: 800
+                        }}>
+                          {team.resPercent}%
+                        </Typography>
+                        <LinearProgress
+                          variant="determinate"
+                          value={Number(team.resPercent)}
+                          sx={{
+                            width: '40px',
+                            height: '6px',
+                            borderRadius: '3px',
+                            bgcolor: 'rgba(255,255,255,0.1)',
+                            '& .MuiLinearProgress-bar': {
+                              bgcolor: team.resPercent >= 80 ? colors.success : team.resPercent >= 50 ? colors.warning : colors.error,
+                            }
+                          }}
+                        />
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Chip
+                        label={team.totalViolations}
+                        onClick={() => handleDrillDown(team, 'violations')}
+                        sx={{
+                          bgcolor: team.totalViolations > 10 ? `${colors.error}20` : team.totalViolations > 5 ? `${colors.warning}20` : `${colors.success}20`,
+                          color: team.totalViolations > 10 ? colors.error : team.totalViolations > 5 ? colors.warning : colors.success,
+                          fontWeight: 900,
+                          fontSize: '0.9rem',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          '&:hover': { transform: 'scale(1.1)' },
+                          transition: 'transform 0.2s'
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <TablePagination
+              rowsPerPageOptions={[10]}
+              component="div"
+              count={leaderboardData.length}
+              rowsPerPage={leaderboardRowsPerPage}
+              page={leaderboardPage}
+              onPageChange={(e, newPage) => setLeaderboardPage(newPage)}
+              sx={{
+                color: colors.textSecondary,
+                borderTop: '1px solid rgba(255,255,255,0.08)',
+                '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
+                '& .MuiIconButton-root': { color: colors.primary }
+              }}
+            />
+          </TableContainer>
+        </Box>
       )}
+
+      {/* Drill-down Transaction Dialog */}
+      <Dialog
+        open={drillDownOpen}
+        onClose={() => setDrillDownOpen(false)}
+        maxWidth="xl"
+        fullWidth
+        PaperProps={{
+          sx: {
+            ...colors.glass,
+            bgcolor: '#1a1a1a',
+            borderRadius: '24px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            minHeight: '60vh'
+          }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <Box>
+            <Typography variant="h5" sx={{ color: '#fff', fontWeight: 800 }}>{drillDownTitle}</Typography>
+            <Typography variant="body2" sx={{ color: colors.textSecondary }}>
+              Related {drillDownItems.length} transaction records
+            </Typography>
+          </Box>
+          <IconButton onClick={() => setDrillDownOpen(false)} sx={{ color: colors.textSecondary }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <TableContainer sx={{ maxHeight: '70vh' }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>TYPE</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>SLID</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>DATE</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>CATEGORY / SUMMARY</TableCell>
+                  {drillDownType !== 'issue' && (
+                    <>
+                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>REASON/SUB</TableCell>
+                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>RC</TableCell>
+                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>OWNER</TableCell>
+                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>FEEDBACK (VERBATIM)</TableCell>
+                    </>
+                  )}
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>STATUS</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>SCORE / INFO</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {drillDownItems.map((item, idx) => {
+                  const isIssue = item.__drillType === 'issue' || drillDownType === 'issue';
+                  const date = isIssue ? (item.date || item.createdAt) : (item.pisDate || item.createdAt);
+                  const status = isIssue ? (item.solved === 'yes' ? 'Solved' : 'Open') : (item.validationStatus || 'Pending');
+                  const score = !isIssue ? (item.evaluationScore ? `${item.evaluationScore}${item.evaluationScore <= 10 ? '/10' : '%'}` : 'N/A') : (item.priority || 'Medium');
+
+                  return (
+                    <TableRow key={item._id || idx} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
+                      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Chip
+                          label={isIssue ? 'ISSUE' : 'TASK'}
+                          size="small"
+                          sx={{
+                            bgcolor: isIssue ? `${colors.error}20` : `${colors.primary}20`,
+                            color: isIssue ? colors.error : colors.primary,
+                            fontWeight: 800,
+                            fontSize: '0.6rem'
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ color: '#fff', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{item.slid}</TableCell>
+                      <TableCell sx={{ color: colors.textSecondary, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{formatDate(date)}</TableCell>
+                      <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        {isIssue ? (item.issueCategory || 'Technical Issue') : (item.customerName || 'N/A')}
+                        <Typography variant="caption" sx={{ display: 'block', color: colors.textSecondary }}>
+                          {isIssue ? item.notes?.substring(0, 50) : item.faultDescription?.substring(0, 50)}...
+                        </Typography>
+                      </TableCell>
+                      {!isIssue && (
+                        <>
+                          <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', maxWidth: '150px' }}>
+                            {item.reason || '-'}
+                            <Typography variant="caption" sx={{ display: 'block', color: colors.textSecondary }}>
+                              {item.subReason}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            {item.RC || item.rootCause || '-'}
+                          </TableCell>
+                          <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            {item.responsible || item.owner || '-'}
+                          </TableCell>
+                          <TableCell sx={{ color: `${colors.warning}cc`, borderBottom: '1px solid rgba(255,255,255,0.05)', fontStyle: 'italic', maxWidth: '250px' }}>
+                            "{item.customerFeedback || item.feedback || 'No verbatim feedback provided'}"
+                          </TableCell>
+                        </>
+                      )}
+                      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Chip
+                          label={status}
+                          size="small"
+                          sx={{
+                            bgcolor: status === 'Solved' || status === 'Approved' ? `${colors.success}20` : status === 'Open' ? `${colors.error}20` : 'rgba(255,255,255,0.1)',
+                            color: status === 'Solved' || status === 'Approved' ? colors.success : status === 'Open' ? colors.error : colors.textSecondary,
+                            fontWeight: 700
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ color: colors.textPrimary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        {score}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <Button onClick={() => setDrillDownOpen(false)} sx={{ color: colors.textSecondary }}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Main Content Area */}
       {selectedTeam && (
@@ -2630,283 +3115,281 @@ ${data.map((a, i) => `
             </Box>
           )}
 
-          {/* 7. REPORTS (Advanced Analytics) */}
+          {/* Tab index 6 now corresponds to Smart Reports */}
+
+          {/* 8. REPORTS (Index 6 after removal of Leaderboard tab) */}
           {activeTab === 6 && (
             <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-              <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                  <Typography variant="h5" sx={{ color: colors.primary }}>Advanced Analytics & Reporting</Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={generatingReport ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <PictureAsPdfIcon />}
-                    onClick={handleGenerateFullReport}
-                    disabled={generatingReport || (quizResults.length === 0 && jobAssessments.length === 0 && labAssessments.length === 0)}
-                    sx={{
-                      bgcolor: colors.primary,
-                      '&:hover': { bgcolor: colors.primary, opacity: 0.9 },
-                      '&:disabled': { bgcolor: colors.textSecondary }
-                    }}
-                  >
-                    {generatingReport ? 'Generating...' : 'Generate Full Evaluation'}
-                  </Button>
-                </Box>
-
-                <Grid container spacing={3}>
-                  {/* Strategic Benchmarking */}
-                  <Grid item xs={12} md={4}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <TrendingUp /> Strategic Benchmarking
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {(() => {
-                          const avgMastery = Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3);
-                          const isMaster = avgMastery >= 85;
-                          return (
-                            <>
-                              <Box>
-                                <Typography variant="caption" color={colors.textSecondary}>Current Status</Typography>
-                                <Typography variant="h5" sx={{ fontWeight: 700, color: isMaster ? colors.success : colors.warning }}>
-                                  {isMaster ? 'Mastery Level' : 'Development Phase'}
-                                </Typography>
-                              </Box>
-                              <Box>
-                                <Typography variant="caption" color={colors.textSecondary}>Distance to Top Tier</Typography>
-                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                  {avgMastery >= 90 ? 'Elite (Top 5%)' : `${90 - avgMastery}% to Elite`}
-                                </Typography>
-                                <LinearProgress
-                                  variant="determinate"
-                                  value={Math.min(100, (avgMastery / 90) * 100)}
-                                  sx={{ mt: 1, height: 6, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: colors.primary } }}
-                                />
-                              </Box>
-                              <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                <Typography variant="caption" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>
-                                  {avgMastery < 70 ? 'Recommendation: Remedial training required in core domains.'
-                                    : avgMastery < 85 ? 'Recommendation: Focus on consistency and error reduction.'
-                                      : 'Recommendation: Maintain performance; mentor other teams.'}
-                                </Typography>
-                              </Box>
-                            </>
-                          );
-                        })()}
-                      </Box>
-                    </Paper>
-                  </Grid>
-
-                  {/* Operational Balance Radar */}
-                  <Grid item xs={12} md={4}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Performance Balance</Typography>
-                      <ResponsiveContainer width="100%" height={280}>
-                        <RadarChart data={[
-                          {
-                            subject: 'Theoretical',
-                            score: calculateAverageScore(quizResults),
-                            fullMark: 100
-                          },
-                          {
-                            subject: 'Practical',
-                            score: calculateAverageScore(jobAssessments) * 20, // Scale to 100
-                            fullMark: 100
-                          },
-                          {
-                            subject: 'Lab',
-                            score: calculateAverageScore(labAssessments),
-                            fullMark: 100
-                          }
-                        ]}>
-                          <PolarGrid stroke={colors.border} />
-                          <PolarAngleAxis dataKey="subject" tick={{ fill: colors.textPrimary, fontSize: 10 }} />
-                          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: colors.textSecondary, fontSize: 8 }} />
-                          <Radar name="Score" dataKey="score" stroke={colors.primary} fill={colors.primary} fillOpacity={0.3} />
-                          <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }}
-                            formatter={(value) => `${Math.round(value)}%`}
-                          />
-                        </RadarChart>
-                      </ResponsiveContainer>
-                    </Paper>
-                  </Grid>
-
-                  {/* Strengths & Weaknesses */}
-                  <Grid item xs={12} md={4}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Strengths & Weaknesses</Typography>
-                      {(() => {
-                        const { strengths, weaknesses } = identifyStrengthsAndWeaknesses();
-                        return (
-                          <Box>
-                            <Typography variant="subtitle2" sx={{ color: colors.success, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <CheckCircleIcon fontSize="small" /> Top Strengths
-                            </Typography>
-                            {strengths.length > 0 ? (
-                              <Box sx={{ mb: 3 }}>
-                                {strengths.map((s, i) => (
-                                  <Chip
-                                    key={i}
-                                    label={`${s.name}: ${Math.round(s.score)}%`}
-                                    size="small"
-                                    sx={{ m: 0.5, bgcolor: `${colors.success}22`, color: colors.success, borderColor: colors.success }}
-                                    variant="outlined"
-                                  />
-                                ))}
-                              </Box>
-                            ) : (
-                              <Typography variant="body2" color={colors.textSecondary} sx={{ mb: 3 }}>No data available</Typography>
-                            )}
-
-                            <Typography variant="subtitle2" sx={{ color: colors.error, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <CancelIcon fontSize="small" /> Areas for Improvement
-                            </Typography>
-                            {weaknesses.length > 0 ? (
-                              <Box>
-                                {weaknesses.map((w, i) => (
-                                  <Chip
-                                    key={i}
-                                    label={`${w.name}: ${Math.round(w.score)}%`}
-                                    size="small"
-                                    sx={{ m: 0.5, bgcolor: `${colors.error}22`, color: colors.error, borderColor: colors.error }}
-                                    variant="outlined"
-                                  />
-                                ))}
-                              </Box>
-                            ) : (
-                              <Typography variant="body2" color={colors.textSecondary}>No data available</Typography>
-                            )}
-                          </Box>
-                        );
-                      })()}
-                    </Paper>
-                  </Grid>
-
-                  {/* Mastery & Consistency Metrics */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Consistency & Mastery Analysis</Typography>
-                      <Grid container spacing={2}>
-                        {[
-                          { label: 'Overall Mastery', value: `${Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3)}%`, color: colors.primary },
-                          { label: 'Theoretical Volatility', value: `${Math.round(calculateStandardDeviation(quizResults))}%`, color: colors.warning },
-                          { label: 'Practical Consistency', value: calculateStandardDeviation(jobAssessments) < 10 ? 'High' : 'Variable', color: colors.success },
-                          { label: 'Lab Mastery Rate', value: `${Math.round(calculatePercentageAboveThreshold(labAssessments, 80))}%`, color: colors.primary }
-                        ].map((metric, i) => (
-                          <Grid item xs={6} key={i}>
-                            <Card sx={{ bgcolor: colors.surfaceElevated, border: `1px solid ${colors.border}` }}>
-                              <CardContent sx={{ p: 2 }}>
-                                <Typography variant="caption" color={colors.textSecondary}>{metric.label}</Typography>
-                                <Typography variant="h6" sx={{ color: metric.color, fontWeight: 'bold' }}>{metric.value}</Typography>
-                              </CardContent>
-                            </Card>
-                          </Grid>
-                        ))}
-                      </Grid>
-                    </Paper>
-                  </Grid>
-
-                  {/* Process Efficiency Analysis */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Process Efficiency Analysis</Typography>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {[
-                          { label: 'Avg Dispatch Speed', value: stats.avgDispatchTime, unit: 'days', color: colors.info },
-                          { label: 'Avg Resolution Speed', value: stats.avgResolutionTime, unit: 'days', color: colors.success },
-                          { label: 'Full Lifecycle Time', value: stats.avgLifecycleTime, unit: 'days', color: colors.warning }
-                        ].map((metric, i) => (
-                          <Box key={i}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                              <Typography variant="body2" color={colors.textSecondary}>{metric.label}</Typography>
-                              <Typography variant="body2" fontWeight="bold" sx={{ color: metric.color }}>{metric.value} {metric.unit}</Typography>
-                            </Box>
-                            <LinearProgress
-                              variant="determinate"
-                              value={Math.min(100, (metric.value / 10) * 100)}
-                              sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: metric.color } }}
-                            />
-                          </Box>
-                        ))}
-                        <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(59, 130, 246, 0.05)', borderRadius: 2, border: '1px solid rgba(59, 130, 246, 0.1)' }}>
-                          <Typography variant="caption" sx={{ color: colors.info, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Info sx={{ fontSize: '1rem' }} /> Values normalized against 10-day benchmark.
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                </Grid>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h5" sx={{ color: colors.primary }}>Advanced Analytics & Reporting</Typography>
+                <Button
+                  variant="contained"
+                  startIcon={generatingReport ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <PictureAsPdfIcon />}
+                  onClick={handleGenerateFullReport}
+                  disabled={generatingReport || (quizResults.length === 0 && jobAssessments.length === 0 && labAssessments.length === 0)}
+                  sx={{
+                    bgcolor: colors.primary,
+                    '&:hover': { bgcolor: colors.primary, opacity: 0.9 },
+                    '&:disabled': { bgcolor: colors.textSecondary }
+                  }}
+                >
+                  {generatingReport ? 'Generating...' : 'Generate Full Evaluation'}
+                </Button>
               </Box>
 
+              <Grid container spacing={3}>
+                {/* Strategic Benchmarking */}
+                <Grid item xs={12} md={4}>
+                  <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)' }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <TrendingUpIcon /> Strategic Benchmarking
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {(() => {
+                        const avgMastery = Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3);
+                        const isMaster = avgMastery >= 85;
+                        return (
+                          <>
+                            <Box>
+                              <Typography variant="caption" color={colors.textSecondary}>Current Status</Typography>
+                              <Typography variant="h5" sx={{ fontWeight: 700, color: isMaster ? colors.success : colors.warning }}>
+                                {isMaster ? 'Mastery Level' : 'Development Phase'}
+                              </Typography>
+                            </Box>
+                            <Box>
+                              <Typography variant="caption" color={colors.textSecondary}>Distance to Top Tier</Typography>
+                              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                {avgMastery >= 90 ? 'Elite (Top 5%)' : `${90 - avgMastery}% to Elite`}
+                              </Typography>
+                              <LinearProgress
+                                variant="determinate"
+                                value={Math.min(100, (avgMastery / 90) * 100)}
+                                sx={{ mt: 1, height: 6, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: colors.primary } }}
+                              />
+                            </Box>
+                            <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, border: '1px dashed rgba(255,255,255,0.1)' }}>
+                              <Typography variant="caption" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>
+                                {avgMastery < 70 ? 'Recommendation: Remedial training required in core domains.'
+                                  : avgMastery < 85 ? 'Recommendation: Focus on consistency and error reduction.'
+                                    : 'Recommendation: Maintain performance; mentor other teams.'}
+                              </Typography>
+                            </Box>
+                          </>
+                        );
+                      })()}
+                    </Box>
+                  </Paper>
+                </Grid>
 
-              {/* Performance Summary Section */}
-              {(quizResults.length > 0 || jobAssessments.length > 0 || labAssessments.length > 0) && (
-                <Box sx={{ mt: 5 }}>
-                  <Typography variant="h5" sx={{ color: colors.primary, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Assessment /> Advanced Analytics
-                  </Typography>
+                {/* Operational Balance Radar */}
+                <Grid item xs={12} md={4}>
+                  <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Performance Balance</Typography>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <RadarChart data={[
+                        {
+                          subject: 'Theoretical',
+                          score: calculateAverageScore(quizResults),
+                          fullMark: 100
+                        },
+                        {
+                          subject: 'Practical',
+                          score: calculateAverageScore(jobAssessments) * 20, // Scale to 100
+                          fullMark: 100
+                        },
+                        {
+                          subject: 'Lab',
+                          score: calculateAverageScore(labAssessments),
+                          fullMark: 100
+                        }
+                      ]}>
+                        <PolarGrid stroke={colors.border} />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: colors.textPrimary, fontSize: 10 }} />
+                        <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: colors.textSecondary, fontSize: 8 }} />
+                        <Radar name="Score" dataKey="score" stroke={colors.primary} fill={colors.primary} fillOpacity={0.3} />
+                        <RechartsTooltip
+                          contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }}
+                          formatter={(value) => `${Math.round(value)}%`}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </Paper>
+                </Grid>
 
-                  <Grid container spacing={3}>
-                    {[
-                      { name: 'Theoretical', data: quizResults, color: colors.primary },
-                      { name: 'Practical', data: jobAssessments, color: colors.success },
-                      { name: 'Lab', data: labAssessments, color: colors.warning }
-                    ].filter(group => group.data.length > 0).map((group, idx) => (
-                      <Grid item xs={12} key={idx}>
-                        <Paper sx={{ p: 3, ...darkThemeStyles.paper, position: 'relative' }}>
-                          <Typography variant="h6" sx={{ color: group.color, mb: 2 }}>{group.name} Analytics</Typography>
-                          <Grid container spacing={4}>
-                            <Grid item xs={12} md={4}>
-                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography color={colors.textSecondary}>Median Score</Typography>
-                                  <Typography fontWeight="bold">{Math.round(calculateMedianScore(group.data))}%</Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography color={colors.textSecondary}>Volatility (StdDev)</Typography>
-                                  <Typography fontWeight="bold">{Math.round(calculateStandardDeviation(group.data))}%</Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography color={colors.textSecondary}>Top Score</Typography>
-                                  <Typography sx={{ color: colors.success }} fontWeight="bold">{calculateHighestScore(group.data)}%</Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography color={colors.textSecondary}>Mastery Rate ({'>'}80%)</Typography>
-                                  <Typography fontWeight="bold">{Math.round(calculatePercentageAboveThreshold(group.data, 80))}%</Typography>
-                                </Box>
-                              </Box>
-                            </Grid>
-                            <Grid item xs={12} md={8}>
-                              <Box sx={{ height: 200 }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                  <AreaChart data={group.data.map(item => ({
-                                    date: formatDate(item.submittedAt || item.assessmentDate || item.createdAt),
-                                    score: item.percentage || item.overallScore || item.totalScore || 0
-                                  })).reverse()}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
-                                    <XAxis dataKey="date" hide />
-                                    <YAxis domain={[0, 100]} hide />
-                                    <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
-                                    <Area
-                                      type="monotone"
-                                      dataKey="score"
-                                      stroke={group.color}
-                                      fill={group.color}
-                                      fillOpacity={0.1}
-                                      strokeWidth={2}
-                                    />
-                                  </AreaChart>
-                                </ResponsiveContainer>
-                              </Box>
-                            </Grid>
-                          </Grid>
-                        </Paper>
+                {/* Strengths & Weaknesses */}
+                <Grid item xs={12} md={4}>
+                  <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Strengths & Weaknesses</Typography>
+                    {(() => {
+                      const { strengths, weaknesses } = identifyStrengthsAndWeaknesses();
+                      return (
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ color: colors.success, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <CheckCircleIcon fontSize="small" /> Top Strengths
+                          </Typography>
+                          {strengths.length > 0 ? (
+                            <Box sx={{ mb: 3 }}>
+                              {strengths.map((s, i) => (
+                                <Chip
+                                  key={i}
+                                  label={`${s.name}: ${Math.round(s.score)}%`}
+                                  size="small"
+                                  sx={{ m: 0.5, bgcolor: `${colors.success}22`, color: colors.success, borderColor: colors.success }}
+                                  variant="outlined"
+                                />
+                              ))}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color={colors.textSecondary} sx={{ mb: 3 }}>No data available</Typography>
+                          )}
+
+                          <Typography variant="subtitle2" sx={{ color: colors.error, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <CancelIcon fontSize="small" /> Areas for Improvement
+                          </Typography>
+                          {weaknesses.length > 0 ? (
+                            <Box>
+                              {weaknesses.map((w, i) => (
+                                <Chip
+                                  key={i}
+                                  label={`${w.name}: ${Math.round(w.score)}%`}
+                                  size="small"
+                                  sx={{ m: 0.5, bgcolor: `${colors.error}22`, color: colors.error, borderColor: colors.error }}
+                                  variant="outlined"
+                                />
+                              ))}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color={colors.textSecondary}>No data available</Typography>
+                          )}
+                        </Box>
+                      );
+                    })()}
+                  </Paper>
+                </Grid>
+
+                {/* Mastery & Consistency Metrics */}
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Consistency & Mastery Analysis</Typography>
+                    <Grid container spacing={2}>
+                      {[
+                        { label: 'Overall Mastery', value: `${Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3)}%`, color: colors.primary },
+                        { label: 'Theoretical Volatility', value: `${Math.round(calculateStandardDeviation(quizResults))}%`, color: colors.warning },
+                        { label: 'Practical Consistency', value: calculateStandardDeviation(jobAssessments) < 10 ? 'High' : 'Variable', color: colors.success },
+                        { label: 'Lab Mastery Rate', value: `${Math.round(calculatePercentageAboveThreshold(labAssessments, 80))}%`, color: colors.primary }
+                      ].map((metric, i) => (
+                        <Grid item xs={6} key={i}>
+                          <Card sx={{ bgcolor: colors.surfaceElevated, border: `1px solid ${colors.border}` }}>
+                            <CardContent sx={{ p: 2 }}>
+                              <Typography variant="caption" color={colors.textSecondary}>{metric.label}</Typography>
+                              <Typography variant="h6" sx={{ color: metric.color, fontWeight: 'bold' }}>{metric.value}</Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Paper>
+                </Grid>
+
+                {/* Process Efficiency Analysis */}
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Process Efficiency Analysis</Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {[
+                        { label: 'Avg Dispatch Speed', value: stats.avgDispatchTime, unit: 'days', color: colors.info },
+                        { label: 'Avg Resolution Speed', value: stats.avgResolutionTime, unit: 'days', color: colors.success },
+                        { label: 'Full Lifecycle Time', value: stats.avgLifecycleTime, unit: 'days', color: colors.warning }
+                      ].map((metric, i) => (
+                        <Box key={i}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography variant="body2" color={colors.textSecondary}>{metric.label}</Typography>
+                            <Typography variant="body2" fontWeight="bold" sx={{ color: metric.color }}>{metric.value} {metric.unit}</Typography>
+                          </Box>
+                          <LinearProgress
+                            variant="determinate"
+                            value={Math.min(100, (metric.value / 10) * 100)}
+                            sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: metric.color } }}
+                          />
+                        </Box>
+                      ))}
+                      <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(59, 130, 246, 0.05)', borderRadius: 2, border: '1px solid rgba(59, 130, 246, 0.1)' }}>
+                        <Typography variant="caption" sx={{ color: colors.info, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Info sx={{ fontSize: '1rem' }} /> Values normalized against 10-day benchmark.
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
+          {/* Performance Summary Section */}
+          {(quizResults.length > 0 || jobAssessments.length > 0 || labAssessments.length > 0) && (
+            <Box sx={{ mt: 5 }}>
+              <Typography variant="h5" sx={{ color: colors.primary, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Assessment /> Advanced Analytics
+              </Typography>
+
+              <Grid container spacing={3}>
+                {[
+                  { name: 'Theoretical', data: quizResults, color: colors.primary },
+                  { name: 'Practical', data: jobAssessments, color: colors.success },
+                  { name: 'Lab', data: labAssessments, color: colors.warning }
+                ].filter(group => group.data.length > 0).map((group, idx) => (
+                  <Grid item xs={12} key={idx}>
+                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, position: 'relative' }}>
+                      <Typography variant="h6" sx={{ color: group.color, mb: 2 }}>{group.name} Analytics</Typography>
+                      <Grid container spacing={4}>
+                        <Grid item xs={12} md={4}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <Typography color={colors.textSecondary}>Median Score</Typography>
+                              <Typography fontWeight="bold">{Math.round(calculateMedianScore(group.data))}%</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <Typography color={colors.textSecondary}>Volatility (StdDev)</Typography>
+                              <Typography fontWeight="bold">{Math.round(calculateStandardDeviation(group.data))}%</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <Typography color={colors.textSecondary}>Top Score</Typography>
+                              <Typography sx={{ color: colors.success }} fontWeight="bold">{calculateHighestScore(group.data)}%</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <Typography color={colors.textSecondary}>Mastery Rate ({'>'}80%)</Typography>
+                              <Typography fontWeight="bold">{Math.round(calculatePercentageAboveThreshold(group.data, 80))}%</Typography>
+                            </Box>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} md={8}>
+                          <Box sx={{ height: 200 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={group.data.map(item => ({
+                                date: formatDate(item.submittedAt || item.assessmentDate || item.createdAt),
+                                score: item.percentage || item.overallScore || item.totalScore || 0
+                              })).reverse()}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
+                                <XAxis dataKey="date" hide />
+                                <YAxis domain={[0, 100]} hide />
+                                <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                                <Area
+                                  type="monotone"
+                                  dataKey="score"
+                                  stroke={group.color}
+                                  fill={group.color}
+                                  fillOpacity={0.1}
+                                  strokeWidth={2}
+                                />
+                              </AreaChart>
+                            </ResponsiveContainer>
+                          </Box>
+                        </Grid>
                       </Grid>
-                    ))}
+                    </Paper>
                   </Grid>
-                </Box>
-              )}
-
+                ))}
+              </Grid>
             </Box>
           )}
         </Box>
