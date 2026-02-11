@@ -344,7 +344,7 @@ const Dashboard = () => {
           <Paper sx={{ p: 0, overflow: 'hidden', borderRadius: 3, bgcolor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.05)' }} elevation={0}>
             <Box p={3}>
               <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
-                <Chart tasks={tasks} samplesData={samplesData} />
+                <Chart tasks={tasks} samplesData={samplesData} settings={settings} />
               </Suspense>
             </Box>
           </Paper>

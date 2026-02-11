@@ -57,6 +57,12 @@ const SidebarLinks = () => {
           isNew: false,
         },
         {
+          label: "Reach Supervisors Audit",
+          link: "reach-supervisors-audit",
+          icon: <img width={20} height={20} src="/all-tasks.png" />,
+          isNew: true,
+        },
+        {
           label: "All Tasks List",
           link: "tasks-list",
           icon: <img width={20} height={20} src="/all-tasks.png" />,

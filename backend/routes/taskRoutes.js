@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import { protect } from "../middleware/authMiddleware.js";
 import {
   addTask,
@@ -36,7 +37,41 @@ import {
   getTaskTickets,
   updateTaskTicket,
   deleteTaskTicket,
+  uploadAuditSheet,
+  commitAuditData,
+  getAuditLogs,
+  downloadAuditSheet,
+  savePreventionStrategy,
+  getPreventionStrategy,
+  getAuditDeepStats,
+  getAuditRecords,
+  updateAuditRecord,
+  processAuditRecordManually,
+  revertAuditRecord,
+  uploadReachSupervisorAudit,
+  commitReachSupervisorData,
+  updateAuditLogDates
 } from "../controllers/taskControllers.js";
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel.sheet.macroEnabled.12'
+    ];
+    if (allowedMimes.includes(file.mimetype) || file.originalname.match(/\.(xlsx|xls|xlsm)$/)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel files are allowed'), false);
+    }
+  }
+});
 
 const router = express.Router();
 
@@ -111,6 +146,29 @@ router.post("/tickets", protect, addTaskTicket);
 router.get("/tickets/:taskId", protect, getTaskTickets);
 router.put("/tickets/:id", protect, updateTaskTicket);
 router.delete("/tickets/:id", protect, deleteTaskTicket);
+
+// Upload audit Excel sheet
+router.post("/upload-audit-sheet", protect, upload.single('file'), uploadAuditSheet);
+// Audit History & Analysis
+router.get("/audit-logs", protect, getAuditLogs);
+router.get("/audit-sheet/:id/download", protect, downloadAuditSheet);
+router.get("/audit-records/:auditId", protect, getAuditRecords);
+router.get("/audit-stats/:auditId", protect, getAuditDeepStats);
+router.post("/commit-audit-data", protect, commitAuditData);
+
+// Advanced Audit Records Management
+router.put("/audit-records/:recordId", protect, updateAuditRecord);
+router.post("/audit-records/:recordId/process-manual", protect, processAuditRecordManually);
+router.post("/audit-records/:recordId/revert", protect, revertAuditRecord);
+
+// Prevention Strategy
+router.get("/prevention-strategy", protect, getPreventionStrategy);
+router.post("/prevention-strategy", protect, savePreventionStrategy);
+
+// Reach Supervisors Audit
+router.post("/upload-reach-audit", protect, upload.single('file'), uploadReachSupervisorAudit);
+router.post("/commit-reach-audit", protect, commitReachSupervisorData);
+router.put("/update-audit-dates/:auditId", protect, updateAuditLogDates);
 
 
 export default router;

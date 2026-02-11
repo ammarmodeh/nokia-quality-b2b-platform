@@ -52,6 +52,7 @@ const IssuePreventionAnalytics = lazy(() => import("./pages/IssuePreventionAnaly
 const PreventionDeepDive = lazy(() => import("./pages/PreventionDeepDive"));
 const DocumentsPortal = lazy(() => import("./pages/DocumentsPortal"));
 const TechnicalGlossary = lazy(() => import("./pages/TechnicalGlossary"));
+const ReachSupervisorsAudit = lazy(() => import("./pages/ReachSupervisorsAudit"));
 
 // Audit System Imports
 const AuditLayout = lazy(() => import("./components/audit/AuditLayout"));
@@ -194,6 +195,7 @@ const App = () => {
           <Route path="/prevention-deep-dive" element={<PreventionDeepDive />} />
           <Route path="/documents" element={<DocumentsPortal />} />
           <Route path="/technical-glossary" element={<TechnicalGlossary />} />
+          <Route path="/reach-supervisors-audit" element={<ReachSupervisorsAudit />} />
           <Route
             path="/dropdown-management"
             element={

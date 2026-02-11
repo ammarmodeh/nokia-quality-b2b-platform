@@ -48,6 +48,8 @@ import {
   PriorityHigh,
   Leaderboard as LeaderboardIcon,
   Close as CloseIcon,
+  Assessment,
+  Timeline,
 } from '@mui/icons-material';
 import api from "../api/api";
 import {
@@ -87,6 +89,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
 import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport, FaEnvelope } from 'react-icons/fa';
+import ViewIssueDetailsDialog from "../components/ViewIssueDetailsDialog";
 
 // Register ChartJS components
 ChartJS.register(
@@ -105,8 +108,6 @@ import {
   TrendingUp,
   TrendingDown,
   TrendingFlat,
-  Assessment,
-  Timeline,
   PieChart as PieChartIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
@@ -150,9 +151,14 @@ const FieldTeamPortal = () => {
 
   // Drill-down state
   const [drillDownOpen, setDrillDownOpen] = useState(false);
-  const [drillDownTitle, setDrillDownTitle] = useState('');
   const [drillDownItems, setDrillDownItems] = useState([]);
-  const [drillDownType, setDrillDownType] = useState('issue'); // 'issue' or 'task'
+  const [drillDownTitle, setDrillDownTitle] = useState('');
+  const [drillDownType, setDrillDownType] = useState('issue'); // 'issue', 'task', 'mixed'
+  const [drillDownTab, setDrillDownTab] = useState('tasks'); // 'tasks', 'issues'
+
+  // View Issue Details State
+  const [selectedDetailIssue, setSelectedDetailIssue] = useState(null);
+  const [detailIssueOpen, setDetailIssueOpen] = useState(false);
 
   // Customer Issues state
   const [customerIssues, setCustomerIssues] = useState([]);
@@ -677,31 +683,44 @@ const FieldTeamPortal = () => {
     let items = [];
     let title = '';
     let dataType = 'issue';
+    let defaultTab = 'tasks';
 
     if (type === 'detractors') {
       items = team.rawDetractors;
       title = `${team.teamName} - NPS Detractors`;
       dataType = 'task';
+      defaultTab = 'tasks';
     } else if (type === 'neutrals') {
       items = team.rawNeutrals;
       title = `${team.teamName} - NPS Neutrals`;
       dataType = 'task';
+      defaultTab = 'tasks';
     } else if (type === 'open') {
       items = team.rawOpen;
       title = `${team.teamName} - Total Open Cases (Dispatched but not closed)`;
       dataType = 'issue';
+      defaultTab = 'issues';
+    } else if (type === 'issues') {
+      items = team.rawIssues;
+      title = `${team.teamName} - Total Customer Issues (Snags & Complaints)`;
+      dataType = 'issue';
+      defaultTab = 'issues';
     } else if (type === 'violations') {
       items = [
         ...team.rawIssues.map(i => ({ ...i, __drillType: 'issue' })),
-        ...team.rawDetractors.map(t => ({ ...t, __drillType: 'task' }))
+        ...team.rawDetractors.map(t => ({ ...t, __drillType: 'task' })),
+        ...team.rawNeutrals.map(t => ({ ...t, __drillType: 'task' }))
       ];
       title = `${team.teamName} - Total Violations Detail`;
       dataType = 'mixed';
+      // If there are issues, default to tasks but let user switch
+      defaultTab = team.rawDetractors.length + team.rawNeutrals.length > 0 ? 'tasks' : 'issues';
     }
 
     setDrillDownItems(items);
     setDrillDownTitle(title);
     setDrillDownType(dataType);
+    setDrillDownTab(defaultTab);
     setDrillDownOpen(true);
   };
 
@@ -1775,7 +1794,7 @@ ${data.map((a, i) => `
                     <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: colors.warning, fontWeight: 800, cursor: 'pointer' }} onClick={() => handleDrillDown(team, 'neutrals')}>
                       {team.npsNeutrals}
                     </TableCell>
-                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff', fontWeight: 700 }}>
+                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#3b82f6', fontWeight: 800, cursor: 'pointer' }} onClick={() => handleDrillDown(team, 'issues')}>
                       {team.issueViolations}
                     </TableCell>
                     <TableCell align="center" sx={{
@@ -1878,6 +1897,34 @@ ${data.map((a, i) => `
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 0 }}>
+          {drillDownType === 'mixed' && (
+            <Box sx={{ borderBottom: 1, borderColor: 'rgba(255,255,255,0.1)', px: 2, bgcolor: '#1a1a1a' }}>
+              <Tabs
+                value={drillDownTab}
+                onChange={(e, val) => setDrillDownTab(val)}
+                sx={{
+                  '& .MuiTab-root': {
+                    color: 'rgba(255,255,255,0.5)',
+                    minHeight: 48,
+                    fontWeight: 500,
+                    fontSize: '0.8rem',
+                    textTransform: 'none'
+                  },
+                  '& .Mui-selected': { color: colors.primary + ' !important' },
+                  '& .MuiTabs-indicator': { bgcolor: colors.primary }
+                }}
+              >
+                <Tab
+                  label={`TASKS (${drillDownItems.filter(i => i.__drillType === 'task' || (drillDownType === 'task')).length})`}
+                  value="tasks"
+                />
+                <Tab
+                  label={`ISSUES (${drillDownItems.filter(i => i.__drillType === 'issue' || (drillDownType === 'issue')).length})`}
+                  value="issues"
+                />
+              </Tabs>
+            </Box>
+          )}
           <TableContainer sx={{ maxHeight: '70vh' }}>
             <Table stickyHeader>
               <TableHead>
@@ -1886,7 +1933,7 @@ ${data.map((a, i) => `
                   <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>SLID</TableCell>
                   <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>DATE</TableCell>
                   <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>CATEGORY / SUMMARY</TableCell>
-                  {drillDownType !== 'issue' && (
+                  {(drillDownType === 'task' || (drillDownType === 'mixed' && drillDownTab === 'tasks')) && (
                     <>
                       <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>REASON/SUB</TableCell>
                       <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>RC</TableCell>
@@ -1899,70 +1946,92 @@ ${data.map((a, i) => `
                 </TableRow>
               </TableHead>
               <TableBody>
-                {drillDownItems.map((item, idx) => {
-                  const isIssue = item.__drillType === 'issue' || drillDownType === 'issue';
-                  const date = isIssue ? (item.date || item.createdAt) : (item.pisDate || item.createdAt);
-                  const status = isIssue ? (item.solved === 'yes' ? 'Solved' : 'Open') : (item.validationStatus || 'Pending');
-                  const score = !isIssue ? (item.evaluationScore ? `${item.evaluationScore}${item.evaluationScore <= 10 ? '/10' : '%'}` : 'N/A') : (item.priority || 'Medium');
+                {drillDownItems
+                  .filter(item => {
+                    if (drillDownType === 'mixed') {
+                      const itemType = item.__drillType || 'task';
+                      return itemType === (drillDownTab === 'tasks' ? 'task' : 'issue');
+                    }
+                    if (drillDownType === 'issue') return (item.__drillType || 'issue') === 'issue';
+                    if (drillDownType === 'task') return (item.__drillType || 'task') === 'task';
+                    return true;
+                  })
+                  .map((item, idx) => {
+                    const isIssue = item.__drillType === 'issue' || drillDownType === 'issue';
+                    const date = isIssue ? (item.date || item.createdAt) : (item.pisDate || item.createdAt);
+                    const status = isIssue ? (item.solved === 'yes' ? 'Solved' : 'Open') : (item.validationStatus || 'Pending');
+                    const score = !isIssue ? (item.evaluationScore ? `${item.evaluationScore}${item.evaluationScore <= 10 ? '/10' : '%'}` : 'N/A') : (item.priority || 'Medium');
 
-                  return (
-                    <TableRow key={item._id || idx} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
-                      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <Chip
-                          label={isIssue ? 'ISSUE' : 'TASK'}
-                          size="small"
-                          sx={{
-                            bgcolor: isIssue ? `${colors.error}20` : `${colors.primary}20`,
-                            color: isIssue ? colors.error : colors.primary,
-                            fontWeight: 800,
-                            fontSize: '0.6rem'
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ color: '#fff', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{item.slid}</TableCell>
-                      <TableCell sx={{ color: colors.textSecondary, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{formatDate(date)}</TableCell>
-                      <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        {isIssue ? (item.issueCategory || 'Technical Issue') : (item.customerName || 'N/A')}
-                        <Typography variant="caption" sx={{ display: 'block', color: colors.textSecondary }}>
-                          {isIssue ? item.notes?.substring(0, 50) : item.faultDescription?.substring(0, 50)}...
-                        </Typography>
-                      </TableCell>
-                      {!isIssue && (
-                        <>
-                          <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', maxWidth: '150px' }}>
-                            {item.reason || '-'}
-                            <Typography variant="caption" sx={{ display: 'block', color: colors.textSecondary }}>
-                              {item.subReason}
-                            </Typography>
-                          </TableCell>
-                          <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            {item.RC || item.rootCause || '-'}
-                          </TableCell>
-                          <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            {item.responsible || item.owner || '-'}
-                          </TableCell>
-                          <TableCell sx={{ color: `${colors.warning}cc`, borderBottom: '1px solid rgba(255,255,255,0.05)', fontStyle: 'italic', maxWidth: '250px' }}>
-                            "{item.customerFeedback || item.feedback || 'No verbatim feedback provided'}"
-                          </TableCell>
-                        </>
-                      )}
-                      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <Chip
-                          label={status}
-                          size="small"
-                          sx={{
-                            bgcolor: status === 'Solved' || status === 'Approved' ? `${colors.success}20` : status === 'Open' ? `${colors.error}20` : 'rgba(255,255,255,0.1)',
-                            color: status === 'Solved' || status === 'Approved' ? colors.success : status === 'Open' ? colors.error : colors.textSecondary,
-                            fontWeight: 700
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ color: colors.textPrimary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        {score}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                    return (
+                      <TableRow
+                        key={item._id || idx}
+                        onClick={() => {
+                          if (isIssue) {
+                            setSelectedDetailIssue(item);
+                            setDetailIssueOpen(true);
+                          }
+                        }}
+                        sx={{
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', cursor: isIssue ? 'pointer' : 'default' }
+                        }}
+                      >
+                        <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <Chip
+                            label={isIssue ? 'ISSUE' : 'TASK'}
+                            size="small"
+                            sx={{
+                              bgcolor: isIssue ? `${colors.error}20` : `${colors.primary}20`,
+                              color: isIssue ? colors.error : colors.primary,
+                              fontWeight: 800,
+                              fontSize: '0.6rem'
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ color: '#fff', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{item.slid}</TableCell>
+                        <TableCell sx={{ color: colors.textSecondary, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{formatDate(date)}</TableCell>
+                        <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          {isIssue ? (item.issueCategory || (item.issues?.[0]?.category) || 'Technical Issue') : (item.customerName || 'N/A')}
+                          <Typography variant="caption" sx={{ display: 'block', color: colors.textSecondary }}>
+                            {isIssue ? (item.issueDetails || item.reporterNote || item.assigneeNote || '').substring(0, 80) : item.faultDescription?.substring(0, 50)}
+                            {isIssue && (item.issueDetails || item.reporterNote || item.assigneeNote || '').length > 80 ? '...' : ''}
+                          </Typography>
+                        </TableCell>
+                        {!isIssue && (
+                          <>
+                            <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', maxWidth: '150px' }}>
+                              {item.reason || '-'}
+                              <Typography variant="caption" sx={{ display: 'block', color: colors.textSecondary }}>
+                                {item.subReason}
+                              </Typography>
+                            </TableCell>
+                            <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              {item.RC || item.rootCause || '-'}
+                            </TableCell>
+                            <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              {item.responsible || item.owner || '-'}
+                            </TableCell>
+                            <TableCell sx={{ color: `${colors.warning}cc`, borderBottom: '1px solid rgba(255,255,255,0.05)', fontStyle: 'italic', maxWidth: '250px' }}>
+                              "{item.customerFeedback || item.feedback || 'No verbatim feedback provided'}"
+                            </TableCell>
+                          </>
+                        )}
+                        <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <Chip
+                            label={status}
+                            size="small"
+                            sx={{
+                              bgcolor: status === 'Solved' || status === 'Approved' ? `${colors.success}20` : status === 'Open' ? `${colors.error}20` : 'rgba(255,255,255,0.1)',
+                              color: status === 'Solved' || status === 'Approved' ? colors.success : status === 'Open' ? colors.error : colors.textSecondary,
+                              fontWeight: 700
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ color: colors.textPrimary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          {score}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
               </TableBody>
             </Table>
           </TableContainer>
@@ -3394,6 +3463,16 @@ ${data.map((a, i) => `
           )}
         </Box>
       )}
+      <ViewIssueDetailsDialog
+        open={detailIssueOpen}
+        onClose={() => setDetailIssueOpen(false)}
+        issue={selectedDetailIssue}
+        onUpdate={() => {
+          // Refresh data if needed, but since we are in drill-down,
+          // maybe just update local state or dispatch global refresh
+          window.dispatchEvent(new CustomEvent('cin-refresh'));
+        }}
+      />
     </Box>
   );
 };

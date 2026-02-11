@@ -8,11 +8,15 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 
-export const DataTable = ({ groupedData }) => {
+export const DataTable = ({ groupedData, settings = {} }) => {
   const [paginationModel, setPaginationModel] = useState({
     pageSize: 10,
     page: 0,
   });
+
+  const promoterTarget = settings?.npsTargets?.promoters ?? 75;
+  const detractorTarget = settings?.npsTargets?.detractors ?? 8;
+  const npsTarget = promoterTarget - detractorTarget;
 
   const sortedWeeksDescending = Object.keys(groupedData).sort((a, b) => {
     const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
@@ -56,7 +60,17 @@ export const DataTable = ({ groupedData }) => {
     };
 
     const getNPSStatus = (nps) => {
-      if (nps >= 66) return { label: 'Met Target', color: '#10b981' };
+      if (nps >= npsTarget) return { label: 'Met Target', color: '#10b981' };
+      return { label: 'Out of Target', color: '#ef4444' };
+    };
+
+    const getPromoterStatus = (val) => {
+      if (val >= promoterTarget) return { label: 'Met Target', color: '#10b981' };
+      return { label: 'Out of Target', color: '#ef4444' };
+    };
+
+    const getDetractorStatus = (val) => {
+      if (val <= detractorTarget) return { label: 'Met Target', color: '#10b981' };
       return { label: 'Out of Target', color: '#ef4444' };
     };
 
@@ -73,9 +87,11 @@ export const DataTable = ({ groupedData }) => {
       promoters: current.Promoters || 0,
       promotersChange: previous ? getChangeValue(current.Promoters, previous.Promoters) : '',
       promotersTrend: previous ? getTrendIcon(current.Promoters, previous.Promoters) : null,
+      promotersStatus: getPromoterStatus(current.Promoters || 0),
       detractors: current.Detractors || 0,
       detractorsChange: previous ? getChangeValue(current.Detractors, previous.Detractors) : '',
       detractorsTrend: previous ? getTrendIcon(current.Detractors, previous.Detractors, true) : null,
+      detractorsStatus: getDetractorStatus(current.Detractors || 0),
       neutrals: current.Neutrals || 0,
       neutralsChange: previous ? getChangeValue(current.Neutrals, previous.Neutrals) : '',
       neutralsTrend: previous ? getTrendIcon(current.Neutrals, previous.Neutrals, true) : null,
@@ -157,7 +173,7 @@ export const DataTable = ({ groupedData }) => {
     {
       field: 'promoters',
       headerName: 'Promoters %',
-      flex: 1.2,
+      flex: 1,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
@@ -175,9 +191,29 @@ export const DataTable = ({ groupedData }) => {
       ),
     },
     {
+      field: 'promotersStatus',
+      headerName: 'P-Status',
+      flex: 1,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => (
+        <Chip
+          label={params.value.label}
+          size="small"
+          sx={{
+            bgcolor: `${params.value.color}20`,
+            color: params.value.color,
+            fontWeight: 700,
+            fontSize: '0.65rem',
+            borderRadius: 2
+          }}
+        />
+      ),
+    },
+    {
       field: 'detractors',
       headerName: 'Detractors %',
-      flex: 1.2,
+      flex: 1,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
@@ -192,6 +228,26 @@ export const DataTable = ({ groupedData }) => {
             </Typography>
           )}
         </Box>
+      ),
+    },
+    {
+      field: 'detractorsStatus',
+      headerName: 'D-Status',
+      flex: 1,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params) => (
+        <Chip
+          label={params.value.label}
+          size="small"
+          sx={{
+            bgcolor: `${params.value.color}20`,
+            color: params.value.color,
+            fontWeight: 700,
+            fontSize: '0.65rem',
+            borderRadius: 2
+          }}
+        />
       ),
     },
     {

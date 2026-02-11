@@ -3,8 +3,19 @@ import { CustomerIssueSchema } from "../models/customerIssueModel.js";
 import { FavouriteSchema } from "../models/favouriteModel.js";
 import { TrashSchema } from "../models/trashModel.js";
 import { ArchiveSchema } from "../models/archiveModel.js";
+import { ReachSupervisorIssue } from "../models/reachSupervisorIssueModel.js";
 import { TaskTicket } from "../models/taskTicketModel.js";
+import AuditLog from "../models/auditLogModel.js";
+import AuditRecord from "../models/auditRecordModel.js";
 import mongoose from "mongoose";
+import fs from "fs";
+import PreventionStrategy from "../models/preventionStrategyModel.js";
+import SamplesToken from "../models/samplesTokenModel.js";
+import path from "path";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const addTask = async (req, res) => {
   const session = await mongoose.startSession();
@@ -994,10 +1005,8 @@ export const getIssuePreventionStats = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
 
-    // Build query for critical tasks
-    const query = {
-      evaluationScore: { $lte: 8 }
-    };
+    // Build query for all tasks in the period
+    const query = {};
 
     // Use interviewDate for filtering as requested
     if (startDate && endDate) {
@@ -1011,20 +1020,27 @@ export const getIssuePreventionStats = async (req, res) => {
       query.interviewDate = { $lte: new Date(endDate) };
     }
 
-    // 1. Fetch all Detractor and Neutral tasks (score <= 8) within the period
-    const criticalTasks = await TaskSchema.find(query)
-      .select('slid evaluationScore customerFeedback createdAt interviewDate pisDate status teamName teamCompany subReason rootCause reason requestNumber operation customerName contactNumber tarrifName customerType governorate district priority validationStatus assignedTo')
+    // 1. Fetch all NPS tasks within the period
+    const npsTasks = await TaskSchema.find(query)
+      .select('slid evaluationScore customerFeedback createdAt interviewDate pisDate status teamName teamCompany subReason rootCause reason requestNumber operation customerName contactNumber tarrifName customerType governorate district priority validationStatus assignedTo gaiaCheck gaiaContent responsible')
       .populate('assignedTo', 'name email');
 
-    const taskSlids = criticalTasks.map(t => t.slid);
+    const taskSlids = npsTasks.map(t => t.slid);
 
-    // 2. Find matching CustomerIssue records for these SLIDs
-    // We don't filter reports by date here because we want to see ALL prior history for these SLIDs
-    const priorReports = await CustomerIssueSchema.find({
-      slid: { $in: taskSlids }
-    }).select('slid fromMain fromSub reporter reporterNote createdAt date solved issues resolveDate closedAt dispatched dispatchedAt closedBy');
+    // 2. Find matching issues from BOTH sources
+    const [ojoReports, reachReports] = await Promise.all([
+      CustomerIssueSchema.find({ slid: { $in: taskSlids } })
+        .select('slid fromMain fromSub reporter reporterNote createdAt date solved issues resolveDate'),
+      ReachSupervisorIssue.find({ slid: { $in: taskSlids } })
+        .select('slid fromMain fromSub reporter reporterNote createdAt date solved issues resolveDate source')
+    ]);
 
-    // 3. Optimize overlap detection using a Map for O(N + M) performance
+    // Combine and normalize reports
+    const normalizedOjo = ojoReports.map(r => ({ ...r.toObject(), _sourceType: 'OJO Team (Manual)' }));
+    const normalizedReach = reachReports.map(r => ({ ...r.toObject(), _sourceType: 'Reach Supervisors (Audit)' }));
+    const priorReports = [...normalizedOjo, ...normalizedReach];
+
+    // 3. Optimize overlap detection using a Map
     const reportsBySlid = new Map();
     priorReports.forEach(report => {
       if (!reportsBySlid.has(report.slid)) {
@@ -1033,51 +1049,65 @@ export const getIssuePreventionStats = async (req, res) => {
       reportsBySlid.get(report.slid).push(report);
     });
 
-    const overlaps = criticalTasks.map(task => {
+    let preventedOverlapCount = 0;
+    let failureOverlapCount = 0;
+    const overlapNpsBreakdown = { promoters: 0, neutrals: 0, detractors: 0 };
+    const overlaps = [];
+
+    npsTasks.forEach(task => {
       const reports = reportsBySlid.get(task.slid) || [];
 
       // Filter for reports that happened BEFORE the task's interview/creation
-      // This is the definition of an overlap/prevention failure
       const priorToTask = reports.filter(r => {
         const reportDate = new Date(r.date || r.createdAt);
         const taskDate = new Date(task.interviewDate || task.createdAt);
         return reportDate < taskDate;
       });
 
-      if (priorToTask.length > 0) {
-        return {
-          task,
-          reports: priorToTask.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
-        };
-      }
-      return null;
-    }).filter(item => item !== null);
+      priorToTask.forEach(report => {
+        const score = task.evaluationScore;
+        const isPrevented = score >= 9;
 
-    // 4. Source Breakdown
-    const sourceBreakdown = priorReports.reduce((acc, report) => {
-      const source = report.fromMain || 'Unknown';
+        if (isPrevented) {
+          preventedOverlapCount++;
+          overlapNpsBreakdown.promoters++;
+        } else {
+          failureOverlapCount++;
+          if (score >= 7) overlapNpsBreakdown.neutrals++;
+          else overlapNpsBreakdown.detractors++;
+        }
+
+        overlaps.push({
+          task,
+          report,
+          isPrevented
+        });
+      });
+    });
+
+    // 4. Source Breakdown (ONLY for overlapping reports for consistency)
+    const sourceBreakdown = overlaps.reduce((acc, item) => {
+      const source = item.report.fromMain || 'Unknown';
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {});
 
-    // 4b. Overlap Source Breakdowns (Crucial for KPI Card)
+    // 4b. Overlap Source Breakdowns
     const overlapMainBreakdown = overlaps.reduce((acc, item) => {
-      const source = item.reports[0]?.fromMain || 'Unknown';
+      const source = item.report.fromMain || 'Unknown';
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {});
 
     const overlapSubBreakdown = overlaps.reduce((acc, item) => {
-      const source = item.reports[0]?.fromSub || 'Unknown';
+      const source = item.report.fromSub || 'Unknown';
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {});
 
-    // 5. Calculate Prevention Gap (Time between first report and task creation) - unused but potential for future
-
-    // 6. Reporter Stats (Who reported issues that became detractors?)
-    const reporterStats = priorReports.reduce((acc, report) => {
-      const reporter = report.reporter || 'Unknown';
+    // 6. Reporter Stats (ONLY for overlapping reports for consistency)
+    const reporterStats = overlaps.reduce((acc, item) => {
+      const reporter = item.report.reporter || 'Unknown';
       acc[reporter] = (acc[reporter] || 0) + 1;
       return acc;
     }, {});
@@ -1092,7 +1122,7 @@ export const getIssuePreventionStats = async (req, res) => {
       return acc;
     }, {});
 
-    // 8. Reason Stats (Root Cause Analysis)
+    // 8. Reason Stats (Root Cause Analysis - for all overlaps)
     const reasonStats = overlaps.reduce((acc, item) => {
       const reasons = Array.isArray(item.task.reason) ? item.task.reason : [item.task.reason || 'Unknown'];
       reasons.forEach(r => {
@@ -1102,193 +1132,140 @@ export const getIssuePreventionStats = async (req, res) => {
       return acc;
     }, {});
 
-    // 9. Company Stats (Vendor Performance)
+    // 9. Company Stats (Vendor Performance - for all overlaps)
     const companyStats = overlaps.reduce((acc, item) => {
       const company = item.task.teamCompany || 'Unknown';
       acc[company] = (acc[company] || 0) + 1;
       return acc;
     }, {});
 
-    // 10. Reporter Comparison Stats (Top Non-Preventive Reporters)
+    // 10. Reporter Comparison Stats
     const reporterComparisonMap = {};
 
     // 11. Diagnosis Accuracy & QoS/Installation Analysis
     let totalMatches = 0;
     let totalComparisons = 0;
 
-    const qosMatrix = {
-      confirmed: 0,
-      falseAlarm: 0,
-      missed: 0
-    };
-
-    const installationMatrix = {
-      confirmed: 0,
-      falseAlarm: 0,
-      missed: 0
-    };
+    const qosMatrix = { confirmed: 0, falseAlarm: 0, missed: 0 };
+    const installationMatrix = { confirmed: 0, falseAlarm: 0, missed: 0 };
 
     // Process Efficiency Stats
-    let totalResolutionTime = 0; // Field Team Speed
-    let totalClosureTime = 0;    // Supervisor Speed
-    let totalLifecycleTime = 0;  // End-to-End
+    let totalResolutionTime = 0;
+    let totalClosureTime = 0;
+    let totalLifecycleTime = 0;
     let countResolution = 0;
     let countClosure = 0;
     let countLifecycle = 0;
     const pendingBottlenecks = [];
     const now = new Date();
 
-    // Removed impactStats as requested
-
     overlaps.forEach(item => {
-      // Handle reason as potentially an array
       const taskReasons = Array.isArray(item.task.reason) ? item.task.reason : [item.task.reason || "Unknown Task Reason"];
-      const interviewDate = item.task.interviewDate ? new Date(item.task.interviewDate) : (item.task.createdAt ? new Date(item.task.createdAt) : null);
+      const report = item.report;
 
-      item.reports.forEach(report => {
-        const reporter = report.reporter || "Unknown Reporter";
-        const reportDate = new Date(report.date || report.createdAt);
+      const reporter = report.reporter || "Unknown Reporter";
+      const reportDate = new Date(report.date || report.createdAt);
 
-        // Process Efficiency Calculations (Refined Logic)
-        const now = new Date();
+      // Supervisor Dispatch Speed
+      let dispatchEnd = report.dispatchedAt ? new Date(report.dispatchedAt) : (report.dispatched === 'no' ? now : null);
+      if (!dispatchEnd && report.dispatched === 'yes') dispatchEnd = reportDate;
 
-        // 1. Supervisor Dispatch Speed: Reported -> Dispatched (OR Reported -> Now if undispatched)
-        let dispatchEnd = report.dispatchedAt ? new Date(report.dispatchedAt) : (report.dispatched === 'no' ? now : null);
+      if (dispatchEnd && dispatchEnd >= reportDate) {
+        const dispatchTime = (dispatchEnd - reportDate) / (1000 * 60 * 60 * 24);
+        totalClosureTime += dispatchTime;
+        countClosure++;
+      }
 
-        // Fallback for historical 'yes' without date
-        if (!dispatchEnd && report.dispatched === 'yes') dispatchEnd = reportDate;
-
-        if (dispatchEnd && dispatchEnd >= reportDate) {
-          const dispatchTime = (dispatchEnd - reportDate) / (1000 * 60 * 60 * 24);
-          totalClosureTime += dispatchTime;
-          countClosure++;
+      // Field Resolution Speed
+      if (report.dispatchedAt || report.dispatched === 'yes') {
+        let resStart = report.dispatchedAt ? new Date(report.dispatchedAt) : reportDate;
+        let resEnd = report.resolveDate ? new Date(report.resolveDate) : (report.solved === 'no' ? now : null);
+        if (resStart && resEnd && resEnd >= resStart) {
+          const resTime = (resEnd - resStart) / (1000 * 60 * 60 * 24);
+          totalResolutionTime += resTime;
+          countResolution++;
         }
+      }
 
-        // 2. Field Resolution Speed (Dispatched -> Resolved OR Dispatched -> Now)
-        // Only measure field speed if a dispatch event exists
-        if (report.dispatchedAt || report.dispatched === 'yes') {
-          let resStart = report.dispatchedAt ? new Date(report.dispatchedAt) : reportDate;
-          let resEnd = report.resolveDate ? new Date(report.resolveDate) : (report.solved === 'no' ? now : null);
+      // Total Lifecycle
+      let lifeEnd = report.closedAt ? new Date(report.closedAt) : (report.solved === 'no' ? now : null);
+      if (lifeEnd && lifeEnd >= reportDate) {
+        const lifeTime = (lifeEnd - reportDate) / (1000 * 60 * 60 * 24);
+        totalLifecycleTime += lifeTime;
+        countLifecycle++;
+      }
 
-          if (resStart && resEnd && resEnd >= resStart) {
-            const resTime = (resEnd - resStart) / (1000 * 60 * 60 * 24);
-            totalResolutionTime += resTime;
-            countResolution++;
-          }
-        }
+      // Bottleneck Detection
+      if (report.solved === 'no') {
+        pendingBottlenecks.push({
+          id: report._id,
+          slid: report.slid,
+          age: ((now - reportDate) / (1000 * 60 * 60 * 24)).toFixed(1),
+          stage: report.dispatched === 'no' ? 'Awaiting Dispatch' : 'Field Work',
+          reportDate: report.date || report.createdAt,
+          assignedTo: (report.assignedTo && report.assignedTo.name) || 'Unassigned',
+          supervisor: report.closedBy || 'Unassigned',
+          originalReport: report
+        });
+      }
 
-        // 3. Total Lifecycle: Reported -> Closed (OR Reported -> Now if open)
-        let lifeEnd = report.closedAt ? new Date(report.closedAt) : (report.solved === 'no' ? now : null);
-        if (lifeEnd && lifeEnd >= reportDate) {
-          const lifeTime = (lifeEnd - reportDate) / (1000 * 60 * 60 * 24);
-          totalLifecycleTime += lifeTime;
-          countLifecycle++;
-        }
+      const reportedCategories = report.issues && report.issues.length > 0 ? report.issues.map(i => i.category) : ["No Category"];
+      const reportedCategoriesString = reportedCategories.join(", ");
 
-        // Bottleneck Detection
-        if (report.solved === 'no') {
-          pendingBottlenecks.push({
-            id: report._id,
-            slid: report.slid,
-            age: ((now - reportDate) / (1000 * 60 * 60 * 24)).toFixed(1),
-            stage: report.dispatched === 'no' ? 'Awaiting Dispatch' : 'Field Work',
-            reportDate: report.date || report.createdAt,
-            assignedTo: (report.assignedTo && report.assignedTo.name) || 'Unassigned',
-            supervisor: report.closedBy || 'Unassigned',
-            originalReport: report // Send full object for viewing
-          });
-        }
+      const isMatch = reportedCategories.some(cat =>
+        taskReasons.some(tr =>
+          cat.toLowerCase().includes(tr.toLowerCase()) ||
+          tr.toLowerCase().includes(cat.toLowerCase())
+        )
+      );
 
-        // Get all categories from report
-        const reportedCategories = report.issues && report.issues.length > 0
-          ? report.issues.map(i => i.category)
-          : ["No Category"];
+      totalComparisons++;
+      if (isMatch) totalMatches++;
 
-        const reportedCategoriesString = reportedCategories.join(", ");
+      // QoS Analysis
+      const reportedQoS = reportedCategories.some(cat => cat.toLowerCase().includes("qos"));
+      const actualQoS = taskReasons.some(tr => tr.toLowerCase().includes("qos"));
+      if (reportedQoS && actualQoS) qosMatrix.confirmed++;
+      else if (reportedQoS && !actualQoS) qosMatrix.falseAlarm++;
+      else if (!reportedQoS && actualQoS) qosMatrix.missed++;
 
-        // Check for Match (Case-insensitive, simplistic check)
-        // We assume "Match" if ANY reported category matches ANY task reason
-        const isMatch = reportedCategories.some(cat =>
-          taskReasons.some(tr =>
-            cat.toLowerCase().includes(tr.toLowerCase()) ||
-            tr.toLowerCase().includes(cat.toLowerCase())
-          )
-        );
+      // Installation Analysis
+      const reportedInstall = reportedCategories.some(cat => cat.toLowerCase().includes("install"));
+      const actualInstall = taskReasons.some(tr => tr.toLowerCase().includes("install"));
+      if (reportedInstall && actualInstall) installationMatrix.confirmed++;
+      else if (reportedInstall && !actualInstall) installationMatrix.falseAlarm++;
+      else if (!reportedInstall && actualInstall) installationMatrix.missed++;
 
-        totalComparisons++;
-        if (isMatch) totalMatches++;
-
-        // QoS Analysis
-        const reportedQoS = reportedCategories.some(cat => cat.toLowerCase().includes("qos"));
-        const actualQoS = taskReasons.some(tr => tr.toLowerCase().includes("qos"));
-
-        if (reportedQoS && actualQoS) qosMatrix.confirmed++;
-        else if (reportedQoS && !actualQoS) qosMatrix.falseAlarm++;
-        else if (!reportedQoS && actualQoS) qosMatrix.missed++;
-
-        // Installation Analysis
-        const reportedInstall = reportedCategories.some(cat => cat.toLowerCase().includes("install"));
-        const actualInstall = taskReasons.some(tr => tr.toLowerCase().includes("install"));
-
-        if (reportedInstall && actualInstall) installationMatrix.confirmed++;
-        else if (reportedInstall && !actualInstall) installationMatrix.falseAlarm++;
-        else if (!reportedInstall && actualInstall) installationMatrix.missed++;
-
-        // --- Existing Reporter Logic ---
-        if (!reporterComparisonMap[reporter]) {
-          reporterComparisonMap[reporter] = {
-            reporterName: reporter,
-            totalNonPrevented: 0,
-            comparisons: []
-          };
-        }
-
-        reporterComparisonMap[reporter].totalNonPrevented++;
-
-        // Find match for this specific comparison (using joined categories)
-        const taskReasonsString = taskReasons.join(", ");
-        const existingComp = reporterComparisonMap[reporter].comparisons.find(
-          c => c.reportedCategory === reportedCategoriesString && c.actualReason === taskReasonsString
-        );
-
-        if (existingComp) {
-          existingComp.count++;
-        } else {
-          reporterComparisonMap[reporter].comparisons.push({
-            reportedCategory: reportedCategoriesString,
-            actualReason: taskReasonsString,
-            count: 1
-          });
-        }
-      });
+      if (!reporterComparisonMap[reporter]) {
+        reporterComparisonMap[reporter] = { reporterName: reporter, totalNonPrevented: 0, comparisons: [] };
+      }
+      reporterComparisonMap[reporter].totalNonPrevented++;
+      const taskReasonsString = taskReasons.join(", ");
+      const existingComp = reporterComparisonMap[reporter].comparisons.find(c => c.reportedCategory === reportedCategoriesString && c.actualReason === taskReasonsString);
+      if (existingComp) existingComp.count++;
+      else reporterComparisonMap[reporter].comparisons.push({ reportedCategory: reportedCategoriesString, actualReason: taskReasonsString, count: 1 });
     });
 
     const globalCategoryReasonMatrix = overlaps.reduce((acc, item) => {
       const taskReasons = Array.isArray(item.task.reason) ? item.task.reason : [item.task.reason || "Unknown Task Reason"];
-      item.reports.forEach(report => {
-        const reportedCategories = report.issues && report.issues.length > 0
-          ? report.issues.map(i => i.category)
-          : ["No Category"];
-
-        reportedCategories.forEach(cat => {
-          if (!acc[cat]) acc[cat] = {};
-          taskReasons.forEach(tr => {
-            acc[cat][tr] = (acc[cat][tr] || 0) + 1;
-          });
-        });
+      const reportedCategories = item.report.issues && item.report.issues.length > 0 ? item.report.issues.map(i => i.category) : ["No Category"];
+      reportedCategories.forEach(cat => {
+        if (!acc[cat]) acc[cat] = {};
+        taskReasons.forEach(tr => { acc[cat][tr] = (acc[cat][tr] || 0) + 1; });
       });
       return acc;
     }, {});
 
-    const reporterComparisonStats = Object.values(reporterComparisonMap)
-      .sort((a, b) => b.totalNonPrevented - a.totalNonPrevented)
-      .slice(0, 10);
+    const reporterComparisonStats = Object.values(reporterComparisonMap).sort((a, b) => b.totalNonPrevented - a.totalNonPrevented).slice(0, 10);
 
     const stats = {
-      totalCriticalTasks: criticalTasks.length,
+      totalNpsTasks: npsTasks.length,
       reportedOverlapCount: overlaps.length,
+      preventedOverlapCount,
+      failureOverlapCount,
       overlapMainBreakdown,
       overlapSubBreakdown,
+      overlapNpsBreakdown,
       sourceBreakdown,
       reporterStats,
       globalCategoryReasonMatrix,
@@ -1302,19 +1279,17 @@ export const getIssuePreventionStats = async (req, res) => {
         totalComparisons
       },
       qosMatrix,
-      installationMatrix, // Add newly calculated matrix
+      installationMatrix,
       processEfficiency: {
         avgResolutionTime: countResolution > 0 ? (totalResolutionTime / countResolution).toFixed(1) : 0,
-        avgDispatchTime: countClosure > 0 ? (totalClosureTime / countClosure).toFixed(1) : 0, // Using countClosure for dispatch as per historical naming
+        avgDispatchTime: countClosure > 0 ? (totalClosureTime / countClosure).toFixed(1) : 0,
         avgLifecycleTime: countLifecycle > 0 ? (totalLifecycleTime / countLifecycle).toFixed(1) : 0,
         oldestPending: pendingBottlenecks.sort((a, b) => b.age - a.age),
         countResolution,
         countClosure
       },
       overlaps: overlaps.sort((a, b) => new Date(b.task.interviewDate || b.task.createdAt) - new Date(a.task.interviewDate || a.task.createdAt)),
-      preventionRate: criticalTasks.length > 0
-        ? ((overlaps.length / criticalTasks.length) * 100).toFixed(2)
-        : 0
+      preventionRate: overlaps.length > 0 ? ((preventedOverlapCount / overlaps.length) * 100).toFixed(1) : 0
     };
 
     res.status(200).json(stats);
@@ -1416,6 +1391,767 @@ export const getPreventionDeepDiveStats = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getPreventionDeepDiveStats:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Upload and process audit Excel sheet
+export const uploadAuditSheet = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" }); // defval to ensure empty cells are present
+
+    if (!jsonData || jsonData.length === 0) {
+      return res.status(400).json({ error: "Excel file is empty" });
+    }
+
+    // Identify columns handling
+    const firstRow = jsonData[0];
+    const columnKeys = Object.keys(firstRow);
+
+    // Find critical columns
+    const slidKey = columnKeys.find(key =>
+      key.toLowerCase().replace(/[^a-z0-9]/g, '') === 'slid'
+    );
+
+    // "HH" column - Interview Date
+    const hhKey = columnKeys.find(key => key.trim().toUpperCase() === 'HH');
+
+    // NPS Columns
+    const npsScoreKey = columnKeys.find(key => key.includes('Question 1 (NPS) - Scale Value'));
+    const npsCommentKey = columnKeys.find(key => key.includes('Question 1 (NPS) - Scale Comment'));
+
+    if (!slidKey) {
+      return res.status(400).json({
+        error: "SLID column not found in Excel. Please ensure the file has a 'SLID' column.",
+        availableColumns: columnKeys
+      });
+    }
+
+    // --- Persistence Logic ---
+    const uploadDir = path.join(__dirname, '../uploads/audit_sheets');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const filename = `${Date.now()}-${req.file.originalname}`;
+    const filePath = path.join(uploadDir, filename);
+
+    // Save file to disk
+    await fs.promises.writeFile(filePath, req.file.buffer);
+
+    // Create Audit Log entry
+    const auditLog = await AuditLog.create({
+      filename: filename,
+      originalName: req.file.originalname,
+      path: filePath,
+      uploadedBy: req.user._id,
+      status: 'Uploaded',
+      auditType: 'DVOC',
+      importStats: {
+        totalRows: jsonData.length,
+        updatedTasks: 0
+      }
+    });
+
+    // Helper for Excel Dates
+    const parseExcelDate = (serial) => {
+      if (!serial) return null;
+      if (typeof serial === 'number' && serial > 20000) {
+        const date = new Date((serial - 25569) * 86400 * 1000);
+        return date.toISOString().split('T')[0];
+      }
+      return serial;
+    };
+
+    // Extract unique SLIDs from Excel
+    const excelSlids = [...new Set(jsonData.map(row => row[slidKey]).filter(Boolean))];
+
+    // Find matching customer issues from BOTH sources (OJO and Reach Supervisors)
+    const [ojoIssues, reachIssues] = await Promise.all([
+      CustomerIssueSchema.find({ slid: { $in: excelSlids } })
+        .select('slid fromMain fromSub reporter reporterNote createdAt date solved issues resolveDate'),
+      ReachSupervisorIssue.find({ slid: { $in: excelSlids } })
+        .select('slid fromMain fromSub reporter reporterNote createdAt date solved issues resolveDate source')
+    ]);
+
+    // Create a map for quick lookup
+    const issueMap = new Map();
+
+    // Process OJO (Manual) Issues
+    ojoIssues.forEach(issue => {
+      if (!issueMap.has(issue.slid)) issueMap.set(issue.slid, []);
+      issueMap.get(issue.slid).push({ ...issue.toObject(), _sourceType: 'OJO Team (Manual)' });
+    });
+
+    // Process Reach (Audit) Issues
+    reachIssues.forEach(issue => {
+      if (!issueMap.has(issue.slid)) issueMap.set(issue.slid, []);
+      issueMap.get(issue.slid).push({ ...issue.toObject(), _sourceType: 'Reach Supervisors (Audit)' });
+    });
+
+    // Process each row from Excel
+    const results = jsonData.map(row => {
+      const slid = row[slidKey];
+      const issues = issueMap.get(slid) || [];
+
+      // Look for Interview Date in HH column
+      let interviewDate = null;
+      if (hhKey && row[hhKey]) {
+        interviewDate = parseExcelDate(row[hhKey]);
+        row[hhKey] = interviewDate || row[hhKey];
+      }
+
+      const evaluationScore = npsScoreKey ? row[npsScoreKey] : null;
+      const customerComment = npsCommentKey ? row[npsCommentKey] : null;
+
+      return {
+        ...row,
+        _slid: slid,
+        _interviewDate: interviewDate,
+        _evaluationScore: evaluationScore,
+        _customerComment: customerComment,
+        _hasMatch: issues.length > 0,
+        _matchCount: issues.length,
+        _matchedIssues: issues.map(issue => ({
+          id: issue._id,
+          fromMain: issue.fromMain,
+          fromSub: issue.fromSub,
+          reporter: issue.reporter,
+          reporterNote: issue.reporterNote,
+          date: issue.date || issue.createdAt,
+          solved: issue.solved,
+          issues: issue.issues,
+          sourceType: issue._sourceType
+        }))
+      };
+    });
+
+    // Summary statistics
+    const totalRows = results.length;
+    const matchedRows = results.filter(r => r._hasMatch).length;
+    const unmatchedRows = totalRows - matchedRows;
+    const totalMatches = results.reduce((sum, r) => sum + r._matchCount, 0);
+
+    // --- Persist Detailed Records ---
+    const auditRecordsData = results.map(r => ({
+      auditId: auditLog._id,
+      slid: r._slid,
+      interviewDate: r._interviewDate,
+      evaluationScore: r._evaluationScore,
+      customerFeedback: r._customerComment,
+      isMatched: r._hasMatch,
+      matchedIssues: r._matchedIssues.map(issue => issue.id),
+      rawRowData: r
+    }));
+
+    await AuditRecord.insertMany(auditRecordsData);
+
+    res.status(200).json({
+      success: true,
+      auditId: auditLog._id, // Return the ID for the commit step
+      summary: {
+        totalRows,
+        matchedRows,
+        unmatchedRows,
+        totalMatches,
+        matchRate: totalRows > 0 ? ((matchedRows / totalRows) * 100).toFixed(1) : 0
+      },
+      data: results,
+      columns: columnKeys
+    });
+
+  } catch (error) {
+    console.error("Error processing audit sheet:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- Reach Supervisors Audit Flow ---
+
+export const uploadReachSupervisorAudit = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
+
+    if (!jsonData.length) return res.status(400).json({ error: "Excel file is empty" });
+
+    const columnKeys = Object.keys(jsonData[0]);
+    const slidKey = columnKeys.find(key => key.toLowerCase().replace(/[^a-z0-9]/g, '') === 'slid');
+
+    if (!slidKey) return res.status(400).json({ error: "SLID column not found" });
+
+    const uploadDir = path.join(__dirname, '../uploads/reach_sheets');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+    const filename = `reach-${Date.now()}-${req.file.originalname}`;
+    const filePath = path.join(uploadDir, filename);
+    await fs.promises.writeFile(filePath, req.file.buffer);
+
+    const auditLog = await AuditLog.create({
+      filename,
+      originalName: req.file.originalname,
+      path: filePath,
+      uploadedBy: req.user._id,
+      status: 'Uploaded',
+      auditType: 'ReachSupervisors',
+      importStats: { totalRows: jsonData.length, matchedRows: 0, updatedTasks: 0 }
+    });
+
+    const results = jsonData.map(row => ({
+      ...row,
+      _slid: row[slidKey],
+      _status: 'Pending'
+    }));
+
+    res.status(200).json({
+      auditId: auditLog._id,
+      filename: auditLog.originalName,
+      stats: auditLog.importStats,
+      records: results
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const commitReachSupervisorData = async (req, res) => {
+  try {
+    const { auditId } = req.body;
+    const auditLog = await AuditLog.findById(auditId);
+    if (!auditLog || auditLog.status === 'Imported') {
+      return res.status(400).json({ error: "Invalid audit or already imported" });
+    }
+
+    const fileBuffer = await fs.promises.readFile(auditLog.path);
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
+
+    const columnKeys = Object.keys(jsonData[0]);
+    const slidKey = columnKeys.find(key => key.toLowerCase().replace(/[^a-z0-9]/g, '') === 'slid');
+    const reporterKey = columnKeys.find(k => k.toLowerCase().includes('reporter') || k.toLowerCase().includes('agent')) || slidKey;
+    const noteKey = columnKeys.find(k => k.toLowerCase().includes('note') || k.toLowerCase().includes('comment') || k.toLowerCase().includes('feedback')) || slidKey;
+    const teamKey = columnKeys.find(k => k.toLowerCase().includes('team') || k.toLowerCase().includes('vendor')) || slidKey;
+    const hhKey = columnKeys.find(key => key.trim().toUpperCase() === 'HH');
+
+    const issuesToCreate = jsonData.map(row => {
+      let interviewDate = null;
+      if (hhKey && row[hhKey]) {
+        if (typeof row[hhKey] === 'number' && row[hhKey] > 20000) {
+          interviewDate = new Date((row[hhKey] - 25569) * 86400 * 1000);
+        } else {
+          interviewDate = new Date(row[hhKey]);
+        }
+      }
+
+      return {
+        slid: String(row[slidKey]),
+        fromMain: "Reach Supervisors Audit",
+        fromSub: auditLog.originalName,
+        reporter: String(row[reporterKey] || "Reach Auditor"),
+        reporterNote: String(row[noteKey] || "No note provided"),
+        contactMethod: "Reach Audit",
+        teamCompany: String(row[teamKey] || "Unknown"),
+        issues: [{ category: "Audit Reach" }],
+        solved: "no",
+        assignedTo: "Reach Supervisors",
+        source: "Reach Supervisors",
+        auditId: auditLog._id,
+        interviewDate: (interviewDate && !isNaN(interviewDate.getTime())) ? interviewDate : null
+      };
+    });
+
+    await ReachSupervisorIssue.insertMany(issuesToCreate);
+
+    auditLog.status = 'Imported';
+    auditLog.importStats.updatedTasks = issuesToCreate.length;
+    await auditLog.save();
+
+    res.status(200).json({ success: true, message: `Imported ${issuesToCreate.length} issues.` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const commitAuditData = async (req, res) => {
+  try {
+    const { auditId } = req.body;
+    const auditLog = await AuditLog.findById(auditId);
+
+    if (!auditLog) {
+      return res.status(404).json({ error: "Audit log not found" });
+    }
+
+    if (auditLog.status === 'Imported') {
+      return res.status(400).json({ error: "This file has already been imported." });
+    }
+
+    // Read file from disk
+    const fileBuffer = await fs.promises.readFile(auditLog.path);
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+    // Identify columns handling (same logic as upload)
+    const firstRow = jsonData[0];
+    const columnKeys = Object.keys(firstRow);
+    const slidKey = columnKeys.find(key => key.toLowerCase().replace(/[^a-z0-9]/g, '') === 'slid');
+    const hhKey = columnKeys.find(key => key.trim().toUpperCase() === 'HH');
+    const npsScoreKey = columnKeys.find(key => key.includes('Question 1 (NPS) - Scale Value'));
+    const npsCommentKey = columnKeys.find(key => key.includes('Question 1 (NPS) - Scale Comment'));
+
+    if (!slidKey) return res.status(400).json({ error: "Invalid file structure (missing SLID)" });
+
+    let updatedCount = 0;
+    const parseExcelDate = (serial) => {
+      if (!serial) return null;
+      if (typeof serial === 'number' && serial > 20000) {
+        return new Date((serial - 25569) * 86400 * 1000);
+      }
+      return new Date(serial); // Try parsing string
+    };
+
+    for (const row of jsonData) {
+      const slid = row[slidKey];
+      if (!slid) continue;
+
+      const updates = {};
+
+      if (hhKey && row[hhKey]) {
+        const date = parseExcelDate(row[hhKey]);
+        if (date && !isNaN(date.getTime())) updates.interviewDate = date;
+      }
+
+      if (npsScoreKey && row[npsScoreKey] !== undefined) {
+        updates.evaluationScore = Number(row[npsScoreKey]);
+      }
+
+      if (npsCommentKey && row[npsCommentKey]) {
+        updates.customerFeedback = String(row[npsCommentKey]);
+      }
+
+      if (Object.keys(updates).length > 0) {
+        // Use findOneAndUpdate to get the task ID for linking
+        const task = await TaskSchema.findOneAndUpdate(
+          { slid: slid },
+          { $set: updates },
+          { new: true }
+        );
+
+        if (task) {
+          updatedCount++;
+          // Also update the AuditRecord status and link it
+          await AuditRecord.findOneAndUpdate(
+            { auditId: auditId, slid: slid },
+            {
+              $set: {
+                status: 'Imported',
+                linkedTask: task._id
+              },
+              $push: {
+                actionLog: {
+                  action: 'Imported',
+                  performedBy: req.user._id,
+                  note: 'Automatically imported via Bulk Commit'
+                }
+              }
+            }
+          );
+        }
+      }
+    }
+
+    // Update Audit Log
+    auditLog.status = 'Imported';
+    auditLog.importStats = {
+      totalRows: jsonData.length,
+      updatedTasks: updatedCount
+    };
+    await auditLog.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Import completed. Updated ${updatedCount} tasks.`,
+      stats: auditLog.importStats
+    });
+
+  } catch (error) {
+    console.error("Error committing audit data:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAuditLogs = async (req, res) => {
+  try {
+    const { auditType = 'DVOC' } = req.query;
+    const logs = await AuditLog.find({ auditType })
+      .populate('uploadedBy', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(50);
+    res.status(200).json(logs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const downloadAuditSheet = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const auditLog = await AuditLog.findById(id);
+
+    if (!auditLog) {
+      return res.status(404).json({ error: "Audit log not found" });
+    }
+
+    if (!fs.existsSync(auditLog.path)) {
+      return res.status(404).json({ error: "File not found on server" });
+    }
+
+    res.download(auditLog.path, auditLog.originalName);
+  } catch (error) {
+    console.error("Error downloading file:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const savePreventionStrategy = async (req, res) => {
+  try {
+    const { content } = req.body;
+
+    // Create new strategy (always append new one, or update single one?)
+    // Requirement is "keep a copy", implies history? Or just "a prevention strategy"?
+    // Let's assume a single active strategy for now, or just create new versions.
+    // Creating new document for version history is safer.
+
+    const strategy = await PreventionStrategy.create({
+      content,
+      updatedBy: req.user._id
+    });
+
+    res.status(200).json(strategy);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getPreventionStrategy = async (req, res) => {
+  try {
+    // Get the latest strategy
+    const strategy = await PreventionStrategy.findOne()
+      .sort({ createdAt: -1 })
+      .populate('updatedBy', 'name');
+
+    res.status(200).json(strategy || { content: '' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAuditRecords = async (req, res) => {
+  try {
+    const { auditId } = req.params;
+    const { page = 1, limit = 100, isMatched } = req.query;
+
+    const query = { auditId };
+    if (isMatched !== undefined) {
+      query.isMatched = isMatched === 'true';
+    }
+
+    let recordsQuery = AuditRecord.find(query)
+      .populate({
+        path: 'matchedIssues',
+        select: 'reporter reporterNote slid date createdAt fromMain fromSub issues resolveDate'
+      })
+      .populate({
+        path: 'linkedTask',
+        select: 'slid reason subReason rootCause evaluationScore interviewDate pisDate customerFeedback assignedTo gaiaCheck gaiaContent responsible',
+        populate: { path: 'assignedTo', select: 'name email' }
+      });
+
+    if (parseInt(limit) !== 0) {
+      recordsQuery = recordsQuery
+        .limit(limit * 1)
+        .skip((page - 1) * limit);
+    }
+
+    const records = await recordsQuery.exec();
+    const count = await AuditRecord.countDocuments(query);
+
+    res.status(200).json({
+      records,
+      totalPages: parseInt(limit) === 0 ? 1 : Math.ceil(count / limit),
+      currentPage: parseInt(limit) === 0 ? 1 : page,
+      totalRecords: count
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAuditDeepStats = async (req, res) => {
+  try {
+    const { auditId } = req.params;
+
+    const auditLog = await AuditLog.findById(auditId);
+
+    // Find records for this audit and populate linkedTask
+    const records = await AuditRecord.find({ auditId }).populate('linkedTask');
+
+    if (!records || records.length === 0) {
+      return res.status(200).json({
+        noRecords: true,
+        message: "This audit was uploaded before deep analytics were enabled or has no row-level data."
+      });
+    }
+
+    const total = records.length;
+    const matchedRecords = records.filter(r => r.isMatched);
+    const matchedCount = matchedRecords.length;
+    const unmatched = total - matchedCount;
+
+    // NPS Calculation from Audit Rows
+    const validScores = records.filter(r => r.evaluationScore !== null && r.evaluationScore !== undefined).map(r => r.evaluationScore);
+    const promoters = validScores.filter(s => s >= 9).length;
+    const detractors = validScores.filter(s => s <= 6).length;
+    const neutrals = validScores.length - promoters - detractors;
+
+    const nps = validScores.length > 0
+      ? (((promoters - detractors) / validScores.length) * 100).toFixed(1)
+      : "N/A";
+
+    // KPI: Manual (OJO) Performance among overlaps - categorize by AUDIT score
+    const manualPromoterRecords = matchedRecords.filter(r => r.evaluationScore >= 9);
+    const manualDetractorRecords = matchedRecords.filter(r => r.evaluationScore >= 1 && r.evaluationScore <= 6);
+    const manualNeutralRecords = matchedRecords.filter(r => r.evaluationScore >= 7 && r.evaluationScore <= 8);
+    const manualUnscoredRecords = matchedRecords.filter(r => r.evaluationScore === null || r.evaluationScore === undefined);
+
+    const manualPromoters = manualPromoterRecords.length;
+    const manualDetractors = manualDetractorRecords.length;
+    const manualNeutrals = manualNeutralRecords.length;
+    const manualUnscored = manualUnscoredRecords.length;
+    const validManualScores = manualPromoters + manualNeutrals + manualDetractors;
+
+    const manualOverlapNps = validManualScores > 0
+      ? (((manualPromoters - manualDetractors) / validManualScores) * 100).toFixed(1)
+      : "N/A";
+
+    // Tracker side stats for comparison
+    let trackerStats = null;
+    if (auditLog && auditLog.startDate && auditLog.endDate) {
+      const start = new Date(auditLog.startDate);
+      const end = new Date(auditLog.endDate);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+
+      const tasksInPeriod = await TaskSchema.find({
+        interviewDate: { $gte: start, $lte: end }
+      }).select('evaluationScore');
+
+      const trackerTotal = tasksInPeriod.length;
+      const trackerPromoters = tasksInPeriod.filter(t => t.evaluationScore >= 9).length;
+      const trackerDetractors = tasksInPeriod.filter(t => t.evaluationScore <= 6).length;
+      const trackerNps = trackerTotal > 0
+        ? (((trackerPromoters - trackerDetractors) / trackerTotal) * 100).toFixed(1)
+        : "N/A";
+
+      trackerStats = {
+        total: trackerTotal,
+        promoters: trackerPromoters,
+        detractors: trackerDetractors,
+        nps: trackerNps
+      };
+    }
+
+    // "Samples Token" (DVOC) Alignment Stats
+    const itnRelated = records.filter(r => {
+      const raw = JSON.stringify(r.rawRowData).toLowerCase();
+      return raw.includes('technical') || raw.includes('support') || raw.includes('itn');
+    }).length;
+
+    res.status(200).json({
+      summary: {
+        total,
+        matched: matchedCount,
+        unmatched,
+        matchRate: ((matchedCount / total) * 100).toFixed(1)
+      },
+      npsData: {
+        score: nps,
+        promoters,
+        detractors,
+        neutrals,
+        validSample: validScores.length
+      },
+      manualOverlapStats: {
+        score: manualOverlapNps,
+        promoters: manualPromoters,
+        detractors: manualDetractors,
+        neutrals: manualNeutrals,
+        unscored: manualUnscored,
+        totalMatched: matchedCount,
+        slidLists: {
+          promoters: manualPromoterRecords.map(r => r.slid),
+          neutrals: manualNeutralRecords.map(r => r.slid),
+          detractors: manualDetractorRecords.map(r => r.slid),
+          unscored: manualUnscoredRecords.map(r => r.slid)
+        }
+      },
+      trackerStats,
+      dvocMetrics: {
+        totalSamples: total,
+        npsRelated: validScores.length,
+        itnRelated,
+        promotersPercentage: ((promoters / total) * 100).toFixed(1),
+        detractorsPercentage: ((detractors / total) * 100).toFixed(1),
+        neutralsPercentage: ((neutrals / total) * 100).toFixed(1)
+      },
+      potentialRegistrationGaps: records.filter(r => !r.isMatched && r.evaluationScore <= 8).length,
+      neutralMatches: records.filter(r => r.isMatched && r.evaluationScore >= 7 && r.evaluationScore <= 8).length
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Update individual audit record details
+ */
+export const updateAuditRecord = async (req, res) => {
+  try {
+    const { recordId } = req.params;
+    const updates = req.body;
+
+    const record = await AuditRecord.findById(recordId);
+    if (!record) return res.status(404).json({ error: "Record not found" });
+
+    // Update allowed fields
+    const allowedFields = ['slid', 'interviewDate', 'evaluationScore', 'customerFeedback', 'isMatched', 'matchedIssues'];
+    allowedFields.forEach(field => {
+      if (updates[field] !== undefined) record[field] = updates[field];
+    });
+
+    record.actionLog.push({
+      action: 'Edited',
+      performedBy: req.user._id,
+      note: updates.note || 'Details updated via dashboard'
+    });
+
+    await record.save();
+    res.status(200).json({ success: true, record });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Manually create a task from an audit record
+ */
+export const processAuditRecordManually = async (req, res) => {
+  try {
+    const { recordId } = req.params;
+    const { taskData } = req.body; // Additional task fields from front-end
+
+    const record = await AuditRecord.findById(recordId);
+    if (!record) return res.status(404).json({ error: "Record not found" });
+
+    if (record.status === 'Imported' || record.status === 'Manually Added') {
+      return res.status(400).json({ error: "Record already processed" });
+    }
+
+    // Create the task
+    const newTask = await TaskSchema.create({
+      ...taskData,
+      slid: record.slid,
+      interviewDate: record.interviewDate,
+      evaluationScore: record.evaluationScore,
+      customerFeedback: record.customerFeedback,
+      auditRef: record.auditId,
+      recordRef: record._id
+    });
+
+    record.status = 'Manually Added';
+    record.linkedTask = newTask._id;
+    record.actionLog.push({
+      action: 'Task Created',
+      performedBy: req.user._id,
+      note: `Manually added to tracker as task ID: ${newTask._id}`
+    });
+
+    await record.save();
+    res.status(200).json({ success: true, taskId: newTask._id, message: "Task created successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Revert a processed audit record (Undo)
+ */
+export const revertAuditRecord = async (req, res) => {
+  try {
+    const { recordId } = req.params;
+    const record = await AuditRecord.findById(recordId);
+    if (!record) return res.status(404).json({ error: "Record not found" });
+
+    if (record.status === 'Pending') {
+      return res.status(400).json({ error: "Record is already in pending state" });
+    }
+
+    // If it was manually added, we might want to delete the task? Or just unlink it?
+    // User requested "Undo", usually means revert the action.
+    if (record.linkedTask) {
+      await TaskSchema.findByIdAndDelete(record.linkedTask);
+    }
+
+    record.status = 'Pending';
+    record.linkedTask = undefined;
+    record.actionLog.push({
+      action: 'Reverted',
+      performedBy: req.user._id,
+      note: 'Status reverted to Pending'
+    });
+
+    await record.save();
+    res.status(200).json({ success: true, message: "Action reverted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateAuditLogDates = async (req, res) => {
+  try {
+    const { auditId } = req.params;
+    const { startDate, endDate } = req.body;
+
+    const auditLog = await AuditLog.findByIdAndUpdate(
+      auditId,
+      {
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null
+      },
+      { new: true }
+    );
+
+    if (!auditLog) return res.status(404).json({ error: "Audit log not found" });
+
+    res.status(200).json({ message: "Audit dates updated successfully", auditLog });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };

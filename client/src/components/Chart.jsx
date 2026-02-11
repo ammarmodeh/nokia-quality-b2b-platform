@@ -50,14 +50,19 @@ const fetchData = async () => {
 */
 
 
-const prepareChartData = (groupedData, timeRange) => {
+const prepareChartData = (groupedData, timeRange, settings = {}) => {
   const categories = ["NPS", "Promoters", "Neutrals", "Detractors"];
   const colors = {
-    NPS: "rgba(59, 130, 246, 0.9)", // Blue
+    NPS: "rgba(148, 163, 184, 1)", // Clear Gray for NPS curve
     Promoters: "rgba(16, 185, 129, 0.9)", // Green
     Neutrals: "rgba(251, 146, 60, 0.9)", // Yellow-orange
     Detractors: "rgba(239, 68, 68, 0.9)", // Red
   };
+
+  // Dynamic Targets from settings, with fallback to legacy defaults
+  const promoterTarget = settings?.npsTargets?.promoters ?? 75;
+  const detractorTarget = settings?.npsTargets?.detractors ?? 8;
+  const npsTarget = promoterTarget - detractorTarget;
 
   const sortedWeeks = Object.keys(groupedData).sort((a, b) => {
     const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
@@ -113,16 +118,46 @@ const prepareChartData = (groupedData, timeRange) => {
           }
         }
       })),
-      // NPS Target Line (Promoters Target 75% - Detractors Target 9% = 66%)
+      // NPS Target Line (Dynamic)
       {
-        label: "NPS Target (≥66%)",
-        data: sortedWeeks.map(() => 66),
-        borderColor: "rgba(148, 163, 184, 0.6)",
-        backgroundColor: "rgba(148, 163, 184, 0.6)",
-        pointBackgroundColor: "rgba(148, 163, 184, 0.6)",
-        pointBorderColor: "rgba(148, 163, 184, 0.6)",
+        label: `NPS Target (≥${npsTarget}%)`,
+        data: sortedWeeks.map(() => npsTarget),
+        borderColor: "rgba(59, 130, 246, 0.6)", // Blue for NPS target
+        backgroundColor: "rgba(59, 130, 246, 0.6)",
+        pointBackgroundColor: "rgba(59, 130, 246, 0.6)",
+        pointBorderColor: "rgba(59, 130, 246, 0.6)",
         borderWidth: 2,
         borderDash: [5, 5],
+        pointRadius: 0,
+        tension: 0,
+        fill: false,
+        datalabels: { display: false }
+      },
+      // Promoters Target Line (Dynamic)
+      {
+        label: `Promoters Target (≥${promoterTarget}%)`,
+        data: sortedWeeks.map(() => promoterTarget),
+        borderColor: "rgba(16, 185, 129, 0.5)",
+        backgroundColor: "rgba(16, 185, 129, 0.5)",
+        pointBackgroundColor: "rgba(16, 185, 129, 0.5)",
+        pointBorderColor: "rgba(16, 185, 129, 0.5)",
+        borderWidth: 1.5,
+        borderDash: [8, 4],
+        pointRadius: 0,
+        tension: 0,
+        fill: false,
+        datalabels: { display: false }
+      },
+      // Detractors Target Line (Dynamic)
+      {
+        label: `Detractors Target (≤${detractorTarget}%)`,
+        data: sortedWeeks.map(() => detractorTarget),
+        borderColor: "rgba(239, 68, 68, 0.5)",
+        backgroundColor: "rgba(239, 68, 68, 0.5)",
+        pointBackgroundColor: "rgba(239, 68, 68, 0.5)",
+        pointBorderColor: "rgba(239, 68, 68, 0.5)",
+        borderWidth: 1.5,
+        borderDash: [12, 4],
         pointRadius: 0,
         tension: 0,
         fill: false,
@@ -132,7 +167,7 @@ const prepareChartData = (groupedData, timeRange) => {
   };
 };
 
-const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
+const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }) => {
   const theme = useTheme();
   const hideChart = useMediaQuery('(max-width:503px)');
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
@@ -266,14 +301,20 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
       const defaultWeeks = individualWeeks.slice(0, 10);
       setTimeRange(defaultWeeks);
 
-      const { grouped, range: finalRange } = processData(initialTasks, defaultWeeks, queryFilters, settings, samplesData, timeFilterMode, recentDaysValue, selectedMonths);
+      const activeSettings = propSettings || settings || {};
+      const { grouped, range: finalRange } = processData(initialTasks, defaultWeeks, queryFilters, activeSettings, samplesData, timeFilterMode, recentDaysValue, selectedMonths);
       setGroupedData(grouped);
-      setChartData(prepareChartData(grouped, finalRange));
+      setChartData(prepareChartData(grouped, finalRange, activeSettings));
     }
-  }, [initialTasks, settings, samplesData]);
+  }, [initialTasks, settings, propSettings, samplesData]);
 
   const exportChartData = () => {
     if (!groupedData || Object.keys(groupedData).length === 0) return;
+
+    const activeSettings = propSettings || settings || {};
+    const promoterTarget = activeSettings?.npsTargets?.promoters ?? 75;
+    const detractorTarget = activeSettings?.npsTargets?.detractors ?? 8;
+    const npsTarget = promoterTarget - detractorTarget;
 
     // Sort weeks descending for the report
     const sortedWeeks = Object.keys(groupedData).sort((a, b) => {
@@ -293,17 +334,23 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
       const promoters = stats.Promoters || 0;
       const detractors = stats.Detractors || 0;
       const nps = promoters - detractors;
-      const status = nps >= 66 ? "Met Target" : "Out of Target";
+      const pStatus = promoters >= promoterTarget ? "Met Target" : "Out of Target";
+      const dStatus = detractors <= detractorTarget ? "Met Target" : "Out of Target";
+      const nStatus = nps >= npsTarget ? "Met Target" : "Out of Target";
 
       return {
         "Week": week,
         "Total Samples": stats.sampleSize || 0,
         "Promoters (%)": promoters,
+        "Target Promoters (%)": promoterTarget,
+        "Promoter Status": pStatus,
         "Neutrals (%)": stats.Neutrals || 0,
         "Detractors (%)": detractors,
+        "Target Detractors (%)": detractorTarget,
+        "Detractor Status": dStatus,
         "NPS (%)": nps,
-        "Target NPS (%)": 66,
-        "Status": status
+        "Target NPS (%)": npsTarget,
+        "NPS Status": nStatus
       };
     });
 
@@ -316,11 +363,15 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
       { wch: 15 }, // Week
       { wch: 15 }, // Total Samples
       { wch: 15 }, // Promoters
+      { wch: 18 }, // Target Promoters
+      { wch: 15 }, // Promoter Status
       { wch: 15 }, // Neutrals
       { wch: 15 }, // Detractors
+      { wch: 18 }, // Target Detractors
+      { wch: 15 }, // Detractor Status
       { wch: 10 }, // NPS
-      { wch: 15 }, // Target
-      { wch: 15 }  // Status
+      { wch: 15 }, // Target NPS
+      { wch: 15 }  // NPS Status
     ];
     worksheet['!cols'] = wscols;
 
@@ -706,7 +757,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [] }) => {
             <ChartComponent chartData={chartData} />
           </Box>
         )}
-        <DataTable groupedData={groupedData} />
+        <DataTable groupedData={groupedData} settings={propSettings || settings} />
       </Box>
     </Box>
   );
