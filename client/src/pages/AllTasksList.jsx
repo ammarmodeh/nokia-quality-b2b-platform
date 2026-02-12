@@ -208,6 +208,9 @@ const AllTasksList = () => {
     location: '',
     team: '',
     rootCause: '',
+    reason: '',
+    subReason: '',
+    responsible: '',
     evaluationScore: '',
     gaiaCheck: '',
     latestGaiaType: '',
@@ -233,6 +236,9 @@ const AllTasksList = () => {
       location: new Set(),
       team: new Set(),
       rootCause: new Set(),
+      reason: new Set(),
+      subReason: new Set(),
+      responsible: new Set(),
       evaluationScore: new Set(),
       gaiaCheck: new Set(),
       latestGaiaType: new Set(),
@@ -265,23 +271,25 @@ const AllTasksList = () => {
       if (task.teamName) options.team.add(String(task.teamName));
       if (task.teamCompany) options.team.add(String(task.teamCompany));
 
-      const addToRootCause = (val) => {
+      const addToSet = (set, val) => {
         if (!val) return;
         if (Array.isArray(val)) {
           val.forEach(v => {
-            if (v && typeof v === 'string' && v.trim()) options.rootCause.add(v.trim());
+            if (v && typeof v === 'string' && v.trim()) set.add(v.trim());
           });
         } else if (typeof val === 'string' && val.trim()) {
-          options.rootCause.add(val.trim());
+          set.add(val.trim());
         }
       };
 
-      addToRootCause(task.reason);
-      addToRootCause(task.subReason);
-      addToRootCause(task.rootCause);
+      addToSet(options.reason, task.reason);
+      addToSet(options.subReason, task.subReason);
+      addToSet(options.rootCause, task.rootCause);
+      addToSet(options.responsible, task.responsible);
+
       if (task.technicalDetails) {
-        addToRootCause(task.technicalDetails.rootCause);
-        addToRootCause(task.technicalDetails.subReason);
+        addToSet(options.rootCause, task.technicalDetails.rootCause);
+        addToSet(options.subReason, task.technicalDetails.subReason);
       }
 
       if (task.evaluationScore !== null && task.evaluationScore !== undefined) options.evaluationScore.add(String(task.evaluationScore));
@@ -460,7 +468,19 @@ const AllTasksList = () => {
       if (columnFilters.status && !(task.status || "").toLowerCase().includes(columnFilters.status.toLowerCase())) return false;
       if (columnFilters.location && !(task.governorate || "").toLowerCase().includes(columnFilters.location.toLowerCase()) && !(task.district || "").toLowerCase().includes(columnFilters.location.toLowerCase())) return false;
       if (columnFilters.team && !(task.teamName || "").toLowerCase().includes(columnFilters.team.toLowerCase()) && !(task.teamCompany || "").toLowerCase().includes(columnFilters.team.toLowerCase())) return false;
-      if (columnFilters.rootCause && !(task.rootCause || "").toLowerCase().includes(columnFilters.rootCause.toLowerCase()) && !(task.subReason || "").toLowerCase().includes(columnFilters.rootCause.toLowerCase())) return false;
+
+      const checkArrayOrString = (val, filter) => {
+        if (!val) return false;
+        if (Array.isArray(val)) {
+          return val.some(v => v && v.toString().toLowerCase().includes(filter.toLowerCase()));
+        }
+        return val.toString().toLowerCase().includes(filter.toLowerCase());
+      };
+
+      if (columnFilters.reason && !checkArrayOrString(task.reason, columnFilters.reason)) return false;
+      if (columnFilters.subReason && !checkArrayOrString(task.subReason, columnFilters.subReason) && !checkArrayOrString(task.technicalDetails?.subReason, columnFilters.subReason)) return false;
+      if (columnFilters.rootCause && !checkArrayOrString(task.rootCause, columnFilters.rootCause) && !checkArrayOrString(task.technicalDetails?.rootCause, columnFilters.rootCause)) return false;
+      if (columnFilters.responsible && !checkArrayOrString(task.responsible, columnFilters.responsible)) return false;
       if (columnFilters.evaluationScore && !(task.evaluationScore || "").toString().toLowerCase().includes(columnFilters.evaluationScore.toLowerCase())) return false;
       if (columnFilters.gaiaCheck && !(task.gaiaCheck || "No").toLowerCase().includes(columnFilters.gaiaCheck.toLowerCase())) return false;
       if (columnFilters.latestGaiaType && !(task.latestGaia?.transactionType || "").toLowerCase().includes(columnFilters.latestGaiaType.toLowerCase())) return false;
@@ -2103,7 +2123,10 @@ const AllTasksList = () => {
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>Status</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Location</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Team / Subcon</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Reason</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Sub Reason</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Root Cause</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Owner</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Score</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Week</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>GAIA Check</TableCell>
@@ -2125,7 +2148,10 @@ const AllTasksList = () => {
                 { key: 'status', placeholder: 'Status' },
                 { key: 'location', placeholder: 'Location' },
                 { key: 'team', placeholder: 'Team/Sub' },
-                { key: 'rootCause', placeholder: 'Root/Sub' },
+                { key: 'reason', placeholder: 'Reason' },
+                { key: 'subReason', placeholder: 'Sub Reason' },
+                { key: 'rootCause', placeholder: 'Root Cause' },
+                { key: 'responsible', placeholder: 'Owner' },
                 { key: 'evaluationScore', placeholder: 'Score' }
               ].map((col) => (
                 <TableCell key={col.key} sx={{ p: '4px !important', minWidth: 100 }}>
@@ -2400,11 +2426,25 @@ const AllTasksList = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#f44336', fontSize: '0.8rem' }}>
-                          {task.rootCause || task.technicalDetails?.rootCause || task.reason || "-"}
-                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {Array.isArray(task.reason) ? task.reason.join(", ") : (task.reason || "-")}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
                         <Typography variant="caption" sx={{ display: 'block', opacity: 0.7, fontSize: '0.7rem' }}>
-                          {task.subReason || task.technicalDetails?.subReason || ""}
+                          {Array.isArray(task.subReason) ? task.subReason.join(", ") : (task.subReason || task.technicalDetails?.subReason || "-")}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#f44336', fontSize: '0.8rem' }}>
+                          {Array.isArray(task.rootCause) ? task.rootCause.join(", ") : (task.rootCause || task.technicalDetails?.rootCause || "-")}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 'bold', fontSize: '0.7rem', color: '#7b68ee' }}>
+                          {Array.isArray(task.responsible) ? task.responsible.join(", ") : (task.responsible || "-")}
                         </Typography>
                       </TableCell>
                       <TableCell>

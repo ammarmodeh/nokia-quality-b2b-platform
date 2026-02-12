@@ -96,10 +96,18 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   const [trendTimeframe, setTrendTimeframe] = useState('week'); // 'day', 'week', 'month'
   const [trendChartType, setTrendChartType] = useState('mixed'); // 'mixed', 'bar', 'line'
 
-  const [negligencePage, setNegligencePage] = useState(0);
-  const [negligenceRowsPerPage, setNegligenceRowsPerPage] = useState(5);
-  const [negligenceSearch, setNegligenceSearch] = useState('');
   const [negligenceSupervisorFilter, setNegligenceSupervisorFilter] = useState('all');
+  const [negligenceSearch, setNegligenceSearch] = useState('');
+  const [negligencePage, setNegligencePage] = useState(0);
+  const [negligenceRowsPerPage, setNegligenceRowsPerPage] = useState(10);
+
+  // --- Team Leaderboard (Ranking) State ---
+  const [leaderboardSearch, setLeaderboardSearch] = useState('');
+  const [leaderboardStatusFilter, setLeaderboardStatusFilter] = useState('all');
+  const [leaderboardPage, setLeaderboardPage] = useState(0);
+  const [leaderboardRowsPerPage, setLeaderboardRowsPerPage] = useState(10);
+  const [leaderboardSort, setLeaderboardSort] = useState({ field: 'total', direction: 'desc' });
+
   const [showEmailDialog, setShowEmailDialog] = useState(false);
 
   const [dateFilter, setDateFilter] = useState({
@@ -296,20 +304,23 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   }, [filteredIssuesByDate, dateFilter]);
 
   // --- Export Handlers ---
-  const handleExportAllAssignees = () => {
-    const data = assigneeStats.detailedList.map(stat => ({
-      'Assignee Name': stat.name,
-      'Total Issues': stat.total,
-      'Closed': stat.resolved,
-      'Open': stat.unresolved,
+  const handleExportLeaderboard = () => {
+    const data = teamNameStats.map(stat => ({
+      'Team Name': stat.name,
+      'Total Involvement': stat.total,
+      'Resolved': stat.resolved,
+      'Active': stat.unresolved,
+      'Success Rate (%)': stat.rate,
+      'Avg Dispatch Speed (Days)': stat.avgDispatchSpeed,
+      'Avg Resolution Speed (Days)': stat.avgResolutionSpeed,
+      'Avg Lifecycle Time (Days)': stat.avgLifecycleTime,
       'Top Category': stat.topCategory,
-      'Top Sub-category': stat.topSubCategory,
-      'Resolution Rate (%)': stat.rate
+      'Top Sub-category': stat.topSubCategory
     }));
 
     const worksheet = utils.json_to_sheet(data);
     const workbook = utils.book_new();
-    utils.book_append_sheet(workbook, worksheet, "Assignee Performance");
+    utils.book_append_sheet(workbook, worksheet, "Leaderboard Performance");
 
     const maxWidths = {};
     data.forEach(row => {
@@ -320,7 +331,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     });
     worksheet['!cols'] = Object.keys(maxWidths).map(key => ({ wch: maxWidths[key] }));
 
-    writeFile(workbook, `Assignee_Performance_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    writeFile(workbook, `Team_Leaderboard_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleExportSelectedAssignee = (team) => {
@@ -354,6 +365,118 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   };
 
   // --- Data Hookups ---
+
+  const teamNameStats = useMemo(() => {
+    let detailedList = [];
+    const statsMap = {};
+    const now = new Date();
+    filteredIssuesByDate.forEach(issue => {
+      const teams = new Set([
+        issue.teamName,
+        issue.installingTeam,
+        issue.assignedTo
+      ].filter(Boolean));
+
+      teams.forEach(team => {
+        if (!statsMap[team]) {
+          statsMap[team] = {
+            total: 0,
+            resolved: 0,
+            unresolved: 0,
+            categories: {},
+            subCategories: {},
+            dispatchSum: 0,
+            dispatchCount: 0,
+            resSum: 0,
+            resCount: 0,
+            lifecycleSum: 0,
+            lifecycleCount: 0
+          };
+        }
+        statsMap[team].total += 1;
+        issue.solved === 'yes' ? statsMap[team].resolved += 1 : statsMap[team].unresolved += 1;
+
+        if (issue.issues) {
+          issue.issues.forEach(i => {
+            if (i.category) statsMap[team].categories[i.category] = (statsMap[team].categories[i.category] || 0) + 1;
+            if (i.subCategory) statsMap[team].subCategories[i.subCategory] = (statsMap[team].subCategories[i.subCategory] || 0) + 1;
+          });
+        }
+
+        const reportDate = new Date(issue.date || issue.createdAt);
+
+        // Speed Metrics for Team
+        // 1. Dispatch
+        let dEnd = issue.dispatchedAt ? new Date(issue.dispatchedAt) : (issue.dispatched === 'no' ? now : null);
+        if (!dEnd && issue.dispatched === 'yes') dEnd = reportDate;
+        if (dEnd && dEnd >= reportDate) {
+          statsMap[team].dispatchSum += (dEnd - reportDate) / (1000 * 60 * 60 * 24);
+          statsMap[team].dispatchCount += 1;
+        }
+
+        // 2. Resolution (Field)
+        if (issue.dispatchedAt || issue.dispatched === 'yes') {
+          let rStart = issue.dispatchedAt ? new Date(issue.dispatchedAt) : reportDate;
+          let rEnd = issue.resolveDate ? new Date(issue.resolveDate) : (issue.solved === 'no' ? now : null);
+          if (rStart && rEnd && rEnd >= rStart) {
+            statsMap[team].resSum += (rEnd - rStart) / (1000 * 60 * 60 * 24);
+            statsMap[team].resCount += 1;
+          }
+        }
+
+        // 3. End-to-End Lifecycle
+        let lEnd = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? now : null);
+        if (lEnd && lEnd >= reportDate) {
+          statsMap[team].lifecycleSum += (lEnd - reportDate) / (1000 * 60 * 60 * 24);
+          statsMap[team].lifecycleCount += 1;
+        }
+      });
+    });
+
+    detailedList = Object.keys(statsMap).map(name => {
+      const stats = statsMap[name];
+      const topCat = Object.entries(stats.categories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+      const topSub = Object.entries(stats.subCategories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+      return {
+        name,
+        ...stats,
+        topCategory: topCat,
+        topSubCategory: topSub,
+        rate: stats.total > 0 ? ((stats.resolved / stats.total) * 100).toFixed(1) : '0.0',
+        avgDispatchSpeed: stats.dispatchCount > 0 ? (stats.dispatchSum / stats.dispatchCount).toFixed(1) : 'N/A',
+        avgResolutionSpeed: stats.resCount > 0 ? (stats.resSum / stats.resCount).toFixed(1) : 'N/A',
+        avgLifecycleTime: stats.lifecycleCount > 0 ? (stats.lifecycleSum / stats.lifecycleCount).toFixed(1) : 'N/A',
+        relatedIssues: filteredIssuesByDate.filter(i =>
+          i.teamName === name ||
+          i.installingTeam === name ||
+          i.assignedTo === name
+        ),
+        type: 'Team Name'
+      };
+    });
+
+    if (leaderboardSearch.trim()) {
+      const term = leaderboardSearch.toLowerCase();
+      detailedList = detailedList.filter(item => item.name.toLowerCase().includes(term) || item.topCategory.toLowerCase().includes(term));
+    }
+
+    if (leaderboardStatusFilter !== 'all') {
+      detailedList = detailedList.filter(item => leaderboardStatusFilter === 'resolved' ? item.resolved > 0 : item.unresolved > 0);
+    }
+
+    if (leaderboardSort.field) {
+      detailedList.sort((a, b) => {
+        let valA = a[leaderboardSort.field], valB = b[leaderboardSort.field];
+        if (['total', 'resolved', 'unresolved', 'rate'].includes(leaderboardSort.field)) {
+          valA = parseFloat(valA) || 0;
+          valB = parseFloat(valB) || 0;
+        }
+        return leaderboardSort.direction === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+      });
+    }
+
+    return detailedList;
+  }, [filteredIssuesByDate, leaderboardSearch, leaderboardStatusFilter, leaderboardSort]);
 
   const teamData = useMemo(() => {
     const counts = {};
@@ -398,24 +521,21 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   }, [filteredIssuesByDate]);
 
   const installingTeamChartData = useMemo(() => {
-    const counts = {};
-    filteredIssuesByDate.forEach(issue => {
-      const team = issue.installingTeam || 'Unknown';
-      counts[team] = (counts[team] || 0) + 1;
-    });
-    const labels = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-    const data = labels.map(label => counts[label]);
+    // Top 10 teams by total involvement
+    const sortedTeams = [...teamNameStats].sort((a, b) => b.total - a.total).slice(0, 10);
+    const labels = sortedTeams.map(t => t.name);
+    const data = sortedTeams.map(t => t.total);
     return {
       labels,
       datasets: [{
-        label: 'Issues by Installing Team',
+        label: 'Total Issue Volume (Holistic)',
         data,
         backgroundColor: 'rgba(255, 159, 64, 0.6)',
         borderColor: 'rgba(255, 159, 64, 1)',
         borderWidth: 1,
       }],
     };
-  }, [filteredIssuesByDate]);
+  }, [teamNameStats]);
 
   const categoryData = useMemo(() => {
     const counts = {};
@@ -431,15 +551,20 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       }
     });
     const sortedCategories = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
     let finalLabels = [];
     let finalData = [];
     if (sortedCategories.length > 6) {
       const top5 = sortedCategories.slice(0, 5);
       const othersCount = sortedCategories.slice(5).reduce((acc, curr) => acc + curr[1], 0);
-      finalLabels = [...top5.map(i => i[0]), 'Others'];
+      finalLabels = [
+        ...top5.map(i => `${i[0]} (${total > 0 ? ((i[1] / total) * 100).toFixed(1) : 0}%)`),
+        `Others (${total > 0 ? ((othersCount / total) * 100).toFixed(1) : 0}%)`
+      ];
       finalData = [...top5.map(i => i[1]), othersCount];
     } else {
-      finalLabels = sortedCategories.map(i => i[0]);
+      finalLabels = sortedCategories.map(i => `${i[0]} (${total > 0 ? ((i[1] / total) * 100).toFixed(1) : 0}%)`);
       finalData = sortedCategories.map(i => i[1]);
     }
     return {
@@ -449,19 +574,25 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796'],
         borderWidth: 1,
       }],
-      totalCount: Object.values(counts).reduce((a, b) => a + b, 0),
+      totalCount: total,
       allCategories: Object.keys(counts).sort()
     };
   }, [filteredIssuesByDate]);
 
-  const statusData = useMemo(() => ({
-    labels: ['Closed', 'Open'],
-    datasets: [{
-      data: [stats.closed, stats.open],
-      backgroundColor: ['#4caf50', '#f44336'],
-      borderWidth: 0,
-    }],
-  }), [stats]);
+  const statusData = useMemo(() => {
+    const total = stats.closed + stats.open;
+    return {
+      labels: [
+        `Closed (${total > 0 ? ((stats.closed / total) * 100).toFixed(1) : 0}%)`,
+        `Open (${total > 0 ? ((stats.open / total) * 100).toFixed(1) : 0}%)`
+      ],
+      datasets: [{
+        data: [stats.closed, stats.open],
+        backgroundColor: ['#4caf50', '#f44336'],
+        borderWidth: 0,
+      }],
+    };
+  }, [stats]);
 
   const closureData = useMemo(() => {
     const counts = {};
@@ -582,25 +713,6 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       };
     });
 
-    if (assigneeSearch.trim()) {
-      const term = assigneeSearch.toLowerCase();
-      detailedList = detailedList.filter(item => item.name.toLowerCase().includes(term) || item.topCategory.toLowerCase().includes(term));
-    }
-    if (filters.status !== 'all') {
-      detailedList = detailedList.filter(item => filters.status === 'resolved' ? item.resolved > 0 : item.unresolved > 0);
-    }
-
-    if (assigneeSort.field) {
-      detailedList.sort((a, b) => {
-        let valA = a[assigneeSort.field], valB = b[assigneeSort.field];
-        if (assigneeSort.field === 'rate' || assigneeSort.field === 'avgResolutionSpeed') {
-          valA = parseFloat(valA) || 0;
-          valB = parseFloat(valB) || 0;
-        }
-        return assigneeSort.direction === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
-      });
-    }
-
     return {
       totals: {
         total: detailedList.reduce((acc, curr) => acc + curr.total, 0),
@@ -619,7 +731,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       },
       detailedList
     };
-  }, [filteredIssuesByDate, assigneeSearch, assigneeSort, filters]);
+  }, [filteredIssuesByDate]);
 
   const supervisorStats = useMemo(() => {
     const statsMap = {};
@@ -826,6 +938,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     return detailedList;
   }, [filteredIssuesByDate, installingTeamSearch, installingTeamSort, installingTeamFilters]);
 
+
+
   const reporterData = useMemo(() => {
     const counts = {};
     filteredIssuesByDate.forEach(issue => {
@@ -925,7 +1039,16 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     maintainAspectRatio: false,
     cutout: '70%',
     plugins: {
-      legend: { position: 'bottom', labels: { color: '#b3b3b3', usePointStyle: true, padding: 20 } }
+      legend: { position: 'bottom', labels: { color: '#b3b3b3', usePointStyle: true, padding: 20 } },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const label = context.label || '';
+            const value = context.raw || 0;
+            return `${label.split(' (')[0]}: ${value}`;
+          }
+        }
+      }
     }
   };
 
@@ -943,31 +1066,6 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       </CardContent>
     </Card>
   );
-
-  const [logPage, setLogPage] = useState(0);
-  const [logRowsPerPage, setLogRowsPerPage] = useState(10);
-
-  const filteredLogIssues = useMemo(() => {
-    return filteredIssuesByDate
-      .filter(i => {
-        const term = assigneeSearch.toLowerCase();
-        const matchSearch = i.slid.toLowerCase().includes(term) ||
-          (i.assignedTo && i.assignedTo.toLowerCase().includes(term)) ||
-          (i.installingTeam && i.installingTeam.toLowerCase().includes(term));
-        const matchStatus = filters.status === 'all' || (filters.status === 'resolved' ? i.solved === 'yes' : i.solved === 'no');
-        return matchSearch && matchStatus;
-      })
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [filteredIssuesByDate, assigneeSearch, filters.status]);
-
-  const handleChangeLogPage = (event, newPage) => {
-    setLogPage(newPage);
-  };
-
-  const handleChangeLogRowsPerPage = (event) => {
-    setLogRowsPerPage(parseInt(event.target.value, 10));
-    setLogPage(0);
-  };
 
   const handleWhatsAppContact = async (issue) => {
     // Build comprehensive message
@@ -1007,10 +1105,10 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       if (issue.resolutionDetails) formattedMessage += `Details: ${issue.resolutionDetails}\n`;
     }
 
-    const installingTeamName = issue.installingTeam;
+    const teamToContact = issue.teamName || issue.installingTeam;
 
-    if (!installingTeamName) {
-      toast.error('Installing team not specified');
+    if (!teamToContact) {
+      toast.error('Team not specified');
       return;
     }
 
@@ -1021,10 +1119,10 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
 
-      console.log('Target Installing Team:', installingTeamName);
+      console.log('Target Team:', teamToContact);
 
       const fieldTeam = response.data.find(team =>
-        team.teamName?.trim().toLowerCase() === installingTeamName.trim().toLowerCase()
+        team.teamName?.trim().toLowerCase() === teamToContact.trim().toLowerCase()
       );
 
       console.log('Found Field Team:', fieldTeam);
@@ -1623,7 +1721,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
             </Paper>
           </Grid>
         </Grid>
-      </Box>
+      </Box >
 
       <Grid container spacing={3}>
         {/* Trend & Resolution Row */}
@@ -1694,15 +1792,16 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
 
 
-        {/* Installing Team Distribution - Full Row */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Installing Team Distribution</Typography>
+
+
+        {/* Side-by-Side Teams Distribution Row */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
+            <Typography variant="h6" gutterBottom fontWeight="bold">Team Performance Distribution (Holistic - Top 10)</Typography>
             <Box sx={{ height: 300 }}><Bar data={installingTeamChartData} options={commonOptions} /></Box>
           </Paper>
         </Grid>
 
-        {/* Side-by-Side: Issues by From & Assignee Performance */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Issues by From (Main)</Typography>
@@ -1710,7 +1809,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        {/* Team Performance Ranking (Leaderboard) - Full Row Moving to End */}
+        <Grid item xs={12}>
           <Paper
             elevation={0}
             sx={{
@@ -1720,356 +1820,136 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
               border: '1px solid rgba(255, 255, 255, 0.08)',
               overflow: 'hidden',
               background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-              height: 400, // Increased height
-              display: 'flex',
-              flexDirection: 'column'
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
             }}
           >
-            <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', bgcolor: 'rgba(255,255,255,0.02)' }}>
-              <Typography variant="h6" fontWeight="700" color="#f8fafc">
-                Assignee Performance
-              </Typography>
-              <Typography variant="body2" color="#94a3b8" sx={{ mt: 0.5 }}>
-                Field team resolution metrics
-              </Typography>
+            <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', bgcolor: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+              <Box>
+                <Typography variant="h6" fontWeight="700" color="#f8fafc">
+                  Team Performance Ranking (Leaderboard)
+                </Typography>
+                <Typography variant="body2" color="#94a3b8" sx={{ mt: 0.5 }}>
+                  Holistic view of all teams involved in reporting, installation, or resolution
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                <TextField
+                  placeholder="Search team or category..."
+                  size="small"
+                  value={leaderboardSearch}
+                  onChange={(e) => {
+                    setLeaderboardSearch(e.target.value);
+                    setLeaderboardPage(0);
+                  }}
+                  InputProps={{
+                    startAdornment: <FaSearch style={{ marginRight: 8, color: '#94a3b8' }} />,
+                    sx: { bgcolor: 'rgba(255,255,255,0.05)', color: '#fff', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' } }
+                  }}
+                />
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <Select
+                    value={leaderboardStatusFilter}
+                    onChange={(e) => {
+                      setLeaderboardStatusFilter(e.target.value);
+                      setLeaderboardPage(0);
+                    }}
+                    sx={{ bgcolor: 'rgba(255,255,255,0.05)', color: '#fff', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' } }}
+                  >
+                    <MenuItem value="all">All Status</MenuItem>
+                    <MenuItem value="resolved">Has Resolved</MenuItem>
+                    <MenuItem value="active">Has Active</MenuItem>
+                  </Select>
+                </FormControl>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<FaFileExcel />}
+                  onClick={handleExportLeaderboard}
+                  sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' }, textTransform: 'none', borderRadius: 2 }}
+                >
+                  Export Ranking
+                </Button>
+              </Box>
             </Box>
-            <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+            <Box sx={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+                <thead>
                   <tr style={{ background: '#0f172a' }}>
-                    <th style={{ padding: '16px 24px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Assignee</th>
-                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Total</th>
-                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Closed</th>
-                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Open</th>
-                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                        Disp.
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#3b82f6' }} />
-                      </Box>
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                        Undisp.
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#f59e0b' }} />
-                      </Box>
-                    </th>
-                    <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Rate</th>
-                    <th style={{ padding: '16px 24px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Avg Speed</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Team Name</th>
+                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Total Involv.</th>
+                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Resolved</th>
+                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Active</th>
+                    <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Success Rate</th>
+                    <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Avg Speed</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Top Issue</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {assigneeStats.detailedList.map((stat, idx) => (
+                  {teamNameStats.slice(leaderboardPage * leaderboardRowsPerPage, leaderboardPage * leaderboardRowsPerPage + leaderboardRowsPerPage).map((team, idx) => (
                     <tr
                       key={idx}
                       style={{
                         borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        transition: 'background-color 0.2s ease'
+                        transition: 'background-color 0.2s ease',
+                        cursor: 'pointer'
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onClick={() => setSelectedTeam(team)}
                     >
                       <td style={{ padding: '16px 24px' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Avatar
-                            sx={{
-                              width: 28,
-                              height: 28,
-                              bgcolor: 'rgba(255,255,255,0.05)',
-                              color: '#f8fafc',
-                              fontSize: '0.75rem',
-                              border: '1px solid rgba(255,255,255,0.1)'
-                            }}
-                          >
-                            {stat.name.charAt(0)}
-                          </Avatar>
-                          <Typography variant="body2" fontWeight="600" color="#f8fafc">
-                            {stat.name}
-                          </Typography>
-                        </Box>
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'center' }}>
-                        <Typography
-                          variant="body2"
-                          fontWeight="600"
-                          color="#94a3b8"
-                          sx={{
-                            cursor: 'pointer',
-                            transition: 'color 0.2s',
-                            '&:hover': { color: '#f8fafc', textDecoration: 'underline' }
-                          }}
-                          onClick={() => handleStatusClick(stat.issuesTotal, `${stat.name} - All Issues`)}
-                        >
-                          {stat.total}
+                        <Typography variant="body2" fontWeight="600" color="#60a5fa">
+                          {team.name}
                         </Typography>
                       </td>
                       <td style={{ padding: '16px', textAlign: 'center' }}>
-                        <Typography
-                          variant="body2"
-                          fontWeight="600"
-                          color="#22c55e"
-                          sx={{
-                            cursor: 'pointer',
-                            transition: 'color 0.2s',
-                            '&:hover': { color: '#4ade80', textDecoration: 'underline' }
-                          }}
-                          onClick={() => handleStatusClick(stat.issuesResolved, `${stat.name} - Closed Issues`)}
-                        >
-                          {stat.resolved}
-                        </Typography>
+                        <Typography variant="body2" fontWeight="600" color="#94a3b8">{team.total}</Typography>
                       </td>
                       <td style={{ padding: '16px', textAlign: 'center' }}>
-                        <Typography
-                          variant="body2"
-                          fontWeight="600"
-                          color="#ef4444"
-                          sx={{
-                            cursor: 'pointer',
-                            transition: 'color 0.2s',
-                            '&:hover': { color: '#f87171', textDecoration: 'underline' }
-                          }}
-                          onClick={() => handleStatusClick(stat.issuesUnresolved, `${stat.name} - Open Issues`)}
-                        >
-                          {stat.unresolved}
-                        </Typography>
+                        <Typography variant="body2" fontWeight="600" color="#22c55e">{team.resolved}</Typography>
                       </td>
                       <td style={{ padding: '16px', textAlign: 'center' }}>
-                        <Typography
-                          variant="body2"
-                          fontWeight="600"
-                          color="#3b82f6"
-                          sx={{
-                            cursor: 'pointer',
-                            transition: 'color 0.2s',
-                            '&:hover': { color: '#60a5fa', textDecoration: 'underline' }
-                          }}
-                          onClick={() => handleStatusClick(stat.issuesOpenDispatched, `${stat.name} - Open Dispatched (In Progress)`)}
-                        >
-                          {stat.openDispatched}
-                        </Typography>
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'center' }}>
-                        <Typography
-                          variant="body2"
-                          fontWeight="600"
-                          color="#f59e0b"
-                          sx={{
-                            cursor: 'pointer',
-                            transition: 'color 0.2s',
-                            '&:hover': { color: '#fbbf24', textDecoration: 'underline' }
-                          }}
-                          onClick={() => handleStatusClick(stat.issuesOpenUndispatched, `${stat.name} - Open Undispatched (Pending)`)}
-                        >
-                          {stat.openUndispatched}
-                        </Typography>
+                        <Typography variant="body2" fontWeight="600" color="#ef4444">{team.unresolved}</Typography>
                       </td>
                       <td style={{ padding: '16px', textAlign: 'right' }}>
                         <Chip
-                          label={`${stat.rate}%`}
+                          label={`${team.rate}%`}
                           size="small"
                           sx={{
                             height: 22,
                             fontSize: '0.7rem',
                             fontWeight: 600,
                             bgcolor: 'rgba(255,255,255,0.05)',
-                            color: parseFloat(stat.rate) >= 80 ? '#22c55e' : parseFloat(stat.rate) >= 50 ? '#f59e0b' : '#ef4444',
-                            border: `1px solid ${parseFloat(stat.rate) >= 80 ? 'rgba(34, 197, 94, 0.3)' : parseFloat(stat.rate) >= 50 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                            color: parseFloat(team.rate) >= 80 ? '#22c55e' : parseFloat(team.rate) >= 50 ? '#f59e0b' : '#ef4444',
+                            border: `1px solid ${parseFloat(team.rate) >= 80 ? 'rgba(34, 197, 94, 0.3)' : parseFloat(team.rate) >= 50 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                           }}
                         />
                       </td>
-                      <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                        <Typography variant="body2" fontFamily="monospace" color={Number(stat.avgResolutionSpeed) > 1 ? '#f59e0b' : '#94a3b8'}>
-                          {stat.avgResolutionSpeed !== 'N/A' ? `${stat.avgResolutionSpeed}d` : '-'}
+                      <td style={{ padding: '16px', textAlign: 'right' }}>
+                        <Typography variant="body2" fontFamily="monospace" color="#94a3b8">
+                          {team.avgResolutionSpeed !== 'N/A' ? `${team.avgResolutionSpeed}d` : '-'}
                         </Typography>
+                      </td>
+                      <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                        <Typography variant="caption" color="#b3b3b3">{team.topCategory}</Typography>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </Box>
-          </Paper>
-        </Grid>
-
-        {/* Unified Issue Log - Replaces separate tables */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                <Box>
-                  <Typography variant="h6" fontWeight="bold">Consolidated Performance Log</Typography>
-                  <Typography variant="caption" color="#b3b3b3">Comprehensive issue tracking: Assignees & Installing Teams</Typography>
-                </Box>
-                <TextField
-                  size="small"
-                  placeholder="Seach SLID, Team, or Assignee..."
-                  value={assigneeSearch}
-                  onChange={(e) => setAssigneeSearch(e.target.value)}
-                  InputProps={{ startAdornment: <FaSearch style={{ marginRight: 8, color: '#666' }} /> }}
-                  sx={{ width: { xs: '100%', sm: '350px' }, '& .MuiOutlinedInput-root': { color: '#fff', bgcolor: '#1a1a1a', '& fieldset': { borderColor: '#3d3d3d' } } }}
-                />
-              </Box>
-
-              <Box sx={{ p: 2, bgcolor: '#1e1e1e', borderRadius: 2, border: '1px solid #333', display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                <FormControl size="small" sx={{ minWidth: 150 }}>
-                  <InputLabel sx={{ color: '#b3b3b3' }}>Status</InputLabel>
-                  <Select
-                    value={filters.status}
-                    label="Status"
-                    onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                    sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#333' } }}
-                  >
-                    <MenuItem value="all">All Statuses</MenuItem>
-                    <MenuItem value="resolved">Closed Only</MenuItem>
-                    <MenuItem value="unresolved">Open Only</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <Button
-                  variant="outlined"
-                  startIcon={<FaFileExcel />}
-                  onClick={() => {
-                    const data = issues.map(i => {
-                      const categories = i.issues?.map(issue => issue.category).filter(Boolean).join(', ') || 'N/A';
-                      const subCategories = i.issues?.map(issue => issue.subCategory).filter(Boolean).join(', ') || 'N/A';
-                      const status = i.solved === 'yes' ? 'Closed' : (i.dispatched === 'yes' ? 'In Progress' : 'Pending');
-
-                      return {
-                        'Report Date': i.date ? new Date(i.date).toLocaleDateString() : 'N/A',
-                        'Created At': i.createdAt ? new Date(i.createdAt).toLocaleString() : 'N/A',
-                        'SLID': i.slid,
-                        'Customer Name': i.customerName || 'N/A',
-                        'Customer Contact': i.customerContact || 'N/A',
-                        'Customer Type': i.customerType || 'N/A',
-                        'PIS Date': i.pisDate ? new Date(i.pisDate).toLocaleDateString() : 'N/A',
-                        'From (Main)': i.fromMain || i.from || 'N/A',
-                        'From (Sub)': i.fromSub || 'N/A',
-                        'Reporter': i.reporter,
-                        'Reporter Note': i.reporterNote || 'N/A',
-                        'Contact Method': i.contactMethod || 'N/A',
-                        'Team/Company': i.teamCompany || 'N/A',
-                        'Assignee': i.assignedTo || 'Unassigned',
-                        'Installing Team': i.installingTeam || 'N/A',
-                        'Assignee Note': i.assigneeNote || 'N/A',
-                        'Status': status,
-                        'Categories': categories,
-                        'Sub-Categories': subCategories,
-                        'Resolution Details': i.resolutionDetails || 'N/A',
-                        'Resolved By': i.resolvedBy || 'N/A',
-                        'Resolve Date': i.resolveDate ? new Date(i.resolveDate).toLocaleDateString() : 'N/A',
-                        'Closed By': i.closedBy || 'N/A',
-                        'Closed At': i.closedAt ? new Date(i.closedAt).toLocaleString() : 'N/A',
-                        'Dispatched Status': i.dispatched || 'no',
-                        'Dispatched At': i.dispatchedAt ? new Date(i.dispatchedAt).toLocaleString() : 'N/A'
-                      };
-                    });
-                    const ws = utils.json_to_sheet(data);
-                    const wb = utils.book_new();
-                    utils.book_append_sheet(wb, ws, "Consolidated Report");
-                    writeFile(wb, `Unified_Performance_Report.xlsx`);
-                  }}
-                  size="small"
-                  sx={{ ml: 'auto', borderColor: '#4caf50', color: '#4caf50' }}
-                >
-                  Export Detailed Log
-                </Button>
-              </Box>
-            </Box>
-
-            <Box sx={{ maxHeight: 500, overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
-                <thead>
-                  <tr style={{ color: '#b3b3b3', fontSize: '0.85rem', textAlign: 'left' }}>
-                    <th style={{ padding: '0 12px' }}>Created At</th>
-                    <th style={{ padding: '0 12px' }}>Report Date</th>
-                    <th style={{ padding: '0 12px' }}>SLID</th>
-                    <th style={{ padding: '0 12px' }}>Assignee</th>
-                    <th style={{ padding: '0 12px' }}>Installing Team</th>
-                    <th style={{ padding: '0 12px' }}>Primary Issue</th>
-                    <th style={{ padding: '0 12px' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLogIssues
-                    .slice(logPage * logRowsPerPage, logPage * logRowsPerPage + logRowsPerPage)
-                    .map((issue, idx) => (
-                      <tr
-                        key={idx}
-                        onClick={() => handleViewIssue(issue)}
-                        style={{ backgroundColor: '#1e1e1e', fontSize: '0.9rem', cursor: 'pointer' }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#252525'}
-                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e1e1e'}
-                      >
-                        <td style={{ padding: '12px', borderRadius: '8px 0 0 8px', color: '#b3b3b3' }}>{new Date(issue.createdAt).toLocaleDateString()}</td>
-                        <td style={{ padding: '12px', color: '#b3b3b3' }}>{new Date(issue.date).toLocaleDateString()}</td>
-                        <td style={{ padding: '12px', fontWeight: 'bold' }}>{issue.slid}</td>
-                        <td style={{ padding: '12px' }}>
-                          <Box
-                            role="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const stat = assigneeStats.detailedList.find(s => s.name === issue.assignedTo);
-                              stat ? setSelectedTeam(stat) : setSelectedTeam({ name: issue.assignedTo, type: 'Assignee', total: 1, resolved: issue.solved === 'yes' ? 1 : 0, rate: issue.solved === 'yes' ? '100.0' : '0.0', categories: {}, relatedIssues: [issue] });
-                            }}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1,
-                              cursor: 'pointer',
-                              color: '#7b68ee',
-                              '&:hover': { textDecoration: 'underline' }
-                            }}
-                          >
-                            <FaUserTie size={12} /> {issue.assignedTo || '---'}
-                          </Box>
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          <Box
-                            role="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const stat = installingTeamStats.find(s => s.name === issue.installingTeam);
-                              stat ? setSelectedTeam(stat) : setSelectedTeam({ name: issue.installingTeam, type: 'Installing Team', total: 1, resolved: issue.solved === 'yes' ? 1 : 0, rate: issue.solved === 'yes' ? '100.0' : '0.0', categories: {}, relatedIssues: [issue] });
-                            }}
-                            sx={{
-                              cursor: 'pointer',
-                              color: '#ff9933',
-                              '&:hover': { textDecoration: 'underline' }
-                            }}
-                          >
-                            {issue.installingTeam || '---'}
-                          </Box>
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          <Chip label={issue.issues?.[0]?.category || 'N/A'} size="small" sx={{ bgcolor: 'rgba(54, 162, 235, 0.1)', color: '#36a2eb' }} />
-                        </td>
-                        <td style={{ padding: '12px', borderRadius: '0 8px 8px 0' }}>
-                          {issue.solved === 'yes' ? (
-                            <Chip label="Closed" size="small" sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)', color: '#4caf50' }} />
-                          ) : (
-                            <Chip
-                              label={issue.dispatched === 'yes' ? 'In Progress' : 'Pending'}
-                              size="small"
-                              sx={{
-                                bgcolor: issue.dispatched === 'yes' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(244, 67, 54, 0.1)',
-                                color: issue.dispatched === 'yes' ? '#2196f3' : '#f44336'
-                              }}
-                            />
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </Box>
             <TablePagination
               component="div"
-              count={filteredLogIssues.length}
-              page={logPage}
-              onPageChange={handleChangeLogPage}
-              rowsPerPage={logRowsPerPage}
-              onRowsPerPageChange={handleChangeLogRowsPerPage}
+              count={teamNameStats.length}
+              page={leaderboardPage}
+              onPageChange={(e, newPage) => setLeaderboardPage(newPage)}
+              rowsPerPage={leaderboardRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setLeaderboardRowsPerPage(parseInt(e.target.value, 10));
+                setLeaderboardPage(0);
+              }}
               rowsPerPageOptions={[5, 10, 25, 50]}
-              sx={{ color: '#fff', '.MuiTablePagination-selectIcon': { color: '#fff' }, borderTop: '1px solid #3d3d3d' }}
+              sx={{ color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.05)' }}
             />
           </Paper>
         </Grid>
@@ -2229,7 +2109,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                           </Typography>
                         </td>
                         <td style={{ padding: '12px', textAlign: 'center' }}>
-                          {issue.installingTeam && (
+                          {(issue.teamName || issue.installingTeam) && (
                             <Tooltip title="Contact Team via WhatsApp">
                               <IconButton
                                 size="small"
@@ -2284,8 +2164,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
             acc[label] = categoryData.datasets[0].data[idx];
             return acc;
           }, {}),
-          companyStats: installingTeamChartData.labels.reduce((acc, label, idx) => {
-            acc[label] = installingTeamChartData.datasets[0].data[idx];
+          companyStats: teamNameStats.reduce((acc, team) => {
+            acc[team.name] = team.total;
             return acc;
           }, {})
         }}

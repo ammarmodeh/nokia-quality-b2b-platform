@@ -26,6 +26,48 @@ import ManagedAutocomplete from "./common/ManagedAutocomplete";
 import { MdAdd, MdDelete, MdHistory, MdTerminal } from "react-icons/md";
 import api from "../api/api";
 import { FaUser } from "react-icons/fa";
+import { Autocomplete as MuiAutocomplete } from "@mui/material";
+
+const CATEGORY_MAPPING = {
+  "Outdoor Problem": [
+    "DB_ Closing",
+    "DB_ DF's Label",
+    "DB-Cabling system",
+    "UG_ Install.",
+    "DF_ Laying on Poles",
+    "DF_ Accessories",
+    "DF_ Laying to BEP/OTO",
+    "BEP_ Install. & location",
+    "BEP_ label (Orange sticker)",
+    "BEP_ Cabling system",
+    "BEP_ DFs label",
+    "Civil Work (HC) Status Restoration",
+    "Clean waste & material"
+  ],
+  "Indoor Problem": [
+    "DF_ Indoor laying",
+    "OTO_ Install.",
+    "OTO_ label",
+    "Modem label",
+    "Modem Location",
+    "Indoor, Status Restoration",
+    "Clean waste & material"
+  ],
+  "QoS": [
+    "Modem Power level > -23.99",
+    "Modem/Extender Config.",
+    "Wi-Fi Coverage",
+    "(FTTH Offer) speed test",
+    "VOIP Active",
+    "Hanging"
+  ],
+  "Behaviour": [
+    "Technicians Skills",
+    "Technicians Behaviour",
+    "Technicians Clothes",
+    "Technicians Health & Safety"
+  ]
+};
 
 const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   const theme = useTheme();
@@ -35,12 +77,14 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
 
   const initialFormState = {
     slid: "",
-    fromMain: "",
-    fromSub: "",
+    fromMain: "Snags",
+    fromSub: "Joint Quality",
     reporter: "",
     reporterNote: "",
-    contactMethod: "",
+    contactMethod: "Whatsapp",
     issues: [{ category: '', subCategory: '' }],
+    teamName: "",
+    teamCode: "",
     pisDateKnown: true,
     pisDate: new Date().toISOString().split('T')[0],
     date: new Date().toISOString().split('T')[0],
@@ -67,6 +111,21 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   const [formData, setFormData] = useState(initialFormState);
   const [duplicateIssues, setDuplicateIssues] = useState([]);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [fieldTeams, setFieldTeams] = useState([]);
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const res = await api.get('/field-teams/get-field-teams', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+        });
+        setFieldTeams(res.data || []);
+      } catch (err) {
+        console.error("Failed to fetch teams", err);
+      }
+    };
+    fetchTeams();
+  }, []);
 
   // Persistence & Edit Logic
   useEffect(() => {
@@ -247,12 +306,25 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
         };
       }
 
-      // Reset dispatch date if dispatched is set to "no"
       if (name === 'dispatched' && value === 'no') {
         updated = {
           ...updated,
           dispatchedAt: ''
         };
+      }
+
+      // Auto-fill Team Code when Team Name is selected
+      if (name === 'teamName') {
+        if (value === 'Unknown') {
+          updated.teamCode = 'Unknown';
+        } else {
+          const selectedTeam = fieldTeams.find(t => t.teamName === value);
+          if (selectedTeam) {
+            updated.teamCode = selectedTeam.teamCode;
+          } else {
+            updated.teamCode = '';
+          }
+        }
       }
 
       return updated;
@@ -263,6 +335,12 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   const handleIssueChange = (index, field, value) => {
     const updatedIssues = [...formData.issues];
     updatedIssues[index][field] = value;
+
+    // Reset subCategory if category changes
+    if (field === 'category') {
+      updatedIssues[index].subCategory = '';
+    }
+
     setFormData(prev => ({ ...prev, issues: updatedIssues }));
   };
 
@@ -285,11 +363,10 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   const validateForm = () => {
     const requiredFields = [
       { field: 'slid', label: 'SLID' },
-      { field: 'fromMain', label: 'From (Main)' },
+      { field: 'fromMain', label: 'Src (Main)' },
       { field: 'reporter', label: 'Reporter Name' },
       { field: 'contactMethod', label: 'Contact Method' },
-      { field: 'teamCompany', label: 'Team/Company' },
-      { field: 'assignedTo', label: 'Assigned To' }
+      { field: 'teamName', label: 'Team Name' }
     ];
 
     for (const { field, label } of requiredFields) {
@@ -620,7 +697,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               <Grid item xs={12} sm={6}>
                 <ManagedAutocomplete
                   category="ISSUE_FROM_MAIN"
-                  label="From (Main)"
+                  label="Src (Main)"
                   fullWidth
                   required
                   value={formData.fromMain}
@@ -632,7 +709,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               <Grid item xs={12} sm={6}>
                 <ManagedAutocomplete
                   category="ISSUE_FROM_SUB"
-                  label="From (Sub)"
+                  label="Src (Sub)"
                   fullWidth
                   value={formData.fromSub}
                   onChange={(val) => handleChange({ target: { name: 'fromSub', value: val } })}
@@ -710,28 +787,38 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                 <Grid item xs={11}>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                      <ManagedAutocomplete
-                        category="ISSUE_CATEGORY"
-                        label={`Category ${index + 1}`}
-                        fullWidth
-                        required
+                      <MuiAutocomplete
                         freeSolo
+                        options={Object.keys(CATEGORY_MAPPING)}
                         value={issue.category}
-                        onChange={(val) => handleIssueChange(index, 'category', val)}
+                        onInputChange={(e, val) => handleIssueChange(index, 'category', val)}
+                        onChange={(e, val) => handleIssueChange(index, 'category', val)}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label={`Category ${index + 1}`}
+                            required
+                            sx={textFieldStyles}
+                          />
+                        )}
                         disabled={!isAdmin}
-                        sx={textFieldStyles}
                       />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <ManagedAutocomplete
-                        category="ISSUE_SUB_CATEGORY"
-                        label={`Sub Category ${index + 1}`}
-                        fullWidth
+                      <MuiAutocomplete
                         freeSolo
+                        options={issue.category && CATEGORY_MAPPING[issue.category] ? CATEGORY_MAPPING[issue.category] : []}
                         value={issue.subCategory}
-                        onChange={(val) => handleIssueChange(index, 'subCategory', val)}
-                        disabled={!isAdmin}
-                        sx={textFieldStyles}
+                        onInputChange={(e, val) => handleIssueChange(index, 'subCategory', val)}
+                        onChange={(e, val) => handleIssueChange(index, 'subCategory', val)}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label={`Sub Category ${index + 1}`}
+                            sx={textFieldStyles}
+                          />
+                        )}
+                        disabled={!isAdmin || !issue.category}
                       />
                     </Grid>
                   </Grid>
@@ -748,57 +835,41 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             </Button>
           </Box>
 
-          {/* Section 4: Assignment */}
+          {/* Section 4: Team Information */}
           <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Field Team & Assignment</Typography>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Team Information</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
-                <ManagedAutocomplete
-                  category="TEAM_COMPANY"
-                  label="Subcon / Company"
-                  fullWidth
-                  required
-                  value={formData.teamCompany}
-                  onChange={(val) => handleChange({ target: { name: 'teamCompany', value: val } })}
+                <MuiAutocomplete
+                  options={['Unknown', ...fieldTeams.map(t => t.teamName)]}
+                  value={formData.teamName}
+                  onChange={(e, val) => handleChange({ target: { name: 'teamName', value: val } })}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Team Name"
+                      required
+                      sx={textFieldStyles}
+                    />
+                  )}
                   disabled={!isAdmin}
-                  sx={textFieldStyles}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <ManagedAutocomplete
-                  category="FIELD_TEAMS"
-                  label="Assigned User"
-                  fullWidth
-                  required
-                  freeSolo
-                  value={formData.assignedTo}
-                  onChange={(val) => handleChange({ target: { name: 'assignedTo', value: val } })}
-                  disabled={!isAdmin}
-                  sx={textFieldStyles}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <ManagedAutocomplete
-                  category="FIELD_TEAMS"
-                  label="Installing Team"
-                  fullWidth
-                  freeSolo
-                  value={formData.installingTeam}
-                  onChange={(val) => handleChange({ target: { name: 'installingTeam', value: val } })}
-                  disabled={!isAdmin}
-                  sx={textFieldStyles}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Assignee Note"
-                  name="assigneeNote"
-                  value={formData.assigneeNote}
-                  onChange={handleChange}
-                  placeholder="Notes for the field team..."
+                  label="Team Code"
+                  name="teamCode"
+                  value={formData.teamCode}
+                  InputProps={{ readOnly: true }}
                   disabled={!isAdmin}
-                  sx={textFieldStyles}
+                  sx={{
+                    ...textFieldStyles,
+                    '& .MuiInputBase-root': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      color: '#b3b3b3'
+                    }
+                  }}
                 />
               </Grid>
             </Grid>

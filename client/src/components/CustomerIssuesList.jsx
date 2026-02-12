@@ -43,7 +43,7 @@ import { toast } from 'sonner';
 import LoadingSpinner from './common/LoadingSpinner';
 import RecordTicketDialog from './task/RecordTicketDialog';
 import AdvancedSearch from './common/AdvancedSearch';
-import { MdHistory, MdEmail, MdSearch, MdClose, MdFilterList, MdMoreVert, MdEdit, MdDelete, MdAdd, MdVisibility, MdFileDownload, MdViewList, MdViewModule, MdBarChart, MdRefresh, MdTerminal } from 'react-icons/md';
+import { MdHistory, MdEmail, MdSearch, MdClose, MdFilterList, MdMoreVert, MdEdit, MdDelete, MdAdd, MdVisibility, MdFileDownload, MdViewList, MdViewModule, MdBarChart, MdRefresh, MdTerminal, MdNewReleases, MdAccessTime } from 'react-icons/md';
 import { alpha } from '@mui/material/styles';
 import api from '../api/api';
 import CustomerIssueDialog from './CustomerIssueDialog';
@@ -168,6 +168,8 @@ const CustomerIssuesList = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sourceFilter, setSourceFilter] = useState('Overall');
   const [supervisorFilter, setSupervisorFilter] = useState('all');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [dateTypeFilter, setDateTypeFilter] = useState('reported'); // 'reported' | 'pis'
 
   // --- GAIA & Advanced Search State ---
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
@@ -199,7 +201,7 @@ const CustomerIssuesList = () => {
   const fetchIssues = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const response = await api.get('/customer-issues-notifications?limit=1000', {
+      const response = await api.get('/customer-issues-notifications?limit=10000', {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
       setIssues(response.data.data);
@@ -226,6 +228,18 @@ const CustomerIssuesList = () => {
     fetchIssues();
     fetchDropdowns();
   }, []);
+
+  // Compute Latest Issue (Reported Date)
+  const latestIssue = useMemo(() => {
+    if (!issues || issues.length === 0) return null;
+    return [...issues].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+  }, [issues]);
+
+  // Compute Latest Created Issue (System Created At)
+  const latestCreatedIssue = useMemo(() => {
+    if (!issues || issues.length === 0) return null;
+    return [...issues].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+  }, [issues]);
 
   useEffect(() => {
     const handleSyncRefresh = () => {
@@ -290,6 +304,17 @@ const CustomerIssuesList = () => {
       filtered = filtered.filter(issue => new Date(issue.date) <= end);
     }
 
+    // Filter by Month
+    if (monthFilter) {
+      const [year, month] = monthFilter.split('-');
+      filtered = filtered.filter(issue => {
+        const dateToCheck = dateTypeFilter === 'pis' ? issue.pisDate : issue.date;
+        if (!dateToCheck) return false;
+        const d = new Date(dateToCheck);
+        return d.getFullYear() === parseInt(year) && (d.getMonth() + 1) === parseInt(month);
+      });
+    }
+
     // Advanced Search Engine Filtering
     if (activeAdvSearch) {
       filtered = filtered.filter(issue => {
@@ -307,7 +332,7 @@ const CustomerIssuesList = () => {
     }
 
     return filtered;
-  }, [issues, sourceFilter, supervisorFilter, searchTerm, startDate, endDate, activeAdvSearch, advSearchFields]);
+  }, [issues, sourceFilter, supervisorFilter, searchTerm, startDate, endDate, monthFilter, dateTypeFilter, activeAdvSearch, advSearchFields]);
 
   useEffect(() => {
     let filtered = filteredByBaseOptions;
@@ -445,8 +470,10 @@ const CustomerIssuesList = () => {
     const worksheet = utils.json_to_sheet(filteredIssues.map(issue => ({
       'Ticket ID': issue.ticketId || '',
       'SLID': issue.slid,
-      'From (Main)': issue.fromMain || issue.from || '',
-      'From (Sub)': issue.fromSub || '',
+      'Src (Main)': issue.fromMain || issue.from || '',
+      'Src (Sub)': issue.fromSub || '',
+      'Team Name': issue.teamName || '',
+      'Team Code': issue.teamCode || '',
       'Reporter': issue.reporter,
       'Contact Method': issue.contactMethod,
       'Customer Name': issue.customerName || '',
@@ -459,7 +486,6 @@ const CustomerIssuesList = () => {
       'Problem Description': (issue.issues && issue.issues.length > 0)
         ? issue.issues.map(i => `${i.category}${i.subCategory ? ` (${i.subCategory})` : ''}`).join(' | ')
         : issue.issueCategory || '',
-      'Team/Company': issue.teamCompany,
       'Assigned User': issue.assignedTo,
       'Installing Team': issue.installingTeam || 'N/A',
       'Assignee Note': issue.assigneeNote || '',
@@ -589,10 +615,10 @@ const CustomerIssuesList = () => {
       if (issue.resolutionDetails) formattedMessage += `Details: ${issue.resolutionDetails}\n`;
     }
 
-    const installingTeamName = issue.installingTeam;
+    const teamToContact = issue.teamName || issue.installingTeam;
 
-    if (!installingTeamName) {
-      toast.error('Installing team not specified');
+    if (!teamToContact) {
+      toast.error('Team not specified');
       return;
     }
 
@@ -602,7 +628,9 @@ const CustomerIssuesList = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
 
-      const fieldTeam = response.data.find(team => team.teamName === installingTeamName);
+      const fieldTeam = response.data.find(team =>
+        team.teamName?.trim().toLowerCase() === teamToContact.trim().toLowerCase()
+      );
 
       if (!fieldTeam || !fieldTeam.contactNumber) {
         toast.error('Team contact number not found');
@@ -737,6 +765,162 @@ const CustomerIssuesList = () => {
 
         </Box>
       </Box>
+
+      {latestIssue && (
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 3,
+            p: 2,
+            background: 'linear-gradient(90deg, rgba(123, 104, 238, 0.15) 0%, rgba(30, 30, 30, 1) 100%)',
+            border: '1px solid rgba(123, 104, 238, 0.3)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 2
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                backgroundColor: 'rgba(123, 104, 238, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#7b68ee'
+              }}
+            >
+              <MdNewReleases size={24} />
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" sx={{ color: '#7b68ee', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Latest Issue Reported
+              </Typography>
+              <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 500 }}>
+                {latestIssue.slid} <span style={{ opacity: 0.6, margin: '0 8px' }}>•</span> {new Date(latestIssue.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+            <Box>
+              <Typography variant="caption" sx={{ color: '#b3b3b3', display: 'block' }}>Reporter</Typography>
+              <Typography variant="body2" sx={{ color: '#ffffff' }}>{latestIssue.reporter}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" sx={{ color: '#b3b3b3', display: 'block' }}>Category</Typography>
+              <Typography variant="body2" sx={{ color: '#ffffff' }}>
+                {latestIssue.issues && latestIssue.issues.length > 0
+                  ? latestIssue.issues[0].category
+                  : (latestIssue.issueCategory || 'N/A')}
+              </Typography>
+            </Box>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                setCurrentIssue(latestIssue);
+                setOpenViewDialog(true);
+              }}
+              sx={{
+                borderColor: '#7b68ee',
+                color: '#7b68ee',
+                '&:hover': {
+                  backgroundColor: 'rgba(123, 104, 238, 0.1)',
+                  borderColor: '#7b68ee'
+                },
+                textTransform: 'none',
+                borderRadius: '6px'
+              }}
+            >
+              View Details
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
+      {latestCreatedIssue && (
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 3,
+            p: 2,
+            background: 'linear-gradient(90deg, rgba(33, 150, 243, 0.15) 0%, rgba(30, 30, 30, 1) 100%)', // Blue gradient for distinction
+            border: '1px solid rgba(33, 150, 243, 0.3)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 2
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#2196f3'
+              }}
+            >
+              <MdAccessTime size={24} />
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" sx={{ color: '#2196f3', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Latest Issue Created
+              </Typography>
+              <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 500 }}>
+                {latestCreatedIssue.slid} <span style={{ opacity: 0.6, margin: '0 8px' }}>•</span> {new Date(latestCreatedIssue.createdAt).toLocaleString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+            <Box>
+              <Typography variant="caption" sx={{ color: '#b3b3b3', display: 'block' }}>Reporter</Typography>
+              <Typography variant="body2" sx={{ color: '#ffffff' }}>{latestCreatedIssue.reporter}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" sx={{ color: '#b3b3b3', display: 'block' }}>Category</Typography>
+              <Typography variant="body2" sx={{ color: '#ffffff' }}>
+                {latestCreatedIssue.issues && latestCreatedIssue.issues.length > 0
+                  ? latestCreatedIssue.issues[0].category
+                  : (latestCreatedIssue.issueCategory || 'N/A')}
+              </Typography>
+            </Box>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                setCurrentIssue(latestCreatedIssue);
+                setOpenViewDialog(true);
+              }}
+              sx={{
+                borderColor: '#2196f3',
+                color: '#2196f3',
+                '&:hover': {
+                  backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                  borderColor: '#2196f3'
+                },
+                textTransform: 'none',
+                borderRadius: '6px'
+              }}
+            >
+              View Details
+            </Button>
+          </Box>
+        </Paper>
+      )}
 
       <Box sx={{
         backgroundColor: '#2d2d2d',
@@ -891,15 +1075,71 @@ const CustomerIssuesList = () => {
           alignItems: isMobile ? 'stretch' : 'center'
         }}>
           <Typography variant="body2" sx={{ color: '#b3b3b3', minWidth: 'fit-content' }}>Filter by Date:</Typography>
+
+          {/* Month Filter Controls */}
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <Select
+                value={dateTypeFilter}
+                onChange={(e) => setDateTypeFilter(e.target.value)}
+                sx={{
+                  backgroundColor: '#1e1e1e',
+                  color: '#ffffff',
+                  fontSize: '0.875rem',
+                  height: '40px',
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
+                  '& .MuiSvgIcon-root': { color: '#b3b3b3' }
+                }}
+              >
+                <MenuItem value="reported">Reported Date</MenuItem>
+                <MenuItem value="pis">PIS Date</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              type="month"
+              value={monthFilter}
+              onChange={(e) => {
+                setMonthFilter(e.target.value);
+                setStartDate(''); // Clear range if month selected
+                setEndDate('');
+              }}
+              size="small"
+              sx={{
+                width: 160,
+                '& .MuiInputBase-root': { color: '#ffffff', backgroundColor: '#1e1e1e', height: '40px' },
+                '& .MuiOutlinedInput-root fieldset': { borderColor: '#3d3d3d' },
+                '&:hover fieldset': { borderColor: '#7b68ee' },
+                '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+              }}
+            />
+            {monthFilter && (
+              <IconButton
+                size="small"
+                onClick={() => setMonthFilter('')}
+                sx={{ color: '#f44336' }}
+              >
+                <MdClose />
+              </IconButton>
+            )}
+          </Box>
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#3d3d3d' }} />
+
           <TextField
             type="date"
             label="From"
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={(e) => {
+              setStartDate(e.target.value);
+              setMonthFilter(''); // Clear month if range selected
+            }}
             InputLabelProps={{ shrink: true }}
             size="small"
             sx={{
-              maxWidth: isMobile ? 'none' : '200px',
+              maxWidth: isMobile ? 'none' : '160px',
               '& .MuiInputBase-root': { color: '#ffffff', backgroundColor: '#1e1e1e' },
               '& .MuiInputLabel-root': { color: '#b3b3b3' },
               '& .MuiOutlinedInput-root fieldset': { borderColor: '#3d3d3d' },
@@ -1055,12 +1295,13 @@ const CustomerIssuesList = () => {
                   <TableCell>Customer</TableCell>
                   <TableCell>Contact</TableCell>
                   <Hidden smDown>
-                    <TableCell>From (Main)</TableCell>
-                    <TableCell>From (Sub)</TableCell>
+                    <TableCell>Src (Main)</TableCell>
+                    <TableCell>Src (Sub)</TableCell>
                   </Hidden>
                   <TableCell>Reporter</TableCell>
                   <Hidden smDown>
-                    <TableCell>Team/Company</TableCell>
+                    <TableCell>Team Name</TableCell>
+                    <TableCell>Team Code</TableCell>
                     <TableCell>Installing Team</TableCell>
                   </Hidden>
                   <TableCell>Issues</TableCell>
@@ -1099,10 +1340,10 @@ const CustomerIssuesList = () => {
                       </TableCell>
                       <Hidden smDown>
                         <TableCell sx={{ fontSize: '0.85rem' }}>
-                          <TruncatedCell value={issue.fromMain || issue.from} label="From (Main)" theme={theme} />
+                          <TruncatedCell value={issue.fromMain || issue.from} label="Src (Main)" theme={theme} />
                         </TableCell>
                         <TableCell sx={{ fontSize: '0.85rem' }}>
-                          <TruncatedCell value={issue.fromSub} label="From (Sub)" theme={theme} />
+                          <TruncatedCell value={issue.fromSub} label="Src (Sub)" theme={theme} />
                         </TableCell>
                       </Hidden>
                       <TableCell sx={{ fontSize: '0.85rem' }}>
@@ -1110,17 +1351,10 @@ const CustomerIssuesList = () => {
                       </TableCell>
                       <Hidden smDown>
                         <TableCell sx={{ fontSize: '0.85rem' }}>
-                          <Chip
-                            label={issue.teamCompany}
-                            size="small"
-                            sx={{
-                              height: 20,
-                              fontSize: '0.7rem',
-                              backgroundColor: '#1e1e1e',
-                              color: '#b3b3b3',
-                              border: '1px solid #3d3d3d'
-                            }}
-                          />
+                          <TruncatedCell value={issue.teamName} label="Team Name" theme={theme} />
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.85rem' }}>
+                          <TruncatedCell value={issue.teamCode} label="Team Code" theme={theme} />
                         </TableCell>
                         <TableCell sx={{ fontSize: '0.85rem' }}>
                           <TruncatedCell value={issue.installingTeam} label="Installing Team" theme={theme} />
@@ -1241,7 +1475,7 @@ const CustomerIssuesList = () => {
                       </Hidden>
                       <TableCell sx={{ pr: 3, textAlign: 'right' }}>
                         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                          {issue.installingTeam && (
+                          {(issue.teamName || issue.installingTeam) && (
                             <Tooltip title="Contact Team via WhatsApp">
                               <IconButton
                                 size="small"

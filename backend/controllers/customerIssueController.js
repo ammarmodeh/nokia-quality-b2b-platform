@@ -41,12 +41,7 @@ export const createIssue = async (req, res) => {
       req.body.issues = req.body.issues.filter(issue => issue.category && issue.category.trim() !== '');
     }
 
-    if (!req.body.teamCompany) {
-      return res.status(400).json({
-        success: false,
-        message: 'Team/company is required'
-      });
-    }
+
 
     const issueData = {
       ...req.body,

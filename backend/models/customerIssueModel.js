@@ -25,7 +25,15 @@ const customerIssueSchema = new mongoose.Schema({
   // REMOVED: issueDetails field
   teamCompany: {
     type: String,
-    required: true
+    required: false
+  },
+  teamName: {
+    type: String,
+    required: false
+  },
+  teamCode: {
+    type: String,
+    required: false
   },
   customerName: {
     type: String,
@@ -55,7 +63,7 @@ const customerIssueSchema = new mongoose.Schema({
   closedBy: { type: String }, // Returned as Supervisor
   closedAt: { type: Date }, // Time of closure by Supervisor
   resolutionDetails: { type: String },
-  assignedTo: { type: String, required: true },
+  assignedTo: { type: String, required: false },
   installingTeam: { type: String },
   dispatched: {
     type: String,
