@@ -4,12 +4,9 @@ import {
   Typography,
   Paper,
   Stack,
-  Container,
   Breadcrumbs,
   Link,
   Grid,
-  Card as MuiCard,
-  CardContent,
   Chip,
   Avatar,
   IconButton,
@@ -20,20 +17,16 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   Table,
   TableBody,
   TableRow,
   TableCell,
   Button,
-  TablePagination,
-  TextField,
-  FormControl,
-  Select,
-  MenuItem,
   useMediaQuery,
   TableHead,
   Radio,
+  DialogActions,
+  TextField,
 } from "@mui/material";
 import {
   NavigateNext as NavigateNextIcon,
@@ -44,8 +37,6 @@ import {
   ContentPaste as ReportIcon,
   Visibility as VisibilityIcon,
   CompareArrows as CompareIcon,
-  TrendingDown as TrendingDownIcon,
-  Explore,
   ArrowForward as ArrowIcon,
   CheckCircle as CheckCircleIcon,
   CloudUpload as UploadIcon,
@@ -54,29 +45,10 @@ import {
   Undo as UndoIcon,
   AddCircle as AddIcon,
   Delete as DeleteIcon,
-  History as HistoryIcon,
-  Save as SaveIcon,
-  MoreVert as MoreIcon,
   Email as EmailIconUI,
   FilterList as FilterIcon,
-  Search as SearchIcon,
 } from "@mui/icons-material";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  AreaChart,
-  Area,
-} from "recharts";
 import api from "../api/api";
 import { MoonLoader } from "react-spinners";
 import moment from "moment";
@@ -100,14 +72,6 @@ const IssuePreventionAnalytics = () => {
   const [showComparisonDialog, setShowComparisonDialog] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
 
-  const [negligencePage, setNegligencePage] = useState(0);
-  const [negligenceRowsPerPage, setNegligenceRowsPerPage] = useState(5);
-  const [negligenceSearch, setNegligenceSearch] = useState('');
-  const [negligenceSupervisorFilter, setNegligenceSupervisorFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState({
-    start: moment().startOf('month').toDate(),
-    end: moment().endOf('day').toDate()
-  });
 
   // Excel upload state
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -126,8 +90,6 @@ const IssuePreventionAnalytics = () => {
   const [deepRecordsPage, setDeepRecordsPage] = useState(1);
   const [totalDeepRecords, setTotalDeepRecords] = useState(0);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
-  const [preventionStrategy, setPreventionStrategy] = useState('');
-  const [strategyLoading, setStrategyLoading] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [showEditRecordDialog, setShowEditRecordDialog] = useState(false);
   const [showAddToTrackerDialog, setShowAddToTrackerDialog] = useState(false);
@@ -167,36 +129,17 @@ const IssuePreventionAnalytics = () => {
     fetchTickets();
   }, [showComparisonDialog, selectedComparison]);
 
-  const fetchStats = async (startArg, endArg) => {
+  const fetchStats = async () => {
     setLoading(true);
     try {
-      const params = {};
-      const start = startArg !== undefined ? startArg : dateFilter.start;
-      const end = endArg !== undefined ? endArg : dateFilter.end;
-
-      if (start) params.startDate = start;
-      if (end) params.endDate = end;
-
       const response = await api.get("/tasks/prevention-stats", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-        params
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
       });
       setData(response.data);
     } catch (error) {
       console.error("Error fetching prevention stats:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchStrategy = async () => {
-    try {
-      const res = await api.get("/tasks/prevention-strategy", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-      });
-      setPreventionStrategy(res.data.content || '');
-    } catch (error) {
-      console.error("Error fetching prevention strategy:", error);
     }
   };
 
@@ -246,20 +189,6 @@ const IssuePreventionAnalytics = () => {
       console.error("Error fetching audit records:", err);
     } finally {
       setLoadingDeepRecords(false);
-    }
-  };
-
-  const handleSaveStrategy = async () => {
-    setStrategyLoading(true);
-    try {
-      await api.post("/tasks/prevention-strategy", { content: preventionStrategy }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-      });
-      alert("Prevention strategy saved successfully!");
-    } catch (error) {
-      alert("Failed to save strategy");
-    } finally {
-      setStrategyLoading(false);
     }
   };
 
@@ -357,6 +286,28 @@ const IssuePreventionAnalytics = () => {
     }
   };
 
+  const handleDeleteAudit = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this audit log? This will also delete all associated records and the physical file. This action cannot be undone.")) return;
+
+    try {
+      await api.delete(`/tasks/audit-logs/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      });
+      alert("Audit log deleted successfully!");
+      fetchAuditHistory();
+      // If the deleted audit was selected for deep dive, clear it
+      if (selectedAuditForDeepDive?._id === id) {
+        setSelectedAuditForDeepDive(null);
+        setDeepStats(null);
+        setDeepAuditRecords([]);
+      }
+    } catch (error) {
+      console.error("Error deleting audit log:", error);
+      alert(error.response?.data?.error || "Failed to delete audit log");
+    }
+  };
+
+
   const handleRevertRecord = async (recordId) => {
     if (!window.confirm("Are you sure you want to revert this action? This will delete any manually created task linked to this record.")) return;
 
@@ -435,7 +386,6 @@ const IssuePreventionAnalytics = () => {
 
   useEffect(() => {
     fetchStats();
-    fetchStrategy();
     fetchAuditHistory();
   }, []);
 
@@ -478,173 +428,6 @@ const IssuePreventionAnalytics = () => {
 
   // ... (skipping unchanged code) ...
 
-  if (loading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "80vh" }}>
-        <MoonLoader color={theme.palette.primary.main} size={50} />
-      </Box>
-    );
-  }
-
-  // Prepare data for the pie chart
-  const pieData = data?.sourceBreakdown
-    ? Object.entries(data.sourceBreakdown).map(([name, value]) => ({ name, value }))
-    : [];
-
-  // Prepare data for Reporter chart
-  const reporterData = data?.reporterStats
-    ? Object.entries(data.reporterStats)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10)
-    : [];
-
-  // Prepare Trend Data
-  const trendChartData = data?.trendData
-    ? Object.entries(data.trendData)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => moment(a.name, "MMM YYYY").toDate() - moment(b.name, "MMM YYYY").toDate())
-    : [];
-
-  // Prepare Reason Data
-  const reasonChartData = data?.reasonStats
-    ? Object.entries(data.reasonStats)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10)
-    : [];
-
-  // Prepare Company Data
-  const companyChartData = data?.companyStats
-    ? Object.entries(data.companyStats)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10)
-    : [];
-
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF"];
-
-  const globalOverlapColumns = [
-    {
-      field: "slid",
-      headerName: "SLID",
-      width: 120,
-      valueGetter: (value, row) => row.task?.slid || row.report?.slid || "N/A",
-      renderCell: (params) => (
-        <Typography variant="body2" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
-          {params.value}
-        </Typography>
-      )
-    },
-    {
-      field: "reportedDate",
-      headerName: "Report Date",
-      width: 150,
-      valueGetter: (value, row) => row.report ? moment(row.report.date || row.report.createdAt).format("MMM DD, YYYY") : "N/A",
-    },
-    {
-      field: "interviewDate",
-      headerName: "Interview Date",
-      width: 150,
-      valueGetter: (value, row) => row.task ? moment(row.task.interviewDate).format("MMM DD, YYYY") : "N/A",
-    },
-    {
-      field: "sourceType",
-      headerName: "Source Team",
-      width: 180,
-      valueGetter: (value, row) => row.report?.sourceType || "Manual (OJO)",
-      renderCell: (params) => (
-        <Chip
-          label={params.value}
-          size="small"
-          variant="outlined"
-          sx={{
-            borderColor: params.value.includes('Reach') ? 'info.main' : 'primary.main',
-            color: params.value.includes('Reach') ? 'info.main' : 'primary.main',
-            fontWeight: 'bold'
-          }}
-        />
-      )
-    },
-    {
-      field: "dispatched",
-      headerName: "Dispatched",
-      width: 100,
-      valueGetter: (value, row) => row.report?.dispatched === 'yes' ? 'Yes' : 'No',
-      renderCell: (params) => (
-        <Chip
-          label={params.value}
-          size="small"
-          color={params.value === 'Yes' ? "success" : "default"}
-          variant="outlined"
-        />
-      )
-    },
-    {
-      field: "outcome",
-      headerName: "Outcome",
-      width: 130,
-      renderCell: (params) => (
-        <Chip
-          label={params.row.isPrevented ? "Prevented" : "Escalated"}
-          size="small"
-          color={params.row.isPrevented ? "success" : "error"}
-          variant="filled"
-          sx={{ fontWeight: 'bold', width: 90 }}
-        />
-      )
-    },
-    {
-      field: "score",
-      headerName: "Tracker Score",
-      width: 100,
-      renderCell: (params) => {
-        const score = params.row.task?.evaluationScore;
-        if (score === undefined || score === null) return "-";
-        let color = "#d32f2f"; // Detractor
-        if (score >= 9) color = "#2e7d32"; // Promoter
-        else if (score >= 7) color = "#ed6c02"; // Neutral
-
-        return (
-          <Chip
-            label={score}
-            size="small"
-            sx={{
-              backgroundColor: color,
-              color: "white",
-              fontWeight: "bold"
-            }}
-          />
-        );
-      }
-    },
-    {
-      field: "reportedCategory",
-      headerName: "Reported Category",
-      width: 180,
-      valueGetter: (value, row) => row.report?.issues?.[0]?.category || "N/A",
-    },
-    {
-      field: "actions",
-      headerName: "View",
-      width: 80,
-      sortable: false,
-      renderCell: (params) => (
-        <Tooltip title="View Task Details">
-          <IconButton onClick={() => {
-            const enrichedTask = {
-              ...params.row.task,
-              relatedIssues: [params.row.report]
-            };
-            setSelectedTask(enrichedTask);
-            setShowTaskDialog(true);
-          }}>
-            <VisibilityIcon fontSize="small" sx={{ color: "grey.400" }} />
-          </IconButton>
-        </Tooltip>
-      )
-    }
-  ];
 
   const auditOverlapColumns = [
     {
@@ -834,54 +617,14 @@ const IssuePreventionAnalytics = () => {
     }
   ];
 
-  const StatCard = ({ title, value, icon, color, description, subStats }) => (
-    <MuiCard sx={{ height: '100%', borderRadius: 3, bgcolor: alpha(color, 0.05), border: `1px solid ${alpha(color, 0.2)}` }} elevation={0}>
-      <CardContent>
-        <Stack spacing={2}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Box>
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
-                  {title}
-                </Typography>
-                {description && (
-                  <Tooltip title={description} arrow>
-                    <IconButton size="small" sx={{ mb: 0.5 }}>
-                      <FilterIcon sx={{ fontSize: 14, color: 'grey.500' }} />
-                    </IconButton>
-                  </Tooltip>
-                )}
-              </Stack>
-              <Typography variant="h4" fontWeight="800" sx={{ color: color }}>
-                {value}
-              </Typography>
-            </Box>
-            <Avatar sx={{ bgcolor: color, width: 48, height: 48 }}>
-              {icon}
-            </Avatar>
-          </Stack>
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "80vh" }}>
+        <MoonLoader color={theme.palette.primary.main} size={50} />
+      </Box>
+    );
+  }
 
-          {subStats && subStats.length > 0 && (
-            <Box>
-              <Divider sx={{ mb: 1, opacity: 0.05 }} />
-              <Stack spacing={0.5}>
-                {subStats.map((stat, idx) => (
-                  <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, fontSize: '0.68rem' }}>
-                      {stat.label}
-                    </Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
-                      {stat.value} ({stat.percentage}%)
-                    </Typography>
-                  </Box>
-                ))}
-              </Stack>
-            </Box>
-          )}
-        </Stack>
-      </CardContent>
-    </MuiCard>
-  );
 
   return (
     <Box sx={{ pt: 3, pb: 6, px: 2 }}>
@@ -986,789 +729,10 @@ const IssuePreventionAnalytics = () => {
         </Paper>
       )}
 
-      {/* Date Filters */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          mb: 4,
-          mt: 2,
-          bgcolor: alpha(theme.palette.primary.main, 0.05),
-          border: `1px dashed ${alpha(theme.palette.primary.main, 0.2)}`,
-          borderRadius: 2
-        }}
-      >
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
-          <Typography variant="body2" fontWeight="bold" color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FilterIcon fontSize="small" /> Filter Period:
-          </Typography>
 
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DatePicker
-              label="Start Date"
-              value={dateFilter.start}
-              onChange={(newValue) => setDateFilter(prev => ({ ...prev, start: newValue }))}
-              slotProps={{
-                textField: {
-                  size: 'small',
-                  sx: { bgcolor: 'background.paper', width: 200 }
-                }
-              }}
-            />
-            <Typography color="text.secondary">-</Typography>
-            <DatePicker
-              label="End Date"
-              value={dateFilter.end}
-              onChange={(newValue) => setDateFilter(prev => ({ ...prev, end: newValue }))}
-              slotProps={{
-                textField: {
-                  size: 'small',
-                  sx: { bgcolor: 'background.paper', width: 200 }
-                }
-              }}
-            />
-          </LocalizationProvider>
-
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => fetchStats()}
-            disabled={loading}
-            sx={{ height: 40, px: 3 }}
-          >
-            Apply Filter
-          </Button>
-
-          {(dateFilter.start || dateFilter.end) && (
-            <Button
-              variant="text"
-              size="small"
-              onClick={() => {
-                setDateFilter({ start: null, end: null });
-                fetchStats(null, null);
-              }}
-              sx={{ height: 40 }}
-            >
-              Clear
-            </Button>
-          )}
-        </Stack>
-      </Paper>
+      {/* Recent Audit Activity Section starts here */}
 
 
-
-      {/* KPI Section */}
-      <Grid container spacing={3} mb={5}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total NPS Interviews"
-            value={data?.totalNpsTasks}
-            icon={<AssessmentIcon />}
-            color={theme.palette.primary.main}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Overlapped Cases"
-            value={data?.reportedOverlapCount}
-            icon={<ReportIcon />}
-            color={theme.palette.warning.main}
-            subStats={[
-              {
-                label: "Prevented (9-10)",
-                value: data?.preventedOverlapCount || 0,
-                percentage: data?.reportedOverlapCount > 0 ? ((data.preventedOverlapCount / data.reportedOverlapCount) * 100).toFixed(0) : 0
-              },
-              {
-                label: "Escalated (1-8)",
-                value: data?.failureOverlapCount || 0,
-                percentage: data?.reportedOverlapCount > 0 ? ((data.failureOverlapCount / data.reportedOverlapCount) * 100).toFixed(0) : 0
-              }
-            ]}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Prevention Success Rate"
-            value={`${data?.preventionRate}%`}
-            icon={<TimelineIcon />}
-            color={theme.palette.info.main}
-            description="Percentage of overlapping cases that resulted in high NPS scores (9-10) after being proactively reported."
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Diagnosis Accuracy"
-            value={`${data?.diagnosisAccuracy?.rate || 0}%`}
-            icon={<VerifiedIcon />}
-            color={theme.palette.success.main}
-            description="Measures the alignment between the reasons reported by customers (Initial Category) and the finalized root causes identified after technical resolution."
-          />
-        </Grid>
-      </Grid>
-
-
-
-      {/* Prevention Strategy Section */}
-      <Paper sx={{ p: 3, mb: 5, borderRadius: 3, bgcolor: '#1a1a1a', border: '1px solid #333' }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6" fontWeight="700" color="warning.main" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <VerifiedIcon /> Prevention Strategy & Action Plan
-          </Typography>
-          <Button
-            variant="contained"
-            color="warning"
-            size="small"
-            onClick={handleSaveStrategy}
-            disabled={strategyLoading}
-          >
-            {strategyLoading ? "Saving..." : "Save Strategy"}
-          </Button>
-        </Stack>
-        <Typography variant="body2" color="text.secondary" mb={2}>
-          Define your long-term strategy and immediate action items to prevent recurrence of top issues.
-        </Typography>
-        <TextField
-          multiline
-          minRows={4}
-          fullWidth
-          variant="outlined"
-          placeholder="Enter your prevention stragegy here..."
-          value={preventionStrategy}
-          onChange={(e) => setPreventionStrategy(e.target.value)}
-          sx={{
-            bgcolor: '#262626',
-            borderRadius: 2,
-            '& .MuiOutlinedInput-root': {
-              color: 'grey.300',
-              '& fieldset': { borderColor: '#444' },
-              '&:hover fieldset': { borderColor: '#666' },
-              '&.Mui-focused fieldset': { borderColor: theme.palette.warning.main }
-            }
-          }}
-        />
-      </Paper>
-
-      {/* Process Efficiency Spotlight */}
-      <Box mb={5}>
-        <Typography variant="h6" fontWeight="700" mb={3}>
-          Process Efficiency: Resolution vs. Closure
-        </Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #333' }}>
-              <Typography variant="subtitle2" color="grey.500" mb={1}>FIELD RESOLUTION SPEED (Incl. Aging)</Typography>
-              <Typography variant="h3" fontWeight="800" color="success.main">
-                {data?.processEfficiency?.avgResolutionTime || 0}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                Avg time from <b>Dispatched</b> → <b>Resolved</b> (Or <b>Reported</b> → <b>Now</b> if pending)
-              </Typography>
-              <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
-                  * Calculation: Resolved cases use (Resolved - Dispatched). Pending cases use (Now - Reported) to reflect negligence.
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #333' }}>
-              <Typography variant="subtitle2" color="grey.500" mb={1}>SUPERVISOR DISPATCH SPEED (Incl. Aging)</Typography>
-              <Typography variant="h3" fontWeight="800" color={Number(data?.processEfficiency?.avgDispatchTime) > 1 ? "warning.main" : "info.main"}>
-                {data?.processEfficiency?.avgDispatchTime || 0}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                Avg time from <b>Reported</b> → <b>Dispatched</b> (Uses Now if pending)
-              </Typography>
-              <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
-                  * Calculation: (Dispatched Date - Reported Date) OR (Now - Reported Date) if undispatched.
-                </Typography>
-              </Box>
-              {Number(data?.processEfficiency?.avgClosureTime) > Number(data?.processEfficiency?.avgResolutionTime) && (
-                <Chip label="Bottleneck detected" color="warning" size="small" sx={{ mt: 1, height: 20, fontSize: 10 }} />
-              )}
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #333' }}>
-              <Typography variant="subtitle2" color="grey.500" mb={1}>TOTAL LIFECYCLE (Accountability)</Typography>
-              <Typography variant="h3" fontWeight="800" color="white">
-                {data?.processEfficiency?.avgLifecycleTime || 0}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                Total time from <b>Initial Report</b> → <b>Final Closure/Now</b>
-              </Typography>
-              <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
-                  * Calculation: Full duration from (Report Date) to (Closed Date) OR (Now) if the case is still open.
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Aging Bottlenecks List - Table Format with Search & View */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2, bgcolor: '#1a1a1a', color: '#fff', borderRadius: 2, border: '1px solid #f44336' }}>
-              <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={2} spacing={2}>
-                <Typography variant="h6" fontWeight="bold" color="error">Aging Bottlenecks List</Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
-                  <FormControl size="small" sx={{ width: { xs: '100%', sm: 200 } }}>
-                    <Select
-                      value={negligenceSupervisorFilter}
-                      onChange={(e) => {
-                        setNegligenceSupervisorFilter(e.target.value);
-                        setNegligencePage(0);
-                      }}
-                      displayEmpty
-                      sx={{
-                        bgcolor: '#2d2d2d',
-                        color: '#fff',
-                        borderRadius: 2,
-                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#444' },
-                        fontSize: '0.85rem'
-                      }}
-                    >
-                      <MenuItem value="all">All Supervisors</MenuItem>
-                      {Array.from(new Set((data?.processEfficiency?.oldestPending || []).map(item => item.supervisor))).sort().map(sup => (
-                        <MenuItem key={sup} value={sup}>{sup}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <TextField
-                    size="small"
-                    placeholder="Search SLID or Technician..."
-                    variant="outlined"
-                    value={negligenceSearch}
-                    onChange={(e) => {
-                      setNegligenceSearch(e.target.value);
-                      setNegligencePage(0);
-                    }}
-                    InputProps={{
-                      startAdornment: <SearchIcon sx={{ mr: 1, color: 'grey.500' }} />,
-                      sx: { bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, '& fieldset': { borderColor: '#444' } }
-                    }}
-                    sx={{ width: { xs: '100%', sm: 250 } }}
-                  />
-                </Stack>
-              </Stack>
-              <Box sx={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ color: '#b3b3b3', fontSize: '0.75rem', borderBottom: '1px solid #3d3d3d' }}>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Created At</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Report Date</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>SLID</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Age</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Stage</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Personnel</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const filtered = (data?.processEfficiency?.oldestPending || []).filter(item => {
-                        const matchesSearch = item.slid.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
-                          item.assignedTo.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
-                          item.supervisor.toLowerCase().includes(negligenceSearch.toLowerCase());
-
-                        const matchesSupervisor = negligenceSupervisorFilter === 'all' || item.supervisor === negligenceSupervisorFilter;
-
-                        return matchesSearch && matchesSupervisor;
-                      });
-
-                      return filtered.length > 0 ? filtered
-                        .slice(negligencePage * negligenceRowsPerPage, negligencePage * negligenceRowsPerPage + negligenceRowsPerPage)
-                        .map((item, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
-                            <td style={{ padding: '8px', color: '#b3b3b3', fontSize: '0.75rem' }}>{new Date(item.originalReport?.task?.createdAt || item.reportDate).toLocaleDateString()}</td>
-                            <td style={{ padding: '8px', color: '#b3b3b3', fontSize: '0.75rem' }}>{new Date(item.reportDate).toLocaleDateString()}</td>
-                            <td style={{ padding: '8px', color: '#4e73df', fontWeight: 'bold', fontSize: '0.85rem' }}>{item.slid}</td>
-                            <td style={{ padding: '8px', textAlign: 'center' }}>
-                              <Chip label={`${item.age}d`} size="small" color="error" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
-                            </td>
-                            <td style={{ padding: '8px', fontSize: '0.8rem', color: '#ccc' }}>{item.stage}</td>
-                            <td style={{ padding: '8px', fontSize: '0.75rem', color: '#999' }}>
-                              T: {item.assignedTo}<br />S: {item.supervisor}
-                            </td>
-                            <td style={{ padding: '8px', textAlign: 'center' }}>
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                color="primary"
-                                onClick={() => {
-                                  // The originalReport has the full data structure needed for TaskDetailsDialog
-                                  // We need to inject the report back into the format expected by handleViewTask
-                                  // However, IssuePreventionAnalytics usually shows the "Failed Prevention" context.
-                                  // Let's find the full row in data.priorReports if possible, or use the originalReport.
-                                  const report = item.originalReport;
-                                  setSelectedTask({
-                                    ...report.task,
-                                    relatedIssues: [report] // Wrap it so TaskDetailsDialog sees the history context
-                                  });
-                                  setShowTaskDialog(true);
-                                }}
-                                sx={{ fontSize: '0.7rem', textTransform: 'none', py: 0.2 }}
-                              >
-                                View
-                              </Button>
-                            </td>
-                          </tr>
-                        )) : (
-                        <tr>
-                          <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#4caf50' }}>No pending delays detected.</td>
-                        </tr>
-                      );
-                    })()}
-                  </tbody>
-                </table>
-              </Box>
-              <TablePagination
-                component="div"
-                count={(data?.processEfficiency?.oldestPending || []).filter(item => {
-                  const matchesSearch = item.slid.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
-                    item.assignedTo.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
-                    item.supervisor.toLowerCase().includes(negligenceSearch.toLowerCase());
-
-                  const matchesSupervisor = negligenceSupervisorFilter === 'all' || item.supervisor === negligenceSupervisorFilter;
-
-                  return matchesSearch && matchesSupervisor;
-                }).length}
-                page={negligencePage}
-                onPageChange={(e, newPage) => setNegligencePage(newPage)}
-                rowsPerPage={negligenceRowsPerPage}
-                onRowsPerPageChange={(e) => {
-                  setNegligenceRowsPerPage(parseInt(e.target.value, 10));
-                  setNegligencePage(0);
-                }}
-                rowsPerPageOptions={[5, 10, 25]}
-                sx={{ color: '#fff' }}
-              />
-            </Paper>
-          </Grid>
-        </Grid>
-      </Box>
-
-      <Grid container spacing={4} mb={5}>
-        {/* Source Distribution Chart */}
-        <Grid item xs={12} md={5}>
-          <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%' }}>
-            <Typography variant="h6" fontWeight="700" mb={3}>
-              Report Source Distribution
-            </Typography>
-            <Box sx={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip />
-                  <Legend verticalAlign="bottom" height={36} />
-                </PieChart>
-              </ResponsiveContainer>
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Prevention Insights */}
-        <Grid item xs={12} md={7}>
-          <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" fontWeight="700" mb={3}>
-              Prevention Insights
-            </Typography>
-            <Box flex={1}>
-              <Stack spacing={3}>
-                <Box>
-                  <Typography variant="subtitle2" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
-                    Critical Understanding
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Currently, <strong>{data?.reportedOverlapCount}</strong> overlap instances were identified (reports that preceded NPS tasks). Out of these, <strong>{data?.preventedOverlapCount}</strong> instances resulted in success (Promoters), while <strong>{data?.failureOverlapCount}</strong> resulted in escalation.
-                  </Typography>
-                </Box>
-                <Divider />
-                <Box>
-                  <Typography variant="subtitle2" color="warning.main" gutterBottom sx={{ fontWeight: 'bold' }}>
-                    Action Plan Recommendation
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Focus on the top reporting sources (see chart) to optimize the hand-over process. Issues reported via these channels are more likely to result in dissatisfaction if not resolved within 48 hours.
-                  </Typography>
-                </Box>
-              </Stack>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {/* Diagnosis & QoS Deep Dive */}
-      <Box mb={5}>
-        <Typography variant="h6" fontWeight="700" mb={3}>
-          Diagnosis Accuracy & QoS Matrix
-        </Typography>
-        <Grid container spacing={3}>
-
-          {/* QoS Spotlight Matrix */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #333' }}>
-              <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                <Typography variant="subtitle1" fontWeight="bold" color="warning.main">
-                  QoS Spotlight
-                </Typography>
-                <Tooltip title="Analyzing how accurately 'QoS' issues are identified.">
-                  <IconButton size="small"><Explore fontSize="small" sx={{ color: 'grey.500' }} /></IconButton>
-                </Tooltip>
-              </Stack>
-
-              {(() => {
-                const confirmed = data?.qosMatrix?.confirmed || 0;
-                const falseAlarm = data?.qosMatrix?.falseAlarm || 0;
-                const missed = data?.qosMatrix?.missed || 0;
-                const totalReported = confirmed + falseAlarm;
-                const totalActual = confirmed + missed;
-
-                return (
-                  <Stack spacing={2}>
-                    <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.1), borderRadius: 2, border: `1px solid ${alpha(theme.palette.success.main, 0.2)}` }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" fontWeight="bold">CONFIRMED QoS</Typography>
-                          <Typography variant="h4" color="success.main" fontWeight="800">{confirmed}</Typography>
-                        </Box>
-                        <Chip
-                          label={totalReported > 0 ? `${((confirmed / totalReported) * 100).toFixed(0)}% Precision` : "0% Precision"}
-                          size="small"
-                          color="success"
-                          variant="outlined"
-                          sx={{ height: 20, fontSize: 10 }}
-                        />
-                      </Stack>
-                      <Typography variant="caption" color="grey.400" display="block" mt={1}>
-                        Reporter said QoS → Issue WAS QoS <br />
-                        <span style={{ opacity: 0.7 }}>(Correctly identified out of {totalReported} total QoS reports)</span>
-                      </Typography>
-                    </Box>
-
-                    <Box sx={{ p: 2, bgcolor: alpha(theme.palette.error.main, 0.1), borderRadius: 2, border: `1px solid ${alpha(theme.palette.error.main, 0.2)}` }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" fontWeight="bold">RECLASSIFIED (Reported ≠ Actual)</Typography>
-                          <Typography variant="h4" color="error.main" fontWeight="800">{falseAlarm}</Typography>
-                        </Box>
-                        <Chip
-                          label={totalReported > 0 ? `${((falseAlarm / totalReported) * 100).toFixed(0)}% Mismatch` : "0% Mismatch"}
-                          size="small"
-                          color="error"
-                          variant="outlined"
-                          sx={{ height: 20, fontSize: 10 }}
-                        />
-                      </Stack>
-                      <Typography variant="caption" color="grey.400" display="block" mt={1}>
-                        Reported as QoS → Actual Reason: OTHER <br />
-                        <span style={{ opacity: 0.7 }}>(Issue valid, but category updated)</span>
-                      </Typography>
-                    </Box>
-
-                    <Box sx={{ p: 2, bgcolor: alpha(theme.palette.info.main, 0.1), borderRadius: 2, border: `1px solid ${alpha(theme.palette.info.main, 0.2)}` }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" fontWeight="bold">UNIDENTIFIED (Actual  ≠ Reported)</Typography>
-                          <Typography variant="h4" color="info.main" fontWeight="800">{missed}</Typography>
-                        </Box>
-                        <Chip
-                          label={totalActual > 0 ? `${((missed / totalActual) * 100).toFixed(0)}% Unidentified` : "0% Unidentified"}
-                          size="small"
-                          color="info"
-                          variant="outlined"
-                          sx={{ height: 20, fontSize: 10 }}
-                        />
-                      </Stack>
-                      <Typography variant="caption" color="grey.400" display="block" mt={1}>
-                        Reported as OTHER → Actual Reason: QoS <br />
-                        <span style={{ opacity: 0.7 }}>(QoS nature discovered during resolution)</span>
-                      </Typography>
-                    </Box>
-                  </Stack>
-                );
-              })()}
-            </Paper>
-          </Grid>
-
-          {/* Installation Spotlight Matrix */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #333' }}>
-              <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                <Typography variant="subtitle1" fontWeight="bold" color="info.main">
-                  Installation Spotlight
-                </Typography>
-                <Tooltip title="Analyzing how accurately 'Installation' issues are identified.">
-                  <IconButton size="small"><Explore fontSize="small" sx={{ color: 'grey.500' }} /></IconButton>
-                </Tooltip>
-              </Stack>
-
-              {(() => {
-                const confirmed = data?.installationMatrix?.confirmed || 0;
-                const falseAlarm = data?.installationMatrix?.falseAlarm || 0;
-                const missed = data?.installationMatrix?.missed || 0;
-                const totalReported = confirmed + falseAlarm;
-                const totalActual = confirmed + missed;
-
-                return (
-                  <Stack spacing={2}>
-                    <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.1), borderRadius: 2, border: `1px solid ${alpha(theme.palette.success.main, 0.2)}` }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" fontWeight="bold">CONFIRMED INSTALL</Typography>
-                          <Typography variant="h4" color="success.main" fontWeight="800">{confirmed}</Typography>
-                        </Box>
-                        <Chip
-                          label={totalReported > 0 ? `${((confirmed / totalReported) * 100).toFixed(0)}% Precision` : "0% Precision"}
-                          size="small"
-                          color="success"
-                          variant="outlined"
-                          sx={{ height: 20, fontSize: 10 }}
-                        />
-                      </Stack>
-                      <Typography variant="caption" color="grey.400" display="block" mt={1}>
-                        Reporter said Install → Issue WAS Install <br />
-                        <span style={{ opacity: 0.7 }}>(Correctly identified out of {totalReported} total Install reports)</span>
-                      </Typography>
-                    </Box>
-
-                    <Box sx={{ p: 2, bgcolor: alpha(theme.palette.error.main, 0.1), borderRadius: 2, border: `1px solid ${alpha(theme.palette.error.main, 0.2)}` }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" fontWeight="bold">RECLASSIFIED (Reported ≠ Actual)</Typography>
-                          <Typography variant="h4" color="error.main" fontWeight="800">{falseAlarm}</Typography>
-                        </Box>
-                        <Chip
-                          label={totalReported > 0 ? `${((falseAlarm / totalReported) * 100).toFixed(0)}% Mismatch` : "0% Mismatch"}
-                          size="small"
-                          color="error"
-                          variant="outlined"
-                          sx={{ height: 20, fontSize: 10 }}
-                        />
-                      </Stack>
-                      <Typography variant="caption" color="grey.400" display="block" mt={1}>
-                        Reported as Install → Actual Reason: OTHER <br />
-                        <span style={{ opacity: 0.7 }}>(Issue valid, but category updated)</span>
-                      </Typography>
-                    </Box>
-
-                    <Box sx={{ p: 2, bgcolor: alpha(theme.palette.info.main, 0.1), borderRadius: 2, border: `1px solid ${alpha(theme.palette.info.main, 0.2)}` }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" fontWeight="bold">UNIDENTIFIED (Actual ≠ Reported)</Typography>
-                          <Typography variant="h4" color="info.main" fontWeight="800">{missed}</Typography>
-                        </Box>
-                        <Chip
-                          label={totalActual > 0 ? `${((missed / totalActual) * 100).toFixed(0)}% Unidentified` : "0% Unidentified"}
-                          size="small"
-                          color="info"
-                          variant="outlined"
-                          sx={{ height: 20, fontSize: 10 }}
-                        />
-                      </Stack>
-                      <Typography variant="caption" color="grey.400" display="block" mt={1}>
-                        Reported as OTHER → Actual Reason: Install <br />
-                        <span style={{ opacity: 0.7 }}>(Install nature discovered during resolution)</span>
-                      </Typography>
-                    </Box>
-                  </Stack>
-                );
-              })()}
-            </Paper>
-          </Grid>
-        </Grid>
-      </Box>
-
-      {/* Global Category Accuracy Matrix */}
-      <Box mb={10}>
-        <Stack direction="row" alignItems="center" spacing={1} mb={3}>
-          <Typography variant="h6" fontWeight="700">
-            Global Category Accuracy Deep Dive
-          </Typography>
-          <Tooltip title="Mapping initially reported categories (from Issues page) to the finalized reasons (from Tasks). Green chips indicate matches, red indicates reclassifications.">
-            <IconButton size="small"><Explore fontSize="small" sx={{ color: 'grey.500' }} /></IconButton>
-          </Tooltip>
-        </Stack>
-        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', border: '1px solid #333' }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ color: 'primary.main', fontWeight: 'bold', borderBottom: '2px solid #333', py: 2 }}>Initial Reported Category</TableCell>
-                <TableCell sx={{ color: 'primary.main', fontWeight: 'bold', borderBottom: '2px solid #333', py: 2 }}>Final Resolution Distribution</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {Object.entries(data?.globalCategoryReasonMatrix || {}).length > 0 ? (
-                Object.entries(data?.globalCategoryReasonMatrix || {}).map(([category, reasons], idx) => (
-                  <TableRow key={idx} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                    <TableCell sx={{ borderBottom: '1px solid #333', color: 'grey.300', fontWeight: 'bold', width: '30%' }}>
-                      {category}
-                    </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #333', py: 2 }}>
-                      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                        {Object.entries(reasons).map(([reason, count], i) => (
-                          <Chip
-                            key={i}
-                            label={`${reason}: ${count}`}
-                            size="small"
-                            sx={{
-                              bgcolor: category.toLowerCase().includes(reason.toLowerCase()) || reason.toLowerCase().includes(category.toLowerCase())
-                                ? alpha(theme.palette.success.main, 0.1)
-                                : alpha(theme.palette.error.main, 0.1),
-                              color: category.toLowerCase().includes(reason.toLowerCase()) || reason.toLowerCase().includes(category.toLowerCase())
-                                ? 'success.main'
-                                : 'error.main',
-                              border: '1px solid currentColor',
-                              fontWeight: 'bold',
-                              fontSize: '0.7rem'
-                            }}
-                          />
-                        ))}
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={2} align="center" sx={{ border: 'none', py: 4, color: 'grey.500' }}>
-                    No mapping data available for the selected period.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </Paper>
-      </Box>
-
-      {/* Deep Dive Analysis: Root Cause & Vendor Performance */}
-      <Grid item xs={12}>
-        <Typography variant="h6" fontWeight="700" mb={3}>
-          Root Cause Deep Dive (Failures by Reason)
-        </Typography>
-        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: 450 }}>
-          <Box sx={{ height: "100%" }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={reasonChartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
-                <XAxis type="number" stroke="#cbd5e1" tick={{ fill: '#94a3b8' }} />
-                <YAxis dataKey="name" type="category" stroke="#cbd5e1" width={100} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                <RechartsTooltip cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} contentStyle={{ backgroundColor: '#262626', border: '1px solid #333', color: '#fff' }} />
-                <Bar dataKey="value" fill="#FF8042" name="Failed Preventions" radius={[0, 4, 4, 0]}>
-                  <Cell fill="#FF8042" />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </Box>
-        </Paper>
-      </Grid>
-
-      {/* Top Non-Preventive Reporters */}
-      <Box mt={10}>
-        <Typography variant="h6" fontWeight="700" my={3}>
-          Top Non-Preventive Reporters (Most Overlaps)
-        </Typography>
-        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a' }}>
-          <Box sx={{ height: 350 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={reporterData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  stroke="#cbd5e1"
-                  fontSize={12}
-                  angle={-45}
-                  textAnchor="end"
-                  interval={0}
-                  tick={{ fill: '#94a3b8' }}
-                />
-                <YAxis stroke="#cbd5e1" tick={{ fill: '#94a3b8' }} />
-                <RechartsTooltip
-                  cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-                  contentStyle={{ backgroundColor: '#262626', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
-                />
-                <Bar dataKey="value" fill="#8884d8" name="Failed Preventions" radius={[4, 4, 0, 0]}>
-                  {reporterData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </Box>
-        </Paper>
-      </Box>
-
-      {/* New Section: Top Reporters Deep Dive */}
-      <Box mt={10} mb={5}>
-        <Typography variant="h6" fontWeight="700" mb={3}>
-          Top Reporters: Reported vs Actual Analysis (What did they miss?)
-        </Typography>
-        <Typography variant="body2" color="text.secondary" mb={3}>
-          Analyzing the discrepancy between what was reported (category) vs the actual root cause found (reason).
-        </Typography>
-
-        <Grid container spacing={3}>
-          {data?.reporterComparisonStats?.map((reporter, index) => (
-            <Grid item xs={12} md={6} lg={4} key={index}>
-              <Paper sx={{ p: 3, borderRadius: 3, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #333' }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight="bold" color="primary.main">
-                      {reporter.reporterName}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {reporter.totalNonPrevented} Non-Prevented Issues
-                    </Typography>
-                  </Box>
-                  <Avatar sx={{ bgcolor: alpha(COLORS[index % COLORS.length], 0.2), color: COLORS[index % COLORS.length], width: 32, height: 32, fontSize: 14 }}>
-                    #{index + 1}
-                  </Avatar>
-                </Stack>
-                <Divider sx={{ mb: 2, borderColor: '#333' }} />
-
-                <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
-                  <Table size="small">
-                    <TableBody>
-                      {reporter.comparisons.map((comp, i) => (
-                        <TableRow key={i}>
-                          <TableCell sx={{ borderBottom: '1px solid #333', color: 'grey.400', py: 1 }}>
-                            <Stack>
-                              <Typography variant="caption" color="warning.main">Reported: {comp.reportedCategory}</Typography>
-                              <Typography variant="caption" color="success.main">Actual: {comp.actualReason}</Typography>
-                            </Stack>
-                          </TableCell>
-                          <TableCell align="right" sx={{ borderBottom: '1px solid #333', color: 'grey.100', fontWeight: 'bold' }}>
-                            {comp.count}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </Box>
-              </Paper>
-            </Grid>
-          ))}
-          {(!data?.reporterComparisonStats || data.reporterComparisonStats.length === 0) && (
-            <Grid item xs={12}>
-              <Paper sx={{ p: 4, textAlign: 'center', bgcolor: '#1a1a1a', borderRadius: 3 }}>
-                <Typography color="text.secondary">No detailed comparison data available.</Typography>
-              </Paper>
-            </Grid>
-          )}
-        </Grid>
-      </Box>
 
       {/* Audit Upload Activity & Stats */}
       <Box mt={10} mb={5}>
@@ -1851,13 +815,28 @@ const IssuePreventionAnalytics = () => {
                   </TableCell>
                   <TableCell>
                     {log.status === 'Imported' && log.importStats ? (
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 'bold' }}>
-                          {log.importStats.updatedTasks}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          updates from {log.importStats.totalRows} rows
-                        </Typography>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Box sx={{ borderRight: '1px solid #333', pr: 1.5 }}>
+                          <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 'bold', display: 'block' }}>
+                            {log.importStats.updatedTasks}
+                          </Typography>
+                          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', display: 'block' }}>
+                            Tasks Updated
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: 'info.main', fontWeight: 'bold', display: 'block' }}>
+                            {log.importStats.matchedRows || 0}
+                          </Typography>
+                          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', display: 'block' }}>
+                            Issue Overlaps
+                          </Typography>
+                        </Box>
+                        <Box sx={{ pl: 1, borderLeft: '1px solid #333' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            from {log.importStats.totalRows} rows
+                          </Typography>
+                        </Box>
                       </Stack>
                     ) : (
                       <Typography variant="caption" color="text.secondary">
@@ -1901,12 +880,28 @@ const IssuePreventionAnalytics = () => {
                       <Tooltip title="Download Original">
                         <IconButton
                           size="small"
-                          onClick={() => handleDownloadAudit(log._id, log.originalName)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadAudit(log._id, log.originalName);
+                          }}
                           sx={{ color: 'grey.500', p: 0.5 }}
                         >
                           <UploadIcon sx={{ transform: 'rotate(180deg)', fontSize: '1rem' }} />
                         </IconButton>
                       </Tooltip>
+                      <Tooltip title="Delete Audit">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteAudit(log._id);
+                          }}
+                          sx={{ color: 'error.main', p: 0.5 }}
+                        >
+                          <DeleteIcon sx={{ fontSize: '1rem' }} />
+                        </IconButton>
+                      </Tooltip>
+
                     </Stack>
                   </TableCell>
                 </TableRow>
@@ -1976,7 +971,7 @@ const IssuePreventionAnalytics = () => {
                       {/* Audit NPS */}
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h3" fontWeight="bold" color="primary">
-                          {deepStats.npsData.score}
+                          {Math.round(deepStats.npsData.score)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">from {deepStats.npsData.validSample} samples</Typography>
                         <Stack direction="row" spacing={0.5} justifyContent="center" mt={1}>
@@ -1995,12 +990,12 @@ const IssuePreventionAnalytics = () => {
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>Match & Coverage Gaps</Typography>
                     <Stack spacing={2} mt={2}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2">Matched Issues:</Typography>
+                        <Typography variant="body2">Issue Overlaps:</Typography>
                         <Typography variant="body2" fontWeight="bold" color="success.main">{deepStats.summary.matched}</Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="body2">Match Rate:</Typography>
-                        <Typography variant="body2" fontWeight="bold">{deepStats.summary.matchRate}%</Typography>
+                        <Typography variant="body2" fontWeight="bold">{Math.round(deepStats.summary.matchRate)}%</Typography>
                       </Box>
                     </Stack>
                   </Paper>
@@ -2017,11 +1012,11 @@ const IssuePreventionAnalytics = () => {
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="caption">Promoters %:</Typography>
-                        <Typography variant="caption" fontWeight="bold" color="success.main">{deepStats.dvocMetrics.promotersPercentage}%</Typography>
+                        <Typography variant="caption" fontWeight="bold" color="success.main">{Math.round(deepStats.dvocMetrics.promotersPercentage)}%</Typography>
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="caption">Detractors %:</Typography>
-                        <Typography variant="caption" fontWeight="bold" color="error.main">{deepStats.dvocMetrics.detractorsPercentage}%</Typography>
+                        <Typography variant="caption" fontWeight="bold" color="error.main">{Math.round(deepStats.dvocMetrics.detractorsPercentage)}%</Typography>
                       </Box>
                     </Stack>
                   </Paper>
@@ -2059,10 +1054,10 @@ const IssuePreventionAnalytics = () => {
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="baseline">
                   <Typography variant="h4" fontWeight="bold" color="secondary.main">
-                    {deepStats.manualOverlapStats.score}
+                    {Math.round(deepStats.manualOverlapStats.score)}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    from {deepStats.manualOverlapStats.totalMatched} matches
+                    from {deepStats.manualOverlapStats.totalMatched} issue overlaps
                   </Typography>
                 </Stack>
               </Grid>
@@ -2100,7 +1095,7 @@ const IssuePreventionAnalytics = () => {
                 <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, border: '1px dashed #444', display: 'inline-block', minWidth: 120 }}>
                   <Typography variant="caption" color="text.secondary" display="block">Overlap Identification</Typography>
                   <Typography variant="subtitle1" fontWeight="bold" color="primary.main">
-                    {deepStats.summary.matchRate}% Match
+                    {Math.round(deepStats.summary.matchRate)}% Match
                   </Typography>
                 </Box>
               </Grid>
@@ -2653,8 +1648,6 @@ const IssuePreventionAnalytics = () => {
         onClose={() => setShowEmailDialog(false)}
         data={data}
         type="prevention"
-        startDate={dateFilter.start}
-        endDate={dateFilter.end}
       />
 
       {/* Upload Results Dialog */}
@@ -2683,7 +1676,7 @@ const IssuePreventionAnalytics = () => {
                 </Typography>
                 {uploadResults && (
                   <Typography variant="caption" color="text.secondary">
-                    {uploadResults.summary.totalRows} total entries | {uploadResults.summary.matchedRows} matched | {uploadResults.summary.matchRate}% match rate
+                    {uploadResults.summary.totalRows} total entries | {uploadResults.summary.matchedRows} matched | {Math.round(uploadResults.summary.matchRate)}% match rate
                   </Typography>
                 )}
               </Box>
@@ -2726,7 +1719,7 @@ const IssuePreventionAnalytics = () => {
                   <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2 }}>
                     <Typography variant="caption" color="text.secondary">Match Rate</Typography>
                     <Typography variant="h4" fontWeight="bold" color="info.main">
-                      {uploadResults.summary.matchRate}%
+                      {Math.round(uploadResults.summary.matchRate)}%
                     </Typography>
                   </Paper>
                 </Grid>

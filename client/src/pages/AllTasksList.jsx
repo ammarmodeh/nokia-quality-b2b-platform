@@ -35,7 +35,11 @@ import {
   Autocomplete,
   alpha,
   Card,
-  CardContent
+  CardContent,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  LinearProgress
 } from '@mui/material';
 import { MoonLoader } from 'react-spinners';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -62,6 +66,8 @@ import {
   MdDateRange,
   MdAssignmentTurnedIn,
   MdHistory,
+  MdExpandMore,
+  MdBarChart
 } from 'react-icons/md';
 import {
   LineChart,
@@ -131,6 +137,36 @@ const AllTasksList = () => {
   const [tempStartDate, setTempStartDate] = useState(null);
   const [tempEndDate, setTempEndDate] = useState(null);
 
+  // Drill-down State
+  const [drillDownState, setDrillDownState] = useState({
+    open: false,
+    title: '',
+    category: '',
+    value: '',
+    tasks: []
+  });
+
+  const handleDrillDownRowClick = (category, value) => {
+    const drillTasks = filteredTasks.filter(t => {
+      const taskVal = t[category];
+      if (Array.isArray(taskVal)) return taskVal.includes(value);
+      return taskVal === value;
+    });
+    setDrillDownState({
+      open: true,
+      title: `${category.charAt(0).toUpperCase() + category.slice(1).replace(/([A-Z])/g, ' $1')}: ${value}`,
+      category,
+      value,
+      tasks: drillTasks
+    });
+  };
+
+
+
+  // --- Samples Token Integration State ---
+  const [samplesTokenData, setSamplesTokenData] = useState([]);
+  const [loadingSamples, setLoadingSamples] = useState(false);
+
   // Sync initial date filter with settings
   useEffect(() => {
     if (settings) {
@@ -148,6 +184,65 @@ const AllTasksList = () => {
       }
     }
   }, [settings]);
+
+  // --- Samples Token Fetching ---
+  useEffect(() => {
+    const fetchSamplesToken = async () => {
+      if (!dateFilter.start || !dateFilter.end) return;
+
+      setLoadingSamples(true);
+      try {
+        const startYear = new Date(dateFilter.start).getFullYear();
+        const endYear = new Date(dateFilter.end).getFullYear();
+        const yearsToFetch = Array.from(
+          { length: endYear - startYear + 1 },
+          (_, i) => startYear + i
+        );
+
+        const promises = yearsToFetch.map(year =>
+          api.get(`/samples-token/${year}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+          }).catch(err => ({ data: [] }))
+        );
+
+        const responses = await Promise.all(promises);
+        const allSamples = responses.flatMap(res => res.data || []);
+        setSamplesTokenData(allSamples);
+      } catch (err) {
+        console.error("Error fetching samples token:", err);
+      } finally {
+        setLoadingSamples(false);
+      }
+    };
+
+    fetchSamplesToken();
+  }, [dateFilter.start, dateFilter.end]);
+
+  // Calculate Total Samples from Token Data
+  const totalSamplesToken = useMemo(() => {
+    if (!dateFilter.start || !dateFilter.end) return 0;
+    const start = new Date(dateFilter.start);
+    const end = new Date(dateFilter.end);
+
+    return samplesTokenData.reduce((sum, sample) => {
+      const sampleYear = parseInt(sample.year || new Date(dateFilter.start).getFullYear());
+      const sampleWeek = sample.weekNumber;
+      const sampleY = sample.year;
+
+      const startWeekNum = getAggregatedWeekNumber(start, start.getFullYear(), settings || {});
+      const endWeekNum = getAggregatedWeekNumber(end, end.getFullYear(), settings || {});
+
+      // Handle year crossing
+      const startCode = start.getFullYear() * 100 + startWeekNum;
+      const endCode = end.getFullYear() * 100 + endWeekNum;
+      const sampleCode = sampleY * 100 + sampleWeek;
+
+      if (sampleCode >= startCode && sampleCode <= endCode) {
+        return sum + (parseFloat(sample.sampleSize) || 0);
+      }
+      return sum;
+    }, 0);
+  }, [samplesTokenData, dateFilter.start, dateFilter.end, settings]);
 
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -214,7 +309,9 @@ const AllTasksList = () => {
     evaluationScore: '',
     gaiaCheck: '',
     latestGaiaType: '',
-    latestGaiaReason: ''
+    latestGaiaReason: '',
+    itnRelated: '',
+    relatedToSubscription: ''
   });
 
   const handleColumnFilterChange = (column, value) => {
@@ -242,7 +339,9 @@ const AllTasksList = () => {
       evaluationScore: new Set(),
       gaiaCheck: new Set(),
       latestGaiaType: new Set(),
-      latestGaiaReason: new Set()
+      latestGaiaReason: new Set(),
+      itnRelated: new Set(),
+      relatedToSubscription: new Set()
     };
 
     allTasks.forEach(task => {
@@ -298,6 +397,9 @@ const AllTasksList = () => {
 
       if (task.latestGaia?.transactionType) options.latestGaiaType.add(task.latestGaia.transactionType);
       if (task.latestGaia?.unfReasonCode) options.latestGaiaReason.add(task.latestGaia.unfReasonCode);
+
+      addToSet(options.itnRelated, task.itnRelated);
+      addToSet(options.relatedToSubscription, task.relatedToSubscription);
     });
 
     // Convert Sets to sorted Arrays
@@ -485,6 +587,9 @@ const AllTasksList = () => {
       if (columnFilters.gaiaCheck && !(task.gaiaCheck || "No").toLowerCase().includes(columnFilters.gaiaCheck.toLowerCase())) return false;
       if (columnFilters.latestGaiaType && !(task.latestGaia?.transactionType || "").toLowerCase().includes(columnFilters.latestGaiaType.toLowerCase())) return false;
       if (columnFilters.latestGaiaReason && !(task.latestGaia?.unfReasonCode || "").toLowerCase().includes(columnFilters.latestGaiaReason.toLowerCase())) return false;
+
+      if (columnFilters.itnRelated && !checkArrayOrString(task.itnRelated, columnFilters.itnRelated)) return false;
+      if (columnFilters.relatedToSubscription && !checkArrayOrString(task.relatedToSubscription, columnFilters.relatedToSubscription)) return false;
 
       return true;
     });
@@ -937,6 +1042,8 @@ const AllTasksList = () => {
         'Sub-Reasons': Array.isArray(task.subReason) ? task.subReason.join(', ') : (task.subReason || 'N/A'),
         'Root Causes': Array.isArray(task.rootCause) ? task.rootCause.join(', ') : (task.rootCause || 'N/A'),
         'Responsible Party': Array.isArray(task.responsible) ? task.responsible.join(', ') : (task.responsible || 'N/A'),
+        'ITN Related': Array.isArray(task.itnRelated) ? task.itnRelated.join(', ') : (task.itnRelated || 'N/A'),
+        'Related to Subscription': Array.isArray(task.relatedToSubscription) ? task.relatedToSubscription.join(', ') : (task.relatedToSubscription || 'N/A'),
 
         // --- TEAM & ASSIGNMENT ---
         'Field Team Name': task.teamName || 'N/A',
@@ -1059,6 +1166,102 @@ const AllTasksList = () => {
     }
   };
 
+  // --- Statistics Dashboard Logic ---
+
+  // Calculate Stats dynamically based on filteredTasks
+  const totalSamples = totalSamplesToken > 0 ? totalSamplesToken : filteredTasks.length;
+  const actualAudits = filteredTasks.length;
+
+  const promoters = filteredTasks.filter(t => (t.evaluationScore || 0) >= 9).length;
+  const detractors = filteredTasks.filter(t => (t.evaluationScore || 0) >= 0 && (t.evaluationScore || 0) <= 6 && t.evaluationScore !== null).length;
+  const neutrals = filteredTasks.filter(t => (t.evaluationScore || 0) >= 7 && (t.evaluationScore || 0) <= 8).length;
+
+  const promoterRate = totalSamples > 0 ? Math.round(((promoters + (totalSamples - actualAudits)) / totalSamples) * 100) : 0;
+  const detractorRate = totalSamples > 0 ? Math.round((detractors / totalSamples) * 100) : 0;
+  const neutralRate = totalSamples > 0 ? Math.round((neutrals / totalSamples) * 100) : 0;
+  const nps = promoterRate - detractorRate;
+
+  // Helper to get top K items
+  const getTopK = (field, k = 5) => {
+    const counts = {};
+    filteredTasks.forEach(t => {
+      const values = Array.isArray(t[field]) ? t[field] : [t[field]];
+      values.forEach(v => {
+        if (v) counts[v] = (counts[v] || 0) + 1;
+      });
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, k)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: Math.round((count / actualAudits) * 100)
+      }));
+  };
+
+  const topReasons = getTopK('reason');
+  const topSubReasons = getTopK('subReason');
+  const topRootCauses = getTopK('rootCause');
+  const topOwners = getTopK('responsible');
+  const topITN = getTopK('itnRelated');
+  const topSubRel = getTopK('relatedToSubscription');
+
+  const StatBar = ({ label, value, color, icon, subLabel }) => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, bgcolor: alpha(color, 0.1), borderRadius: 2, minWidth: 100, flex: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, color: color }}>
+        {icon}
+        <Typography variant="body2" fontWeight="bold">{label}</Typography>
+      </Box>
+      <Typography variant="h4" fontWeight="900" sx={{ color: '#fff' }}>
+        {value}
+      </Typography>
+      {subLabel && <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), mt: 0.5 }}>{subLabel}</Typography>}
+    </Box>
+  );
+
+  const MiniTable = ({ title, data, color, category }) => (
+    <Box sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, p: 2, height: '100%' }}>
+      <Typography variant="subtitle2" sx={{ color: color, fontWeight: 'bold', mb: 2, borderBottom: `1px solid ${alpha(color, 0.2)}`, pb: 1 }}>
+        {title}
+      </Typography>
+      <Stack spacing={1.5}>
+        {data.map((item, idx) => (
+          <Box
+            key={idx}
+            onClick={() => handleDrillDownRowClick(category, item.name)}
+            sx={{
+              cursor: 'pointer',
+              p: 0.5,
+              borderRadius: 1,
+              transition: 'all 0.2s',
+              '&:hover': {
+                bgcolor: alpha(color, 0.1),
+                transform: 'translateX(4px)'
+              }
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+              <Typography variant="caption" sx={{ color: '#fff', fontWeight: 500 }}>{item.name}</Typography>
+              <Typography variant="caption" sx={{ color: color }}>{item.count} ({item.percentage}%)</Typography>
+            </Box>
+            <LinearProgress
+              variant="determinate"
+              value={item.percentage}
+              sx={{
+                height: 4,
+                borderRadius: 2,
+                bgcolor: 'rgba(255,255,255,0.1)',
+                '& .MuiLinearProgress-bar': { bgcolor: color }
+              }}
+            />
+          </Box>
+        ))}
+        {data.length === 0 && <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>No data</Typography>}
+      </Stack>
+    </Box>
+  );
+
   if (loading && allTasks.length === 0) {
     return <LoadingSpinner variant="page" />;
   }
@@ -1099,76 +1302,64 @@ const AllTasksList = () => {
       <Paper sx={{ mb: 3, p: 2, borderRadius: 3, border: '1px dashed #6366f1', bgcolor: 'rgba(99, 102, 241, 0.04)' }}>
 
         {/* Consolidated Premium KPI Cards */}
-        <Grid container spacing={4} sx={{ mt: 1, mb: 5 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <StatCard
-              title="Total Audits"
-              value={dashboardStats.total}
-              icon={<MdHistory size={28} />}
+        {/* Comprehensive Statistics Dashboard */}
+        <Box sx={{ mb: 4 }}>
+
+
+
+
+
+
+
+
+          {/* Summary Stats Row */}
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }}>
+            <StatBar
+              label="Total Samples"
+              value={loadingSamples ? "..." : totalSamplesToken}
               color="#7b68ee"
-              subtitle="Efficiency"
-              extra={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 800 }}>
-                    {dashboardStats.complianceRate}% Compliance
-                  </Typography>
-                  <Box sx={{ flexGrow: 1, height: 4, bgcolor: alpha('#fff', 0.1), borderRadius: 2 }}>
-                    <Box sx={{ width: `${dashboardStats.complianceRate}%`, height: '100%', bgcolor: '#10b981', borderRadius: 2 }} />
-                  </Box>
-                </Box>
-              }
+              icon={<MdHistory />}
+              subLabel={`Actual Audits: ${actualAudits}`}
             />
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <StatCard
-              title="Health Status"
-              value={filteredTasks.filter(t => t.status === 'Closed').length}
-              icon={<MdCheckCircle size={28} />}
-              color="#10b981"
-              subtitle="Resolution"
-              extra={
-                <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), fontWeight: 500 }}>
-                  <span style={{ color: '#ff9800', fontWeight: 800 }}>
-                    {filteredTasks.filter(t => ['Todo', 'In Progress'].includes(t.status)).length}
-                  </span> Active / Open Issues
-                </Typography>
-              }
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <StatCard
-              title="Customer Pulse"
-              value={dashboardStats.promoterRate + '%'}
-              icon={<MdStar size={28} />}
-              color="#f59e0b"
-              subtitle="Sentiment"
-              extra={
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="caption" sx={{ color: '#ef4444' }}>
-                    Destractors: <strong>{dashboardStats.detractorRate}%</strong>
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#f59e0b' }}>
-                    Neutrals: <strong>{dashboardStats.neutralRate}%</strong>
-                  </Typography>
-                </Box>
-              }
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <StatCard
-              title="Excellence Score"
-              value={dashboardStats.avgScore}
-              icon={<MdAssignmentTurnedIn size={28} />}
-              color="#06b6d4"
-              subtitle="Performance"
-              extra={
-                <Typography variant="caption" sx={{ color: alpha('#fff', 0.5) }}>
-                  Top Performer: <strong style={{ color: '#fff' }}>{trendData?.topOwners?.[0]?.name || 'N/A'}</strong>
-                </Typography>
-              }
-            />
-          </Grid>
-        </Grid>
+            <StatBar label="NPS Score" value={nps} color={nps >= 50 ? "#4caf50" : nps >= 0 ? "#ff9800" : "#f44336"} icon={<MdInsights />} />
+            <StatBar label="Promoters" value={`${promoterRate}%`} color="#4caf50" icon={<MdStar />} />
+            <StatBar label="Detractors" value={`${detractorRate}%`} color="#f44336" icon={<MdError />} />
+            <StatBar label="Neutrals" value={`${neutralRate}%`} color="#ff9800" icon={<MdRadioButtonUnchecked />} />
+          </Stack>
+
+          {/* Expandable Detailed Stats */}
+          <Accordion sx={{ bgcolor: 'rgba(255,255,255,0.02)', color: '#fff', '&:before': { display: 'none' }, boxShadow: 'none' }}>
+            <AccordionSummary expandIcon={<MdExpandMore style={{ color: '#fff' }} />} sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <MdBarChart style={{ color: '#7b68ee' }} />
+                <Typography fontWeight="bold">Detailed Breakdown (Top 5 Results)</Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <MiniTable title="Top Reasons" data={topReasons} color="#2196f3" category="reason" />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <MiniTable title="Top Sub-Reasons" data={topSubReasons} color="#9c27b0" category="subReason" />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <MiniTable title="Top Root Causes" data={topRootCauses} color="#e91e63" category="rootCause" />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <MiniTable title="Top Owners" data={topOwners} color="#00bcd4" category="responsible" />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <MiniTable title="ITN Related" data={topITN} color="#ff5722" category="itnRelated" />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <MiniTable title="Subscription Related" data={topSubRel} color="#8bc34a" category="relatedToSubscription" />
+                </Grid>
+              </Grid>
+            </AccordionDetails>
+          </Accordion>
+        </Box>
+
 
         {/* View Selection Toggle */}
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
@@ -2127,6 +2318,8 @@ const AllTasksList = () => {
               <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Sub Reason</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Root Cause</TableCell>
               <TableCell style={{ fontSize: '0.875rem', minWidth: 150 }}>Owner</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 100 }}>ITN Related</TableCell>
+              <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Related to Subscription</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Score</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 80 }}>Week</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 100 }}>GAIA Check</TableCell>
@@ -2152,6 +2345,8 @@ const AllTasksList = () => {
                 { key: 'subReason', placeholder: 'Sub Reason' },
                 { key: 'rootCause', placeholder: 'Root Cause' },
                 { key: 'responsible', placeholder: 'Owner' },
+                { key: 'itnRelated', placeholder: 'ITN Related' },
+                { key: 'relatedToSubscription', placeholder: 'Related to Subscription' },
                 { key: 'evaluationScore', placeholder: 'Score' }
               ].map((col) => (
                 <TableCell key={col.key} sx={{ p: '4px !important', minWidth: 100 }}>
@@ -2445,6 +2640,25 @@ const AllTasksList = () => {
                       <TableCell>
                         <Typography variant="caption" sx={{ display: 'block', fontWeight: 'bold', fontSize: '0.7rem', color: '#7b68ee' }}>
                           {Array.isArray(task.responsible) ? task.responsible.join(", ") : (task.responsible || "-")}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={Array.isArray(task.itnRelated) ? task.itnRelated.join(", ") : (task.itnRelated || "-")}
+                          size="small"
+                          sx={{
+                            fontWeight: 'bold',
+                            fontSize: '0.7rem',
+                            bgcolor: (Array.isArray(task.itnRelated) && task.itnRelated.includes('Yes')) || task.itnRelated === 'Yes' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                            color: (Array.isArray(task.itnRelated) && task.itnRelated.includes('Yes')) || task.itnRelated === 'Yes' ? '#4caf50' : '#fff',
+                            border: '1px solid',
+                            borderColor: 'divider'
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ display: 'block', fontSize: '0.75rem' }}>
+                          {Array.isArray(task.relatedToSubscription) ? task.relatedToSubscription.join(", ") : (task.relatedToSubscription || "-")}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -2778,6 +2992,104 @@ const AllTasksList = () => {
           />
         )
       }
+
+      {/* Categorical Drill-down Dialog */}
+      <Dialog
+        open={drillDownState.open}
+        onClose={() => setDrillDownState(prev => ({ ...prev, open: false }))}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            backgroundColor: '#1a1a1a',
+            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
+            borderRadius: '24px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            minHeight: '60vh'
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          pb: 1,
+          borderBottom: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          <Box>
+            <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 0.5 }}>
+              Task List
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+              {drillDownState.title} ({drillDownState.tasks.length} Tasks)
+            </Typography>
+          </Box>
+          <IconButton onClick={() => setDrillDownState(prev => ({ ...prev, open: false }))} sx={{ color: '#fff' }}>
+            <MdClose />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Date</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {drillDownState.tasks.map((task) => (
+                  <TableRow key={task._id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}>
+                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>
+                      {task.interviewDate ? format(new Date(task.interviewDate), 'dd/MM/yyyy') : '-'}
+                    </TableCell>
+                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
+                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
+                    <TableCell>
+                      {task.evaluationScore && (
+                        <Chip
+                          label={task.evaluationScore}
+                          size="small"
+                          sx={{
+                            height: 20,
+                            fontSize: '0.65rem',
+                            fontWeight: 'bold',
+                            bgcolor: task.evaluationScore >= 9 ? 'rgba(76, 175, 80, 0.2)' :
+                              task.evaluationScore >= 7 ? 'rgba(255, 152, 0, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                            color: task.evaluationScore >= 9 ? '#4caf50' :
+                              task.evaluationScore >= 7 ? '#ff9800' : '#f44336'
+                          }}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={() => {
+                          setSelectedTask(task);
+                          setViewDialogOpen(true);
+                        }}
+                        sx={{
+                          textTransform: 'none',
+                          color: '#7b68ee',
+                          fontWeight: 'bold',
+                          '&:hover': { bgcolor: alpha('#7b68ee', 0.1) }
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog

@@ -50,7 +50,8 @@ import {
   revertAuditRecord,
   uploadReachSupervisorAudit,
   commitReachSupervisorData,
-  updateAuditLogDates
+  updateAuditLogDates,
+  deleteAuditLog
 } from "../controllers/taskControllers.js";
 
 // Configure multer for memory storage
@@ -169,6 +170,7 @@ router.post("/prevention-strategy", protect, savePreventionStrategy);
 router.post("/upload-reach-audit", protect, upload.single('file'), uploadReachSupervisorAudit);
 router.post("/commit-reach-audit", protect, commitReachSupervisorData);
 router.put("/update-audit-dates/:auditId", protect, updateAuditLogDates);
+router.delete("/audit-logs/:id", protect, deleteAuditLog);
 
 
 export default router;

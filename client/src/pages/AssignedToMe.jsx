@@ -710,16 +710,7 @@ const AssignedToMe = () => {
     },
     { field: 'customerName', headerName: 'Customer Name', flex: 1, minWidth: 150 },
     { field: 'governorate', headerName: 'Governorate', width: 130 },
-    {
-      field: 'summary',
-      headerName: 'Summary',
-      width: 200,
-      renderCell: (params) => (
-        <Typography variant="caption" sx={{ color: '#2196f3', fontWeight: '500' }}>
-          {params.row.subTasks?.[0]?.title === "Task Reception" ? params.row.subTasks[0].shortNote : ""}
-        </Typography>
-      )
-    },
+    /* Summary column removed */
     {
       field: 'status',
       headerName: 'Status',

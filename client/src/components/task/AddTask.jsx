@@ -40,8 +40,8 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
       <Stack spacing={2}>
         {rcaRows.map((row, index) => (
           <Box key={index} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'rgba(0,0,0,0.02)' }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={2.7}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={2.1}>
                 <Autocomplete
                   freeSolo
                   fullWidth
@@ -53,7 +53,7 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                   renderInput={(params) => <TextField {...params} label="Main Reason" variant="outlined" />}
                 />
               </Grid>
-              <Grid item xs={12} sm={2.7}>
+              <Grid item xs={12} sm={2.1}>
                 <Autocomplete
                   freeSolo
                   fullWidth
@@ -65,7 +65,7 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                   renderInput={(params) => <TextField {...params} label="Sub Reason" variant="outlined" />}
                 />
               </Grid>
-              <Grid item xs={12} sm={2.7}>
+              <Grid item xs={12} sm={2.1}>
                 <Autocomplete
                   freeSolo
                   fullWidth
@@ -77,7 +77,7 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                   renderInput={(params) => <TextField {...params} label="Root Cause" variant="outlined" />}
                 />
               </Grid>
-              <Grid item xs={12} sm={2.7}>
+              <Grid item xs={12} sm={2.1}>
                 <Autocomplete
                   freeSolo
                   fullWidth
@@ -89,7 +89,33 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                   renderInput={(params) => <TextField {...params} label="Owner" variant="outlined" />}
                 />
               </Grid>
-              <Grid item xs={12} sm={1.2}>
+              <Grid item xs={12} sm={2.1}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>ITN Related</InputLabel>
+                  <Select
+                    value={row.itnRelated || 'No'}
+                    label="ITN Related"
+                    onChange={(e) => handleChange(index, 'itnRelated', e.target.value)}
+                  >
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={2.1}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Related to Current Subscription</InputLabel>
+                  <Select
+                    value={row.relatedToSubscription || 'No'}
+                    label="Related to Current Subscription"
+                    onChange={(e) => handleChange(index, 'relatedToSubscription', e.target.value)}
+                  >
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={1.5}>
                 <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                   <IconButton color="primary" onClick={handleAdd} size="small">
                     <AddCircleIcon />
@@ -208,7 +234,6 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [assignedTo, setAssignedTo] = useState(task?.assignedTo || []);
   const [whomItMayConcern, setWhomItMayConcern] = useState([]);
   const [priority, setPriority] = useState(task?.priority?.toUpperCase() || dropdownOptions.PRIORITY[0]);
-  const [category, setCategory] = useState(dropdownOptions.TASK_CATEGORIES[0]);
   const [teamCompany, setTeamCompany] = useState(dropdownOptions.TEAM_COMPANY[0]);
   const [evaluationScore, setEvaluationScore] = useState(dropdownOptions.EVALUATION_SCORE[0]);
   const [governorate, setGovernorate] = useState(dropdownOptions.GOVERNORATES[0]);
@@ -216,7 +241,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [customerType, setCustomerType] = useState(dropdownOptions.CUSTOMER_TYPE[0]);
   const [validationStatus, setValidationStatus] = useState(dropdownOptions.VALIDATION_STATUS[1] || dropdownOptions.VALIDATION_STATUS[0]);
   const [rcaRows, setRcaRows] = useState([
-    { responsible: '', reason: '', subReason: '', rootCause: '' }
+    { responsible: '', reason: '', subReason: '', rootCause: '', itnRelated: 'No', relatedToSubscription: 'Yes' }
   ]);
   const [ontType, setOntType] = useState("");
   const [freeExtender, setFreeExtender] = useState("No");
@@ -270,7 +295,6 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       whomItMayConcern,
       // status,
       priority,
-      category,
       teamCompany,
       teamName: teamInfo.teamName,
       teamId: teamInfo.teamId,
@@ -281,6 +305,8 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       reason: rcaRows.map(r => r.reason).filter(v => v),
       subReason: rcaRows.map(r => r.subReason).filter(v => v),
       rootCause: rcaRows.map(r => r.rootCause).filter(v => v),
+      itnRelated: rcaRows.map(r => r.itnRelated).filter(v => v),
+      relatedToSubscription: rcaRows.map(r => r.relatedToSubscription).filter(v => v),
       ontType,
       freeExtender,
       extenderType: freeExtender === 'Yes' ? extenderType : null,
@@ -335,7 +361,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
     setOpen(false);
   };
 
-  const handleAddRcaRow = () => setRcaRows([...rcaRows, { responsible: '', reason: '', subReason: '', rootCause: '' }]);
+  const handleAddRcaRow = () => setRcaRows([...rcaRows, { responsible: '', reason: '', subReason: '', rootCause: '', itnRelated: 'No', relatedToSubscription: 'No' }]);
   const handleRemoveRcaRow = (index) => setRcaRows(rcaRows.filter((_, i) => i !== index));
   const handleChangeRcaRow = (index, field, newValue) => {
     const updated = [...rcaRows];
@@ -451,25 +477,14 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             />
           </Stack>
 
-          {/* Row 4: Tariff Name, Interview Date */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              label="Tariff Name"
-              fullWidth
-              variant="outlined"
-              {...register('tarrifName')}
-              error={!!errors.tarrifName}
-              helperText={errors.tarrifName ? errors.tarrifName.message : ''}
-            />
-            <TextField
-              label="Interview Date"
-              type="date"
-              fullWidth
-              variant="outlined"
-              {...register('interviewDate')}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Stack>
+          <TextField
+            label="Tariff Name"
+            fullWidth
+            variant="outlined"
+            {...register('tarrifName')}
+            error={!!errors.tarrifName}
+            helperText={errors.tarrifName ? errors.tarrifName.message : ''}
+          />
 
           {/* Row 5: Satisfaction Score */}
           <FormControl fullWidth variant="outlined">
@@ -510,31 +525,19 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             helperText="Maximum 100 characters"
           />
 
-          {/* Row 7: Customer Type, PIS Date */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Customer Type</InputLabel>
-              <Select
-                value={customerType}
-                onChange={(e) => setCustomerType(e.target.value)}
-                label="Customer Type"
-              >
-                {dropdownOptions.CUSTOMER_TYPE.map((list) => (
-                  <MenuItem key={list} value={list}>{list}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="PIS Date"
-              type="date"
-              fullWidth
-              variant="outlined"
-              {...register('pisDate')}
-              error={!!errors.pisDate}
-              helperText={errors.pisDate ? errors.pisDate.message : ''}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Stack>
+          {/* Row 7: Customer Type */}
+          <FormControl fullWidth variant="outlined">
+            <InputLabel>Customer Type</InputLabel>
+            <Select
+              value={customerType}
+              onChange={(e) => setCustomerType(e.target.value)}
+              label="Customer Type"
+            >
+              {dropdownOptions.CUSTOMER_TYPE.map((list) => (
+                <MenuItem key={list} value={list}>{list}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           {/* New Row: GAIA Check & Contract Date */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -572,16 +575,8 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             />
           </Stack>
 
-          {/* New Row: In Date & App Date */}
+          {/* Row: App Date & In Date */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              label="In date (send to Subcon)"
-              type="date"
-              fullWidth
-              variant="outlined"
-              {...register('inDate')}
-              InputLabelProps={{ shrink: true }}
-            />
             <TextField
               label="App. Date"
               type="date"
@@ -590,20 +585,56 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               {...register('appDate')}
               InputLabelProps={{ shrink: true }}
             />
+            <TextField
+              label="In date (send to Subcon)"
+              type="date"
+              fullWidth
+              variant="outlined"
+              {...register('inDate')}
+              InputLabelProps={{ shrink: true }}
+            />
           </Stack>
 
-          {/* New Row: Close Date */}
-          <TextField
-            label="Close Date (Online)"
-            type="date"
-            fullWidth
-            variant="outlined"
-            {...register('closeDate')}
-            InputLabelProps={{ shrink: true }}
-          />
-
-          {/* Row 8: Free Extender (Yes/No) */}
+          {/* Ordered Date Fields: Close Date -> PIS Date -> Interview Date */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <TextField
+              label="Close Date (Online)"
+              type="date"
+              fullWidth
+              variant="outlined"
+              {...register('closeDate')}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="PIS Date"
+              type="date"
+              fullWidth
+              variant="outlined"
+              {...register('pisDate')}
+              error={!!errors.pisDate}
+              helperText={errors.pisDate ? errors.pisDate.message : ''}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Interview Date"
+              type="date"
+              fullWidth
+              variant="outlined"
+              {...register('interviewDate')}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
+
+          {/* Row: ONT Type -> Free Extender */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>ONT Type</InputLabel>
+              <Select value={ontType} onChange={(e) => setOntType(e.target.value)} label="ONT Type">
+                {dropdownOptions.ONT_TYPE.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <FormControl fullWidth variant="outlined">
               <InputLabel>Free Extender</InputLabel>
               <Select
@@ -697,18 +728,6 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
                 ))}
               </Select>
             </FormControl>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                label="Category"
-              >
-                {dropdownOptions.TASK_CATEGORIES.map((list) => (
-                  <MenuItem key={list} value={list}>{list}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -716,14 +735,6 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               <InputLabel>Validation Status</InputLabel>
               <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
                 {dropdownOptions.VALIDATION_STATUS.map((list) => (
-                  <MenuItem key={list} value={list}>{list}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>ONT Type</InputLabel>
-              <Select value={ontType} onChange={(e) => setOntType(e.target.value)} label="ONT Type">
-                {dropdownOptions.ONT_TYPE.map((list) => (
                   <MenuItem key={list} value={list}>{list}</MenuItem>
                 ))}
               </Select>

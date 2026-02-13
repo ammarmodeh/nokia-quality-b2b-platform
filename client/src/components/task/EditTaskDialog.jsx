@@ -24,8 +24,8 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
       <Stack spacing={2}>
         {rcaRows.map((row, index) => (
           <Box key={index} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'rgba(0,0,0,0.02)' }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={2.7}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={2.1}>
                 <Autocomplete
                   freeSolo
                   fullWidth
@@ -37,7 +37,7 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                   renderInput={(params) => <TextField {...params} label="Main Reason" variant="outlined" />}
                 />
               </Grid>
-              <Grid item xs={12} sm={2.7}>
+              <Grid item xs={12} sm={2.1}>
                 <Autocomplete
                   freeSolo
                   fullWidth
@@ -49,7 +49,7 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                   renderInput={(params) => <TextField {...params} label="Sub Reason" variant="outlined" />}
                 />
               </Grid>
-              <Grid item xs={12} sm={2.7}>
+              <Grid item xs={12} sm={2.1}>
                 <Autocomplete
                   freeSolo
                   fullWidth
@@ -61,7 +61,7 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                   renderInput={(params) => <TextField {...params} label="Root Cause" variant="outlined" />}
                 />
               </Grid>
-              <Grid item xs={12} sm={2.7}>
+              <Grid item xs={12} sm={2.1}>
                 <Autocomplete
                   freeSolo
                   fullWidth
@@ -73,7 +73,33 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                   renderInput={(params) => <TextField {...params} label="Owner" variant="outlined" />}
                 />
               </Grid>
-              <Grid item xs={12} sm={1.2}>
+              <Grid item xs={12} sm={2.1}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>ITN Related</InputLabel>
+                  <Select
+                    value={row.itnRelated || 'No'}
+                    label="ITN Related"
+                    onChange={(e) => handleChange(index, 'itnRelated', e.target.value)}
+                  >
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={2.1}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Related to Current Subscription</InputLabel>
+                  <Select
+                    value={row.relatedToSubscription || 'No'}
+                    label="Related to Current Subscription"
+                    onChange={(e) => handleChange(index, 'relatedToSubscription', e.target.value)}
+                  >
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={1.5}>
                 <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                   <IconButton color="primary" onClick={handleAdd} size="small">
                     <AddCircleIcon />
@@ -103,7 +129,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   // const [status, setStatus] = useState(LISTS[0]);
   const [priority, setPriority] = useState("");
   const [department, setDepartment] = useState(DEPARTMENT[0]);
-  const [category, setCategory] = useState("");
   const [date, setDate] = useState("");
   const [pisDate, setPisDate] = useState(""); // State for PIS Date
   const [interviewDate, setInterviewDate] = useState("");
@@ -120,7 +145,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const [customerType, setCustomerType] = useState('');
   const [validationStatus, setValidationStatus] = useState("");
   const [rcaRows, setRcaRows] = useState([
-    { responsible: '', reason: '', subReason: '', rootCause: '' }
+    { responsible: '', reason: '', subReason: '', rootCause: '', itnRelated: 'No', relatedToSubscription: 'Yes' }
   ]);
   const [ontType, setOntType] = useState("");
   const [freeExtender, setFreeExtender] = useState("No");
@@ -259,9 +284,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
 
       setDepartment(task.department || DEPARTMENT[0]);
 
-      const categoryValue = task.category || "";
-      setCategory(categoryValue);
-
       setPisDate(formattedPISDate);
       setInterviewDate(formattedInterviewDate);
       setTeamCompany(task.teamCompany || '');
@@ -277,19 +299,23 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setCustomerType(task.customerType || '');
       setValidationStatus(task.validationStatus || "");
 
+      const itns = Array.isArray(task.itnRelated) ? task.itnRelated : (task.itnRelated ? [task.itnRelated] : []);
       const resps = Array.isArray(task.responsible) ? task.responsible : (task.responsible ? [task.responsible] : []);
       const reas = Array.isArray(task.reason) ? task.reason : (task.reason ? [task.reason] : []);
       const subReas = Array.isArray(task.subReason) ? task.subReason : (task.subReason ? [task.subReason] : []);
       const roots = Array.isArray(task.rootCause) ? task.rootCause : (task.rootCause ? [task.rootCause] : []);
+      const subs = Array.isArray(task.relatedToSubscription) ? task.relatedToSubscription : (task.relatedToSubscription ? [task.relatedToSubscription] : []);
 
-      const maxLen = Math.max(resps.length, reas.length, subReas.length, roots.length, 1);
+      const maxLen = Math.max(resps.length, reas.length, subReas.length, roots.length, itns.length, subs.length, 1);
       const rows = [];
       for (let i = 0; i < maxLen; i++) {
         rows.push({
           responsible: resps[i] || '',
           reason: reas[i] || '',
           subReason: subReas[i] || '',
-          rootCause: roots[i] || ''
+          rootCause: roots[i] || '',
+          itnRelated: itns[i] || 'No',
+          relatedToSubscription: subs[i] || 'No'
         });
       }
       setRcaRows(rows);
@@ -346,7 +372,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       whomItMayConcern,
       priority,
       department,
-      category,
       teamCompany,
       teamName: teamInfo.teamName,
       teamId: teamInfo.teamId,
@@ -360,6 +385,8 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       reason: rcaRows.map(r => r.reason).filter(v => v),
       subReason: rcaRows.map(r => r.subReason).filter(v => v),
       rootCause: rcaRows.map(r => r.rootCause).filter(v => v),
+      itnRelated: rcaRows.map(r => r.itnRelated).filter(v => v),
+      relatedToSubscription: rcaRows.map(r => r.relatedToSubscription).filter(v => v),
       ontType,
       freeExtender,
       extenderType: freeExtender === 'Yes' ? extenderType : null,
@@ -394,7 +421,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
     }
   };
 
-  const handleAddRcaRow = () => setRcaRows([...rcaRows, { responsible: '', reason: '', subReason: '', rootCause: '' }]);
+  const handleAddRcaRow = () => setRcaRows([...rcaRows, { responsible: '', reason: '', subReason: '', rootCause: '', itnRelated: 'No', relatedToSubscription: 'No' }]);
   const handleRemoveRcaRow = (index) => setRcaRows(rcaRows.filter((_, i) => i !== index));
   const handleChangeRcaRow = (index, field, newValue) => {
     const updated = [...rcaRows];
@@ -486,7 +513,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               />
             </Stack>
 
-            {/* Row 4: Tariff Name, Interview Date */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
                 label="Tariff Name"
@@ -495,16 +521,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
                 {...register("tarrifName", { required: "Tariff Name is required" })}
                 error={!!errors.tarrifName}
                 helperText={errors.tarrifName ? errors.tarrifName.message : ""}
-              />
-              <TextField
-                label="Interview Date"
-                type="date"
-                fullWidth
-                variant="outlined"
-                {...register('interviewDate')}
-                value={interviewDate}
-                onChange={(e) => setInterviewDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
               />
             </Stack>
 
@@ -543,29 +559,15 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               helperText="Maximum 100 characters"
             />
 
-            {/* Row 7: Customer Type, PIS Date */}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Customer Type</InputLabel>
-                <Select value={customerType} onChange={(e) => setCustomerType(e.target.value)} label="Customer Type">
-                  {dropdownOptions.CUSTOMER_TYPE.map((list) => (
-                    <MenuItem key={list} value={list}>{list}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                label="PIS Date"
-                type="datetime-local"
-                fullWidth
-                variant="outlined"
-                {...register('pisDate', { required: 'PIS Date is required!' })}
-                error={!!errors.pisDate}
-                helperText={errors.pisDate ? errors.pisDate.message : ''}
-                value={pisDate}
-                onChange={(e) => setPisDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Stack>
+            {/* Row 7: Customer Type */}
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Customer Type</InputLabel>
+              <Select value={customerType} onChange={(e) => setCustomerType(e.target.value)} label="Customer Type">
+                {dropdownOptions.CUSTOMER_TYPE.map((list) => (
+                  <MenuItem key={list} value={list}>{list}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
             {/* New Row: GAIA Check & Contract Date */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -605,18 +607,8 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               />
             </Stack>
 
-            {/* New Row: In Date & App Date */}
+            {/* Row: App Date & In Date */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <TextField
-                label="In date (send to Subcon)"
-                type="date"
-                fullWidth
-                variant="outlined"
-                {...register('inDate')}
-                value={inDate}
-                onChange={(e) => setInDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
               <TextField
                 label="App. Date"
                 type="date"
@@ -627,22 +619,64 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
                 onChange={(e) => setAppDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
+              <TextField
+                label="In date (send to Subcon)"
+                type="date"
+                fullWidth
+                variant="outlined"
+                {...register('inDate')}
+                value={inDate}
+                onChange={(e) => setInDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
             </Stack>
 
-            {/* New Row: Close Date */}
-            <TextField
-              label="Close Date (Online)"
-              type="date"
-              fullWidth
-              variant="outlined"
-              {...register('closeDate')}
-              value={closeDate}
-              onChange={(e) => setCloseDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-
-            {/* Row 8: Free Extender (Yes/No) */}
+            {/* Ordered Date Fields: Close Date -> PIS Date -> Interview Date */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                label="Close Date (Online)"
+                type="date"
+                fullWidth
+                variant="outlined"
+                {...register('closeDate')}
+                value={closeDate}
+                onChange={(e) => setCloseDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="PIS Date"
+                type="datetime-local"
+                fullWidth
+                variant="outlined"
+                {...register('pisDate', { required: 'PIS Date is required!' })}
+                error={!!errors.pisDate}
+                helperText={errors.pisDate ? errors.pisDate.message : ''}
+                value={pisDate}
+                onChange={(e) => setPisDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="Interview Date"
+                type="date"
+                fullWidth
+                variant="outlined"
+                {...register('interviewDate')}
+                value={interviewDate}
+                onChange={(e) => setInterviewDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Stack>
+
+            {/* Row: ONT Type -> Free Extender */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>ONT Type</InputLabel>
+                <Select value={ontType} onChange={(e) => setOntType(e.target.value)} label="ONT Type">
+                  {dropdownOptions.ONT_TYPE.map((list) => (
+                    <MenuItem key={list} value={list}>{list}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <FormControl fullWidth variant="outlined">
                 <InputLabel>Free Extender</InputLabel>
                 <Select
@@ -723,14 +757,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
                 </Select>
               </FormControl>
               <FormControl fullWidth variant="outlined">
-                <InputLabel>Category</InputLabel>
-                <Select value={category} onChange={(e) => setCategory(e.target.value)} label="Category">
-                  {dropdownOptions.TASK_CATEGORIES.map((list) => (
-                    <MenuItem key={list} value={list}>{list}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl fullWidth variant="outlined">
                 <InputLabel>Validation Status</InputLabel>
                 <Select value={validationStatus} onChange={(e) => setValidationStatus(e.target.value)} label="Validation Status">
                   {dropdownOptions.VALIDATION_STATUS.map((list) => (
@@ -741,14 +767,6 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
             </Stack>
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>ONT Type</InputLabel>
-                <Select value={ontType} onChange={(e) => setOntType(e.target.value)} label="ONT Type">
-                  {dropdownOptions.ONT_TYPE.map((list) => (
-                    <MenuItem key={list} value={list}>{list}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
               <FormControl fullWidth variant="outlined">
                 <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
                 <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
@@ -807,7 +825,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
           </Stack>
         </form>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 };
 

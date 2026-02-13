@@ -1457,6 +1457,7 @@ export const uploadAuditSheet = async (req, res) => {
       auditType: 'DVOC',
       importStats: {
         totalRows: jsonData.length,
+        matchedRows: 0,
         updatedTasks: 0
       }
     });
@@ -1535,10 +1536,14 @@ export const uploadAuditSheet = async (req, res) => {
     });
 
     // Summary statistics
-    const totalRows = results.length;
-    const matchedRows = results.filter(r => r._hasMatch).length;
-    const unmatchedRows = totalRows - matchedRows;
+    const totalRowsCount = results.length;
+    const finalMatchedRows = results.filter(r => r._hasMatch).length;
+    const unmatchedRows = totalRowsCount - finalMatchedRows;
     const totalMatches = results.reduce((sum, r) => sum + r._matchCount, 0);
+
+    // Update the audit log with the preliminary stats
+    auditLog.importStats.matchedRows = finalMatchedRows;
+    await auditLog.save();
 
     // --- Persist Detailed Records ---
     const auditRecordsData = results.map(r => ({
@@ -1780,6 +1785,7 @@ export const commitAuditData = async (req, res) => {
     auditLog.status = 'Imported';
     auditLog.importStats = {
       totalRows: jsonData.length,
+      matchedRows: auditLog.importStats.matchedRows || 0, // Preserve overlaps
       updatedTasks: updatedCount
     };
     await auditLog.save();
@@ -2155,3 +2161,35 @@ export const updateAuditLogDates = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const deleteAuditLog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const auditLog = await AuditLog.findById(id);
+
+    if (!auditLog) {
+      return res.status(404).json({ error: "Audit log not found" });
+    }
+
+    // 1. Delete associated AuditRecords
+    await AuditRecord.deleteMany({ auditId: id });
+
+    // 2. Delete physical file if it exists
+    if (auditLog.path && fs.existsSync(auditLog.path)) {
+      try {
+        fs.unlinkSync(auditLog.path);
+      } catch (fileError) {
+        console.error("Error deleting physical file:", fileError);
+      }
+    }
+
+    // 3. Delete AuditLog entry
+    await AuditLog.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Audit log and associated records deleted successfully" });
+  } catch (error) {
+    console.error("Delete Audit Log Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+

@@ -195,6 +195,8 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
       'Reason': task.reason,
       'Sub Reason': task.subReason || 'N/A',
       'Root Cause': task.rootCause || 'N/A',
+      'ITN Related': task.itnRelated || 'N/A',
+      'Related to Current Subscription': task.relatedToSubscription || 'N/A',
       'Customer Type': task.customerType,
       'Governorate': task.governorate,
       'District': task.district,
@@ -367,6 +369,8 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
                       <DetailItem label="Reason" value={task.reason} />
                       <DetailItem label="Sub Reason" value={task.subReason} />
                       <DetailItem label="Root Cause" value={task.rootCause} />
+                      <DetailItem label="ITN Related" value={task.itnRelated} />
+                      <DetailItem label="Related to Current Subscription" value={task.relatedToSubscription} />
                       <DetailItem
                         label="Customer Feedback"
                         value={task.customerFeedback}
@@ -414,33 +418,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
                     </Stack>
                   </Grid>
 
-                  {/* Subtasks / Activity */}
-                  {task.subTasks && task.subTasks.length > 0 && (
-                    <Grid item xs={12}>
-                      <Box sx={{ mt: 2, p: 2, bgcolor: '#252525', borderRadius: '12px', border: '1px solid #333' }}>
-                        <Typography variant="caption" fontWeight="bold" color="gray" sx={{ mb: 2, display: 'block', textTransform: 'uppercase' }}>
-                          ACTION STEPS TAKEN
-                        </Typography>
-                        <Stack spacing={1}>
-                          {task.subTasks.map((sub, idx) => (
-                            <Box key={idx} sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                              <Chip label={idx + 1} size="small" sx={{ minWidth: 24, height: 24, fontSize: '0.7rem' }} />
-                              <Box>
-                                <Typography variant="body2" color="white" fontWeight="500">
-                                  {sub.title || `Step ${idx + 1}`}
-                                </Typography>
-                                {sub.note && (
-                                  <Typography variant="body2" color="gray">
-                                    {sub.note}
-                                  </Typography>
-                                )}
-                              </Box>
-                            </Box>
-                          ))}
-                        </Stack>
-                      </Box>
-                    </Grid>
-                  )}
+                  {/* Subtasks / Activity Removed */}
                 </Grid>
               </Box>
             </Paper>
@@ -469,6 +447,6 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
           Export Details to Excel
         </Button>
       </DialogActions>
-    </Dialog>
+    </Dialog >
   );
 };

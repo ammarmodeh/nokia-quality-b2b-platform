@@ -68,7 +68,7 @@ const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, p
         return acc;
       }, {});
       const topReason = Object.entries(mostCommonReason).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
-      const evaluatedPercent = ((teamsData.filter(t => t.isEvaluated).length / (teamsData.length || 1)) * 100).toFixed(1);
+      const evaluatedPercent = Math.round((teamsData.filter(t => t.isEvaluated).length / (teamsData.length || 1)) * 100);
 
       const dateStr = period || todayDate;
 
@@ -320,8 +320,8 @@ Reporting Period: ${dateStr} ${explicitDates}
 Executive Summary:
 - Total Tasks (Detractors / Neutrals): ${totalCriticalTasks}
 - Failed Preventions (Reported issues that escalated): ${reportedOverlapCount}
-- Prevention Gap Rate: ${preventionRate}%
-- Diagnosis Accuracy: ${diagnosisAccuracy?.rate || 0}%
+- Prevention Gap Rate: ${Math.round(preventionRate)}%
+- Diagnosis Accuracy: ${Math.round(diagnosisAccuracy?.rate || 0)}%
 
 Process Efficiency (Aging Analysis):
 - Avg. Supervisor Dispatch Speed: ${processEfficiency?.avgDispatchTime || 0} days
@@ -351,8 +351,8 @@ ${greeting}
 ملخص تنفيذي:
 - إجمالي المهام الحرجة (العملاء غير الراضين / المحايدين): ${totalCriticalTasks}
 - فشل منع التصعيد (مشاكل تم الإبلاغ عنها وتفاقمت): ${reportedOverlapCount}
-- معدل فجوة الوقاية: ${preventionRate}%
-- دقة التشخيص: ${diagnosisAccuracy?.rate || 0}%
+- معدل فجوة الوقاية: ${Math.round(preventionRate)}%
+- دقة التشخيص: ${Math.round(diagnosisAccuracy?.rate || 0)}%
 
 كفاءة العمليات (تحليل التأخير):
 - متوسط سرعة توجيه المشرفين: ${processEfficiency?.avgDispatchTime || 0} أيام

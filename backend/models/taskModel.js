@@ -177,6 +177,8 @@ const taskSchema = new mongoose.Schema(
     freeExtender: { type: String, enum: ["Yes", "No", null], default: null },
     extenderType: { type: String, trim: true, default: null },
     extenderNumber: { type: Number, default: 0 },
+    itnRelated: { type: [String], default: [] },
+    relatedToSubscription: { type: [String], default: [] },
     reason: { type: [String], default: [] },
     subReason: { type: [String], default: [] },
     rootCause: { type: [String], default: [] },

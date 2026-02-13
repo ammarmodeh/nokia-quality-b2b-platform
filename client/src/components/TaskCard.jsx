@@ -47,9 +47,8 @@ import { useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import EditTaskDialog from "./task/EditTaskDialog";
 import { IoMdMagnet } from "react-icons/io";
-import { RiProgress4Fill } from "react-icons/ri";
-import DetailedSubtaskDialog from "./task/DetailedSubtaskDialog";
-import TaskProgressDialog from "./task/TaskProgressDialog";
+// import DetailedSubtaskDialog from "./task/DetailedSubtaskDialog";
+// import TaskProgressDialog from "./task/TaskProgressDialog";
 import { toast } from "sonner";
 import { getCustomWeekNumber } from "../utils/helpers";
 
@@ -80,9 +79,9 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [anchorEl, setAnchorEl] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
-  const [progressDialogOpen, setProgressDialogOpen] = useState(false);
-  const [managementNoteOpen, setManagementNoteOpen] = useState(false);
+  // const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  // const [progressDialogOpen, setProgressDialogOpen] = useState(false);
+  // const [managementNoteOpen, setManagementNoteOpen] = useState(false);
   const [creatorColor, setCreatorColor] = useState([]);
 
   const assignedUsers = Array.isArray(task?.assignedTo)
@@ -109,7 +108,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
     if (action === "favorite") handleFavoriteClick(task);
     if (action === "view") navigate(`/tasks/view-task/${task._id}`, { state: { from: location.pathname } });
     if (action === "archive") handleTaskArchive(task._id);
-    if (action === "progress") setProgressDialogOpen(true);
+    // if (action === "progress") setProgressDialogOpen(true);
   };
 
   const generateTaskReport = () => {
@@ -348,52 +347,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
             )}
 
             {/* Subtask Management Notes */}
-            {task.subTasks?.filter(st => st.note).length > 0 && (
-              <Box sx={{
-                mt: 1,
-                p: 1,
-                bgcolor: 'rgba(59, 130, 246, 0.05)',
-                borderRadius: 1.5,
-                borderRight: '3px solid #3b82f6'
-              }}
-                dir="rtl"
-              >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                  <Typography variant="caption" sx={{ color: '#3b82f6', fontWeight: 800, fontSize: '0.6rem', letterSpacing: 0.5 }}>
-                    MANAGEMENT NOTES
-                  </Typography>
-                  <Tooltip title="Read Full Note">
-                    <IconButton
-                      size="small"
-                      onClick={() => setManagementNoteOpen(true)}
-                      sx={{ p: 0, color: '#3b82f6', '&:hover': { color: '#fff' } }}
-                    >
-                      <VisibilityIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: '#cbd5e1',
-                    fontSize: '0.75rem',
-                    lineHeight: 1.3,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    textAlign: 'right'
-                  }}
-                >
-                  {task.subTasks.filter(st => st.note).slice(-1)[0].note}
-                </Typography>
-                {task.subTasks.filter(st => st.note).length > 1 && (
-                  <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.6rem', mt: 0.5, display: 'block' }}>
-                    + {task.subTasks.filter(st => st.note).length - 1} more log(s)
-                  </Typography>
-                )}
-              </Box>
-            )}
+            {/* Management Note Section Removed */}
           </Box>
 
           {/* Timeline / Dates Grid */}
@@ -471,20 +425,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
               </Tooltip>
             </Box>
 
-            <Button
-              size="small"
-              onClick={() => setNoteDialogOpen(true)}
-              endIcon={<RiProgress4Fill />}
-              sx={{
-                color: '#94a3b8',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                textTransform: 'none',
-                '&:hover': { color: '#fff', bgcolor: 'transparent' }
-              }}
-            >
-              DETAILS
-            </Button>
+            {/* Details Button Removed */}
           </Box>
         </Box>
 
@@ -517,10 +458,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
               <ListItemIcon><VisibilityIcon fontSize="small" sx={{ color: "#10b981" }} /></ListItemIcon>
               <ListItemText>Full Diagnostics</ListItemText>
             </MenuItem>
-            <MenuItem onClick={() => handleAction("progress")}>
-              <ListItemIcon><RiProgress4Fill size={16} color="#94a3b8" /></ListItemIcon>
-              <ListItemText>View Timeline</ListItemText>
-            </MenuItem>
+            {/* Timeline Removed */}
             <MenuItem onClick={() => handleAction("favorite")}>
               <ListItemIcon><FaStar size={14} color="#f59e0b" /></ListItemIcon>
               <ListItemText>Bookmark</ListItemText>
@@ -551,10 +489,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
               <ListItemIcon><VisibilityIcon fontSize="small" sx={{ color: "#10b981" }} /></ListItemIcon>
               <ListItemText>Full Diagnostics</ListItemText>
             </MenuItem>
-            <MenuItem onClick={() => handleAction("progress")}>
-              <ListItemIcon><RiProgress4Fill size={16} color="#94a3b8" /></ListItemIcon>
-              <ListItemText>View Timeline</ListItemText>
-            </MenuItem>
+            {/* Timeline Removed */}
             <MenuItem onClick={() => handleAction("favorite")}>
               <ListItemIcon><FaStar size={14} color="#f59e0b" /></ListItemIcon>
               <ListItemText>Bookmark</ListItemText>
@@ -565,51 +500,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
 
       <EditTaskDialog open={editDialogOpen} setOpen={setEditDialogOpen} task={task} handleTaskUpdate={handleTaskUpdate} />
 
-      <DetailedSubtaskDialog
-        open={noteDialogOpen}
-        onClose={() => setNoteDialogOpen(false)}
-        task={task}
-        setUpdateTasksList={setUpdateStateDuringSave}
-      />
-
-      <TaskProgressDialog
-        open={progressDialogOpen}
-        onClose={() => setProgressDialogOpen(false)}
-        subtasks={task.subTasks || []}
-      />
-
-      {/* Management Note Full View Dialog */}
-      <Dialog
-        open={managementNoteOpen}
-        onClose={() => setManagementNoteOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: '#1a1a1a',
-            color: '#fff',
-            border: '1px solid #333',
-            borderRadius: 3
-          }
-        }}
-      >
-        <DialogTitle sx={{ borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" fontWeight="bold">Management Note</Typography>
-          <IconButton onClick={() => setManagementNoteOpen(false)} sx={{ color: '#94a3b8' }}>
-            <MdClose />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2, direction: 'rtl', textAlign: 'right' }}>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: '#cbd5e1', lineHeight: 1.6 }}>
-            {task.subTasks?.filter(st => st.note).slice(-1)[0]?.note}
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid #333', p: 2 }}>
-          <Button onClick={() => setManagementNoteOpen(false)} sx={{ color: '#94a3b8' }}>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Dialogs Removed */}
     </>
   );
 };

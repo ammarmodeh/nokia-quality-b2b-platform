@@ -408,6 +408,50 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
         return rows;
     }, [validatedTasks, reasonSearch, reasonSort]);
 
+    const itnAnalysis = useMemo(() => {
+        const stats = {};
+        validatedTasks.forEach(task => {
+            const values = getFlatValues(task, 'itnRelated');
+            values.forEach(val => {
+                if (!stats[val]) stats[val] = { name: val, cases: 0, neutrals: 0, detractors: 0 };
+                stats[val].cases++;
+                const score = task.evaluationScore;
+                if (score >= 7 && score <= 8) stats[val].neutrals++;
+                else if (score <= 6 && score !== null) stats[val].detractors++;
+            });
+        });
+        const totalCases = Object.values(stats).reduce((acc, curr) => acc + curr.cases, 0);
+        return Object.values(stats).map(s => ({
+            ...s,
+            percentageLabel: totalCases > 0 ? ((s.cases / totalCases) * 100).toFixed(0) : 0,
+            percentageValue: totalCases > 0 ? (s.cases / totalCases) * 100 : 0,
+            neutralPctValue: s.cases > 0 ? (s.neutrals / s.cases) * 100 : 0,
+            detractorPctValue: s.cases > 0 ? (s.detractors / s.cases) * 100 : 0
+        })).sort((a, b) => b.cases - a.cases);
+    }, [validatedTasks]);
+
+    const subscriptionAnalysis = useMemo(() => {
+        const stats = {};
+        validatedTasks.forEach(task => {
+            const values = getFlatValues(task, 'relatedToSubscription');
+            values.forEach(val => {
+                if (!stats[val]) stats[val] = { name: val, cases: 0, neutrals: 0, detractors: 0 };
+                stats[val].cases++;
+                const score = task.evaluationScore;
+                if (score >= 7 && score <= 8) stats[val].neutrals++;
+                else if (score <= 6 && score !== null) stats[val].detractors++;
+            });
+        });
+        const totalCases = Object.values(stats).reduce((acc, curr) => acc + curr.cases, 0);
+        return Object.values(stats).map(s => ({
+            ...s,
+            percentageLabel: totalCases > 0 ? ((s.cases / totalCases) * 100).toFixed(0) : 0,
+            percentageValue: totalCases > 0 ? (s.cases / totalCases) * 100 : 0,
+            neutralPctValue: s.cases > 0 ? (s.neutrals / s.cases) * 100 : 0,
+            detractorPctValue: s.cases > 0 ? (s.detractors / s.cases) * 100 : 0
+        })).sort((a, b) => b.cases - a.cases);
+    }, [validatedTasks]);
+
     const contributionMatrix = useMemo(() => {
         const matrix = {};
         const ownerTotals = {};
@@ -733,6 +777,68 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
                             </Table>
                         </TableContainer>
                     </Box>
+                </Box>
+
+                <Divider sx={{ borderColor: '#2d2d2d', mx: 3 }} />
+
+                {/* 5. ITN & SUBSCRIPTION IMPACT SECTION (NEW) */}
+                <Box sx={{ p: 3 }}>
+                    <Grid container spacing={3}>
+                        <Grid item xs={12} md={6}>
+                            <Box sx={{ border: '1px solid #2d2d2d', borderRadius: '8px', overflow: 'hidden' }}>
+                                <SectionHeader title="ITN Impact Analysis" onExport={exportToExcel} dataToExport={itnAnalysis} chartType="bar" />
+                                <TableContainer sx={{ maxHeight: 400 }}>
+                                    <Table size="small" stickyHeader>
+                                        <TableHead>
+                                            <TableRow>
+                                                <HeaderCell>ITN Category</HeaderCell>
+                                                <HeaderCell align="center">Cases</HeaderCell>
+                                                <HeaderCell align="center">N%</HeaderCell>
+                                                <HeaderCell align="center">D%</HeaderCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {itnAnalysis.map((row) => (
+                                                <TableRow key={row.name}>
+                                                    <StyledTableCell sx={{ fontWeight: 800, color: '#fff' }}>{row.name}</StyledTableCell>
+                                                    <StyledTableCell align="center" sx={{ bgcolor: alpha('#7b68ee', 0.1) }}>{row.cases}</StyledTableCell>
+                                                    <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(row.neutralPctValue, 0, 40, 'orange') }}>{row.neutralPctValue.toFixed(1)}%</StyledTableCell>
+                                                    <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(row.detractorPctValue, 0, 40, 'red') }}>{row.detractorPctValue.toFixed(1)}%</StyledTableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <Box sx={{ border: '1px solid #2d2d2d', borderRadius: '8px', overflow: 'hidden' }}>
+                                <SectionHeader title="Subscription Correlation" onExport={exportToExcel} dataToExport={subscriptionAnalysis} chartType="pie" />
+                                <TableContainer sx={{ maxHeight: 400 }}>
+                                    <Table size="small" stickyHeader>
+                                        <TableHead>
+                                            <TableRow>
+                                                <HeaderCell>Status</HeaderCell>
+                                                <HeaderCell align="center">Volume</HeaderCell>
+                                                <HeaderCell align="center">Share %</HeaderCell>
+                                                <HeaderCell align="center">D%</HeaderCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {subscriptionAnalysis.map((row) => (
+                                                <TableRow key={row.name}>
+                                                    <StyledTableCell sx={{ fontWeight: 800, color: '#fff' }}>{row.name}</StyledTableCell>
+                                                    <StyledTableCell align="center" sx={{ bgcolor: alpha('#10b981', 0.1) }}>{row.cases}</StyledTableCell>
+                                                    <StyledTableCell align="center" sx={{ fontWeight: 900 }}>{row.percentageLabel}%</StyledTableCell>
+                                                    <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(row.detractorPctValue, 0, 40, 'red') }}>{row.detractorPctValue.toFixed(1)}%</StyledTableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            </Box>
+                        </Grid>
+                    </Grid>
                 </Box>
 
                 <Divider sx={{ borderColor: '#2d2d2d', mx: 3 }} />
