@@ -252,7 +252,9 @@ export const calculateTrendData = (tasks, period = 'week', periodsCount = 8, gro
       detractors: new Array(periodsToAnalyze.length).fill(0),
       neutrals: new Array(periodsToAnalyze.length).fill(0),
       totalViolations: new Array(periodsToAnalyze.length).fill(0),
-      equivalentDetractors: new Array(periodsToAnalyze.length).fill(0)
+      equivalentDetractors: new Array(periodsToAnalyze.length).fill(0),
+      tasks: {}, // Store tasks by period label
+      allTasks: [] // Store all tasks across all periods
     };
   });
 
@@ -261,6 +263,8 @@ export const calculateTrendData = (tasks, period = 'week', periodsCount = 8, gro
     const tasksInPeriod = period === 'week'
       ? filterTasksByWeek(tasks, periodInfo.year, periodInfo.week, settings)
       : filterTasksByMonth(tasks, periodInfo.year, periodInfo.month, settings);
+
+    const periodLabel = periodLabels[index];
 
     tasksInPeriod.forEach(task => {
       let key;
@@ -271,6 +275,15 @@ export const calculateTrendData = (tasks, period = 'week', periodsCount = 8, gro
       }
 
       if (!trendData[key]) return; // Should not happen given step 1
+
+      // Initialize tasks array for this period if not exists
+      if (!trendData[key].tasks[periodLabel]) {
+        trendData[key].tasks[periodLabel] = [];
+      }
+
+      // Store the task object
+      trendData[key].tasks[periodLabel].push(task);
+      trendData[key].allTasks.push(task);
 
       // Count violations
       if (task.evaluationScore >= 1 && task.evaluationScore <= 6) {

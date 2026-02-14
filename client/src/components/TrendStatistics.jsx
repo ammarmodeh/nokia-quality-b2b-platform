@@ -28,6 +28,7 @@ import { MdFileDownload } from 'react-icons/md';
 import * as XLSX from 'xlsx';
 import AIAnalysisButton from './AIAnalysisButton';
 import api from '../api/api';
+import TrendTasksDialog from './TrendTasksDialog';
 
 // Register ChartJS components
 ChartJS.register(
@@ -52,6 +53,8 @@ const TrendStatistics = ({ tasks }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [selectedEntities, setSelectedEntities] = useState([]);
   const [settings, setSettings] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -91,6 +94,16 @@ const TrendStatistics = ({ tasks }) => {
 
   const handleSelectedEntitiesChange = (event, newValue) => {
     setSelectedEntities(newValue);
+  };
+
+  const handleCardClick = (entityName) => {
+    setSelectedEntity(entityName);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    setSelectedEntity(null);
   };
 
   // Calculate trend data
@@ -739,6 +752,7 @@ const TrendStatistics = ({ tasks }) => {
             {trendAnalysis.entities.map((indicator, index) => (
               <Box
                 key={index}
+                onClick={() => handleCardClick(indicator.name)}
                 sx={{
                   backgroundColor: '#1e1e1e',
                   borderRadius: '8px',
@@ -748,7 +762,14 @@ const TrendStatistics = ({ tasks }) => {
                   border: '1px solid',
                   borderColor: indicator.statusColor || '#3d3d3d',
                   position: 'relative',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: `0 4px 12px ${indicator.statusColor || '#7b68ee'}40`,
+                    borderColor: indicator.statusColor || '#7b68ee'
+                  }
                 }}
               >
                 <Box sx={{
@@ -760,7 +781,23 @@ const TrendStatistics = ({ tasks }) => {
                   bgcolor: indicator.statusColor || '#ff9800'
                 }} />
 
-                <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 600, mb: 1, minHeight: '2.5em' }}>
+                {/* Task Count Badge */}
+                <Box sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  bgcolor: '#7b68ee',
+                  color: '#fff',
+                  borderRadius: '12px',
+                  px: 1,
+                  py: 0.5,
+                  fontSize: '0.7rem',
+                  fontWeight: 'bold'
+                }}>
+                  {trendData[indicator.name]?.allTasks?.length || 0} tasks
+                </Box>
+
+                <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 600, mb: 1, minHeight: '2.5em', pr: 8 }}>
                   {indicator.name}
                 </Typography>
 
@@ -850,6 +887,16 @@ const TrendStatistics = ({ tasks }) => {
           </Typography>
         )}
       </Paper>
+
+      {/* Task Details Dialog */}
+      <TrendTasksDialog
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        entityName={selectedEntity}
+        entityData={selectedEntity ? trendData[selectedEntity] : null}
+        analysisType={analysisType}
+        period={period}
+      />
     </Box>
   );
 };
