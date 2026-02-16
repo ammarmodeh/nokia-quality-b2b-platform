@@ -17,12 +17,14 @@ import {
     Chip,
     Stack,
     Button,
-    alpha
+    alpha,
+    Tooltip
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { MdHistory, MdContentCopy } from 'react-icons/md';
 import api from '../../api/api';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const GaiaStepsDialog = ({ open, onClose, task }) => {
     const [tickets, setTickets] = useState([]);
@@ -63,6 +65,38 @@ const GaiaStepsDialog = ({ open, onClose, task }) => {
     const copyToClipboard = (text) => {
         if (!text) return;
         navigator.clipboard.writeText(text);
+        toast.success("Copied to clipboard!");
+    };
+
+    const formatTicket = (ticket) => {
+        const date = ticket.eventDate ? format(new Date(ticket.eventDate), 'dd/MM/yyyy') : '-';
+        const type = ticket.transactionType || ticket.mainCategory || 'N/A';
+        const state = ticket.transactionState || 'N/A';
+        const agent = ticket.agentName || 'N/A';
+        const recordedBy = ticket.recordedBy?.name || 'System';
+        const reason = ticket.unfReasonCode || '-';
+        const note = ticket.note || '-';
+
+        return `Date: ${date} | Type: ${type} - State: ${state}
+Agent: ${agent} (Recorded by: ${recordedBy})
+Unf. Reason: ${reason}
+Note: ${note}
+------------------------------------------`;
+    };
+
+    const handleCopyAll = () => {
+        if (!tickets.length) return;
+
+        const header = `Q-Ops Transaction Log for ${task?.slid || 'N/A'} #${task?.requestNumber || 'N/A'}
+Customer: ${task?.customerName || "No Customer Name"}
+==========================================
+`;
+        const body = tickets.map(t => formatTicket(t)).join('\n');
+        copyToClipboard(header + body);
+    };
+
+    const handleCopyStep = (ticket) => {
+        copyToClipboard(formatTicket(ticket));
     };
 
     return (
@@ -93,9 +127,16 @@ const GaiaStepsDialog = ({ open, onClose, task }) => {
                         Q-Ops Transaction Log
                     </Typography>
                 </Stack>
-                <IconButton onClick={onClose} sx={{ color: '#aaa' }}>
-                    <CloseIcon />
-                </IconButton>
+                <Stack direction="row" spacing={1}>
+                    <Tooltip title="Copy Full Log">
+                        <IconButton onClick={handleCopyAll} sx={{ color: '#7b68ee', '&:hover': { bgcolor: alpha('#7b68ee', 0.1) } }}>
+                            <MdContentCopy />
+                        </IconButton>
+                    </Tooltip>
+                    <IconButton onClick={onClose} sx={{ color: '#aaa' }}>
+                        <CloseIcon />
+                    </IconButton>
+                </Stack>
             </DialogTitle>
 
             <DialogContent sx={{ p: 0, bgcolor: '#1e1e1e', display: 'flex', flexDirection: 'column', height: '70vh' }}>
@@ -119,6 +160,7 @@ const GaiaStepsDialog = ({ open, onClose, task }) => {
                     <Table size="small" stickyHeader>
                         <TableHead>
                             <TableRow>
+                                <TableCell sx={{ bgcolor: '#252525', color: '#aaa', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid #333', width: 50 }}>Action</TableCell>
                                 <TableCell sx={{ bgcolor: '#252525', color: '#aaa', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid #333' }}>Execution Date</TableCell>
                                 <TableCell sx={{ bgcolor: '#252525', color: '#aaa', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid #333' }}>Type / State</TableCell>
                                 <TableCell sx={{ bgcolor: '#252525', color: '#aaa', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid #333' }}>Agent / Participant</TableCell>
@@ -129,11 +171,11 @@ const GaiaStepsDialog = ({ open, onClose, task }) => {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: '#aaa' }}>Loading...</TableCell>
+                                    <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#aaa' }}>Loading...</TableCell>
                                 </TableRow>
                             ) : tickets.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: '#aaa' }}>No logs found for this case.</TableCell>
+                                    <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#aaa' }}>No logs found for this case.</TableCell>
                                 </TableRow>
                             ) : tickets.map((ticket, index) => (
                                 <TableRow
@@ -143,6 +185,17 @@ const GaiaStepsDialog = ({ open, onClose, task }) => {
                                         borderBottom: '1px solid #3d3d3d'
                                     }}
                                 >
+                                    <TableCell>
+                                        <Tooltip title="Copy This Step">
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleCopyStep(ticket)}
+                                                sx={{ color: '#aaa', '&:hover': { color: '#fff' } }}
+                                            >
+                                                <MdContentCopy size={16} />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </TableCell>
                                     <TableCell sx={{ color: '#fff', fontSize: '0.875rem' }}>
                                         {ticket.eventDate
                                             ? format(new Date(ticket.eventDate), 'dd/MM/yyyy')
