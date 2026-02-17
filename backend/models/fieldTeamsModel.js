@@ -10,9 +10,9 @@ const fieldTeamsSchema = new mongoose.Schema(
     teamCode: {
       type: String,
       required: [true, "Team Code is required"],
-      unique: true,
       trim: true,
     },
+
     firstName: {
       type: String,
       trim: true,
@@ -68,7 +68,6 @@ const fieldTeamsSchema = new mongoose.Schema(
     quizCode: {
       type: String,
       required: true,
-      unique: true,
     },
     isSuspended: {
       type: Boolean,

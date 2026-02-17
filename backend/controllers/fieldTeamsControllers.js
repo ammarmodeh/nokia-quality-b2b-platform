@@ -6,7 +6,7 @@ dotenv.config();
 export const loginFieldTeam = async (req, res) => {
   const { teamCode, quizCode } = req.body;
   try {
-    const team = await FieldTeamsSchema.findOne({ teamCode });
+    const team = await FieldTeamsSchema.findOne({ teamCode, isTerminated: false });
     if (!team) {
       return res.status(404).json({ message: 'Team not found or invalid team code' });
     }
@@ -163,7 +163,7 @@ export const getFieldTeamByQuizCode = async (req, res) => {
   const { quizCode } = req.params;
 
   try {
-    const team = await FieldTeamsSchema.findOne({ quizCode });
+    const team = await FieldTeamsSchema.findOne({ quizCode, isTerminated: false });
     if (team) {
       res.json(team);
     } else {
@@ -183,10 +183,13 @@ export const addFieldTeam = async (req, res) => {
     if (!teamCompany) return res.status(400).json({ error: "Team Company is required" });
     if (!contactNumber) return res.status(400).json({ error: "Contact Number is required" });
 
-    // Uniqueness check for teamCode
-    const existingCode = await FieldTeamsSchema.findOne({ teamCode: teamCode.trim() });
+    // Uniqueness check for teamCode (exclude terminated teams)
+    const existingCode = await FieldTeamsSchema.findOne({
+      teamCode: teamCode.trim(),
+      isTerminated: false
+    });
     if (existingCode) {
-      return res.status(400).json({ error: `Team Code '${teamCode}' already exists.` });
+      return res.status(400).json({ error: `An active team with Code '${teamCode}' already exists.` });
     }
 
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -450,10 +453,14 @@ export const updateFieldTeam = async (req, res) => {
     // Check if teamCode is being updated and is different
     if (teamCode && teamCode.trim() !== team.teamCode) {
       const cleanTeamCode = teamCode.trim();
-      // Check for uniqueness
-      const existingTeam = await FieldTeamsSchema.findOne({ teamCode: cleanTeamCode, _id: { $ne: teamId } });
+      // Check for uniqueness (exclude terminated teams)
+      const existingTeam = await FieldTeamsSchema.findOne({
+        teamCode: cleanTeamCode,
+        isTerminated: false,
+        _id: { $ne: teamId }
+      });
       if (existingTeam) {
-        return res.status(400).json({ error: `Team Code '${cleanTeamCode}' already exists.` });
+        return res.status(400).json({ error: `An active team with Code '${cleanTeamCode}' already exists.` });
       }
 
       updates.teamCode = cleanTeamCode;

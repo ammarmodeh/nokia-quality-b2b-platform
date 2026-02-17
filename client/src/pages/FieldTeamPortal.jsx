@@ -9,7 +9,8 @@ import {
   DialogTitle, DialogContent, DialogActions, IconButton, TableSortLabel,
   InputLabel, Collapse, Pagination, Badge, Avatar,
   ToggleButtonGroup,
-  ToggleButton
+  ToggleButton,
+  Tooltip as MuiTooltip
 } from "@mui/material";
 import {
   ArrowBack, Quiz, Assignment, BarChart as BarChartIconMUI, SupportAgent,
@@ -18,7 +19,7 @@ import {
   TrendingFlat, PieChart as PieChartIcon, CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon, PictureAsPdf as PictureAsPdfIcon, TableChart as TableChartIcon,
   Search as SearchIcon, FilterList as FilterListIcon, CalendarToday as CalendarTodayIcon,
-  Event as EventIcon, Update as UpdateIcon
+  Event as EventIcon, Update as UpdateIcon, Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import moment from "moment";
 import { subDays, isAfter, format } from 'date-fns';
@@ -3880,6 +3881,7 @@ ${data.map((a, i) => `
                   )}
                   <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>STATUS</TableCell>
                   <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>SCORE / INFO</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>ACTIONS</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -3906,10 +3908,13 @@ ${data.map((a, i) => `
                           if (isIssue) {
                             setSelectedDetailIssue(item);
                             setDetailIssueOpen(true);
+                          } else {
+                            setSelectedTask(item);
+                            setViewDialogOpen(true);
                           }
                         }}
                         sx={{
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', cursor: isIssue ? 'pointer' : 'default' }
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', cursor: 'pointer' }
                         }}
                       >
                         <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -3965,6 +3970,29 @@ ${data.map((a, i) => `
                         </TableCell>
                         <TableCell sx={{ color: colors.textPrimary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                           {score}
+                        </TableCell>
+                        <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                          <MuiTooltip title="View Full Details">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isIssue) {
+                                  setSelectedDetailIssue(item);
+                                  setDetailIssueOpen(true);
+                                } else {
+                                  setSelectedTask(item);
+                                  setViewDialogOpen(true);
+                                }
+                              }}
+                              sx={{
+                                color: colors.primary,
+                                '&:hover': { bgcolor: `${colors.primary}20` }
+                              }}
+                            >
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                          </MuiTooltip>
                         </TableCell>
                       </TableRow>
                     );

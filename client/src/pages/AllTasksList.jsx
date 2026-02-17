@@ -1918,6 +1918,13 @@ const AllTasksList = () => {
                 <span>Closed</span>
               </Box>
             </MenuItem>
+            <MenuItem value="Completed">
+              <Box display="flex" alignItems="center" gap={1}>
+                <MdCheckCircle style={{ color: '#4caf50' }} />
+                <span>Completed</span>
+              </Box>
+            </MenuItem>
+
           </Select>
         </FormControl>
 
