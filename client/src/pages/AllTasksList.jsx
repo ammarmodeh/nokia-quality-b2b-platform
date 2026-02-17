@@ -146,17 +146,18 @@ const AllTasksList = () => {
     tasks: []
   });
 
-  const handleDrillDownRowClick = (category, value) => {
+  const handleDrillDownRowClick = (filters, customTitle) => {
     const drillTasks = filteredTasks.filter(t => {
-      const taskVal = t[category];
-      if (Array.isArray(taskVal)) return taskVal.includes(value);
-      return taskVal === value;
+      return Object.entries(filters).every(([key, value]) => {
+        const taskVal = t[key];
+        if (Array.isArray(taskVal)) return taskVal.includes(value);
+        return taskVal === value;
+      });
     });
     setDrillDownState({
       open: true,
-      title: `${category.charAt(0).toUpperCase() + category.slice(1).replace(/([A-Z])/g, ' $1')}: ${value}`,
-      category,
-      value,
+      title: customTitle,
+      filters,
       tasks: drillTasks
     });
   };
@@ -1229,7 +1230,7 @@ const AllTasksList = () => {
         {data.map((item, idx) => (
           <Box
             key={idx}
-            onClick={() => handleDrillDownRowClick(category, item.name)}
+            onClick={() => handleDrillDownRowClick({ [category]: item.name }, `${category.charAt(0).toUpperCase() + category.slice(1).replace(/([A-Z])/g, ' $1')}: ${item.name}`)}
             sx={{
               cursor: 'pointer',
               p: 0.5,
@@ -1609,6 +1610,7 @@ const AllTasksList = () => {
           <AllTasksDeepDiveAnalytics
             tasks={filteredTasks}
             periodLabel={dateFilter.label || (dateFilter.type === 'all' ? 'All Time' : `${format(dateFilter.start, 'dd MMM')} - ${format(dateFilter.end, 'dd MMM')}`)}
+            onDrillDown={handleDrillDownRowClick}
           />
         )}
       </Paper>
@@ -3036,6 +3038,8 @@ const AllTasksList = () => {
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Date</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
                 </TableRow>
@@ -3048,8 +3052,14 @@ const AllTasksList = () => {
                     </TableCell>
                     <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
                     <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
+                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                      {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
+                    </TableCell>
+                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                      {Array.isArray(task.responsible) ? task.responsible.join(', ') : task.responsible || '-'}
+                    </TableCell>
                     <TableCell>
-                      {task.evaluationScore && (
+                      {task.evaluationScore !== undefined && task.evaluationScore !== null && (
                         <Chip
                           label={task.evaluationScore}
                           size="small"

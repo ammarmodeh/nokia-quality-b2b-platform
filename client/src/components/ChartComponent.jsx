@@ -124,13 +124,17 @@ export const ChartComponent = ({ chartData }) => {
         callbacks: {
           label: (context) => {
             const value = context.parsed.y;
-            return `${context.dataset.label}: ${value}%`;
+            const isNPS = context.dataset.label?.includes('NPS');
+            return `${context.dataset.label}: ${value}${isNPS ? '' : '%'}`;
           }
         }
       },
       datalabels: {
         display: (context) => context.dataset.datalabels?.display !== false,
-        formatter: (value) => `${value}%`,
+        formatter: (value, context) => {
+          const isNPS = context.dataset.label?.includes('NPS');
+          return `${value}${isNPS ? '' : '%'}`;
+        },
       },
       // Ensure customCanvasBackgroundColor options are accessible
       customCanvasBackgroundColor: {
@@ -150,7 +154,7 @@ export const ChartComponent = ({ chartData }) => {
         ticks: {
           color: "#94a3b8",
           font: { size: 11 },
-          callback: (value) => `${value}%`
+          callback: (value) => value
         }
       },
     },

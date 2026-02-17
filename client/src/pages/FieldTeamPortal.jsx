@@ -1,56 +1,28 @@
 ﻿import { useState, useEffect, useMemo } from "react";
+import { alpha } from "@mui/material/styles";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  Box,
-  Typography,
-  TextField,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  Alert,
-  Chip,
-  Card,
-  CardContent,
-  TablePagination,
-  Autocomplete,
-  Tabs,
-  Tab,
-  useMediaQuery,
-  Button,
-  Divider,
-  Grid,
-  FormControl,
-  Select,
-  MenuItem,
-  LinearProgress,
-  Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton
+  Box, Typography, TextField, Paper, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, CircularProgress, Alert, Chip, Card, CardContent,
+  TablePagination, Autocomplete, Tabs, Tab, useMediaQuery, Button, Divider,
+  Grid, FormControl, Select, MenuItem, LinearProgress, Stack, Dialog,
+  DialogTitle, DialogContent, DialogActions, IconButton, TableSortLabel,
+  InputLabel, Collapse, Pagination, Badge, Avatar,
+  ToggleButtonGroup,
+  ToggleButton
 } from "@mui/material";
 import {
-  ArrowBack,
-  Quiz,
-  Assignment,
-  BarChart,
-  SupportAgent,
-  Warning,
-  CheckCircle,
-  Schedule,
-  Info,
-  PriorityHigh,
-  Leaderboard as LeaderboardIcon,
-  Close as CloseIcon,
-  Assessment,
-  Timeline,
+  ArrowBack, Quiz, Assignment, BarChart as BarChartIconMUI, SupportAgent,
+  Warning, CheckCircle, Schedule, Info, PriorityHigh, Assessment, Timeline,
+  Leaderboard as LeaderboardIcon, Close as CloseIcon, TrendingUp, TrendingDown,
+  TrendingFlat, PieChart as PieChartIcon, CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon, PictureAsPdf as PictureAsPdfIcon, TableChart as TableChartIcon,
+  Search as SearchIcon, FilterList as FilterListIcon, CalendarToday as CalendarTodayIcon,
+  Event as EventIcon, Update as UpdateIcon
 } from '@mui/icons-material';
+import moment from "moment";
+import { subDays, isAfter, format } from 'date-fns';
+import { generateWeekRanges, getWeekNumber, getMonthNumber, generateMonthRanges } from "../utils/helpers";
 import api from "../api/api";
 import {
   BarChart as RechartsBarChart,
@@ -70,7 +42,9 @@ import {
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
-  Legend as RechartsLegend
+  Legend as RechartsLegend,
+  LineChart,
+  Line
 } from 'recharts';
 import {
   Chart as ChartJS,
@@ -89,7 +63,9 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
 import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport, FaEnvelope } from 'react-icons/fa';
+import { MdInsights } from 'react-icons/md';
 import ViewIssueDetailsDialog from "../components/ViewIssueDetailsDialog";
+import { TaskDetailsDialog } from "../components/TaskDetailsDialog";
 
 // Register ChartJS components
 ChartJS.register(
@@ -104,19 +80,101 @@ ChartJS.register(
   LineElement,
   TimeScale
 );
-import {
-  TrendingUp,
-  TrendingDown,
-  TrendingFlat,
-  PieChart as PieChartIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  PictureAsPdf as PictureAsPdfIcon,
-  TableChart as TableChartIcon,
-  Search as SearchIcon,
-} from '@mui/icons-material';
+
 import * as XLSX from 'xlsx';
 import FieldTeamTicketsForPortalReview from "../components/FieldTeamTicketsForPortalReview";
+
+
+// --- Components ---
+
+const StatCard = ({ title, count, total, color, icon, percentage }) => (
+  <Card sx={{
+    height: '100%',
+    position: 'relative',
+    overflow: 'visible',
+    borderRadius: 3,
+    bgcolor: 'rgba(30, 41, 59, 0.5)',
+    border: '1px solid rgba(255, 255, 255, 0.05)',
+    backdropFilter: 'blur(10px)'
+  }}>
+    <CardContent sx={{ p: 3 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="start" mb={2}>
+        <Box>
+          <Typography variant="subtitle2" color="#94a3b8" fontWeight="600" gutterBottom>
+            {title}
+          </Typography>
+          <Typography variant="h4" fontWeight="800" color="#fff">
+            {count}
+          </Typography>
+        </Box>
+        <Avatar
+          variant="rounded"
+          sx={{
+            bgcolor: `${color}15`, // Light opacity background
+            color: color,
+            width: 48,
+            height: 48,
+            borderRadius: 2
+          }}
+        >
+          {icon}
+        </Avatar>
+      </Stack>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <LinearProgress
+          variant="determinate"
+          value={percentage || 0}
+          sx={{
+            flexGrow: 1,
+            height: 6,
+            borderRadius: 5,
+            bgcolor: `${color}20`,
+            '& .MuiLinearProgress-bar': {
+              bgcolor: color,
+              borderRadius: 5,
+            }
+          }}
+        />
+        <Typography variant="caption" sx={{ ml: 2, fontWeight: 'bold', color: color }}>
+          {percentage ? percentage.toFixed(0) : 0}%
+        </Typography>
+      </Box>
+      <Typography variant="caption" color="#64748b">
+        {count} of {total} tasks
+      </Typography>
+    </CardContent>
+  </Card>
+);
+
+// --- Compact Data Table Helper ---
+const CompactDataTable = ({ data, total }) => (
+  <TableContainer sx={{
+    mt: 2,
+    maxHeight: 200,
+    overflowY: 'auto',
+    '&::-webkit-scrollbar': { width: '4px' },
+    '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' }
+  }}>
+    <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+      <TableHead>
+        <TableRow>
+          <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Category Item</TableCell>
+          <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Count</TableCell>
+          <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {data.map((row, i) => (
+          <TableRow key={i} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+            <TableCell sx={{ color: '#e2e8f0' }}>{row.name}</TableCell>
+            <TableCell align="right" sx={{ color: '#e2e8f0', fontWeight: 'bold' }}>{row.value}</TableCell>
+            <TableCell align="right" sx={{ color: '#94a3b8' }}>{((row.value / total) * 100).toFixed(1)}%</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
 
 const FieldTeamPortal = () => {
   // const user = useSelector((state) => state?.auth?.user);
@@ -149,6 +207,7 @@ const FieldTeamPortal = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [generatingReport, setGeneratingReport] = useState(false);
   const isMobile = useMediaQuery('(max-width:600px)');
+  const isMedium = useMediaQuery('(max-width:960px)');
 
   // Drill-down state
   const [drillDownOpen, setDrillDownOpen] = useState(false);
@@ -175,12 +234,29 @@ const FieldTeamPortal = () => {
   // Leaderboard 'Magic Table' state
   const [leaderboardSearchQuery, setLeaderboardSearchQuery] = useState('');
   const [leaderboardStatusQuery, setLeaderboardStatusQuery] = useState('all');
+  const [selectedLeaderboardDetail, setSelectedLeaderboardDetail] = useState(null);
+  const [leaderboardDialogOpen, setLeaderboardDialogOpen] = useState(false);
+  const [chartDialog, setChartDialog] = useState({ open: false, title: '', data: [], type: 'area', stackKeys: [] });
   const [leaderboardPage, setLeaderboardPage] = useState(0);
   const [leaderboardRowsPerPage, setLeaderboardRowsPerPage] = useState(10);
   const [leaderboardSort, setLeaderboardSort] = useState({ field: 'totalViolations', direction: 'desc' });
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [leaderboardDateFilter, setLeaderboardDateFilter] = useState({ start: '', end: '' });
   const [leaderboardThresholds, setLeaderboardThresholds] = useState({ minIssues: '', minSuccessRate: '' });
+
+  // NEW: State for Global Analytics Tab
+  const [globalTab, setGlobalTab] = useState(0);
+  const [analyticsSubTab, setAnalyticsSubTab] = useState(0); // 0: All, 1: Detractors, 2: Neutrals
+  const [offendersPage, setOffendersPage] = useState(1);
+
+  // Analytics Drill-Down State
+  const [analyticsDrillDown, setAnalyticsDrillDown] = useState({
+    open: false,
+    title: '',
+    tasks: []
+  });
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
   // Updated Premium Colors & Glassmorphism Theme
   const colors = {
@@ -205,6 +281,16 @@ const FieldTeamPortal = () => {
       boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
     }
   };
+
+  // --- Global Analytics Time Filtering State ---
+  const [timeFilterMode, setTimeFilterMode] = useState('all'); // 'all', 'days', 'weeks', 'months', 'custom'
+  const [recentDaysValue, setRecentDaysValue] = useState(70);
+  const [selectedWeeks, setSelectedWeeks] = useState([]);
+  const [selectedMonths, setSelectedMonths] = useState([]);
+  const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
+  const [weekRanges, setWeekRanges] = useState([]);
+  const [monthOptions, setMonthOptions] = useState([]);
+  const [settings, setSettings] = useState(null);
 
   const glassCardProps = {
     sx: {
@@ -255,6 +341,488 @@ const FieldTeamPortal = () => {
       return true;
     });
   }, [customerIssues, dateFilter, selectedTeam]);
+
+  // Fetch Settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Update Week/Month Options when tasks or settings change
+  useEffect(() => {
+    if (allTechnicalTasksGlobal.length > 0 && settings) {
+      const weeks = generateWeekRanges(allTechnicalTasksGlobal, settings);
+      setWeekRanges(weeks.filter(r => /Wk-\d+ \(\d+\)/.test(r)).reverse());
+
+      const months = generateMonthRanges(allTechnicalTasksGlobal, settings);
+      setMonthOptions(months);
+    }
+  }, [allTechnicalTasksGlobal, settings]);
+
+  // --- NEW: Global Analytics Logic ---
+  const globalAnalytics = useMemo(() => {
+    // 1. Time Filtering
+    let timeFiltered = allTechnicalTasksGlobal;
+    if (timeFilterMode === 'days') {
+      const cutoff = subDays(new Date(), recentDaysValue);
+      timeFiltered = allTechnicalTasksGlobal.filter(t => t.interviewDate && isAfter(new Date(t.interviewDate), cutoff));
+    } else if (timeFilterMode === 'weeks' && selectedWeeks.length > 0) {
+      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+        if (!t.interviewDate) return false;
+        const { key } = getWeekNumber(t.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber);
+        return selectedWeeks.includes(key);
+      });
+    } else if (timeFilterMode === 'months' && selectedMonths.length > 0) {
+      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+        if (!t.interviewDate) return false;
+        const monthInfo = getMonthNumber(t.interviewDate, settings);
+        return monthInfo && selectedMonths.includes(monthInfo.key);
+      });
+    } else if (timeFilterMode === 'custom' && customDateRange.start && customDateRange.end) {
+      const start = new Date(customDateRange.start);
+      const end = new Date(customDateRange.end);
+      end.setHours(23, 59, 59, 999);
+      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+        const d = new Date(t.interviewDate || t.createdAt);
+        return d >= start && d <= end;
+      });
+    }
+
+    // 2. Sub-tab Filtering (All/Detractors/Neutrals)
+    let tasksToProcess = timeFiltered;
+    if (analyticsSubTab === 1) { // Detractors
+      tasksToProcess = timeFiltered.filter(t => {
+        let score = t.evaluationScore;
+        if (score && score > 0) {
+          if (score <= 10) score = score * 10;
+          return score <= 60;
+        }
+        return false;
+      });
+    } else if (analyticsSubTab === 2) { // Neutrals
+      tasksToProcess = timeFiltered.filter(t => {
+        let score = t.evaluationScore;
+        if (score && score > 0) {
+          if (score <= 10) score = score * 10;
+          return score > 60 && score <= 80;
+        }
+        return false;
+      });
+    }
+
+    const stats = {
+      byOwner: {},
+      byReason: {},
+      bySubReason: {},
+      byRootCause: {},
+      byFieldTeam: {},
+      fieldTeamDetails: {},
+      contributionMatrix: {}, // Owner vs Reason
+      rootCauseMatrix: {},    // Owner vs Root Cause
+      sentiment: { Promoter: 0, Neutral: 0, Detractor: 0, NotEvaluated: 0 },
+      // NEW: Detailed tracking for Advanced Analytics Tables
+      detailedOwners: {},
+      detailedReasons: {},
+      detailedSubReasons: {},
+      detailedRootCauses: {}
+    };
+
+    // Use Global Technical Tasks (NPS Tickets) as primary source
+    tasksToProcess.forEach(task => {
+      const increment = (map, value) => {
+        if (Array.isArray(value)) {
+          value.forEach(v => { if (v) map[v] = (map[v] || 0) + 1; });
+        } else if (value) {
+          map[value] = (map[value] || 0) + 1;
+        }
+      };
+
+      const ownerRaw = task.responsible || task.assignedTo?.name || 'Unknown';
+      const owners = Array.isArray(ownerRaw) ? ownerRaw.filter(o => o) : [ownerRaw];
+      // If owners array is empty after filtering, use 'Unknown'
+      if (owners.length === 0) owners.push('Unknown');
+
+      const reasons = Array.isArray(task.reason) ? task.reason.filter(r => r) : (task.reason ? [task.reason] : ['Unknown']);
+      if (reasons.length === 0) reasons.push('Unknown');
+
+      const subReasons = Array.isArray(task.subReason) ? task.subReason.filter(sr => sr) : (task.subReason ? [task.subReason] : ['Unknown']);
+      if (subReasons.length === 0) subReasons.push('Unknown');
+
+      const rootCauses = Array.isArray(task.rootCause) ? task.rootCause.filter(rc => rc) : (task.rootCause ? [task.rootCause] : ['Unknown']);
+      if (rootCauses.length === 0) rootCauses.push('Unknown');
+
+      const fieldTeam = task.teamName || 'Unknown';
+      const category = task.category || 'N/A';
+      const isITN = task.itnRelated === true || task.itnRelated === 'Yes';
+      const isSubscription = task.relatedToSubscription === true || task.relatedToSubscription === 'Yes';
+
+      owners.forEach(o => increment(stats.byOwner, o));
+      reasons.forEach(r => increment(stats.byReason, r));
+      subReasons.forEach(sr => increment(stats.bySubReason, sr));
+      rootCauses.forEach(rc => increment(stats.byRootCause, rc));
+
+      // --- Detailed Tracking for Advanced Analytics Tables ---
+      // Track Owner details
+      owners.forEach(o => {
+        if (!stats.detailedOwners[o]) {
+          stats.detailedOwners[o] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
+        }
+        stats.detailedOwners[o].total++;
+        if (isITN) stats.detailedOwners[o].itn++;
+        if (isSubscription) stats.detailedOwners[o].subscription++;
+      });
+
+      // Track Reason details with owner contributions
+      reasons.forEach(r => {
+        if (!stats.detailedReasons[r]) {
+          stats.detailedReasons[r] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
+        }
+        stats.detailedReasons[r].total++;
+        if (isITN) stats.detailedReasons[r].itn++;
+        if (isSubscription) stats.detailedReasons[r].subscription++;
+        owners.forEach(o => {
+          stats.detailedReasons[r].ownerBreakdown[o] = (stats.detailedReasons[r].ownerBreakdown[o] || 0) + 1;
+        });
+      });
+
+      // Track Sub-Reason details with owner contributions
+      subReasons.forEach(sr => {
+        if (!stats.detailedSubReasons[sr]) {
+          stats.detailedSubReasons[sr] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
+        }
+        stats.detailedSubReasons[sr].total++;
+        if (isITN) stats.detailedSubReasons[sr].itn++;
+        if (isSubscription) stats.detailedSubReasons[sr].subscription++;
+        owners.forEach(o => {
+          stats.detailedSubReasons[sr].ownerBreakdown[o] = (stats.detailedSubReasons[sr].ownerBreakdown[o] || 0) + 1;
+        });
+      });
+
+      // Track Root Cause details with owner contributions
+      rootCauses.forEach(rc => {
+        if (!stats.detailedRootCauses[rc]) {
+          stats.detailedRootCauses[rc] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
+        }
+        stats.detailedRootCauses[rc].total++;
+        if (isITN) stats.detailedRootCauses[rc].itn++;
+        if (isSubscription) stats.detailedRootCauses[rc].subscription++;
+        owners.forEach(o => {
+          stats.detailedRootCauses[rc].ownerBreakdown[o] = (stats.detailedRootCauses[rc].ownerBreakdown[o] || 0) + 1;
+        });
+      });
+
+      // --- Matrix Logic ---
+      // Owner vs Reason
+      reasons.forEach(r => {
+        if (!stats.contributionMatrix[r]) stats.contributionMatrix[r] = { total: 0 };
+        owners.forEach(o => {
+          stats.contributionMatrix[r][o] = (stats.contributionMatrix[r][o] || 0) + 1;
+          stats.contributionMatrix[r].total++;
+        });
+      });
+
+      // Owner vs Root Cause
+      rootCauses.forEach(rc => {
+        if (!stats.rootCauseMatrix[rc]) stats.rootCauseMatrix[rc] = { total: 0 };
+        owners.forEach(o => {
+          stats.rootCauseMatrix[rc][o] = (stats.rootCauseMatrix[rc][o] || 0) + 1;
+          stats.rootCauseMatrix[rc].total++;
+        });
+      });
+
+      stats.byFieldTeam[fieldTeam] = (stats.byFieldTeam[fieldTeam] || 0) + 1;
+
+      if (!stats.fieldTeamDetails[fieldTeam]) {
+        stats.fieldTeamDetails[fieldTeam] = {
+          total: 0,
+          byCategory: {},
+          byOwner: {},
+          byReason: {},
+          bySubReason: {},
+          byRootCause: {},
+          npsBreakdown: { Detractor: 0, Neutral: 0, Promoter: 0, NotEvaluated: 0 }
+        };
+      }
+
+      const teamStats = stats.fieldTeamDetails[fieldTeam];
+      teamStats.total += 1;
+      teamStats.byCategory[category] = (teamStats.byCategory[category] || 0) + 1;
+
+      owners.forEach(o => increment(teamStats.byOwner, o));
+      reasons.forEach(r => increment(teamStats.byReason, r));
+      subReasons.forEach(sr => increment(teamStats.bySubReason, sr));
+      rootCauses.forEach(rc => increment(teamStats.byRootCause, rc));
+
+      // Calculate NPS stats
+      let score = task.evaluationScore;
+      if (score && score > 0) {
+        if (score <= 10) score = score * 10; // Normalize
+        if (score <= 60) {
+          teamStats.npsBreakdown.Detractor++;
+          stats.sentiment.Detractor++;
+        } else if (score <= 80) {
+          teamStats.npsBreakdown.Neutral++;
+          stats.sentiment.Neutral++;
+        } else {
+          teamStats.npsBreakdown.Promoter++;
+          stats.sentiment.Promoter++;
+        }
+      } else {
+        teamStats.npsBreakdown.NotEvaluated++;
+        stats.sentiment.NotEvaluated++;
+      }
+    });
+
+    const toChartData = (obj) => {
+      const entries = Object.entries(obj).map(([name, value]) => ({ name, value }));
+      const categoryTotal = entries.reduce((sum, item) => sum + item.value, 0);
+      return entries
+        .map(item => ({
+          ...item,
+          percentage: categoryTotal > 0 ? ((item.value / categoryTotal) * 100).toFixed(1) : 0,
+          contribution: tasksToProcess.length > 0 ? ((item.value / tasksToProcess.length) * 100).toFixed(1) : 0
+        }))
+        .sort((a, b) => b.value - a.value);
+    };
+
+    const topFieldTeams = toChartData(stats.byFieldTeam);
+
+    const fieldTeamAnalytics = topFieldTeams.map(team => ({
+      teamName: team.name,
+      totalIssues: team.value,
+      categories: toChartData(stats.fieldTeamDetails[team.name]?.byCategory || {}),
+      owners: toChartData(stats.fieldTeamDetails[team.name]?.byOwner || {}),
+      reasons: toChartData(stats.fieldTeamDetails[team.name]?.byReason || {}),
+      subReasons: toChartData(stats.fieldTeamDetails[team.name]?.bySubReason || {}),
+      rootCauses: toChartData(stats.fieldTeamDetails[team.name]?.byRootCause || {}),
+      npsBreakdown: [
+        { name: 'Detractor', value: stats.fieldTeamDetails[team.name]?.npsBreakdown?.Detractor || 0, color: '#ef4444' },
+        { name: 'Neutral', value: stats.fieldTeamDetails[team.name]?.npsBreakdown?.Neutral || 0, color: '#f59e0b' }
+      ]
+    }));
+
+    // Matrix Summary
+    const topOwners = toChartData(stats.byOwner).slice(0, 10).map(o => o.name);
+
+    return {
+      ownerData: toChartData(stats.byOwner),
+      reasonData: toChartData(stats.byReason),
+      subReasonData: toChartData(stats.bySubReason),
+      rootCauseData: toChartData(stats.byRootCause),
+      sentimentData: (() => {
+        const totalSentiment = stats.sentiment.Promoter + stats.sentiment.Neutral + stats.sentiment.Detractor;
+        return [
+          { name: 'Promoters', value: stats.sentiment.Promoter, color: '#10b981' },
+          { name: 'Neutrals', value: stats.sentiment.Neutral, color: '#f59e0b' },
+          { name: 'Detractors', value: stats.sentiment.Detractor, color: '#ef4444' }
+        ]
+          .filter(s => s.value > 0)
+          .map(s => ({
+            ...s,
+            percentage: totalSentiment > 0 ? ((s.value / totalSentiment) * 100).toFixed(1) : 0
+          }));
+      })(),
+      contributionMatrix: {
+        matrix: stats.contributionMatrix,
+        topOwners
+      },
+      rootCauseMatrix: {
+        matrix: stats.rootCauseMatrix,
+        topOwners
+      },
+      // NEW: Detailed data for Advanced Analytics Tables
+      detailedOwners: stats.detailedOwners,
+      detailedReasons: stats.detailedReasons,
+      detailedSubReasons: stats.detailedSubReasons,
+      detailedRootCauses: stats.detailedRootCauses,
+      fieldTeamAnalytics,
+      totalProcessed: tasksToProcess.length,
+      categoryTotals: {
+        owners: Object.values(stats.byOwner).reduce((a, b) => a + b, 0),
+        reasons: Object.values(stats.byReason).reduce((a, b) => a + b, 0),
+        subReasons: Object.values(stats.bySubReason).reduce((a, b) => a + b, 0),
+        rootCauses: Object.values(stats.byRootCause).reduce((a, b) => a + b, 0)
+      }
+    };
+  }, [allTechnicalTasksGlobal, analyticsSubTab, timeFilterMode, recentDaysValue, selectedWeeks, selectedMonths, customDateRange, settings]);
+
+  const handleExportTeamViolations = (team) => {
+    // Filter tasks for this team
+    const teamTasks = allTechnicalTasksGlobal.filter(t => t.teamName === team.teamName);
+    const data = teamTasks.map(t => {
+      let displayScore = 'Not Evaluated';
+      let satisfaction = 'N/A';
+      let score = t.evaluationScore || 0;
+      if (score > 0) {
+        const isSmallScale = score <= 10;
+        displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
+        const normalized = isSmallScale ? score * 10 : score;
+        if (normalized <= 60) satisfaction = 'Detractor';
+        else if (normalized <= 80) satisfaction = 'Neutral';
+        else satisfaction = 'Promoter';
+      }
+      return {
+        'SLID': t.slid,
+        'Customer': t.customerName,
+        'Status': t.validationStatus,
+        'Category': t.category,
+        'Reason': Array.isArray(t.reason) ? t.reason.join(", ") : t.reason,
+        'Root Cause': Array.isArray(t.rootCause) ? t.rootCause.join(", ") : t.rootCause,
+        'Technician': t.technician || t.primaryTechnician,
+        'Score': displayScore,
+        'Satisfaction': satisfaction,
+        'Date': new Date(t.createdAt).toLocaleDateString()
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Violations");
+    XLSX.writeFile(wb, `${team.teamName}_Violations_Report.xlsx`);
+  };
+
+  const handleExportAllTeamsViolations = () => {
+    const data = allTechnicalTasksGlobal.map(t => {
+      let displayScore = 'Not Evaluated';
+      let satisfaction = 'N/A';
+      let score = t.evaluationScore || 0;
+      if (score > 0) {
+        const isSmallScale = score <= 10;
+        displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
+        const normalized = isSmallScale ? score * 10 : score;
+        if (normalized <= 60) satisfaction = 'Detractor';
+        else if (normalized <= 80) satisfaction = 'Neutral';
+        else satisfaction = 'Promoter';
+      }
+      return {
+        'Team': t.teamName,
+        'SLID': t.slid,
+        'Customer': t.customerName,
+        'Status': t.validationStatus,
+        'Category': t.category,
+        'Reason': Array.isArray(t.reason) ? t.reason.join(", ") : t.reason,
+        'Root Cause': Array.isArray(t.rootCause) ? t.rootCause.join(", ") : t.rootCause,
+        'Technician': t.technician || t.primaryTechnician,
+        'Score': displayScore,
+        'Satisfaction': satisfaction,
+        'Date': new Date(t.createdAt).toLocaleDateString()
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "All_Teams_Violations");
+    XLSX.writeFile(wb, `All_Teams_Violations_Report.xlsx`);
+  };
+
+  // Analytics Drill-Down Handler
+  const handleAnalyticsDrillDown = (filters = {}) => {
+    let filtered = [];
+
+    // Apply time filtering first
+    let timeFiltered = allTechnicalTasksGlobal;
+    if (timeFilterMode === 'days') {
+      const cutoff = subDays(new Date(), recentDaysValue);
+      timeFiltered = allTechnicalTasksGlobal.filter(t => t.interviewDate && isAfter(new Date(t.interviewDate), cutoff));
+    } else if (timeFilterMode === 'weeks' && selectedWeeks.length > 0) {
+      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+        if (!t.interviewDate) return false;
+        const { key } = getWeekNumber(t.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber);
+        return selectedWeeks.includes(key);
+      });
+    } else if (timeFilterMode === 'months' && selectedMonths.length > 0) {
+      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+        if (!t.interviewDate) return false;
+        const monthInfo = getMonthNumber(t.interviewDate, settings);
+        return monthInfo && selectedMonths.includes(monthInfo.key);
+      });
+    } else if (timeFilterMode === 'custom' && customDateRange.start && customDateRange.end) {
+      const start = new Date(customDateRange.start);
+      const end = new Date(customDateRange.end);
+      end.setHours(23, 59, 59, 999);
+      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+        const d = new Date(t.interviewDate || t.createdAt);
+        return d >= start && d <= end;
+      });
+    }
+
+    // Apply sub-tab filtering (All/Detractors/Neutrals)
+    let tasksToProcess = timeFiltered;
+    if (analyticsSubTab === 1) { // Detractors
+      tasksToProcess = timeFiltered.filter(t => {
+        let score = t.evaluationScore;
+        if (score && score > 0) {
+          if (score <= 10) score = score * 10;
+          return score <= 60;
+        }
+        return false;
+      });
+    } else if (analyticsSubTab === 2) { // Neutrals
+      tasksToProcess = timeFiltered.filter(t => {
+        let score = t.evaluationScore;
+        if (score && score > 0) {
+          if (score <= 10) score = score * 10;
+          return score > 60 && score <= 80;
+        }
+        return false;
+      });
+    }
+
+    // Apply specific filters
+    filtered = tasksToProcess.filter(task => {
+      let match = true;
+
+      if (filters.owner) {
+        const owners = Array.isArray(task.responsible) ? task.responsible : [task.responsible || task.assignedTo?.name || 'Unknown'];
+        if (!owners.includes(filters.owner)) match = false;
+      }
+
+      if (filters.reason) {
+        const reasons = Array.isArray(task.reason) ? task.reason : [task.reason || 'Unknown'];
+        if (!reasons.includes(filters.reason)) match = false;
+      }
+
+      if (filters.subReason) {
+        const subReasons = Array.isArray(task.subReason) ? task.subReason : [task.subReason || 'Unknown'];
+        if (!subReasons.includes(filters.subReason)) match = false;
+      }
+
+      if (filters.rootCause) {
+        const rootCauses = Array.isArray(task.rootCause) ? task.rootCause : [task.rootCause || 'Unknown'];
+        if (!rootCauses.includes(filters.rootCause)) match = false;
+      }
+
+      if (filters.itn) {
+        if (!(task.itnRelated === true || task.itnRelated === 'Yes')) match = false;
+      }
+
+      if (filters.subscription) {
+        if (!(task.relatedToSubscription === true || task.relatedToSubscription === 'Yes')) match = false;
+      }
+
+      return match;
+    });
+
+    // Generate Title
+    const titleParts = [];
+    if (filters.owner) titleParts.push(`Owner: ${filters.owner}`);
+    if (filters.reason) titleParts.push(`Reason: ${filters.reason}`);
+    if (filters.subReason) titleParts.push(`Sub-Reason: ${filters.subReason}`);
+    if (filters.rootCause) titleParts.push(`Root Cause: ${filters.rootCause}`);
+    if (filters.itn) titleParts.push(`ITN Related`);
+    if (filters.subscription) titleParts.push(`Subscription Related`);
+
+    setAnalyticsDrillDown({
+      open: true,
+      title: titleParts.join(' | ') || 'Filtered Tasks',
+      tasks: filtered
+    });
+  };
 
   const stats = useMemo(() => {
     const issuesToProcess = filteredIssuesByDate;
@@ -831,20 +1399,6 @@ const FieldTeamPortal = () => {
     setActiveTab(newValue);
   };
 
-  const [settings, setSettings] = useState(null);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await api.get("/settings");
-        setSettings(response.data);
-      } catch (err) {
-        console.error("Failed to fetch settings");
-      }
-    };
-    fetchSettings();
-  }, []);
-
   const getAssessmentStatus = (score, type = 'general') => {
     const thresholds = settings?.thresholds || { pass: 85, average: 70, fail: 50, quizPassScore: 70, labPassScore: 75 };
 
@@ -905,9 +1459,22 @@ const FieldTeamPortal = () => {
     return Math.sqrt(variance);
   };
 
-  const calculatePercentageAboveThreshold = (results, threshold) => {
-    const aboveThreshold = results.filter((result) => (result.overallScore || result.percentage || 0) >= threshold).length;
-    return (aboveThreshold / results.length) * 100;
+  const calculatePercentageAboveThreshold = (data, threshold) => {
+    if (!data || data.length === 0) return 0;
+    const above = data.filter(item => (item.percentage || item.overallScore || item.totalScore || 0) >= threshold);
+    return (above.length / data.length) * 100;
+  };
+
+  const getHeatmapColor = (value, min = 0, max = 100, type = 'blue') => {
+    const percentage = Math.min(Math.max((value - min) / (max - min), 0), 1);
+    const colors = {
+      green: `rgba(16, 185, 129, ${percentage * 0.4 + 0.05})`,
+      blue: `rgba(59, 130, 246, ${percentage * 0.4 + 0.05})`,
+      orange: `rgba(245, 158, 11, ${percentage * 0.4 + 0.05})`,
+      red: `rgba(239, 68, 68, ${percentage * 0.4 + 0.05})`,
+      purple: `rgba(139, 92, 246, ${percentage * 0.4 + 0.05})`
+    };
+    return colors[type] || colors.blue;
   };
 
   const calculateHighestScore = (results) => {
@@ -1323,6 +1890,29 @@ ${data.map((a, i) => `
     XLSX.writeFile(wb, `${selectedTeam.teamName.replace(/\s+/g, '_')}_Full_Performance_Report.xlsx`);
   };
 
+  useEffect(() => {
+    const fetchGlobalData = async () => {
+      setLoadingGlobal(true);
+      try {
+        const [tasksRes, issuesRes] = await Promise.all([
+          api.get("/tasks/get-all-tasks", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          }),
+          api.get("/customer-issues/get-all-issues", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          })
+        ]);
+        setAllTechnicalTasksGlobal(tasksRes.data);
+        setAllCustomerIssuesGlobal(issuesRes.data);
+      } catch (error) {
+        // console.error("Error fetching global data:", error);
+      } finally {
+        setLoadingGlobal(false);
+      }
+    };
+    fetchGlobalData();
+  }, []);
+
   const handleExportLeaderboard = () => {
     const data = leaderboardData.map((team, index) => ({
       'Rank': index + 1,
@@ -1423,7 +2013,7 @@ ${data.map((a, i) => `
             color: colors.textPrimary
           }}
         />
-        <Bar dataKey="count" fill={colors.primary} radius={[4, 4, 0, 0]} />
+        <RechartsBar dataKey="count" fill={colors.primary} radius={[4, 4, 0, 0]} />
       </RechartsBarChart>
     </ResponsiveContainer>
   );
@@ -1788,301 +2378,1433 @@ ${data.map((a, i) => `
             {loadingGlobal && <CircularProgress size={24} sx={{ color: colors.primary }} />}
           </Box>
 
-          {/* Magic Table Controls: Advanced Search & Filter */}
-          <Box sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'stretch', mb: 2 }}>
-              <Paper sx={{
-                p: 2,
-                flex: 1,
-                minWidth: '300px',
-                ...colors.glass,
-                borderRadius: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                border: '1px solid rgba(255,255,255,0.1)'
-              }}>
-                <SearchIcon sx={{ color: colors.primary, mr: 2, fontSize: '1.2rem' }} />
-                <TextField
-                  placeholder="Search by Team Name, Company, or Region..."
-                  variant="standard"
-                  fullWidth
-                  value={leaderboardSearchQuery}
-                  onChange={(e) => {
-                    setLeaderboardSearchQuery(e.target.value);
-                    setLeaderboardPage(0); // Reset to first page on search
-                  }}
-                  InputProps={{
-                    disableUnderline: true,
-                    sx: { color: '#fff', fontSize: '1rem', fontWeight: 300, letterSpacing: '0.5px' }
-                  }}
-                />
-                {leaderboardSearchQuery && (
-                  <IconButton size="small" onClick={() => setLeaderboardSearchQuery('')} sx={{ color: colors.textSecondary }}>
-                    <FaTimes />
-                  </IconButton>
-                )}
-              </Paper>
-
-              <FormControl sx={{ minWidth: 200, ...colors.glass, borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <Select
-                  value={leaderboardStatusQuery}
-                  onChange={(e) => {
-                    setLeaderboardStatusQuery(e.target.value);
-                    setLeaderboardPage(0);
-                  }}
-                  displayEmpty
-                  variant="standard"
-                  disableUnderline
-                  sx={{
-                    height: '100%',
-                    px: 2,
-                    color: '#fff',
-                    fontWeight: 300,
-                    '& .MuiSelect-select': { py: 1.5 }
-                  }}
-                >
-                  <MenuItem value="all">All Rankings</MenuItem>
-                  <MenuItem value="detractors">Has Detractors</MenuItem>
-                  <MenuItem value="issues">Has Key Issues</MenuItem>
-                  <MenuItem value="open">Has Open Cases</MenuItem>
-                </Select>
-              </FormControl>
-
-              <Button
-                variant="outlined"
-                startIcon={<FaFilter />}
-                onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}
-                sx={{
-                  borderRadius: '16px',
-                  color: advancedFiltersOpen ? colors.primary : colors.textSecondary,
-                  borderColor: advancedFiltersOpen ? colors.primary : 'rgba(255,255,255,0.1)',
-                  background: advancedFiltersOpen ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  transition: 'all 0.2s',
-                  '&:hover': { borderColor: colors.primary, background: 'rgba(139, 92, 246, 0.1)' }
-                }}
-              >
-                Advanced
-              </Button>
-
-              <Button
-                variant="contained"
-                startIcon={<TableChartIcon />}
-                onClick={handleExportLeaderboard}
-                sx={{
-                  borderRadius: '16px',
-                  px: 3,
-                  background: colors.primaryGradient,
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  boxShadow: `0 8px 20px ${colors.primary}40`,
-                  '&:hover': { transform: 'translateY(-2px)', filter: 'brightness(1.1)' },
-                  transition: 'all 0.2s'
-                }}
-              >
-                Export Ranking
-              </Button>
-            </Box>
-
-            {advancedFiltersOpen && (
-              <Box sx={{
-                p: 3,
-                mb: 3,
-                ...colors.glass,
-                borderRadius: '20px',
-                border: '1px solid rgba(139, 92, 246, 0.2)',
-                animation: 'slideDown 0.3s ease-out'
-              }}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={3}>
-                    <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>START DATE</Typography>
-                    <TextField
-                      type="date"
-                      fullWidth
-                      variant="standard"
-                      InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
-                      value={leaderboardDateFilter.start}
-                      onChange={(e) => {
-                        setLeaderboardDateFilter({ ...leaderboardDateFilter, start: e.target.value });
-                        setLeaderboardPage(0);
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={3}>
-                    <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>END DATE</Typography>
-                    <TextField
-                      type="date"
-                      fullWidth
-                      variant="standard"
-                      InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
-                      value={leaderboardDateFilter.end}
-                      onChange={(e) => {
-                        setLeaderboardDateFilter({ ...leaderboardDateFilter, end: e.target.value });
-                        setLeaderboardPage(0);
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={3}>
-                    <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>MIN ISSUES</Typography>
-                    <TextField
-                      placeholder="e.g. 5"
-                      type="number"
-                      fullWidth
-                      variant="standard"
-                      InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
-                      value={leaderboardThresholds.minIssues}
-                      onChange={(e) => {
-                        setLeaderboardThresholds({ ...leaderboardThresholds, minIssues: e.target.value });
-                        setLeaderboardPage(0);
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={3}>
-                    <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>MIN SUCCESS %</Typography>
-                    <TextField
-                      placeholder="e.g. 80"
-                      type="number"
-                      fullWidth
-                      variant="standard"
-                      InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
-                      value={leaderboardThresholds.minSuccessRate}
-                      onChange={(e) => {
-                        setLeaderboardThresholds({ ...leaderboardThresholds, minSuccessRate: e.target.value });
-                        setLeaderboardPage(0);
-                      }}
-                    />
-                  </Grid>
-                </Grid>
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button
-                    size="small"
-                    sx={{ color: colors.error, fontWeight: 700 }}
-                    onClick={() => {
-                      setLeaderboardDateFilter({ start: '', end: '' });
-                      setLeaderboardThresholds({ minIssues: '', minSuccessRate: '' });
-                    }}
-                  >
-                    Clear All Filters
-                  </Button>
-                </Box>
-              </Box>
-            )}
+          {/* Global View Tabs */}
+          <Box sx={{ borderBottom: 1, borderColor: 'rgba(255,255,255,0.1)', mb: 3 }}>
+            <Tabs
+              value={globalTab}
+              onChange={(e, v) => setGlobalTab(v)}
+              sx={{
+                '& .MuiTab-root': { color: colors.textSecondary, textTransform: 'none', fontSize: '1rem', fontWeight: 500, minHeight: 48 },
+                '& .Mui-selected': { color: colors.primary },
+                '& .MuiTabs-indicator': { bgcolor: colors.primary }
+              }}
+            >
+              <Tab label="Leaderboard" icon={<LeaderboardIcon />} iconPosition="start" />
+              <Tab label="Global Analytics" icon={<BarChartIconMUI />} iconPosition="start" />
+            </Tabs>
           </Box>
 
-          <TableContainer component={Paper} sx={{
-            ...colors.glass,
-            borderRadius: '24px',
-            overflow: 'hidden',
-            border: '1px solid rgba(255,255,255,0.08)'
-          }}>
-            <Table size="small">
-              <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
-                <TableRow>
-                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>RANK</TableCell>
-                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'teamName', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TEAM NAME</TableCell>
-                  <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalNpsTickets', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL NPS</TableCell>
-                  <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsDetractors', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>DETRACTORS</TableCell>
-                  <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsNeutrals', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>NEUTRALS</TableCell>
-                  <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'issueViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>KEY ISSUES</TableCell>
-                  <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'openCount', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>OPEN CASES</TableCell>
-                  <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'avgResolutionTime', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>AVG SPEED</TableCell>
-                  <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'resPercent', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>SUCCESS %</TableCell>
-                  <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL VIOLATIONS</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedLeaderboardData.map((team, index) => {
-                  const actualRank = (leaderboardPage * leaderboardRowsPerPage) + index + 1;
-                  return (
-                    <TableRow
-                      key={team._id}
+          {/* TAB 0: LEADERBOARD */}
+          {globalTab === 0 && (
+            <>
+              {/* Magic Table Controls: Advanced Search & Filter */}
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'stretch', mb: 2 }}>
+                  <Paper sx={{
+                    p: 2,
+                    flex: 1,
+                    minWidth: '300px',
+                    ...colors.glass,
+                    borderRadius: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                  }}>
+                    <SearchIcon sx={{ color: colors.primary, mr: 2, fontSize: '1.2rem' }} />
+                    <TextField
+                      placeholder="Search by Team Name, Company, or Region..."
+                      variant="standard"
+                      fullWidth
+                      value={leaderboardSearchQuery}
+                      onChange={(e) => {
+                        setLeaderboardSearchQuery(e.target.value);
+                        setLeaderboardPage(0); // Reset to first page on search
+                      }}
+                      InputProps={{
+                        disableUnderline: true,
+                        sx: { color: '#fff', fontSize: '1rem', fontWeight: 300, letterSpacing: '0.5px' }
+                      }}
+                    />
+                    {leaderboardSearchQuery && (
+                      <IconButton size="small" onClick={() => setLeaderboardSearchQuery('')} sx={{ color: colors.textSecondary }}>
+                        <FaTimes />
+                      </IconButton>
+                    )}
+                  </Paper>
+
+                  <FormControl sx={{ minWidth: 200, ...colors.glass, borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <Select
+                      value={leaderboardStatusQuery}
+                      onChange={(e) => {
+                        setLeaderboardStatusQuery(e.target.value);
+                        setLeaderboardPage(0);
+                      }}
+                      displayEmpty
+                      variant="standard"
+                      disableUnderline
                       sx={{
-                        bgcolor: 'transparent',
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
-                        transition: 'background 0.2s'
+                        height: '100%',
+                        px: 2,
+                        color: '#fff',
+                        fontWeight: 300,
+                        '& .MuiSelect-select': { py: 1.5 }
                       }}
                     >
-                      <TableCell sx={{ color: colors.textSecondary, fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', py: 1 }}>
-                        <Box sx={{
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '6px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          bgcolor: index + (leaderboardPage * leaderboardRowsPerPage) === 0 ? 'rgba(245, 158, 11, 0.2)' : index + (leaderboardPage * leaderboardRowsPerPage) === 1 ? 'rgba(209, 213, 219, 0.2)' : index + (leaderboardPage * leaderboardRowsPerPage) === 2 ? 'rgba(180, 83, 9, 0.2)' : 'rgba(255,255,255,0.05)',
-                          color: index + (leaderboardPage * leaderboardRowsPerPage) === 0 ? '#f59e0b' : index + (leaderboardPage * leaderboardRowsPerPage) === 1 ? '#d1d5db' : index + (leaderboardPage * leaderboardRowsPerPage) === 2 ? '#b45309' : colors.textSecondary,
-                          fontWeight: 800,
-                          fontSize: '0.75rem'
-                        }}>
-                          {actualRank}
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
-                        <Box sx={{ cursor: 'pointer' }} onClick={() => handleTeamSelect(team)}>
-                          <Typography sx={{ color: '#fff', fontWeight: 300, fontSize: '0.85rem' }}>{team.teamName}</Typography>
-                          <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.7rem' }}>{team.teamCompany} | {team.governorate}</Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>{team.totalNpsTickets}</TableCell>
-                      <TableCell align="center" onClick={() => handleDrillDown(team, 'detractors')} sx={{ color: colors.error, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsDetractors}</TableCell>
-                      <TableCell align="center" onClick={() => handleDrillDown(team, 'neutrals')} sx={{ color: colors.warning, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsNeutrals}</TableCell>
-                      <TableCell align="center" onClick={() => handleDrillDown(team, 'issues')} sx={{ color: '#3b82f6', fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.issueViolations}</TableCell>
-                      <TableCell align="center" onClick={() => team.openCount > 0 && handleDrillDown(team, 'open')} sx={{ color: team.openCount > 0 ? colors.error : colors.textSecondary, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: team.openCount > 0 ? 'pointer' : 'default' }}>{team.openCount}</TableCell>
-                      <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>{team.avgResolutionTime}d</TableCell>
-                      <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
-                        <Typography variant="body2" sx={{
-                          color: team.resPercent > 90 ? colors.success : team.resPercent > 70 ? colors.warning : colors.error,
-                          fontWeight: 500,
-                          fontSize: '0.8rem'
-                        }}>
-                          {team.resPercent}%
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
-                        <Chip
-                          label={team.totalViolations}
-                          onClick={() => handleDrillDown(team, 'violations')}
-                          size="small"
-                          sx={{
-                            background: team.totalViolations === 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                            color: team.totalViolations === 0 ? colors.success : colors.error,
-                            fontWeight: 700,
-                            borderRadius: '8px',
-                            height: '22px',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer',
-                            '&:hover': { transform: 'scale(1.1)' }
+                      <MenuItem value="all">All Rankings</MenuItem>
+                      <MenuItem value="detractors">Has Detractors</MenuItem>
+                      <MenuItem value="issues">Has Key Issues</MenuItem>
+                      <MenuItem value="open">Has Open Cases</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <Button
+                    variant="outlined"
+                    startIcon={<FaFilter />}
+                    onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}
+                    sx={{
+                      borderRadius: '16px',
+                      color: advancedFiltersOpen ? colors.primary : colors.textSecondary,
+                      borderColor: advancedFiltersOpen ? colors.primary : 'rgba(255,255,255,0.1)',
+                      background: advancedFiltersOpen ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      transition: 'all 0.2s',
+                      '&:hover': { borderColor: colors.primary, background: 'rgba(139, 92, 246, 0.1)' }
+                    }}
+                  >
+                    Advanced
+                  </Button>
+
+                  <Button
+                    variant="contained"
+                    startIcon={<TableChartIcon />}
+                    onClick={handleExportLeaderboard}
+                    sx={{
+                      borderRadius: '16px',
+                      px: 3,
+                      background: colors.primaryGradient,
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      boxShadow: `0 8px 20px ${colors.primary}40`,
+                      '&:hover': { transform: 'translateY(-2px)', filter: 'brightness(1.1)' },
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Export Ranking
+                  </Button>
+                </Box>
+
+                {advancedFiltersOpen && (
+                  <Box sx={{
+                    p: 3,
+                    mb: 3,
+                    ...colors.glass,
+                    borderRadius: '20px',
+                    border: '1px solid rgba(139, 92, 246, 0.2)',
+                    animation: 'slideDown 0.3s ease-out'
+                  }}>
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} sm={3}>
+                        <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>START DATE</Typography>
+                        <TextField
+                          type="date"
+                          fullWidth
+                          variant="standard"
+                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                          value={leaderboardDateFilter.start}
+                          onChange={(e) => {
+                            setLeaderboardDateFilter({ ...leaderboardDateFilter, start: e.target.value });
+                            setLeaderboardPage(0);
                           }}
                         />
-                      </TableCell>
+                      </Grid>
+                      <Grid item xs={12} sm={3}>
+                        <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>END DATE</Typography>
+                        <TextField
+                          type="date"
+                          fullWidth
+                          variant="standard"
+                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                          value={leaderboardDateFilter.end}
+                          onChange={(e) => {
+                            setLeaderboardDateFilter({ ...leaderboardDateFilter, end: e.target.value });
+                            setLeaderboardPage(0);
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={3}>
+                        <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>MIN ISSUES</Typography>
+                        <TextField
+                          placeholder="e.g. 5"
+                          type="number"
+                          fullWidth
+                          variant="standard"
+                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                          value={leaderboardThresholds.minIssues}
+                          onChange={(e) => {
+                            setLeaderboardThresholds({ ...leaderboardThresholds, minIssues: e.target.value });
+                            setLeaderboardPage(0);
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={3}>
+                        <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>MIN SUCCESS %</Typography>
+                        <TextField
+                          placeholder="e.g. 80"
+                          type="number"
+                          fullWidth
+                          variant="standard"
+                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                          value={leaderboardThresholds.minSuccessRate}
+                          onChange={(e) => {
+                            setLeaderboardThresholds({ ...leaderboardThresholds, minSuccessRate: e.target.value });
+                            setLeaderboardPage(0);
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
+                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                      <Button
+                        size="small"
+                        sx={{ color: colors.error, fontWeight: 700 }}
+                        onClick={() => {
+                          setLeaderboardDateFilter({ start: '', end: '' });
+                          setLeaderboardThresholds({ minIssues: '', minSuccessRate: '' });
+                        }}
+                      >
+                        Clear All Filters
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+
+              <TableContainer component={Paper} sx={{
+                ...colors.glass,
+                borderRadius: '24px',
+                overflow: 'hidden',
+                border: '1px solid rgba(255,255,255,0.08)'
+              }}>
+                <Table size="small">
+                  <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
+                    <TableRow>
+                      <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>RANK</TableCell>
+                      <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'teamName', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TEAM NAME</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalNpsTickets', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL NPS</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsDetractors', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>DETRACTORS</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsNeutrals', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>NEUTRALS</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'issueViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>KEY ISSUES</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'openCount', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>OPEN CASES</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'avgResolutionTime', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>AVG SPEED</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'resPercent', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>SUCCESS %</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL VIOLATIONS</TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            <TablePagination
-              rowsPerPageOptions={[10, 25, 50, 100]}
-              component="div"
-              count={leaderboardData.length}
-              rowsPerPage={leaderboardRowsPerPage}
-              page={leaderboardPage}
-              onPageChange={(e, newPage) => setLeaderboardPage(newPage)}
-              onRowsPerPageChange={(e) => {
-                setLeaderboardRowsPerPage(parseInt(e.target.value, 10));
-                setLeaderboardPage(0);
-              }}
-              sx={{
-                color: colors.textSecondary,
-                borderTop: '1px solid rgba(255,255,255,0.08)',
-                '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
-                '& .MuiIconButton-root': { color: colors.primary }
-              }}
-            />
-          </TableContainer >
+                  </TableHead>
+                  <TableBody>
+                    {paginatedLeaderboardData.map((team, index) => {
+                      const actualRank = (leaderboardPage * leaderboardRowsPerPage) + index + 1;
+                      return (
+                        <TableRow
+                          key={team._id}
+                          sx={{
+                            bgcolor: 'transparent',
+                            '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                            transition: 'background 0.2s'
+                          }}
+                        >
+                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', py: 1 }}>
+                            <Box sx={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: index + (leaderboardPage * leaderboardRowsPerPage) === 0 ? 'rgba(245, 158, 11, 0.2)' : index + (leaderboardPage * leaderboardRowsPerPage) === 1 ? 'rgba(209, 213, 219, 0.2)' : index + (leaderboardPage * leaderboardRowsPerPage) === 2 ? 'rgba(180, 83, 9, 0.2)' : 'rgba(255,255,255,0.05)',
+                              color: index + (leaderboardPage * leaderboardRowsPerPage) === 0 ? '#f59e0b' : index + (leaderboardPage * leaderboardRowsPerPage) === 1 ? '#d1d5db' : index + (leaderboardPage * leaderboardRowsPerPage) === 2 ? '#b45309' : colors.textSecondary,
+                              fontWeight: 800,
+                              fontSize: '0.75rem'
+                            }}>
+                              {actualRank}
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
+                            <Box sx={{ cursor: 'pointer' }} onClick={() => handleTeamSelect(team)}>
+                              <Typography sx={{ color: '#fff', fontWeight: 300, fontSize: '0.85rem' }}>{team.teamName}</Typography>
+                              <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.7rem' }}>{team.teamCompany} | {team.governorate}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>{team.totalNpsTickets}</TableCell>
+                          <TableCell align="center" onClick={() => handleDrillDown(team, 'detractors')} sx={{ color: colors.error, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsDetractors}</TableCell>
+                          <TableCell align="center" onClick={() => handleDrillDown(team, 'neutrals')} sx={{ color: colors.warning, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsNeutrals}</TableCell>
+                          <TableCell align="center" onClick={() => handleDrillDown(team, 'issues')} sx={{ color: '#3b82f6', fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.issueViolations}</TableCell>
+                          <TableCell align="center" onClick={() => team.openCount > 0 && handleDrillDown(team, 'open')} sx={{ color: team.openCount > 0 ? colors.error : colors.textSecondary, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: team.openCount > 0 ? 'pointer' : 'default' }}>{team.openCount}</TableCell>
+                          <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>{team.avgResolutionTime}d</TableCell>
+                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
+                            <Typography variant="body2" sx={{
+                              color: team.resPercent > 90 ? colors.success : team.resPercent > 70 ? colors.warning : colors.error,
+                              fontWeight: 500,
+                              fontSize: '0.8rem'
+                            }}>
+                              {team.resPercent}%
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
+                            <Chip
+                              label={team.totalViolations}
+                              onClick={() => handleDrillDown(team, 'violations')}
+                              size="small"
+                              sx={{
+                                background: team.totalViolations === 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                color: team.totalViolations === 0 ? colors.success : colors.error,
+                                fontWeight: 700,
+                                borderRadius: '8px',
+                                height: '22px',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                '&:hover': { transform: 'scale(1.1)' }
+                              }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+                <TablePagination
+                  rowsPerPageOptions={[10, 25, 50, 100]}
+                  component="div"
+                  count={leaderboardData.length}
+                  rowsPerPage={leaderboardRowsPerPage}
+                  page={leaderboardPage}
+                  onPageChange={(e, newPage) => setLeaderboardPage(newPage)}
+                  onRowsPerPageChange={(e) => {
+                    setLeaderboardRowsPerPage(parseInt(e.target.value, 10));
+                    setLeaderboardPage(0);
+                  }}
+                  sx={{
+                    color: colors.textSecondary,
+                    borderTop: '1px solid rgba(255,255,255,0.08)',
+                    '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
+                    '& .MuiIconButton-root': { color: colors.primary }
+                  }}
+                />
+              </TableContainer >
+            </>
+          )}
+
+          {/* TAB 1: GLOBAL ANALYTICS */}
+          {globalTab === 1 && (
+            <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+              <Box sx={{
+                display: 'flex',
+                flexDirection: isMedium ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: isMedium ? 'start' : 'center',
+                gap: 2,
+                mb: 3,
+                pb: 1,
+                borderBottom: '1px solid rgba(255,255,255,0.05)'
+              }}>
+                <Tabs
+                  value={analyticsSubTab}
+                  onChange={(e, v) => setAnalyticsSubTab(v)}
+                  sx={{
+                    minHeight: '40px',
+                    '& .MuiTab-root': {
+                      color: colors.textSecondary,
+                      minHeight: '40px',
+                      py: 0.5,
+                      fontSize: '0.85rem',
+                      textTransform: 'none'
+                    },
+                    '& .Mui-selected': { color: '#fff !important', fontWeight: 'bold' },
+                    '& .MuiTabs-indicator': { backgroundColor: '#3b82f6' }
+                  }}
+                >
+                  <Tab label="All Analysis" />
+                  <Tab label="Detractors" />
+                  <Tab label="Neutrals" />
+                </Tabs>
+
+                <Box sx={{
+                  px: 2,
+                  py: 0.5,
+                  borderRadius: '20px',
+                  bgcolor: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.2)'
+                }}>
+                  <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.85rem' }}>
+                    <span style={{ color: '#94a3b8' }}>Analyzing:</span> <span style={{ fontWeight: '800', color: '#3b82f6' }}>{globalAnalytics.totalProcessed}</span> <span style={{ color: '#94a3b8' }}>Tasks</span>
+                  </Typography>
+                </Box>
+              </Box>
+              <Paper sx={{ p: 2, mb: 3, ...colors.glass, borderRadius: 3 }} elevation={0}>
+                <Stack direction={isMedium ? "column" : "row"} spacing={3} alignItems={isMedium ? "start" : "center"}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FilterListIcon sx={{ color: colors.primary }} />
+                    <Typography variant="subtitle2" sx={{ color: colors.textSecondary, fontWeight: 700, minWidth: '80px' }}>
+                      Time Filter:
+                    </Typography>
+                  </Box>
+
+                  <ToggleButtonGroup
+                    value={timeFilterMode}
+                    exclusive
+                    onChange={(e, val) => val && setTimeFilterMode(val)}
+                    size="small"
+                    sx={{
+                      bgcolor: 'rgba(0,0,0,0.2)',
+                      '& .MuiToggleButton-root': {
+                        color: '#94a3b8',
+                        borderColor: 'rgba(255,255,255,0.05)',
+                        px: 2,
+                        py: 0.5,
+                        fontSize: '0.75rem',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        '&.Mui-selected': {
+                          bgcolor: 'rgba(139, 92, 246, 0.1)',
+                          color: colors.primary,
+                          borderColor: 'rgba(139, 92, 246, 0.3)',
+                          '&:hover': { bgcolor: 'rgba(139, 92, 246, 0.2)' }
+                        }
+                      }
+                    }}
+                  >
+                    <ToggleButton value="all" sx={{ gap: 1 }}><CalendarTodayIcon sx={{ fontSize: 16 }} /> All Time</ToggleButton>
+                    <ToggleButton value="weeks" sx={{ gap: 1 }}><EventIcon sx={{ fontSize: 16 }} /> Weeks</ToggleButton>
+                    <ToggleButton value="months" sx={{ gap: 1 }}><CalendarTodayIcon sx={{ fontSize: 16 }} /> Months</ToggleButton>
+                    <ToggleButton value="days" sx={{ gap: 1 }}><UpdateIcon sx={{ fontSize: 16 }} /> Recent Days</ToggleButton>
+                    <ToggleButton value="custom" sx={{ gap: 1 }}><FilterListIcon sx={{ fontSize: 16 }} /> Custom</ToggleButton>
+                  </ToggleButtonGroup>
+
+                  <Box sx={{ flexGrow: 1, width: '100%' }}>
+                    {timeFilterMode === 'days' && (
+                      <Stack direction="row" spacing={3} alignItems="center">
+                        <Slider
+                          value={recentDaysValue}
+                          onChange={(e, val) => setRecentDaysValue(val)}
+                          min={7}
+                          max={365}
+                          sx={{ flexGrow: 1, color: colors.primary }}
+                          valueLabelDisplay="auto"
+                        />
+                        <TextField
+                          size="small"
+                          label="Days"
+                          type="number"
+                          value={recentDaysValue}
+                          onChange={(e) => setRecentDaysValue(Number(e.target.value))}
+                          sx={{
+                            width: 80,
+                            '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
+                            '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                          }}
+                        />
+                      </Stack>
+                    )}
+
+                    {timeFilterMode === 'weeks' && (
+                      <Autocomplete
+                        multiple
+                        size="small"
+                        options={weekRanges}
+                        value={selectedWeeks}
+                        onChange={(e, newVal) => setSelectedWeeks(newVal)}
+                        renderInput={(params) => (
+                          <TextField {...params} label="Select Weeks" variant="outlined" placeholder="Search weeks..." />
+                        )}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            color: '#fff', fontSize: '0.8rem',
+                            '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
+                          },
+                          '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                        }}
+                      />
+                    )}
+
+                    {timeFilterMode === 'months' && (
+                      <Autocomplete
+                        multiple
+                        size="small"
+                        options={monthOptions}
+                        getOptionLabel={(option) => option.label}
+                        value={monthOptions.filter(m => selectedMonths.includes(m.key))}
+                        onChange={(e, newVal) => setSelectedMonths(newVal.map(v => v.key))}
+                        renderInput={(params) => (
+                          <TextField {...params} label="Select Monthly Periods" variant="outlined" placeholder="Search months..." />
+                        )}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            color: '#fff', fontSize: '0.8rem',
+                            '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
+                          },
+                          '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                        }}
+                      />
+                    )}
+
+                    {timeFilterMode === 'custom' && (
+                      <Stack direction="row" spacing={2}>
+                        <TextField
+                          size="small"
+                          label="Start Date"
+                          type="date"
+                          value={customDateRange.start}
+                          onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
+                            '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                          }}
+                        />
+                        <TextField
+                          size="small"
+                          label="End Date"
+                          type="date"
+                          value={customDateRange.end}
+                          onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
+                            '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                          }}
+                        />
+                      </Stack>
+                    )}
+                  </Box>
+
+                  <Button
+                    size="small"
+                    sx={{ color: colors.textSecondary, textTransform: 'none', minWidth: '80px' }}
+                  >
+                    Reset Filter
+                  </Button>
+                </Stack>
+              </Paper>
+
+              {/* 1. Global Sentiment Segmentation - Deep Dive Port */}
+              <Grid container spacing={4} sx={{ mb: 6 }}>
+                <Grid item xs={12} md={7}>
+                  <Paper sx={{ p: 2.5, ...colors.glass, borderRadius: 4, border: '1px solid rgba(139, 92, 246, 0.2)' }} elevation={0}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box sx={{ width: 3, height: 20, bgcolor: '#8b5cf6', borderRadius: 4 }} />
+                        <Typography variant="h6" fontWeight="800" color="#fff" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.95rem' }}>
+                          Sentiment Segmentation <span style={{ color: alpha('#fff', 0.5), fontSize: '0.75rem' }}>Deep Analysis</span>
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => setChartDialog({ open: true, title: 'Sentiment Analysis', data: globalAnalytics.sentimentData, type: 'pie' })}
+                          sx={{ color: '#8b5cf6', bgcolor: 'rgba(139, 92, 246, 0.1)', '&:hover': { bgcolor: 'rgba(139, 92, 246, 0.2)' } }}
+                        >
+                          <MdInsights size={18} />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                    <TableContainer sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                      <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, fontSize: '0.75rem' } }}>
+                        <TableHead>
+                          <TableRow sx={{ '& .MuiTableCell-root': { bgcolor: 'rgba(255,255,255,0.03)', color: '#94a3b8', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' } }}>
+                            <TableCell>Customer Sentiment</TableCell>
+                            <TableCell align="right">Hit Count</TableCell>
+                            <TableCell align="right">Matrix Share</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {globalAnalytics.sentimentData.map((row) => (
+                            <TableRow key={row.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                              <TableCell sx={{ color: row.color, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{row.name}</TableCell>
+                              <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{row.value}</TableCell>
+                              <TableCell align="right" sx={{
+                                bgcolor: getHeatmapColor(parseFloat(row.percentage), 0, 100, row.name === 'Promoters' ? 'green' : row.name === 'Neutrals' ? 'orange' : 'red'),
+                                color: '#fff', fontWeight: 800, borderBottom: '1px solid rgba(255,255,255,0.05)'
+                              }}>
+                                {row.percentage}%
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={5}>
+                  <Paper sx={{ p: 2.5, ...colors.glass, borderRadius: 4, border: '1px solid rgba(139, 92, 246, 0.1)', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} elevation={0}>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <RechartsPieChart>
+                        <RechartsPie
+                          data={globalAnalytics.sentimentData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={6}
+                          dataKey="value"
+                          label={({ name, percentage }) => `${percentage}%`}
+                        >
+                          {globalAnalytics.sentimentData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                        </RechartsPie>
+                        <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+                        <RechartsLegend verticalAlign="bottom" height={30} />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </Paper>
+                </Grid>
+              </Grid>
+
+              {/* Analytical Matrices removed */}
+
+
+              <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Divider sx={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+                <Typography variant="h6" sx={{ color: '#3b82f6', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' }}>Advanced Analytics Charts & Tables</Typography>
+                <Divider sx={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+              </Box>
+
+              {/* Advanced Analytics Charts & Tables */}
+              <Grid container spacing={3}>
+                {/* Owner Analysis */}
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(59, 130, 246, 0.2)' }} elevation={0}>
+                    <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <SupportAgent sx={{ color: '#3b82f6' }} /> Owner Distribution
+                    </Typography>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <RechartsBarChart data={globalAnalytics.ownerData}>
+                        <defs>
+                          <linearGradient id="ownerGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.2} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                        <RechartsTooltip
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}>
+                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                  <Typography sx={{ color: '#3b82f6', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
+                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                </Paper>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <RechartsBar dataKey="value" fill="url(#ownerGradient)" radius={[6, 6, 0, 0]} />
+                      </RechartsBarChart>
+                    </ResponsiveContainer>
+                    {/* Detailed Owner Table - Compact Style */}
+                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Owner</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {Object.entries(globalAnalytics.detailedOwners).sort((a, b) => b[1].total - a[1].total).map(([owner, data]) => (
+                            <TableRow key={owner} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                              <TableCell sx={{ color: '#e2e8f0' }}>{owner}</TableCell>
+                              <TableCell
+                                align="right"
+                                onClick={() => handleAnalyticsDrillDown({ owner })}
+                                sx={{
+                                  color: '#e2e8f0',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                  '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' }
+                                }}
+                              >
+                                {data.total}
+                              </TableCell>
+                              <TableCell
+                                align="right"
+                                onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ owner, itn: true })}
+                                sx={{
+                                  color: data.itn > 0 ? '#f59e0b' : '#64748b',
+                                  cursor: data.itn > 0 ? 'pointer' : 'default',
+                                  '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
+                                }}
+                              >
+                                {data.itn}
+                              </TableCell>
+                              <TableCell
+                                align="right"
+                                onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ owner, subscription: true })}
+                                sx={{
+                                  color: data.subscription > 0 ? '#10b981' : '#64748b',
+                                  cursor: data.subscription > 0 ? 'pointer' : 'default',
+                                  '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
+                                }}
+                              >
+                                {data.subscription}
+                              </TableCell>
+                              <TableCell align="right" sx={{ color: '#94a3b8' }}>{((data.total / globalAnalytics.totalProcessed) * 100).toFixed(1)}%</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                  </Paper>
+                </Grid>
+
+                {/* Reason Breakdown */}
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(16, 185, 129, 0.2)' }} elevation={0}>
+                    <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <PriorityHigh sx={{ color: '#10b981' }} /> Reason Distribution
+                    </Typography>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <RechartsPieChart>
+                        <RechartsPie
+                          data={globalAnalytics.reasonData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {globalAnalytics.reasonData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'][index % 8]} />
+                          ))}
+                        </RechartsPie>
+                        <RechartsTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
+                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{payload[0].name}</Typography>
+                                  <Typography sx={{ color: payload[0].payload.fill, fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
+                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Weight: {payload[0].payload.percentage}%</Typography>
+                                </Paper>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <RechartsLegend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '0.7rem', color: '#94a3b8' }} />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                    {/* Detailed Reason Table - Compact Style */}
+                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Reason</TableCell>
+                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => (
+                              <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                            ))}
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {Object.entries(globalAnalytics.detailedReasons).sort((a, b) => b[1].total - a[1].total).slice(0, 15).map(([reason, data]) => {
+                            const top3Owners = globalAnalytics.contributionMatrix.topOwners.slice(0, 3);
+                            const top3Sum = top3Owners.reduce((sum, owner) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                            const allOwnersSum = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
+                            const otherCount = allOwnersSum - top3Sum;
+                            return (
+                              <TableRow key={reason} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                <TableCell
+                                  onClick={() => handleAnalyticsDrillDown({ reason })}
+                                  sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                >
+                                  {reason}
+                                </TableCell>
+                                {top3Owners.map(owner => {
+                                  const count = data.ownerBreakdown[owner] || 0;
+                                  const pct = allOwnersSum > 0 ? ((count / allOwnersSum) * 100).toFixed(0) : 0;
+                                  return (
+                                    <TableCell
+                                      key={owner}
+                                      align="right"
+                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ reason, owner })}
+                                      sx={{
+                                        color: count > 0 ? '#e2e8f0' : 'rgba(255,255,255,0.1)',
+                                        fontWeight: count > 0 ? 'bold' : 'normal',
+                                        cursor: count > 0 ? 'pointer' : 'default',
+                                        '&:hover': count > 0 ? { bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' } : {}
+                                      }}
+                                    >
+                                      {count}
+                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                    </TableCell>
+                                  );
+                                })}
+                                <TableCell
+                                  align="right"
+                                  onClick={() => otherCount > 0 && handleAnalyticsDrillDown({ reason })}
+                                  sx={{ color: '#94a3b8', cursor: otherCount > 0 ? 'pointer' : 'default' }}
+                                >
+                                  {otherCount}
+                                </TableCell>
+                                <TableCell
+                                  align="right"
+                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ reason, itn: true })}
+                                  sx={{
+                                    color: data.itn > 0 ? '#f59e0b' : '#64748b',
+                                    cursor: data.itn > 0 ? 'pointer' : 'default',
+                                    '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
+                                  }}
+                                >
+                                  {data.itn}
+                                </TableCell>
+                                <TableCell
+                                  align="right"
+                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ reason, subscription: true })}
+                                  sx={{
+                                    color: data.subscription > 0 ? '#10b981' : '#64748b',
+                                    cursor: data.subscription > 0 ? 'pointer' : 'default',
+                                    '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
+                                  }}
+                                >
+                                  {data.subscription}
+                                </TableCell>
+                                <TableCell
+                                  align="right"
+                                  onClick={() => handleAnalyticsDrillDown({ reason })}
+                                  sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                >
+                                  {data.total}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{((data.total / globalAnalytics.totalProcessed) * 100).toFixed(1)}%</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          {/* Total Row */}
+                          <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                            <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => {
+                              const totalForOwner = Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                              return (
+                                <TableCell key={owner} align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
+                              );
+                            })}
+                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => {
+                                const top3Sum = globalAnalytics.contributionMatrix.topOwners.slice(0, 3).reduce((s, owner) => s + (data.ownerBreakdown[owner] || 0), 0);
+                                const allSum = Object.values(data.ownerBreakdown).reduce((s, count) => s + count, 0);
+                                return sum + (allSum - top3Sum);
+                              }, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.itn, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.subscription, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.total, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                  </Paper>
+                </Grid>
+
+                {/* Sub-reason Analysis */}
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(245, 158, 11, 0.2)' }} elevation={0}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                      <Typography variant="h6" fontWeight="700" color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Assignment sx={{ color: '#f59e0b' }} /> Sub-Reason Breakdown
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => setChartDialog({ open: true, title: 'Sub-Reason Analysis', data: globalAnalytics.subReasonData, type: 'bar' })}
+                        sx={{ color: '#f59e0b', bgcolor: 'rgba(245, 158, 11, 0.1)' }}
+                      >
+                        <MdInsights size={20} />
+                      </IconButton>
+                    </Box>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <RechartsBarChart data={globalAnalytics.subReasonData}>
+                        <defs>
+                          <linearGradient id="subReasonGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.2} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                        <RechartsTooltip
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
+                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                  <Typography sx={{ color: '#f59e0b', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
+                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                </Paper>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <RechartsBar dataKey="value" fill="url(#subReasonGradient)" radius={[6, 6, 0, 0]} />
+                      </RechartsBarChart>
+                    </ResponsiveContainer>
+                    {/* Detailed Sub-Reason Table - Compact Style */}
+                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub-Reason</TableCell>
+                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => (
+                              <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                            ))}
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {Object.entries(globalAnalytics.detailedSubReasons).sort((a, b) => b[1].total - a[1].total).slice(0, 15).map(([subReason, data]) => {
+                            const top3Owners = globalAnalytics.contributionMatrix.topOwners.slice(0, 3);
+                            const top3Sum = top3Owners.reduce((sum, owner) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                            const allOwnersSum = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
+                            const otherCount = allOwnersSum - top3Sum;
+                            return (
+                              <TableRow key={subReason} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                <TableCell
+                                  onClick={() => handleAnalyticsDrillDown({ subReason })}
+                                  sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                >
+                                  {subReason}
+                                </TableCell>
+                                {top3Owners.map(owner => {
+                                  const count = data.ownerBreakdown[owner] || 0;
+                                  const pct = allOwnersSum > 0 ? ((count / allOwnersSum) * 100).toFixed(0) : 0;
+                                  return (
+                                    <TableCell
+                                      key={owner}
+                                      align="right"
+                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ subReason, owner })}
+                                      sx={{
+                                        color: count > 0 ? '#f59e0b' : 'rgba(255,255,255,0.1)',
+                                        fontWeight: count > 0 ? 'bold' : 'normal',
+                                        cursor: count > 0 ? 'pointer' : 'default',
+                                        '&:hover': count > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#fff' } : {}
+                                      }}
+                                    >
+                                      {count}
+                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                    </TableCell>
+                                  );
+                                })}
+                                <TableCell
+                                  align="right"
+                                  onClick={() => otherCount > 0 && handleAnalyticsDrillDown({ subReason })}
+                                  sx={{ color: '#94a3b8', cursor: otherCount > 0 ? 'pointer' : 'default' }}
+                                >
+                                  {otherCount}
+                                </TableCell>
+                                <TableCell
+                                  align="right"
+                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ subReason, itn: true })}
+                                  sx={{
+                                    color: data.itn > 0 ? '#f59e0b' : '#64748b',
+                                    cursor: data.itn > 0 ? 'pointer' : 'default',
+                                    '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
+                                  }}
+                                >
+                                  {data.itn}
+                                </TableCell>
+                                <TableCell
+                                  align="right"
+                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ subReason, subscription: true })}
+                                  sx={{
+                                    color: data.subscription > 0 ? '#10b981' : '#64748b',
+                                    cursor: data.subscription > 0 ? 'pointer' : 'default',
+                                    '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
+                                  }}
+                                >
+                                  {data.subscription}
+                                </TableCell>
+                                <TableCell
+                                  align="right"
+                                  onClick={() => handleAnalyticsDrillDown({ subReason })}
+                                  sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                >
+                                  {data.total}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{((data.total / globalAnalytics.totalProcessed) * 100).toFixed(1)}%</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          {/* Total Row */}
+                          <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                            <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => {
+                              const totalForOwner = Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                              return (
+                                <TableCell key={owner} align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
+                              );
+                            })}
+                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => {
+                                const top3Sum = globalAnalytics.contributionMatrix.topOwners.slice(0, 3).reduce((s, owner) => s + (data.ownerBreakdown[owner] || 0), 0);
+                                const allSum = Object.values(data.ownerBreakdown).reduce((s, count) => s + count, 0);
+                                return sum + (allSum - top3Sum);
+                              }, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.itn, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.subscription, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.total, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                  </Paper>
+                </Grid>
+
+                {/* Root Cause Analysis */}
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(139, 92, 246, 0.2)' }} elevation={0}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                      <Typography variant="h6" fontWeight="700" color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <SearchIcon sx={{ color: '#8b5cf6' }} /> Root Cause Matrix
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => setChartDialog({ open: true, title: 'Root Cause Analysis', data: globalAnalytics.rootCauseData, type: 'area' })}
+                        sx={{ color: '#8b5cf6', bgcolor: 'rgba(139, 92, 246, 0.1)' }}
+                      >
+                        <MdInsights size={20} />
+                      </IconButton>
+                    </Box>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <RechartsBarChart data={globalAnalytics.rootCauseData}>
+                        <defs>
+                          <linearGradient id="rootCauseGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.2} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                        <RechartsTooltip
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
+                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                  <Typography sx={{ color: '#8b5cf6', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
+                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                </Paper>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <RechartsBar dataKey="value" fill="url(#rootCauseGradient)" radius={[6, 6, 0, 0]} />
+                      </RechartsBarChart>
+                    </ResponsiveContainer>
+                    {/* Detailed Root Cause Table - Compact Style */}
+                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Root Cause</TableCell>
+                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => (
+                              <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                            ))}
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {Object.entries(globalAnalytics.detailedRootCauses).sort((a, b) => b[1].total - a[1].total).slice(0, 15).map(([rootCause, data]) => {
+                            const top3Owners = globalAnalytics.contributionMatrix.topOwners.slice(0, 3);
+                            const top3Sum = top3Owners.reduce((sum, owner) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                            const allOwnersSum = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
+                            const otherCount = allOwnersSum - top3Sum;
+                            return (
+                              <TableRow key={rootCause} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                <TableCell
+                                  onClick={() => handleAnalyticsDrillDown({ rootCause })}
+                                  sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                >
+                                  {rootCause}
+                                </TableCell>
+                                {top3Owners.map(owner => {
+                                  const count = data.ownerBreakdown[owner] || 0;
+                                  const pct = allOwnersSum > 0 ? ((count / allOwnersSum) * 100).toFixed(0) : 0;
+                                  return (
+                                    <TableCell
+                                      key={owner}
+                                      align="right"
+                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ rootCause, owner })}
+                                      sx={{
+                                        color: count > 0 ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
+                                        fontWeight: count > 0 ? 'bold' : 'normal',
+                                        cursor: count > 0 ? 'pointer' : 'default',
+                                        '&:hover': count > 0 ? { bgcolor: 'rgba(139, 92, 246, 0.2)', color: '#fff' } : {}
+                                      }}
+                                    >
+                                      {count}
+                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                    </TableCell>
+                                  );
+                                })}
+                                <TableCell
+                                  align="right"
+                                  onClick={() => otherCount > 0 && handleAnalyticsDrillDown({ rootCause })}
+                                  sx={{ color: '#94a3b8', cursor: otherCount > 0 ? 'pointer' : 'default' }}
+                                >
+                                  {otherCount}
+                                </TableCell>
+                                <TableCell
+                                  align="right"
+                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ rootCause, itn: true })}
+                                  sx={{
+                                    color: data.itn > 0 ? '#f59e0b' : '#64748b',
+                                    cursor: data.itn > 0 ? 'pointer' : 'default',
+                                    '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
+                                  }}
+                                >
+                                  {data.itn}
+                                </TableCell>
+                                <TableCell
+                                  align="right"
+                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ rootCause, subscription: true })}
+                                  sx={{
+                                    color: data.subscription > 0 ? '#10b981' : '#64748b',
+                                    cursor: data.subscription > 0 ? 'pointer' : 'default',
+                                    '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
+                                  }}
+                                >
+                                  {data.subscription}
+                                </TableCell>
+                                <TableCell
+                                  align="right"
+                                  onClick={() => handleAnalyticsDrillDown({ rootCause })}
+                                  sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                >
+                                  {data.total}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{((data.total / globalAnalytics.totalProcessed) * 100).toFixed(1)}%</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          {/* Total Row */}
+                          <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                            <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => {
+                              const totalForOwner = Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                              return (
+                                <TableCell key={owner} align="right" sx={{ color: '#8b5cf6', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
+                              );
+                            })}
+                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => {
+                                const top3Sum = globalAnalytics.contributionMatrix.topOwners.slice(0, 3).reduce((s, owner) => s + (data.ownerBreakdown[owner] || 0), 0);
+                                const allSum = Object.values(data.ownerBreakdown).reduce((s, count) => s + count, 0);
+                                return sum + (allSum - top3Sum);
+                              }, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.itn, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.subscription, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                              {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.total, 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                  </Paper>
+                </Grid>
+              </Grid>
+
+              {/* Field Team Analysis Section using Blue Theme */}
+              <Box sx={{ mt: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h5" fontWeight="700" color="#3b82f6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    Field Team Offenders Analysis
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FaFileExcel />}
+                    onClick={handleExportAllTeamsViolations}
+                    sx={{ borderColor: '#10b981', color: '#10b981', '&:hover': { borderColor: '#059669', bgcolor: 'rgba(16, 185, 129, 0.1)' } }}
+                  >
+                    Export All Teams Detailed Report
+                  </Button>
+                </Box>
+
+                {globalAnalytics.fieldTeamAnalytics && globalAnalytics.fieldTeamAnalytics.length > 0 ? (
+                  <Grid container spacing={2}>
+                    {globalAnalytics.fieldTeamAnalytics
+                      .slice((offendersPage - 1) * 10, offendersPage * 10)
+                      .map((team, idx) => (
+                        <Grid item xs={12} key={idx}>
+                          <Paper sx={{
+                            p: 2,
+                            ...colors.glass,
+                            borderRadius: 2,
+                            border: '2px solid rgba(59, 130, 246, 0.3)',
+                            '&:hover': { borderColor: 'rgba(59, 130, 246, 0.6)' }
+                          }} elevation={0}>
+                            {/* Team Header */}
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                              <Box>
+                                <Typography variant="h6" fontWeight="700" color="#fff">
+                                  #{(offendersPage - 1) * 10 + idx + 1} {team.teamName}
+                                </Typography>
+                                <Typography variant="body2" color="#b3b3b3">
+                                  Total Issues: <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{team.totalIssues}</span>
+                                </Typography>
+                              </Box>
+                              <Button
+                                size="small"
+                                startIcon={<FaFileExcel />}
+                                onClick={() => handleExportTeamViolations(team)}
+                                sx={{ color: '#94a3b8', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' } }}
+                              >
+                                Export
+                              </Button>
+                            </Box>
+
+                            {/* Analysis Grid */}
+                            <Grid container spacing={4}>
+                              {/* Left Column: People & Reasons */}
+                              <Grid item xs={12} md={4}>
+                                <Stack spacing={3}>
+                                  <Box>
+                                    <Typography variant="subtitle2" fontWeight="700" mb={1.5} color="#3b82f6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <SupportAgent sx={{ fontSize: 18 }} /> Responsible Owners
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxHeight: 300, overflowY: 'auto', pr: 1 }}>
+                                      {team.owners.map((owner, i) => (
+                                        <Box key={i} sx={{ position: 'relative' }}>
+                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
+                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{owner.name}</Typography>
+                                            <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>{owner.value}</Typography>
+                                          </Box>
+                                          <LinearProgress
+                                            variant="determinate"
+                                            value={(owner.value / team.totalIssues) * 100}
+                                            sx={{
+                                              height: 4,
+                                              borderRadius: 2,
+                                              bgcolor: 'rgba(59, 130, 246, 0.1)',
+                                              '& .MuiLinearProgress-bar': { bgcolor: '#3b82f6' }
+                                            }}
+                                          />
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  </Box>
+                                  <Box>
+                                    <Typography variant="subtitle2" fontWeight="700" mb={1.5} color="#f59e0b" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <PriorityHigh sx={{ fontSize: 18 }} /> Issue Reasons
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxHeight: 300, overflowY: 'auto', pr: 1 }}>
+                                      {team.reasons.map((reason, i) => (
+                                        <Box key={i}>
+                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
+                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{reason.name}</Typography>
+                                            <Typography sx={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 'bold' }}>{reason.value}</Typography>
+                                          </Box>
+                                          <LinearProgress
+                                            variant="determinate"
+                                            value={(reason.value / team.totalIssues) * 100}
+                                            sx={{
+                                              height: 4,
+                                              borderRadius: 2,
+                                              bgcolor: 'rgba(245, 158, 11, 0.1)',
+                                              '& .MuiLinearProgress-bar': { bgcolor: '#f59e0b' }
+                                            }}
+                                          />
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  </Box>
+                                </Stack>
+                              </Grid>
+
+                              {/* Middle Column: Root Causes & Sub-reasons */}
+                              <Grid item xs={12} md={4}>
+                                <Stack spacing={3}>
+                                  <Box>
+                                    <Typography variant="subtitle2" fontWeight="700" mb={1.5} color="#10b981" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <SearchIcon sx={{ fontSize: 18 }} /> Root Cause Distribution
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxHeight: 300, overflowY: 'auto', pr: 1 }}>
+                                      {team.rootCauses.map((rc, i) => (
+                                        <Box key={i}>
+                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
+                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{rc.name}</Typography>
+                                            <Typography sx={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>{rc.value}</Typography>
+                                          </Box>
+                                          <LinearProgress
+                                            variant="determinate"
+                                            value={(rc.value / team.totalIssues) * 100}
+                                            sx={{
+                                              height: 4,
+                                              borderRadius: 2,
+                                              bgcolor: 'rgba(16, 185, 129, 0.1)',
+                                              '& .MuiLinearProgress-bar': { bgcolor: '#10b981' }
+                                            }}
+                                          />
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  </Box>
+                                  <Box>
+                                    <Typography variant="subtitle2" fontWeight="700" mb={1.5} color="#8b5cf6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Assignment sx={{ fontSize: 18 }} /> Sub-Reason Analysis
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxHeight: 300, overflowY: 'auto', pr: 1 }}>
+                                      {team.subReasons.map((sr, i) => (
+                                        <Box key={i}>
+                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
+                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{sr.name}</Typography>
+                                            <Typography sx={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 'bold' }}>{sr.value}</Typography>
+                                          </Box>
+                                          <LinearProgress
+                                            variant="determinate"
+                                            value={(sr.value / team.totalIssues) * 100}
+                                            sx={{
+                                              height: 4,
+                                              borderRadius: 2,
+                                              bgcolor: 'rgba(139, 92, 246, 0.1)',
+                                              '& .MuiLinearProgress-bar': { bgcolor: '#8b5cf6' }
+                                            }}
+                                          />
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  </Box>
+                                </Stack>
+                              </Grid>
+
+                              {/* Right Column: NPS Satisfaction */}
+                              <Grid item xs={12} md={4}>
+                                <Typography variant="subtitle2" fontWeight="700" mb={2} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <TrendingUp sx={{ fontSize: 18 }} /> Customer Satisfaction (NPS)
+                                </Typography>
+                                <Paper sx={{
+                                  p: 2,
+                                  bgcolor: 'rgba(15, 23, 42, 0.6)',
+                                  borderRadius: 3,
+                                  border: '1px solid rgba(255,255,255,0.05)',
+                                  height: '240px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'center'
+                                }}>
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <RechartsBarChart data={team.npsBreakdown} layout="vertical" margin={{ left: 20 }}>
+                                      <XAxis type="number" hide />
+                                      <YAxis
+                                        dataKey="name"
+                                        type="category"
+                                        width={80}
+                                        stroke="#94a3b8"
+                                        fontSize={11}
+                                        fontWeight={600}
+                                      />
+                                      <RechartsTooltip
+                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 12, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}
+                                        itemStyle={{ color: '#fff', fontSize: '0.8rem' }}
+                                      />
+                                      <RechartsBar dataKey="value" radius={[0, 6, 6, 0]} barSize={32}>
+                                        {team.npsBreakdown.map((entry, index) => (
+                                          <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                      </RechartsBar>
+                                    </RechartsBarChart>
+                                  </ResponsiveContainer>
+                                  <Box sx={{ mt: 1, px: 1, display: 'flex', justifyContent: 'space-around' }}>
+                                    {team.npsBreakdown.map((entry, i) => (
+                                      <Stack key={i} direction="row" spacing={1} alignItems="center">
+                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: entry.color }} />
+                                        <Typography sx={{ fontSize: '0.65rem', color: '#94a3b8' }}>
+                                          {entry.name}: <strong>{entry.value}</strong>
+                                        </Typography>
+                                      </Stack>
+                                    ))}
+                                  </Box>
+                                </Paper>
+                              </Grid>
+                            </Grid>
+                          </Paper>
+                        </Grid>
+                      ))}
+                  </Grid>
+                ) : (
+                  <Typography variant="body2" color="#b3b3b3" textAlign="center" py={4}>
+                    No field team data available
+                  </Typography>
+                )}
+
+                {/* Pagination Controls */}
+                {globalAnalytics.fieldTeamAnalytics && globalAnalytics.fieldTeamAnalytics.length > 10 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 2 }}>
+                    <Pagination
+                      count={Math.ceil(globalAnalytics.fieldTeamAnalytics.length / 10)}
+                      page={offendersPage}
+                      onChange={(e, v) => setOffendersPage(v)}
+                      color="primary"
+                      sx={{
+                        '& .MuiPaginationItem-root': { color: '#fff' },
+                        '& .Mui-selected': { bgcolor: 'rgba(59, 130, 246, 0.3) !important' }
+                      }}
+                    />
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          )}
+
         </Box >
-      )}
+      )
+      }
 
       {/* Drill-down Transaction Dialog */}
       <Dialog
@@ -2292,7 +4014,7 @@ ${data.map((a, i) => `
                   }
                 }}
               >
-                <Tab label="Executive Overview" icon={<BarChart />} iconPosition="start" />
+                <Tab label="Executive Overview" icon={<BarChartIconMUI />} iconPosition="start" />
                 <Tab label="Customer Issues" icon={<SupportAgent />} iconPosition="start" />
                 <Tab label="Tasks & Tickets" icon={<Assignment />} iconPosition="start" />
                 <Tab label="Theoretical" icon={<Quiz />} iconPosition="start" />
@@ -3690,7 +5412,270 @@ ${data.map((a, i) => `
           window.dispatchEvent(new CustomEvent('cin-refresh'));
         }}
       />
+
+      <ProfessionalChartDialog
+        open={chartDialog.open}
+        onClose={() => setChartDialog({ ...chartDialog, open: false })}
+        title={chartDialog.title}
+        data={chartDialog.data}
+        type={chartDialog.type}
+        stackKeys={chartDialog.stackKeys}
+      />
+
+      {/* Analytics Drill-Down Dialog */}
+      <Dialog
+        open={analyticsDrillDown.open}
+        onClose={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))}
+        fullWidth
+        maxWidth="lg"
+        PaperProps={{
+          sx: {
+            backgroundColor: '#1a1a1a',
+            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
+            borderRadius: '24px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            minHeight: '60vh'
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          pb: 1,
+          borderBottom: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          <Box>
+            <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 0.5 }}>
+              Task List
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+              {analyticsDrillDown.title} ({analyticsDrillDown.tasks.length} Tasks)
+            </Typography>
+          </Box>
+          <IconButton onClick={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))} sx={{ color: '#fff' }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Week</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Feedback</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {analyticsDrillDown.tasks.map((task) => (
+                  <TableRow key={task._id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}>
+                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                      {task.interviewDate ? getWeekNumber(task.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber).week : '-'}
+                    </TableCell>
+                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
+                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
+                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                      {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
+                    </TableCell>
+                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                      {Array.isArray(task.responsible) ? task.responsible.join(', ') : task.responsible || '-'}
+                    </TableCell>
+                    <TableCell sx={{ color: alpha('#fff', 0.6), fontSize: '0.7rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {task.customerFeedback || '-'}
+                    </TableCell>
+                    <TableCell>
+                      {task.evaluationScore !== undefined && task.evaluationScore !== null && (
+                        <Chip
+                          label={task.evaluationScore}
+                          size="small"
+                          sx={{
+                            height: 20,
+                            fontSize: '0.65rem',
+                            fontWeight: 'bold',
+                            bgcolor: task.evaluationScore >= 9 ? 'rgba(76, 175, 80, 0.2)' :
+                              task.evaluationScore >= 7 ? 'rgba(255, 152, 0, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                            color: task.evaluationScore >= 9 ? '#4caf50' :
+                              task.evaluationScore >= 7 ? '#ff9800' : '#f44336'
+                          }}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={() => {
+                          setSelectedTask(task);
+                          setViewDialogOpen(true);
+                        }}
+                        sx={{
+                          textTransform: 'none',
+                          color: '#7b68ee',
+                          fontWeight: 'bold',
+                          '&:hover': { bgcolor: alpha('#7b68ee', 0.1) }
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+      </Dialog>
+
+      {/* Task Details Dialog */}
+      {selectedTask && (
+        <TaskDetailsDialog
+          open={viewDialogOpen}
+          onClose={() => {
+            setViewDialogOpen(false);
+            setSelectedTask(null);
+          }}
+          tasks={[selectedTask]}
+          teamName={selectedTask.teamName || "Unknown Team"}
+        />
+      )}
+
     </Box >
+  );
+};
+
+// --- Professional Chart Dialog Ported from Deep Dive ---
+const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType = 'line', stackKeys = [] }) => {
+  const [chartType, setChartType] = useState(initialType);
+
+  useEffect(() => {
+    if (open) setChartType(initialType);
+  }, [open, initialType]);
+
+  const renderChart = () => {
+    const labelStyle = { fill: '#fff', fontSize: 10, fontWeight: 600 };
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
+
+    switch (chartType) {
+      case 'radar':
+        return (
+          <ResponsiveContainer width="100%" height={450}>
+            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+              <PolarGrid stroke="rgba(255,255,255,0.1)" />
+              <PolarAngleAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} />
+              <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fill: '#94a3b8', fontSize: 8 }} />
+              <Radar name="Primary Metric" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8, color: '#fff' }} />
+            </RadarChart>
+          </ResponsiveContainer>
+        );
+      case 'area':
+        return (
+          <ResponsiveContainer width="100%" height={450}>
+            <AreaChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
+              <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
+              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+              <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} strokeWidth={3} />
+            </AreaChart>
+          </ResponsiveContainer>
+        );
+      case 'line':
+        return (
+          <ResponsiveContainer width="100%" height={450}>
+            <LineChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
+              <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
+              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+              <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} />
+            </LineChart>
+          </ResponsiveContainer>
+        );
+      case 'pie':
+        return (
+          <ResponsiveContainer width="100%" height={450}>
+            <RechartsPieChart>
+              <RechartsPie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={80}
+                outerRadius={140}
+                paddingAngle={5}
+                dataKey="value"
+                label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                ))}
+              </RechartsPie>
+              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+              <RechartsLegend verticalAlign="bottom" height={36} />
+            </RechartsPieChart>
+          </ResponsiveContainer>
+        );
+      case 'bar':
+      default:
+        return (
+          <ResponsiveContainer width="100%" height={450}>
+            <RechartsBarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
+              <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
+              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+              <RechartsBar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        );
+    }
+  };
+
+  return (
+    <Dialog fullWidth maxWidth="lg" open={open} onClose={onClose} PaperProps={{ sx: { bgcolor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 3 } }}>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', py: 2 }}>
+        <Box>
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700 }}>{title} Analytical Insight</Typography>
+          <Typography variant="caption" sx={{ color: '#94a3b8' }}>Advanced Pattern & Distribution Analysis</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {[
+            { type: 'bar', icon: <BarChartIconMUI /> },
+            { type: 'line', icon: <Timeline /> },
+            { type: 'area', icon: <TrendingUp /> },
+            { type: 'radar', icon: <Assessment /> },
+            { type: 'pie', icon: <PieChartIcon /> }
+          ].map(opt => (
+            <IconButton
+              key={opt.type}
+              size="small"
+              onClick={() => setChartType(opt.type)}
+              sx={{
+                color: chartType === opt.type ? '#fff' : '#94a3b8',
+                bgcolor: chartType === opt.type ? '#3b82f6' : 'rgba(255,255,255,0.05)',
+                '&:hover': { bgcolor: '#3b82f6' },
+                borderRadius: 2
+              }}
+            >
+              {opt.icon}
+            </IconButton>
+          ))}
+          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+          <IconButton onClick={onClose} sx={{ color: '#94a3b8' }}><CloseIcon /></IconButton>
+        </Box>
+      </DialogTitle>
+      <DialogContent sx={{ p: 4 }}>
+        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          {renderChart()}
+        </Box>
+      </DialogContent>
+    </Dialog>
   );
 };
 

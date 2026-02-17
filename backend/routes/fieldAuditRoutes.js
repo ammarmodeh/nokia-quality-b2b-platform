@@ -166,7 +166,7 @@ router.post("/register", protectAuditor, adminOnly, registerAuditUser); // Admin
 router.post("/upload-tasks", protectAuditor, adminOnly, uploadTasks);
 router.post("/preview-assignments", protectAuditor, adminOnly, previewTaskAssignments);
 router.post("/manual-task", protectAuditor, adminOnly, createManualTask);
-router.get("/all-tasks", protectAuditor, adminOnly, getAllTasks);
+router.get("/tasks-list", protectAuditor, adminOnly, getAllTasks);
 router.get("/stats", protectAuditor, adminOnly, getAuditorStats);
 router.put("/tasks/:taskId/assign", protectAuditor, adminOnly, assignTask);
 router.put("/tasks/:taskId/reschedule", protectAuditor, adminOnly, rescheduleTask);

@@ -715,7 +715,7 @@ const DetailedTaskReview = ({ apiUrl, token }) => {
   const fetchSubmitted = async () => {
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const { data } = await axios.get(`${apiUrl}/all-tasks`, config);
+      const { data } = await axios.get(`${apiUrl}/tasks-list`, config);
       setSubmittedTasks(data.filter(t => t.status === "Submitted" || t.status === "Approved"));
     } catch (error) {
       console.error("Fetch submitted failed", error);
@@ -1774,7 +1774,7 @@ const TaskManagement = ({ apiUrl, token, auditors }) => {
   const fetchTasks = async () => {
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const { data } = await axios.get(`${apiUrl}/all-tasks?date=${selectedDate}`, config);
+      const { data } = await axios.get(`${apiUrl}/tasks-list?date=${selectedDate}`, config);
       setTasks(data);
 
       // Extract unique towns and auditors for filters
@@ -2194,7 +2194,7 @@ const AuditAdminDashboard = () => {
     if (!token) return;
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const tasksReq = axios.get(`${API_URL}/all-tasks`, config);
+      const tasksReq = axios.get(`${API_URL}/tasks-list`, config);
       const statsReq = axios.get(`${API_URL}/stats`, config);
       const settingsReq = api.get("/settings");
 

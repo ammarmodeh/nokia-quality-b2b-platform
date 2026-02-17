@@ -538,9 +538,14 @@ export const generateMonthRanges = (tasks, settings = {}) => {
   const month1End = new Date(month1EndDate);
 
   // Add Month 1
+  const formatDateRange = (s, e) => {
+    const format = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return `${format(s)} - ${format(e)}`;
+  };
+
   ranges.push({
     key: `Month-1`,
-    label: `Month 1`,
+    label: `Month 1 (${formatDateRange(month1Start, month1End)})`,
     start: month1Start,
     end: month1End
   });
@@ -558,7 +563,7 @@ export const generateMonthRanges = (tasks, settings = {}) => {
 
     ranges.push({
       key: `Month-${i}`,
-      label: `Month ${i}`,
+      label: `Month ${i} (${formatDateRange(currentStart, currentEnd)})`,
       start: new Date(currentStart),
       end: new Date(currentEnd)
     });
@@ -603,7 +608,16 @@ export const getMonthNumber = (date, settings = {}) => {
     }
 
     currentStart = new Date(currentEnd);
-    currentStart.setDate(currentStart.setDate() + 1);
+    currentStart.setDate(currentStart.getDate() + 1);
+  }
+
+  // Handle Month 13 separately if not covered in loop
+  if (targetDate >= currentStart) {
+    const currentEnd = new Date(currentStart);
+    currentEnd.setDate(currentEnd.getDate() + 27);
+    if (targetDate <= currentEnd) {
+      return { monthNumber: 13, key: 'Month-13' };
+    }
   }
 
   return null; // Date doesn't fall in any configured month
@@ -651,16 +665,20 @@ export const groupDataByMonth = (data, monthRange, settings = {}, samplesData = 
   });
 
   samplesData.forEach((sample) => {
-    // Find which month this week belongs to
-    const weekKey = `Wk-${String(sample.weekNumber).padStart(2, '0')} (${sample.year})`;
+    // To associate a sample (week) with a month, we find a date in that week.
+    // We can use the calibration settings to find the start of that week.
+    const { weekStartDay = 0, week1StartDate = null, week1EndDate = null, startWeekNumber = 1 } = settings;
 
-    // We need to determine which month this week falls into
-    // This requires checking the week's date range against month ranges
-    // For simplicity, we'll use a helper to map weeks to months
-    for (const [monthKey, monthRange] of Object.entries(monthRangesMap)) {
-      // This is a simplified check - in production you'd want more precise week-to-month mapping
-      if (groupedData[monthKey]) {
-        groupedData[monthKey].sampleSize += (sample.sampleSize || 0);
+    if (week1StartDate) {
+      const w1Start = new Date(week1StartDate);
+      const diffWeeks = sample.weekNumber - startWeekNumber;
+      // Approximate the middle of the week to be safe with timezones/boundaries
+      const weekMidDate = new Date(w1Start);
+      weekMidDate.setDate(w1Start.getDate() + (diffWeeks * 7) + 3);
+
+      const monthInfo = getMonthNumber(weekMidDate, settings);
+      if (monthInfo && groupedData[monthInfo.key]) {
+        groupedData[monthInfo.key].sampleSize += (sample.sampleSize || 0);
       }
     }
   });

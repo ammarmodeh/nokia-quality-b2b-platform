@@ -18,22 +18,31 @@ export const DataTable = ({ groupedData, settings = {} }) => {
   const detractorTarget = settings?.npsTargets?.detractors ?? 8;
   const npsTarget = promoterTarget - detractorTarget;
 
-  const sortedWeeksDescending = Object.keys(groupedData).sort((a, b) => {
-    const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
-    const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
-    if (!matchA || !matchB) return 0;
-    const yearA = parseInt(matchA[2], 10);
-    const yearB = parseInt(matchB[2], 10);
-    const weekA = parseInt(matchA[1], 10);
-    const weekB = parseInt(matchB[1], 10);
-    if (yearA !== yearB) return yearB - yearA;
-    return weekB - weekA;
+  const sortedKeysDescending = Object.keys(groupedData).sort((a, b) => {
+    const matchWkA = a.match(/Wk-(\d+) \((\d+)\)/);
+    const matchWkB = b.match(/Wk-(\d+) \((\d+)\)/);
+    if (matchWkA && matchWkB) {
+      const yearA = parseInt(matchWkA[2], 10);
+      const yearB = parseInt(matchWkB[2], 10);
+      const weekA = parseInt(matchWkA[1], 10);
+      const weekB = parseInt(matchWkB[1], 10);
+      if (yearA !== yearB) return yearB - yearA;
+      return weekB - weekA;
+    }
+
+    const matchMonA = a.match(/Month (\d+)/);
+    const matchMonB = b.match(/Month (\d+)/);
+    if (matchMonA && matchMonB) {
+      return parseInt(matchMonB[1], 10) - parseInt(matchMonA[1], 10);
+    }
+
+    return b.localeCompare(a);
   });
 
-  const rows = sortedWeeksDescending.map((week, index) => {
-    const previousWeek = sortedWeeksDescending[index + 1];
-    const current = groupedData[week];
-    const previous = previousWeek ? groupedData[previousWeek] : null;
+  const rows = sortedKeysDescending.map((key, index) => {
+    const previousKey = sortedKeysDescending[index + 1];
+    const current = groupedData[key];
+    const previous = previousKey ? groupedData[previousKey] : null;
 
     const npsValue = (current.Promoters || 0) - (current.Detractors || 0);
     const prevNpsValue = previous ? (previous.Promoters || 0) - (previous.Detractors || 0) : null;
@@ -77,8 +86,8 @@ export const DataTable = ({ groupedData, settings = {} }) => {
     const npsStatus = getNPSStatus(npsValue);
 
     return {
-      id: week,
-      week,
+      id: key,
+      period: key,
       sampleSize: current.sampleSize || 0,
       nps: npsValue,
       npsChange: getChangeValue(npsValue, prevNpsValue),
@@ -100,8 +109,8 @@ export const DataTable = ({ groupedData, settings = {} }) => {
 
   const columns = [
     {
-      field: 'week',
-      headerName: 'Week',
+      field: 'period',
+      headerName: (rows[0] && rows[0].period.includes('Month')) ? 'Month' : 'Week',
       flex: 1.2,
       headerAlign: 'center',
       align: 'center',
@@ -284,7 +293,7 @@ export const DataTable = ({ groupedData, settings = {} }) => {
       }}>
         <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <Typography variant="subtitle2" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
-            Weekly Performance Details
+            {(rows[0] && rows[0].period.includes('Month')) ? 'Monthly' : 'Weekly'} Performance Details
           </Typography>
         </Box>
         <DataGrid

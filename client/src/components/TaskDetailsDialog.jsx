@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -18,6 +18,13 @@ import {
   useTheme,
   useMediaQuery,
   alpha,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  CircularProgress
 } from '@mui/material';
 import * as XLSX from 'xlsx';
 import {
@@ -29,13 +36,16 @@ import {
   MdInfoOutline,
   MdBusiness,
   MdLocationOn,
-  MdAssignment
+  MdAssignment,
+  MdHistory
 } from 'react-icons/md';
 import { FaWhatsapp } from 'react-icons/fa6';
 import moment from 'moment';
+import api from '../api/api';
+import { getWeekNumber } from '../utils/helpers';
 
 // Reusable Detail Item
-const DetailItem = ({ label, value, icon }) => (
+const DetailItem = ({ label, value, icon, fullWidth = false }) => (
   <Box sx={{
     display: 'flex',
     flexDirection: 'column',
@@ -45,7 +55,8 @@ const DetailItem = ({ label, value, icon }) => (
     bgcolor: (theme) => alpha(theme.palette.background.default, 0.05),
     border: '1px solid',
     borderColor: (theme) => alpha(theme.palette.divider, 0.1),
-    height: '100%'
+    height: '100%',
+    gridColumn: fullWidth ? '1 / -1' : 'auto'
   }}>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary', mb: 0.5 }}>
       {icon && <Box sx={{ display: 'flex', color: 'primary.main', opacity: 0.8 }}>{icon}</Box>}
@@ -81,13 +92,100 @@ const SectionHeader = ({ title, icon }) => (
   </Stack>
 );
 
+// Expandable Note for Table Cells
+const ExpandableNote = ({ text }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const shouldTruncate = text && text.length > 80;
+
+  if (!text) return '-';
+
+  return (
+    <Box sx={{ direction: 'rtl', textAlign: 'right' }}>
+      <Typography variant="body2" sx={{
+        color: '#aaa',
+        whiteSpace: isExpanded ? 'pre-wrap' : 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        maxWidth: 250,
+        fontSize: '0.75rem',
+        lineHeight: 1.4
+      }}>
+        {text}
+      </Typography>
+      {shouldTruncate && (
+        <Button
+          size="small"
+          onClick={() => setIsExpanded(!isExpanded)}
+          sx={{
+            p: 0,
+            minWidth: 0,
+            color: 'primary.main',
+            fontSize: '0.7rem',
+            mt: 0.2,
+            textTransform: 'none',
+            '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
+          }}
+        >
+          {isExpanded ? 'Read Less' : 'Read More'}
+        </Button>
+      )}
+    </Box>
+  );
+};
+
 export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => {
   const theme = useTheme();
-  // Use sm breakpoint for mobile check to match passed props usage or standard hook
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [qopsLogs, setQopsLogs] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [settings, setSettings] = useState(null);
+
+  // Fetch Settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get("/settings");
+        setSettings(response.data);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Use title prop if provided, else fall back to teamName logic
   const displayTitle = title || `All Tasks for Team: ${teamName || 'Unknown'}`;
+
+  // Fetch QOps logs when dialog opens and there is a single task (usual case for drill-down)
+  useEffect(() => {
+    if (open && tasks.length === 1 && tasks[0]._id) {
+      fetchTickets(tasks[0]._id);
+    } else {
+      setQopsLogs([]);
+    }
+  }, [open, tasks]);
+
+  const fetchTickets = async (taskId) => {
+    setLoadingLogs(true);
+    try {
+      const { data } = await api.get(`/tasks/tickets/${taskId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      // Sort: Event Date (asc) -> Created At (asc)
+      const sorted = (data || []).sort((a, b) => {
+        const dateA = a.eventDate ? new Date(a.eventDate).getTime() : 0;
+        const dateB = b.eventDate ? new Date(b.eventDate).getTime() : 0;
+        if (dateA !== dateB) return dateA - dateB;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+      setQopsLogs(sorted);
+    } catch (error) {
+      console.error('Error fetching QOps tickets:', error);
+      setQopsLogs([]);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
 
   const copyToClipboard = () => {
     let textToCopy = `${displayTitle}\n\n`;
@@ -113,20 +211,36 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
       textToCopy += `Customer Feedback: ${task.customerFeedback}\n`;
       textToCopy += `Reason: ${task.reason}\n`;
       textToCopy += `Sub Reason: ${task.subReason || 'N/A'}\n`;
-      textToCopy += `Root Cause: ${task.rootCause || 'N/A'}\n\n`;
+      textToCopy += `Root Cause: ${task.rootCause || 'N/A'}\n`;
+      textToCopy += `GAIA Check: ${task.gaiaCheck || 'N/A'}\n`;
+      textToCopy += `Latest QOps Type: ${task.latestGaia?.transactionType || 'N/A'}\n`;
+      textToCopy += `Latest QOps State: ${task.latestGaia?.transactionState || 'N/A'}\n`;
+      textToCopy += `Latest QOps Reason: ${task.latestGaia?.unfReasonCode || 'N/A'}\n\n`;
 
-      textToCopy += `Progress:\n`;
-      task.subTasks?.forEach((subtask, subIndex) => {
-        textToCopy += `${subIndex + 1}. ${subtask.title || `Step ${subIndex + 1}`}\n`;
-        textToCopy += `Action: ${subtask.note || 'No action taken yet'}\n`;
-        if (subtask.completedBy) {
-          textToCopy += `Completed by: ${subtask.completedBy.name}\n`;
-        }
-        if (subtask.dateTime) {
-          textToCopy += `Completed on: ${subtask.dateTime}\n`;
-        }
-        textToCopy += '\n';
-      });
+
+      textToCopy += `Progress & Logs:\n`;
+      // Combine logs if available, else subtasks
+      const logsToExport = qopsLogs.length > 0 ? qopsLogs : (task.subTasks || []);
+
+      if (qopsLogs.length > 0) {
+        textToCopy += `--- Q-Ops Transaction Log ---\n`;
+        qopsLogs.forEach((log, idx) => {
+          textToCopy += `${idx + 1}. Date: ${log.eventDate ? moment(log.eventDate).format('DD/MM/YYYY') : '-'} | Type: ${log.transactionType || log.mainCategory || 'N/A'} | State: ${log.transactionState || 'N/A'} | Agent: ${log.agentName || 'N/A'} | Note: ${log.note || '-'}\n`;
+        });
+      } else {
+        textToCopy += `--- Subtasks ---\n`;
+        task.subTasks?.forEach((subtask, subIndex) => {
+          textToCopy += `${subIndex + 1}. ${subtask.title || `Step ${subIndex + 1}`}\n`;
+          textToCopy += `Action: ${subtask.note || 'No action taken yet'}\n`;
+          if (subtask.completedBy) {
+            textToCopy += `Completed by: ${subtask.completedBy.name}\n`;
+          }
+          if (subtask.dateTime) {
+            textToCopy += `Completed on: ${subtask.dateTime}\n`;
+          }
+          textToCopy += '\n';
+        });
+      }
 
       textToCopy += '\n';
     });
@@ -197,6 +311,10 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
       'Root Cause': task.rootCause || 'N/A',
       'ITN Related': task.itnRelated || 'N/A',
       'Related to Current Subscription': task.relatedToSubscription || 'N/A',
+      'GAIA Check': task.gaiaCheck || 'N/A',
+      'Latest QOps Type': task.latestGaia?.transactionType || 'N/A',
+      'Latest QOps State': task.latestGaia?.transactionState || 'N/A',
+      'Latest QOps Reason': task.latestGaia?.unfReasonCode || 'N/A',
       'Customer Type': task.customerType,
       'Governorate': task.governorate,
       'District': task.district,
@@ -329,6 +447,19 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
                   <Typography variant="subtitle1" fontWeight="bold" color="white">
                     Request #{task.requestNumber}
                   </Typography>
+                  {task.interviewDate && (
+                    <Chip
+                      label={`Week ${getWeekNumber(task.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber).week}`}
+                      size="small"
+                      sx={{
+                        borderRadius: '8px',
+                        fontWeight: 'bold',
+                        bgcolor: alpha(theme.palette.secondary.main, 0.2),
+                        color: theme.palette.secondary.main,
+                        border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`
+                      }}
+                    />
+                  )}
                   {task.slid && (
                     <Chip
                       label={task.slid}
@@ -358,29 +489,16 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
                         icon={<MdLocationOn size={14} />}
                         value={`${task.governorate || ''}${task.governorate && task.district ? ', ' : ''}${task.district || ''}`}
                       />
+                      <DetailItem label="Contract Date" value={task.contractDate ? moment(task.contractDate).format("MMM DD, YYYY") : 'N/A'} />
+                      <DetailItem label="App. Date" value={task.appDate ? moment(task.appDate).format("MMM DD, YYYY") : 'N/A'} />
+                      <DetailItem label="In Date" value={task.inDate ? moment(task.inDate).format("MMM DD, YYYY") : 'N/A'} />
+                      <DetailItem label="Close Date" value={task.closeDate ? moment(task.closeDate).format("MMM DD, YYYY") : 'N/A'} />
                     </Stack>
                   </Grid>
 
                   {/* Column 2: Issue Details */}
                   <Grid item xs={12} md={4}>
                     <SectionHeader title="Issue Details" icon={<MdInfoOutline size={16} />} />
-                    <Stack spacing={2}>
-                      <DetailItem label="Tariff" value={task.tarrifName} />
-                      <DetailItem label="Reason" value={task.reason} />
-                      <DetailItem label="Sub Reason" value={task.subReason} />
-                      <DetailItem label="Root Cause" value={task.rootCause} />
-                      <DetailItem label="ITN Related" value={task.itnRelated} />
-                      <DetailItem label="Related to Current Subscription" value={task.relatedToSubscription} />
-                      <DetailItem
-                        label="Customer Feedback"
-                        value={task.customerFeedback}
-                      />
-                    </Stack>
-                  </Grid>
-
-                  {/* Column 3: Outcome & Team */}
-                  <Grid item xs={12} md={4}>
-                    <SectionHeader title="Outcome & Team" icon={<MdBusiness size={16} />} />
                     <Stack spacing={2}>
                       <DetailItem
                         label="Satisfaction Score"
@@ -398,9 +516,24 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
                           />
                         }
                       />
+                      <DetailItem label="Tariff" value={task.tarrifName} />
+                      <DetailItem label="Reason" value={task.reason} />
+                      <DetailItem label="Sub Reason" value={task.subReason} />
+                      <DetailItem
+                        label="Customer Feedback"
+                        value={task.customerFeedback}
+                      />
+                    </Stack>
+                  </Grid>
+
+                  {/* Column 3: Outcome & Team */}
+                  <Grid item xs={12} md={4}>
+                    <SectionHeader title="Outcome & Team" icon={<MdBusiness size={16} />} />
+                    <Stack spacing={2}>
+                      <DetailItem label="Root Cause" value={task.rootCause} />
                       <DetailItem label="Owner" value={task.responsible || 'N/A'} icon={<MdPerson size={14} />} />
-                      <DetailItem label="Team" value={task.teamName} />
-                      <DetailItem label="Company" value={task.teamCompany} />
+                      <DetailItem label="ITN Related" value={task.itnRelated} />
+                      <DetailItem label="Related to Current Subscription" value={task.relatedToSubscription} />
                       <DetailItem
                         label="Validation"
                         value={
@@ -415,10 +548,81 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
                           />
                         }
                       />
+                      <DetailItem label="Team" value={task.teamName} />
+                      <DetailItem label="Company" value={task.teamCompany} />
                     </Stack>
                   </Grid>
 
-                  {/* Subtasks / Activity Removed */}
+                  {/* Column 4: Q-Ops & GAIA (New Section) */}
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 2 }} />
+                    <SectionHeader title="Q-Ops Transaction Logs" icon={<MdHistory size={16} />} />
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} md={4}>
+                        <Stack spacing={2}>
+                          <DetailItem label="GAIA Check" value={task.gaiaCheck || "N/A"}
+                            valueStyle={task.gaiaCheck === 'Yes' ? { color: 'green', fontWeight: 'bold' } : {}}
+                          />
+                          {task.latestGaia && (
+                            <>
+                              <DetailItem label="Latest QOps Type" value={task.latestGaia.transactionType || "N/A"} />
+                              <DetailItem label="Latest QOps State" value={task.latestGaia.transactionState || "N/A"} />
+                              <DetailItem label="Latest QOps Reason" value={task.latestGaia.unfReasonCode || "N/A"} />
+                            </>
+                          )}
+                        </Stack>
+                      </Grid>
+                      <Grid item xs={12} md={8}>
+                        <Box sx={{ border: '1px solid #333', borderRadius: 2, overflow: 'hidden' }}>
+                          <TableContainer sx={{ maxHeight: 300 }}>
+                            <Table size="small" stickyHeader>
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Execution Date</TableCell>
+                                  <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Type / State</TableCell>
+                                  <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Agent</TableCell>
+                                  <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Note</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {loadingLogs ? (
+                                  <TableRow>
+                                    <TableCell colSpan={4} align="center" sx={{ color: '#aaa', py: 3 }}>
+                                      <CircularProgress size={20} sx={{ mr: 1 }} /> Loading logs...
+                                    </TableCell>
+                                  </TableRow>
+                                ) : qopsLogs.length > 0 ? (
+                                  qopsLogs.map((log, i) => (
+                                    <TableRow key={i} sx={{ '&:hover': { bgcolor: '#2a2a2a' } }}>
+                                      <TableCell sx={{ color: '#fff' }}>{log.eventDate ? moment(log.eventDate).format('DD/MM/YYYY') : '-'}</TableCell>
+                                      <TableCell sx={{ color: '#fff' }}>
+                                        <Typography variant="body2" fontSize="0.75rem">{log.transactionType || log.mainCategory}</Typography>
+                                        <Typography variant="caption" color="gray">{log.transactionState}</Typography>
+                                      </TableCell>
+                                      <TableCell sx={{ color: '#fff' }}>{log.agentName || '-'}</TableCell>
+                                      <TableCell sx={{ color: '#aaa', maxWidth: 250 }}>
+                                        <ExpandableNote text={log.note} />
+                                      </TableCell>
+                                    </TableRow>
+                                  ))
+                                ) : (
+                                  <TableRow>
+                                    <TableCell colSpan={4} align="center" sx={{ color: '#aaa', py: 3 }}>
+                                      No Q-Ops logs found.
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+
+                  {/* Original Subtasks Section - Keeping just in case, but QOps is priority */}
+                  {/* {task.subTasks && task.subTasks.length > 0 && ...} */}
+
                 </Grid>
               </Box>
             </Paper>

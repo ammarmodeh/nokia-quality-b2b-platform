@@ -46,26 +46,26 @@ const SidebarLinks = () => {
           {
             label: "Audit Admin Portal",
             link: "audit/admin",
-            icon: <img width={20} height={20} src="/all-tasks.png" />,
+            icon: <img width={20} height={20} src="/tasks-list.png" />,
             isNew: true,
           }
         ] : []),
         {
           label: "Auditor Portal",
           link: "audit/tasks",
-          icon: <img width={20} height={20} src="/all-tasks.png" />,
+          icon: <img width={20} height={20} src="/tasks-list.png" />,
           isNew: false,
         },
         {
           label: "Reach Supervisors Audit",
           link: "reach-supervisors-audit",
-          icon: <img width={20} height={20} src="/all-tasks.png" />,
+          icon: <img width={20} height={20} src="/tasks-list.png" />,
           isNew: true,
         },
         {
           label: "All Tasks List",
           link: "tasks-list",
-          icon: <img width={20} height={20} src="/all-tasks.png" />,
+          icon: <img width={20} height={20} src="/tasks-list.png" />,
           isNew: false,
         },
         {

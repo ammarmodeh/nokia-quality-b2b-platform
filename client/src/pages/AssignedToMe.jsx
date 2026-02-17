@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { IoMdAdd } from "react-icons/io";
 import { FaList, FaUserClock, FaRegCalendarAlt, FaSortAmountDown } from "react-icons/fa";
-import { MdClose, MdGridView, MdOutlineSearch, MdFilterList, MdBarChart } from "react-icons/md";
+import { MdClose, MdGridView, MdOutlineSearch, MdFilterList } from "react-icons/md";
 import {
   Tabs, Tab, Stack, Typography, TextField, IconButton, Box, Button,
   CircularProgress, useMediaQuery, Card, CardContent, Grid, LinearProgress,
@@ -21,11 +21,7 @@ import { useSelector } from "react-redux";
 import { format } from "date-fns";
 
 import { useNavigate } from "react-router-dom";
-import {
-  BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend
-} from 'recharts';
-import * as XLSX from 'xlsx';
-import { FaFileExcel } from 'react-icons/fa';
+
 
 // --- Components ---
 
@@ -98,7 +94,6 @@ const AssignedToMe = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [selected, setSelected] = useState(0);
-  const [offendersPage, setOffendersPage] = useState(1);
   // 0 = Board, 1 = List
   const [open, setOpen] = useState(false);
   const [updateRefetchTasks, setUpdateRefetchTasks] = useState(false);
@@ -223,111 +218,7 @@ const AssignedToMe = () => {
 
   const statusStats = calculateStatusStats();
 
-  // Analytics aggregation
-  const analytics = useMemo(() => {
-    const stats = {
-      byOwner: {},
-      byReason: {},
-      bySubReason: {},
-      byRootCause: {},
-      byFieldTeam: {},
-      fieldTeamDetails: {}
-    };
 
-    filteredTasks.forEach(task => {
-      // For AssignedToMe, "owner" is usually me, but maybe we want "Responsible" or "Created By"? 
-      // Let's stick to the same pattern: responsible or assignedTo name.
-      // Helper to increment counts for single or array values
-      const increment = (map, value) => {
-        if (Array.isArray(value)) {
-          value.forEach(v => { if (v) map[v] = (map[v] || 0) + 1; });
-        } else if (value) {
-          map[value] = (map[value] || 0) + 1;
-        } else {
-          // map['N/A'] = (map['N/A'] || 0) + 1; // Optional: count missing as N/A
-        }
-      };
-
-      const owner = task.responsible || task.assignedTo?.name || 'Unassigned';
-      const reason = task.reason;
-      const subReason = task.subReason;
-      const rootCause = task.rootCause;
-      const fieldTeam = task.teamName || 'Unassigned';
-      const category = task.category || 'N/A';
-
-      increment(stats.byOwner, owner);
-      increment(stats.byReason, reason);
-      increment(stats.bySubReason, subReason);
-      increment(stats.byRootCause, rootCause);
-
-      stats.byFieldTeam[fieldTeam] = (stats.byFieldTeam[fieldTeam] || 0) + 1;
-
-      if (!stats.fieldTeamDetails[fieldTeam]) {
-        stats.fieldTeamDetails[fieldTeam] = {
-          total: 0,
-          byCategory: {},
-          byOwner: {},
-          byReason: {},
-          bySubReason: {},
-          byRootCause: {}
-        };
-      }
-
-      const teamStats = stats.fieldTeamDetails[fieldTeam];
-      teamStats.total += 1;
-      teamStats.byCategory[category] = (teamStats.byCategory[category] || 0) + 1;
-
-      increment(teamStats.byOwner, owner);
-      increment(teamStats.byReason, reason);
-      increment(teamStats.bySubReason, subReason);
-      increment(teamStats.byRootCause, rootCause);
-
-      // Calculate NPS stats (Detractor/Neutral/Promoter)
-      if (!teamStats.npsBreakdown) {
-        teamStats.npsBreakdown = { Detractor: 0, Neutral: 0, Promoter: 0, NotEvaluated: 0 };
-      }
-
-      let score = task.evaluationScore;
-      if (score && score > 0) {
-        if (score <= 10) score = score * 10; // Normalize
-        if (score <= 60) teamStats.npsBreakdown.Detractor++;
-        else if (score <= 80) teamStats.npsBreakdown.Neutral++;
-        else teamStats.npsBreakdown.Promoter++;
-      } else {
-        teamStats.npsBreakdown.NotEvaluated++;
-      }
-    });
-
-    const toChartData = (obj) => Object.entries(obj)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-
-    // Get all field teams (offenders)
-    const topFieldTeams = toChartData(stats.byFieldTeam);
-
-    const fieldTeamAnalytics = topFieldTeams.map(team => ({
-      teamName: team.name,
-      totalIssues: team.value,
-      categories: toChartData(stats.fieldTeamDetails[team.name]?.byCategory || {}),
-      owners: toChartData(stats.fieldTeamDetails[team.name]?.byOwner || {}).slice(0, 5),
-      reasons: toChartData(stats.fieldTeamDetails[team.name]?.byReason || {}).slice(0, 5),
-      subReasons: toChartData(stats.fieldTeamDetails[team.name]?.bySubReason || {}).slice(0, 5),
-      rootCauses: toChartData(stats.fieldTeamDetails[team.name]?.byRootCause || {}).slice(0, 5),
-      npsBreakdown: [
-        { name: 'Detractor', value: stats.fieldTeamDetails[team.name]?.npsBreakdown?.Detractor || 0, color: '#ef4444' },
-        { name: 'Neutral', value: stats.fieldTeamDetails[team.name]?.npsBreakdown?.Neutral || 0, color: '#f59e0b' },
-        { name: 'Promoter', value: stats.fieldTeamDetails[team.name]?.npsBreakdown?.Promoter || 0, color: '#10b981' }
-      ]
-    }));
-
-    return {
-      ownerData: toChartData(stats.byOwner).slice(0, 10),
-      reasonData: toChartData(stats.byReason).slice(0, 8),
-      subReasonData: toChartData(stats.bySubReason).slice(0, 10),
-      rootCauseData: toChartData(stats.byRootCause).slice(0, 10),
-      fieldTeamAnalytics
-    };
-  }, [filteredTasks]);
 
   const handleSearch = (term) => {
     setSearchTerm(term);
@@ -376,9 +267,9 @@ const AssignedToMe = () => {
 
   const handleTabChange = (event, newValue) => {
     setSelected(newValue);
-    // When switching to List view (1) or Analytics view (2), show all tasks
+    // When switching to List view (1), show all tasks
     // When switching to Board view (0), show infinite scroll tasks or filtered result
-    if (newValue === 1 || newValue === 2) {
+    if (newValue === 1) {
       setFilteredTasks(allTasks);
     } else {
       if (searchTerm) {
@@ -556,141 +447,7 @@ const AssignedToMe = () => {
     return data.length + 3; // Return items written + header/title spacing
   };
 
-  const handleExportTeam = (team) => {
-    // 1. Filter tasks for this team
-    const teamTasks = filteredTasks.filter(t => t.teamName === team.teamName);
 
-    // 2. Prepare Data
-    const data = teamTasks.map(t => {
-      let displayScore = 'Not Evaluated';
-      let satisfaction = 'N/A';
-      let score = t.evaluationScore || 0;
-      if (score > 0) {
-        const isSmallScale = score <= 10;
-        displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
-        const normalized = isSmallScale ? score * 10 : score;
-        if (normalized <= 60) satisfaction = 'Detractor';
-        else if (normalized <= 80) satisfaction = 'Neutral';
-        else satisfaction = 'Promoter';
-      }
-
-      return {
-        'SLID': t.slid,
-        'Customer': t.customerName,
-        'Status': t.status,
-        'Category': t.category,
-        'Reason': Array.isArray(t.reason) ? t.reason.join(", ") : t.reason,
-        'Root Cause': Array.isArray(t.rootCause) ? t.rootCause.join(", ") : t.rootCause,
-        'Technician': t.technician || t.primaryTechnician,
-        'Score': displayScore,
-        'Satisfaction': satisfaction,
-        'Date': formatDate(t.createdAt)
-      };
-    });
-
-    const wb = XLSX.utils.book_new();
-
-    // Sheet 1: Insights & Full Breakdowns
-    const { summaryMetrics, breakdowns } = generateInsights(teamTasks);
-    const wsInsights = XLSX.utils.json_to_sheet(summaryMetrics);
-
-    // Stack Breakdown Tables
-    // Note: append_sheet is not used here because we are writing to the SAME sheet at different offsets
-    let currentRow = summaryMetrics.length + 3; // Start after summary metrics
-
-    XLSX.utils.sheet_add_aoa(wsInsights, [["--- DETAILED BREAKDOWNS ---"]], { origin: { r: currentRow, c: 0 } });
-    currentRow += 2;
-
-    const tableSpacing = 4; // Columns between tables
-
-    // We will place tables side-by-side or stacked? 
-    // Let's stack them to handle variable length gracefully without overwriting
-
-    // Table 1: Reasons
-    writeBreakdownTable(wb, wsInsights, "ALL REASONS", breakdowns.reasons, currentRow, 0);
-
-    // Table 2: Sub-Reasons (Placed in next columns for better visibility)
-    writeBreakdownTable(wb, wsInsights, "ALL SUB-REASONS", breakdowns.subReasons, currentRow, 3);
-
-    // Table 3: Root Causes
-    writeBreakdownTable(wb, wsInsights, "ALL ROOT CAUSES", breakdowns.rootCauses, currentRow, 6);
-
-    // Table 4: Owners
-    writeBreakdownTable(wb, wsInsights, "ALL OWNERS", breakdowns.owners, currentRow, 9);
-
-    // Auto-width attempt for first few columns
-    wsInsights['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }];
-
-    XLSX.utils.book_append_sheet(wb, wsInsights, "Summary & Insights");
-
-    // Sheet 2: Tasks
-    const wsTasks = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, wsTasks, "Detailed Tasks");
-
-    XLSX.writeFile(wb, `${team.teamName}_Performance_Report.xlsx`);
-  };
-
-  const handleExportAllTeams = () => {
-    const allOffenderTasks = filteredTasks.filter(t => t.teamName);
-
-    // Flatten all data
-    const data = allOffenderTasks.map(t => {
-      let displayScore = 'Not Evaluated';
-      let satisfaction = 'N/A';
-      let score = t.evaluationScore || 0;
-      if (score > 0) {
-        const isSmallScale = score <= 10;
-        displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
-        const normalized = isSmallScale ? score * 10 : score;
-        if (normalized <= 60) satisfaction = 'Detractor';
-        else if (normalized <= 80) satisfaction = 'Neutral';
-        else satisfaction = 'Promoter';
-      }
-
-      return {
-        'Team Name': t.teamName,
-        'Company': t.teamCompany,
-        'SLID': t.slid,
-        'Customer': t.customerName,
-        'Status': t.status,
-        'Category': t.category,
-        'Reason': Array.isArray(t.reason) ? t.reason.join(", ") : t.reason,
-        'Sub-Reason': Array.isArray(t.subReason) ? t.subReason.join(", ") : t.subReason,
-        'Root Cause': Array.isArray(t.rootCause) ? t.rootCause.join(", ") : t.rootCause,
-        'Technician': t.technician || t.primaryTechnician,
-        'Score': displayScore,
-        'Satisfaction': satisfaction,
-        'Date': formatDate(t.createdAt)
-      };
-    });
-
-    const wb = XLSX.utils.book_new();
-
-    // Sheet 1: Global Insights
-    const { summaryMetrics, breakdowns } = generateInsights(allOffenderTasks);
-    const wsGlobal = XLSX.utils.json_to_sheet(summaryMetrics);
-
-    // Detailed Tables layout
-    let currentRow = summaryMetrics.length + 3;
-    XLSX.utils.sheet_add_aoa(wsGlobal, [["--- GLOBAL DETAILED BREAKDOWNS ---"]], { origin: { r: currentRow, c: 0 } });
-    currentRow += 2;
-
-    // Side-by-side layout for maximum information density
-    writeBreakdownTable(wb, wsGlobal, "ALL REASONS", breakdowns.reasons, currentRow, 0);
-    writeBreakdownTable(wb, wsGlobal, "ALL SUB-REASONS", breakdowns.subReasons, currentRow, 3);
-    writeBreakdownTable(wb, wsGlobal, "ALL ROOT CAUSES", breakdowns.rootCauses, currentRow, 6);
-    writeBreakdownTable(wb, wsGlobal, "ALL OWNERS", breakdowns.owners, currentRow, 9);
-
-    wsGlobal['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 5 }, { wch: 30 }, { wch: 10 }];
-
-    XLSX.utils.book_append_sheet(wb, wsGlobal, "Global Executive Summary");
-
-    // Sheet 2: All Tasks
-    const ws = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, ws, "All Teams Details");
-
-    XLSX.writeFile(wb, "All_Field_Teams_Detailed_Report.xlsx");
-  };
 
   const formatDate = (date) => date ? new Date(date).toLocaleDateString() : 'N/A';
 
@@ -846,7 +603,6 @@ const AssignedToMe = () => {
           >
             <Tab icon={<MdGridView />} iconPosition="start" label="Board View" />
             <Tab icon={<FaList />} iconPosition="start" label="List View" />
-            <Tab icon={<MdBarChart />} iconPosition="start" label="Analytics" />
           </Tabs>
 
           <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', md: 'auto' } }}>
@@ -972,7 +728,7 @@ const AssignedToMe = () => {
             </>
           )}
         </Box>
-      ) : selected === 1 ? (
+      ) : (
         // List View (DataGrid)
         <Paper sx={{ height: 600, width: '100%', borderRadius: 3, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
           <DataGrid
@@ -995,286 +751,6 @@ const AssignedToMe = () => {
             }}
           />
         </Paper>
-      ) : (
-        // Analytics View
-        <Box sx={{
-          p: 2,
-          mb: 2,
-          bgcolor: 'rgba(30, 41, 59, 0.5)',
-          borderRadius: 3,
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(8px)'
-        }}>
-          <Grid container spacing={3}>
-            {/* Owner Analysis */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.2)', borderRadius: 2, border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
-                <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
-                  Owner Distribution
-                </Typography>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={analytics.ownerData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} stroke="#94a3b8" />
-                    <YAxis stroke="#94a3b8" />
-                    <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                    <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-
-            {/* Reason Breakdown */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.2)', borderRadius: 2, border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
-                <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
-                  Reason Breakdown
-                </Typography>
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie
-                      data={analytics.reasonData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {analytics.reasonData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'][index % 8]} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-
-            {/* Sub-reason Distribution */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.2)', borderRadius: 2, border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
-                <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
-                  Sub-reason Distribution
-                </Typography>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={analytics.subReasonData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} stroke="#94a3b8" />
-                    <YAxis stroke="#94a3b8" />
-                    <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                    <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-
-            {/* Root Cause Analysis */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.2)', borderRadius: 2, border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
-                <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
-                  Root Cause Analysis
-                </Typography>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={analytics.rootCauseData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} stroke="#94a3b8" />
-                    <YAxis stroke="#94a3b8" />
-                    <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                    <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-          </Grid>
-
-          {/* Field Team Offenders Section using Blue Theme */}
-          <Box sx={{ mt: 4 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h5" fontWeight="700" color="#3b82f6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                🚨 Top Field Team Offenders
-              </Typography>
-              <Button
-                variant="outlined"
-                startIcon={<FaFileExcel />}
-                onClick={handleExportAllTeams}
-                sx={{ borderColor: '#10b981', color: '#10b981', '&:hover': { borderColor: '#059669', bgcolor: 'rgba(16, 185, 129, 0.1)' } }}
-              >
-                Export All Teams Detailed Report
-              </Button>
-            </Box>
-
-            {analytics.fieldTeamAnalytics && analytics.fieldTeamAnalytics.length > 0 ? (
-              <Grid container spacing={2}>
-                {analytics.fieldTeamAnalytics
-                  .slice((offendersPage - 1) * 10, offendersPage * 10)
-                  .map((team, idx) => (
-                    <Grid item xs={12} key={idx}>
-                      <Paper sx={{
-                        p: 2,
-                        bgcolor: 'rgba(30,30,30,0.8)',
-                        borderRadius: 2,
-                        border: '2px solid rgba(59, 130, 246, 0.3)',
-                        '&:hover': { borderColor: 'rgba(59, 130, 246, 0.6)' }
-                      }} elevation={0}>
-                        {/* Team Header */}
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                          <Box>
-                            <Typography variant="h6" fontWeight="700" color="#fff">
-                              #{(offendersPage - 1) * 10 + idx + 1} {team.teamName}
-                            </Typography>
-                            <Typography variant="body2" color="#b3b3b3">
-                              Total Issues: <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{team.totalIssues}</span>
-                            </Typography>
-                          </Box>
-                          <Button
-                            size="small"
-                            startIcon={<FaFileExcel />}
-                            onClick={() => handleExportTeam(team)}
-                            sx={{ color: '#94a3b8', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' } }}
-                          >
-                            Export
-                          </Button>
-                        </Box>
-
-                        {/* Categories Breakdown */}
-                        <Grid container spacing={2}>
-                          {/* Category Distribution */}
-                          <Grid item xs={12} md={6}>
-                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#f59e0b">
-                              📊 Issue Categories
-                            </Typography>
-                            <ResponsiveContainer width="100%" height={150}>
-                              <PieChart>
-                                <Pie
-                                  data={team.categories}
-                                  cx="50%"
-                                  cy="50%"
-                                  labelLine={false}
-                                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                  outerRadius={50}
-                                  fill="#8884d8"
-                                  dataKey="value"
-                                >
-                                  {team.categories.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'][index % 5]} />
-                                  ))}
-                                </Pie>
-                                <RechartsTooltip contentStyle={{ backgroundColor: '#1e1e1e', border: 'none' }} />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          </Grid>
-
-                          {/* Top Owners - Show all but scrollable if many */}
-                          <Grid item xs={12} md={6}>
-                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#3b82f6">
-                              👤 Top Owners
-                            </Typography>
-                            <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
-                              {team.owners.map((owner, i) => (
-                                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(59, 130, 246, 0.1)', borderRadius: 1 }}>
-                                  <Typography variant="caption" color="#fff">{owner.name}</Typography>
-                                  <Typography variant="caption" fontWeight="bold" color="#3b82f6">{owner.value}</Typography>
-                                </Box>
-                              ))}
-                            </Box>
-                          </Grid>
-
-                          {/* Top Reasons */}
-                          <Grid item xs={12} md={6}>
-                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#f59e0b">
-                              📋 Top Reasons
-                            </Typography>
-                            <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
-                              {team.reasons.map((reason, i) => (
-                                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(245, 158, 11, 0.1)', borderRadius: 1 }}>
-                                  <Typography variant="caption" color="#fff">{reason.name}</Typography>
-                                  <Typography variant="caption" fontWeight="bold" color="#f59e0b">{reason.value}</Typography>
-                                </Box>
-                              ))}
-                            </Box>
-                          </Grid>
-
-                          {/* Top Sub-reasons */}
-                          <Grid item xs={12} md={6}>
-                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#a78bfa">
-                              📌 Top Sub-reasons
-                            </Typography>
-                            <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
-                              {team.subReasons.map((subReason, i) => (
-                                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(167, 139, 250, 0.1)', borderRadius: 1 }}>
-                                  <Typography variant="caption" color="#fff">{subReason.name}</Typography>
-                                  <Typography variant="caption" fontWeight="bold" color="#a78bfa">{subReason.value}</Typography>
-                                </Box>
-                              ))}
-                            </Box>
-                          </Grid>
-
-                          {/* Top Root Causes */}
-                          <Grid item xs={12} md={6}>
-                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#10b981">
-                              🔍 Top Root Causes
-                            </Typography>
-                            <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
-                              {team.rootCauses.map((rootCause, i) => (
-                                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(16, 185, 129, 0.1)', borderRadius: 1 }}>
-                                  <Typography variant="caption" color="#fff">{rootCause.name}</Typography>
-                                  <Typography variant="caption" fontWeight="bold" color="#10b981">{rootCause.value}</Typography>
-                                </Box>
-                              ))}
-                            </Box>
-                          </Grid>
-
-                          {/* NPS Breakdown Chart */}
-                          <Grid item xs={12}>
-                            <Typography variant="subtitle2" fontWeight="600" mb={1} color="#fff">
-                              ❤️ Customer Satisfaction (NPS)
-                            </Typography>
-                            <Paper sx={{ p: 1, bgcolor: 'rgba(0,0,0,0.3)', borderRadius: 2 }}>
-                              <ResponsiveContainer width="100%" height={200}>
-                                <BarChart data={team.npsBreakdown} layout="vertical" barSize={20}>
-                                  <XAxis type="number" hide />
-                                  <YAxis dataKey="name" type="category" width={80} stroke="#94a3b8" fontSize={12} />
-                                  <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: 8 }} />
-                                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                                    {team.npsBreakdown.map((entry, index) => (
-                                      <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
-                                  </Bar>
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </Paper>
-                          </Grid>
-
-                        </Grid>
-                      </Paper>
-                    </Grid>
-                  ))}
-              </Grid>
-            ) : (
-              <Typography variant="body2" color="#b3b3b3" textAlign="center" py={4}>
-                No field team data available
-              </Typography>
-            )}
-
-            {/* Pagination Controls */}
-            {analytics.fieldTeamAnalytics && analytics.fieldTeamAnalytics.length > 10 && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 2 }}>
-                <Pagination
-                  count={Math.ceil(analytics.fieldTeamAnalytics.length / 10)}
-                  page={offendersPage}
-                  onChange={(e, v) => setOffendersPage(v)}
-                  color="primary"
-                  sx={{
-                    '& .MuiPaginationItem-root': { color: '#fff' },
-                    '& .Mui-selected': { bgcolor: 'rgba(59, 130, 246, 0.3) !important' }
-                  }}
-                />
-              </Box>
-            )}
-          </Box>
-        </Box>
       )}
 
       <AddTask open={open} setOpen={setOpen} setUpdateRefetchTasks={setUpdateRefetchTasks} />

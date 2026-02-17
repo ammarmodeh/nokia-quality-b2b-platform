@@ -159,7 +159,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const [contractDate, setContractDate] = useState("");
   const [inDate, setInDate] = useState("");
   const [appDate, setAppDate] = useState("");
-  const [closeDate, setCloseDate] = useState("");
+  // const [closeDate, setCloseDate] = useState(""); // Removed in favor of react-hook-form
 
   // Dynamic dropdown options
   const [dropdownOptions, setDropdownOptions] = useState({
@@ -226,7 +226,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
     if (open && task) {
       const pisDueDate = task.pisDate ? new Date(task.pisDate) : null;
       const formattedPISDate = pisDueDate
-        ? `${pisDueDate.getFullYear()}-${String(pisDueDate.getMonth() + 1).padStart(2, "0")}-${String(pisDueDate.getDate()).padStart(2, "0")}T${String(pisDueDate.getHours()).padStart(2, "0")}:${String(pisDueDate.getMinutes()).padStart(2, "0")}`
+        ? `${pisDueDate.getFullYear()}-${String(pisDueDate.getMonth() + 1).padStart(2, "0")}-${String(pisDueDate.getDate()).padStart(2, "0")}`
         : "";
 
       const interviewDueDate = task.interviewDate ? new Date(task.interviewDate) : null;
@@ -332,7 +332,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setContractDate(task.contractDate ? new Date(task.contractDate).toISOString().split('T')[0] : "");
       setInDate(task.inDate ? new Date(task.inDate).toISOString().split('T')[0] : "");
       setAppDate(task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : "");
-      setCloseDate(task.closeDate ? new Date(task.closeDate).toISOString().split('T')[0] : "");
+      // setCloseDate(task.closeDate ? new Date(task.closeDate).toISOString().split('T')[0] : "");
     }
   }, [task, open, reset, setValue, user, dropdownOptions]);
 
@@ -398,7 +398,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       contractDate,
       inDate,
       appDate,
-      closeDate,
+      closeDate: data.closeDate,
     };
 
     // console.log({ formData });
@@ -639,20 +639,16 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
                 fullWidth
                 variant="outlined"
                 {...register('closeDate')}
-                value={closeDate}
-                onChange={(e) => setCloseDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
               <TextField
                 label="PIS Date"
-                type="datetime-local"
+                type="date"
                 fullWidth
                 variant="outlined"
                 {...register('pisDate', { required: 'PIS Date is required!' })}
                 error={!!errors.pisDate}
                 helperText={errors.pisDate ? errors.pisDate.message : ''}
-                value={pisDate}
-                onChange={(e) => setPisDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
               <TextField

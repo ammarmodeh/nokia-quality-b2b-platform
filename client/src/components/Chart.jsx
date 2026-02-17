@@ -35,7 +35,7 @@ import { RiFileExcel2Fill } from "react-icons/ri";
 import api from "../api/api";
 import { ChartComponent } from "./ChartComponent";
 import { DataTable } from "./DataTable";
-import { generateWeekRanges, getDesiredWeeks, groupDataByWeek, generateMonthRanges, getMonthNumber } from "../utils/helpers";
+import { generateWeekRanges, getDesiredWeeks, groupDataByWeek, generateMonthRanges, getMonthNumber, groupDataByMonth } from "../utils/helpers";
 import { subDays, isAfter } from 'date-fns';
 
 import ChartDataLabels from 'chartjs-plugin-datalabels';
@@ -64,26 +64,38 @@ const prepareChartData = (groupedData, timeRange, settings = {}) => {
   const detractorTarget = settings?.npsTargets?.detractors ?? 8;
   const npsTarget = promoterTarget - detractorTarget;
 
-  const sortedWeeks = Object.keys(groupedData).sort((a, b) => {
-    const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
-    const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
-    if (!matchA || !matchB) return 0;
-    const yearA = parseInt(matchA[2], 10);
-    const yearB = parseInt(matchB[2], 10);
-    const weekA = parseInt(matchA[1], 10);
-    const weekB = parseInt(matchB[1], 10);
-    if (yearA !== yearB) return yearA - yearB;
-    return weekA - weekB;
+  const sortedLabels = Object.keys(groupedData).sort((a, b) => {
+    const matchWkA = a.match(/Wk-(\d+) \((\d+)\)/);
+    const matchWkB = b.match(/Wk-(\d+) \((\d+)\)/);
+    if (matchWkA && matchWkB) {
+      const yearA = parseInt(matchWkA[2], 10);
+      const yearB = parseInt(matchWkB[2], 10);
+      const weekA = parseInt(matchWkA[1], 10);
+      const weekB = parseInt(matchWkB[1], 10);
+      if (yearA !== yearB) return yearA - yearB;
+      return weekA - weekB;
+    }
+
+    // Handle Month-X (descriptive) sorting
+    const matchMonA = a.match(/Month (\d+)/);
+    const matchMonB = b.match(/Month (\d+)/);
+    if (matchMonA && matchMonB) {
+      return parseInt(matchMonA[1], 10) - parseInt(matchMonB[1], 10);
+    }
+
+    return a.localeCompare(b);
   });
 
   return {
-    labels: sortedWeeks,
+    labels: sortedLabels,
     datasets: [
       ...categories.map((category) => ({
         label: category,
-        data: sortedWeeks.map((week) => {
+        data: sortedLabels.map((week) => {
           if (category === "NPS") {
-            return (groupedData[week].Promoters || 0) - (groupedData[week].Detractors || 0);
+            const promoters = groupedData[week].Promoters || 0;
+            const detractors = groupedData[week].Detractors || 0;
+            return promoters - detractors;
           }
           return groupedData[week][category] || 0;
         }),
@@ -120,8 +132,8 @@ const prepareChartData = (groupedData, timeRange, settings = {}) => {
       })),
       // NPS Target Line (Dynamic)
       {
-        label: `NPS Target (≥${npsTarget}%)`,
-        data: sortedWeeks.map(() => npsTarget),
+        label: `NPS Target (≥${npsTarget})`,
+        data: sortedLabels.map(() => npsTarget),
         borderColor: "rgba(59, 130, 246, 0.6)", // Blue for NPS target
         backgroundColor: "rgba(59, 130, 246, 0.6)",
         pointBackgroundColor: "rgba(59, 130, 246, 0.6)",
@@ -136,7 +148,7 @@ const prepareChartData = (groupedData, timeRange, settings = {}) => {
       // Promoters Target Line (Dynamic)
       {
         label: `Promoters Target (≥${promoterTarget}%)`,
-        data: sortedWeeks.map(() => promoterTarget),
+        data: sortedLabels.map(() => promoterTarget),
         borderColor: "rgba(16, 185, 129, 0.5)",
         backgroundColor: "rgba(16, 185, 129, 0.5)",
         pointBackgroundColor: "rgba(16, 185, 129, 0.5)",
@@ -151,7 +163,7 @@ const prepareChartData = (groupedData, timeRange, settings = {}) => {
       // Detractors Target Line (Dynamic)
       {
         label: `Detractors Target (≤${detractorTarget}%)`,
-        data: sortedWeeks.map(() => detractorTarget),
+        data: sortedLabels.map(() => detractorTarget),
         borderColor: "rgba(239, 68, 68, 0.5)",
         backgroundColor: "rgba(239, 68, 68, 0.5)",
         pointBackgroundColor: "rgba(239, 68, 68, 0.5)",
@@ -183,6 +195,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
   const [error, setError] = useState(null);
 
   // Advanced Time Range State
+  const [viewType, setViewType] = useState('weekly'); // 'weekly' or 'monthly'
   const [timeFilterMode, setTimeFilterMode] = useState('weeks'); // 'weeks', 'days', 'months'
   const [recentDaysValue, setRecentDaysValue] = useState(70);
   const [selectedMonths, setSelectedMonths] = useState([]);
@@ -256,19 +269,49 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
     if (filters.district) filtered = filtered.filter(t => t.district === filters.district);
 
     // 2. Filter by Time Mode
-    let finalRange = range;
+    let finalRange = range; // 'range' here is the `timeRange` state, which is an array of week keys
     if (mode === 'days') {
       const cutoff = subDays(new Date(), days);
       filtered = filtered.filter(t => t.interviewDate && isAfter(new Date(t.interviewDate), cutoff));
+      // When filtering by days, we need to re-generate the week ranges based on the filtered data
+      // and then use those as the 'finalRange' for grouping by week.
       const newRanges = generateWeekRanges(filtered, currentSettings || {});
-      finalRange = newRanges.filter(r => /Wk-\d+ \(\d+\)/.test(r));
+      finalRange = newRanges.filter(r => /Wk-\d+ \(\d+\)/.test(r)); // Ensure only week keys are kept
     } else if (mode === 'months' && months.length > 0) {
       filtered = filtered.filter(t => {
         const monthInfo = getMonthNumber(t.interviewDate, currentSettings || {});
         return monthInfo && months.includes(monthInfo.key);
       });
+      // Similar to 'days', if we filter by specific months, we need to re-generate week ranges
+      // from the filtered data to ensure we only group by weeks present in the selected months.
       const newRanges = generateWeekRanges(filtered, currentSettings || {});
       finalRange = newRanges.filter(r => /Wk-\d+ \(\d+\)/.test(r));
+    }
+
+    // 3. Aggregate based on viewType
+    if (viewType === 'monthly') {
+      const monthRanges = generateMonthRanges(filtered, currentSettings || {});
+      const allMonthKeys = monthRanges.map(m => m.key);
+      const grouped = groupDataByMonth(filtered, allMonthKeys, currentSettings || {}, samples);
+
+      // Filter range to only include months with activity (samples or violations)
+      // and map keys to descriptive labels
+      const activeRange = monthRanges
+        .filter(m => {
+          const stats = grouped[m.key];
+          return stats && (stats.sampleSize > 0 || stats.Detractors > 0 || stats.Neutrals > 0);
+        })
+        .map(m => m.label); // Use the descriptive label as the key in the final range
+
+      // Re-key grouped data with the descriptive labels for the chart/table
+      const descriptiveGrouped = {};
+      monthRanges.forEach(m => {
+        if (activeRange.includes(m.label)) {
+          descriptiveGrouped[m.label] = grouped[m.key];
+        }
+      });
+
+      return { grouped: descriptiveGrouped, range: activeRange };
     }
 
     const timeFilteredData = getDesiredWeeks(filtered, finalRange, currentSettings || {});
@@ -302,7 +345,8 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
       setTimeRange(defaultWeeks);
 
       const activeSettings = propSettings || settings || {};
-      const { grouped, range: finalRange } = processData(initialTasks, defaultWeeks, queryFilters, activeSettings, samplesData, timeFilterMode, recentDaysValue, selectedMonths);
+      const actualMode = viewType === 'monthly' ? 'monthly' : timeFilterMode;
+      const { grouped, range: finalRange } = processData(initialTasks, defaultWeeks, queryFilters, activeSettings, samplesData, actualMode, recentDaysValue, selectedMonths);
       setGroupedData(grouped);
       setChartData(prepareChartData(grouped, finalRange, activeSettings));
     }
@@ -339,7 +383,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
       const nStatus = nps >= npsTarget ? "Met Target" : "Out of Target";
 
       return {
-        "Week": week,
+        [viewType === 'weekly' ? "Week" : "Month"]: week,
         "Total Samples": stats.sampleSize || 0,
         "Promoters (%)": promoters,
         "Target Promoters (%)": promoterTarget,
@@ -348,15 +392,15 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
         "Detractors (%)": detractors,
         "Target Detractors (%)": detractorTarget,
         "Detractor Status": dStatus,
-        "NPS (%)": nps,
-        "Target NPS (%)": npsTarget,
+        "NPS": nps,
+        "Target NPS": npsTarget,
         "NPS Status": nStatus
       };
     });
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Weekly QoS Trends");
+    XLSX.utils.book_append_sheet(workbook, worksheet, `${viewType === 'weekly' ? 'Weekly' : 'Monthly'} QoS Trends`);
 
     // Auto-size columns
     const wscols = [
@@ -376,7 +420,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
     worksheet['!cols'] = wscols;
 
     const timestamp = moment().format("YYYY-MM-DD_HHmm");
-    XLSX.writeFile(workbook, `weekly_qos_trends_${timestamp}.xlsx`);
+    XLSX.writeFile(workbook, `${viewType}_qos_trends_${timestamp}.xlsx`);
   };
 
   const handleReset = () => {
@@ -411,25 +455,29 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
 
   useEffect(() => {
     if (tasks.length > 0) {
-      const { grouped, range: finalRange } = processData(tasks, timeRange, queryFilters, settings, samplesData, timeFilterMode, recentDaysValue, selectedMonths);
+      const activeSettings = propSettings || settings || {};
+      const actualMode = viewType === 'monthly' ? 'monthly' : timeFilterMode;
+      const { grouped, range: finalRange } = processData(tasks, timeRange, queryFilters, activeSettings, samplesData, actualMode, recentDaysValue, selectedMonths);
       setGroupedData(grouped);
-      setChartData(prepareChartData(grouped, finalRange));
+      setChartData(prepareChartData(grouped, finalRange, activeSettings));
     }
-  }, [timeRange, tasks, settings, samplesData, queryFilters, timeFilterMode, recentDaysValue, selectedMonths]);
+  }, [timeRange, tasks, settings, propSettings, samplesData, queryFilters, timeFilterMode, recentDaysValue, selectedMonths, viewType]);
 
   const applyFilter = (category) => {
     setFilter(category);
-    const { grouped, range: finalRange } = processData(tasks, timeRange, queryFilters, settings, samplesData, timeFilterMode, recentDaysValue, selectedMonths);
+    const activeSettings = propSettings || settings || {};
+    const actualMode = viewType === 'monthly' ? 'monthly' : timeFilterMode;
+    const { grouped, range: finalRange } = processData(tasks, timeRange, queryFilters, activeSettings, samplesData, actualMode, recentDaysValue, selectedMonths);
 
     if (category === "All") {
-      setChartData(prepareChartData(grouped, finalRange));
+      setChartData(prepareChartData(grouped, finalRange, activeSettings));
     } else {
       const filteredGrouped = Object.keys(grouped).reduce((acc, week) => {
         acc[week] = { [category]: grouped[week][category] };
         return acc;
       }, {});
 
-      setChartData(prepareChartData(filteredGrouped, finalRange));
+      setChartData(prepareChartData(filteredGrouped, finalRange, activeSettings));
     }
     setGroupedData(grouped);
   };
@@ -458,10 +506,43 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
         justifyContent="space-between"
       >
         <Typography variant="h6" sx={{ color: "#E2E8F0", fontWeight: "bold", fontSize: "1.1rem" }}>
-          Weekly QoS Trends
+          {viewType === 'weekly' ? 'Weekly' : 'Monthly'} QoS Trends
         </Typography>
 
-        <Stack direction="row" spacing={1.5}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <ToggleButtonGroup
+            value={viewType}
+            exclusive
+            onChange={(e, val) => val && setViewType(val)}
+            size="small"
+            sx={{
+              backgroundColor: "rgba(0,0,0,0.2)",
+              height: '32px',
+              mr: 1,
+              "& .MuiToggleButton-root": {
+                color: "#94a3b8",
+                borderColor: "rgba(255,255,255,0.05)",
+                px: 2,
+                fontSize: '0.75rem',
+                textTransform: 'none',
+                fontWeight: 700,
+                "&.Mui-selected": {
+                  backgroundColor: "rgba(123, 104, 238, 0.15)",
+                  color: "#7b68ee",
+                  borderColor: "rgba(123, 104, 238, 0.3)",
+                  "&:hover": { backgroundColor: "rgba(123, 104, 238, 0.2)" }
+                }
+              }
+            }}
+          >
+            <ToggleButton value="weekly" sx={{ gap: 0.5 }}>
+              Weekly
+            </ToggleButton>
+            <ToggleButton value="monthly" sx={{ gap: 0.5 }}>
+              Monthly
+            </ToggleButton>
+          </ToggleButtonGroup>
+
           <Button
             variant="outlined"
             size="small"

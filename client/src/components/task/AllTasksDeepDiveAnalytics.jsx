@@ -283,7 +283,7 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
     );
 };
 
-const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
+const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
     const theme = useTheme();
 
     // --- States ---
@@ -344,18 +344,20 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
         })).filter(s => s.value > 0);
     }, [tasks]);
 
-    const validatedTasks = useMemo(() => tasks.filter(t => t.validationStatus === 'Validated'), [tasks]);
+    // const validatedTasks = useMemo(() => tasks.filter(t => t.validationStatus === 'Validated'), [tasks]);
+    // Uses 'tasks' directly for analytics to show actual numbers as requested
+    const analyzedTasks = tasks; // Alias for clarity, or just use tasks
 
     const ownerPerformance = useMemo(() => {
         const stats = {};
-        validatedTasks.forEach(task => {
+        analyzedTasks.forEach(task => {
             const owners = getFlatValues(task, 'responsible');
             owners.forEach(owner => {
                 if (!stats[owner]) stats[owner] = { name: owner, cases: 0, neutrals: 0, detractors: 0 };
                 stats[owner].cases++;
                 const score = task.evaluationScore;
                 if (score >= 7 && score <= 8) stats[owner].neutrals++;
-                else if (score <= 6) stats[owner].detractors++;
+                else if (score >= 0 && score <= 6 && score !== null) stats[owner].detractors++; // Ensure score is valid
             });
         });
         const totalValidated = Object.values(stats).reduce((acc, curr) => acc + curr.cases, 0);
@@ -375,18 +377,18 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
             return isDesc ? bVal - aVal : aVal - bVal;
         });
         return rows;
-    }, [validatedTasks, ownerSearch, ownerSort]);
+    }, [analyzedTasks, ownerSearch, ownerSort]);
 
     const reasonAnalysis = useMemo(() => {
         const stats = {};
-        validatedTasks.forEach(task => {
+        analyzedTasks.forEach(task => {
             const reasons = getFlatValues(task, 'reason');
             reasons.forEach(reason => {
                 if (!stats[reason]) stats[reason] = { name: reason, cases: 0, neutrals: 0, detractors: 0 };
                 stats[reason].cases++;
                 const score = task.evaluationScore;
                 if (score >= 7 && score <= 8) stats[reason].neutrals++;
-                else if (score <= 6) stats[reason].detractors++;
+                else if (score >= 0 && score <= 6 && score !== null) stats[reason].detractors++;
             });
         });
         const totalCases = Object.values(stats).reduce((acc, curr) => acc + curr.cases, 0);
@@ -406,18 +408,18 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
             return isDesc ? bVal - aVal : aVal - bVal;
         });
         return rows;
-    }, [validatedTasks, reasonSearch, reasonSort]);
+    }, [analyzedTasks, reasonSearch, reasonSort]);
 
     const itnAnalysis = useMemo(() => {
         const stats = {};
-        validatedTasks.forEach(task => {
+        analyzedTasks.forEach(task => {
             const values = getFlatValues(task, 'itnRelated');
             values.forEach(val => {
                 if (!stats[val]) stats[val] = { name: val, cases: 0, neutrals: 0, detractors: 0 };
                 stats[val].cases++;
                 const score = task.evaluationScore;
                 if (score >= 7 && score <= 8) stats[val].neutrals++;
-                else if (score <= 6 && score !== null) stats[val].detractors++;
+                else if (score >= 0 && score <= 6 && score !== null) stats[val].detractors++;
             });
         });
         const totalCases = Object.values(stats).reduce((acc, curr) => acc + curr.cases, 0);
@@ -428,18 +430,18 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
             neutralPctValue: s.cases > 0 ? (s.neutrals / s.cases) * 100 : 0,
             detractorPctValue: s.cases > 0 ? (s.detractors / s.cases) * 100 : 0
         })).sort((a, b) => b.cases - a.cases);
-    }, [validatedTasks]);
+    }, [analyzedTasks]);
 
     const subscriptionAnalysis = useMemo(() => {
         const stats = {};
-        validatedTasks.forEach(task => {
+        analyzedTasks.forEach(task => {
             const values = getFlatValues(task, 'relatedToSubscription');
             values.forEach(val => {
                 if (!stats[val]) stats[val] = { name: val, cases: 0, neutrals: 0, detractors: 0 };
                 stats[val].cases++;
                 const score = task.evaluationScore;
                 if (score >= 7 && score <= 8) stats[val].neutrals++;
-                else if (score <= 6 && score !== null) stats[val].detractors++;
+                else if (score >= 0 && score <= 6 && score !== null) stats[val].detractors++;
             });
         });
         const totalCases = Object.values(stats).reduce((acc, curr) => acc + curr.cases, 0);
@@ -450,29 +452,111 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
             neutralPctValue: s.cases > 0 ? (s.neutrals / s.cases) * 100 : 0,
             detractorPctValue: s.cases > 0 ? (s.detractors / s.cases) * 100 : 0
         })).sort((a, b) => b.cases - a.cases);
-    }, [validatedTasks]);
+    }, [analyzedTasks]);
 
     const contributionMatrix = useMemo(() => {
         const matrix = {};
         const ownerTotals = {};
         const topReasons = reasonAnalysis.slice(0, 10).map(r => r.name);
         const topOwners = ownerPerformance.slice(0, 8).map(o => o.name);
-        validatedTasks.forEach(task => {
+        analyzedTasks.forEach(task => {
             const reasons = getFlatValues(task, 'reason');
             const owners = getFlatValues(task, 'responsible');
-            reasons.forEach(r => {
-                if (!topReasons.includes(r)) return;
-                if (!matrix[r]) matrix[r] = { total: 0 };
-                owners.forEach(o => {
-                    if (!topOwners.includes(o)) return;
+
+            // Fix for cross-association:
+            // If strictly multiple owners AND multiple reasons, assume 1:1 mapping by index.
+            // Otherwise (e.g. 1 owner for 3 reasons), keep cross-product.
+            if (reasons.length > 1 && owners.length > 1) {
+                const len = Math.min(reasons.length, owners.length);
+                for (let i = 0; i < len; i++) {
+                    const r = reasons[i];
+                    const o = owners[i];
+
+                    if (!topReasons.includes(r)) continue;
+                    if (!matrix[r]) matrix[r] = { total: 0 };
+
+                    if (!topOwners.includes(o)) continue;
+
+                    // Increment specific cell
                     matrix[r][o] = (matrix[r][o] || 0) + 1;
                     matrix[r].total++;
                     ownerTotals[o] = (ownerTotals[o] || 0) + 1;
+                }
+            } else {
+                // Fallback: Cross-product (for 1 owner -> N reasons, or N owners -> 1 reason)
+                reasons.forEach(r => {
+                    if (!topReasons.includes(r)) return;
+                    if (!matrix[r]) matrix[r] = { total: 0 };
+                    owners.forEach(o => {
+                        if (!topOwners.includes(o)) return;
+                        matrix[r][o] = (matrix[r][o] || 0) + 1;
+                        matrix[r].total++;
+                        ownerTotals[o] = (ownerTotals[o] || 0) + 1;
+                    });
                 });
-            });
+            }
         });
         return { matrix, topReasons, topOwners, ownerTotals };
-    }, [validatedTasks, reasonAnalysis, ownerPerformance]);
+    }, [analyzedTasks, reasonAnalysis, ownerPerformance]);
+
+    const rootCauseAnalysis = useMemo(() => {
+        const stats = {};
+        analyzedTasks.forEach(task => {
+            const values = getFlatValues(task, 'rootCause');
+            values.forEach(val => {
+                if (!stats[val]) stats[val] = { name: val, cases: 0, neutrals: 0, detractors: 0 };
+                stats[val].cases++;
+                const score = task.evaluationScore;
+                if (score >= 7 && score <= 8) stats[val].neutrals++;
+                else if (score >= 0 && score <= 6 && score !== null) stats[val].detractors++;
+            });
+        });
+        const totalCases = Object.values(stats).reduce((acc, curr) => acc + curr.cases, 0);
+        return Object.values(stats).map(s => ({
+            ...s,
+            percentageLabel: totalCases > 0 ? ((s.cases / totalCases) * 100).toFixed(0) : 0,
+            percentageValue: totalCases > 0 ? (s.cases / totalCases) * 100 : 0,
+            neutralPctValue: s.cases > 0 ? (s.neutrals / s.cases) * 100 : 0,
+            detractorPctValue: s.cases > 0 ? (s.detractors / s.cases) * 100 : 0
+        })).sort((a, b) => b.cases - a.cases);
+    }, [analyzedTasks]);
+
+    const rootCauseMatrix = useMemo(() => {
+        const matrix = {};
+        const ownerTotals = {};
+        const topRCs = rootCauseAnalysis.slice(0, 10).map(r => r.name);
+        const topOwners = ownerPerformance.slice(0, 8).map(o => o.name);
+        analyzedTasks.forEach(task => {
+            const rcs = getFlatValues(task, 'rootCause');
+            const owners = getFlatValues(task, 'responsible');
+
+            if (rcs.length > 1 && owners.length > 1) {
+                const len = Math.min(rcs.length, owners.length);
+                for (let i = 0; i < len; i++) {
+                    const r = rcs[i];
+                    const o = owners[i];
+                    if (!topRCs.includes(r)) continue;
+                    if (!matrix[r]) matrix[r] = { total: 0 };
+                    if (!topOwners.includes(o)) continue;
+                    matrix[r][o] = (matrix[r][o] || 0) + 1;
+                    matrix[r].total++;
+                    ownerTotals[o] = (ownerTotals[o] || 0) + 1;
+                }
+            } else {
+                rcs.forEach(r => {
+                    if (!topRCs.includes(r)) return;
+                    if (!matrix[r]) matrix[r] = { total: 0 };
+                    owners.forEach(o => {
+                        if (!topOwners.includes(o)) return;
+                        matrix[r][o] = (matrix[r][o] || 0) + 1;
+                        matrix[r].total++;
+                        ownerTotals[o] = (ownerTotals[o] || 0) + 1;
+                    });
+                });
+            }
+        });
+        return { matrix, topRCs, topOwners, ownerTotals };
+    }, [analyzedTasks, rootCauseAnalysis, ownerPerformance]);
 
     const hierarchyData = useMemo(() => {
         const data = {};
@@ -676,7 +760,12 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
                                         </TableHead>
                                         <TableBody>
                                             {segmentationData.map((row) => (
-                                                <TableRow key={row.name}>
+                                                <TableRow
+                                                    key={row.name}
+                                                    hover
+                                                    onClick={() => onDrillDown && onDrillDown({ sentiment: row.name }, `Sentiment Analysis: ${row.name}`)}
+                                                    sx={{ cursor: 'pointer' }}
+                                                >
                                                     <StyledTableCell sx={{ color: row.color, fontWeight: 700 }}>{row.name}</StyledTableCell>
                                                     <StyledTableCell align="center" sx={{ bgcolor: alpha(row.color, 0.05), borderLeft: `6px solid ${row.color}` }}>{row.value}</StyledTableCell>
                                                     <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(parseFloat(row.percentage), 0, 100, row.name === 'Promoter' ? 'green' : row.name === 'Neutral' ? 'orange' : 'red'), fontWeight: 800 }}>
@@ -726,7 +815,12 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
                                 </TableHead>
                                 <TableBody>
                                     {ownerPerformance.map((row) => (
-                                        <TableRow key={row.name}>
+                                        <TableRow
+                                            key={row.name}
+                                            hover
+                                            onClick={() => onDrillDown && onDrillDown({ responsible: row.name }, `Owner Performance: ${row.name}`)}
+                                            sx={{ cursor: 'pointer' }}
+                                        >
                                             <StyledTableCell sx={{ fontWeight: 800, color: '#fff' }}>{row.name}</StyledTableCell>
                                             <StyledTableCell align="center" sx={{ bgcolor: alpha('#7b68ee', 0.1), fontWeight: 700 }}>{row.cases}</StyledTableCell>
                                             <StyledTableCell align="center" sx={{ fontWeight: 900, bgcolor: getHeatmapColor(row.percentageValue, 0, 50, 'blue') }}>{row.percentageLabel}%</StyledTableCell>
@@ -763,7 +857,12 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
                                 </TableHead>
                                 <TableBody>
                                     {reasonAnalysis.map((row) => (
-                                        <TableRow key={row.name}>
+                                        <TableRow
+                                            key={row.name}
+                                            hover
+                                            onClick={() => onDrillDown && onDrillDown({ reason: row.name }, `Reason Analysis: ${row.name}`)}
+                                            sx={{ cursor: 'pointer' }}
+                                        >
                                             <StyledTableCell sx={{ fontWeight: 800, color: '#fff' }}>{row.name}</StyledTableCell>
                                             <StyledTableCell align="center" sx={{ bgcolor: alpha('#10b981', 0.1), fontWeight: 700 }}>{row.cases}</StyledTableCell>
                                             <StyledTableCell align="center" sx={{ fontWeight: 900, bgcolor: getHeatmapColor(row.percentageValue, 0, 40, 'green') }}>{row.percentageLabel}%</StyledTableCell>
@@ -799,7 +898,12 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
                                         </TableHead>
                                         <TableBody>
                                             {itnAnalysis.map((row) => (
-                                                <TableRow key={row.name}>
+                                                <TableRow
+                                                    key={row.name}
+                                                    hover
+                                                    onClick={() => onDrillDown && onDrillDown({ itnRelated: row.name }, `ITN Impact: ${row.name}`)}
+                                                    sx={{ cursor: 'pointer' }}
+                                                >
                                                     <StyledTableCell sx={{ fontWeight: 800, color: '#fff' }}>{row.name}</StyledTableCell>
                                                     <StyledTableCell align="center" sx={{ bgcolor: alpha('#7b68ee', 0.1) }}>{row.cases}</StyledTableCell>
                                                     <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(row.neutralPctValue, 0, 40, 'orange') }}>{row.neutralPctValue.toFixed(1)}%</StyledTableCell>
@@ -881,21 +985,119 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel }) => {
                                         const data = contributionMatrix.matrix[reason] || { total: 0 };
                                         return (
                                             <TableRow key={reason}>
-                                                <StyledTableCell sx={{ position: 'sticky', left: 0, bgcolor: '#121212', zIndex: 5, borderRight: '2px solid #333', fontWeight: 900, color: '#fff' }}>{reason}</StyledTableCell>
+                                                <StyledTableCell
+                                                    onClick={() => onDrillDown && onDrillDown({ reason: reason }, `Tasks for Reason: ${reason}`)}
+                                                    sx={{ position: 'sticky', left: 0, bgcolor: '#121212', zIndex: 5, borderRight: '2px solid #333', fontWeight: 900, color: '#fff', cursor: 'pointer', '&:hover': { bgcolor: alpha('#7b68ee', 0.1) } }}
+                                                >
+                                                    {reason}
+                                                </StyledTableCell>
                                                 {contributionMatrix.topOwners.map(owner => {
                                                     const count = data[owner] || 0;
                                                     const ownerTotal = contributionMatrix.ownerTotals[owner] || 0;
                                                     const loadPct = ownerTotal > 0 ? (count / ownerTotal) * 100 : 0;
                                                     return (
                                                         <React.Fragment key={`${reason}-${owner}`}>
-                                                            <StyledTableCell align="center" sx={{ borderLeft: '1px solid #2d2d2d', fontWeight: 700 }}>{count || '-'}</StyledTableCell>
+                                                            <StyledTableCell
+                                                                align="center"
+                                                                onClick={() => count > 0 && onDrillDown && onDrillDown({ reason: reason, responsible: owner }, `Tasks for ${owner} (${reason})`)}
+                                                                sx={{ borderLeft: '1px solid #2d2d2d', fontWeight: 700, cursor: count > 0 ? 'pointer' : 'default', '&:hover': { bgcolor: count > 0 ? alpha('#7b68ee', 0.1) : 'inherit' } }}
+                                                            >
+                                                                {count || '-'}
+                                                            </StyledTableCell>
                                                             <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(loadPct, 0, 60, 'blue'), color: loadPct > 0 ? '#fff' : alpha('#fff', 0.2), fontSize: '0.75rem', fontWeight: 600 }}>
                                                                 {count > 0 ? `${loadPct.toFixed(0)}%` : '-'}
                                                             </StyledTableCell>
                                                         </React.Fragment>
                                                     );
                                                 })}
-                                                <StyledTableCell align="center" sx={{ fontWeight: 900, bgcolor: alpha('#10b981', 0.2), color: '#fff', borderLeft: '2px solid #333' }}>{data.total}</StyledTableCell>
+                                                <StyledTableCell
+                                                    align="center"
+                                                    onClick={() => data.total > 0 && onDrillDown && onDrillDown({ reason: reason }, `Total Impact: ${reason}`)}
+                                                    sx={{ fontWeight: 900, bgcolor: alpha('#10b981', 0.2), color: '#fff', borderLeft: '2px solid #333', cursor: 'pointer', '&:hover': { bgcolor: alpha('#10b981', 0.3) } }}
+                                                >
+                                                    {data.total}
+                                                </StyledTableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Box>
+                </Box>
+
+                <Divider sx={{ borderColor: '#2d2d2d', mx: 3 }} />
+
+                {/* 6. ROOT CAUSE IMPACT MATRIX SECTION (NEW) */}
+                <Box sx={{ p: 3 }}>
+                    <Box sx={{ border: '1px solid #2d2d2d', borderRadius: '8px', overflow: 'hidden' }}>
+                        <SectionHeader
+                            title="Root Cause Impact Matrix"
+                            onExport={exportToExcel}
+                            dataToExport={rootCauseMatrix.topRCs.map(rc => ({ name: rc, ...rootCauseMatrix.matrix[rc] }))}
+                            chartType="stack"
+                            stackKeys={rootCauseMatrix.topOwners}
+                        />
+                        <TableContainer sx={{ overflowX: 'auto', maxHeight: 600 }}>
+                            <Table size="small" stickyHeader sx={{ minWidth: 1000 }}>
+                                <TableHead>
+                                    <TableRow>
+                                        <HeaderCell sx={{ top: 0, zIndex: 12, borderRight: '2px solid #333' }}>Root Cause</HeaderCell>
+                                        {rootCauseMatrix.topOwners.map(owner => (
+                                            <HeaderCell key={owner} align="center" colSpan={2} sx={{ bgcolor: alpha('#7b68ee', 0.05), borderLeft: '1px solid #333', top: 0 }}>
+                                                {owner}
+                                            </HeaderCell>
+                                        ))}
+                                        <HeaderCell align="center" sx={{ bgcolor: alpha('#10b981', 0.1), top: 0, borderLeft: '2px solid #333' }}>Total Impact</HeaderCell>
+                                    </TableRow>
+                                    <TableRow>
+                                        <HeaderCell sx={{ top: 48, zIndex: 12, borderRight: '2px solid #333' }}></HeaderCell>
+                                        {rootCauseMatrix.topOwners.map(owner => (
+                                            <React.Fragment key={`${owner}-sub`}>
+                                                <HeaderCell align="center" sx={{ top: 48, fontSize: '0.7rem', borderLeft: '1px solid #333' }}>Vol</HeaderCell>
+                                                <HeaderCell align="center" sx={{ top: 48, fontSize: '0.7rem', color: alpha('#fff', 0.5) }}>Load %</HeaderCell>
+                                            </React.Fragment>
+                                        ))}
+                                        <HeaderCell align="center" sx={{ top: 48, borderLeft: '2px solid #333' }}>Cases</HeaderCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {rootCauseMatrix.topRCs.map(rc => {
+                                        const data = rootCauseMatrix.matrix[rc] || { total: 0 };
+                                        return (
+                                            <TableRow key={rc}>
+                                                <StyledTableCell
+                                                    onClick={() => onDrillDown && onDrillDown({ rootCause: rc }, `Tasks for Root Cause: ${rc}`)}
+                                                    sx={{ position: 'sticky', left: 0, bgcolor: '#121212', zIndex: 5, borderRight: '2px solid #333', fontWeight: 900, color: '#fff', cursor: 'pointer', '&:hover': { bgcolor: alpha('#7b68ee', 0.1) } }}
+                                                >
+                                                    {rc}
+                                                </StyledTableCell>
+                                                {rootCauseMatrix.topOwners.map(owner => {
+                                                    const count = data[owner] || 0;
+                                                    const ownerTotal = rootCauseMatrix.ownerTotals[owner] || 0;
+                                                    const loadPct = ownerTotal > 0 ? (count / ownerTotal) * 100 : 0;
+                                                    return (
+                                                        <React.Fragment key={`${rc}-${owner}`}>
+                                                            <StyledTableCell
+                                                                align="center"
+                                                                onClick={() => count > 0 && onDrillDown && onDrillDown({ rootCause: rc, responsible: owner }, `Tasks for ${owner} (${rc})`)}
+                                                                sx={{ borderLeft: '1px solid #2d2d2d', fontWeight: 700, cursor: count > 0 ? 'pointer' : 'default', '&:hover': { bgcolor: count > 0 ? alpha('#7b68ee', 0.1) : 'inherit' } }}
+                                                            >
+                                                                {count || '-'}
+                                                            </StyledTableCell>
+                                                            <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(loadPct, 0, 60, 'blue'), color: loadPct > 0 ? '#fff' : alpha('#fff', 0.2), fontSize: '0.75rem', fontWeight: 600 }}>
+                                                                {count > 0 ? `${loadPct.toFixed(0)}%` : '-'}
+                                                            </StyledTableCell>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                                <StyledTableCell
+                                                    align="center"
+                                                    onClick={() => data.total > 0 && onDrillDown && onDrillDown({ rootCause: rc }, `Total Impact: ${rc}`)}
+                                                    sx={{ fontWeight: 900, bgcolor: alpha('#10b981', 0.2), color: '#fff', borderLeft: '2px solid #333', cursor: 'pointer', '&:hover': { bgcolor: alpha('#10b981', 0.3) } }}
+                                                >
+                                                    {data.total}
+                                                </StyledTableCell>
                                             </TableRow>
                                         );
                                     })}

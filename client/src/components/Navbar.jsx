@@ -307,24 +307,17 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 </MenuItem>
                 <MenuItem
                   component={Link}
-                  to="/detractor-tasks"
+                  to="/fieldTeams-portal"
                   onClick={handleMobileMenuClose}
                 >
-                  <Typography variant="body1">Detractor Tasks</Typography>
+                  <Typography variant="body1">Field Teams Portal</Typography>
                 </MenuItem>
                 <MenuItem
                   component={Link}
-                  to="/neutral-tasks"
+                  to="/tasks-list"
                   onClick={handleMobileMenuClose}
                 >
-                  <Typography variant="body1">Neutral Tasks</Typography>
-                </MenuItem>
-                <MenuItem
-                  component={Link}
-                  to="/audit/tasks"
-                  onClick={handleMobileMenuClose}
-                >
-                  <Typography variant="body1">Audit Tasks</Typography>
+                  <Typography variant="body1">All Tasks</Typography>
                 </MenuItem>
                 <Divider sx={{ borderColor: '#3d3d3d', mx: 2, my: 1 }} />
                 <MenuItem
@@ -445,8 +438,8 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
             <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
             <Button
-              id="reviews-menu-anchor"
-              onClick={handleReviewsMenuOpen}
+              component={Link}
+              to="/fieldTeams-portal"
               disableRipple
               sx={{
                 height: '55px',
@@ -462,34 +455,14 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 },
               }}
             >
-              NPS Reviews
+              Field Teams Portal
             </Button>
-            <Menu
-              id="reviews-menu"
-              anchorEl={reviewsMenuAnchorEl}
-              open={openReviewsMenu}
-              onClose={handleReviewsMenuClose}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-              sx={menuStyles}
-              PaperProps={{ sx: { width: '200px' } }}
-            >
-              <MenuItem component={Link} to="/assigned-to-me" onClick={handleReviewsMenuClose}>
-                Assigned To Me
-              </MenuItem>
-              <MenuItem component={Link} to="/detractor-tasks" onClick={handleReviewsMenuClose}>
-                Detractor Tasks
-              </MenuItem>
-              <MenuItem component={Link} to="/neutral-tasks" onClick={handleReviewsMenuClose}>
-                Neutral Tasks
-              </MenuItem>
-            </Menu>
 
             <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
             <Button
               component={Link}
-              to="/audit/tasks"
+              to="/tasks-list"
               disableRipple
               sx={{
                 height: '55px',
@@ -505,7 +478,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 },
               }}
             >
-              Audit Tasks
+              All Tasks
             </Button>
 
             <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
