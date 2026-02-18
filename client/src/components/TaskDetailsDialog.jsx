@@ -37,12 +37,14 @@ import {
   MdBusiness,
   MdLocationOn,
   MdAssignment,
-  MdHistory
+  MdHistory,
+  MdEdit
 } from 'react-icons/md';
 import { FaWhatsapp } from 'react-icons/fa6';
 import moment from 'moment';
 import api from '../api/api';
 import { getWeekNumber } from '../utils/helpers';
+import EditTaskDialog from './task/EditTaskDialog';
 
 // Reusable Detail Item
 const DetailItem = ({ label, value, icon, fullWidth = false }) => (
@@ -133,12 +135,16 @@ const ExpandableNote = ({ text }) => {
   );
 };
 
-export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => {
+export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTaskUpdated }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [qopsLogs, setQopsLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [settings, setSettings] = useState(null);
+
+  // Edit states
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedTaskToEdit, setSelectedTaskToEdit] = useState(null);
 
   // Fetch Settings
   useEffect(() => {
@@ -184,6 +190,21 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
       setQopsLogs([]);
     } finally {
       setLoadingLogs(false);
+    }
+  };
+
+  const handleEditClick = (task) => {
+    setSelectedTaskToEdit(task);
+    setEditDialogOpen(true);
+  };
+
+  const handleTaskUpdateSuccess = (updatedTask) => {
+    setEditDialogOpen(false);
+    setSelectedTaskToEdit(null);
+    if (onTaskUpdated) onTaskUpdated(updatedTask);
+    // Refresh logs if it's a single task view
+    if (tasks.length === 1) {
+      fetchTickets(tasks[0]._id);
     }
   };
 
@@ -342,315 +363,341 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName }) => 
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullScreen
-      PaperProps={{
-        sx: {
-          bgcolor: '#1a1a1a',
-          backgroundImage: 'none'
-        }
-      }}
-    >
-      <DialogTitle sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        bgcolor: '#252525',
-        borderBottom: '1px solid #333',
-        py: 2,
-        px: 3
-      }}>
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Box sx={{
-            width: 40, height: 40, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.2),
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.palette.primary.main
-          }}>
-            <MdAssignment size={24} />
-          </Box>
-          <Box>
-            <Typography variant={isMobile ? "subtitle1" : "h6"} fontWeight="bold" color="white">
-              {displayTitle}
-            </Typography>
-            <Typography variant="caption" color="gray">
-              Showing {tasks.length} tasks details
-            </Typography>
-          </Box>
-        </Stack>
+    <>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullScreen
+        PaperProps={{
+          sx: {
+            bgcolor: '#1a1a1a',
+            backgroundImage: 'none'
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          bgcolor: '#252525',
+          borderBottom: '1px solid #333',
+          py: 2,
+          px: 3
+        }}>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Box sx={{
+              width: 40, height: 40, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.2),
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.palette.primary.main
+            }}>
+              <MdAssignment size={24} />
+            </Box>
+            <Box>
+              <Typography variant={isMobile ? "subtitle1" : "h6"} fontWeight="bold" color="white">
+                {displayTitle}
+              </Typography>
+              <Typography variant="caption" color="gray">
+                Showing {tasks.length} tasks details
+              </Typography>
+            </Box>
+          </Stack>
 
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Tooltip title="Copy to Clipboard">
-            <IconButton onClick={copyToClipboard} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'white' } }}>
-              <MdContentCopy />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Export to Excel">
-            <IconButton onClick={exportToExcel} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'white' } }}>
-              <MdFileDownload />
-            </IconButton>
-          </Tooltip>
-          {tasks[0]?.teamId?.contactNumber && (
-            <Tooltip title="Contact via WhatsApp">
-              <IconButton onClick={redirectToWhatsApp} sx={{ mr: 1, color: '#25D366', '&:hover': { bgcolor: alpha('#25D366', 0.1) } }}>
-                <FaWhatsapp />
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Tooltip title="Copy to Clipboard">
+              <IconButton onClick={copyToClipboard} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'white' } }}>
+                <MdContentCopy />
               </IconButton>
             </Tooltip>
-          )}
-          <IconButton onClick={onClose} sx={{ color: 'gray', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}>
-            <MdClose />
-          </IconButton>
-        </Box>
-      </DialogTitle>
+            <Tooltip title="Export to Excel">
+              <IconButton onClick={exportToExcel} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'white' } }}>
+                <MdFileDownload />
+              </IconButton>
+            </Tooltip>
+            {tasks[0]?.teamId?.contactNumber && (
+              <Tooltip title="Contact via WhatsApp">
+                <IconButton onClick={redirectToWhatsApp} sx={{ mr: 1, color: '#25D366', '&:hover': { bgcolor: alpha('#25D366', 0.1) } }}>
+                  <FaWhatsapp />
+                </IconButton>
+              </Tooltip>
+            )}
+            <IconButton onClick={onClose} sx={{ color: 'gray', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}>
+              <MdClose />
+            </IconButton>
+          </Box>
+        </DialogTitle>
 
-      <DialogContent sx={{ bgcolor: '#121212', p: { xs: 2, md: 4 } }}>
-        <Stack spacing={4}>
-          {tasks.map((task, index) => (
-            <Paper
-              key={index}
-              elevation={0}
-              sx={{
-                p: 0,
-                bgcolor: '#1e1e1e',
-                borderRadius: '16px',
-                border: '1px solid #333',
-                overflow: 'hidden',
-                transition: 'transform 0.2s',
-                '&:hover': {
-                  borderColor: theme.palette.primary.main,
-                  boxShadow: `0 0 0 1px ${alpha(theme.palette.primary.main, 0.5)}`
-                }
-              }}
-            >
-              {/* Task Header Bar */}
-              <Box sx={{
-                p: 2,
-                bgcolor: alpha(theme.palette.primary.main, 0.08),
-                borderBottom: '1px solid #333',
-                display: 'flex',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: 2,
-                alignItems: 'center'
-              }}>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <Chip
-                    label={`#${index + 1}`}
-                    size="small"
-                    sx={{
-                      borderRadius: '8px',
-                      fontWeight: 'bold',
-                      bgcolor: theme.palette.primary.main,
-                      color: 'white'
-                    }}
-                  />
-                  <Typography variant="subtitle1" fontWeight="bold" color="white">
-                    Request #{task.requestNumber}
-                  </Typography>
-                  {task.interviewDate && (
+        <DialogContent sx={{ bgcolor: '#121212', p: { xs: 2, md: 4 } }}>
+          <Stack spacing={4}>
+            {tasks.map((task, index) => (
+              <Paper
+                key={index}
+                elevation={0}
+                sx={{
+                  p: 0,
+                  bgcolor: '#1e1e1e',
+                  borderRadius: '16px',
+                  border: '1px solid #333',
+                  overflow: 'hidden',
+                  transition: 'transform 0.2s',
+                  '&:hover': {
+                    borderColor: theme.palette.primary.main,
+                    boxShadow: `0 0 0 1px ${alpha(theme.palette.primary.main, 0.5)}`
+                  }
+                }}
+              >
+                {/* Task Header Bar */}
+                <Box sx={{
+                  p: 2,
+                  bgcolor: alpha(theme.palette.primary.main, 0.08),
+                  borderBottom: '1px solid #333',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 2,
+                  alignItems: 'center'
+                }}>
+                  <Stack direction="row" alignItems="center" spacing={2}>
                     <Chip
-                      label={`Week ${getWeekNumber(task.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber).week}`}
+                      label={`#${index + 1}`}
                       size="small"
                       sx={{
                         borderRadius: '8px',
                         fontWeight: 'bold',
-                        bgcolor: alpha(theme.palette.secondary.main, 0.2),
-                        color: theme.palette.secondary.main,
-                        border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`
+                        bgcolor: theme.palette.primary.main,
+                        color: 'white'
                       }}
                     />
-                  )}
-                  {task.slid && (
-                    <Chip
-                      label={task.slid}
-                      variant="outlined"
+                    <Typography variant="subtitle1" fontWeight="bold" color="white">
+                      Request #{task.requestNumber}
+                    </Typography>
+                    {task.interviewDate && (
+                      <Chip
+                        label={`Week ${getWeekNumber(task.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber).week}`}
+                        size="small"
+                        sx={{
+                          borderRadius: '8px',
+                          fontWeight: 'bold',
+                          bgcolor: alpha(theme.palette.secondary.main, 0.2),
+                          color: theme.palette.secondary.main,
+                          border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`
+                        }}
+                      />
+                    )}
+                    {task.slid && (
+                      <Chip
+                        label={task.slid}
+                        variant="outlined"
+                        size="small"
+                        sx={{ borderColor: '#555', color: '#aaa', fontWeight: 500 }}
+                      />
+                    )}
+                  </Stack>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Typography variant="body2" sx={{ color: '#aaa', display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <MdTimer />
+                      PIS: {task.pisDate ? moment(task.pisDate).format("MMM DD, YYYY") : 'N/A'}
+                    </Typography>
+                    <Button
+                      startIcon={<MdEdit />}
                       size="small"
-                      sx={{ borderColor: '#555', color: '#aaa', fontWeight: 500 }}
-                    />
-                  )}
-                </Stack>
-                <Typography variant="body2" sx={{ color: '#aaa', display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <MdTimer />
-                  PIS: {task.pisDate ? moment(task.pisDate).format("MMM DD, YYYY") : 'N/A'}
-                </Typography>
-              </Box>
+                      onClick={() => handleEditClick(task)}
+                      sx={{
+                        color: theme.palette.primary.main,
+                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.2) }
+                      }}
+                    >
+                      Edit Task
+                    </Button>
+                  </Stack>
+                </Box>
 
-              <Box sx={{ p: 3 }}>
-                <Grid container spacing={3}>
-                  {/* Column 1: Customer & Location */}
-                  <Grid item xs={12} md={4}>
-                    <SectionHeader title="Customer & Location" icon={<MdPerson size={16} />} />
-                    <Stack spacing={2}>
-                      <DetailItem label="Customer Name" value={task.customerName} />
-                      <DetailItem label="Contact" value={task.contactNumber} />
-                      <DetailItem label="Type" value={task.customerType} />
-                      <DetailItem
-                        label="Location"
-                        icon={<MdLocationOn size={14} />}
-                        value={`${task.governorate || ''}${task.governorate && task.district ? ', ' : ''}${task.district || ''}`}
-                      />
-                      <DetailItem label="Contract Date" value={task.contractDate ? moment(task.contractDate).format("MMM DD, YYYY") : 'N/A'} />
-                      <DetailItem label="App. Date" value={task.appDate ? moment(task.appDate).format("MMM DD, YYYY") : 'N/A'} />
-                      <DetailItem label="In Date" value={task.inDate ? moment(task.inDate).format("MMM DD, YYYY") : 'N/A'} />
-                      <DetailItem label="Close Date" value={task.closeDate ? moment(task.closeDate).format("MMM DD, YYYY") : 'N/A'} />
-                    </Stack>
-                  </Grid>
+                <Box sx={{ p: 3 }}>
+                  <Grid container spacing={3}>
+                    {/* Column 1: Customer & Location */}
+                    <Grid item xs={12} md={4}>
+                      <SectionHeader title="Customer & Location" icon={<MdPerson size={16} />} />
+                      <Stack spacing={2}>
+                        <DetailItem label="Customer Name" value={task.customerName} />
+                        <DetailItem label="Contact" value={task.contactNumber} />
+                        <DetailItem label="Type" value={task.customerType} />
+                        <DetailItem
+                          label="Location"
+                          icon={<MdLocationOn size={14} />}
+                          value={`${task.governorate || ''}${task.governorate && task.district ? ', ' : ''}${task.district || ''}`}
+                        />
+                        <DetailItem label="Contract Date" value={task.contractDate ? moment(task.contractDate).format("MMM DD, YYYY") : 'N/A'} />
+                        <DetailItem label="App. Date" value={task.appDate ? moment(task.appDate).format("MMM DD, YYYY") : 'N/A'} />
+                        <DetailItem label="In Date" value={task.inDate ? moment(task.inDate).format("MMM DD, YYYY") : 'N/A'} />
+                        <DetailItem label="Close Date" value={task.closeDate ? moment(task.closeDate).format("MMM DD, YYYY") : 'N/A'} />
+                      </Stack>
+                    </Grid>
 
-                  {/* Column 2: Issue Details */}
-                  <Grid item xs={12} md={4}>
-                    <SectionHeader title="Issue Details" icon={<MdInfoOutline size={16} />} />
-                    <Stack spacing={2}>
-                      <DetailItem
-                        label="Satisfaction Score"
-                        value={
-                          <Chip
-                            label={`${task.evaluationScore} (${task.evaluationScore >= 9 ? 'Promoter' :
-                              task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'})`}
-                            size="small"
-                            sx={{
-                              fontWeight: 'bold',
-                              color: 'white',
-                              bgcolor: task.evaluationScore >= 9 ? '#10b981' :
-                                task.evaluationScore >= 7 ? '#64748b' : '#ef4444'
-                            }}
-                          />
-                        }
-                      />
-                      <DetailItem label="Tariff" value={task.tarrifName} />
-                      <DetailItem label="Reason" value={task.reason} />
-                      <DetailItem label="Sub Reason" value={task.subReason} />
-                      <DetailItem
-                        label="Customer Feedback"
-                        value={task.customerFeedback}
-                      />
-                    </Stack>
-                  </Grid>
+                    {/* Column 2: Issue Details */}
+                    <Grid item xs={12} md={4}>
+                      <SectionHeader title="Issue Details" icon={<MdInfoOutline size={16} />} />
+                      <Stack spacing={2}>
+                        <DetailItem
+                          label="Satisfaction Score"
+                          value={
+                            <Chip
+                              label={`${task.evaluationScore} (${task.evaluationScore >= 9 ? 'Promoter' :
+                                task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'})`}
+                              size="small"
+                              sx={{
+                                fontWeight: 'bold',
+                                color: 'white',
+                                bgcolor: task.evaluationScore >= 9 ? '#10b981' :
+                                  task.evaluationScore >= 7 ? '#64748b' : '#ef4444'
+                              }}
+                            />
+                          }
+                        />
+                        <DetailItem label="Tariff" value={task.tarrifName} />
+                        <DetailItem label="Reason" value={task.reason} />
+                        <DetailItem label="Sub Reason" value={task.subReason} />
+                        <DetailItem
+                          label="Customer Feedback"
+                          value={task.customerFeedback}
+                        />
+                      </Stack>
+                    </Grid>
 
-                  {/* Column 3: Outcome & Team */}
-                  <Grid item xs={12} md={4}>
-                    <SectionHeader title="Outcome & Team" icon={<MdBusiness size={16} />} />
-                    <Stack spacing={2}>
-                      <DetailItem label="Root Cause" value={task.rootCause} />
-                      <DetailItem label="Owner" value={task.responsible || 'N/A'} icon={<MdPerson size={14} />} />
-                      <DetailItem label="ITN Related" value={task.itnRelated} />
-                      <DetailItem label="Related to Current Subscription" value={task.relatedToSubscription} />
-                      <DetailItem
-                        label="Validation"
-                        value={
-                          <Chip
-                            label={task.validationStatus || 'Not Validated'}
-                            size="small"
-                            sx={{
-                              bgcolor: task.validationStatus === 'Validated' ? alpha('#10b981', 0.2) : alpha('#ef4444', 0.2),
-                              color: task.validationStatus === 'Validated' ? '#10b981' : '#ef4444',
-                              fontWeight: 'bold'
-                            }}
-                          />
-                        }
-                      />
-                      <DetailItem label="Team" value={task.teamName} />
-                      <DetailItem label="Company" value={task.teamCompany} />
-                    </Stack>
-                  </Grid>
+                    {/* Column 3: Outcome & Team */}
+                    <Grid item xs={12} md={4}>
+                      <SectionHeader title="Outcome & Team" icon={<MdBusiness size={16} />} />
+                      <Stack spacing={2}>
+                        <DetailItem label="Root Cause" value={task.rootCause} />
+                        <DetailItem label="Owner" value={task.responsible || 'N/A'} icon={<MdPerson size={14} />} />
+                        <DetailItem label="ITN Related" value={task.itnRelated} />
+                        <DetailItem label="Related to Current Subscription" value={task.relatedToSubscription} />
+                        <DetailItem
+                          label="Validation"
+                          value={
+                            <Chip
+                              label={task.validationStatus || 'Not Validated'}
+                              size="small"
+                              sx={{
+                                bgcolor: task.validationStatus === 'Validated' ? alpha('#10b981', 0.2) : alpha('#ef4444', 0.2),
+                                color: task.validationStatus === 'Validated' ? '#10b981' : '#ef4444',
+                                fontWeight: 'bold'
+                              }}
+                            />
+                          }
+                        />
+                        <DetailItem label="Team" value={task.teamName} />
+                        <DetailItem label="Company" value={task.teamCompany} />
+                      </Stack>
+                    </Grid>
 
-                  {/* Column 4: Q-Ops & GAIA (New Section) */}
-                  <Grid item xs={12}>
-                    <Divider sx={{ my: 2 }} />
-                    <SectionHeader title="Q-Ops Transaction Logs" icon={<MdHistory size={16} />} />
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} md={4}>
-                        <Stack spacing={2}>
-                          <DetailItem label="GAIA Check" value={task.gaiaCheck || "N/A"}
-                            valueStyle={task.gaiaCheck === 'Yes' ? { color: 'green', fontWeight: 'bold' } : {}}
-                          />
-                          {task.latestGaia && (
-                            <>
-                              <DetailItem label="Latest QOps Type" value={task.latestGaia.transactionType || "N/A"} />
-                              <DetailItem label="Latest QOps State" value={task.latestGaia.transactionState || "N/A"} />
-                              <DetailItem label="Latest QOps Reason" value={task.latestGaia.unfReasonCode || "N/A"} />
-                            </>
-                          )}
-                        </Stack>
-                      </Grid>
-                      <Grid item xs={12} md={8}>
-                        <Box sx={{ border: '1px solid #333', borderRadius: 2, overflow: 'hidden' }}>
-                          <TableContainer sx={{ maxHeight: 300 }}>
-                            <Table size="small" stickyHeader>
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Execution Date</TableCell>
-                                  <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Type / State</TableCell>
-                                  <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Agent</TableCell>
-                                  <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Note</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {loadingLogs ? (
+                    {/* Column 4: Q-Ops & GAIA (New Section) */}
+                    <Grid item xs={12}>
+                      <Divider sx={{ my: 2 }} />
+                      <SectionHeader title="Q-Ops Transaction Logs" icon={<MdHistory size={16} />} />
+                      <Grid container spacing={3}>
+                        <Grid item xs={12} md={4}>
+                          <Stack spacing={2}>
+                            <DetailItem label="GAIA Check" value={task.gaiaCheck || "N/A"}
+                              valueStyle={task.gaiaCheck === 'Yes' ? { color: 'green', fontWeight: 'bold' }
+                                : {}}
+                            />
+                            {task.latestGaia && (
+                              <>
+                                <DetailItem label="Latest QOps Type" value={task.latestGaia.transactionType || "N/A"} />
+                                <DetailItem label="Latest QOps State" value={task.latestGaia.transactionState || "N/A"} />
+                                <DetailItem label="Latest QOps Reason" value={task.latestGaia.unfReasonCode || "N/A"} />
+                              </>
+                            )}
+                          </Stack>
+                        </Grid>
+                        <Grid item xs={12} md={8}>
+                          <Box sx={{ border: '1px solid #333', borderRadius: 2, overflow: 'hidden' }}>
+                            <TableContainer sx={{ maxHeight: 300 }}>
+                              <Table size="small" stickyHeader>
+                                <TableHead>
                                   <TableRow>
-                                    <TableCell colSpan={4} align="center" sx={{ color: '#aaa', py: 3 }}>
-                                      <CircularProgress size={20} sx={{ mr: 1 }} /> Loading logs...
-                                    </TableCell>
+                                    <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Execution Date</TableCell>
+                                    <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Type / State</TableCell>
+                                    <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Agent</TableCell>
+                                    <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Note</TableCell>
                                   </TableRow>
-                                ) : qopsLogs.length > 0 ? (
-                                  qopsLogs.map((log, i) => (
-                                    <TableRow key={i} sx={{ '&:hover': { bgcolor: '#2a2a2a' } }}>
-                                      <TableCell sx={{ color: '#fff' }}>{log.eventDate ? moment(log.eventDate).format('DD/MM/YYYY') : '-'}</TableCell>
-                                      <TableCell sx={{ color: '#fff' }}>
-                                        <Typography variant="body2" fontSize="0.75rem">{log.transactionType || log.mainCategory}</Typography>
-                                        <Typography variant="caption" color="gray">{log.transactionState}</Typography>
-                                      </TableCell>
-                                      <TableCell sx={{ color: '#fff' }}>{log.agentName || '-'}</TableCell>
-                                      <TableCell sx={{ color: '#aaa', maxWidth: 250 }}>
-                                        <ExpandableNote text={log.note} />
+                                </TableHead>
+                                <TableBody>
+                                  {loadingLogs ? (
+                                    <TableRow>
+                                      <TableCell colSpan={4} align="center" sx={{ color: '#aaa', py: 3 }}>
+                                        <CircularProgress size={20} sx={{ mr: 1 }} /> Loading logs...
                                       </TableCell>
                                     </TableRow>
-                                  ))
-                                ) : (
-                                  <TableRow>
-                                    <TableCell colSpan={4} align="center" sx={{ color: '#aaa', py: 3 }}>
-                                      No Q-Ops logs found.
-                                    </TableCell>
-                                  </TableRow>
-                                )}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
-                        </Box>
+                                  ) : qopsLogs.length > 0 ? (
+                                    qopsLogs.map((log, i) => (
+                                      <TableRow key={i} sx={{ '&:hover': { bgcolor: '#2a2a2a' } }}>
+                                        <TableCell sx={{ color: '#fff' }}>{log.eventDate ? moment(log.eventDate).format('DD/MM/YYYY') : '-'}</TableCell>
+                                        <TableCell sx={{ color: '#fff' }}>
+                                          <Typography variant="body2" fontSize="0.75rem">{log.transactionType || log.mainCategory}</Typography>
+                                          <Typography variant="caption" color="gray">{log.transactionState}</Typography>
+                                        </TableCell>
+                                        <TableCell sx={{ color: '#fff' }}>{log.agentName || '-'}</TableCell>
+                                        <TableCell sx={{ color: '#aaa', maxWidth: 250 }}>
+                                          <ExpandableNote text={log.note} />
+                                        </TableCell>
+                                      </TableRow>
+                                    ))
+                                  ) : (
+                                    <TableRow>
+                                      <TableCell colSpan={4} align="center" sx={{ color: '#aaa', py: 3 }}>
+                                        No Q-Ops logs found.
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </Box>
+                        </Grid>
                       </Grid>
                     </Grid>
+
+                    {/* Original Subtasks Section - Keeping just in case, but QOps is priority */}
+                    {/* {task.subTasks && task.subTasks.length > 0 && ...} */}
+
                   </Grid>
+                </Box>
+              </Paper>
+            ))}
+          </Stack>
+        </DialogContent>
 
-                  {/* Original Subtasks Section - Keeping just in case, but QOps is priority */}
-                  {/* {task.subTasks && task.subTasks.length > 0 && ...} */}
+        <DialogActions sx={{
+          bgcolor: '#252525',
+          borderTop: '1px solid #333',
+          p: 2,
+          justifyContent: 'space-between'
+        }}>
+          <Button onClick={onClose} sx={{ color: 'gray' }}>
+            Close Preview
+          </Button>
+          <Button
+            onClick={exportToExcel}
+            variant="contained"
+            startIcon={<MdFileDownload />}
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              '&:hover': { bgcolor: theme.palette.primary.dark }
+            }}
+          >
+            Export Details to Excel
+          </Button>
+        </DialogActions>
+      </Dialog >
 
-                </Grid>
-              </Box>
-            </Paper>
-          ))}
-        </Stack>
-      </DialogContent>
-
-      <DialogActions sx={{
-        bgcolor: '#252525',
-        borderTop: '1px solid #333',
-        p: 2,
-        justifyContent: 'space-between'
-      }}>
-        <Button onClick={onClose} sx={{ color: 'gray' }}>
-          Close Preview
-        </Button>
-        <Button
-          onClick={exportToExcel}
-          variant="contained"
-          startIcon={<MdFileDownload />}
-          sx={{
-            bgcolor: theme.palette.primary.main,
-            '&:hover': { bgcolor: theme.palette.primary.dark }
-          }}
-        >
-          Export Details to Excel
-        </Button>
-      </DialogActions>
-    </Dialog >
+      {selectedTaskToEdit && (
+        <EditTaskDialog
+          open={editDialogOpen}
+          setOpen={setEditDialogOpen}
+          task={selectedTaskToEdit}
+          handleTaskUpdate={handleTaskUpdateSuccess}
+        />
+      )}
+    </>
   );
 };

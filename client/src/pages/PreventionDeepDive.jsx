@@ -569,6 +569,7 @@ const PreventionDeepDive = () => {
           onClose={() => setShowTaskDialog(false)}
           tasks={[selectedTask]}
           teamName={selectedTask?.teamCompany || "Deep Dive Result"}
+          onTaskUpdated={fetchDeepDiveStats}
         />
       )}
     </Container>

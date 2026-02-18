@@ -361,12 +361,12 @@ const Dashboard = () => {
             <Stack direction={isMediumScreen ? "column" : "row"} spacing={3}>
               <Box flex={1} minWidth={0}>
                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <AllReasonsTable tasks={tasks} />
+                  <AllReasonsTable tasks={tasks} onTaskUpdated={() => setUpdateTasksList(prev => !prev)} />
                 </Box>
               </Box>
               <Box flex={1} minWidth={0}>
                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <AllOwnersTable tasks={tasks} />
+                  <AllOwnersTable tasks={tasks} onTaskUpdated={() => setUpdateTasksList(prev => !prev)} />
                 </Box>
               </Box>
             </Stack>
@@ -383,7 +383,7 @@ const Dashboard = () => {
           <Stack spacing={4}>
             <Suspense fallback={<MoonLoader color="#3b82f6" size={30} />}>
               <TaskTable tasks={tasks} fieldTeams={teamsData} />
-              <TeamViolationTracker tasks={tasks} initialFieldTeams={teamsData} />
+              <TeamViolationTracker tasks={tasks} initialFieldTeams={teamsData} onTaskUpdated={() => setUpdateTasksList(prev => !prev)} />
             </Suspense>
           </Stack>
         </Box>

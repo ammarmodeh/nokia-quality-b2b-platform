@@ -1301,6 +1301,7 @@ const IssuePreventionAnalytics = () => {
         onClose={() => setShowTaskDialog(false)}
         tasks={selectedTask ? [selectedTask] : []}
         teamName={selectedTask?.teamName || "Task Details"}
+        onTaskUpdated={fetchStats}
       />
 
       {/* Detailed Comparison Dialog */}

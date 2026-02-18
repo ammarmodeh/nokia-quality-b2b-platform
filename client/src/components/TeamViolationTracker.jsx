@@ -10,7 +10,7 @@ import api from "../api/api";
 import * as XLSX from 'xlsx';
 import SearchAndExport from "./ViolationSearchAndExport";
 
-const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
+const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) => {
   const { enqueueSnackbar } = useSnackbar();
   const user = useSelector((state) => state?.auth?.user);
   const [fieldTeams, setFieldTeams] = useState(initialFieldTeams);
@@ -1024,6 +1024,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [] }) => {
         selectedTeamForAbsence={selectedTeamForAbsence}
         violationDialogOpen={violationDialogOpen}
         onViolationDialogClose={handleViolationDialogClose}
+        onTaskUpdated={onTaskUpdated}
       />
     </Box>
   );

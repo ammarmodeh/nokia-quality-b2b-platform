@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
@@ -18,7 +18,17 @@ import {
   Switch,
   FormControlLabel,
   Paper,
-  Grid
+
+  Grid,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Select as MuiSelect,
+  MenuItem as MuiMenuItem,
+  TableSortLabel
 } from "@mui/material";
 import {
   Save as SaveIcon,
@@ -28,7 +38,12 @@ import {
   Notifications as NotificationsIcon,
   Score as ScoreIcon,
   Edit as EditIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Add,
+  Search as SearchIcon,
+  ArrowUpward,
+  ArrowDownward,
+  FilterList as FilterListIcon
 } from "@mui/icons-material";
 import { HashLoader } from "react-spinners";
 
@@ -50,6 +65,7 @@ const SettingsPage = () => {
     reset,
     setValue,
     watch,
+    control,
     formState: { errors, isDirty },
   } = useForm({
     defaultValues: {
@@ -81,6 +97,8 @@ const SettingsPage = () => {
       startWeekNumber: 1,
       month1StartDate: null,
       month1EndDate: null,
+
+      scoringKeys: [],
     },
   });
 
@@ -509,6 +527,15 @@ const SettingsPage = () => {
               label={<Typography sx={{ color: '#ffffff' }}>Enable Push Notifications</Typography>}
             />
           </Box> */}
+
+          <Divider sx={{ my: 4, borderColor: '#444' }} />
+          <SectionHeader title="Dynamic Scoring Keys" icon={ScoreIcon} />
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 2 }}>
+              Define scoring keys that can be applied to Tasks and Customer Issues. These keys will appear as selectable options in the respective forms.
+            </Typography>
+            <ScoringKeysEditor control={control} register={register} errors={errors} editMode={editMode} />
+          </Box>
         </form>
       </Paper>
 
@@ -518,6 +545,255 @@ const SettingsPage = () => {
         </Alert>
       </Snackbar>
     </Box>
+  );
+};
+
+
+const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
+  const { fields, append, remove, move } = useFieldArray({
+    control,
+    name: "scoringKeys"
+  });
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  // Compute displayed fields with original index tracking
+  const processedFields = fields
+    .map((field, index) => ({ ...field, originalIndex: index }))
+    .filter(field =>
+      field.label.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (!sortConfig.key) return 0;
+      const valA = a[sortConfig.key];
+      const valB = b[sortConfig.key];
+
+      // Handle numeric sorting for points, string for label
+      if (sortConfig.key === 'points') {
+        return sortConfig.direction === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+      }
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const handleMove = (index, direction) => {
+    // index is the processed index, we need original index logic if we were strictly using originalIndex, 
+    // but move() takes the current index in the field array.
+    // However, since we disable move when sorted/filtered, visual index === real index.
+    if (direction === 'up' && index > 0) {
+      move(index, index - 1);
+    } else if (direction === 'down' && index < fields.length - 1) {
+      move(index, index + 1);
+    }
+  };
+
+  const isReorderDisabled = searchTerm !== "" || sortConfig.key !== null || !editMode;
+
+  const textFieldStyles = {
+    '& .MuiInputBase-root': { color: '#ffffff', fontSize: '0.85rem' },
+    '& .MuiInputLabel-root': { color: '#b3b3b3' },
+    '& .MuiOutlinedInput-root': {
+      '& fieldset': { borderColor: editMode ? '#444' : 'transparent' },
+      '&:hover fieldset': { borderColor: editMode ? '#666' : 'transparent' },
+      '&.Mui-focused fieldset': { borderColor: '#1976d2' },
+      backgroundColor: editMode ? '#1e1e1e' : 'transparent',
+    },
+    '& .Mui-disabled': {
+      WebkitTextFillColor: '#ffffff !important',
+    }
+  };
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+        <TextField
+          size="small"
+          placeholder="Search keys..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{
+            ...textFieldStyles,
+            width: 300,
+            '& .MuiOutlinedInput-root': { bgcolor: '#1e1e1e' }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: '#666' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+        {(searchTerm || sortConfig.key) && (
+          <MuiButton
+            size="small"
+            onClick={() => { setSearchTerm(""); setSortConfig({ key: null, direction: 'asc' }); }}
+            sx={{ color: '#90caf9' }}
+          >
+            Clear Filters
+          </MuiButton>
+        )}
+      </Box>
+
+      <TableContainer component={Paper} sx={{ bgcolor: 'transparent', border: '1px solid #444', maxHeight: 400, overflow: 'auto' }}>
+        <Table size="small" stickyHeader>
+          <TableHead sx={{ bgcolor: '#1e1e1e' }}>
+            <TableRow>
+              <TableCell sx={{ bgcolor: '#1e1e1e', color: '#b3b3b3', borderBottom: '1px solid #444' }}>
+                <TableSortLabel
+                  active={sortConfig.key === 'label'}
+                  direction={sortConfig.key === 'label' ? sortConfig.direction : 'asc'}
+                  onClick={() => handleSort('label')}
+                  sx={{
+                    color: '#b3b3b3 !important',
+                    '& .MuiTableSortLabel-icon': { color: '#b3b3b3 !important' }
+                  }}
+                >
+                  Key Name (Label)
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ bgcolor: '#1e1e1e', color: '#b3b3b3', borderBottom: '1px solid #444' }}>
+                <TableSortLabel
+                  active={sortConfig.key === 'points'}
+                  direction={sortConfig.key === 'points' ? sortConfig.direction : 'asc'}
+                  onClick={() => handleSort('points')}
+                  sx={{
+                    color: '#b3b3b3 !important',
+                    '& .MuiTableSortLabel-icon': { color: '#b3b3b3 !important' }
+                  }}
+                >
+                  Points
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ bgcolor: '#1e1e1e', color: '#b3b3b3', borderBottom: '1px solid #444' }}>
+                <TableSortLabel
+                  active={sortConfig.key === 'targetForm'}
+                  direction={sortConfig.key === 'targetForm' ? sortConfig.direction : 'asc'}
+                  onClick={() => handleSort('targetForm')}
+                  sx={{
+                    color: '#b3b3b3 !important',
+                    '& .MuiTableSortLabel-icon': { color: '#b3b3b3 !important' }
+                  }}
+                >
+                  Target
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ bgcolor: '#1e1e1e', color: '#b3b3b3', borderBottom: '1px solid #444', textAlign: 'center', width: 140 }}>Action</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {processedFields.map((field, index) => (
+              <TableRow key={field.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                <TableCell sx={{ borderBottom: '1px solid #333', p: 1 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    disabled={!editMode}
+                    {...register(`scoringKeys.${field.originalIndex}.label`, { required: true })}
+                    sx={textFieldStyles}
+                    placeholder="e.g. Critical Issue"
+                  />
+                </TableCell>
+                <TableCell sx={{ borderBottom: '1px solid #333', p: 1, width: 120 }}>
+                  <TextField
+                    type="number"
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    disabled={!editMode}
+                    {...register(`scoringKeys.${field.originalIndex}.points`, { required: true })}
+                    sx={textFieldStyles}
+                  />
+                </TableCell>
+                <TableCell sx={{ borderBottom: '1px solid #333', p: 1, width: 140 }}>
+                  <Controller
+                    control={control}
+                    name={`scoringKeys.${field.originalIndex}.targetForm`}
+                    defaultValue={field.targetForm || "Both"}
+                    render={({ field: { onChange, value, ref } }) => (
+                      <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        variant="outlined"
+                        disabled={!editMode}
+                        inputRef={ref}
+                        value={value}
+                        onChange={onChange}
+                        sx={textFieldStyles}
+                        SelectProps={{ native: true }}
+                      >
+                        <option value="Both">Both</option>
+                        <option value="Task">Task</option>
+                        <option value="Issue">Issue</option>
+                      </TextField>
+                    )}
+                  />
+                </TableCell>
+                <TableCell sx={{ borderBottom: '1px solid #333', p: 1, textAlign: 'center' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+                    <IconButton
+                      onClick={() => handleMove(index, 'up')}
+                      disabled={isReorderDisabled || index === 0}
+                      size="small"
+                      sx={{ color: isReorderDisabled ? '#444' : '#90caf9' }}
+                    >
+                      <ArrowUpward fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => handleMove(index, 'down')}
+                      disabled={isReorderDisabled || index === fields.length - 1}
+                      size="small"
+                      sx={{ color: isReorderDisabled ? '#444' : '#90caf9' }}
+                    >
+                      <ArrowDownward fontSize="small" />
+                    </IconButton>
+                    <IconButton onClick={() => remove(field.originalIndex)} disabled={!editMode} color="error" size="small">
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+            {processedFields.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={3} sx={{ textAlign: 'center', py: 3, color: '#666' }}>
+                  No keys found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      {editMode && (
+        <MuiButton
+          startIcon={<Add />}
+          onClick={() => {
+            // If sorted/filtered, we append to the end anyway
+            append({ label: '', points: 0, targetForm: 'Both' });
+            // Optionally clear filters to show the new item, but user might find that annoying.
+            // For now, let's keep filters.
+          }}
+          sx={{ mt: 2, color: '#1976d2', borderColor: '#1976d2' }}
+          variant="outlined"
+        >
+          Add Key
+        </MuiButton>
+      )
+      }
+    </Box >
   );
 };
 

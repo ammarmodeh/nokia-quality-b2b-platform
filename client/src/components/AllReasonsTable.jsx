@@ -98,7 +98,7 @@ function CustomToolbar() {
   );
 }
 
-export const AllReasonsTable = memo(({ tasks }) => {
+export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery('(max-width:503px)');
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
@@ -701,6 +701,7 @@ export const AllReasonsTable = memo(({ tasks }) => {
         onClose={() => setDialogOpen(false)}
         tasks={reasonTasks}
         title={`Tasks for Reason: ${selectedReason}`}
+        onTaskUpdated={onTaskUpdated}
       />
     </Stack>
   );

@@ -421,6 +421,7 @@ const Archived = () => {
             }}
             tasks={[selectedTask]}
             teamName={selectedTask.teamName || "Unknown Team"}
+            onTaskUpdated={fetchArchives}
           />
         )}
       </Box>

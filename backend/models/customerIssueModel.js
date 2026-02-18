@@ -77,6 +77,10 @@ const customerIssueSchema = new mongoose.Schema({
   callerDetails: { type: String, required: false }, // Caller details/note
   callDate: { type: Date, required: false }, // Date of the call
   isChecked: { type: Boolean, default: false }, // For user progress tracking
+  isQoS: { type: Boolean, default: false },
+  itnRelated: { type: [String], default: [] },
+  relatedToSubscription: { type: [String], default: [] },
+  scoringKeys: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

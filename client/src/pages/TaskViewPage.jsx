@@ -204,7 +204,13 @@ const TaskViewPage = () => {
                     <DetailItem label="Full Name" value={task.customerName} />
                     <DetailItem label="Contact #" value={task.contactNumber} />
                     <DetailItem label="Type" value={task.customerType} />
-                    <DetailItem label="Location" value={`${task.governorate || ''}, ${task.district || ''}`} />
+                    <DetailItem label="Location" value={`${task.governorate || ''}${task.governorate && task.district ? ', ' : ''}${task.district || ''}`} />
+                    <DetailItem label="Contract Date" value={task.contractDate ? format(new Date(task.contractDate), "MMM dd, yyyy") : '—'} />
+                    <DetailItem label="App Date" value={task.appDate ? format(new Date(task.appDate), "MMM dd, yyyy") : '—'} />
+                    <DetailItem label="In Date" value={task.inDate ? format(new Date(task.inDate), "MMM dd, yyyy") : '—'} />
+                    <DetailItem label="Close Date" value={task.closeDate ? format(new Date(task.closeDate), "MMM dd, yyyy") : '—'} />
+                    <DetailItem label="PIS Date" value={task.pisDate ? format(new Date(task.pisDate), "MMM dd, yyyy") : '—'} />
+                    <DetailItem label="Interview Date" value={task.interviewDate ? format(new Date(task.interviewDate), "MMM dd, yyyy") : '—'} />
                     <DetailItem label="Initial Feedback" value={task.customerFeedback} fullWidth />
                   </DetailGrid>
                 </DataSection>

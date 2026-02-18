@@ -105,13 +105,18 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     area: "",
     callerName: "",
     callerDetails: "",
-    callDate: ""
+    callDate: "",
+    isQoS: false,
+    itnRelated: "No",
+    relatedToSubscription: "No",
+    scoringKeys: []
   };
 
   const [formData, setFormData] = useState(initialFormState);
   const [duplicateIssues, setDuplicateIssues] = useState([]);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [fieldTeams, setFieldTeams] = useState([]);
+  const [scoringKeyOptions, setScoringKeyOptions] = useState([]);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -125,6 +130,21 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
       }
     };
     fetchTeams();
+  }, []);
+
+  // Fetch Scoring Keys from Settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await api.get("/settings");
+        if (data && data.scoringKeys) {
+          setScoringKeyOptions(data.scoringKeys);
+        }
+      } catch (error) {
+        console.error("Failed to load settings for scoring keys", error);
+      }
+    };
+    fetchSettings();
   }, []);
 
   // Persistence & Edit Logic
@@ -188,7 +208,12 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           // Caller fields
           callerName: issue.callerName || '',
           callerDetails: issue.callerDetails || '',
-          callDate: issue.callDate ? new Date(issue.callDate).toISOString().split('T')[0] : ''
+          callDate: issue.callDate ? new Date(issue.callDate).toISOString().split('T')[0] : '',
+
+          isQoS: issue.isQoS || false,
+          itnRelated: (Array.isArray(issue.itnRelated) ? (issue.itnRelated.includes('Yes') ? 'Yes' : 'No') : (issue.itnRelated || 'No')),
+          relatedToSubscription: (Array.isArray(issue.relatedToSubscription) ? (issue.relatedToSubscription.includes('Yes') ? 'Yes' : 'No') : (issue.relatedToSubscription || 'No')),
+          scoringKeys: issue.scoringKeys || []
         };
 
         setFormData(baseData);
@@ -687,6 +712,119 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   sx={textFieldStyles}
                 />
               </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.isQoS}
+                      onChange={handleChange}
+                      name="isQoS"
+                      sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 'bold' }}>Quality of Service (QoS)</Typography>
+                      <Typography variant="caption" sx={{ color: '#b3b3b3', display: 'block' }}>Flag for higher weighting in rankings</Typography>
+                    </Box>
+                  }
+                  disabled={!isAdmin}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth sx={formControlStyles}>
+                  <InputLabel sx={inputLabelStyles}>ITN Related</InputLabel>
+                  <Select
+                    name="itnRelated"
+                    value={formData.itnRelated || 'No'}
+                    label="ITN Related"
+                    onChange={handleChange}
+                    disabled={!isAdmin}
+                    sx={selectStyles}
+                    MenuProps={{ PaperProps: { sx: { backgroundColor: '#2d2d2d', color: '#ffffff', '& .MuiMenuItem-root': menuItemStyles } } }}
+                  >
+                    <MenuItem value="Yes" sx={menuItemStyles}>Yes</MenuItem>
+                    <MenuItem value="No" sx={menuItemStyles}>No</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth sx={formControlStyles}>
+                  <InputLabel sx={inputLabelStyles}>Related to Current Subscription</InputLabel>
+                  <Select
+                    name="relatedToSubscription"
+                    value={formData.relatedToSubscription || 'No'}
+                    label="Related to Current Subscription"
+                    onChange={handleChange}
+                    disabled={!isAdmin}
+                    sx={selectStyles}
+                    MenuProps={{ PaperProps: { sx: { backgroundColor: '#2d2d2d', color: '#ffffff', '& .MuiMenuItem-root': menuItemStyles } } }}
+                  >
+                    <MenuItem value="Yes" sx={menuItemStyles}>Yes</MenuItem>
+                    <MenuItem value="No" sx={menuItemStyles}>No</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+
+              {/* Dynamic Scoring Keys - Autocomplete */}
+              {scoringKeyOptions.length > 0 && (
+                <Grid item xs={12}>
+                  <Box sx={{ p: 2, border: '1px solid #3d3d3d', borderRadius: 2, mt: 2 }}>
+                    <Typography variant="subtitle2" sx={{ color: '#7b68ee', mb: 1 }}>Scoring Factors</Typography>
+                    <MuiAutocomplete
+                      multiple
+                      id="scoring-keys-autocomplete"
+                      options={scoringKeyOptions.filter(key => key.targetForm === 'Issue' || key.targetForm === 'Both' || !key.targetForm)}
+                      getOptionLabel={(option) => `${option.label} (${option.points > 0 ? '+' : ''}${option.points})`}
+                      value={scoringKeyOptions.filter(key => formData.scoringKeys?.includes(key.label))}
+                      onChange={(event, newValue) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          scoringKeys: newValue.map(item => item.label)
+                        }));
+                      }}
+                      disabled={!isAdmin}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          variant="outlined"
+                          label="Select Scoring Factors"
+                          placeholder="Search factors..."
+                          sx={textFieldStyles}
+                        />
+                      )}
+                      renderOption={(props, option, { selected }) => (
+                        <li {...props} style={{ backgroundColor: '#2d2d2d', color: '#fff' }}>
+                          <Checkbox
+                            icon={<Box component="span" sx={{ width: 16, height: 16, border: '1px solid gray', borderRadius: '3px' }} />}
+                            checkedIcon={<Box component="span" sx={{ width: 16, height: 16, bgcolor: '#7b68ee', borderRadius: '3px' }} />}
+                            style={{ marginRight: 8 }}
+                            checked={selected}
+                            sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                          />
+                          {option.label} <span style={{ color: '#b3b3b3', fontSize: '0.8em', marginLeft: '4px' }}>({option.points > 0 ? '+' : ''}{option.points})</span>
+                        </li>
+                      )}
+                      fullWidth
+                      ChipProps={{
+                        sx: {
+                          backgroundColor: '#7b68ee',
+                          color: '#ffffff',
+                          '& .MuiChip-deleteIcon': {
+                            color: '#ffffff',
+                            '&:hover': {
+                              color: '#e0e0e0',
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  </Box>
+                </Grid>
+              )}
             </Grid>
           </Box>
 
@@ -1059,7 +1197,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             </Grid>
           </Box>
         </Box>
-      </DialogContent>
+      </DialogContent >
 
 
       <DialogActions sx={{
@@ -1190,7 +1328,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Dialog>
+    </Dialog >
   );
 };
 

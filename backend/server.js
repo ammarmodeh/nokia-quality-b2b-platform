@@ -98,7 +98,7 @@ app.use("/api/quiz-results", quizResultRoutes);
 app.use("/api/on-the-job-assessments", onTheJobAssessmentRoutes);
 app.use("/api/archive", archiveRoutes);
 app.use("/api/trash", trashRoutes);
-app.use("/api/customer-issues-notifications", customerIssueRoutes);
+app.use("/api/customer-issues", customerIssueRoutes);
 app.use("/api/suggestions", suggestionsRoutes);
 app.use("/api/policies", policyRoutes);
 app.use("/api/ai", aiRoutes);

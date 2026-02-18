@@ -240,7 +240,7 @@ const FieldTeamPortal = () => {
   const [chartDialog, setChartDialog] = useState({ open: false, title: '', data: [], type: 'area', stackKeys: [] });
   const [leaderboardPage, setLeaderboardPage] = useState(0);
   const [leaderboardRowsPerPage, setLeaderboardRowsPerPage] = useState(10);
-  const [leaderboardSort, setLeaderboardSort] = useState({ field: 'totalViolations', direction: 'desc' });
+  const [leaderboardSort, setLeaderboardSort] = useState({ field: 'totalPoints', direction: 'desc' });
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [leaderboardDateFilter, setLeaderboardDateFilter] = useState({ start: '', end: '' });
   const [leaderboardThresholds, setLeaderboardThresholds] = useState({ minIssues: '', minSuccessRate: '' });
@@ -358,7 +358,7 @@ const FieldTeamPortal = () => {
 
   // Update Week/Month Options when tasks or settings change
   useEffect(() => {
-    if (allTechnicalTasksGlobal.length > 0 && settings) {
+    if (Array.isArray(allTechnicalTasksGlobal) && allTechnicalTasksGlobal.length > 0 && settings) {
       const weeks = generateWeekRanges(allTechnicalTasksGlobal, settings);
       setWeekRanges(weeks.filter(r => /Wk-\d+ \(\d+\)/.test(r)).reverse());
 
@@ -370,18 +370,19 @@ const FieldTeamPortal = () => {
   // --- NEW: Global Analytics Logic ---
   const globalAnalytics = useMemo(() => {
     // 1. Time Filtering
-    let timeFiltered = allTechnicalTasksGlobal;
+    const techTasks = Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [];
+    let timeFiltered = techTasks;
     if (timeFilterMode === 'days') {
       const cutoff = subDays(new Date(), recentDaysValue);
-      timeFiltered = allTechnicalTasksGlobal.filter(t => t.interviewDate && isAfter(new Date(t.interviewDate), cutoff));
+      timeFiltered = techTasks.filter(t => t.interviewDate && isAfter(new Date(t.interviewDate), cutoff));
     } else if (timeFilterMode === 'weeks' && selectedWeeks.length > 0) {
-      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+      timeFiltered = techTasks.filter(t => {
         if (!t.interviewDate) return false;
         const { key } = getWeekNumber(t.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber);
         return selectedWeeks.includes(key);
       });
     } else if (timeFilterMode === 'months' && selectedMonths.length > 0) {
-      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+      timeFiltered = techTasks.filter(t => {
         if (!t.interviewDate) return false;
         const monthInfo = getMonthNumber(t.interviewDate, settings);
         return monthInfo && selectedMonths.includes(monthInfo.key);
@@ -390,7 +391,7 @@ const FieldTeamPortal = () => {
       const start = new Date(customDateRange.start);
       const end = new Date(customDateRange.end);
       end.setHours(23, 59, 59, 999);
-      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+      timeFiltered = techTasks.filter(t => {
         const d = new Date(t.interviewDate || t.createdAt);
         return d >= start && d <= end;
       });
@@ -435,6 +436,12 @@ const FieldTeamPortal = () => {
       detailedRootCauses: {}
     };
 
+    // Create a lookup map for scoring keys: Label -> Points
+    const scoringKeysMap = (settings?.scoringKeys || []).reduce((acc, key) => {
+      acc[key.label] = key.points || 0;
+      return acc;
+    }, {});
+
     // Use Global Technical Tasks (NPS Tickets) as primary source
     tasksToProcess.forEach(task => {
       const increment = (map, value) => {
@@ -461,21 +468,32 @@ const FieldTeamPortal = () => {
 
       const fieldTeam = task.teamName || 'Unknown';
       const category = task.category || 'N/A';
-      const isITN = task.itnRelated === true || task.itnRelated === 'Yes';
-      const isSubscription = task.relatedToSubscription === true || task.relatedToSubscription === 'Yes';
+      const isITN = (Array.isArray(task.itnRelated) && task.itnRelated.includes('Yes')) || task.itnRelated === 'Yes' || task.itnRelated === true;
+      const isSubscription = (Array.isArray(task.relatedToSubscription) && task.relatedToSubscription.includes('Yes')) || task.relatedToSubscription === 'Yes' || task.relatedToSubscription === true;
 
       owners.forEach(o => increment(stats.byOwner, o));
       reasons.forEach(r => increment(stats.byReason, r));
       subReasons.forEach(sr => increment(stats.bySubReason, sr));
       rootCauses.forEach(rc => increment(stats.byRootCause, rc));
 
+      // Calculate Points for this task
+      let taskPoints = 0;
+      if (Array.isArray(task.scoringKeys)) {
+        task.scoringKeys.forEach(keyLabel => {
+          if (scoringKeysMap[keyLabel]) {
+            taskPoints += scoringKeysMap[keyLabel];
+          }
+        });
+      }
+
       // --- Detailed Tracking for Advanced Analytics Tables ---
       // Track Owner details
       owners.forEach(o => {
         if (!stats.detailedOwners[o]) {
-          stats.detailedOwners[o] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
+          stats.detailedOwners[o] = { total: 0, itn: 0, subscription: 0, points: 0, ownerBreakdown: {} };
         }
         stats.detailedOwners[o].total++;
+        stats.detailedOwners[o].points += taskPoints;
         if (isITN) stats.detailedOwners[o].itn++;
         if (isSubscription) stats.detailedOwners[o].subscription++;
       });
@@ -654,71 +672,110 @@ const FieldTeamPortal = () => {
     };
   }, [allTechnicalTasksGlobal, analyticsSubTab, timeFilterMode, recentDaysValue, selectedWeeks, selectedMonths, customDateRange, settings]);
 
-  const handleExportTeamViolations = (team) => {
-    // Filter tasks for this team
-    const teamTasks = allTechnicalTasksGlobal.filter(t => t.teamName === team.teamName);
-    const data = teamTasks.map(t => {
-      let displayScore = 'Not Evaluated';
-      let satisfaction = 'N/A';
-      let score = t.evaluationScore || 0;
-      if (score > 0) {
-        const isSmallScale = score <= 10;
-        displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
-        const normalized = isSmallScale ? score * 10 : score;
-        if (normalized <= 60) satisfaction = 'Detractor';
-        else if (normalized <= 80) satisfaction = 'Neutral';
-        else satisfaction = 'Promoter';
-      }
-      return {
-        'SLID': t.slid,
-        'Customer': t.customerName,
-        'Status': t.validationStatus,
-        'Category': t.category,
-        'Reason': Array.isArray(t.reason) ? t.reason.join(", ") : t.reason,
-        'Root Cause': Array.isArray(t.rootCause) ? t.rootCause.join(", ") : t.rootCause,
-        'Technician': t.technician || t.primaryTechnician,
-        'Score': displayScore,
-        'Satisfaction': satisfaction,
-        'Date': new Date(t.createdAt).toLocaleDateString()
+  const calculateItemPoints = (item, type = 'task') => {
+    let points = 0;
+
+    // 1. Dynamic Scoring Rules
+    if (settings?.scoringRules && Array.isArray(settings.scoringRules)) {
+      const evaluateRule = (item, rule) => {
+        if (!rule.isActive) return 0;
+        let itemValue = item[rule.field];
+        const ruleValue = rule.value;
+
+        const compare = (a, b, op) => {
+          switch (op) {
+            case 'equals': return a == b;
+            case 'notEquals': return a != b;
+            case 'greaterThan': return Number(a) > Number(b);
+            case 'lessThan': return Number(a) < Number(b);
+            case 'contains': return String(a).toLowerCase().includes(String(b).toLowerCase());
+            default: return false;
+          }
+        };
+
+        return compare(itemValue, ruleValue, rule.operator) ? Number(rule.points) : 0;
       };
-    });
+
+      settings.scoringRules.filter(r => r.type === type).forEach(rule => {
+        points += evaluateRule(item, rule);
+      });
+    }
+
+    // 2. Manual Scoring Keys
+    if (settings?.scoringKeys && Array.isArray(settings.scoringKeys) && Array.isArray(item.scoringKeys)) {
+      item.scoringKeys.forEach(keyLabel => {
+        const keyConfig = settings.scoringKeys.find(k => k.label === keyLabel);
+        if (keyConfig) points += Number(keyConfig.points);
+      });
+    }
+
+    return points;
+  };
+
+  const mapItemToExcelRow = (item, type) => {
+    let displayScore = 'Not Evaluated';
+    let satisfaction = 'N/A';
+    let score = item.evaluationScore || 0;
+    if (score > 0) {
+      const isSmallScale = score <= 10;
+      displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
+      const normalized = isSmallScale ? score * 10 : score;
+      if (normalized <= 60) satisfaction = 'Detractor';
+      else if (normalized <= 80) satisfaction = 'Neutral';
+      else satisfaction = 'Promoter';
+    }
+
+    return {
+      'Type': type === 'task' ? 'NPS Ticket' : 'Customer Issue',
+      'Team': item.teamName,
+      'SLID': item.slid,
+      'Customer': item.customerName || 'N/A',
+      // 'Category': type === 'task' ? item.category : (item.issueCategory || 'General'),
+      // 'Sub-Category': item.issueSubCategory || '-',
+      'Reason': Array.isArray(item.reason) ? item.reason.join(", ") : (item.reason || '-'),
+      'Sub-Reason': Array.isArray(item.subReason) ? item.subReason.join(", ") : (item.subReason || '-'),
+      'Root Cause': Array.isArray(item.rootCause) ? item.rootCause.join(", ") : (item.rootCause || '-'),
+      'Owner/Responsible': item.responsible || item.assignedTo?.name || '-',
+      'Technician': item.technician || item.primaryTechnician || '-',
+      'Status': item.validationStatus || (item.solved === 'yes' ? 'Solved' : 'Open'),
+      'Score': displayScore,
+      'Satisfaction': satisfaction,
+      'Points': calculateItemPoints(item, type),
+      'ITN Related': ((Array.isArray(item.itnRelated) && item.itnRelated.includes('Yes')) || item.itnRelated === 'Yes' || item.itnRelated === true) ? 'Yes' : 'No',
+      'Subscription Related': ((Array.isArray(item.relatedToSubscription) && item.relatedToSubscription.includes('Yes')) || item.relatedToSubscription === 'Yes' || item.relatedToSubscription === true) ? 'Yes' : 'No',
+      'Date': new Date(item.interviewDate || item.date || item.createdAt).toLocaleDateString()
+    };
+  };
+
+  const handleExportTeamViolations = (team) => {
+    // Filter tasks and issues for this team
+    const teamTasks = (Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [])
+      .filter(t => t.teamName === team.teamName)
+      .map(t => mapItemToExcelRow(t, 'task'));
+
+    const teamIssues = (Array.isArray(filteredIssuesByDate) ? filteredIssuesByDate : [])
+      .filter(i => i.teamName === team.teamName)
+      .map(i => mapItemToExcelRow(i, 'issue'));
+
+    const data = [...teamTasks, ...teamIssues];
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Violations");
-    XLSX.writeFile(wb, `${team.teamName}_Violations_Report.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Violations Details");
+    XLSX.writeFile(wb, `${team.teamName}_Violations_DeepDive_Report.xlsx`);
   };
 
   const handleExportAllTeamsViolations = () => {
-    const data = allTechnicalTasksGlobal.map(t => {
-      let displayScore = 'Not Evaluated';
-      let satisfaction = 'N/A';
-      let score = t.evaluationScore || 0;
-      if (score > 0) {
-        const isSmallScale = score <= 10;
-        displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
-        const normalized = isSmallScale ? score * 10 : score;
-        if (normalized <= 60) satisfaction = 'Detractor';
-        else if (normalized <= 80) satisfaction = 'Neutral';
-        else satisfaction = 'Promoter';
-      }
-      return {
-        'Team': t.teamName,
-        'SLID': t.slid,
-        'Customer': t.customerName,
-        'Status': t.validationStatus,
-        'Category': t.category,
-        'Reason': Array.isArray(t.reason) ? t.reason.join(", ") : t.reason,
-        'Root Cause': Array.isArray(t.rootCause) ? t.rootCause.join(", ") : t.rootCause,
-        'Technician': t.technician || t.primaryTechnician,
-        'Score': displayScore,
-        'Satisfaction': satisfaction,
-        'Date': new Date(t.createdAt).toLocaleDateString()
-      };
-    });
+    const allTasks = (Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [])
+      .map(t => mapItemToExcelRow(t, 'task'));
+
+    const allIssues = (Array.isArray(filteredIssuesByDate) ? filteredIssuesByDate : [])
+      .map(i => mapItemToExcelRow(i, 'issue'));
+
+    const data = [...allTasks, ...allIssues];
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "All_Teams_Violations");
-    XLSX.writeFile(wb, `All_Teams_Violations_Report.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Global Violations Report");
+    XLSX.writeFile(wb, `Global_Violations_DeepDive_Analysis_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   // Analytics Drill-Down Handler
@@ -726,18 +783,19 @@ const FieldTeamPortal = () => {
     let filtered = [];
 
     // Apply time filtering first
-    let timeFiltered = allTechnicalTasksGlobal;
+    const techTasks = Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [];
+    let timeFiltered = techTasks;
     if (timeFilterMode === 'days') {
       const cutoff = subDays(new Date(), recentDaysValue);
-      timeFiltered = allTechnicalTasksGlobal.filter(t => t.interviewDate && isAfter(new Date(t.interviewDate), cutoff));
+      timeFiltered = techTasks.filter(t => t.interviewDate && isAfter(new Date(t.interviewDate), cutoff));
     } else if (timeFilterMode === 'weeks' && selectedWeeks.length > 0) {
-      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+      timeFiltered = techTasks.filter(t => {
         if (!t.interviewDate) return false;
         const { key } = getWeekNumber(t.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber);
         return selectedWeeks.includes(key);
       });
     } else if (timeFilterMode === 'months' && selectedMonths.length > 0) {
-      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+      timeFiltered = techTasks.filter(t => {
         if (!t.interviewDate) return false;
         const monthInfo = getMonthNumber(t.interviewDate, settings);
         return monthInfo && selectedMonths.includes(monthInfo.key);
@@ -746,7 +804,7 @@ const FieldTeamPortal = () => {
       const start = new Date(customDateRange.start);
       const end = new Date(customDateRange.end);
       end.setHours(23, 59, 59, 999);
-      timeFiltered = allTechnicalTasksGlobal.filter(t => {
+      timeFiltered = techTasks.filter(t => {
         const d = new Date(t.interviewDate || t.createdAt);
         return d >= start && d <= end;
       });
@@ -1182,74 +1240,75 @@ const FieldTeamPortal = () => {
 
 
 
+  const fetchFieldTeams = async () => {
+    try {
+      setLoading(true);
+      // Fetch from both endpoints and combine results
+      const [fieldTeamsRes, quizTeamsRes] = await Promise.all([
+        api.get("/field-teams/get-field-teams", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }),
+        api.get("/quiz-results/teams/all", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        })
+      ]);
+
+      // Combine and deduplicate teams
+      const combinedTeams = [
+        ...fieldTeamsRes.data,
+        ...quizTeamsRes.data.data.map(qt => ({
+          _id: qt.teamId,
+          teamName: qt.teamName,
+          teamCompany: "N/A" // Default value for quiz teams
+        }))
+      ];
+
+      // Remove duplicates
+      const uniqueTeams = combinedTeams.reduce((acc, team) => {
+        if (!acc.some(t => t._id === team._id)) {
+          acc.push(team);
+        }
+        return acc;
+      }, []);
+
+      setFieldTeams(uniqueTeams);
+    } catch (error) {
+      console.error("Error fetching field teams:", error);
+      setError("Failed to fetch field teams");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchGlobalData = async () => {
+    try {
+      setLoadingGlobal(true);
+      const [techRes, issuesRes] = await Promise.all([
+        api.get("/tasks/get-all-tasks", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        }),
+        api.get("/customer-issues", {
+          params: { limit: 10000 },
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        })
+      ]);
+      const techData = techRes.data?.data || techRes.data || [];
+      setAllTechnicalTasksGlobal(Array.isArray(techData) ? techData : []);
+      // Ensure we always have an array even if structure is different
+      const issuesData = issuesRes.data?.data || issuesRes.data || [];
+      setAllCustomerIssuesGlobal(Array.isArray(issuesData) ? issuesData : []);
+    } catch (err) {
+      console.error("Error fetching global leaderboard data:", err);
+    } finally {
+      setLoadingGlobal(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchFieldTeams = async () => {
-      try {
-        setLoading(true);
-        // Fetch from both endpoints and combine results
-        const [fieldTeamsRes, quizTeamsRes] = await Promise.all([
-          api.get("/field-teams/get-field-teams", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }),
-          api.get("/quiz-results/teams/all", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          })
-        ]);
-
-        // console.log({ fieldTeamsRes, quizTeamsRes });
-
-        // Combine and deduplicate teams
-        const combinedTeams = [
-          ...fieldTeamsRes.data,
-          ...quizTeamsRes.data.data.map(qt => ({
-            _id: qt.teamId,
-            teamName: qt.teamName,
-            teamCompany: "N/A" // Default value for quiz teams
-          }))
-        ];
-
-        // Remove duplicates
-        const uniqueTeams = combinedTeams.reduce((acc, team) => {
-          if (!acc.some(t => t._id === team._id)) {
-            acc.push(team);
-          }
-          return acc;
-        }, []);
-
-        setFieldTeams(uniqueTeams);
-      } catch (error) {
-        console.error("Error fetching field teams:", error);
-        setError("Failed to fetch field teams");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchGlobalData = async () => {
-      try {
-        setLoadingGlobal(true);
-        const [techRes, issuesRes] = await Promise.all([
-          api.get("/tasks/get-all-tasks", {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-          }),
-          api.get("/customer-issues-notifications", {
-            params: { limit: 10000 },
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-          })
-        ]);
-        setAllTechnicalTasksGlobal(techRes.data || []);
-        setAllCustomerIssuesGlobal(issuesRes.data.data || []);
-      } catch (err) {
-        console.error("Error fetching global leaderboard data:", err);
-      } finally {
-        setLoadingGlobal(false);
-      }
-    };
-
     fetchGlobalData();
     fetchFieldTeams();
   }, []);
@@ -1297,6 +1356,10 @@ const FieldTeamPortal = () => {
     setDrillDownType(dataType);
     setDrillDownTab(defaultTab);
     setDrillDownOpen(true);
+  };
+
+  const handleTeamSelect = (team) => {
+    navigate(`/fieldTeams-portal/${team._id}`);
   };
 
   // Sync selectedTeam with URL teamId
@@ -1797,68 +1860,12 @@ ${data.map((a, i) => `
     XLSX.utils.book_append_sheet(wb, wsSummary, "Overview Summary");
 
     // 2. NPS Tickets Sheet
-    const techTasksData = technicalTasks.map(t => {
-      let score = t.evaluationScore || 0;
-      let satisfaction = 'N/A';
-      let displayScore = 'Not Evaluated';
-
-      if (score > 0) {
-        const isSmallScale = score <= 10;
-        displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
-
-        // Normalize for calculation
-        const normalizedScore = isSmallScale ? score * 10 : score;
-
-        if (normalizedScore <= 60) satisfaction = 'Detractor';
-        else if (normalizedScore <= 80) satisfaction = 'Neutral';
-        else satisfaction = 'Promoter';
-      }
-
-      return {
-        'Ticket Request': t.requestNumber || 'N/A',
-        'Ticket ID': t.ticketId || '-',
-        'Customer Name': t.customerName,
-        'Customer Contact': t.customerContact || 'N/A',
-        'Customer Feedback': t.customerFeedback || '-',
-        'SLID': t.slid,
-        'PIS Date': t.pisDate ? new Date(t.pisDate).toLocaleDateString() : 'N/A',
-        'Task Date': formatDate(t.createdAt),
-        'Priority': t.priority,
-        'Status': t.validationStatus,
-        'Validation Notes': t.validationNotes || '-',
-        'Evaluation Score': displayScore,
-        'Satisfaction Level': satisfaction,
-        'Technician': t.technician || t.primaryTechnician || '-',
-        'Subtasks Count': t.subtasks?.length || 0,
-        'Region': t.governorate || '-',
-        'City': t.city || '-'
-      };
-    });
+    const techTasksData = technicalTasks.map(t => mapItemToExcelRow(t, 'task'));
     const wsTech = XLSX.utils.json_to_sheet(techTasksData);
     XLSX.utils.book_append_sheet(wb, wsTech, "NPS Tickets");
 
     // 3. Customer Issues Sheet
-    const issuesData = filteredIssuesByDate.map(i => ({
-      'SLID': i.slid,
-      'Category': i.issueCategory || 'General',
-      'Sub-Category': i.issueSubCategory || '-',
-      'Status': i.solved === 'yes' ? 'Closed' : 'Open',
-      'Customer Name': i.customerName || 'N/A',
-      'Customer Contact': i.customerContact || 'N/A',
-      'Reporter': i.reporter || 'N/A',
-      'Source': i.fromMain || i.reports?.[0]?.fromMain || '-',
-      'Report Date': formatDate(i.date || i.createdAt),
-      'Dispatched': i.dispatched,
-      'Dispatched Time': i.dispatchedAt ? formatDate(i.dispatchedAt) : (i.dispatched === 'yes' ? 'IMMEDIATE' : '-'),
-      'Resolution Date': i.resolveDate ? formatDate(i.resolveDate) : 'N/A',
-      'Closed By': i.closedBy || i.supervisor || '-',
-      'Closed Date': i.closedAt ? formatDate(i.closedAt) : '-',
-      'Resolution Details': i.resolutionDetails || '-',
-      'Issue Note/Details': i.issueDetails || i.reporterNote || '-',
-      'Aging (Days)': i.date ? Math.floor((new Date() - new Date(i.date)) / (1000 * 60 * 60 * 24)) : 'N/A',
-      'Is QoS?': i.isQoS ? 'Yes' : 'No',
-      'Is Install?': i.isInstall ? 'Yes' : 'No'
-    }));
+    const issuesData = filteredIssuesByDate.map(i => mapItemToExcelRow(i, 'issue'));
     const wsIssues = XLSX.utils.json_to_sheet(issuesData);
     XLSX.utils.book_append_sheet(wb, wsIssues, "Customer Issues");
 
@@ -1891,60 +1898,65 @@ ${data.map((a, i) => `
     XLSX.writeFile(wb, `${selectedTeam.teamName.replace(/\s+/g, '_')}_Full_Performance_Report.xlsx`);
   };
 
-  useEffect(() => {
-    const fetchGlobalData = async () => {
-      setLoadingGlobal(true);
-      try {
-        const [tasksRes, issuesRes] = await Promise.all([
-          api.get("/tasks/get-all-tasks", {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-          }),
-          api.get("/customer-issues/get-all-issues", {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-          })
-        ]);
-        setAllTechnicalTasksGlobal(tasksRes.data);
-        setAllCustomerIssuesGlobal(issuesRes.data);
-      } catch (error) {
-        // console.error("Error fetching global data:", error);
-      } finally {
-        setLoadingGlobal(false);
-      }
-    };
-    fetchGlobalData();
-  }, []);
+
 
   const handleExportLeaderboard = () => {
-    const data = leaderboardData.map((team, index) => ({
+    // 1. Summary Ranking Data
+    const summaryData = leaderboardData.map((team, index) => ({
       'Rank': index + 1,
       'Team Name': team.teamName,
       'Company': team.teamCompany,
-      'Region': team.governorate,
+      // 'Region': team.governorate,
       'Total NPS Tasks': team.totalNpsTickets,
       'NPS Detractors': team.npsDetractors,
+      'Detractor Rate %': team.totalNpsTickets > 0 ? ((team.npsDetractors / team.totalNpsTickets) * 100).toFixed(1) : '0.0',
       'NPS Neutrals': team.npsNeutrals,
       'Total Issues': team.issueViolations,
       'Open Cases': team.openCount,
       'Avg Resolution Time (Days)': team.avgResolutionTime,
-      'Success Rate (%)': team.resPercent,
-      'Total Violations': team.totalViolations
+      'Resolution Rate (%)': team.resPercent,
+      'Total Violations (Tasks + Issues)': team.totalViolations,
+      'Total Points': team.totalPoints,
+      // 'Performance Score': Math.max(0, 100 - (team.totalPoints / 10)).toFixed(1) // Simple heuristic
     }));
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Team Performance Ranking");
-
-    // Set column widths
-    const maxWidths = {};
-    data.forEach(row => {
-      Object.keys(row).forEach(key => {
-        const val = row[key] ? row[key].toString() : '';
-        maxWidths[key] = Math.max(maxWidths[key] || 10, val.length + 2);
-      });
+    // 2. Global Deep Dive Data (All violations from all teams)
+    const allViolations = [];
+    leaderboardData.forEach(team => {
+      team.rawDetractors.forEach(t => allViolations.push(mapItemToExcelRow(t, 'task')));
+      team.rawNeutrals.forEach(t => allViolations.push(mapItemToExcelRow(t, 'task')));
+      team.rawIssues.forEach(i => allViolations.push(mapItemToExcelRow(i, 'issue')));
     });
-    ws['!cols'] = Object.keys(maxWidths).map(key => ({ wch: maxWidths[key] }));
 
-    XLSX.writeFile(wb, `Team_Performance_Ranking_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const wb = XLSX.utils.book_new();
+
+    // Add Summary Sheet
+    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Performance Ranking");
+
+    // Add Detailed Sheet
+    const wsDetails = XLSX.utils.json_to_sheet(allViolations);
+    XLSX.utils.book_append_sheet(wb, wsDetails, "Global Violation Deep-Dive");
+
+    // Auto-size columns for both sheets
+    [wsSummary, wsDetails].forEach(ws => {
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      const cols = [];
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        let maxLen = 10;
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+          const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+          if (cell && cell.v) {
+            const len = cell.v.toString().length;
+            if (len > maxLen) maxLen = len;
+          }
+        }
+        cols.push({ wch: maxLen + 2 });
+      }
+      ws['!cols'] = cols;
+    });
+
+    XLSX.writeFile(wb, `Team_Performance_Ranking_DeepDive_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const renderLineChart = (data, dataKey, color = colors.primary) => (
@@ -2047,7 +2059,7 @@ ${data.map((a, i) => `
 
     const processed = fieldTeams.map(team => {
       // 1. Technical Tasks Filter (NPS) with Date Filter
-      const teamTechTasks = allTechnicalTasksGlobal.filter(t => {
+      const teamTechTasks = (Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : []).filter(t => {
         const isTeam = t.teamId === team._id || t.teamName === team.teamName;
         if (!isTeam) return false;
 
@@ -2064,7 +2076,7 @@ ${data.map((a, i) => `
       });
 
       // 2. Customer Issues Filter with Date Filter
-      const teamIssues = allCustomerIssuesGlobal.filter(i => {
+      const teamIssues = (Array.isArray(allCustomerIssuesGlobal) ? allCustomerIssuesGlobal : []).filter(i => {
         const isTeam = i.installingTeam === team.teamName || i.assignedTo === team.teamName || i.teamName === team.teamName;
         if (!isTeam) return false;
 
@@ -2135,6 +2147,15 @@ ${data.map((a, i) => `
         openCount: openCases.length,
         avgResolutionTime,
         totalViolations: totalNpsTickets + totalIssues, // Total violations = Total NPS Tickets + Total Customer Issues
+
+        // Calculate Total Points using the helper
+        totalPoints: (() => {
+          let points = 0;
+          teamTechTasks.forEach(t => { points += calculateItemPoints(t, 'task'); });
+          teamIssues.forEach(i => { points += calculateItemPoints(i, 'issue'); });
+          return points;
+        })(),
+
         // Raw data for drill-down
         rawDetractors: npsDetractors,
         rawNeutrals: npsNeutrals,
@@ -2169,7 +2190,7 @@ ${data.map((a, i) => `
 
     return filtered.sort((a, b) => {
       let valA = a[leaderboardSort.field], valB = b[leaderboardSort.field];
-      if (['totalNpsTickets', 'npsDetractors', 'npsNeutrals', 'issueViolations', 'openCount', 'resPercent', 'totalViolations'].includes(leaderboardSort.field)) {
+      if (['totalNpsTickets', 'npsDetractors', 'npsNeutrals', 'issueViolations', 'openCount', 'resPercent', 'totalViolations', 'totalPoints'].includes(leaderboardSort.field)) {
         valA = parseFloat(valA) || 0;
         valB = parseFloat(valB) || 0;
       }
@@ -2180,7 +2201,7 @@ ${data.map((a, i) => `
       }
       return leaderboardSort.direction === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
     });
-  }, [fieldTeams, allTechnicalTasksGlobal, allCustomerIssuesGlobal, leaderboardSearchQuery, leaderboardStatusQuery, leaderboardSort, leaderboardDateFilter, leaderboardThresholds]);
+  }, [fieldTeams, allTechnicalTasksGlobal, allCustomerIssuesGlobal, leaderboardSearchQuery, leaderboardStatusQuery, leaderboardSort, leaderboardDateFilter, leaderboardThresholds, settings, calculateItemPoints]);
 
   const paginatedLeaderboardData = useMemo(() => {
     const startIndex = leaderboardPage * leaderboardRowsPerPage;
@@ -2598,6 +2619,7 @@ ${data.map((a, i) => `
                       <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'openCount', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>OPEN CASES</TableCell>
                       <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'avgResolutionTime', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>AVG SPEED</TableCell>
                       <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'resPercent', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>SUCCESS %</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalPoints', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL POINTS</TableCell>
                       <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL VIOLATIONS</TableCell>
                     </TableRow>
                   </TableHead>
@@ -2649,6 +2671,20 @@ ${data.map((a, i) => `
                             }}>
                               {team.resPercent}%
                             </Typography>
+                          </TableCell>
+                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
+                            <Chip
+                              label={team.totalPoints}
+                              size="small"
+                              sx={{
+                                background: 'rgba(139, 92, 246, 0.1)',
+                                color: colors.primary,
+                                fontWeight: 800,
+                                borderRadius: '8px',
+                                height: '22px',
+                                fontSize: '0.75rem',
+                              }}
+                            />
                           </TableCell>
                           <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
                             <Chip
@@ -3009,6 +3045,7 @@ ${data.map((a, i) => `
                         <TableHead>
                           <TableRow>
                             <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Owner</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Points</TableCell>
                             <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
                             <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
                             <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
@@ -3019,6 +3056,7 @@ ${data.map((a, i) => `
                           {Object.entries(globalAnalytics.detailedOwners).sort((a, b) => b[1].total - a[1].total).map(([owner, data]) => (
                             <TableRow key={owner} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                               <TableCell sx={{ color: '#e2e8f0' }}>{owner}</TableCell>
+                              <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{data.points}</TableCell>
                               <TableCell
                                 align="right"
                                 onClick={() => handleAnalyticsDrillDown({ owner })}
@@ -3880,6 +3918,7 @@ ${data.map((a, i) => `
                     </>
                   )}
                   <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>STATUS</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>POINTS</TableCell>
                   <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>SCORE / INFO</TableCell>
                   <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>ACTIONS</TableCell>
                 </TableRow>
@@ -3965,6 +4004,20 @@ ${data.map((a, i) => `
                               bgcolor: status === 'Solved' || status === 'Approved' ? `${colors.success}20` : status === 'Open' ? `${colors.error}20` : 'rgba(255,255,255,0.1)',
                               color: status === 'Solved' || status === 'Approved' ? colors.success : status === 'Open' ? colors.error : colors.textSecondary,
                               fontWeight: 700
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <Chip
+                            label={calculateItemPoints(item, isIssue ? 'issue' : 'task')}
+                            size="small"
+                            sx={{
+                              bgcolor: 'rgba(139, 92, 246, 0.1)',
+                              color: colors.primary,
+                              fontWeight: 800,
+                              borderRadius: '8px',
+                              height: '24px',
+                              fontSize: '0.75rem',
                             }}
                           />
                         </TableCell>
@@ -5570,6 +5623,7 @@ ${data.map((a, i) => `
           }}
           tasks={[selectedTask]}
           teamName={selectedTask.teamName || "Unknown Team"}
+          onTaskUpdated={fetchGlobalData}
         />
       )}
 

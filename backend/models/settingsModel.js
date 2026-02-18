@@ -72,6 +72,18 @@ const settingsSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Dynamic Scoring Keys (Simple Label + Points)
+    scoringKeys: [
+      {
+        label: { type: String, required: true },
+        points: { type: Number, required: true, default: 0 },
+        targetForm: {
+          type: String,
+          enum: ["Task", "Issue", "Both"],
+          default: "Both"
+        }
+      }
+    ],
   },
   { timestamps: true }
 );

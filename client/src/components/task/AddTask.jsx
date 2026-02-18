@@ -222,6 +222,21 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
     fetchAllFieldTeams()
   }, [])
 
+  // Fetch Scoring Keys from Settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await api.get("/settings");
+        if (data && data.scoringKeys) {
+          setScoringKeyOptions(data.scoringKeys);
+        }
+      } catch (error) {
+        console.error("Failed to load settings for scoring keys", error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const task = '';
 
   const {
@@ -251,6 +266,9 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [closureCallFeedback, setClosureCallFeedback] = useState("");
   const [gaiaCheck, setGaiaCheck] = useState("No");
   const [gaiaContent, setGaiaContent] = useState("");
+  const [isQoS, setIsQoS] = useState(false);
+  const [scoringKeyOptions, setScoringKeyOptions] = useState([]);
+  const [selectedScoringKeys, setSelectedScoringKeys] = useState([]);
 
   // Conditional field toggles
 
@@ -320,6 +338,9 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       appDate: data.appDate,
       closeDate: data.closeDate,
       operation: data.operation,
+      operation: data.operation,
+      isQoS,
+      scoringKeys: selectedScoringKeys,
     };
 
     console.log('Sending Task Data:', formData);
@@ -624,6 +645,59 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               InputLabelProps={{ shrink: true }}
             />
           </Stack>
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={isQoS}
+                onChange={(e) => setIsQoS(e.target.checked)}
+                color="primary"
+              />
+            }
+            label={
+              <Box>
+                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>Quality of Service (QoS)</Typography>
+                <Typography variant="caption" color="textSecondary">Flag this task for higher weighting in team performance rankings</Typography>
+              </Box>
+            }
+          />
+
+          {/* Dynamic Scoring Keys - Autocomplete */}
+          {scoringKeyOptions.length > 0 && (
+            <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>Scoring Factors</Typography>
+              <Autocomplete
+                multiple
+                id="scoring-factors-autocomplete"
+                options={scoringKeyOptions.filter(key => key.targetForm === 'Task' || key.targetForm === 'Both' || !key.targetForm)}
+                getOptionLabel={(option) => `${option.label} (${option.points > 0 ? '+' : ''}${option.points})`}
+                value={scoringKeyOptions.filter(key => selectedScoringKeys.includes(key.label))}
+                onChange={(event, newValue) => {
+                  setSelectedScoringKeys(newValue.map(item => item.label));
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="outlined"
+                    label="Select Scoring Factors"
+                    placeholder="Search factors..."
+                  />
+                )}
+                renderOption={(props, option, { selected }) => (
+                  <li {...props}>
+                    <Checkbox
+                      icon={<Box component="span" sx={{ width: 16, height: 16, border: '1px solid gray', borderRadius: '3px' }} />}
+                      checkedIcon={<Box component="span" sx={{ width: 16, height: 16, bgcolor: 'primary.main', borderRadius: '3px' }} />}
+                      style={{ marginRight: 8 }}
+                      checked={selected}
+                    />
+                    {option.label} ({option.points > 0 ? '+' : ''}{option.points})
+                  </li>
+                )}
+                fullWidth
+              />
+            </Box>
+          )}
 
           {/* Row: ONT Type -> Free Extender */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>

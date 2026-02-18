@@ -15,6 +15,7 @@ router.post('/', createIssue);
 
 // Get all customer issues
 router.get('/', getAllIssues);
+router.get('/get-all-issues', getAllIssues);
 
 // Get single issue
 router.get('/:id', getIssueById);

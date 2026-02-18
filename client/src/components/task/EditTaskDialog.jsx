@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogTitle, DialogContent, Button, TextField, Select, MenuItem, Stack, FormControl, InputLabel, FormHelperText, Autocomplete, Typography, IconButton, Divider, Box, Grid } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, Button, TextField, Select, MenuItem, Stack, FormControl, InputLabel, FormHelperText, Autocomplete, Typography, IconButton, Divider, Box, Grid, FormControlLabel, Checkbox } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
@@ -8,6 +8,7 @@ import SelectList from "../SelectList";
 import { useSelector } from "react-redux";
 import UserList from "./UserList";
 import api from "../../api/api";
+import { toast } from "sonner";
 
 // const LISTS = ["Todo", "In Progress", "Closed"];
 // Initial fallback constants for safety (will be replaced by API data)
@@ -119,7 +120,56 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
   );
 };
 
-const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
+const EditTaskDialog = ({
+  open,
+  setOpen,
+  onClose,
+  task: taskProp,
+  id,
+  handleTaskUpdate,
+  onTaskUpdated,
+  onUpdate
+}) => {
+  const [task, setTask] = useState(taskProp);
+
+  // Sync internal task state with prop
+  useEffect(() => {
+    if (taskProp) setTask(taskProp);
+  }, [taskProp]);
+
+  // Fetch task by ID if not provided as object
+  useEffect(() => {
+    const fetchTask = async () => {
+      if (open && !task && id) {
+        try {
+          setLoading(true);
+          const { data } = await api.get(`/tasks/get-task/${id}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+          });
+          setTask(data);
+        } catch (err) {
+          console.error("Failed to fetch task for editing:", err);
+          setError("Failed to load task data");
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    fetchTask();
+  }, [open, id, task]);
+
+  const handleClose = () => {
+    if (setOpen) setOpen(false);
+    if (onClose) onClose();
+  };
+
+  const handleSuccess = (updatedTask) => {
+    if (handleTaskUpdate) handleTaskUpdate(updatedTask);
+    if (onTaskUpdated) onTaskUpdated(updatedTask);
+    if (onUpdate) onUpdate(updatedTask);
+    handleClose();
+  };
+
   const user = useSelector((state) => state?.auth?.user);
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm();
 
@@ -156,10 +206,13 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
   const [operation, setOperation] = useState("");
   const [gaiaCheck, setGaiaCheck] = useState("No");
   const [gaiaContent, setGaiaContent] = useState("");
+  const [isQoS, setIsQoS] = useState(false);
   const [contractDate, setContractDate] = useState("");
   const [inDate, setInDate] = useState("");
   const [appDate, setAppDate] = useState("");
   // const [closeDate, setCloseDate] = useState(""); // Removed in favor of react-hook-form
+  const [scoringKeyOptions, setScoringKeyOptions] = useState([]);
+  const [selectedScoringKeys, setSelectedScoringKeys] = useState([]);
 
   // Dynamic dropdown options
   const [dropdownOptions, setDropdownOptions] = useState({
@@ -199,6 +252,21 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
     };
 
     fetchDropdownOptions();
+  }, []);
+
+  // Fetch Scoring Keys from Settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await api.get("/settings");
+        if (data && data.scoringKeys) {
+          setScoringKeyOptions(data.scoringKeys);
+        }
+      } catch (error) {
+        console.error("Failed to load settings for scoring keys", error);
+      }
+    };
+    fetchSettings();
   }, []);
 
   // Fetch all users when the component mounts
@@ -329,10 +397,12 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       setOperation(task.operation || "");
       setGaiaCheck(task.gaiaCheck || "No");
       setGaiaContent(task.gaiaContent || "");
+      setIsQoS(task.isQoS || false);
       setContractDate(task.contractDate ? new Date(task.contractDate).toISOString().split('T')[0] : "");
       setInDate(task.inDate ? new Date(task.inDate).toISOString().split('T')[0] : "");
       setAppDate(task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : "");
       // setCloseDate(task.closeDate ? new Date(task.closeDate).toISOString().split('T')[0] : "");
+      setSelectedScoringKeys(task.scoringKeys || []);
     }
   }, [task, open, reset, setValue, user, dropdownOptions]);
 
@@ -397,8 +467,9 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
       gaiaContent: gaiaCheck === "Yes" ? gaiaContent : null,
       contractDate,
       inDate,
-      appDate,
       closeDate: data.closeDate,
+      isQoS,
+      scoringKeys: selectedScoringKeys,
     };
 
     // console.log({ formData });
@@ -406,18 +477,17 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
     // return
 
     try {
-      const response = await api.put(`/tasks/update-task/${task._id}`, formData, {
+      const { data: responseData } = await api.put(`/tasks/update-task/${task._id}`, formData, {
         headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
 
-      if (response.status === 200) {
-        alert("Task updated successfully!");
-        window.dispatchEvent(new CustomEvent('dashboard-refresh'));
-        handleTaskUpdate(response.data);  // This should update the parent component's state
-        setOpen(false);
+      if (responseData.status === 200 || responseData._id) {
+        toast.success(responseData?.message || "Task Updated Successfully");
+        handleSuccess(responseData.task || responseData);
       }
-    } catch (error) {
-      console.error("Error updating task:", error.response?.data?.error);
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || "Something went wrong");
     }
   };
 
@@ -663,6 +733,43 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
               />
             </Stack>
 
+            {/* Dynamic Scoring Keys - Autocomplete */}
+            {scoringKeyOptions.length > 0 && (
+              <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>Scoring Factors</Typography>
+                <Autocomplete
+                  multiple
+                  id="scoring-factors-autocomplete"
+                  options={scoringKeyOptions.filter(key => key.targetForm === 'Task' || key.targetForm === 'Both' || !key.targetForm)}
+                  getOptionLabel={(option) => `${option.label} (${option.points > 0 ? '+' : ''}${option.points})`}
+                  value={scoringKeyOptions.filter(key => selectedScoringKeys.includes(key.label))}
+                  onChange={(event, newValue) => {
+                    setSelectedScoringKeys(newValue.map(item => item.label));
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      variant="outlined"
+                      label="Select Scoring Factors"
+                      placeholder="Search factors..."
+                    />
+                  )}
+                  renderOption={(props, option, { selected }) => (
+                    <li {...props}>
+                      <Checkbox
+                        icon={<Box component="span" sx={{ width: 16, height: 16, border: '1px solid gray', borderRadius: '3px' }} />}
+                        checkedIcon={<Box component="span" sx={{ width: 16, height: 16, bgcolor: 'primary.main', borderRadius: '3px' }} />}
+                        style={{ marginRight: 8 }}
+                        checked={selected}
+                      />
+                      {option.label} ({option.points > 0 ? '+' : ''}{option.points})
+                    </li>
+                  )}
+                  fullWidth
+                />
+              </Box>
+            )}
+
             {/* Row: ONT Type -> Free Extender */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth variant="outlined">
@@ -815,7 +922,7 @@ const EditTaskDialog = ({ open, setOpen, task, handleTaskUpdate }) => {
 
             {/* Actions */}
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
-              <Button onClick={() => setOpen(false)} variant="outlined">Cancel</Button>
+              <Button onClick={handleClose} variant="outlined">Cancel</Button>
               <Button type="submit" variant="contained" color="primary">Update Task</Button>
             </Box>
           </Stack>

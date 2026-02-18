@@ -99,7 +99,7 @@ function CustomToolbar() {
   );
 }
 
-export const AllOwnersTable = memo(({ tasks }) => {
+export const AllOwnersTable = memo(({ tasks, onTaskUpdated }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery('(max-width:503px)');
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
@@ -706,6 +706,7 @@ export const AllOwnersTable = memo(({ tasks }) => {
         onClose={() => setDialogOpen(false)}
         tasks={ownerTasks}
         title={`Tasks for Owner: ${selectedOwner}`}
+        onTaskUpdated={onTaskUpdated}
       />
     </Stack>
   );

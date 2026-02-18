@@ -25,6 +25,7 @@ const SessionDialogs = ({
   selectedTeamForAbsence,
   violationDialogOpen,
   onViolationDialogClose,
+  onTaskUpdated,
 }) => {
   return (
     <>
@@ -33,6 +34,7 @@ const SessionDialogs = ({
         onClose={onClose}
         tasks={selectedTeamTasks}
         teamName={selectedTeam}
+        onTaskUpdated={onTaskUpdated}
       />
 
       <AddSessionDialog

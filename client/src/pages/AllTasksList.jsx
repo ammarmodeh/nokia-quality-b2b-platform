@@ -2998,6 +2998,7 @@ const AllTasksList = () => {
             }}
             tasks={[selectedTask]}
             teamName={selectedTask.teamName || "Unknown Team"}
+            onTaskUpdated={() => setUpdateRefetchTasks(prev => prev + 1)}
           />
         )
       }
