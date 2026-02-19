@@ -579,6 +579,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                       <Stack spacing={2}>
                         <DetailItem label="Root Cause" value={task.rootCause} />
                         <DetailItem label="Owner" value={task.responsible || 'N/A'} icon={<MdPerson size={14} />} />
+                        <DetailItem label="Scoring Factors" value={task.scoringKeys} />
                         <DetailItem label="ITN Related" value={task.itnRelated} />
                         <DetailItem label="Related to Current Subscription" value={task.relatedToSubscription} />
                         <DetailItem

@@ -406,6 +406,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
                 </Box>
                 <DetailItem icon={MdAccessTime} label="Dispatch Time" value={issue.dispatchedAt ? format(new Date(issue.dispatchedAt), 'MMM dd, p') : (issue.dispatched === 'yes' ? 'Dispatched' : 'Pending')} />
                 <DetailItem icon={MdOutlineDescription} label="Method" value={issue.resolvedBy} />
+                <DetailItem icon={MdInfo} label="Scoring Factors" value={issue.scoringKeys?.join(", ") || "None"} />
                 <DetailItem icon={MdOutlineSupervisorAccount} label="Supervisor" value={issue.closedBy} />
                 <DetailItem icon={MdOutlineDoneAll} label="Final Close" value={issue.closedAt ? format(new Date(issue.closedAt), 'MMM dd, p') : 'Open'} />
               </Stack>

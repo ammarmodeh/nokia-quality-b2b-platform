@@ -177,6 +177,54 @@ const CompactDataTable = ({ data, total }) => (
   </TableContainer>
 );
 
+const splitValues = (val) => {
+  if (val === undefined || val === null || val === "") return [];
+  if (Array.isArray(val)) {
+    return val.flatMap(v => {
+      if (typeof v === 'string') return v.split(/[,;|]/).map(s => s.trim());
+      return v;
+    });
+  }
+  return String(val).split(/[,;|]/).map(s => s.trim());
+};
+
+const extractOwners = (task) => {
+  if (!task) return [];
+
+  const normalize = (name) => {
+    if (!name || typeof name !== 'string') return 'Empty';
+    let n = name.trim().toUpperCase();
+    if (n === 'REACH') return 'Reach';
+    if (n === 'OJO') return 'OJO';
+    if (n === 'GAM') return 'GAM';
+    if (n === 'CUSTOMER') return 'Customer';
+    if (!n || n === 'N/A' || n === 'EMPTY' || n === 'NIL') return 'Empty';
+    return 'Others';
+  };
+
+  // 1. Check responsible array/string (Primary)
+  const resp = splitValues(task.responsible);
+  if (resp.length > 0 && resp.some(v => v && v !== 'Empty')) {
+    return resp.map(normalize);
+  }
+
+  // 2. Fallback to assignedTo (Legacy or Fallback)
+  let fallback = [];
+  if (task.assignedTo) {
+    if (Array.isArray(task.assignedTo)) {
+      fallback = task.assignedTo.map(u => u.name || (typeof u === 'string' ? u : 'Unknown'));
+    } else if (typeof task.assignedTo === 'object') {
+      fallback = [task.assignedTo.name || 'Unknown'];
+    } else {
+      fallback = [String(task.assignedTo)];
+    }
+  } else if (task['assignedTo.name']) {
+    fallback = [task['assignedTo.name']];
+  }
+
+  return fallback.map(normalize);
+};
+
 const FieldTeamPortal = () => {
   // const user = useSelector((state) => state?.auth?.user);
   const { teamId } = useParams();
@@ -436,134 +484,104 @@ const FieldTeamPortal = () => {
       detailedRootCauses: {}
     };
 
-    // Create a lookup map for scoring keys: Label -> Points
-    const scoringKeysMap = (settings?.scoringKeys || []).reduce((acc, key) => {
-      acc[key.label] = key.points || 0;
-      return acc;
-    }, {});
+    // Create a lookup map for scoring keys: Label -> Points (filtered for Task/Both by default as this processes techTasks)
+    const scoringKeysMap = (settings?.scoringKeys || [])
+      .filter(k => k.targetForm === 'Task' || k.targetForm === 'Both')
+      .reduce((acc, key) => {
+        acc[key.label] = key.points || 0;
+        return acc;
+      }, {});
 
     // Use Global Technical Tasks (NPS Tickets) as primary source
     tasksToProcess.forEach(task => {
-      // Helper to split multi-select strings or handle arrays
-      const splitValues = (val) => {
-        if (!val) return [];
-        if (Array.isArray(val)) return val.filter(v => v && v !== 'N/A' && v !== 'Unknown');
-        return String(val).split(/[,/]+/).map(s => s.trim()).filter(s => s && s !== 'N/A' && s !== 'Unknown');
-      };
+      const rawOwners = extractOwners(task);
+      const rawReasons = splitValues(task.reason);
+      const rawSubReasons = splitValues(task.subReason);
+      const rawRootCauses = splitValues(task.rootCause);
 
-      const increment = (map, value) => {
-        const items = splitValues(value);
-        if (items.length === 0) {
-          // map['Unknown'] = (map['Unknown'] || 0) + 1; // Optional: handle unknown
-          return;
+      const maxLen = Math.max(rawReasons.length, rawSubReasons.length, rawRootCauses.length, rawOwners.length, 1);
+
+      // Create Tuples for aligned processing
+      const tuples = [];
+      for (let i = 0; i < maxLen; i++) {
+        const owner = rawOwners[i] || 'Empty';
+        const reason = rawReasons[i] || 'N/A';
+        const subReason = rawSubReasons[i] || 'N/A';
+        const rootCause = rawRootCauses[i] || 'N/A';
+
+        // ONLY keep tuple if it's NOT just garbage (all fields empty/N/A)
+        const isGarbage = (owner === 'Empty' || !owner) &&
+          (reason === 'N/A' || !reason) &&
+          (subReason === 'N/A' || !subReason) &&
+          (rootCause === 'N/A' || !rootCause);
+
+        if (!isGarbage || i === 0) { // Keep 1st row even if empty, or only non-garbage
+          tuples.push({ owner, reason, subReason, rootCause });
         }
-        items.forEach(v => {
-          map[v] = (map[v] || 0) + 1;
-        });
-      };
-
-      const owners = splitValues(task.responsible || task.assignedTo?.name);
-      if (owners.length === 0) owners.push('Empty');
-
-      const reasons = splitValues(task.reason);
-      if (reasons.length === 0) reasons.push('Empty');
-
-      const subReasons = splitValues(task.subReason);
-      if (subReasons.length === 0) subReasons.push('Empty');
-
-      const rootCauses = splitValues(task.rootCause);
-      if (rootCauses.length === 0) rootCauses.push('Empty');
+      }
 
       const fieldTeam = task.teamName || 'Unknown';
       const category = task.category || 'N/A';
-
-      // Check if ANY of the split indicators are "Yes"
       const isITN = splitValues(task.itnRelated).some(v => v === 'Yes' || v === true);
       const isSubscription = splitValues(task.relatedToSubscription).some(v => v === 'Yes' || v === true);
 
-      owners.forEach(o => increment(stats.byOwner, o));
-      reasons.forEach(r => increment(stats.byReason, r));
-      subReasons.forEach(sr => increment(stats.bySubReason, sr));
-      rootCauses.forEach(rc => increment(stats.byRootCause, rc));
-
-      // Calculate Points for this task
+      // Calculate Points (apply once per task, or shared across owners?)
+      // User likely wants points to be associated with the task itself, but we display them per owner.
       let taskPoints = 0;
       if (Array.isArray(task.scoringKeys)) {
         task.scoringKeys.forEach(keyLabel => {
-          if (scoringKeysMap[keyLabel]) {
-            taskPoints += scoringKeysMap[keyLabel];
-          }
+          if (scoringKeysMap[keyLabel]) taskPoints += scoringKeysMap[keyLabel];
         });
       }
 
-      // --- Detailed Tracking for Advanced Analytics Tables ---
-      // Track Owner details
-      owners.forEach(o => {
+      // Process Tuples
+      tuples.forEach(tuple => {
+        const { owner, reason, subReason, rootCause } = tuple;
+
+        // Individual Stats
+        stats.byOwner[owner] = (stats.byOwner[owner] || 0) + 1;
+        stats.byReason[reason] = (stats.byReason[reason] || 0) + 1;
+        stats.bySubReason[subReason] = (stats.bySubReason[subReason] || 0) + 1;
+        stats.byRootCause[rootCause] = (stats.byRootCause[rootCause] || 0) + 1;
+
+        // Detailed Owner tracking
+        if (!stats.detailedOwners[owner]) {
+          stats.detailedOwners[owner] = { total: 0, itn: 0, subscription: 0, points: 0, ownerBreakdown: {} };
+        }
+        stats.detailedOwners[owner].total++;
+        if (isITN) stats.detailedOwners[owner].itn++;
+        if (isSubscription) stats.detailedOwners[owner].subscription++;
+
+        // Matrix: Owner vs Reason
+        if (!stats.contributionMatrix[reason]) stats.contributionMatrix[reason] = { total: 0 };
+        stats.contributionMatrix[reason][owner] = (stats.contributionMatrix[reason][owner] || 0) + 1;
+        stats.contributionMatrix[reason].total++;
+
+        // Matrix: Owner vs Root Cause
+        if (!stats.rootCauseMatrix[rootCause]) stats.rootCauseMatrix[rootCause] = { total: 0 };
+        stats.rootCauseMatrix[rootCause][owner] = (stats.rootCauseMatrix[rootCause][owner] || 0) + 1;
+        stats.rootCauseMatrix[rootCause].total++;
+
+        // Detailed Breakdown Maps (Label -> { details })
+        const updateDetail = (map, label) => {
+          if (!map[label]) map[label] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
+          map[label].total++;
+          if (isITN) map[label].itn++;
+          if (isSubscription) map[label].subscription++;
+          map[label].ownerBreakdown[owner] = (map[label].ownerBreakdown[owner] || 0) + 1;
+        };
+
+        updateDetail(stats.detailedReasons, reason);
+        updateDetail(stats.detailedSubReasons, subReason);
+        updateDetail(stats.detailedRootCauses, rootCause);
+      });
+
+      // Distribute points once per unique owner in the task
+      [...new Set(rawOwners)].forEach(o => {
         if (!stats.detailedOwners[o]) {
           stats.detailedOwners[o] = { total: 0, itn: 0, subscription: 0, points: 0, ownerBreakdown: {} };
         }
-        stats.detailedOwners[o].total++;
         stats.detailedOwners[o].points += taskPoints;
-        if (isITN) stats.detailedOwners[o].itn++;
-        if (isSubscription) stats.detailedOwners[o].subscription++;
-      });
-
-      // Track Reason details with owner contributions
-      reasons.forEach(r => {
-        if (!stats.detailedReasons[r]) {
-          stats.detailedReasons[r] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
-        }
-        stats.detailedReasons[r].total++;
-        if (isITN) stats.detailedReasons[r].itn++;
-        if (isSubscription) stats.detailedReasons[r].subscription++;
-        owners.forEach(o => {
-          stats.detailedReasons[r].ownerBreakdown[o] = (stats.detailedReasons[r].ownerBreakdown[o] || 0) + 1;
-        });
-      });
-
-      // Track Sub-Reason details with owner contributions
-      subReasons.forEach(sr => {
-        if (!stats.detailedSubReasons[sr]) {
-          stats.detailedSubReasons[sr] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
-        }
-        stats.detailedSubReasons[sr].total++;
-        if (isITN) stats.detailedSubReasons[sr].itn++;
-        if (isSubscription) stats.detailedSubReasons[sr].subscription++;
-        owners.forEach(o => {
-          stats.detailedSubReasons[sr].ownerBreakdown[o] = (stats.detailedSubReasons[sr].ownerBreakdown[o] || 0) + 1;
-        });
-      });
-
-      // Track Root Cause details with owner contributions
-      rootCauses.forEach(rc => {
-        if (!stats.detailedRootCauses[rc]) {
-          stats.detailedRootCauses[rc] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
-        }
-        stats.detailedRootCauses[rc].total++;
-        if (isITN) stats.detailedRootCauses[rc].itn++;
-        if (isSubscription) stats.detailedRootCauses[rc].subscription++;
-        owners.forEach(o => {
-          stats.detailedRootCauses[rc].ownerBreakdown[o] = (stats.detailedRootCauses[rc].ownerBreakdown[o] || 0) + 1;
-        });
-      });
-
-      // --- Matrix Logic ---
-      // Owner vs Reason
-      reasons.forEach(r => {
-        if (!stats.contributionMatrix[r]) stats.contributionMatrix[r] = { total: 0 };
-        owners.forEach(o => {
-          stats.contributionMatrix[r][o] = (stats.contributionMatrix[r][o] || 0) + 1;
-          stats.contributionMatrix[r].total++;
-        });
-      });
-
-      // Owner vs Root Cause
-      rootCauses.forEach(rc => {
-        if (!stats.rootCauseMatrix[rc]) stats.rootCauseMatrix[rc] = { total: 0 };
-        owners.forEach(o => {
-          stats.rootCauseMatrix[rc][o] = (stats.rootCauseMatrix[rc][o] || 0) + 1;
-          stats.rootCauseMatrix[rc].total++;
-        });
       });
 
       stats.byFieldTeam[fieldTeam] = (stats.byFieldTeam[fieldTeam] || 0) + 1;
@@ -584,19 +602,23 @@ const FieldTeamPortal = () => {
       teamStats.total += 1;
       teamStats.byCategory[category] = (teamStats.byCategory[category] || 0) + 1;
 
-      owners.forEach(o => increment(teamStats.byOwner, o));
-      reasons.forEach(r => increment(teamStats.byReason, r));
-      subReasons.forEach(sr => increment(teamStats.bySubReason, sr));
-      rootCauses.forEach(rc => increment(teamStats.byRootCause, rc));
+      // Update team stats based on tuples
+      tuples.forEach(tuple => {
+        const { owner, reason, subReason, rootCause } = tuple;
+        teamStats.byOwner[owner] = (teamStats.byOwner[owner] || 0) + 1;
+        teamStats.byReason[reason] = (teamStats.byReason[reason] || 0) + 1;
+        teamStats.bySubReason[subReason] = (teamStats.bySubReason[subReason] || 0) + 1;
+        teamStats.byRootCause[rootCause] = (teamStats.byRootCause[rootCause] || 0) + 1;
+      });
 
-      // Calculate NPS stats
+      // Calculate NPS stats (this is per task, not per tuple)
       let score = task.evaluationScore;
       if (score && score > 0) {
         if (score <= 10) score = score * 10; // Normalize
         if (score <= 60) {
           teamStats.npsBreakdown.Detractor++;
           stats.sentiment.Detractor++;
-        } else if (score <= 80) {
+        } else if (score > 60 && score <= 80) {
           teamStats.npsBreakdown.Neutral++;
           stats.sentiment.Neutral++;
         } else {
@@ -684,17 +706,13 @@ const FieldTeamPortal = () => {
       ]
     }));
 
-    // Matrix Summary & Dynamic Owners List
-    const priorityOwners = ['Reach', 'OJO', 'GAM', 'Customer', 'Empty'];
-    const otherOwnersFound = Object.keys(stats.byOwner).filter(o => !priorityOwners.includes(o));
-    otherOwnersFound.sort((a, b) => stats.byOwner[b] - stats.byOwner[a]);
-
-    // Construct the list of owners to show as distinct columns
-    // Include priority owners (if they have data or we want them always) + top 3 others
-    const matrixOwners = [
-      ...priorityOwners.filter(o => stats.byOwner[o] > 0 || priorityOwners.slice(0, 4).includes(o)),
-      ...otherOwnersFound.slice(0, 3)
-    ];
+    // Matrix Summary & Fixed Owners List
+    const priorityOwners = ['Reach', 'OJO', 'GAM', 'Customer', 'Others', 'Empty'];
+    const matrixOwners = priorityOwners.filter(o => o !== 'Empty' || stats.byOwner[o] > 0);
+    // Ensure 'Empty' is last if it has data
+    if (stats.byOwner['Empty'] > 0 && !matrixOwners.includes('Empty')) {
+      matrixOwners.push('Empty');
+    }
 
     return {
       ownerData: toChartData(stats.byOwner).sort((a, b) => {
@@ -799,7 +817,10 @@ const FieldTeamPortal = () => {
     // 2. Manual Scoring Keys
     if (settings?.scoringKeys && Array.isArray(settings.scoringKeys) && Array.isArray(item.scoringKeys)) {
       item.scoringKeys.forEach(keyLabel => {
-        const keyConfig = settings.scoringKeys.find(k => k.label === keyLabel);
+        const keyConfig = settings.scoringKeys.find(k =>
+          k.label === keyLabel &&
+          (k.targetForm === (type === 'task' ? 'Task' : 'Issue') || k.targetForm === 'Both')
+        );
         if (keyConfig) points += Number(keyConfig.points);
       });
     }
@@ -822,18 +843,50 @@ const FieldTeamPortal = () => {
 
     return {
       'Type': type === 'task' ? 'NPS Ticket' : 'Customer Issue',
-      'Team': item.teamName,
+      'Team Name': item.teamName,
+      'Team Company': item.teamCompany || '-',
       'SLID': item.slid,
+      'Governorate': item.governorate || '-',
+      'District': item.district || '-',
       'Customer': item.customerName || 'N/A',
-      'Reason': Array.isArray(item.reason) ? item.reason.join(", ") : (item.reason || '-'),
-      'Sub-Reason': Array.isArray(item.subReason) ? item.subReason.join(", ") : (item.subReason || '-'),
-      'Root Cause': Array.isArray(item.rootCause) ? item.rootCause.join(", ") : (item.rootCause || '-'),
-      'Owner/Responsible': item.responsible || item.assignedTo?.name || (item.assignedTo && typeof item.assignedTo === 'string' ? item.assignedTo : '-'),
+      'Customer': item.customerName || 'N/A',
+
+      // Dynamic Interleaved Columns
+      ...(() => {
+        const reasons = Array.isArray(item.reason) ? item.reason : (item.reason ? [item.reason] : []);
+        const subReasons = Array.isArray(item.subReason) ? item.subReason : (item.subReason ? [item.subReason] : []);
+        const rootCauses = Array.isArray(item.rootCause) ? item.rootCause : (item.rootCause ? [item.rootCause] : []);
+        const owners = extractOwners(item);
+
+        const maxLen = Math.max(reasons.length, subReasons.length, rootCauses.length, owners.length, 1);
+        const dynamicCols = {};
+
+        for (let i = 0; i < maxLen; i++) {
+          dynamicCols[`Reason ${i + 1}`] = reasons[i] || '-';
+          dynamicCols[`Sub-Reason ${i + 1}`] = subReasons[i] || '-';
+          dynamicCols[`Root Cause ${i + 1}`] = rootCauses[i] || '-';
+          dynamicCols[`Owner ${i + 1}`] = owners[i] || '-';
+        }
+        return dynamicCols;
+      })(),
+
       'Technician': item.technician || item.primaryTechnician || '-',
       'Status': item.validationStatus || (item.solved === 'yes' ? 'Solved' : 'Open'),
       'Score': displayScore,
       'Satisfaction': satisfaction,
       'Points': calculateItemPoints(item, type),
+      'GAIA Check': item.gaiaCheck || 'N/A',
+      'GAIA Content': item.gaiaContent || '-',
+      'Latest QOps Type': item.latestGaia?.transactionType || 'N/A',
+      'Latest QOps State': item.latestGaia?.transactionState || 'N/A',
+      'Latest QOps Reason': item.latestGaia?.unfReasonCode || 'N/A',
+      'Latest QOps Note': item.latestGaia?.note || 'N/A',
+      'QOps Transaction History': item.tickets?.map((t, idx) =>
+        `[${idx + 1}] ${new Date(t.eventDate || t.createdAt).toLocaleDateString()} | ${t.transactionType || t.mainCategory} (${t.transactionState}) -> Note: ${t.note || 'No note'}`
+      ).join('\n') || 'No logs',
+      'Action taken by assigned user': item.subTasks?.map((sub, index) =>
+        `Step ${index + 1}: ${sub.title} - ${sub.note}`
+      ).join('\n') || '',
       'Customer Feedback': (type === 'task' ? (item.customerFeedback || '-') : (item.reporterNote || '-')),
       'Our Actions/Resolution': (type === 'issue' ? (item.resolutionDetails || item.assigneeNote || '-') : '-'),
       'ITN Related': ((Array.isArray(item.itnRelated) && item.itnRelated.includes('Yes')) || item.itnRelated === 'Yes' || item.itnRelated === true) ? 'Yes' : 'No',
@@ -947,10 +1000,73 @@ const FieldTeamPortal = () => {
     XLSX.writeFile(wb, `Global_Violations_DeepDive_Analysis_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  // Analytics Distributions Export
+  const handleExportAnalyticsDistributions = () => {
+    if (!globalAnalytics) return;
+
+    const wb = XLSX.utils.book_new();
+
+    // Helper: build a data array for simple chart data (ownerData, reasonData, etc.)
+    const buildSheetRows = (detailedArr) => {
+      const total = detailedArr.reduce((s, r) => s + (r.total || 0), 0);
+      return detailedArr.map(row => ({
+        'Label': row.name,
+        'Count': row.total || 0,
+        'Percentage (%)': row.percentage || row.floatPct?.toFixed(1) || '0.0',
+        'ITN Related': row.itn || 0,
+        'Subscription Related': row.subscription || 0,
+        'Contribution to Total Tasks (%)': total > 0 ? ((row.total / total) * 100).toFixed(1) : '0.0'
+      }));
+    };
+
+    // Sheet 1: Owner Distribution
+    const ownerRows = buildSheetRows(globalAnalytics.detailedOwners);
+    const wsOwner = XLSX.utils.json_to_sheet(ownerRows);
+    wsOwner['!cols'] = Object.keys(ownerRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 18) }));
+    XLSX.utils.book_append_sheet(wb, wsOwner, 'Owner Distribution');
+
+    // Sheet 2: Reason Distribution
+    const reasonRows = buildSheetRows(globalAnalytics.detailedReasons);
+    const wsReason = XLSX.utils.json_to_sheet(reasonRows);
+    wsReason['!cols'] = Object.keys(reasonRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 20) }));
+    XLSX.utils.book_append_sheet(wb, wsReason, 'Reason Distribution');
+
+    // Sheet 3: Sub-Reason Breakdown
+    const subReasonRows = buildSheetRows(globalAnalytics.detailedSubReasons);
+    const wsSubReason = XLSX.utils.json_to_sheet(subReasonRows);
+    wsSubReason['!cols'] = Object.keys(subReasonRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 20) }));
+    XLSX.utils.book_append_sheet(wb, wsSubReason, 'Sub-Reason Breakdown');
+
+    // Sheet 4: Root Cause Matrix
+    const rootCauseRows = buildSheetRows(globalAnalytics.detailedRootCauses);
+    const wsRootCause = XLSX.utils.json_to_sheet(rootCauseRows);
+    wsRootCause['!cols'] = Object.keys(rootCauseRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 20) }));
+    XLSX.utils.book_append_sheet(wb, wsRootCause, 'Root Cause Matrix');
+
+    // Sheet 5: Cross-Owner × Reason Contribution Matrix
+    const { matrix: contribMatrix, topOwners } = globalAnalytics.contributionMatrix || {};
+    if (contribMatrix && topOwners?.length > 0) {
+      const reasons = Object.keys(contribMatrix);
+      const contribRows = reasons.map(reason => {
+        const row = { 'Reason \\ Owner': reason };
+        topOwners.forEach(owner => {
+          row[owner] = contribMatrix[reason]?.[owner] || 0;
+        });
+        row['Total'] = topOwners.reduce((s, o) => s + (contribMatrix[reason]?.[o] || 0), 0);
+        return row;
+      });
+      if (contribRows.length > 0) {
+        const wsContrib = XLSX.utils.json_to_sheet(contribRows);
+        wsContrib['!cols'] = Object.keys(contribRows[0]).map(k => ({ wch: Math.max(k.length + 4, 14) }));
+        XLSX.utils.book_append_sheet(wb, wsContrib, 'Contribution Matrix');
+      }
+    }
+
+    XLSX.writeFile(wb, `Analytics_Distributions_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   // Analytics Drill-Down Handler
   const handleAnalyticsDrillDown = (filters = {}) => {
-    let filtered = [];
-
     // Apply time filtering first
     const techTasks = Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [];
     let timeFiltered = techTasks;
@@ -1001,39 +1117,51 @@ const FieldTeamPortal = () => {
       });
     }
 
-    // Apply specific filters
-    filtered = tasksToProcess.filter(task => {
-      let match = true;
+    // Filter tasks based on the tuple logic
+    const finalFiltered = tasksToProcess.filter(task => {
+      const rawOwners = extractOwners(task);
+      const rawReasons = splitValues(task.reason);
+      const rawSubReasons = splitValues(task.subReason);
+      const rawRootCauses = splitValues(task.rootCause);
 
-      if (filters.owner) {
-        const owners = Array.isArray(task.responsible) ? task.responsible : [task.responsible || task.assignedTo?.name || 'Unknown'];
-        if (!owners.includes(filters.owner)) match = false;
+      const maxLen = Math.max(rawOwners.length, rawReasons.length, rawSubReasons.length, rawRootCauses.length, 1);
+
+      // Create tuples for this specific task
+      const tuples = [];
+      for (let i = 0; i < maxLen; i++) {
+        const owner = rawOwners[i] || 'Empty';
+        const reason = rawReasons[i] || 'N/A';
+        const subReason = rawSubReasons[i] || 'N/A';
+        const rootCause = rawRootCauses[i] || 'N/A';
+
+        // Filter out garbage tuples
+        const isGarbage = (owner === 'Empty' || !owner) &&
+          (reason === 'N/A' || !reason) &&
+          (subReason === 'N/A' || !subReason) &&
+          (rootCause === 'N/A' || !rootCause);
+
+        if (!isGarbage || i === 0) {
+          tuples.push({ owner, reason, subReason, rootCause });
+        }
       }
 
-      if (filters.reason) {
-        const reasons = Array.isArray(task.reason) ? task.reason : [task.reason || 'Unknown'];
-        if (!reasons.includes(filters.reason)) match = false;
-      }
+      // Check if any tuple matches the filters
+      const tupleMatches = tuples.some(tuple => {
+        let match = true;
+        if (filters.owner && tuple.owner !== filters.owner) match = false;
+        if (filters.reason && tuple.reason !== filters.reason) match = false;
+        if (filters.subReason && tuple.subReason !== filters.subReason) match = false;
+        if (filters.rootCause && tuple.rootCause !== filters.rootCause) match = false;
+        return match;
+      });
 
-      if (filters.subReason) {
-        const subReasons = Array.isArray(task.subReason) ? task.subReason : [task.subReason || 'Unknown'];
-        if (!subReasons.includes(filters.subReason)) match = false;
-      }
+      if (!tupleMatches) return false;
 
-      if (filters.rootCause) {
-        const rootCauses = Array.isArray(task.rootCause) ? task.rootCause : [task.rootCause || 'Unknown'];
-        if (!rootCauses.includes(filters.rootCause)) match = false;
-      }
+      // Apply ITN/Subscription filters (these are task-level, not tuple-level)
+      if (filters.itn && !splitValues(task.itnRelated).some(v => v === 'Yes' || v === true)) return false;
+      if (filters.subscription && !splitValues(task.relatedToSubscription).some(v => v === 'Yes' || v === true)) return false;
 
-      if (filters.itn) {
-        if (!(task.itnRelated === true || task.itnRelated === 'Yes')) match = false;
-      }
-
-      if (filters.subscription) {
-        if (!(task.relatedToSubscription === true || task.relatedToSubscription === 'Yes')) match = false;
-      }
-
-      return match;
+      return true;
     });
 
     // Generate Title
@@ -1048,7 +1176,7 @@ const FieldTeamPortal = () => {
     setAnalyticsDrillDown({
       open: true,
       title: titleParts.join(' | ') || 'Filtered Tasks',
-      tasks: filtered
+      tasks: finalFiltered
     });
   };
 
@@ -2964,6 +3092,21 @@ ${data.map((a, i) => `
                     <span style={{ color: '#94a3b8' }}>Analyzing:</span> <span style={{ fontWeight: '800', color: '#3b82f6' }}>{globalAnalytics.totalProcessed}</span> <span style={{ color: '#94a3b8' }}>Tasks</span>
                   </Typography>
                 </Box>
+
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<FaFileExcel size={13} />}
+                  onClick={handleExportAnalyticsDistributions}
+                  sx={{
+                    borderColor: 'rgba(34, 197, 94, 0.4)',
+                    color: '#22c55e',
+                    fontSize: '0.75rem',
+                    '&:hover': { bgcolor: 'rgba(34, 197, 94, 0.1)', borderColor: '#22c55e' }
+                  }}
+                >
+                  Export Analytics
+                </Button>
               </Box>
               <Paper sx={{ p: 2, mb: 3, ...colors.glass, borderRadius: 3 }} elevation={0}>
                 <Stack direction={isMedium ? "column" : "row"} spacing={3} alignItems={isMedium ? "start" : "center"}>
@@ -4166,25 +4309,78 @@ ${data.map((a, i) => `
                             {isIssue && (item.issueDetails || item.reporterNote || item.assigneeNote || '').length > 80 ? '...' : ''}
                           </Typography>
                         </TableCell>
-                        {!isIssue && (
-                          <>
-                            <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', maxWidth: '150px' }}>
-                              {item.reason || '-'}
-                              <Typography variant="caption" sx={{ display: 'block', color: colors.textSecondary }}>
-                                {item.subReason}
-                              </Typography>
-                            </TableCell>
-                            <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                              {item.RC || item.rootCause || '-'}
-                            </TableCell>
-                            <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                              {item.responsible || item.owner || '-'}
-                            </TableCell>
-                            <TableCell sx={{ color: `${colors.warning}cc`, borderBottom: '1px solid rgba(255,255,255,0.05)', fontStyle: 'italic', maxWidth: '250px' }}>
-                              "{item.customerFeedback || item.feedback || 'No verbatim feedback provided'}"
-                            </TableCell>
-                          </>
-                        )}
+                        {!isIssue && (() => {
+                          const rawOwners = extractOwners(item);
+                          const rawReasons = splitValues(item.reason);
+                          const rawSubReasons = splitValues(item.subReason);
+                          const rawRoots = splitValues(item.rootCause);
+                          const maxLen = Math.max(rawOwners.length, rawReasons.length, rawSubReasons.length, rawRoots.length, 1);
+
+                          const validTuples = [];
+                          for (let i = 0; i < maxLen; i++) {
+                            const owner = rawOwners[i] || 'Empty';
+                            const reason = rawReasons[i] || 'N/A';
+                            const subReason = rawSubReasons[i] || 'N/A';
+                            const rootCause = rawRoots[i] || 'N/A';
+
+                            const isGarbage = (owner === 'Empty' || !owner) &&
+                              (reason === 'N/A' || !reason) &&
+                              (subReason === 'N/A' || !subReason) &&
+                              (rootCause === 'N/A' || !rootCause);
+
+                            if (!isGarbage || i === 0) {
+                              validTuples.push({ owner, reason, subReason, rootCause });
+                            }
+                          }
+
+                          const max = validTuples.length;
+
+                          return (
+                            <>
+                              <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top' }}>
+                                {validTuples.map((tuple, i) => (
+                                  <Box key={i} sx={{ minHeight: '1.5em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                    {tuple.reason || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
+                                  </Box>
+                                ))}
+                              </TableCell>
+                              <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top' }}>
+                                {validTuples.map((tuple, i) => (
+                                  <Box key={i} sx={{ minHeight: '1.5em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                    {tuple.subReason || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
+                                  </Box>
+                                ))}
+                              </TableCell>
+                              <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top' }}>
+                                {validTuples.map((tuple, i) => (
+                                  <Box key={i} sx={{ minHeight: '1.5em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                    {tuple.rootCause || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
+                                  </Box>
+                                ))}
+                              </TableCell>
+                              <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top' }}>
+                                {validTuples.map((tuple, i) => (
+                                  <Box key={i} sx={{ minHeight: '1.5em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                    <Chip
+                                      label={tuple.owner || 'Empty'}
+                                      size="small"
+                                      sx={{
+                                        height: '20px',
+                                        fontSize: '0.65rem',
+                                        bgcolor: 'rgba(255,255,255,0.05)',
+                                        color: tuple.owner !== 'Empty' ? '#fff' : 'rgba(255,255,255,0.3)',
+                                        border: '1px solid rgba(255,255,255,0.1)'
+                                      }}
+                                    />
+                                  </Box>
+                                ))}
+                              </TableCell>
+                              <TableCell sx={{ color: `${colors.warning}cc`, borderBottom: '1px solid rgba(255,255,255,0.05)', fontStyle: 'italic', maxWidth: '250px' }}>
+                                "{item.customerFeedback || item.feedback || 'No verbatim feedback provided'}"
+                              </TableCell>
+                            </>
+                          );
+                        })()}
                         <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                           <Chip
                             label={status}
@@ -5736,6 +5932,8 @@ ${data.map((a, i) => `
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Sub-Reason</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Root Cause</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Feedback</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
@@ -5754,7 +5952,13 @@ ${data.map((a, i) => `
                       {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
                     </TableCell>
                     <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
-                      {Array.isArray(task.responsible) ? task.responsible.join(', ') : task.responsible || '-'}
+                      {Array.isArray(task.subReason) ? task.subReason.join(', ') : task.subReason || '-'}
+                    </TableCell>
+                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                      {Array.isArray(task.rootCause) ? task.rootCause.join(', ') : task.rootCause || '-'}
+                    </TableCell>
+                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                      {[...new Set(splitValues(task.responsible || task.assignedTo?.name))].join(', ') || '-'}
                     </TableCell>
                     <TableCell sx={{ color: alpha('#fff', 0.6), fontSize: '0.7rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {task.customerFeedback || '-'}

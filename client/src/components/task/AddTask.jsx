@@ -319,12 +319,12 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       evaluationScore,
       customerType,
       validationStatus,
-      responsible: rcaRows.map(r => r.responsible).filter(v => v),
-      reason: rcaRows.map(r => r.reason).filter(v => v),
-      subReason: rcaRows.map(r => r.subReason).filter(v => v),
-      rootCause: rcaRows.map(r => r.rootCause).filter(v => v),
-      itnRelated: rcaRows.map(r => r.itnRelated).filter(v => v),
-      relatedToSubscription: rcaRows.map(r => r.relatedToSubscription).filter(v => v),
+      responsible: rcaRows.map(r => r.responsible),
+      reason: rcaRows.map(r => r.reason),
+      subReason: rcaRows.map(r => r.subReason),
+      rootCause: rcaRows.map(r => r.rootCause),
+      itnRelated: rcaRows.map(r => r.itnRelated),
+      relatedToSubscription: rcaRows.map(r => r.relatedToSubscription),
       ontType,
       freeExtender,
       extenderType: freeExtender === 'Yes' ? extenderType : null,
@@ -677,7 +677,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
               <Autocomplete
                 multiple
                 id="scoring-factors-autocomplete"
-                options={scoringKeyOptions.filter(key => key.targetForm === 'Task' || key.targetForm === 'Both' || !key.targetForm)}
+                options={scoringKeyOptions.filter(key => key.targetForm === 'Task' || key.targetForm === 'Both')}
                 getOptionLabel={(option) => `${option.label} (${option.points > 0 ? '+' : ''}${option.points})`}
                 value={scoringKeyOptions.filter(key => selectedScoringKeys.includes(key.label))}
                 onChange={(event, newValue) => {

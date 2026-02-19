@@ -777,7 +777,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                     <MuiAutocomplete
                       multiple
                       id="scoring-keys-autocomplete"
-                      options={scoringKeyOptions.filter(key => key.targetForm === 'Issue' || key.targetForm === 'Both' || !key.targetForm)}
+                      options={scoringKeyOptions.filter(key => key.targetForm === 'Issue' || key.targetForm === 'Both')}
                       getOptionLabel={(option) => `${option.label} (${option.points > 0 ? '+' : ''}${option.points})`}
                       value={scoringKeyOptions.filter(key => formData.scoringKeys?.includes(key.label))}
                       onChange={(event, newValue) => {
