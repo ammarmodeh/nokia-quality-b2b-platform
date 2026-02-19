@@ -26,7 +26,7 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
   const fetchLogs = useCallback(async (searchTerm) => {
     setLoading(true);
     try {
-      const response = await api.get('/customer-issues-notifications/logs', {
+      const response = await api.get('/customer-issues/logs', {
         params: { slid: searchTerm },
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });

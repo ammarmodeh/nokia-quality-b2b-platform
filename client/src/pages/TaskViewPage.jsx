@@ -206,7 +206,8 @@ const TaskViewPage = () => {
                     <DetailItem label="Type" value={task.customerType} />
                     <DetailItem label="Location" value={`${task.governorate || ''}${task.governorate && task.district ? ', ' : ''}${task.district || ''}`} />
                     <DetailItem label="Contract Date" value={task.contractDate ? format(new Date(task.contractDate), "MMM dd, yyyy") : '—'} />
-                    <DetailItem label="App Date" value={task.appDate ? format(new Date(task.appDate), "MMM dd, yyyy") : '—'} />
+                    <DetailItem label="UN Date" value={task.unDate ? format(new Date(task.unDate), "MMM dd, yyyy") : '—'} />
+                    <DetailItem label="FE Date" value={task.feDate ? format(new Date(task.feDate), "MMM dd, yyyy") : (task.appDate ? format(new Date(task.appDate), "MMM dd, yyyy") : '—')} />
                     <DetailItem label="In Date" value={task.inDate ? format(new Date(task.inDate), "MMM dd, yyyy") : '—'} />
                     <DetailItem label="Close Date" value={task.closeDate ? format(new Date(task.closeDate), "MMM dd, yyyy") : '—'} />
                     <DetailItem label="PIS Date" value={task.pisDate ? format(new Date(task.pisDate), "MMM dd, yyyy") : '—'} />

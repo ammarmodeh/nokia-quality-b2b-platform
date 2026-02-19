@@ -256,7 +256,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     // And avoid checking if we are editing the same issue (though backend filter handles exact match)
     if (formData.slid && formData.slid.length > 2 && !issue) {
       try {
-        const res = await api.get('/customer-issues-notifications', {
+        const res = await api.get('/customer-issues', {
           params: { slid: formData.slid }, // Uses the new exact match filter backend
           headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
         });
@@ -284,7 +284,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
       // And avoid checking if we are editing the same issue (though backend filter handles exact match)
       if (formData.slid && formData.slid.length > 5 && !issue) {
         try {
-          const res = await api.get('/customer-issues-notifications', {
+          const res = await api.get('/customer-issues', {
             params: { slid: formData.slid }, // Uses the new exact match filter backend
             headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
           });

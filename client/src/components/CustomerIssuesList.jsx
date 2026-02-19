@@ -201,7 +201,7 @@ const CustomerIssuesList = () => {
   const fetchIssues = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const response = await api.get('/customer-issues-notifications?limit=10000', {
+      const response = await api.get('/customer-issues?limit=10000', {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
       setIssues(response.data.data);
@@ -392,7 +392,7 @@ const CustomerIssuesList = () => {
       if (id) {
         // Update
         const response = await api.put(
-          `/customer-issues-notifications/${id}`,
+          `/customer-issues/${id}`,
           {
             ...issueData,
             date: new Date(issueData.date).toISOString()
@@ -407,7 +407,7 @@ const CustomerIssuesList = () => {
         toast.success("Issue updated successfully");
       } else {
         // Create
-        const response = await api.post('/customer-issues-notifications', issueData, {
+        const response = await api.post('/customer-issues', issueData, {
           headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
         });
         const created = response.data.data;
@@ -427,7 +427,7 @@ const CustomerIssuesList = () => {
   const handleDeleteConfirm = async () => {
     try {
       await api.delete(
-        `/customer-issues-notifications/${currentIssue._id}`,
+        `/customer-issues/${currentIssue._id}`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
         }

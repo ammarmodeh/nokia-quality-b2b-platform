@@ -208,6 +208,92 @@ const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, p
         }
       }
 
+      // --- Detailed Aggregation Helper ---
+      const getDetailedSummary = (taskList, lang) => {
+        if (!taskList || taskList.length === 0) return lang === 'en' ? '  - No data available for this section.' : '  - لا توجد بيانات متوفرة لهذا القسم.';
+
+        const total = taskList.length;
+        const stats = { byOwner: {}, byReason: {}, bySubReason: {}, byRootCause: {}, itnYes: 0, subYes: 0 };
+
+        const addToStats = (obj, value) => {
+          if (!value) return;
+          const items = Array.isArray(value) ? value : String(value).split(/,\s*/);
+          items.forEach(item => {
+            const trimmed = item.trim();
+            if (trimmed && trimmed !== 'N/A') {
+              obj[trimmed] = (obj[trimmed] || 0) + 1;
+            }
+          });
+        };
+
+        taskList.forEach(t => {
+          const ownerValue = t.responsible || t.assignedTo?.name || (t.assignedTo && typeof t.assignedTo === 'string' ? t.assignedTo : 'Unassigned');
+          addToStats(stats.byOwner, ownerValue);
+          addToStats(stats.byReason, t.reason);
+          addToStats(stats.bySubReason, t.subReason);
+          addToStats(stats.byRootCause, t.rootCause);
+
+          if (((Array.isArray(t.itnRelated) && t.itnRelated.includes('Yes')) || t.itnRelated === 'Yes' || t.itnRelated === true)) stats.itnYes++;
+          if (((Array.isArray(t.relatedToSubscription) && t.relatedToSubscription.includes('Yes')) || t.relatedToSubscription === 'Yes' || t.relatedToSubscription === true)) stats.subYes++;
+        });
+
+        const getAllFormatted = (obj) => {
+          const entries = Object.entries(obj);
+          if (entries.length === 0) return 'N/A';
+          const categoryTotal = entries.reduce((sum, [, count]) => sum + count, 0);
+
+          // Calculate initial percentages and remainders (Largest Remainder Method)
+          const items = entries
+            .sort((a, b) => b[1] - a[1]) // Sort primarily by count descending
+            .map(([label, count]) => {
+              const exact = (count / categoryTotal) * 100;
+              return {
+                label,
+                count,
+                floor: Math.floor(exact),
+                remainder: exact - Math.floor(exact)
+              };
+            });
+
+          const currentSum = items.reduce((sum, item) => sum + item.floor, 0);
+          let difference = 100 - currentSum;
+
+          // Distribute the difference to items with the largest remainders
+          if (difference > 0) {
+            // Sort a copy by remainder descending to find which items to increment
+            const sortedByRemainder = [...items].sort((a, b) => b.remainder - a.remainder || b.count - a.count);
+            for (let i = 0; i < difference; i++) {
+              sortedByRemainder[i % sortedByRemainder.length].floor += 1;
+            }
+          }
+
+          return items
+            .map(item => `${item.label} (${item.count} - ${item.floor}%)`)
+            .join(', ');
+        };
+
+        const itnPct = Math.round((stats.itnYes / total) * 100);
+        const subPct = Math.round((stats.subYes / total) * 100);
+
+        if (lang === 'en') {
+          return `  - Reasons: ${getAllFormatted(stats.byReason)}\n` +
+            `  - Sub-Reasons: ${getAllFormatted(stats.bySubReason)}\n` +
+            `  - Root Causes: ${getAllFormatted(stats.byRootCause)}\n` +
+            `  - Owners: ${getAllFormatted(stats.byOwner)}\n` +
+            `  - ITN Related (Tasks): ${stats.itnYes} (${itnPct}%) | Subscription Related (Tasks): ${stats.subYes} (${subPct}%)`;
+        } else {
+          return `  - الأسباب: ${getAllFormatted(stats.byReason)}\n` +
+            `  - الأسباب الفرعية: ${getAllFormatted(stats.bySubReason)}\n` +
+            `  - الأسباب الجذرية: ${getAllFormatted(stats.byRootCause)}\n` +
+            `  - المسؤولون: ${getAllFormatted(stats.byOwner)}\n` +
+            `  - متعلق بـ ITN (المهام): ${stats.itnYes} (${itnPct}%) | متعلق بالاشتراك (المهام): ${stats.subYes} (${subPct}%)`;
+        }
+      };
+
+      const detractorsSummary = getDetailedSummary(tasks.filter(t => t.evaluationScore >= 1 && t.evaluationScore <= 6), lang);
+      const neutralsSummary = getDetailedSummary(tasks.filter(t => t.evaluationScore >= 7 && t.evaluationScore <= 8), lang);
+      const overallSummary = getDetailedSummary(tasks, lang);
+
       if (lang === 'en') {
         const greeting = `Dear ${managementName},`;
         return `Subject: NPS & Workforce Analytics Report
@@ -225,6 +311,15 @@ Net Promoter Score (NPS) Analysis:
 - Detractors: ${detractorCount} (${detractorsPercent}%) ${isDetractorAlarm ? `[ALARM: Above Target ${targetDetractors}%]` : `[Target Met: ≤${targetDetractors}%]`}
 - Neutrals: ${neutralCount}
 - Overall NPS Score: ${npsScore} ${isNPSAlarm ? `[ALARM: Below Target ${npsTarget}]` : `[Target Met: ≥${npsTarget}]`}
+
+1. Detractors Analysis:
+${detractorsSummary}
+
+2. Neutrals Analysis:
+${neutralsSummary}
+
+3. Overall Analysis (All Feedback):
+${overallSummary}
 ${trendSection}
 Operational Key Performance Indicators:
 - Total Cases Recorded: ${totalTasks}
@@ -261,6 +356,15 @@ ${weeksList ? `الأسابيع المشمولة: ${weeksList}` : ''}
 - المنتقدون: ${detractorCount} (${detractorsPercent}%) ${isDetractorAlarm ? `[تنبيه: أعلى من المستهدف ${targetDetractors}%]` : `[تم تحقيق المستهدف: ≤${targetDetractors}%]`}
 - المحايدون: ${neutralCount}
 - صافي مؤشر الترويج (NPS): ${npsScore} ${isNPSAlarm ? `[تنبيه: أقل من المستهدف ${npsTarget}]` : `[تم تحقيق المستهدف: ≥${npsTarget}]`}
+
+1. تحليل المنتقدين (Detractors):
+${detractorsSummary}
+
+2. تحليل المحايدين (Neutrals):
+${neutralsSummary}
+
+3. التحليل الشامل (Overall):
+${overallSummary}
 ${trendSection}
 مؤشرات الأداء الرئيسية للعمليات:
 - إجمالي الحالات المسجلة: ${totalTasks}

@@ -84,7 +84,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
   const handleCinSubmit = async (formData) => {
     try {
-      await api.post("/customer-issues-notifications", formData);
+      await api.post("/customer-issues", formData);
       toast.success("Issue reported successfully!");
       setCinDialogOpen(false);
       window.dispatchEvent(new CustomEvent('cin-refresh'));

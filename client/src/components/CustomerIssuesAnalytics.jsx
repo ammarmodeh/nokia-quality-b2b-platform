@@ -137,7 +137,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     try {
       const updatedValue = !issue.isChecked;
       const response = await api.put(
-        `/customer-issues-notifications/${issue._id}`,
+        `/customer-issues/${issue._id}`,
         { isChecked: updatedValue },
         { headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` } }
       );
@@ -154,7 +154,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
   const handleIssueUpdate = async (formData, id) => {
     try {
-      const response = await api.put(`/customer-issues-notifications/${id}`, formData, {
+      const response = await api.put(`/customer-issues/${id}`, formData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
       });
       if (response.data.success) {

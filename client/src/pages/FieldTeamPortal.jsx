@@ -444,32 +444,42 @@ const FieldTeamPortal = () => {
 
     // Use Global Technical Tasks (NPS Tickets) as primary source
     tasksToProcess.forEach(task => {
-      const increment = (map, value) => {
-        if (Array.isArray(value)) {
-          value.forEach(v => { if (v) map[v] = (map[v] || 0) + 1; });
-        } else if (value) {
-          map[value] = (map[value] || 0) + 1;
-        }
+      // Helper to split multi-select strings or handle arrays
+      const splitValues = (val) => {
+        if (!val) return [];
+        if (Array.isArray(val)) return val.filter(v => v && v !== 'N/A' && v !== 'Unknown');
+        return String(val).split(/[,/]+/).map(s => s.trim()).filter(s => s && s !== 'N/A' && s !== 'Unknown');
       };
 
-      const ownerRaw = task.responsible || task.assignedTo?.name || 'Unknown';
-      const owners = Array.isArray(ownerRaw) ? ownerRaw.filter(o => o) : [ownerRaw];
-      // If owners array is empty after filtering, use 'Unknown'
-      if (owners.length === 0) owners.push('Unknown');
+      const increment = (map, value) => {
+        const items = splitValues(value);
+        if (items.length === 0) {
+          // map['Unknown'] = (map['Unknown'] || 0) + 1; // Optional: handle unknown
+          return;
+        }
+        items.forEach(v => {
+          map[v] = (map[v] || 0) + 1;
+        });
+      };
 
-      const reasons = Array.isArray(task.reason) ? task.reason.filter(r => r) : (task.reason ? [task.reason] : ['Unknown']);
-      if (reasons.length === 0) reasons.push('Unknown');
+      const owners = splitValues(task.responsible || task.assignedTo?.name);
+      if (owners.length === 0) owners.push('Empty');
 
-      const subReasons = Array.isArray(task.subReason) ? task.subReason.filter(sr => sr) : (task.subReason ? [task.subReason] : ['Unknown']);
-      if (subReasons.length === 0) subReasons.push('Unknown');
+      const reasons = splitValues(task.reason);
+      if (reasons.length === 0) reasons.push('Empty');
 
-      const rootCauses = Array.isArray(task.rootCause) ? task.rootCause.filter(rc => rc) : (task.rootCause ? [task.rootCause] : ['Unknown']);
-      if (rootCauses.length === 0) rootCauses.push('Unknown');
+      const subReasons = splitValues(task.subReason);
+      if (subReasons.length === 0) subReasons.push('Empty');
+
+      const rootCauses = splitValues(task.rootCause);
+      if (rootCauses.length === 0) rootCauses.push('Empty');
 
       const fieldTeam = task.teamName || 'Unknown';
       const category = task.category || 'N/A';
-      const isITN = (Array.isArray(task.itnRelated) && task.itnRelated.includes('Yes')) || task.itnRelated === 'Yes' || task.itnRelated === true;
-      const isSubscription = (Array.isArray(task.relatedToSubscription) && task.relatedToSubscription.includes('Yes')) || task.relatedToSubscription === 'Yes' || task.relatedToSubscription === true;
+
+      // Check if ANY of the split indicators are "Yes"
+      const isITN = splitValues(task.itnRelated).some(v => v === 'Yes' || v === true);
+      const isSubscription = splitValues(task.relatedToSubscription).some(v => v === 'Yes' || v === true);
 
       owners.forEach(o => increment(stats.byOwner, o));
       reasons.forEach(r => increment(stats.byReason, r));
@@ -602,13 +612,60 @@ const FieldTeamPortal = () => {
     const toChartData = (obj) => {
       const entries = Object.entries(obj).map(([name, value]) => ({ name, value }));
       const categoryTotal = entries.reduce((sum, item) => sum + item.value, 0);
-      return entries
-        .map(item => ({
+
+      // Calculate float percentages
+      let items = entries.map(item => ({
+        ...item,
+        floatPct: categoryTotal > 0 ? (item.value / categoryTotal) * 100 : 0,
+        contribution: tasksToProcess.length > 0 ? ((item.value / tasksToProcess.length) * 100).toFixed(1) : 0
+      }));
+
+      // Largest Remainder Method for precise 100% sum
+      const floorSum = items.reduce((sum, item) => sum + Math.floor(item.floatPct), 0);
+      const diff = 100 - floorSum;
+      if (categoryTotal > 0 && diff > 0 && diff < items.length) {
+        items = items
+          .map(item => ({ ...item, remainder: item.floatPct - Math.floor(item.floatPct) }))
+          .sort((a, b) => b.remainder - a.remainder);
+
+        for (let i = 0; i < diff; i++) {
+          items[i].percentage = (Math.floor(items[i].floatPct) + 1).toFixed(1);
+        }
+        for (let i = diff; i < items.length; i++) {
+          items[i].percentage = Math.floor(items[i].floatPct).toFixed(1);
+        }
+      } else {
+        items = items.map(item => ({
           ...item,
-          percentage: categoryTotal > 0 ? ((item.value / categoryTotal) * 100).toFixed(1) : 0,
-          contribution: tasksToProcess.length > 0 ? ((item.value / tasksToProcess.length) * 100).toFixed(1) : 0
-        }))
-        .sort((a, b) => b.value - a.value);
+          percentage: item.floatPct.toFixed(1)
+        }));
+      }
+
+      return items.sort((a, b) => b.value - a.value);
+    };
+
+    const toDetailedTableData = (statsObj) => {
+      const entries = Object.entries(statsObj).map(([key, data]) => ({ name: key, ...data }));
+      const totalHits = entries.reduce((sum, item) => sum + item.total, 0);
+
+      let items = entries.map(item => ({
+        ...item,
+        floatPct: totalHits > 0 ? (item.total / totalHits) * 100 : 0
+      }));
+
+      const floorSum = items.reduce((sum, item) => sum + Math.floor(item.floatPct), 0);
+      const diff = 100 - floorSum;
+      if (totalHits > 0 && diff > 0 && diff < items.length) {
+        items = items
+          .map(item => ({ ...item, remainder: item.floatPct - Math.floor(item.floatPct) }))
+          .sort((a, b) => b.remainder - a.remainder);
+        for (let i = 0; i < diff; i++) items[i].percentage = (Math.floor(items[i].floatPct) + 1).toFixed(1);
+        for (let i = diff; i < items.length; i++) items[i].percentage = Math.floor(items[i].floatPct).toFixed(1);
+      } else {
+        items = items.map(item => ({ ...item, percentage: item.floatPct.toFixed(1) }));
+      }
+
+      return items.sort((a, b) => b.total - a.total);
     };
 
     const topFieldTeams = toChartData(stats.byFieldTeam);
@@ -627,40 +684,78 @@ const FieldTeamPortal = () => {
       ]
     }));
 
-    // Matrix Summary
-    const topOwners = toChartData(stats.byOwner).slice(0, 10).map(o => o.name);
+    // Matrix Summary & Dynamic Owners List
+    const priorityOwners = ['Reach', 'OJO', 'GAM', 'Customer', 'Empty'];
+    const otherOwnersFound = Object.keys(stats.byOwner).filter(o => !priorityOwners.includes(o));
+    otherOwnersFound.sort((a, b) => stats.byOwner[b] - stats.byOwner[a]);
+
+    // Construct the list of owners to show as distinct columns
+    // Include priority owners (if they have data or we want them always) + top 3 others
+    const matrixOwners = [
+      ...priorityOwners.filter(o => stats.byOwner[o] > 0 || priorityOwners.slice(0, 4).includes(o)),
+      ...otherOwnersFound.slice(0, 3)
+    ];
 
     return {
-      ownerData: toChartData(stats.byOwner),
+      ownerData: toChartData(stats.byOwner).sort((a, b) => {
+        const idxA = priorityOwners.indexOf(a.name);
+        const idxB = priorityOwners.indexOf(b.name);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return b.value - a.value;
+      }),
       reasonData: toChartData(stats.byReason),
       subReasonData: toChartData(stats.bySubReason),
       rootCauseData: toChartData(stats.byRootCause),
       sentimentData: (() => {
         const totalSentiment = stats.sentiment.Promoter + stats.sentiment.Neutral + stats.sentiment.Detractor;
-        return [
+        const entries = [
           { name: 'Promoters', value: stats.sentiment.Promoter, color: '#10b981' },
           { name: 'Neutrals', value: stats.sentiment.Neutral, color: '#f59e0b' },
           { name: 'Detractors', value: stats.sentiment.Detractor, color: '#ef4444' }
-        ]
-          .filter(s => s.value > 0)
-          .map(s => ({
-            ...s,
-            percentage: totalSentiment > 0 ? ((s.value / totalSentiment) * 100).toFixed(1) : 0
-          }));
+        ].filter(s => s.value > 0);
+
+        const total = entries.reduce((sum, item) => sum + item.value, 0);
+        let items = entries.map(item => ({
+          ...item,
+          floatPct: total > 0 ? (item.value / total) * 100 : 0
+        }));
+
+        const floorSum = items.reduce((sum, item) => sum + Math.floor(item.floatPct), 0);
+        const diff = 100 - floorSum;
+        if (total > 0 && diff > 0 && diff < items.length) {
+          items = items
+            .map(item => ({ ...item, remainder: item.floatPct - Math.floor(item.floatPct) }))
+            .sort((a, b) => b.remainder - a.remainder);
+          for (let i = 0; i < diff; i++) items[i].percentage = (Math.floor(items[i].floatPct) + 1).toFixed(1);
+          for (let i = diff; i < items.length; i++) items[i].percentage = Math.floor(items[i].floatPct).toFixed(1);
+        } else {
+          items = items.map(item => ({ ...item, percentage: item.floatPct.toFixed(1) }));
+        }
+        return items;
       })(),
+      matrixOwners,
       contributionMatrix: {
         matrix: stats.contributionMatrix,
-        topOwners
+        topOwners: matrixOwners
       },
       rootCauseMatrix: {
         matrix: stats.rootCauseMatrix,
-        topOwners
+        topOwners: matrixOwners
       },
-      // NEW: Detailed data for Advanced Analytics Tables
-      detailedOwners: stats.detailedOwners,
-      detailedReasons: stats.detailedReasons,
-      detailedSubReasons: stats.detailedSubReasons,
-      detailedRootCauses: stats.detailedRootCauses,
+      // Pre-calculated detailed stats with LRM
+      detailedOwners: toDetailedTableData(stats.detailedOwners).sort((a, b) => {
+        const idxA = priorityOwners.indexOf(a.name);
+        const idxB = priorityOwners.indexOf(b.name);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return b.total - a.total;
+      }),
+      detailedReasons: toDetailedTableData(stats.detailedReasons),
+      detailedSubReasons: toDetailedTableData(stats.detailedSubReasons),
+      detailedRootCauses: toDetailedTableData(stats.detailedRootCauses),
       fieldTeamAnalytics,
       totalProcessed: tasksToProcess.length,
       categoryTotals: {
@@ -730,21 +825,95 @@ const FieldTeamPortal = () => {
       'Team': item.teamName,
       'SLID': item.slid,
       'Customer': item.customerName || 'N/A',
-      // 'Category': type === 'task' ? item.category : (item.issueCategory || 'General'),
-      // 'Sub-Category': item.issueSubCategory || '-',
       'Reason': Array.isArray(item.reason) ? item.reason.join(", ") : (item.reason || '-'),
       'Sub-Reason': Array.isArray(item.subReason) ? item.subReason.join(", ") : (item.subReason || '-'),
       'Root Cause': Array.isArray(item.rootCause) ? item.rootCause.join(", ") : (item.rootCause || '-'),
-      'Owner/Responsible': item.responsible || item.assignedTo?.name || '-',
+      'Owner/Responsible': item.responsible || item.assignedTo?.name || (item.assignedTo && typeof item.assignedTo === 'string' ? item.assignedTo : '-'),
       'Technician': item.technician || item.primaryTechnician || '-',
       'Status': item.validationStatus || (item.solved === 'yes' ? 'Solved' : 'Open'),
       'Score': displayScore,
       'Satisfaction': satisfaction,
       'Points': calculateItemPoints(item, type),
+      'Customer Feedback': (type === 'task' ? (item.customerFeedback || '-') : (item.reporterNote || '-')),
+      'Our Actions/Resolution': (type === 'issue' ? (item.resolutionDetails || item.assigneeNote || '-') : '-'),
       'ITN Related': ((Array.isArray(item.itnRelated) && item.itnRelated.includes('Yes')) || item.itnRelated === 'Yes' || item.itnRelated === true) ? 'Yes' : 'No',
       'Subscription Related': ((Array.isArray(item.relatedToSubscription) && item.relatedToSubscription.includes('Yes')) || item.relatedToSubscription === 'Yes' || item.relatedToSubscription === true) ? 'Yes' : 'No',
-      'Date': new Date(item.interviewDate || item.date || item.createdAt).toLocaleDateString()
+      'Date': new Date(item.interviewDate || item.date || item.createdAt).toLocaleDateString(),
+      'Contract Date': item.contractDate ? new Date(item.contractDate).toLocaleDateString() : '-',
+      'UN Date': item.unDate ? new Date(item.unDate).toLocaleDateString() : '-',
+      'FE Date': item.feDate ? new Date(item.feDate).toLocaleDateString() : (item.appDate ? new Date(item.appDate).toLocaleDateString() : '-'),
+      'In Date': item.inDate ? new Date(item.inDate).toLocaleDateString() : '-',
+      'Close Date': item.closeDate ? new Date(item.closeDate).toLocaleDateString() : '-'
     };
+  };
+
+  const handleExportIndividualTeam = (team) => {
+    // 0. Calculate Global Totals for Comparative Analysis
+    const globalTotals = leaderboardData.reduce((acc, t) => {
+      acc.totalDetractors += (t.npsDetractors || 0);
+      acc.totalNeutrals += (t.npsNeutrals || 0);
+      acc.totalIssues += (t.issueViolations || 0);
+      acc.totalViolations += (t.totalViolations || 0);
+      acc.totalPoints += (t.totalPoints || 0);
+      return acc;
+    }, { totalDetractors: 0, totalNeutrals: 0, totalIssues: 0, totalViolations: 0, totalPoints: 0 });
+
+    // 1. Team Summary Data with Comparative Metrics
+    const summaryData = [{
+      'Team Name': team.teamName,
+      'Company': team.teamCompany,
+      'Total NPS Tasks': team.totalNpsTickets,
+      'NPS Detractors': team.npsDetractors,
+      '% of Global Detractors': globalTotals.totalDetractors > 0 ? ((team.npsDetractors / globalTotals.totalDetractors) * 100).toFixed(1) + '%' : '0.0%',
+      'NPS Neutrals': team.npsNeutrals,
+      '% of Global Neutrals': globalTotals.totalNeutrals > 0 ? ((team.npsNeutrals / globalTotals.totalNeutrals) * 100).toFixed(1) + '%' : '0.0%',
+      'Total Issues': team.issueViolations,
+      '% of Global Issues': globalTotals.totalIssues > 0 ? ((team.issueViolations / globalTotals.totalIssues) * 100).toFixed(1) + '%' : '0.0%',
+      'Open Cases': team.openCount,
+      'Avg Resolution Time (Days)': team.avgResolutionTime,
+      'Resolution Rate (%)': team.resPercent,
+      'Total Violations': team.totalViolations,
+      '% of Global Total Violations': globalTotals.totalViolations > 0 ? ((team.totalViolations / globalTotals.totalViolations) * 100).toFixed(1) + '%' : '0.0%',
+      'Total Points': team.totalPoints,
+      '% of Global Total Points': globalTotals.totalPoints > 0 ? ((team.totalPoints / globalTotals.totalPoints) * 100).toFixed(1) + '%' : '0.0%',
+    }];
+
+    // 2. Detailed Data
+    const detailedData = [
+      ...team.rawDetractors.map(t => mapItemToExcelRow(t, 'task')),
+      ...team.rawNeutrals.map(t => mapItemToExcelRow(t, 'task')),
+      ...team.rawIssues.map(i => mapItemToExcelRow(i, 'issue'))
+    ];
+
+    const wb = XLSX.utils.book_new();
+
+    // Summary Sheet
+    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Team Performance Summary");
+
+    // Detailed Sheet
+    const wsDetails = XLSX.utils.json_to_sheet(detailedData);
+    XLSX.utils.book_append_sheet(wb, wsDetails, "Detailed Feedback & Actions");
+
+    // Auto-size columns
+    [wsSummary, wsDetails].forEach(ws => {
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      const cols = [];
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        let maxLen = 10;
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+          const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+          if (cell && cell.v) {
+            const len = cell.v.toString().length;
+            if (len > maxLen) maxLen = len;
+          }
+        }
+        cols.push({ wch: Math.min(maxLen + 2, 50) }); // Cap at 50 for readability
+      }
+      ws['!cols'] = cols;
+    });
+
+    XLSX.writeFile(wb, `${team.teamName}_Detailed_Quality_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleExportTeamViolations = (team) => {
@@ -1395,7 +1564,7 @@ const FieldTeamPortal = () => {
           // Fetch Customer Issues if teamCompany is available
           if (selectedTeam.teamCompany && selectedTeam.teamCompany !== 'N/A') {
             try {
-              const issuesRes = await api.get('/customer-issues-notifications', {
+              const issuesRes = await api.get('/customer-issues', {
                 params: {
                   teamCompany: selectedTeam.teamCompany,
                   limit: 1000 // Fetch a reasonable amount for analysis
@@ -2621,6 +2790,7 @@ ${data.map((a, i) => `
                       <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'resPercent', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>SUCCESS %</TableCell>
                       <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalPoints', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL POINTS</TableCell>
                       <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL VIOLATIONS</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>ACTIONS</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -2702,6 +2872,25 @@ ${data.map((a, i) => `
                                 '&:hover': { transform: 'scale(1.1)' }
                               }}
                             />
+                          </TableCell>
+                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
+                            <MuiTooltip title="Export Detailed Team Report">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleExportIndividualTeam(team)}
+                                sx={{
+                                  color: colors.success,
+                                  bgcolor: 'rgba(16, 185, 129, 0.1)',
+                                  '&:hover': {
+                                    bgcolor: 'rgba(16, 185, 129, 0.2)',
+                                    transform: 'scale(1.1)'
+                                  },
+                                  transition: 'all 0.2s'
+                                }}
+                              >
+                                <FaFileExcel size={14} />
+                              </IconButton>
+                            </MuiTooltip>
                           </TableCell>
                         </TableRow>
                       );
@@ -3053,13 +3242,13 @@ ${data.map((a, i) => `
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {Object.entries(globalAnalytics.detailedOwners).sort((a, b) => b[1].total - a[1].total).map(([owner, data]) => (
-                            <TableRow key={owner} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                              <TableCell sx={{ color: '#e2e8f0' }}>{owner}</TableCell>
+                          {globalAnalytics.detailedOwners.map((data) => (
+                            <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                              <TableCell sx={{ color: '#e2e8f0' }}>{data.name}</TableCell>
                               <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{data.points}</TableCell>
                               <TableCell
                                 align="right"
-                                onClick={() => handleAnalyticsDrillDown({ owner })}
+                                onClick={() => handleAnalyticsDrillDown({ owner: data.name })}
                                 sx={{
                                   color: '#e2e8f0',
                                   fontWeight: 'bold',
@@ -3071,7 +3260,7 @@ ${data.map((a, i) => `
                               </TableCell>
                               <TableCell
                                 align="right"
-                                onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ owner, itn: true })}
+                                onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ owner: data.name, itn: true })}
                                 sx={{
                                   color: data.itn > 0 ? '#f59e0b' : '#64748b',
                                   cursor: data.itn > 0 ? 'pointer' : 'default',
@@ -3082,7 +3271,7 @@ ${data.map((a, i) => `
                               </TableCell>
                               <TableCell
                                 align="right"
-                                onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ owner, subscription: true })}
+                                onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ owner: data.name, subscription: true })}
                                 sx={{
                                   color: data.subscription > 0 ? '#10b981' : '#64748b',
                                   cursor: data.subscription > 0 ? 'pointer' : 'default',
@@ -3091,7 +3280,7 @@ ${data.map((a, i) => `
                               >
                                 {data.subscription}
                               </TableCell>
-                              <TableCell align="right" sx={{ color: '#94a3b8' }}>{((data.total / globalAnalytics.totalProcessed) * 100).toFixed(1)}%</TableCell>
+                              <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -3145,10 +3334,10 @@ ${data.map((a, i) => `
                         <TableHead>
                           <TableRow>
                             <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Reason</TableCell>
-                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => (
+                            {globalAnalytics.matrixOwners.map(owner => (
                               <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
                             ))}
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>Others</TableCell>
                             <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
                             <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
                             <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
@@ -3156,27 +3345,27 @@ ${data.map((a, i) => `
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {Object.entries(globalAnalytics.detailedReasons).sort((a, b) => b[1].total - a[1].total).slice(0, 15).map(([reason, data]) => {
-                            const top3Owners = globalAnalytics.contributionMatrix.topOwners.slice(0, 3);
-                            const top3Sum = top3Owners.reduce((sum, owner) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                          {globalAnalytics.detailedReasons.slice(0, 15).map((data) => {
+                            const matrixOwners = globalAnalytics.matrixOwners;
+                            const matrixSum = matrixOwners.reduce((sum, owner) => sum + (data.ownerBreakdown[owner] || 0), 0);
                             const allOwnersSum = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
-                            const otherCount = allOwnersSum - top3Sum;
+                            const otherCount = allOwnersSum - matrixSum;
                             return (
-                              <TableRow key={reason} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                                 <TableCell
-                                  onClick={() => handleAnalyticsDrillDown({ reason })}
+                                  onClick={() => handleAnalyticsDrillDown({ reason: data.name })}
                                   sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
                                 >
-                                  {reason}
+                                  {data.name}
                                 </TableCell>
-                                {top3Owners.map(owner => {
+                                {globalAnalytics.matrixOwners.map(owner => {
                                   const count = data.ownerBreakdown[owner] || 0;
                                   const pct = allOwnersSum > 0 ? ((count / allOwnersSum) * 100).toFixed(0) : 0;
                                   return (
                                     <TableCell
                                       key={owner}
                                       align="right"
-                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ reason, owner })}
+                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ reason: data.name, owner })}
                                       sx={{
                                         color: count > 0 ? '#e2e8f0' : 'rgba(255,255,255,0.1)',
                                         fontWeight: count > 0 ? 'bold' : 'normal',
@@ -3191,14 +3380,14 @@ ${data.map((a, i) => `
                                 })}
                                 <TableCell
                                   align="right"
-                                  onClick={() => otherCount > 0 && handleAnalyticsDrillDown({ reason })}
+                                  onClick={() => otherCount > 0 && handleAnalyticsDrillDown({ reason: data.name })}
                                   sx={{ color: '#94a3b8', cursor: otherCount > 0 ? 'pointer' : 'default' }}
                                 >
                                   {otherCount}
                                 </TableCell>
                                 <TableCell
                                   align="right"
-                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ reason, itn: true })}
+                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ reason: data.name, itn: true })}
                                   sx={{
                                     color: data.itn > 0 ? '#f59e0b' : '#64748b',
                                     cursor: data.itn > 0 ? 'pointer' : 'default',
@@ -3209,7 +3398,7 @@ ${data.map((a, i) => `
                                 </TableCell>
                                 <TableCell
                                   align="right"
-                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ reason, subscription: true })}
+                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ reason: data.name, subscription: true })}
                                   sx={{
                                     color: data.subscription > 0 ? '#10b981' : '#64748b',
                                     cursor: data.subscription > 0 ? 'pointer' : 'default',
@@ -3220,29 +3409,29 @@ ${data.map((a, i) => `
                                 </TableCell>
                                 <TableCell
                                   align="right"
-                                  onClick={() => handleAnalyticsDrillDown({ reason })}
+                                  onClick={() => handleAnalyticsDrillDown({ reason: data.name })}
                                   sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
                                 >
                                   {data.total}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{((data.total / globalAnalytics.totalProcessed) * 100).toFixed(1)}%</TableCell>
+                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
                               </TableRow>
                             );
                           })}
                           {/* Total Row */}
                           <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
                             <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
-                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => {
+                            {globalAnalytics.matrixOwners.map(owner => {
                               const totalForOwner = Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                               return (
-                                <TableCell key={owner} align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
+                                <TableCell key={owner} align="right" sx={{ color: '#3b82f6', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
                               );
                             })}
                             <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>
                               {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => {
-                                const top3Sum = globalAnalytics.contributionMatrix.topOwners.slice(0, 3).reduce((s, owner) => s + (data.ownerBreakdown[owner] || 0), 0);
+                                const matrixSum = globalAnalytics.matrixOwners.reduce((s, owner) => s + (data.ownerBreakdown[owner] || 0), 0);
                                 const allSum = Object.values(data.ownerBreakdown).reduce((s, count) => s + count, 0);
-                                return sum + (allSum - top3Sum);
+                                return sum + (allSum - matrixSum);
                               }, 0)}
                             </TableCell>
                             <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
@@ -3312,7 +3501,7 @@ ${data.map((a, i) => `
                         <TableHead>
                           <TableRow>
                             <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub-Reason</TableCell>
-                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => (
+                            {globalAnalytics.matrixOwners.map(owner => (
                               <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
                             ))}
                             <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
@@ -3323,27 +3512,27 @@ ${data.map((a, i) => `
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {Object.entries(globalAnalytics.detailedSubReasons).sort((a, b) => b[1].total - a[1].total).slice(0, 15).map(([subReason, data]) => {
-                            const top3Owners = globalAnalytics.contributionMatrix.topOwners.slice(0, 3);
-                            const top3Sum = top3Owners.reduce((sum, owner) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                          {globalAnalytics.detailedSubReasons.slice(0, 15).map((data) => {
+                            const matrixOwners = globalAnalytics.matrixOwners;
+                            const matrixSum = matrixOwners.reduce((sum, owner) => sum + (data.ownerBreakdown[owner] || 0), 0);
                             const allOwnersSum = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
-                            const otherCount = allOwnersSum - top3Sum;
+                            const otherCount = allOwnersSum - matrixSum;
                             return (
-                              <TableRow key={subReason} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                                 <TableCell
-                                  onClick={() => handleAnalyticsDrillDown({ subReason })}
+                                  onClick={() => handleAnalyticsDrillDown({ subReason: data.name })}
                                   sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
                                 >
-                                  {subReason}
+                                  {data.name}
                                 </TableCell>
-                                {top3Owners.map(owner => {
+                                {globalAnalytics.matrixOwners.map(owner => {
                                   const count = data.ownerBreakdown[owner] || 0;
                                   const pct = allOwnersSum > 0 ? ((count / allOwnersSum) * 100).toFixed(0) : 0;
                                   return (
                                     <TableCell
                                       key={owner}
                                       align="right"
-                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ subReason, owner })}
+                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ subReason: data.name, owner })}
                                       sx={{
                                         color: count > 0 ? '#f59e0b' : 'rgba(255,255,255,0.1)',
                                         fontWeight: count > 0 ? 'bold' : 'normal',
@@ -3358,14 +3547,14 @@ ${data.map((a, i) => `
                                 })}
                                 <TableCell
                                   align="right"
-                                  onClick={() => otherCount > 0 && handleAnalyticsDrillDown({ subReason })}
+                                  onClick={() => otherCount > 0 && handleAnalyticsDrillDown({ subReason: data.name })}
                                   sx={{ color: '#94a3b8', cursor: otherCount > 0 ? 'pointer' : 'default' }}
                                 >
                                   {otherCount}
                                 </TableCell>
                                 <TableCell
                                   align="right"
-                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ subReason, itn: true })}
+                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ subReason: data.name, itn: true })}
                                   sx={{
                                     color: data.itn > 0 ? '#f59e0b' : '#64748b',
                                     cursor: data.itn > 0 ? 'pointer' : 'default',
@@ -3376,7 +3565,7 @@ ${data.map((a, i) => `
                                 </TableCell>
                                 <TableCell
                                   align="right"
-                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ subReason, subscription: true })}
+                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ subReason: data.name, subscription: true })}
                                   sx={{
                                     color: data.subscription > 0 ? '#10b981' : '#64748b',
                                     cursor: data.subscription > 0 ? 'pointer' : 'default',
@@ -3387,19 +3576,19 @@ ${data.map((a, i) => `
                                 </TableCell>
                                 <TableCell
                                   align="right"
-                                  onClick={() => handleAnalyticsDrillDown({ subReason })}
+                                  onClick={() => handleAnalyticsDrillDown({ subReason: data.name })}
                                   sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
                                 >
                                   {data.total}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{((data.total / globalAnalytics.totalProcessed) * 100).toFixed(1)}%</TableCell>
+                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
                               </TableRow>
                             );
                           })}
                           {/* Total Row */}
                           <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
                             <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
-                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => {
+                            {globalAnalytics.matrixOwners.map(owner => {
                               const totalForOwner = Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                               return (
                                 <TableCell key={owner} align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
@@ -3407,9 +3596,9 @@ ${data.map((a, i) => `
                             })}
                             <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>
                               {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => {
-                                const top3Sum = globalAnalytics.contributionMatrix.topOwners.slice(0, 3).reduce((s, owner) => s + (data.ownerBreakdown[owner] || 0), 0);
+                                const matrixSum = globalAnalytics.matrixOwners.reduce((s, owner) => s + (data.ownerBreakdown[owner] || 0), 0);
                                 const allSum = Object.values(data.ownerBreakdown).reduce((s, count) => s + count, 0);
-                                return sum + (allSum - top3Sum);
+                                return sum + (allSum - matrixSum);
                               }, 0)}
                             </TableCell>
                             <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
@@ -3479,7 +3668,7 @@ ${data.map((a, i) => `
                         <TableHead>
                           <TableRow>
                             <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Root Cause</TableCell>
-                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => (
+                            {globalAnalytics.matrixOwners.map(owner => (
                               <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
                             ))}
                             <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
@@ -3490,32 +3679,32 @@ ${data.map((a, i) => `
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {Object.entries(globalAnalytics.detailedRootCauses).sort((a, b) => b[1].total - a[1].total).slice(0, 15).map(([rootCause, data]) => {
-                            const top3Owners = globalAnalytics.contributionMatrix.topOwners.slice(0, 3);
-                            const top3Sum = top3Owners.reduce((sum, owner) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                          {globalAnalytics.detailedRootCauses.slice(0, 15).map((data) => {
+                            const matrixOwners = globalAnalytics.matrixOwners;
+                            const matrixSum = matrixOwners.reduce((sum, owner) => sum + (data.ownerBreakdown[owner] || 0), 0);
                             const allOwnersSum = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
-                            const otherCount = allOwnersSum - top3Sum;
+                            const otherCount = allOwnersSum - matrixSum;
                             return (
-                              <TableRow key={rootCause} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                                 <TableCell
-                                  onClick={() => handleAnalyticsDrillDown({ rootCause })}
+                                  onClick={() => handleAnalyticsDrillDown({ rootCause: data.name })}
                                   sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
                                 >
-                                  {rootCause}
+                                  {data.name}
                                 </TableCell>
-                                {top3Owners.map(owner => {
+                                {globalAnalytics.matrixOwners.map(owner => {
                                   const count = data.ownerBreakdown[owner] || 0;
                                   const pct = allOwnersSum > 0 ? ((count / allOwnersSum) * 100).toFixed(0) : 0;
                                   return (
                                     <TableCell
                                       key={owner}
                                       align="right"
-                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ rootCause, owner })}
+                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ rootCause: data.name, owner })}
                                       sx={{
-                                        color: count > 0 ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
+                                        color: count > 0 ? '#e2e8f0' : 'rgba(255,255,255,0.1)',
                                         fontWeight: count > 0 ? 'bold' : 'normal',
                                         cursor: count > 0 ? 'pointer' : 'default',
-                                        '&:hover': count > 0 ? { bgcolor: 'rgba(139, 92, 246, 0.2)', color: '#fff' } : {}
+                                        '&:hover': count > 0 ? { bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' } : {}
                                       }}
                                     >
                                       {count}
@@ -3525,14 +3714,14 @@ ${data.map((a, i) => `
                                 })}
                                 <TableCell
                                   align="right"
-                                  onClick={() => otherCount > 0 && handleAnalyticsDrillDown({ rootCause })}
+                                  onClick={() => otherCount > 0 && handleAnalyticsDrillDown({ rootCause: data.name })}
                                   sx={{ color: '#94a3b8', cursor: otherCount > 0 ? 'pointer' : 'default' }}
                                 >
                                   {otherCount}
                                 </TableCell>
                                 <TableCell
                                   align="right"
-                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ rootCause, itn: true })}
+                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ rootCause: data.name, itn: true })}
                                   sx={{
                                     color: data.itn > 0 ? '#f59e0b' : '#64748b',
                                     cursor: data.itn > 0 ? 'pointer' : 'default',
@@ -3543,7 +3732,7 @@ ${data.map((a, i) => `
                                 </TableCell>
                                 <TableCell
                                   align="right"
-                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ rootCause, subscription: true })}
+                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ rootCause: data.name, subscription: true })}
                                   sx={{
                                     color: data.subscription > 0 ? '#10b981' : '#64748b',
                                     cursor: data.subscription > 0 ? 'pointer' : 'default',
@@ -3554,19 +3743,19 @@ ${data.map((a, i) => `
                                 </TableCell>
                                 <TableCell
                                   align="right"
-                                  onClick={() => handleAnalyticsDrillDown({ rootCause })}
+                                  onClick={() => handleAnalyticsDrillDown({ rootCause: data.name })}
                                   sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
                                 >
                                   {data.total}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{((data.total / globalAnalytics.totalProcessed) * 100).toFixed(1)}%</TableCell>
+                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
                               </TableRow>
                             );
                           })}
                           {/* Total Row */}
                           <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
                             <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
-                            {globalAnalytics.contributionMatrix.topOwners.slice(0, 3).map(owner => {
+                            {globalAnalytics.matrixOwners.map(owner => {
                               const totalForOwner = Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                               return (
                                 <TableCell key={owner} align="right" sx={{ color: '#8b5cf6', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
@@ -3574,9 +3763,9 @@ ${data.map((a, i) => `
                             })}
                             <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>
                               {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => {
-                                const top3Sum = globalAnalytics.contributionMatrix.topOwners.slice(0, 3).reduce((s, owner) => s + (data.ownerBreakdown[owner] || 0), 0);
+                                const matrixSum = globalAnalytics.matrixOwners.reduce((s, owner) => s + (data.ownerBreakdown[owner] || 0), 0);
                                 const allSum = Object.values(data.ownerBreakdown).reduce((s, count) => s + count, 0);
-                                return sum + (allSum - top3Sum);
+                                return sum + (allSum - matrixSum);
                               }, 0)}
                             </TableCell>
                             <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>

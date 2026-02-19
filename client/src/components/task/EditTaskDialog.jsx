@@ -209,7 +209,8 @@ const EditTaskDialog = ({
   const [isQoS, setIsQoS] = useState(false);
   const [contractDate, setContractDate] = useState("");
   const [inDate, setInDate] = useState("");
-  const [appDate, setAppDate] = useState("");
+  const [feDate, setFeDate] = useState("");
+  const [unDate, setUnDate] = useState("");
   // const [closeDate, setCloseDate] = useState(""); // Removed in favor of react-hook-form
   const [scoringKeyOptions, setScoringKeyOptions] = useState([]);
   const [selectedScoringKeys, setSelectedScoringKeys] = useState([]);
@@ -327,7 +328,8 @@ const EditTaskDialog = ({
         interviewDate: formattedInterviewDate,
         contractDate: task.contractDate ? new Date(task.contractDate).toISOString().split('T')[0] : "",
         inDate: task.inDate ? new Date(task.inDate).toISOString().split('T')[0] : "",
-        appDate: task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : "",
+        feDate: task.feDate ? new Date(task.feDate).toISOString().split('T')[0] : (task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : ""),
+        unDate: task.unDate ? new Date(task.unDate).toISOString().split('T')[0] : "",
         closeDate: task.closeDate ? new Date(task.closeDate).toISOString().split('T')[0] : "",
       });
 
@@ -343,7 +345,8 @@ const EditTaskDialog = ({
       setValue("dashboardShortNote", task.dashboardShortNote || "");
       setValue("contractDate", task.contractDate ? new Date(task.contractDate).toISOString().split('T')[0] : "");
       setValue("inDate", task.inDate ? new Date(task.inDate).toISOString().split('T')[0] : "");
-      setValue("appDate", task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : "");
+      setValue("feDate", task.feDate ? new Date(task.feDate).toISOString().split('T')[0] : (task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : ""));
+      setValue("unDate", task.unDate ? new Date(task.unDate).toISOString().split('T')[0] : "");
       setValue("closeDate", task.closeDate ? new Date(task.closeDate).toISOString().split('T')[0] : "");
       setValue("gaiaContent", task.gaiaContent || "");
 
@@ -400,7 +403,9 @@ const EditTaskDialog = ({
       setIsQoS(task.isQoS || false);
       setContractDate(task.contractDate ? new Date(task.contractDate).toISOString().split('T')[0] : "");
       setInDate(task.inDate ? new Date(task.inDate).toISOString().split('T')[0] : "");
-      setAppDate(task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : "");
+      const initialFeDate = task.feDate ? new Date(task.feDate).toISOString().split('T')[0] : (task.appDate ? new Date(task.appDate).toISOString().split('T')[0] : "");
+      setFeDate(initialFeDate);
+      setUnDate(task.unDate ? new Date(task.unDate).toISOString().split('T')[0] : "");
       // setCloseDate(task.closeDate ? new Date(task.closeDate).toISOString().split('T')[0] : "");
       setSelectedScoringKeys(task.scoringKeys || []);
     }
@@ -467,6 +472,8 @@ const EditTaskDialog = ({
       gaiaContent: gaiaCheck === "Yes" ? gaiaContent : null,
       contractDate,
       inDate,
+      feDate,
+      unDate,
       closeDate: data.closeDate,
       isQoS,
       scoringKeys: selectedScoringKeys,
@@ -677,16 +684,26 @@ const EditTaskDialog = ({
               />
             </Stack>
 
-            {/* Row: App Date & In Date */}
+            {/* Row: FE Date, UN Date & In Date */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
-                label="App. Date"
+                label="UN Date"
                 type="date"
                 fullWidth
                 variant="outlined"
-                {...register('appDate')}
-                value={appDate}
-                onChange={(e) => setAppDate(e.target.value)}
+                {...register('unDate')}
+                value={unDate}
+                onChange={(e) => setUnDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="FE Date"
+                type="date"
+                fullWidth
+                variant="outlined"
+                {...register('feDate')}
+                value={feDate}
+                onChange={(e) => setFeDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
               <TextField

@@ -189,6 +189,8 @@ const taskSchema = new mongoose.Schema(
     contractDate: { type: Date, default: null },
     inDate: { type: Date, default: null },
     appDate: { type: Date, default: null },
+    feDate: { type: Date, default: null },
+    unDate: { type: Date, default: null },
     closeDate: { type: Date, default: null },
 
     teamName: {

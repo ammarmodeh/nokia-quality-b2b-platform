@@ -219,6 +219,11 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
       textToCopy += `Customer Name: ${task.customerName}\n`;
       textToCopy += `Contact Number: ${task.contactNumber}\n`;
       textToCopy += `PIS Date: ${moment(task.pisDate).format("YYYY-MM-DD")}\n`;
+      textToCopy += `Contract Date: ${moment(task.contractDate).format("YYYY-MM-DD")}\n`;
+      textToCopy += `UN Date: ${task.unDate ? moment(task.unDate).format("YYYY-MM-DD") : 'N/A'}\n`;
+      textToCopy += `FE Date: ${task.feDate ? moment(task.feDate).format("YYYY-MM-DD") : (task.appDate ? moment(task.appDate).format("YYYY-MM-DD") : 'N/A')}\n`;
+      textToCopy += `In Date: ${moment(task.inDate).format("YYYY-MM-DD")}\n`;
+      textToCopy += `Close Date: ${moment(task.closeDate).format("YYYY-MM-DD")}\n`;
       textToCopy += `Tariff Name: ${task.tarrifName}\n`;
       textToCopy += `Customer Type: ${task.customerType}\n`;
       textToCopy += `Interview Date: ${moment(task.interviewDate).format("YYYY-MM-DD")}\n`;
@@ -321,6 +326,11 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
       'Operation': task.operation || 'N/A',
       'SLID': task.slid,
       'PIS Date': new Date(task.pisDate).toLocaleString(),
+      'Contract Date': task.contractDate ? new Date(task.contractDate).toLocaleDateString() : 'N/A',
+      'FE Date': task.feDate ? new Date(task.feDate).toLocaleDateString() : (task.appDate ? new Date(task.appDate).toLocaleDateString() : 'N/A'),
+      'UN Date': task.unDate ? new Date(task.unDate).toLocaleDateString() : 'N/A',
+      'In Date': task.inDate ? new Date(task.inDate).toLocaleDateString() : 'N/A',
+      'Close Date': task.closeDate ? new Date(task.closeDate).toLocaleDateString() : 'N/A',
       'Customer Name': task.customerName,
       'Customer Feedback': task.customerFeedback,
       'Satisfaction Score': task.evaluationScore,
@@ -526,7 +536,8 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                           value={`${task.governorate || ''}${task.governorate && task.district ? ', ' : ''}${task.district || ''}`}
                         />
                         <DetailItem label="Contract Date" value={task.contractDate ? moment(task.contractDate).format("MMM DD, YYYY") : 'N/A'} />
-                        <DetailItem label="App. Date" value={task.appDate ? moment(task.appDate).format("MMM DD, YYYY") : 'N/A'} />
+                        <DetailItem label="FE Date" value={task.feDate ? moment(task.feDate).format("MMM DD, YYYY") : (task.appDate ? moment(task.appDate).format("MMM DD, YYYY") : 'N/A')} />
+                        <DetailItem label="UN Date" value={task.unDate ? moment(task.unDate).format("MMM DD, YYYY") : 'N/A'} />
                         <DetailItem label="In Date" value={task.inDate ? moment(task.inDate).format("MMM DD, YYYY") : 'N/A'} />
                         <DetailItem label="Close Date" value={task.closeDate ? moment(task.closeDate).format("MMM DD, YYYY") : 'N/A'} />
                       </Stack>

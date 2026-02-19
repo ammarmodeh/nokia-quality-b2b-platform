@@ -335,9 +335,9 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       gaiaContent: gaiaCheck === "Yes" ? gaiaContent : null,
       contractDate: data.contractDate,
       inDate: data.inDate,
-      appDate: data.appDate,
+      feDate: data.feDate,
+      unDate: data.unDate,
       closeDate: data.closeDate,
-      operation: data.operation,
       operation: data.operation,
       isQoS,
       scoringKeys: selectedScoringKeys,
@@ -596,14 +596,22 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             />
           </Stack>
 
-          {/* Row: App Date & In Date */}
+          {/* Row: FE Date, UN Date & In Date */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
-              label="App. Date"
+              label="UN Date"
               type="date"
               fullWidth
               variant="outlined"
-              {...register('appDate')}
+              {...register('unDate')}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="FE Date"
+              type="date"
+              fullWidth
+              variant="outlined"
+              {...register('feDate')}
               InputLabelProps={{ shrink: true }}
             />
             <TextField
