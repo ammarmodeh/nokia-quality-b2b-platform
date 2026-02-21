@@ -849,7 +849,6 @@ const FieldTeamPortal = () => {
       'Governorate': item.governorate || '-',
       'District': item.district || '-',
       'Customer': item.customerName || 'N/A',
-      'Customer': item.customerName || 'N/A',
 
       // Dynamic Interleaved Columns
       ...(() => {
@@ -2203,6 +2202,7 @@ ${data.map((a, i) => `
       'Rank': index + 1,
       'Team Name': team.teamName,
       'Company': team.teamCompany,
+      'Status': team.isTerminated ? 'Terminated' : team.isResigned ? 'Resigned' : team.isSuspended ? 'Suspended' : team.isOnLeave ? 'On Leave' : 'Active',
       // 'Region': team.governorate,
       'Total NPS Tasks': team.totalNpsTickets,
       'NPS Detractors': team.npsDetractors,
@@ -2909,6 +2909,7 @@ ${data.map((a, i) => `
                     <TableRow>
                       <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>RANK</TableCell>
                       <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'teamName', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TEAM NAME</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>STATUS</TableCell>
                       <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalNpsTickets', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL NPS</TableCell>
                       <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsDetractors', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>DETRACTORS</TableCell>
                       <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsNeutrals', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>NEUTRALS</TableCell>
@@ -2954,6 +2955,33 @@ ${data.map((a, i) => `
                               <Typography sx={{ color: '#fff', fontWeight: 300, fontSize: '0.85rem' }}>{team.teamName}</Typography>
                               <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.7rem' }}>{team.teamCompany} | {team.governorate}</Typography>
                             </Box>
+                          </TableCell>
+                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
+                            {(() => {
+                              let label = 'Active';
+                              let bg = 'rgba(16, 185, 129, 0.15)';
+                              let color = '#10b981';
+                              if (team.isTerminated) { label = 'Terminated'; bg = 'rgba(239, 68, 68, 0.15)'; color = '#ef4444'; }
+                              else if (team.isResigned) { label = 'Resigned'; bg = 'rgba(249, 115, 22, 0.15)'; color = '#f97316'; }
+                              else if (team.isSuspended) { label = 'Suspended'; bg = 'rgba(245, 158, 11, 0.15)'; color = '#f59e0b'; }
+                              else if (team.isOnLeave) { label = 'On Leave'; bg = 'rgba(99, 102, 241, 0.15)'; color = '#6366f1'; }
+                              return (
+                                <Chip
+                                  label={label}
+                                  size="small"
+                                  sx={{
+                                    background: bg,
+                                    color: color,
+                                    fontWeight: 700,
+                                    borderRadius: '8px',
+                                    height: '20px',
+                                    fontSize: '0.68rem',
+                                    border: `1px solid ${color}40`,
+                                    letterSpacing: '0.3px'
+                                  }}
+                                />
+                              );
+                            })()}
                           </TableCell>
                           <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>{team.totalNpsTickets}</TableCell>
                           <TableCell align="center" onClick={() => handleDrillDown(team, 'detractors')} sx={{ color: colors.error, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsDetractors}</TableCell>
