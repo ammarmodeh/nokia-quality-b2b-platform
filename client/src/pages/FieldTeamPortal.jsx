@@ -268,6 +268,8 @@ const FieldTeamPortal = () => {
   // View Issue Details State
   const [selectedDetailIssue, setSelectedDetailIssue] = useState(null);
   const [detailIssueOpen, setDetailIssueOpen] = useState(false);
+  const [verbatimDialogOpen, setVerbatimDialogOpen] = useState(false);
+  const [selectedVerbatim, setSelectedVerbatim] = useState("");
 
   // Customer Issues state
   const [customerIssues, setCustomerIssues] = useState([]);
@@ -498,8 +500,18 @@ const FieldTeamPortal = () => {
       const rawReasons = splitValues(task.reason);
       const rawSubReasons = splitValues(task.subReason);
       const rawRootCauses = splitValues(task.rootCause);
+      const rawItnRelated = splitValues(task.itnRelated);
+      const rawSubscriptionRelated = splitValues(task.relatedToSubscription);
 
-      const maxLen = Math.max(rawReasons.length, rawSubReasons.length, rawRootCauses.length, rawOwners.length, 1);
+      const maxLen = Math.max(
+        rawReasons.length,
+        rawSubReasons.length,
+        rawRootCauses.length,
+        rawOwners.length,
+        rawItnRelated.length,
+        rawSubscriptionRelated.length,
+        1
+      );
 
       // Create Tuples for aligned processing
       const tuples = [];
@@ -508,6 +520,8 @@ const FieldTeamPortal = () => {
         const reason = rawReasons[i] || 'N/A';
         const subReason = rawSubReasons[i] || 'N/A';
         const rootCause = rawRootCauses[i] || 'N/A';
+        const itnVal = rawItnRelated[i] || 'No';
+        const subVal = rawSubscriptionRelated[i] || 'No';
 
         // ONLY keep tuple if it's NOT just garbage (all fields empty/N/A)
         const isGarbage = (owner === 'Empty' || !owner) &&
@@ -516,14 +530,19 @@ const FieldTeamPortal = () => {
           (rootCause === 'N/A' || !rootCause);
 
         if (!isGarbage || i === 0) { // Keep 1st row even if empty, or only non-garbage
-          tuples.push({ owner, reason, subReason, rootCause });
+          tuples.push({
+            owner,
+            reason,
+            subReason,
+            rootCause,
+            isITN: itnVal === 'Yes' || itnVal === true,
+            isSubscription: subVal === 'Yes' || subVal === true
+          });
         }
       }
 
       const fieldTeam = task.teamName || 'Unknown';
       const category = task.category || 'N/A';
-      const isITN = splitValues(task.itnRelated).some(v => v === 'Yes' || v === true);
-      const isSubscription = splitValues(task.relatedToSubscription).some(v => v === 'Yes' || v === true);
 
       // Calculate Points (apply once per task, or shared across owners?)
       // User likely wants points to be associated with the task itself, but we display them per owner.
@@ -536,7 +555,7 @@ const FieldTeamPortal = () => {
 
       // Process Tuples
       tuples.forEach(tuple => {
-        const { owner, reason, subReason, rootCause } = tuple;
+        const { owner, reason, subReason, rootCause, isITN, isSubscription } = tuple;
 
         // Individual Stats
         stats.byOwner[owner] = (stats.byOwner[owner] || 0) + 1;
@@ -1122,8 +1141,18 @@ const FieldTeamPortal = () => {
       const rawReasons = splitValues(task.reason);
       const rawSubReasons = splitValues(task.subReason);
       const rawRootCauses = splitValues(task.rootCause);
+      const rawItnRelated = splitValues(task.itnRelated);
+      const rawSubRelated = splitValues(task.relatedToSubscription);
 
-      const maxLen = Math.max(rawOwners.length, rawReasons.length, rawSubReasons.length, rawRootCauses.length, 1);
+      const maxLen = Math.max(
+        rawOwners.length,
+        rawReasons.length,
+        rawSubReasons.length,
+        rawRootCauses.length,
+        rawItnRelated.length,
+        rawSubRelated.length,
+        1
+      );
 
       // Create tuples for this specific task
       const tuples = [];
@@ -1132,6 +1161,8 @@ const FieldTeamPortal = () => {
         const reason = rawReasons[i] || 'N/A';
         const subReason = rawSubReasons[i] || 'N/A';
         const rootCause = rawRootCauses[i] || 'N/A';
+        const itnVal = rawItnRelated[i] || 'No';
+        const subVal = rawSubRelated[i] || 'No';
 
         // Filter out garbage tuples
         const isGarbage = (owner === 'Empty' || !owner) &&
@@ -1140,7 +1171,14 @@ const FieldTeamPortal = () => {
           (rootCause === 'N/A' || !rootCause);
 
         if (!isGarbage || i === 0) {
-          tuples.push({ owner, reason, subReason, rootCause });
+          tuples.push({
+            owner,
+            reason,
+            subReason,
+            rootCause,
+            isITN: itnVal === 'Yes' || itnVal === true,
+            isSubscription: subVal === 'Yes' || subVal === true
+          });
         }
       }
 
@@ -1151,14 +1189,15 @@ const FieldTeamPortal = () => {
         if (filters.reason && tuple.reason !== filters.reason) match = false;
         if (filters.subReason && tuple.subReason !== filters.subReason) match = false;
         if (filters.rootCause && tuple.rootCause !== filters.rootCause) match = false;
+
+        // Apply ITN/Subscription filters at the tuple level
+        if (filters.itn && !tuple.isITN) match = false;
+        if (filters.subscription && !tuple.isSubscription) match = false;
+
         return match;
       });
 
       if (!tupleMatches) return false;
-
-      // Apply ITN/Subscription filters (these are task-level, not tuple-level)
-      if (filters.itn && !splitValues(task.itnRelated).some(v => v === 'Yes' || v === true)) return false;
-      if (filters.subscription && !splitValues(task.relatedToSubscription).some(v => v === 'Yes' || v === true)) return false;
 
       return true;
     });
@@ -4265,22 +4304,23 @@ ${data.map((a, i) => `
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>TYPE</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>SLID</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>DATE</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>CATEGORY / SUMMARY</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>TYPE</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SLID</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>DATE</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>CUSTOMER / CATEGORY</TableCell>
                   {(drillDownType === 'task' || (drillDownType === 'mixed' && drillDownTab === 'tasks')) && (
                     <>
-                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>REASON/SUB</TableCell>
-                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>RC</TableCell>
-                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>OWNER</TableCell>
-                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>FEEDBACK (VERBATIM)</TableCell>
+                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>REASON</TableCell>
+                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SUB-REASON</TableCell>
+                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>RC</TableCell>
+                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>OWNER</TableCell>
+                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>FEEDBACK (VERBATIM)</TableCell>
                     </>
                   )}
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>STATUS</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>POINTS</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>SCORE / INFO</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>ACTIONS</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>STATUS</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>POINTS</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SCORE / INFO</TableCell>
+                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', fontSize: '0.75rem', py: 1 }}>ACTIONS</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -4303,20 +4343,11 @@ ${data.map((a, i) => `
                     return (
                       <TableRow
                         key={item._id || idx}
-                        onClick={() => {
-                          if (isIssue) {
-                            setSelectedDetailIssue(item);
-                            setDetailIssueOpen(true);
-                          } else {
-                            setSelectedTask(item);
-                            setViewDialogOpen(true);
-                          }
-                        }}
                         sx={{
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', cursor: 'pointer' }
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' }
                         }}
                       >
-                        <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                           <Chip
                             label={isIssue ? 'ISSUE' : 'TASK'}
                             size="small"
@@ -4324,17 +4355,41 @@ ${data.map((a, i) => `
                               bgcolor: isIssue ? `${colors.error}20` : `${colors.primary}20`,
                               color: isIssue ? colors.error : colors.primary,
                               fontWeight: 800,
-                              fontSize: '0.6rem'
+                              fontSize: '0.55rem',
+                              height: '18px'
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={{ color: '#fff', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{item.slid}</TableCell>
-                        <TableCell sx={{ color: colors.textSecondary, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{formatDate(date)}</TableCell>
-                        <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                          {isIssue ? (item.issueCategory || (item.issues?.[0]?.category) || 'Technical Issue') : (item.customerName || 'N/A')}
-                          <Typography variant="caption" sx={{ display: 'block', color: colors.textSecondary }}>
-                            {isIssue ? (item.issueDetails || item.reporterNote || item.assigneeNote || '').substring(0, 80) : item.faultDescription?.substring(0, 50)}
-                            {isIssue && (item.issueDetails || item.reporterNote || item.assigneeNote || '').length > 80 ? '...' : ''}
+                        <TableCell sx={{ py: 1, color: '#fff', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>{item.slid}</TableCell>
+                        <TableCell sx={{ py: 1, color: colors.textSecondary, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>{formatDate(date)}</TableCell>
+                        <TableCell sx={{ py: 1, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {isIssue ? (
+                              item.issueCategory || (item.issues?.[0]?.category) || 'Technical Issue'
+                            ) : (
+                              <>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff', fontSize: '0.8rem' }}>
+                                  {item.customerName || 'N/A'}
+                                </Typography>
+                                {item.customerType && (
+                                  <Chip
+                                    label={item.customerType}
+                                    size="small"
+                                    sx={{
+                                      height: '16px',
+                                      fontSize: '0.55rem',
+                                      bgcolor: 'rgba(255,255,255,0.1)',
+                                      color: colors.textSecondary,
+                                      borderRadius: '4px'
+                                    }}
+                                  />
+                                )}
+                              </>
+                            )}
+                          </Box>
+                          <Typography variant="caption" sx={{ display: 'block', color: colors.textSecondary, fontSize: '0.65rem' }}>
+                            {isIssue ? (item.issueDetails || item.reporterNote || item.assigneeNote || '').substring(0, 50) : item.faultDescription?.substring(0, 30)}
+                            {(isIssue ? (item.issueDetails || item.reporterNote || item.assigneeNote || '').length > 50 : (item.faultDescription || '').length > 30) ? '...' : ''}
                           </Typography>
                         </TableCell>
                         {!isIssue && (() => {
@@ -4365,36 +4420,36 @@ ${data.map((a, i) => `
 
                           return (
                             <>
-                              <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top' }}>
+                              <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
                                 {validTuples.map((tuple, i) => (
-                                  <Box key={i} sx={{ minHeight: '1.5em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                  <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
                                     {tuple.reason || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
                                   </Box>
                                 ))}
                               </TableCell>
-                              <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top' }}>
+                              <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
                                 {validTuples.map((tuple, i) => (
-                                  <Box key={i} sx={{ minHeight: '1.5em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                  <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
                                     {tuple.subReason || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
                                   </Box>
                                 ))}
                               </TableCell>
-                              <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top' }}>
+                              <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
                                 {validTuples.map((tuple, i) => (
-                                  <Box key={i} sx={{ minHeight: '1.5em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                  <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
                                     {tuple.rootCause || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
                                   </Box>
                                 ))}
                               </TableCell>
-                              <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top' }}>
+                              <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.7rem' }}>
                                 {validTuples.map((tuple, i) => (
-                                  <Box key={i} sx={{ minHeight: '1.5em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                  <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
                                     <Chip
                                       label={tuple.owner || 'Empty'}
                                       size="small"
                                       sx={{
-                                        height: '20px',
-                                        fontSize: '0.65rem',
+                                        height: '16px',
+                                        fontSize: '0.6rem',
                                         bgcolor: 'rgba(255,255,255,0.05)',
                                         color: tuple.owner !== 'Empty' ? '#fff' : 'rgba(255,255,255,0.3)',
                                         border: '1px solid rgba(255,255,255,0.1)'
@@ -4403,24 +4458,54 @@ ${data.map((a, i) => `
                                   </Box>
                                 ))}
                               </TableCell>
-                              <TableCell sx={{ color: `${colors.warning}cc`, borderBottom: '1px solid rgba(255,255,255,0.05)', fontStyle: 'italic', maxWidth: '250px' }}>
-                                "{item.customerFeedback || item.feedback || 'No verbatim feedback provided'}"
+                              <TableCell sx={{ py: 1, color: `${colors.warning}cc`, borderBottom: '1px solid rgba(255,255,255,0.05)', fontStyle: 'italic', maxWidth: '200px', fontSize: '0.75rem' }}>
+                                {(() => {
+                                  const feedback = item.customerFeedback || item.feedback || 'No verbatim feedback provided';
+                                  return (
+                                    <>
+                                      {feedback.substring(0, 50)}
+                                      {feedback.length > 50 && (
+                                        <Button
+                                          size="small"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedVerbatim(feedback);
+                                            setVerbatimDialogOpen(true);
+                                          }}
+                                          sx={{
+                                            textTransform: 'none',
+                                            fontSize: '0.65rem',
+                                            color: colors.primary,
+                                            ml: 1,
+                                            minWidth: 0,
+                                            p: 0,
+                                            '&:hover': { background: 'transparent', textDecoration: 'underline' }
+                                          }}
+                                        >
+                                          Read More
+                                        </Button>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </TableCell>
                             </>
                           );
                         })()}
-                        <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                           <Chip
                             label={status}
                             size="small"
                             sx={{
                               bgcolor: status === 'Solved' || status === 'Approved' ? `${colors.success}20` : status === 'Open' ? `${colors.error}20` : 'rgba(255,255,255,0.1)',
                               color: status === 'Solved' || status === 'Approved' ? colors.success : status === 'Open' ? colors.error : colors.textSecondary,
-                              fontWeight: 700
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              height: '20px'
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                           <Chip
                             label={calculateItemPoints(item, isIssue ? 'issue' : 'task')}
                             size="small"
@@ -4428,16 +4513,16 @@ ${data.map((a, i) => `
                               bgcolor: 'rgba(139, 92, 246, 0.1)',
                               color: colors.primary,
                               fontWeight: 800,
-                              borderRadius: '8px',
-                              height: '24px',
-                              fontSize: '0.75rem',
+                              borderRadius: '6px',
+                              height: '20px',
+                              fontSize: '0.7rem',
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={{ color: colors.textPrimary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <TableCell sx={{ py: 1, color: colors.textPrimary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>
                           {score}
                         </TableCell>
-                        <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                        <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
                           <MuiTooltip title="View Full Details">
                             <IconButton
                               size="small"
@@ -4453,10 +4538,11 @@ ${data.map((a, i) => `
                               }}
                               sx={{
                                 color: colors.primary,
+                                p: 0.5,
                                 '&:hover': { bgcolor: `${colors.primary}20` }
                               }}
                             >
-                              <VisibilityIcon fontSize="small" />
+                              <VisibilityIcon sx={{ fontSize: '1.1rem' }} />
                             </IconButton>
                           </MuiTooltip>
                         </TableCell>
@@ -4469,6 +4555,42 @@ ${data.map((a, i) => `
         </DialogContent>
         <DialogActions sx={{ p: 3, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <Button onClick={() => setDrillDownOpen(false)} sx={{ color: colors.textSecondary }}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Verbatim Feedback Dialog */}
+      <Dialog
+        open={verbatimDialogOpen}
+        onClose={() => setVerbatimDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            ...colors.glass,
+            bgcolor: '#1a1a1a',
+            borderRadius: '16px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            maxWidth: '500px'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: colors.warning, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          Full Customer Feedback
+        </DialogTitle>
+        <DialogContent sx={{ p: 4 }}>
+          <Typography sx={{ color: '#fff', fontStyle: 'italic', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+            "{selectedVerbatim}"
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.05)', p: 2 }}>
+          <Button
+            onClick={() => setVerbatimDialogOpen(false)}
+            sx={{
+              color: colors.primary,
+              fontWeight: 700,
+              '&:hover': { background: 'rgba(139, 92, 246, 0.1)' }
+            }}
+          >
+            Got it
+          </Button>
         </DialogActions>
       </Dialog>
 

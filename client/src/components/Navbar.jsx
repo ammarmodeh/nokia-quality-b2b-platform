@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { MdOutlineSearch, MdClose, MdMoreVert, MdChevronLeft, MdOutlineMenuOpen } from "react-icons/md";
 import { useNavigate, Link } from "react-router-dom";
 import UserAvatar from "./UserAvatar";
-import NotificationPanel from "./NotificationPanel";
 import api from "../api/api";
 import { BeatLoader } from "react-spinners";
 import { toast } from "sonner";
@@ -558,9 +557,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
         <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
-        <NotificationPanel />
 
-        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
 
         <Tooltip title="Personal Notes">
           <IconButton
