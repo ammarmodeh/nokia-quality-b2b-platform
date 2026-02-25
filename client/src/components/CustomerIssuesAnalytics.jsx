@@ -1006,7 +1006,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         data: data,
         borderColor: '#4caf50',
         borderWidth: 2,
-        tension: 0.4,
+        tension: 0,
         pointRadius: 4,
         order: 1,
         fill: trendChartType === 'line' ? { target: 'origin', above: 'rgba(76, 175, 80, 0.1)' } : false

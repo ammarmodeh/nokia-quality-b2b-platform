@@ -9,17 +9,17 @@ const customerIssueSchema = new mongoose.Schema({
     default: null
   },
   from: { type: String, required: false }, // Keep for backward compatibility
-  fromMain: { type: String, required: true },
+  fromMain: { type: String, required: false },
   fromSub: { type: String },
-  reporter: { type: String, required: true },
+  reporter: { type: String, required: false },
   reporterNote: { type: String },
   contactMethod: {
     type: String,
-    required: true
+    required: false
   },
   // issueCategory: { type: String, required: true }, // Deprecated
   issues: [{
-    category: { type: String, required: true },
+    category: { type: String, required: false },
     subCategory: { type: String }
   }],
   // REMOVED: issueDetails field
@@ -52,7 +52,7 @@ const customerIssueSchema = new mongoose.Schema({
     enum: ['Phone', 'Visit', ''],
     default: ''
   },
-  date: { type: Date, default: Date.now },
+  date: { type: Date, required: false, default: null },
   solved: {
     type: String,
     required: true,

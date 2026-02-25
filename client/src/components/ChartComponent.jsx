@@ -159,7 +159,7 @@ export const ChartComponent = ({ chartData }) => {
       },
     },
     elements: {
-      line: { tension: 0.3, borderWidth: 2.5 },
+      line: { tension: 0, borderWidth: 2.5 },
       point: { radius: 5, hoverRadius: 7, borderWidth: 2, backgroundColor: "#1e1e1e" }
     }
   };

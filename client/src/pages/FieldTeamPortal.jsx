@@ -483,7 +483,8 @@ const FieldTeamPortal = () => {
       detailedOwners: {},
       detailedReasons: {},
       detailedSubReasons: {},
-      detailedRootCauses: {}
+      detailedRootCauses: {},
+      detailedFieldTeams: {}
     };
 
     // Create a lookup map for scoring keys: Label -> Points (filtered for Task/Both by default as this processes techTasks)
@@ -593,6 +594,14 @@ const FieldTeamPortal = () => {
         updateDetail(stats.detailedReasons, reason);
         updateDetail(stats.detailedSubReasons, subReason);
         updateDetail(stats.detailedRootCauses, rootCause);
+
+        // Detailed Field Team tracking
+        if (!stats.detailedFieldTeams[fieldTeam]) {
+          stats.detailedFieldTeams[fieldTeam] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
+        }
+        stats.detailedFieldTeams[fieldTeam].total++;
+        if (isITN) stats.detailedFieldTeams[fieldTeam].itn++;
+        if (isSubscription) stats.detailedFieldTeams[fieldTeam].subscription++;
       });
 
       // Distribute points once per unique owner in the task
@@ -793,6 +802,7 @@ const FieldTeamPortal = () => {
       detailedReasons: toDetailedTableData(stats.detailedReasons),
       detailedSubReasons: toDetailedTableData(stats.detailedSubReasons),
       detailedRootCauses: toDetailedTableData(stats.detailedRootCauses),
+      detailedFieldTeams: toDetailedTableData(stats.detailedFieldTeams),
       fieldTeamAnalytics,
       totalProcessed: tasksToProcess.length,
       categoryTotals: {
@@ -800,7 +810,8 @@ const FieldTeamPortal = () => {
         reasons: Object.values(stats.byReason).reduce((a, b) => a + b, 0),
         subReasons: Object.values(stats.bySubReason).reduce((a, b) => a + b, 0),
         rootCauses: Object.values(stats.byRootCause).reduce((a, b) => a + b, 0)
-      }
+      },
+      tasks: tasksToProcess
     };
   }, [allTechnicalTasksGlobal, analyticsSubTab, timeFilterMode, recentDaysValue, selectedWeeks, selectedMonths, customDateRange, settings]);
 
@@ -862,12 +873,19 @@ const FieldTeamPortal = () => {
 
     return {
       'Type': type === 'task' ? 'NPS Ticket' : 'Customer Issue',
-      'Team Name': item.teamName,
-      'Team Company': item.teamCompany || '-',
       'SLID': item.slid,
+      'Customer': item.customerName || 'N/A',
+      'Status': item.validationStatus || (item.solved === 'yes' ? 'Solved' : 'Open'),
+
       'Governorate': item.governorate || '-',
       'District': item.district || '-',
-      'Customer': item.customerName || 'N/A',
+
+      'Score': displayScore,
+      'Satisfaction': satisfaction,
+      'Points': calculateItemPoints(item, type),
+
+      'Customer Feedback': (type === 'task' ? (item.customerFeedback || '-') : (item.reporterNote || '-')),
+      'Our Actions/Resolution': (type === 'issue' ? (item.resolutionDetails || item.assigneeNote || '-') : '-'),
 
       // Dynamic Interleaved Columns
       ...(() => {
@@ -888,11 +906,7 @@ const FieldTeamPortal = () => {
         return dynamicCols;
       })(),
 
-      'Technician': item.technician || item.primaryTechnician || '-',
-      'Status': item.validationStatus || (item.solved === 'yes' ? 'Solved' : 'Open'),
-      'Score': displayScore,
-      'Satisfaction': satisfaction,
-      'Points': calculateItemPoints(item, type),
+
       'GAIA Check': item.gaiaCheck || 'N/A',
       'GAIA Content': item.gaiaContent || '-',
       'Latest QOps Type': item.latestGaia?.transactionType || 'N/A',
@@ -905,10 +919,13 @@ const FieldTeamPortal = () => {
       'Action taken by assigned user': item.subTasks?.map((sub, index) =>
         `Step ${index + 1}: ${sub.title} - ${sub.note}`
       ).join('\n') || '',
-      'Customer Feedback': (type === 'task' ? (item.customerFeedback || '-') : (item.reporterNote || '-')),
-      'Our Actions/Resolution': (type === 'issue' ? (item.resolutionDetails || item.assigneeNote || '-') : '-'),
       'ITN Related': ((Array.isArray(item.itnRelated) && item.itnRelated.includes('Yes')) || item.itnRelated === 'Yes' || item.itnRelated === true) ? 'Yes' : 'No',
       'Subscription Related': ((Array.isArray(item.relatedToSubscription) && item.relatedToSubscription.includes('Yes')) || item.relatedToSubscription === 'Yes' || item.relatedToSubscription === true) ? 'Yes' : 'No',
+
+      'Team Name': item.teamName,
+      'Technician': item.technician || item.primaryTechnician || '-',
+      // 'Team Company': item.teamCompany || '-',
+
       'Date': new Date(item.interviewDate || item.date || item.createdAt).toLocaleDateString(),
       'Contract Date': item.contractDate ? new Date(item.contractDate).toLocaleDateString() : '-',
       'UN Date': item.unDate ? new Date(item.unDate).toLocaleDateString() : '-',
@@ -932,7 +949,7 @@ const FieldTeamPortal = () => {
     // 1. Team Summary Data with Comparative Metrics
     const summaryData = [{
       'Team Name': team.teamName,
-      'Company': team.teamCompany,
+      // 'Company': team.teamCompany,
       'Total NPS Tasks': team.totalNpsTickets,
       'NPS Detractors': team.npsDetractors,
       '% of Global Detractors': globalTotals.totalDetractors > 0 ? ((team.npsDetractors / globalTotals.totalDetractors) * 100).toFixed(1) + '%' : '0.0%',
@@ -1061,7 +1078,15 @@ const FieldTeamPortal = () => {
     wsRootCause['!cols'] = Object.keys(rootCauseRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 20) }));
     XLSX.utils.book_append_sheet(wb, wsRootCause, 'Root Cause Matrix');
 
-    // Sheet 5: Cross-Owner × Reason Contribution Matrix
+    // Sheet 5: Field Team Distribution (Offenders)
+    const teamRows = buildSheetRows(globalAnalytics.detailedFieldTeams);
+    if (teamRows.length > 0) {
+      const wsTeam = XLSX.utils.json_to_sheet(teamRows);
+      wsTeam['!cols'] = Object.keys(teamRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 25) }));
+      XLSX.utils.book_append_sheet(wb, wsTeam, 'Field Team Distribution');
+    }
+
+    // Sheet 6: Cross-Owner × Reason Contribution Matrix
     const { matrix: contribMatrix, topOwners } = globalAnalytics.contributionMatrix || {};
     if (contribMatrix && topOwners?.length > 0) {
       const reasons = Object.keys(contribMatrix);
@@ -1078,6 +1103,30 @@ const FieldTeamPortal = () => {
         wsContrib['!cols'] = Object.keys(contribRows[0]).map(k => ({ wch: Math.max(k.length + 4, 14) }));
         XLSX.utils.book_append_sheet(wb, wsContrib, 'Contribution Matrix');
       }
+    }
+
+    // Sheet 7: Detailed Offenders Log (Raw Data)
+    if (globalAnalytics.tasks?.length > 0) {
+      const detailedRows = globalAnalytics.tasks.map(t => mapItemToExcelRow(t, 'task'));
+      const wsDetailed = XLSX.utils.json_to_sheet(detailedRows);
+
+      // Auto-size columns for the detailed sheet
+      const range = XLSX.utils.decode_range(wsDetailed['!ref']);
+      const cols = [];
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        let maxLen = 10;
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+          const cell = wsDetailed[XLSX.utils.encode_cell({ r: R, c: C })];
+          if (cell && cell.v) {
+            const len = cell.v.toString().length;
+            if (len > maxLen) maxLen = len;
+          }
+        }
+        cols.push({ wch: Math.min(maxLen + 2, 60) }); // Cap at 60 for better Excel experience
+      }
+      wsDetailed['!cols'] = cols;
+
+      XLSX.utils.book_append_sheet(wb, wsDetailed, 'Detailed Offenders Log');
     }
 
     XLSX.writeFile(wb, `Analytics_Distributions_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -1482,7 +1531,7 @@ const FieldTeamPortal = () => {
         data: data,
         borderColor: '#4caf50',
         borderWidth: 2,
-        tension: 0.4,
+        tension: 0,
         pointRadius: 4,
         order: 1,
         fill: trendChartType === 'line' ? { target: 'origin', above: 'rgba(76, 175, 80, 0.1)' } : false

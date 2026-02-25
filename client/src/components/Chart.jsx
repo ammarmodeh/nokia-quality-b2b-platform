@@ -105,7 +105,7 @@ const prepareChartData = (groupedData, timeRange, settings = {}) => {
         pointBorderColor: colors[category],
         pointStyle: category === "Promoters" ? "rectRot" : "rect",
         borderWidth: 2.5,
-        tension: 0.3,
+        tension: 0,
         fill: false,
         datalabels: {
           align: category === 'NPS' ? 'top' : (category === 'Promoters' ? 'top' : (category === 'Neutrals' ? 45 : 'right')),

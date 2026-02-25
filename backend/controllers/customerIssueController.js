@@ -45,8 +45,8 @@ export const createIssue = async (req, res) => {
 
     const issueData = {
       ...req.body,
-      date: req.body.date ? new Date(req.body.date) : new Date(),
-      pisDate: req.body.pisDate ? new Date(req.body.pisDate) : new Date(),
+      date: req.body.date ? new Date(req.body.date) : (req.body.dateKnown === false ? null : new Date()),
+      pisDate: req.body.pisDate ? new Date(req.body.pisDate) : (req.body.pisDateKnown === false ? null : new Date()),
       resolveDate: (req.body.solved === 'yes' && req.body.resolveDate) ? new Date(req.body.resolveDate) : null
     };
 
@@ -220,8 +220,12 @@ export const updateIssue = async (req, res) => {
       updatedAt: new Date()
     };
 
-    if (req.body.pisDate) {
-      updateData.pisDate = new Date(req.body.pisDate);
+    if (req.body.hasOwnProperty('pisDate')) {
+      updateData.pisDate = req.body.pisDate ? new Date(req.body.pisDate) : null;
+    }
+
+    if (req.body.hasOwnProperty('date')) {
+      updateData.date = req.body.date ? new Date(req.body.date) : null;
     }
 
     if (req.body.resolveDate) {

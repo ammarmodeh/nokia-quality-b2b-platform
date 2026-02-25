@@ -341,7 +341,7 @@ const TeamStatistics = ({ team, tabValue, setTabValue, colors, prepareViolationR
         data: tasksByWeek,
         borderColor: colors.primary,
         backgroundColor: colors.primary,
-        tension: 0.1
+        tension: 0
       }]
     };
   };

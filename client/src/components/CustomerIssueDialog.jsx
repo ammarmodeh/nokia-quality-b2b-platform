@@ -87,6 +87,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     teamCode: "",
     pisDateKnown: true,
     pisDate: new Date().toISOString().split('T')[0],
+    dateKnown: true,
     date: new Date().toISOString().split('T')[0],
     solved: "no",
     assignedTo: "",
@@ -107,8 +108,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     callerDetails: "",
     callDate: "",
     isQoS: false,
-    itnRelated: "No",
-    relatedToSubscription: "No",
     scoringKeys: []
   };
 
@@ -190,6 +189,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           // Controlled Date Formatting
           pisDateKnown: issue.pisDateKnown !== undefined ? issue.pisDateKnown : !!issue.pisDate,
           pisDate: safeDate(issue.pisDate) || initialFormState.pisDate,
+          dateKnown: issue.dateKnown !== undefined ? issue.dateKnown : !!issue.date,
           date: safeDate(issue.date) || initialFormState.date,
           resolveDate: safeDate(issue.resolveDate),
           closedAt: safeDate(issue.closedAt),
@@ -211,8 +211,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           callDate: issue.callDate ? new Date(issue.callDate).toISOString().split('T')[0] : '',
 
           isQoS: issue.isQoS || false,
-          itnRelated: (Array.isArray(issue.itnRelated) ? (issue.itnRelated.includes('Yes') ? 'Yes' : 'No') : (issue.itnRelated || 'No')),
-          relatedToSubscription: (Array.isArray(issue.relatedToSubscription) ? (issue.relatedToSubscription.includes('Yes') ? 'Yes' : 'No') : (issue.relatedToSubscription || 'No')),
           scoringKeys: issue.scoringKeys || []
         };
 
@@ -227,12 +225,15 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             ...prev,
             ...parsed,
             pisDate: today, // Always default to today for new entries
+            dateKnown: true,
             date: today     // Always default to today for new entries
           }));
         } else {
           setFormData({
             ...initialFormState,
+            pisDateKnown: true,
             pisDate: today,
+            dateKnown: true,
             date: today
           });
         }
@@ -386,31 +387,9 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   };
 
   const validateForm = () => {
-    const requiredFields = [
-      { field: 'slid', label: 'SLID' },
-      { field: 'fromMain', label: 'Src (Main)' },
-      { field: 'reporter', label: 'Reporter Name' },
-      { field: 'contactMethod', label: 'Contact Method' },
-      { field: 'teamName', label: 'Team Name' }
-    ];
-
-    for (const { field, label } of requiredFields) {
-      if (!formData[field] || (typeof formData[field] === 'string' && !formData[field].trim())) {
-        alert(`${label} is required.`);
-        return false;
-      }
-    }
-
-    if (!formData.issues || formData.issues.length === 0) {
-      alert("At least one issue is required.");
+    if (!formData.slid || (typeof formData.slid === 'string' && !formData.slid.trim())) {
+      alert("SLID is required.");
       return false;
-    }
-
-    for (let i = 0; i < formData.issues.length; i++) {
-      if (!formData.issues[i].category || !formData.issues[i].category.trim()) {
-        alert(`Category for Issue ${i + 1} is required.`);
-        return false;
-      }
     }
 
     // Workflow Validation: Enforce Dispatch before Resolution
@@ -443,7 +422,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
 
     const submitData = {
       ...formData,
-      pisDate: formData.pisDateKnown ? formData.pisDate : null
+      pisDate: formData.pisDateKnown ? formData.pisDate : null,
+      date: formData.dateKnown ? formData.date : null
     };
     onSubmit(submitData, issue?._id); // Pass ID if editing
     if (!issue) localStorage.removeItem('customerIssueFormData');
@@ -642,7 +622,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   name="customerName"
                   value={formData.customerName}
                   onChange={handleChange}
-                  required
                   disabled={!isAdmin}
                   sx={textFieldStyles}
                 />
@@ -654,7 +633,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   name="customerContact"
                   value={formData.customerContact}
                   onChange={handleChange}
-                  required
                   disabled={!isAdmin}
                   sx={textFieldStyles}
                 />
@@ -700,17 +678,33 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Reported Date"
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
-                  InputLabelProps={{ shrink: true }}
-                  disabled={!isAdmin}
-                  sx={textFieldStyles}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.dateKnown}
+                        onChange={handleChange}
+                        name="dateKnown"
+                        sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                      />
+                    }
+                    label="Reported Date Known"
+                    sx={{ color: '#ffffff', minWidth: '150px' }}
+                  />
+                  {formData.dateKnown && (
+                    <TextField
+                      fullWidth
+                      label="Reported Date"
+                      type="date"
+                      name="date"
+                      value={formData.date}
+                      onChange={handleChange}
+                      InputLabelProps={{ shrink: true }}
+                      disabled={!isAdmin}
+                      sx={textFieldStyles}
+                    />
+                  )}
+                </Box>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControlLabel
@@ -730,42 +724,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   }
                   disabled={!isAdmin}
                 />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth sx={formControlStyles}>
-                  <InputLabel sx={inputLabelStyles}>ITN Related</InputLabel>
-                  <Select
-                    name="itnRelated"
-                    value={formData.itnRelated || 'No'}
-                    label="ITN Related"
-                    onChange={handleChange}
-                    disabled={!isAdmin}
-                    sx={selectStyles}
-                    MenuProps={{ PaperProps: { sx: { backgroundColor: '#2d2d2d', color: '#ffffff', '& .MuiMenuItem-root': menuItemStyles } } }}
-                  >
-                    <MenuItem value="Yes" sx={menuItemStyles}>Yes</MenuItem>
-                    <MenuItem value="No" sx={menuItemStyles}>No</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth sx={formControlStyles}>
-                  <InputLabel sx={inputLabelStyles}>Related to Current Subscription</InputLabel>
-                  <Select
-                    name="relatedToSubscription"
-                    value={formData.relatedToSubscription || 'No'}
-                    label="Related to Current Subscription"
-                    onChange={handleChange}
-                    disabled={!isAdmin}
-                    sx={selectStyles}
-                    MenuProps={{ PaperProps: { sx: { backgroundColor: '#2d2d2d', color: '#ffffff', '& .MuiMenuItem-root': menuItemStyles } } }}
-                  >
-                    <MenuItem value="Yes" sx={menuItemStyles}>Yes</MenuItem>
-                    <MenuItem value="No" sx={menuItemStyles}>No</MenuItem>
-                  </Select>
-                </FormControl>
               </Grid>
 
 
@@ -837,7 +795,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   category="ISSUE_FROM_MAIN"
                   label="Src (Main)"
                   fullWidth
-                  required
                   value={formData.fromMain}
                   onChange={(val) => handleChange({ target: { name: 'fromMain', value: val } })}
                   disabled={!isAdmin}
@@ -860,7 +817,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   category="REPORTERS"
                   label="Reporter Name"
                   fullWidth
-                  required
                   freeSolo
                   value={formData.reporter}
                   onChange={(val) => handleChange({ target: { name: 'reporter', value: val } })}
@@ -874,7 +830,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                     category="CONTACT_METHOD"
                     label="Contact Method"
                     fullWidth
-                    required
                     freeSolo
                     value={formData.contactMethod}
                     onChange={(val) => handleChange({ target: { name: 'contactMethod', value: val } })}
@@ -935,7 +890,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                           <TextField
                             {...params}
                             label={`Category ${index + 1}`}
-                            required
                             sx={textFieldStyles}
                           />
                         )}
@@ -986,7 +940,6 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                     <TextField
                       {...params}
                       label="Team Name"
-                      required
                       sx={textFieldStyles}
                     />
                   )}

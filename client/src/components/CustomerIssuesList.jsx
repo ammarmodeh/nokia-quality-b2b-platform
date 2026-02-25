@@ -36,7 +36,8 @@ import {
   Tab,
   TablePagination,
   Pagination,
-  Badge
+  Badge,
+  Autocomplete
 } from '@mui/material';
 import { FaFilePdf, FaWhatsapp } from 'react-icons/fa6';
 import { toast } from 'sonner';
@@ -154,7 +155,7 @@ const CustomerIssuesList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentIssue, setCurrentIssue] = useState(null);
-  const [viewMode, setViewMode] = useState('analytics'); // 'list' | 'grid' | 'analytics'
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid' | 'analytics'
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'resolved' | 'unresolved'
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -187,6 +188,73 @@ const CustomerIssuesList = () => {
   const [gaiaStepsDialogOpen, setGaiaStepsDialogOpen] = useState(false);
   const [gaiaStepsTask, setGaiaStepsTask] = useState(null);
   const [dropdownOptions, setDropdownOptions] = useState({});
+  const [columnFilters, setColumnFilters] = useState({
+    createdAt: '',
+    pisDate: '',
+    date: '',
+    slid: '',
+    customerName: '',
+    customerContact: '',
+    fromMain: '',
+    fromSub: '',
+    reporter: '',
+    teamName: '',
+    teamCode: '',
+    installingTeam: '',
+    issues: '',
+    assignedTo: '',
+    closedBy: '',
+    dispatched: '',
+    status: ''
+  });
+
+  const allColumnOptions = useMemo(() => {
+    const options = {};
+    const keys = [
+      'createdAt', 'pisDate', 'date', 'slid', 'customerName',
+      'customerContact', 'fromMain', 'fromSub', 'reporter',
+      'teamName', 'teamCode', 'installingTeam', 'issues',
+      'assignedTo', 'closedBy', 'dispatched', 'status'
+    ];
+
+    keys.forEach(key => {
+      const uniqueVals = new Set();
+      issues.forEach(issue => {
+        let val = '';
+        switch (key) {
+          case 'slid': val = issue.slid; break;
+          case 'customerName': val = issue.customerName; break;
+          case 'customerContact': val = issue.customerContact; break;
+          case 'fromMain': val = issue.fromMain || issue.from; break;
+          case 'fromSub': val = issue.fromSub; break;
+          case 'reporter': val = issue.reporter; break;
+          case 'teamName': val = issue.teamName; break;
+          case 'teamCode': val = issue.teamCode; break;
+          case 'installingTeam': val = issue.installingTeam; break;
+          case 'issues':
+            issue.issues?.forEach(i => uniqueVals.add(i.category));
+            return;
+          case 'assignedTo': val = issue.assignedTo; break;
+          case 'closedBy': val = issue.closedBy; break;
+          case 'dispatched': val = issue.dispatched === 'yes' ? 'yes' : 'no'; break;
+          case 'status': val = issue.solved === 'yes' ? 'closed' : 'open'; break;
+          case 'createdAt':
+            val = issue.createdAt ? new Date(issue.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+            break;
+          case 'pisDate':
+            val = issue.pisDate ? new Date(issue.pisDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+            break;
+          case 'date':
+            val = issue.date ? new Date(issue.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+            break;
+          default: break;
+        }
+        if (val) uniqueVals.add(val);
+      });
+      options[key] = Array.from(uniqueVals).filter(Boolean).sort();
+    });
+    return options;
+  }, [issues]);
 
 
   const handleChangePage = (event, newPage) => {
@@ -232,7 +300,11 @@ const CustomerIssuesList = () => {
   // Compute Latest Issue (Reported Date)
   const latestIssue = useMemo(() => {
     if (!issues || issues.length === 0) return null;
-    return [...issues].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+    return [...issues].sort((a, b) => {
+      const dateA = a.date ? new Date(a.date) : new Date(0);
+      const dateB = b.date ? new Date(b.date) : new Date(0);
+      return dateB - dateA;
+    })[0];
   }, [issues]);
 
   // Compute Latest Created Issue (System Created At)
@@ -296,12 +368,18 @@ const CustomerIssuesList = () => {
     if (startDate) {
       const start = new Date(startDate);
       start.setHours(0, 0, 0, 0);
-      filtered = filtered.filter(issue => new Date(issue.date) >= start);
+      filtered = filtered.filter(issue => {
+        if (!issue.date) return false;
+        return new Date(issue.date) >= start;
+      });
     }
     if (endDate) {
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(issue => new Date(issue.date) <= end);
+      filtered = filtered.filter(issue => {
+        if (!issue.date) return false;
+        return new Date(issue.date) <= end;
+      });
     }
 
     // Filter by Month
@@ -331,8 +409,45 @@ const CustomerIssuesList = () => {
       });
     }
 
+    // Column-specific filtering
+    if (Object.keys(columnFilters).length > 0) {
+      filtered = filtered.filter(issue => {
+        return Object.entries(columnFilters).every(([key, value]) => {
+          if (!value) return true;
+          const term = value.toLowerCase();
+
+          switch (key) {
+            case 'slid': return issue.slid?.toLowerCase().includes(term);
+            case 'customerName': return issue.customerName?.toLowerCase().includes(term);
+            case 'customerContact': return issue.customerContact?.toLowerCase().includes(term);
+            case 'fromMain': return (issue.fromMain || issue.from)?.toLowerCase().includes(term);
+            case 'fromSub': return issue.fromSub?.toLowerCase().includes(term);
+            case 'reporter': return issue.reporter?.toLowerCase().includes(term);
+            case 'teamName': return issue.teamName?.toLowerCase().includes(term);
+            case 'teamCode': return issue.teamCode?.toLowerCase().includes(term);
+            case 'installingTeam': return issue.installingTeam?.toLowerCase().includes(term);
+            case 'issues': return issue.issues?.some(i => i.category.toLowerCase().includes(term));
+            case 'assignedTo': return issue.assignedTo?.toLowerCase().includes(term);
+            case 'closedBy': return issue.closedBy?.toLowerCase().includes(term);
+            case 'dispatched': return (issue.dispatched === 'yes' ? 'yes' : 'no').includes(term);
+            case 'status': return (issue.solved === 'yes' ? 'closed' : 'open').includes(term);
+            case 'createdAt':
+              const cDate = issue.createdAt ? new Date(issue.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+              return cDate.toLowerCase().includes(term);
+            case 'pisDate':
+              const pDate = issue.pisDate ? new Date(issue.pisDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+              return pDate.toLowerCase().includes(term);
+            case 'date':
+              const rDate = issue.date ? new Date(issue.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+              return rDate.toLowerCase().includes(term);
+            default: return true;
+          }
+        });
+      });
+    }
+
     return filtered;
-  }, [issues, sourceFilter, supervisorFilter, searchTerm, startDate, endDate, monthFilter, dateTypeFilter, activeAdvSearch, advSearchFields]);
+  }, [issues, sourceFilter, supervisorFilter, searchTerm, startDate, endDate, monthFilter, dateTypeFilter, activeAdvSearch, advSearchFields, columnFilters]);
 
   useEffect(() => {
     let filtered = filteredByBaseOptions;
@@ -395,7 +510,8 @@ const CustomerIssuesList = () => {
           `/customer-issues/${id}`,
           {
             ...issueData,
-            date: new Date(issueData.date).toISOString()
+            date: issueData.date ? new Date(issueData.date).toISOString() : null,
+            pisDate: issueData.pisDate ? new Date(issueData.pisDate).toISOString() : null,
           },
           { headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` } }
         );
@@ -497,8 +613,11 @@ const CustomerIssuesList = () => {
       'Responsible Supervisor': issue.closedBy || 'N/A',
       'Close Date (Approval)': issue.closedAt ? new Date(issue.closedAt).toLocaleDateString() : 'N/A',
       'Resolution Summary': issue.resolutionDetails || '',
-      'Date Reported': new Date(issue.date).toLocaleDateString(),
-      'PIS Date': issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'
+      'ITN Related': (Array.isArray(issue.itnRelated) ? (issue.itnRelated.includes('Yes') ? 'Yes' : 'No') : (issue.itnRelated || 'No')),
+      'Subscription Related': (Array.isArray(issue.relatedToSubscription) ? (issue.relatedToSubscription.includes('Yes') ? 'Yes' : 'No') : (issue.relatedToSubscription || 'No')),
+      'Date Reported': issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A',
+      'PIS Date': issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A',
+      'Created At': issue.createdAt ? new Date(issue.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'
     })));
 
     const workbook = utils.book_new();
@@ -522,7 +641,8 @@ const CustomerIssuesList = () => {
 
       filteredIssues.forEach((issue, index) => {
         markdownContent += `## ${index + 1}. Issue - SLID: ${issue.slid}\n`;
-        markdownContent += `- **Date Reported**: ${new Date(issue.date).toLocaleDateString()}\n`;
+        markdownContent += `- **Created At**: ${issue.createdAt ? new Date(issue.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}\n`;
+        markdownContent += `- **Date Reported**: ${issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'}\n`;
         markdownContent += `- **Reporter**: ${issue.reporter || 'N/A'}\n`;
         markdownContent += `- **Area**: ${issue.area || 'N/A'}\n`;
         markdownContent += `- **Caller Name**: ${issue.callerName || 'N/A'}\n`;
@@ -600,7 +720,7 @@ const CustomerIssuesList = () => {
     formattedMessage += `\n`;
 
     formattedMessage += `*📅 Timeline*\n`;
-    formattedMessage += `Reported: ${new Date(issue.date).toLocaleDateString()}\n`;
+    formattedMessage += `Reported: ${issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'}\n`;
     if (issue.pisDate) formattedMessage += `PIS Date: ${new Date(issue.pisDate).toLocaleDateString()}\n`;
     if (issue.dispatched === 'yes') {
       formattedMessage += `Dispatched: ${issue.dispatchedAt ? new Date(issue.dispatchedAt).toLocaleDateString() : 'Yes'}\n`;
@@ -688,6 +808,79 @@ const CustomerIssuesList = () => {
   }
 
 
+
+  const handleColumnFilterChange = (column, value) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [column]: value
+    }));
+    setPage(0);
+  };
+
+  const renderFilterInput = (column, placeholder = "Filter...") => (
+    <Autocomplete
+      freeSolo
+      size="small"
+      options={allColumnOptions[column] || []}
+      value={columnFilters[column] || ''}
+      onInputChange={(event, newValue) => {
+        handleColumnFilterChange(column, newValue);
+      }}
+      onChange={(event, newValue) => {
+        handleColumnFilterChange(column, newValue || '');
+      }}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          variant="standard"
+          placeholder={placeholder}
+          onClick={(e) => e.stopPropagation()}
+          sx={{
+            '& .MuiInput-root': {
+              fontSize: '0.65rem',
+              color: '#ffffff',
+              '&:before': { borderBottomColor: 'rgba(255,255,255,0.1)' },
+              '&:after': { borderBottomColor: '#7b68ee' },
+            },
+            '& .MuiInput-input': {
+              padding: '2px 0 2px 0 !important',
+              '&::placeholder': { color: 'rgba(255,255,255,0.3)', opacity: 1 }
+            }
+          }}
+        />
+      )}
+      PaperProps={{
+        sx: {
+          backgroundColor: '#2d2d2d',
+          color: '#ffffff',
+          fontSize: '0.75rem',
+          '& .MuiAutocomplete-option': {
+            padding: '4px 8px',
+            '&[aria-selected="true"]': {
+              backgroundColor: 'rgba(123, 104, 238, 0.2)',
+            },
+            '&.Mui-focused': {
+              backgroundColor: 'rgba(123, 104, 238, 0.1)',
+            }
+          }
+        }
+      }}
+      sx={{
+        mt: 0.5,
+        width: '100%',
+        '& .MuiAutocomplete-clearIndicator': {
+          color: 'rgba(255,255,255,0.5)',
+          padding: 0,
+          '& .MuiSvgIcon-root': { fontSize: '0.8rem' }
+        },
+        '& .MuiAutocomplete-popupIndicator': {
+          color: 'rgba(255,255,255,0.5)',
+          padding: 0,
+          '& .MuiSvgIcon-root': { fontSize: '0.8rem' }
+        }
+      }}
+    />
+  );
 
   return (
     <Box sx={{
@@ -1037,8 +1230,8 @@ const CustomerIssuesList = () => {
             border: '1px solid #3d3d3d'
           }}>
             {[
-              { id: 'analytics', icon: <MdBarChart />, label: 'Analytics' },
               { id: 'list', icon: <MdViewList />, label: 'List' },
+              { id: 'analytics', icon: <MdBarChart />, label: 'Analytics' },
               { id: 'grid', icon: <MdViewModule />, label: 'Grid' }
             ].map((mode) => (
               <Tooltip key={mode.id} title={mode.label}>
@@ -1242,56 +1435,78 @@ const CustomerIssuesList = () => {
             overflowX: 'auto',
             flex: 1,
             width: "100%",
-            border: 0,
+            border: "1px solid #3d3d3d",
+            borderRadius: "12px",
             color: "#ffffff",
+            maxHeight: "calc(100vh - 350px)", // Advanced sticky scroll
             "&.MuiTableContainer-root": {
-              backgroundColor: '#2d2d2d',
+              backgroundColor: '#1e1e1e',
             },
             "& .MuiTable-root": {
-              backgroundColor: "#2d2d2d",
+              backgroundColor: "#1e1e1e",
+              borderCollapse: 'separate',
+              borderSpacing: 0,
             },
             "& .MuiTableHead-root": {
-              backgroundColor: "#2d2d2d",
+              position: 'sticky',
+              top: 0,
+              zIndex: 3,
               "& .MuiTableCell-root": {
                 color: "#b3b3b3",
-                fontSize: "0.875rem",
-                fontWeight: "bold",
-                borderBottom: "1px solid #e5e7eb",
+                fontSize: "0.72rem",
+                fontWeight: "800",
+                textTransform: 'uppercase',
+                letterSpacing: '0.8px',
+                borderBottom: "2px solid #3d3d3d",
+                whiteSpace: "nowrap",
+                padding: "10px 14px",
+                backgroundColor: "rgba(30, 30, 30, 0.95)", // Glassmorphism base
+                backdropFilter: "blur(8px)", // Advanced effect
               }
             },
             "& .MuiTableBody-root": {
               "& .MuiTableCell-root": {
-                borderBottom: "1px solid #e5e7eb",
+                borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
                 color: "#ffffff",
-                maxWidth: "180px", // Increased slightly for visibility
+                fontSize: "0.8rem",
+                padding: "6px 12px", // Compact padding
+                maxWidth: "180px",
               },
               "& .MuiTableRow-root": {
-                backgroundColor: "#2d2d2d",
+                backgroundColor: "transparent",
                 "&:hover": {
-                  backgroundColor: "#2d2d2d",
+                  backgroundColor: "rgba(123, 104, 238, 0.08)",
                 },
+                "&:nth-of-type(even)": {
+                  backgroundColor: "rgba(255, 255, 255, 0.01)",
+                }
               }
             },
             "& .MuiPaper-root": {
               backgroundColor: "transparent",
               boxShadow: "none",
             },
+            // Custom Scrollbar
             "&::-webkit-scrollbar": {
-              width: "8px",
-              height: "8px",
+              width: "6px",
+              height: "6px",
             },
             "&::-webkit-scrollbar-thumb": {
-              backgroundColor: "#666",
-              borderRadius: "4px",
+              backgroundColor: "#3d3d3d",
+              borderRadius: "10px",
+              "&:hover": { backgroundColor: "#4d4d4d" }
             },
             "&::-webkit-scrollbar-track": {
-              backgroundColor: "#e5e7eb",
+              backgroundColor: "transparent",
             },
           }}>
-            <Table size={isMobile ? 'small' : 'medium'}>
+            <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ pl: 3 }}>SLID</TableCell>
+                  <TableCell sx={{ pl: 3 }}>Created At</TableCell>
+                  <TableCell>PIS Date</TableCell>
+                  <TableCell>Report Date</TableCell>
+                  <TableCell>SLID</TableCell>
                   <TableCell>Customer</TableCell>
                   <TableCell>Contact</TableCell>
                   <Hidden smDown>
@@ -1315,10 +1530,67 @@ const CustomerIssuesList = () => {
                     <TableCell>Assignee Note</TableCell>
                   </Hidden>
                   <TableCell>Status</TableCell>
-                  <Hidden xsDown>
-                    <TableCell>Report Date</TableCell>
+                  <TableCell
+                    sx={{
+                      pr: 3,
+                      textAlign: 'right',
+                      position: 'sticky',
+                      right: 0,
+                      zIndex: 10,
+                      backgroundColor: "#111111 !important",
+                      boxShadow: "-4px 0 12px rgba(0,0,0,0.5)",
+                      "&::before": {
+                        content: '""',
+                        position: 'absolute',
+                        left: -1,
+                        top: 0,
+                        bottom: 0,
+                        width: '1px',
+                        backgroundColor: 'rgba(255,255,255,0.1)'
+                      }
+                    }}
+                  >
+                    Actions
+                  </TableCell>
+                </TableRow>
+                <TableRow sx={{ backgroundColor: "rgba(30, 30, 30, 0.98)" }}>
+                  <TableCell sx={{ pl: 3 }}>{renderFilterInput('createdAt')}</TableCell>
+                  <TableCell>{renderFilterInput('pisDate')}</TableCell>
+                  <TableCell>{renderFilterInput('date')}</TableCell>
+                  <TableCell>{renderFilterInput('slid')}</TableCell>
+                  <TableCell>{renderFilterInput('customerName')}</TableCell>
+                  <TableCell>{renderFilterInput('customerContact')}</TableCell>
+                  <Hidden smDown>
+                    <TableCell>{renderFilterInput('fromMain')}</TableCell>
+                    <TableCell>{renderFilterInput('fromSub')}</TableCell>
                   </Hidden>
-                  <TableCell sx={{ pr: 3, textAlign: 'right' }}>Actions</TableCell>
+                  <TableCell>{renderFilterInput('reporter')}</TableCell>
+                  <Hidden smDown>
+                    <TableCell>{renderFilterInput('teamName')}</TableCell>
+                    <TableCell>{renderFilterInput('teamCode')}</TableCell>
+                    <TableCell>{renderFilterInput('installingTeam')}</TableCell>
+                  </Hidden>
+                  <TableCell>{renderFilterInput('issues')}</TableCell>
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
+                  <Hidden mdDown>
+                    <TableCell>{renderFilterInput('assignedTo')}</TableCell>
+                    <TableCell>{renderFilterInput('closedBy')}</TableCell>
+                    <TableCell>{renderFilterInput('dispatched')}</TableCell>
+                    <TableCell></TableCell>
+                  </Hidden>
+                  <TableCell>{renderFilterInput('status')}</TableCell>
+                  <TableCell
+                    sx={{
+                      pr: 3,
+                      position: 'sticky',
+                      right: 0,
+                      zIndex: 10,
+                      backgroundColor: "#111111 !important",
+                      boxShadow: "-4px 0 12px rgba(0,0,0,0.5)",
+                    }}
+                  ></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1331,7 +1603,16 @@ const CustomerIssuesList = () => {
                         transition: 'background-color 0.2s',
                       }}
                     >
-                      <TableCell sx={{ pl: 3, fontWeight: 500, color: '#7b68ee !important' }}>{issue.slid}</TableCell>
+                      <TableCell sx={{ pl: 3, fontSize: '0.85rem' }}>
+                        {issue.createdAt ? new Date(issue.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.85rem' }}>
+                        {issue.pisDate ? new Date(issue.pisDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.85rem' }}>
+                        {issue.date ? new Date(issue.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 500, color: '#7b68ee !important' }}>{issue.slid}</TableCell>
                       <TableCell>
                         <TruncatedCell value={issue.customerName} label="Customer Name" theme={theme} />
                       </TableCell>
@@ -1369,11 +1650,16 @@ const CustomerIssuesList = () => {
                                 label={i.category}
                                 size="small"
                                 sx={{
-                                  height: 20,
-                                  fontSize: '0.7rem',
-                                  backgroundColor: 'rgba(123, 104, 238, 0.1)',
+                                  height: 18,
+                                  fontSize: '0.65rem',
+                                  fontWeight: 700,
+                                  backgroundColor: 'rgba(123, 104, 238, 0.08)',
                                   color: '#7b68ee',
-                                  border: '1px solid rgba(123, 104, 238, 0.2)'
+                                  border: '1px solid rgba(123, 104, 238, 0.2)',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(123, 104, 238, 0.15)',
+                                    borderColor: '#7b68ee'
+                                  }
                                 }}
                               />
                             ))}
@@ -1409,24 +1695,27 @@ const CustomerIssuesList = () => {
                       <TableCell>
                         <Button
                           size="small"
-                          variant="outlined"
+                          variant="text"
+                          startIcon={<MdHistory size={14} />}
                           onClick={(e) => {
                             e.stopPropagation();
                             setGaiaStepsTask(issue);
                             setGaiaStepsDialogOpen(true);
                           }}
                           sx={{
-                            fontSize: '0.7rem',
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
                             textTransform: 'none',
-                            borderColor: '#7b68ee',
                             color: '#7b68ee',
+                            padding: '2px 8px',
+                            minWidth: 'auto',
                             '&:hover': {
-                              borderColor: '#6854d9',
-                              backgroundColor: 'rgba(123, 104, 238, 0.08)'
+                              backgroundColor: 'rgba(123, 104, 238, 0.1)',
+                              textDecoration: 'underline'
                             }
                           }}
                         >
-                          View Log
+                          View Steps
                         </Button>
                       </TableCell>
                       <Hidden mdDown>
@@ -1469,11 +1758,28 @@ const CustomerIssuesList = () => {
                         />
                       </TableCell>
                       <Hidden xsDown>
-                        <TableCell sx={{ fontSize: '0.85rem', color: '#b3b3b3' }}>
-                          {new Date(issue.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                        </TableCell>
                       </Hidden>
-                      <TableCell sx={{ pr: 3, textAlign: 'right' }}>
+                      <TableCell
+                        sx={{
+                          pr: 3,
+                          textAlign: 'right',
+                          position: 'sticky',
+                          right: 0,
+                          zIndex: 5,
+                          backgroundColor: "#111111 !important",
+                          borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                          boxShadow: "-4px 0 12px rgba(0,0,0,0.5)",
+                          "&::before": {
+                            content: '""',
+                            position: 'absolute',
+                            left: -1,
+                            top: 0,
+                            bottom: 0,
+                            width: '1px',
+                            backgroundColor: 'rgba(255,255,255,0.1)'
+                          }
+                        }}
+                      >
                         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                           {(issue.teamName || issue.installingTeam) && (
                             <Tooltip title="Contact Team via WhatsApp">
@@ -1533,14 +1839,24 @@ const CustomerIssuesList = () => {
             </Table>
           </TableContainer>
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
+            rowsPerPageOptions={[5, 10, 25, 50]}
             component="div"
             count={filteredIssues.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
-            sx={{ color: '#ffffff', '.MuiTablePagination-selectIcon': { color: '#ffffff' } }}
+            sx={{
+              color: '#b3b3b3',
+              borderTop: '1px solid #3d3d3d',
+              backgroundColor: '#1e1e1e',
+              borderBottomLeftRadius: '12px',
+              borderBottomRightRadius: '12px',
+              '& .MuiTablePagination-selectIcon': { color: '#ffffff' },
+              '& .MuiTablePagination-actions': { color: '#ffffff' },
+              '& .MuiTablePagination-select': { color: '#ffffff' },
+              '& .MuiTablePagination-displayedRows': { color: '#ffffff', fontWeight: 600 }
+            }}
           />
         </>
       ) : (

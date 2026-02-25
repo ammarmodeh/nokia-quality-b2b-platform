@@ -262,7 +262,7 @@ const AdvancedStatsDialog = ({
         data: counts,
         borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
         backgroundColor: `hsla(${Math.random() * 360}, 70%, 50%, 0.1)`,
-        tension: 0.1,
+        tension: 0,
         fill: true
       };
     });
@@ -321,7 +321,7 @@ const AdvancedStatsDialog = ({
           data,
           borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
           backgroundColor: `hsla(${Math.random() * 360}, 70%, 50%, 0.1)`,
-          tension: 0.1,
+          tension: 0,
           fill: true
         };
       })

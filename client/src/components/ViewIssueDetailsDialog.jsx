@@ -88,7 +88,7 @@ const DetailItem = ({ icon: Icon, label, value }) => (
 
 const StatusTimeline = ({ issue }) => {
   const steps = [
-    { label: 'Reported', date: issue.date || issue.createdAt, icon: MdEvent, color: colors.timeline.reported, active: true },
+    { label: 'Reported', date: issue.date || issue.createdAt, icon: MdEvent, color: colors.timeline.reported, active: !!issue.date },
     { label: 'Dispatched', date: issue.dispatchedAt || (issue.dispatched === 'yes' ? (issue.date || issue.createdAt) : null), icon: MdTimeline, color: colors.timeline.dispatched, active: issue.dispatched === 'yes' },
     { label: 'Resolved', date: issue.resolveDate, icon: MdCheckCircle, color: colors.timeline.resolved, active: !!issue.resolveDate || issue.solved === 'yes' },
     { label: 'Closed', date: issue.closedAt, icon: MdOutlineDoneAll, color: colors.timeline.closed, active: !!issue.closedAt || issue.solved === 'yes' }
@@ -132,7 +132,7 @@ const StatusTimeline = ({ issue }) => {
                 {step.label}
               </Typography>
               <Typography variant="caption" sx={{ fontSize: '0.65rem', color: colors.textSecondary }}>
-                {step.date ? format(new Date(step.date), 'MMM dd') : '--'}
+                {step.date && step.active ? format(new Date(step.date), 'MMM dd') : '--'}
               </Typography>
             </Box>
           </Grid>
@@ -182,7 +182,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
       Resolve Date: ${issue.resolveDate ? new Date(issue.resolveDate).toLocaleString() : 'N/A'}
       Supervisor: ${issue.closedBy || 'N/A'}
       Resolution Details: ${issue.resolutionDetails || 'N/A'}
-      Date Reported: ${new Date(issue.date || issue.createdAt).toLocaleString()}
+      Date Reported: ${issue.date ? new Date(issue.date).toLocaleString() : 'Unknown'}
       PIS Date: ${issue.pisDate ? new Date(issue.pisDate).toLocaleDateString() : 'N/A'}`;
 
     navigator.clipboard.writeText(detailsText)
@@ -214,7 +214,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
     formattedMessage += `\n`;
 
     formattedMessage += `*📅 Timeline*\n`;
-    formattedMessage += `Reported: ${new Date(issue.date || issue.createdAt).toLocaleDateString()}\n`;
+    formattedMessage += `Reported: ${issue.date ? new Date(issue.date).toLocaleDateString() : 'Unknown'}\n`;
     if (issue.pisDate) formattedMessage += `PIS Date: ${new Date(issue.pisDate).toLocaleDateString()}\n`;
     if (issue.dispatched === 'yes') {
       formattedMessage += `Dispatched: ${issue.dispatchedAt ? new Date(issue.dispatchedAt).toLocaleDateString() : 'Yes'}\n`;
@@ -382,6 +382,8 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
                 <DetailItem icon={MdOutlineEngineering} label="Installing Team" value={issue.installingTeam} />
                 <DetailItem icon={MdAssignmentInd} label="Assigned User" value={issue.assignedTo} />
                 <DetailItem icon={MdOutlineDescription} label="Assignee Note" value={issue.assigneeNote} />
+                <DetailItem icon={MdInfo} label="ITN Related" value={Array.isArray(issue.itnRelated) ? (issue.itnRelated.includes('Yes') ? 'Yes' : 'No') : (issue.itnRelated || 'No')} />
+                <DetailItem icon={MdInfo} label="Subscription Related" value={Array.isArray(issue.relatedToSubscription) ? (issue.relatedToSubscription.includes('Yes') ? 'Yes' : 'No') : (issue.relatedToSubscription || 'No')} />
               </Stack>
             </Paper>
           </Grid>

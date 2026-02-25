@@ -178,7 +178,7 @@ const TrendStatistics = ({ tasks }) => {
         data: data[selectedMetric] || [],
         borderColor: colors[index % colors.length],
         backgroundColor: colors[index % colors.length] + '33',
-        tension: 0.3,
+        tension: 0,
         pointRadius: 4,
         pointHoverRadius: 6,
       };
