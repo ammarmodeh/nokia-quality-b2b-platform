@@ -322,7 +322,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
                 <FaPoll size={20} />
               </Box>
               <Box>
-                <Typography variant="h6" fontWeight="800">NPS Performance</Typography>
+                <Typography variant="h6" fontWeight="800">NPS Performance (FTTH Installations)</Typography>
                 {/* <Typography variant="caption" color="textSecondary">Interactive Sentiment Scoring</Typography> */}
               </Box>
             </Stack>

@@ -318,7 +318,7 @@ const Dashboard = () => {
         {/* Key Metrics Cards */}
         <Box mb={5}>
           <Suspense fallback={<MoonLoader color="#3b82f6" size={30} />}>
-            <Card tasks={tasks} setUpdateTasksList={setUpdateTasksList} />
+            <Card tasks={tasks} samplesData={samplesData} setUpdateTasksList={setUpdateTasksList} />
           </Suspense>
         </Box>
 

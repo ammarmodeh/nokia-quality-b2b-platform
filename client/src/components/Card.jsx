@@ -143,7 +143,7 @@ function countStatuses(tasks = []) {
   };
 }
 
-const Card = ({ tasks = [], setUpdateTasksList }) => {
+const Card = ({ tasks = [], samplesData = [], setUpdateTasksList }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -235,6 +235,11 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
 
 
 
+  const totalSamples = samplesData?.reduce((acc, curr) => acc + (curr.sampleSize || 0), 0) || 0;
+  const violationPercentage = totalSamples > 0 ? ((tasks.length / totalSamples) * 100).toFixed(2) : 0;
+  const detractorPercentage = totalSamples > 0 ? ((counts.Detractor / totalSamples) * 100).toFixed(2) : 0;
+  const neutralPercentage = totalSamples > 0 ? ((counts.Neutral / totalSamples) * 100).toFixed(2) : 0;
+
   const stats = [
     {
       _id: "1",
@@ -246,6 +251,8 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
         { label: "Todo", count: counts.Todo, color: "text-blue-200" },
         { label: "Validated", count: counts.Validated, color: "text-green-300" },
         { label: "Pending", count: counts.Pending, color: "text-orange-300" },
+        { label: "Total Samples", count: totalSamples, color: "text-indigo-200" },
+        { label: "Violation %", count: `${violationPercentage}%`, color: "text-yellow-200" },
       ],
       extraStats: [
         { label: "Top Reasons", values: totalStats.reasons.top3, allData: totalStats.reasons.all },
@@ -266,6 +273,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
         { label: "Todo", count: counts.DetractorTodo, color: "text-red-200" },
         { label: "In Progress", count: counts.DetractorInProgress, color: "text-red-100" },
         { label: "Closed", count: counts.DetractorClosed, color: "text-green-300" },
+        { label: "Detractor %", count: `${detractorPercentage}%`, color: "text-yellow-200" },
       ],
       extraStats: [
         { label: "Top Reasons", values: detractorStats.reasons.top3, allData: detractorStats.reasons.all },
@@ -286,6 +294,7 @@ const Card = ({ tasks = [], setUpdateTasksList }) => {
         { label: "Todo", count: counts.NeutralTodo, color: "text-yellow-200" },
         { label: "In Progress", count: counts.NeutralInProgress, color: "text-yellow-100" },
         { label: "Closed", count: counts.NeutralClosed, color: "text-green-300" },
+        { label: "Neutral %", count: `${neutralPercentage}%`, color: "text-indigo-200" },
       ],
       extraStats: [
         { label: "Top Reasons", values: neutralStats.reasons.top3, allData: neutralStats.reasons.all },
