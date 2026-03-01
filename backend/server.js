@@ -49,28 +49,33 @@ app.use((req, res, next) => {
 // CORS configuration
 // ------------------------------------------------------------------
 const allowedOrigins = [
-  process.env.FRONTEND_URL, // e.g. https://nokia-quality-b2b-platform.vercel.app
+  process.env.FRONTEND_URL,
   "https://nokia-quality-b2b-platform-bfrq.vercel.app",
-];
+  "http://localhost:5173",
+].filter(Boolean);
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or local development if needed)
+    // Allow requests with no origin (like mobile apps or local development)
     if (!origin) return callback(null, true);
 
     // Dynamic verification for Nokia Quality Vercel domains
-    const isVercelDomain = origin.endsWith(".vercel.app") && origin.includes("nokia-quality");
+    const isVercelDomain = origin.endsWith(".vercel.app") && (origin.includes("nokia-quality") || origin.includes("-bfrq"));
 
     if (allowedOrigins.includes(origin) || isVercelDomain) {
       callback(null, true);
     } else {
       console.warn(`[CORS] Blocked Origin: ${origin}`);
-      callback(new Error(`Not allowed by CORS: ${origin}`));
+      // Instead of failing the request with an error, we can just not set the headers
+      // or we can allow it in development.
+      callback(null, false);
     }
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 // Explicitly handle pre-flight OPTIONS requests
@@ -149,7 +154,7 @@ process.on('uncaughtException', (error) => {
   // Don't exit the process, just log the error
 });
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
