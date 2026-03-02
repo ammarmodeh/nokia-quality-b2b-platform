@@ -51,7 +51,7 @@ app.use((req, res, next) => {
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   "https://nokia-quality-b2b-platform-bfrq.vercel.app",
-  "http://localhost:5173",
+  "http://localhost:3000",
 ].filter(Boolean);
 
 const corsOptions = {
