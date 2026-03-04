@@ -97,10 +97,13 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     customerContact: '',
     assigneeNote: '',
     resolvedBy: '',
+    resolveDateKnown: true,
     resolveDate: '',
     closedBy: "",
+    closedAtKnown: true,
     closedAt: "",
     dispatched: "no",
+    dispatchedAtKnown: true,
     dispatchedAt: "",
     resolutionDetails: "",
     area: "",
@@ -191,8 +194,11 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           pisDate: safeDate(issue.pisDate) || initialFormState.pisDate,
           dateKnown: issue.dateKnown !== undefined ? issue.dateKnown : !!issue.date,
           date: safeDate(issue.date) || initialFormState.date,
+          resolveDateKnown: issue.resolveDateKnown !== undefined ? issue.resolveDateKnown : !!issue.resolveDate,
           resolveDate: safeDate(issue.resolveDate),
+          closedAtKnown: issue.closedAtKnown !== undefined ? issue.closedAtKnown : !!issue.closedAt,
           closedAt: safeDate(issue.closedAt),
+          dispatchedAtKnown: issue.dispatchedAtKnown !== undefined ? issue.dispatchedAtKnown : !!issue.dispatchedAt,
           dispatchedAt: safeDate(issue.dispatchedAt),
 
           // Status fields
@@ -398,16 +404,16 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
         alert("CRITICAL: Issue must be marked as 'Dispatched' before it can be 'Closed'.");
         return false;
       }
-      if (!formData.dispatchedAt) {
-        alert("CRITICAL: Dispatched Date is required before closing an issue.");
+      if (formData.dispatchedAtKnown && !formData.dispatchedAt) {
+        alert("Dispatched Date is required if 'Known' is checked.");
         return false;
       }
-      if (!formData.resolveDate) {
-        alert("Field Resolution Date is required.");
+      if (formData.resolveDateKnown && !formData.resolveDate) {
+        alert("Field Resolution Date is required if 'Known' is checked.");
         return false;
       }
-      if (!formData.closedAt) {
-        alert("Close Date (Supervisor Approval) is required.");
+      if (formData.closedAtKnown && !formData.closedAt) {
+        alert("Close Date (Supervisor Approval) is required if 'Known' is checked.");
         return false;
       }
     }
@@ -423,7 +429,10 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     const submitData = {
       ...formData,
       pisDate: formData.pisDateKnown ? formData.pisDate : null,
-      date: formData.dateKnown ? formData.date : null
+      date: formData.dateKnown ? formData.date : null,
+      dispatchedAt: formData.dispatchedAtKnown ? formData.dispatchedAt : null,
+      resolveDate: formData.resolveDateKnown ? formData.resolveDate : null,
+      closedAt: formData.closedAtKnown ? formData.closedAt : null
     };
     onSubmit(submitData, issue?._id); // Pass ID if editing
     if (!issue) localStorage.removeItem('customerIssueFormData');
@@ -1030,17 +1039,33 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               </Grid>
               <Grid item xs={12} sm={4}>
                 {formData.dispatched === 'yes' && (
-                  <TextField
-                    fullWidth
-                    label="Dispatched Date"
-                    type="date"
-                    name="dispatchedAt"
-                    value={formData.dispatchedAt || ''}
-                    onChange={handleChange}
-                    InputLabelProps={{ shrink: true }}
-                    disabled={!isAdmin}
-                    sx={textFieldStyles}
-                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={formData.dispatchedAtKnown}
+                          onChange={handleChange}
+                          name="dispatchedAtKnown"
+                          sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                        />
+                      }
+                      label="Dispatched Date Known"
+                      sx={{ color: '#ffffff', minWidth: '150px' }}
+                    />
+                    {formData.dispatchedAtKnown && (
+                      <TextField
+                        fullWidth
+                        label="Dispatched Date"
+                        type="date"
+                        name="dispatchedAt"
+                        value={formData.dispatchedAt || ''}
+                        onChange={handleChange}
+                        InputLabelProps={{ shrink: true }}
+                        disabled={!isAdmin}
+                        sx={textFieldStyles}
+                      />
+                    )}
+                  </Box>
                 )}
               </Grid>
               <Grid item xs={12} sm={4}>
@@ -1101,35 +1126,67 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               </Grid>
               <Grid item xs={12} sm={4}>
                 {formData.solved === 'yes' && (
-                  <TextField
-                    fullWidth
-                    label="Close Date"
-                    type="date"
-                    name="closedAt"
-                    value={formData.closedAt || ''}
-                    onChange={handleChange}
-                    InputLabelProps={{ shrink: true }}
-                    disabled={!isAdmin}
-                    sx={textFieldStyles}
-                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={formData.closedAtKnown}
+                          onChange={handleChange}
+                          name="closedAtKnown"
+                          sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                        />
+                      }
+                      label="Close Date Known"
+                      sx={{ color: '#ffffff', minWidth: '150px' }}
+                    />
+                    {formData.closedAtKnown && (
+                      <TextField
+                        fullWidth
+                        label="Close Date"
+                        type="date"
+                        name="closedAt"
+                        value={formData.closedAt || ''}
+                        onChange={handleChange}
+                        InputLabelProps={{ shrink: true }}
+                        disabled={!isAdmin}
+                        sx={textFieldStyles}
+                      />
+                    )}
+                  </Box>
                 )}
               </Grid>
               {formData.solved === 'yes' && (
                 <>
                   <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Field Resolution Date"
-                      type="date"
-                      name="resolveDate"
-                      value={formData.resolveDate || ''}
-                      onChange={handleChange}
-                      InputLabelProps={{ shrink: true }}
-                      required
-                      disabled={!isAdmin}
-                      sx={textFieldStyles}
-                      helperText="When field team finished work"
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={formData.resolveDateKnown}
+                            onChange={handleChange}
+                            name="resolveDateKnown"
+                            sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                          />
+                        }
+                        label="Resolution Date Known"
+                        sx={{ color: '#ffffff', minWidth: '150px' }}
+                      />
+                      {formData.resolveDateKnown && (
+                        <TextField
+                          fullWidth
+                          label="Field Resolution Date"
+                          type="date"
+                          name="resolveDate"
+                          value={formData.resolveDate || ''}
+                          onChange={handleChange}
+                          InputLabelProps={{ shrink: true }}
+                          required
+                          disabled={!isAdmin}
+                          sx={textFieldStyles}
+                          helperText="When field team finished work"
+                        />
+                      )}
+                    </Box>
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField

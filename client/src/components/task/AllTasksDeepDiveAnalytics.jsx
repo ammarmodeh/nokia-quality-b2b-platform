@@ -298,8 +298,14 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
     // Helper functions
     const getFlatValues = (task, field) => {
         const val = task[field];
-        if (Array.isArray(val)) return val.length > 0 ? val : ['Unknown'];
-        if (val && typeof val === 'string' && val.trim()) return [val.trim()];
+        if (Array.isArray(val)) {
+            const flattened = val.flatMap(v => (typeof v === 'string' ? v.split(',').map(s => s.trim()) : v)).filter(Boolean);
+            return flattened.length > 0 ? flattened : ['Unknown'];
+        }
+        if (val && typeof val === 'string' && val.trim()) {
+            return val.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        if (val) return [val];
         return ['Unknown'];
     };
 

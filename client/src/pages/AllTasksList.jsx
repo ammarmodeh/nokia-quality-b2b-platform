@@ -624,12 +624,24 @@ const AllTasksList = () => {
     const sourceData = filteredTasks;
     if (!sourceData.length) return { reason: [], subReason: [], rootCause: [] };
 
-    // Helper to count frequencies
+    // Helper to count frequencies — handles arrays and comma-separated strings
     const count = (key) => {
       const map = {};
       sourceData.forEach(t => {
-        const val = t[key] || 'Unknown';
-        map[val] = (map[val] || 0) + 1;
+        const val = t[key];
+        let values = [];
+        if (Array.isArray(val)) {
+          values = val.flatMap(v => (typeof v === 'string' ? v.split(',').map(s => s.trim()) : [v])).filter(Boolean);
+        } else if (typeof val === 'string' && val.trim()) {
+          values = val.split(',').map(s => s.trim()).filter(Boolean);
+        } else if (val) {
+          values = [val];
+        }
+        if (values.length === 0) {
+          map['Unknown'] = (map['Unknown'] || 0) + 1;
+        } else {
+          values.forEach(v => { map[v] = (map[v] || 0) + 1; });
+        }
       });
       return Object.entries(map)
         .map(([name, value]) => ({ name, value }))
@@ -937,14 +949,30 @@ const AllTasksList = () => {
     const getCountsWithPercent = (field) => {
       const counts = {};
       filteredTasks.forEach(t => {
-        const val = t[field] || 'Unknown';
-        counts[val] = (counts[val] || 0) + 1;
+        const val = t[field];
+        // Distribute logic: handle arrays and comma-separated strings
+        let values = [];
+        if (Array.isArray(val)) {
+          values = val.flatMap(v => (typeof v === 'string' ? v.split(',').map(s => s.trim()) : [v])).filter(Boolean);
+        } else if (typeof val === 'string' && val.trim()) {
+          values = val.split(',').map(s => s.trim()).filter(Boolean);
+        } else if (val) {
+          values = [val];
+        }
+        if (values.length === 0) {
+          counts['Unknown'] = (counts['Unknown'] || 0) + 1;
+        } else {
+          values.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+        }
       });
+
+      const totalDistributed = Object.values(counts).reduce((acc, curr) => acc + curr, 0);
+
       return Object.entries(counts)
         .map(([name, count]) => ({
           Name: name,
           Count: count,
-          Percentage: totalTasks > 0 ? `${((count / totalTasks) * 100).toFixed(1)}%` : "0%"
+          Percentage: totalDistributed > 0 ? `${((count / totalDistributed) * 100).toFixed(1)}%` : "0%"
         }))
         .sort((a, b) => b.Count - a.Count);
     };
@@ -1042,7 +1070,7 @@ const AllTasksList = () => {
         'Reasons': Array.isArray(task.reason) ? task.reason.join(', ') : (task.reason || 'N/A'),
         'Sub-Reasons': Array.isArray(task.subReason) ? task.subReason.join(', ') : (task.subReason || 'N/A'),
         'Root Causes': Array.isArray(task.rootCause) ? task.rootCause.join(', ') : (task.rootCause || 'N/A'),
-        'Responsible Party': Array.isArray(task.responsible) ? task.responsible.join(', ') : (task.responsible || 'N/A'),
+        'Ownership': Array.isArray(task.responsible) ? task.responsible.join(', ') : (task.responsible || 'N/A'),
         'ITN Related': Array.isArray(task.itnRelated) ? task.itnRelated.join(', ') : (task.itnRelated || 'N/A'),
         'Related to Subscription': Array.isArray(task.relatedToSubscription) ? task.relatedToSubscription.join(', ') : (task.relatedToSubscription || 'N/A'),
 
@@ -1068,7 +1096,7 @@ const AllTasksList = () => {
       const timelineData = {
         // --- TIMELINE ---
         'Created At': task.createdAt ? format(new Date(task.createdAt), 'yyyy-MM-dd HH:mm') : '-',
-        'Contract Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
+        'Request Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
         'In Date': task.inDate ? format(new Date(task.inDate), 'yyyy-MM-dd') : 'N/A',
         'UN Date': task.unDate ? format(new Date(task.unDate), 'yyyy-MM-dd') : 'N/A',
         'FE Date': task.feDate ? format(new Date(task.feDate), 'yyyy-MM-dd') : (task.appDate ? format(new Date(task.appDate), 'yyyy-MM-dd') : 'N/A'),
@@ -1178,7 +1206,7 @@ const AllTasksList = () => {
   const detractors = filteredTasks.filter(t => (t.evaluationScore || 0) >= 0 && (t.evaluationScore || 0) <= 6 && t.evaluationScore !== null).length;
   const neutrals = filteredTasks.filter(t => (t.evaluationScore || 0) >= 7 && (t.evaluationScore || 0) <= 8).length;
 
-  const promoterRate = totalSamples > 0 ? Math.round(((promoters + (totalSamples - actualAudits)) / totalSamples) * 100) : 0;
+  const promoterRate = totalSamples > 0 ? Math.round(((promoters + Math.max(0, totalSamples - actualAudits)) / totalSamples) * 100) : 0;
   const detractorRate = totalSamples > 0 ? Math.round((detractors / totalSamples) * 100) : 0;
   const neutralRate = totalSamples > 0 ? Math.round((neutrals / totalSamples) * 100) : 0;
   const nps = promoterRate - detractorRate;
@@ -1187,18 +1215,28 @@ const AllTasksList = () => {
   const getTopK = (field, k = 5) => {
     const counts = {};
     filteredTasks.forEach(t => {
-      const values = Array.isArray(t[field]) ? t[field] : [t[field]];
-      values.forEach(v => {
-        if (v) counts[v] = (counts[v] || 0) + 1;
-      });
+      const val = t[field];
+      // Distribute logic: handle arrays and comma-separated strings
+      let values = [];
+      if (Array.isArray(val)) {
+        values = val.flatMap(v => (typeof v === 'string' ? v.split(',').map(s => s.trim()) : [v])).filter(Boolean);
+      } else if (typeof val === 'string' && val.trim()) {
+        values = val.split(',').map(s => s.trim()).filter(Boolean);
+      } else if (val) {
+        values = [val];
+      }
+      values.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
     });
+
+    const totalCount = Object.values(counts).reduce((acc, curr) => acc + curr, 0);
+
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, k)
       .map(([name, count]) => ({
         name,
         count,
-        percentage: Math.round((count / actualAudits) * 100)
+        percentage: totalCount > 0 ? Math.round((count / totalCount) * 100) : 0
       }));
   };
 
@@ -3029,7 +3067,7 @@ const AllTasksList = () => {
         }}>
           <Box>
             <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 0.5 }}>
-              Task List
+              OJO Snags List
             </Typography>
             <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
               {drillDownState.title} ({drillDownState.tasks.length} Tasks)

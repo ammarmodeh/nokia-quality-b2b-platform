@@ -646,7 +646,7 @@ const EditTaskDialog = ({
               </Select>
             </FormControl>
 
-            {/* New Row: GAIA Check & Contract Date */}
+            {/* New Row: GAIA Check & Request Date */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel>GAIA Check</InputLabel>
@@ -673,7 +673,7 @@ const EditTaskDialog = ({
                 />
               )}
               <TextField
-                label="Contract date (RE Date)"
+                label="Request Date"
                 type="date"
                 fullWidth
                 variant="outlined"
@@ -684,20 +684,10 @@ const EditTaskDialog = ({
               />
             </Stack>
 
-            {/* Row: FE Date, UN Date & In Date */}
+            {/* Row: FE Date & In Date */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
-                label="UN Date"
-                type="date"
-                fullWidth
-                variant="outlined"
-                {...register('unDate')}
-                value={unDate}
-                onChange={(e) => setUnDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                label="FE Date"
+                label="Creation Date (FE)"
                 type="date"
                 fullWidth
                 variant="outlined"
@@ -707,7 +697,7 @@ const EditTaskDialog = ({
                 InputLabelProps={{ shrink: true }}
               />
               <TextField
-                label="In date (send to Subcon)"
+                label="Dispatch Date (To Subcon)"
                 type="date"
                 fullWidth
                 variant="outlined"
@@ -721,7 +711,7 @@ const EditTaskDialog = ({
             {/* Ordered Date Fields: Close Date -> PIS Date -> Interview Date */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
-                label="Close Date (Online)"
+                label="Completion Date"
                 type="date"
                 fullWidth
                 variant="outlined"

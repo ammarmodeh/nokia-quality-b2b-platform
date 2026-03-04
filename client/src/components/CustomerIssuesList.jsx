@@ -621,8 +621,8 @@ const CustomerIssuesList = () => {
     })));
 
     const workbook = utils.book_new();
-    utils.book_append_sheet(workbook, worksheet, 'Customer Issues Notifications');
-    writeFile(workbook, 'CIN.xlsx');
+    utils.book_append_sheet(workbook, worksheet, 'OJO Snags');
+    writeFile(workbook, 'OJO_Snags.xlsx');
   };
 
   const handleExportPDF = async () => {
@@ -634,13 +634,13 @@ const CustomerIssuesList = () => {
 
       toast.info("Generating professional PDF report...");
 
-      const reportTitle = "Customer Issue Notification (CIN) Analytics Report";
+      const reportTitle = "OJO Snags Analytics Report";
       let markdownContent = `**Date Range**: ${startDate || 'All Time'} to ${endDate || 'Now'}\n`;
       markdownContent += `**Total Records**: ${filteredIssues.length}\n`;
       markdownContent += `**Status Filter**: ${statusFilter.toUpperCase()}\n\n---\n\n`;
 
       filteredIssues.forEach((issue, index) => {
-        markdownContent += `## ${index + 1}. Issue - SLID: ${issue.slid}\n`;
+        markdownContent += `## ${index + 1}. Snag - SLID: ${issue.slid}\n`;
         markdownContent += `- **Created At**: ${issue.createdAt ? new Date(issue.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}\n`;
         markdownContent += `- **Date Reported**: ${issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'}\n`;
         markdownContent += `- **Reporter**: ${issue.reporter || 'N/A'}\n`;
@@ -655,7 +655,7 @@ const CustomerIssuesList = () => {
         markdownContent += `- **Status**: ${issue.solved === 'yes' ? 'Resolved ✅' : 'Unresolved ❌'}\n`;
         if (issue.resolveDate) markdownContent += `- **Resolve Date**: ${new Date(issue.resolveDate).toLocaleDateString()}\n`;
 
-        markdownContent += `\n### Issues Highlighted:\n`;
+        markdownContent += `\n### Snags Highlighted:\n`;
         if (issue.issues && issue.issues.length > 0) {
           issue.issues.forEach(i => {
             markdownContent += `- **${i.category}**: ${i.subCategory || 'No Details'}\n`;
@@ -684,7 +684,7 @@ const CustomerIssuesList = () => {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `CIN_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+      link.setAttribute('download', `OJO_Snags_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -699,43 +699,56 @@ const CustomerIssuesList = () => {
 
   const handleWhatsAppContact = async (issue) => {
     // Build comprehensive message
-    let formattedMessage = `*🔔 Issue Report*\n\n`;
+    let formattedMessage = `*🔔 OJO SNAG REPORT*\n\n`;
 
+    formattedMessage += `*📌 IDENTIFICATION*\n`;
     formattedMessage += `*SLID:* ${issue.slid}\n`;
-    formattedMessage += `*👤 Customer Info*\n`;
-    formattedMessage += `Name: ${issue.customerName || 'N/A'}\n`;
-    formattedMessage += `Contact: ${issue.customerContact || 'N/A'}\n`;
     if (issue.ticketId) formattedMessage += `*Ticket ID:* ${issue.ticketId}\n`;
+    formattedMessage += `*Area:* ${issue.area || 'N/A'}\n`;
     formattedMessage += `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Open'}\n\n`;
 
-    formattedMessage += `*📍 Source & Team*\n`;
-    formattedMessage += `Team Company: ${issue.teamCompany}\n`;
-    formattedMessage += `Installing Team: ${issue.installingTeam || 'N/A'}\n`;
-    formattedMessage += `Assigned To: ${issue.assignedTo || 'Unassigned'}\n\n`;
-
-    formattedMessage += `*🔍 Issue Details*\n`;
-    formattedMessage += `Categories: ${issue.issues?.map(i => i.category + (i.subCategory ? ` (${i.subCategory})` : '')).join(', ') || 'N/A'}\n`;
-    if (issue.reporterNote) formattedMessage += `Reporter Note: ${issue.reporterNote}\n`;
-    if (issue.assigneeNote) formattedMessage += `Assignee Note: ${issue.assigneeNote}\n`;
+    formattedMessage += `*👤 CUSTOMER INFO*\n`;
+    formattedMessage += `*Name:* ${issue.customerName || 'N/A'}\n`;
+    formattedMessage += `*Contact:* ${issue.customerContact || 'N/A'}\n`;
+    if (issue.callerName) formattedMessage += `*Caller:* ${issue.callerName} (${issue.callerDetails || 'No details'})\n`;
     formattedMessage += `\n`;
 
-    formattedMessage += `*📅 Timeline*\n`;
-    formattedMessage += `Reported: ${issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'}\n`;
-    if (issue.pisDate) formattedMessage += `PIS Date: ${new Date(issue.pisDate).toLocaleDateString()}\n`;
+    formattedMessage += `*📍 SOURCE & TEAM*\n`;
+    formattedMessage += `*Source:* ${issue.fromMain || issue.from || 'N/A'} ${issue.fromSub ? `(${issue.fromSub})` : ''}\n`;
+    formattedMessage += `*Reporter:* ${issue.reporter || 'N/A'}\n`;
+    formattedMessage += `*Team Company:* ${issue.teamCompany || 'N/A'}\n`;
+    formattedMessage += `*Installing Team:* ${issue.installingTeam || 'N/A'}\n`;
+    formattedMessage += `*Assigned To:* ${issue.assignedTo || 'Unassigned'}\n\n`;
+
+    formattedMessage += `*🔍 SNAG DETAILS*\n`;
+    const snagCategories = issue.issues?.map(i => i.category + (i.subCategory ? ` - ${i.subCategory}` : '')).join('\n• ') || 'N/A';
+    formattedMessage += `• ${snagCategories}\n`;
+
+    if (issue.reporterNote) formattedMessage += `\n*Reporter Note:* ${issue.reporterNote}\n`;
+    if (issue.assigneeNote) formattedMessage += `*Assignee Note:* ${issue.assigneeNote}\n`;
+
+    formattedMessage += `\n*🔗 RELATIONSHIPS*\n`;
+    formattedMessage += `*ITN Related:* ${issue.itnRelated ? (Array.isArray(issue.itnRelated) ? issue.itnRelated.join(', ') : issue.itnRelated) : 'No'}\n`;
+    formattedMessage += `*Subscription Related:* ${issue.relatedToSubscription ? (Array.isArray(issue.relatedToSubscription) ? issue.relatedToSubscription.join(', ') : issue.relatedToSubscription) : 'No'}\n`;
+
+    formattedMessage += `\n*📅 TIMELINE*\n`;
+    formattedMessage += `*Reported:* ${issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'}\n`;
+    if (issue.pisDate) formattedMessage += `*PIS Date:* ${new Date(issue.pisDate).toLocaleDateString()}\n`;
+
     if (issue.dispatched === 'yes') {
-      formattedMessage += `Dispatched: ${issue.dispatchedAt ? new Date(issue.dispatchedAt).toLocaleDateString() : 'Yes'}\n`;
+      formattedMessage += `*Dispatched:* ${issue.dispatchedAt ? new Date(issue.dispatchedAt).toLocaleDateString() : 'Yes'}\n`;
     }
 
     if (issue.solved === 'yes') {
-      formattedMessage += `\n*✅ Resolution*\n`;
-      if (issue.resolveDate) formattedMessage += `Resolved: ${new Date(issue.resolveDate).toLocaleDateString()}\n`;
-      if (issue.resolvedBy) formattedMessage += `Method: ${issue.resolvedBy}\n`;
-      if (issue.closedBy) formattedMessage += `Supervisor: ${issue.closedBy}\n`;
-      if (issue.closedAt) formattedMessage += `Closed: ${new Date(issue.closedAt).toLocaleDateString()}\n`;
-      if (issue.resolutionDetails) formattedMessage += `Details: ${issue.resolutionDetails}\n`;
+      formattedMessage += `\n*✅ RESOLUTION*\n`;
+      if (issue.resolveDate) formattedMessage += `*Resolved Date:* ${new Date(issue.resolveDate).toLocaleDateString()}\n`;
+      if (issue.resolvedBy) formattedMessage += `*Resolution Method:* ${issue.resolvedBy}\n`;
+      if (issue.closedBy) formattedMessage += `*Supervisor:* ${issue.closedBy}\n`;
+      if (issue.closedAt) formattedMessage += `*Close Date:* ${new Date(issue.closedAt).toLocaleDateString()}\n`;
+      if (issue.resolutionDetails) formattedMessage += `*Summary:* ${issue.resolutionDetails}\n`;
     }
 
-    const teamToContact = issue.teamName || issue.installingTeam;
+    const teamToContact = issue.installingTeam || issue.teamName;
 
     if (!teamToContact) {
       toast.error('Team not specified');
