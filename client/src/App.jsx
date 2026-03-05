@@ -85,17 +85,30 @@ const QuizResultsRouteHandler = ({ children }) => {
 };
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { user } = useSelector((state) => state?.auth);
+  const { user, token } = useSelector((state) => state?.auth);
   const location = useLocation();
 
+  // DIAGNOSTIC LOGGING
+  React.useEffect(() => {
+    const lsUserInfo = localStorage.getItem("userInfo");
+    const lsToken = localStorage.getItem("accessToken");
+    console.log("[Diagnostic] ProtectedRoute Check:", {
+      reduxUser: user?._id || "null",
+      reduxToken: token ? "present" : "null",
+      lsUserInfo: lsUserInfo ? "present" : "null",
+      lsToken: lsToken ? "present" : "null",
+      path: location.pathname
+    });
+  }, [user, token, location]);
+
   if (!user) {
-    console.warn("[ProtectedRoute] No user found, would redirect to /auth");
-    // return <Navigate to="/auth" state={{ from: location }} replace />;
+    console.warn("[ProtectedRoute] No user found, redirecting to /auth");
+    return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
   if (adminOnly && user && user.role !== 'Admin') {
-    console.warn("[ProtectedRoute] User is not Admin, would redirect to /dashboard");
-    // return <Navigate to="/dashboard" replace />;
+    console.warn("[ProtectedRoute] User is not Admin, redirecting to /dashboard");
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;

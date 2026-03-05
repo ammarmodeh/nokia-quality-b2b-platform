@@ -174,30 +174,30 @@ const NotificationPanel = () => {
       if (Array.isArray(tasksResponse.data)) {
         const myAssignedTasks = tasksResponse.data.filter((task) =>
           Array.isArray(task.assignedTo) && task.assignedTo.some((assignedUser) =>
-            String(assignedUser._id || assignedUser) === String(user._id)
+            String(assignedUser._id || assignedUser) === String(user?._id)
           )
         );
 
         taskNotifications = myAssignedTasks
-          .filter((task) => !task.readBy.includes(user._id))
+          .filter((task) => !task.readBy.includes(user?._id))
           .map((task) => ({
             ...task,
             type: 'task',
             createdAt: task.createdAt,
-            isRead: task.readBy.includes(user._id)
+            isRead: task.readBy.includes(user?._id)
           }));
 
         const taskUpdateNotifications = tasksResponse.data
           .filter(task =>
             task.whomItMayConcern &&
             task.whomItMayConcern.some(userRef =>
-              String(userRef._id || userRef) === String(user._id)
+              String(userRef._id || userRef) === String(user?._id)
             )
           )
           .flatMap(task =>
             (task.notifications || [])
               .filter(notif =>
-                String(notif.recipient?._id || notif.recipient) === String(user._id) &&
+                String(notif.recipient?._id || notif.recipient) === String(user?._id) &&
                 !notif.read &&
                 notif.type !== 'task-closed'
               )
@@ -216,7 +216,7 @@ const NotificationPanel = () => {
           .filter(task =>
             task.notifications &&
             task.notifications.some(notif =>
-              String(notif.recipient?._id || notif.recipient) === String(user._id) &&
+              String(notif.recipient?._id || notif.recipient) === String(user?._id) &&
               notif.type === 'task-closed' &&
               !notif.read
             )
@@ -224,7 +224,7 @@ const NotificationPanel = () => {
           .flatMap(task =>
             task.notifications
               .filter(notif =>
-                String(notif.recipient?._id || notif.recipient) === String(user._id) &&
+                String(notif.recipient?._id || notif.recipient) === String(user?._id) &&
                 notif.type === 'task-closed' &&
                 !notif.read
               )
@@ -315,7 +315,7 @@ const NotificationPanel = () => {
           .filter(suggestion => suggestion.responseLog?.length > 0)
           .flatMap(suggestion =>
             suggestion.responseLog
-              .filter(response => !response.readBy?.includes(user._id))
+              .filter(response => !response.readBy?.includes(user?._id))
               .map(response => ({
                 ...suggestion,
                 type: 'suggestion-response',
@@ -330,7 +330,7 @@ const NotificationPanel = () => {
 
       if (Array.isArray(adminSuggestionsResponse.data?.data)) {
         const adminSuggestions = adminSuggestionsResponse.data.data
-          .filter(suggestion => !suggestion.readBy?.includes(user._id))
+          .filter(suggestion => !suggestion.readBy?.includes(user?._id))
           .map(suggestion => ({
             ...suggestion,
             type: 'suggestion-admin',

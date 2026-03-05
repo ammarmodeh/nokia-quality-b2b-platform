@@ -106,14 +106,13 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && token) {
-      console.log("[Auth] User logged in, redirect would happen in 3.5s to /dashboard");
-      // Redirect after showing both messages (total ~3.5 seconds)
-      /* 
+      console.log("[Auth] User detected in Redux. Attempting session persistence check...");
+      // Auto-redirect to dashboard if already logged in
       const timer = setTimeout(() => {
+        console.log("[Auth] Executing delayed redirect to /dashboard");
         navigate('/dashboard');
       }, 3500);
       return () => clearTimeout(timer);
-      */
     }
   }, [user, token, navigate]);
 

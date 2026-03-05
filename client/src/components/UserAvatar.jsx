@@ -575,7 +575,7 @@ const UserAvatar = () => {
     setSuggestionDialogOpen(true);
   };
 
-  const accountId = user._id;
+  const accountId = user?._id;
 
   return (
     <div>
@@ -681,7 +681,7 @@ const UserAvatar = () => {
           </Box>
         </MenuItem>
 
-        {user.role === "Member" && (
+        {user?.role === "Member" && (
           <div>
             <Divider sx={{
               my: 1,
