@@ -106,12 +106,11 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && token) {
-      console.log("[Auth] User detected in Redux — redirect is disabled (diagnostic mode)");
-      // const timer = setTimeout(() => {
-      //   console.log("[Auth] Executing delayed redirect to /dashboard");
-      //   navigate('/dashboard');
-      // }, 3500);
-      // return () => clearTimeout(timer);
+      console.log("[Auth] User detected — redirecting to /dashboard in 1.5s");
+      const timer = setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+      return () => clearTimeout(timer);
     }
   }, [user, token, navigate]);
 
