@@ -44,7 +44,11 @@ app.use(compression());
 // Request Logging Middleware
 // ------------------------------------------------------------------
 app.use((req, res, next) => {
-  console.log(`[Request] ${req.method} ${req.originalUrl} | Origin: ${req.headers.origin}`);
+  console.log(`[Request] ${req.method} ${req.originalUrl} | Protocol: ${req.protocol} | Secure: ${req.secure} | Host: ${req.get('host')} | Origin: ${req.headers.origin}`);
+  // Log specific headers that might cause redirection loops
+  if (req.headers['x-forwarded-proto']) {
+    console.log(`[Proxy] X-Forwarded-Proto: ${req.headers['x-forwarded-proto']}`);
+  }
   next();
 });
 
@@ -58,31 +62,7 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 const corsOptions = {
-  origin: (origin, callback) => {
-    // 1. Allow internal requests or tools with no origin
-    if (!origin) return callback(null, true);
-
-    // 2. Allow explicitly defined origins (from ENV)
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    // 3. Optional: Dynamic check for preview/staging environments.
-    // This part is specific to your current platform (Vercel).
-    // If you move to another provider, you can update this logic or 
-    // simply rely on the FRONTEND_URL environment variable.
-    const isPreviewDomain =
-      origin.endsWith(".vercel.app") &&
-      (origin.includes("nokia-quality") || origin.includes("-bfrq"));
-
-    if (isPreviewDomain) {
-      return callback(null, true);
-    }
-
-    // 4. Block everything else in production
-    console.warn(`[CORS] Rejected Origin: ${origin}`);
-    callback(new Error("Not allowed by CORS"), false);
-  },
+  origin: true, // Wide open for debugging
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],

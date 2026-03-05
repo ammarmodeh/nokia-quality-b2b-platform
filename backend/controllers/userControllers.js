@@ -135,8 +135,8 @@ export const login = async (req, res) => {
     // Send the refresh token in a secure, HTTP-only cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
+      secure: true, // Always true for cross-site cookies
+      sameSite: "None", // Required for cross-site if domains/subdomains differ
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 

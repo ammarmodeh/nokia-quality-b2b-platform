@@ -106,11 +106,14 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && token) {
+      console.log("[Auth] User logged in, redirect would happen in 3.5s to /dashboard");
       // Redirect after showing both messages (total ~3.5 seconds)
+      /* 
       const timer = setTimeout(() => {
         navigate('/dashboard');
       }, 3500);
       return () => clearTimeout(timer);
+      */
     }
   }, [user, token, navigate]);
 

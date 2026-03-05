@@ -89,11 +89,13 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   const location = useLocation();
 
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    console.warn("[ProtectedRoute] No user found, would redirect to /auth");
+    // return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  if (adminOnly && user.role !== 'Admin') {
-    return <Navigate to="/dashboard" replace />;
+  if (adminOnly && user && user.role !== 'Admin') {
+    console.warn("[ProtectedRoute] User is not Admin, would redirect to /dashboard");
+    // return <Navigate to="/dashboard" replace />;
   }
 
   return children;
