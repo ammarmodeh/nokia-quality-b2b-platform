@@ -288,7 +288,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               </InputLabel>
               <NativeSelect
                 {...register('teamCompany')}
-                disabled={user.role !== 'Admin'}
+                disabled={user?.role !== 'Admin'}
                 sx={{
                   color: '#ffffff',
                   bgcolor: '#1a1a1a',

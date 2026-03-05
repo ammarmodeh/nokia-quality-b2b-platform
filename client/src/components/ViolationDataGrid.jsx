@@ -545,7 +545,7 @@ const ViolationDataGrid = ({
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="Add Session">
             <IconButton
-              disabled={user.role !== "Admin"}
+              disabled={user?.role !== "Admin"}
               onClick={() => onAddSessionClick(params.row.teamName, params.row.id)}
               sx={{
                 color: '#4caf50',
@@ -559,7 +559,7 @@ const ViolationDataGrid = ({
 
           <Tooltip title="Report Absence">
             <IconButton
-              disabled={user.role !== "Admin"}
+              disabled={user?.role !== "Admin"}
               onClick={() => onReportAbsenceClick(params.row.teamName, params.row.id)}
               sx={{
                 color: '#f44336',
@@ -585,7 +585,7 @@ const ViolationDataGrid = ({
         </Box>
       ),
     },
-  ], [user.role, onTeamNameClick, onAddSessionClick, onViewSessionsClick, onReportAbsenceClick]);
+  ], [user?.role, onTeamNameClick, onAddSessionClick, onViewSessionsClick, onReportAbsenceClick]);
 
   // Calculate statistics
   const calculateStats = () => {

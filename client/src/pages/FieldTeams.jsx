@@ -506,7 +506,7 @@ const FieldTeamForm = () => {
         </Box>
       ),
     },
-    ...(user.role === 'Admin' ? [
+    ...(user?.role === 'Admin' ? [
       {
         field: 'teamCode',
         headerName: 'Team ID',
@@ -641,7 +641,7 @@ const FieldTeamForm = () => {
         );
       },
     },
-    ...(user.role === 'Admin' ? [{
+    ...(user?.role === 'Admin' ? [{
       field: 'actions',
       headerName: 'Actions',
       width: 200,
@@ -684,7 +684,7 @@ const FieldTeamForm = () => {
       ),
     }] : []),
 
-  ], [handleDeleteClick, handleEditClick, handleOnLeaveClick, handleReactivateClick, handleResignedClick, handleSuspendClick, handleTerminateClick, handleToggleQuizPermission, handleViewHistoryClick, handleViewLogsClick, user.role]);
+  ], [handleDeleteClick, handleEditClick, handleOnLeaveClick, handleReactivateClick, handleResignedClick, handleSuspendClick, handleTerminateClick, handleToggleQuizPermission, handleViewHistoryClick, handleViewLogsClick, user?.role]);
 
   return (
     <Box
@@ -1341,8 +1341,8 @@ const FieldTeamForm = () => {
             View State Logs
           </MenuItem>
 
-          {user.role === 'Admin' && <Divider sx={{ borderColor: '#333', my: 0.5 }} />}
-          {user.role === 'Admin' && (
+          {user?.role === 'Admin' && <Divider sx={{ borderColor: '#333', my: 0.5 }} />}
+          {user?.role === 'Admin' && (
             <MenuItem onClick={() => { handleDeleteClick(menuTeam); handleMenuClose(); }} sx={{ color: '#f44336' }}>
               <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: '#f44336' }} /></ListItemIcon>
               Delete Team permanently

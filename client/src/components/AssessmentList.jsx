@@ -203,7 +203,7 @@ const AssessmentList = ({
                             <Edit fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        {user.role === 'Admin' && (
+                        {user?.role === 'Admin' && (
                           <Tooltip title="Delete Permanently">
                             <IconButton
                               size="small"

@@ -169,7 +169,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
       <Button
         type="submit"
         variant="contained"
-        disabled={loading || user.role !== 'Admin'}
+        disabled={loading || user?.role !== 'Admin'}
         startIcon={loading ? null : <Add />}
         disableElevation
         sx={{

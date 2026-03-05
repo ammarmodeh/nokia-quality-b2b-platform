@@ -127,7 +127,7 @@ const NotificationPanel = () => {
           });
         } else if (notification.type === 'suggestion-response') {
           const suggestionId = notification._id.split('-')[0];
-          if (user.role === "Member") {
+          if (user?.role === "Member") {
             return markResponseAsRead(suggestionId, notification.responseId);
           } else {
             return markSuggestionAsRead(suggestionId);
@@ -158,10 +158,10 @@ const NotificationPanel = () => {
         api.get("/tasks/get-all-tasks", {
           headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
         }),
-        user.role === "Member" ? api.get("/suggestions/user", {
+        user?.role === "Member" ? api.get("/suggestions/user", {
           headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
         }) : { data: { data: [] } },
-        user.role === "Admin" ? api.get("/suggestions", {
+        user?.role === "Admin" ? api.get("/suggestions", {
           headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
         }) : { data: { data: [] } },
         api.get("/policies/notifications", {
@@ -249,7 +249,7 @@ const NotificationPanel = () => {
           .flatMap(policy => {
             if (!policy.createdBy) return [];
             const createdById = policy.createdBy._id || policy.createdBy;
-            const isAdmin = user.role === "Admin";
+            const isAdmin = user?.role === "Admin";
             const isManager = user.isManager;
 
             if (!isAdmin && !isManager) return [];
@@ -391,12 +391,12 @@ const NotificationPanel = () => {
       }
       else if (notification.type === 'suggestion-response') {
         const suggestionId = notification._id.split('-')[0];
-        if (user.role === "Member") {
+        if (user?.role === "Member") {
           await markResponseAsRead(suggestionId, notification.responseId);
         } else {
           await markSuggestionAsRead(suggestionId);
         }
-        navigate(user.role === "Admin" ? "/admin/suggestions" : "/my-suggestions");
+        navigate(user?.role === "Admin" ? "/admin/suggestions" : "/my-suggestions");
         removeNotification(notification._id);
         setUnreadCount(prev => Math.max(prev - 1, 0));
       }
