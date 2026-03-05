@@ -102,13 +102,13 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   }, [user, token, location]);
 
   if (!user) {
-    console.warn("[ProtectedRoute] No user found, redirecting to /auth");
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    console.warn("[ProtectedRoute] No user found — not redirecting (diagnostic mode)");
+    // return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
   if (adminOnly && user && user.role !== 'Admin') {
-    console.warn("[ProtectedRoute] User is not Admin, redirecting to /dashboard");
-    return <Navigate to="/dashboard" replace />;
+    console.warn("[ProtectedRoute] User is not Admin — not redirecting (diagnostic mode)");
+    // return <Navigate to="/dashboard" replace />;
   }
 
   return children;
