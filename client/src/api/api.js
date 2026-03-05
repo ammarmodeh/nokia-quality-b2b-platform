@@ -83,9 +83,11 @@ api.interceptors.response.use(
         return api(originalRequest);
 
       } catch (refreshError) {
-        // If refresh fails, log out
+        // If refresh fails, log out and redirect — but only if not already on /auth
         store.dispatch(logout());
-        window.location.href = "/auth";
+        if (!window.location.pathname.includes('/auth')) {
+          window.location.href = "/auth";
+        }
         return Promise.reject(refreshError);
       }
     }
