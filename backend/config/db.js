@@ -31,8 +31,13 @@ export const connectDB = async () => {
 
   } catch (error) {
     console.error(`❌ MongoDB Connection Error: ${error.message}`);
+
+    if (error.message.includes("ENOTFOUND")) {
+      console.error("💡 TIP: Your ISP/network is blocking the DNS resolution for MongoDB Atlas.");
+      console.error("Try using a non-SRV connection string or check your firewall settings.");
+    }
+
     // In serverless environments like Vercel, process.exit(1) can cause ERR_CONNECTION_RESET.
-    // We should throw or just log the error and let the app handle it via health checks.
     if (!process.env.VERCEL && process.env.NODE_ENV !== "production") {
       process.exit(1);
     }

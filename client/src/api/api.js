@@ -11,6 +11,18 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// Diagnostic to catch misconfigured production endpoints
+if (!import.meta.env.DEV && import.meta.env.VITE_BACKEND_URL) {
+  const currentOrigin = window.location.origin;
+  if (import.meta.env.VITE_BACKEND_URL.includes(currentOrigin)) {
+    console.warn(
+      "⚠️ [Diagnostic] API Configuration Error: VITE_BACKEND_URL matches your frontend domain.\n" +
+      "Requests to /api on the same domain will fail with ERR_CONNECTION_RESET on Vercel.\n" +
+      "Please set VITE_BACKEND_URL to your actual backend (e.g., Render/Express) in Vercel settings."
+    );
+  }
+}
+
 // Request interceptor (adds token to headers)
 api.interceptors.request.use(
   (config) => {
