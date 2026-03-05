@@ -50,32 +50,39 @@ app.use((req, res, next) => {
 // ------------------------------------------------------------------
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  "https://nokia-quality-b2b-platform-bfrq.vercel.app",
-  "https://nokia-quality-b2b-platform.vercel.app",
   "http://localhost:3000",
+  "http://localhost:5173", // Common Vite port
 ].filter(Boolean);
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, local development, or Vercel internal)
+    // 1. Allow internal requests or tools with no origin
     if (!origin) return callback(null, true);
 
-    // Dynamic verification for Nokia Quality Vercel domains
-    const isVercelDomain = origin.endsWith(".vercel.app") && (origin.includes("nokia-quality") || origin.includes("-bfrq"));
-
-    if (allowedOrigins.includes(origin) || isVercelDomain) {
-      callback(null, true);
-    } else {
-      console.warn(`[CORS] Blocked Origin: ${origin}`);
-      // In Vercel, blocking CORS by returning false can sometimes cause the edge function to drop the connection
-      // For API resilience, we allow it to pass CORS but fail authentication later
-      callback(null, true);
+    // 2. Allow explicitly defined origins (from ENV)
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
+
+    // 3. Optional: Dynamic check for preview/staging environments.
+    // This part is specific to your current platform (Vercel).
+    // If you move to another provider, you can update this logic or 
+    // simply rely on the FRONTEND_URL environment variable.
+    const isPreviewDomain =
+      origin.endsWith(".vercel.app") &&
+      (origin.includes("nokia-quality") || origin.includes("-bfrq"));
+
+    if (isPreviewDomain) {
+      return callback(null, true);
+    }
+
+    // 4. Block everything else in production
+    console.warn(`[CORS] Rejected Origin: ${origin}`);
+    callback(new Error("Not allowed by CORS"), false);
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-  preflightContinue: false,
   optionsSuccessStatus: 204
 };
 
