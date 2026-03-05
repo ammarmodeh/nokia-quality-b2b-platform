@@ -35,6 +35,9 @@ console.log('process.env.FRONTEND_URL:', process.env.FRONTEND_URL);
 
 const app = express();
 
+// Trust proxy for Render/Vercel (fixes ERR_TOO_MANY_REDIRECTS)
+app.set('trust proxy', 1);
+
 app.use(compression());
 
 // ------------------------------------------------------------------
