@@ -463,7 +463,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
               <ListItemIcon><FaStar size={14} color="#f59e0b" /></ListItemIcon>
               <ListItemText>Bookmark</ListItemText>
             </MenuItem>
-            {user?.role === "Admin" && (
+            {user.role === "Admin" && (
               <MenuItem onClick={() => handleAction("archive")}>
                 <ListItemIcon><IoMdMagnet size={16} color="#8b5cf6" /></ListItemIcon>
                 <ListItemText>Archive</ListItemText>

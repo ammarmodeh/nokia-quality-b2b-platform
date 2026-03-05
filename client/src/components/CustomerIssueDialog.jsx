@@ -73,7 +73,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const user = useSelector((state) => state?.auth?.user);
-  const isAdmin = user?.role === "Admin";
+  const isAdmin = user.role === "Admin";
 
   const initialFormState = {
     slid: "",

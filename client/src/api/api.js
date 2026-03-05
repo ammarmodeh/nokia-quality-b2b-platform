@@ -4,17 +4,10 @@ import { logout } from "../redux/slices/authSlice";
 
 // console.log('import.meta.env.VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
 
-// Resolve the backend URL — fallback to Render URL if env var is not set in production
-const BACKEND_URL = import.meta.env.DEV
-  ? '' // Use Vite proxy in development (baseURL = '/api')
-  : (import.meta.env.VITE_BACKEND_URL || 'https://qops.onrender.com');
-
-console.log('[API] Backend URL resolved to:', import.meta.env.DEV ? '/api (Vite proxy)' : `${BACKEND_URL}/api`);
-
 const api = axios.create({
   // Use /api to leverage the Vite proxy during local development, 
   // or the full URL from environment variables in production.
-  baseURL: import.meta.env.DEV ? '/api' : `${BACKEND_URL}/api`,
+  baseURL: import.meta.env.DEV ? '/api' : `${import.meta.env.VITE_BACKEND_URL}/api`,
   withCredentials: true,
 });
 

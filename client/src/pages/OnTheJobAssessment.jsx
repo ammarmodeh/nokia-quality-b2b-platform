@@ -928,10 +928,10 @@ const OnTheJobAssessment = () => {
   }), [colors, isMobile]);
 
   const handleNewAssessment = useCallback(() => {
-    if (user?.title === "Field Technical Support - QoS") {
+    if (user.title === "Field Technical Support - QoS") {
       setOpenAssessmentDialog(true);
     }
-  }, [user?.title]);
+  }, [user.title]);
 
   const handleSelectAssessment = useCallback((assessment) => {
     setSelectedAssessment(assessment);
@@ -939,7 +939,7 @@ const OnTheJobAssessment = () => {
   }, []);
 
   const handleDeleteAssessment = (assessmentId) => {
-    if (user?.role !== 'Admin') {
+    if (user.role !== 'Admin') {
       alert("You do not have permission to delete the assessments.");
       return;
     }
@@ -1163,7 +1163,7 @@ const OnTheJobAssessment = () => {
             onSelectAssessment={handleSelectAssessment}
             onEditAssessment={handleEditAssessment}
             onDeleteAssessment={handleDeleteAssessment}
-            onNewAssessment={user?.title === "Field Technical Support - QoS" ? handleNewAssessment : undefined}
+            onNewAssessment={user.title === "Field Technical Support - QoS" ? handleNewAssessment : undefined}
             user={user}
             page={assessmentsPage}
             rowsPerPage={assessmentsRowsPerPage}
@@ -1241,7 +1241,7 @@ const OnTheJobAssessment = () => {
         )}
 
         {/* New Assessment Dialog */}
-        {user?.title === "Field Technical Support - QoS" && selectedTeam && (
+        {user.title === "Field Technical Support - QoS" && selectedTeam && (
           <Dialog
             open={openAssessmentDialog}
             onClose={() => setOpenAssessmentDialog(false)}
