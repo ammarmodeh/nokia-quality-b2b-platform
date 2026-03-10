@@ -2281,7 +2281,7 @@ const AuditAdminDashboard = () => {
               <StatCard title="Total Tasks" value={dashboardStats.total} color="#3ea6ff" icon={<AssignmentTurnedInIcon />} subtext="System lifetime" />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <StatCard title="Pending" value={dashboardStats.pending} color="#f44336" icon={<PendingActionsIcon />} subtext="Awaiting audit" />
+              <StatCard title="Not validated" value={dashboardStats.pending} color="#f44336" icon={<PendingActionsIcon />} subtext="Awaiting audit" />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard title="Completed" value={dashboardStats.completed} color="#00f5d4" icon={<TrendingUpIcon />} subtext="Success rate" />

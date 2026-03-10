@@ -250,7 +250,7 @@ const Card = ({ tasks = [], samplesData = [], setUpdateTasksList }) => {
       subStats: [
         { label: "Todo", count: counts.Todo, color: "text-blue-200" },
         { label: "Validated", count: counts.Validated, color: "text-green-300" },
-        { label: "Pending", count: counts.Pending, color: "text-orange-300" },
+        { label: "Not validated", count: counts.Pending, color: "text-orange-300" },
         { label: "Total Samples", count: totalSamples, color: "text-indigo-200" },
         { label: "Violation %", count: `${violationPercentage}%`, color: "text-yellow-200" },
       ],

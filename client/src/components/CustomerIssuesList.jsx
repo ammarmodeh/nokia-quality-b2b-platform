@@ -699,39 +699,38 @@ const CustomerIssuesList = () => {
 
   const handleWhatsAppContact = async (issue) => {
     // Build comprehensive message
-    let formattedMessage = `*🔔 OJO SNAG REPORT*\n\n`;
+    let formattedMessage = `*OJO SNAG REPORT*\n\n`;
 
-    formattedMessage += `*📌 IDENTIFICATION*\n`;
+    formattedMessage += `*IDENTIFICATION*\n`;
     formattedMessage += `*SLID:* ${issue.slid}\n`;
     if (issue.ticketId) formattedMessage += `*Ticket ID:* ${issue.ticketId}\n`;
     formattedMessage += `*Area:* ${issue.area || 'N/A'}\n`;
-    formattedMessage += `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Open'}\n\n`;
+    formattedMessage += `*Status:* ${issue.solved === 'yes' ? 'Resolved' : 'Open'}\n\n`;
 
-    formattedMessage += `*👤 CUSTOMER INFO*\n`;
+    formattedMessage += `*CUSTOMER INFO*\n`;
     formattedMessage += `*Name:* ${issue.customerName || 'N/A'}\n`;
     formattedMessage += `*Contact:* ${issue.customerContact || 'N/A'}\n`;
     if (issue.callerName) formattedMessage += `*Caller:* ${issue.callerName} (${issue.callerDetails || 'No details'})\n`;
     formattedMessage += `\n`;
 
-    formattedMessage += `*📍 SOURCE & TEAM*\n`;
+    formattedMessage += `*SOURCE & TEAM*\n`;
     formattedMessage += `*Source:* ${issue.fromMain || issue.from || 'N/A'} ${issue.fromSub ? `(${issue.fromSub})` : ''}\n`;
-    formattedMessage += `*Reporter:* ${issue.reporter || 'N/A'}\n`;
     formattedMessage += `*Team Company:* ${issue.teamCompany || 'N/A'}\n`;
     formattedMessage += `*Installing Team:* ${issue.installingTeam || 'N/A'}\n`;
     formattedMessage += `*Assigned To:* ${issue.assignedTo || 'Unassigned'}\n\n`;
 
-    formattedMessage += `*🔍 SNAG DETAILS*\n`;
+    formattedMessage += `*SNAG DETAILS*\n`;
     const snagCategories = issue.issues?.map(i => i.category + (i.subCategory ? ` - ${i.subCategory}` : '')).join('\n• ') || 'N/A';
     formattedMessage += `• ${snagCategories}\n`;
 
     if (issue.reporterNote) formattedMessage += `\n*Reporter Note:* ${issue.reporterNote}\n`;
     if (issue.assigneeNote) formattedMessage += `*Assignee Note:* ${issue.assigneeNote}\n`;
 
-    formattedMessage += `\n*🔗 RELATIONSHIPS*\n`;
+    formattedMessage += `\n*RELATIONSHIPS*\n`;
     formattedMessage += `*ITN Related:* ${issue.itnRelated ? (Array.isArray(issue.itnRelated) ? issue.itnRelated.join(', ') : issue.itnRelated) : 'No'}\n`;
     formattedMessage += `*Subscription Related:* ${issue.relatedToSubscription ? (Array.isArray(issue.relatedToSubscription) ? issue.relatedToSubscription.join(', ') : issue.relatedToSubscription) : 'No'}\n`;
 
-    formattedMessage += `\n*📅 TIMELINE*\n`;
+    formattedMessage += `\n*TIMELINE*\n`;
     formattedMessage += `*Reported:* ${issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'}\n`;
     if (issue.pisDate) formattedMessage += `*PIS Date:* ${new Date(issue.pisDate).toLocaleDateString()}\n`;
 
@@ -740,7 +739,7 @@ const CustomerIssuesList = () => {
     }
 
     if (issue.solved === 'yes') {
-      formattedMessage += `\n*✅ RESOLUTION*\n`;
+      formattedMessage += `\n*RESOLUTION*\n`;
       if (issue.resolveDate) formattedMessage += `*Resolved Date:* ${new Date(issue.resolveDate).toLocaleDateString()}\n`;
       if (issue.resolvedBy) formattedMessage += `*Resolution Method:* ${issue.resolvedBy}\n`;
       if (issue.closedBy) formattedMessage += `*Supervisor:* ${issue.closedBy}\n`;

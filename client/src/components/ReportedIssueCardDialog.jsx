@@ -129,21 +129,21 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
       ? issue.issues.map(i => `• ${i.category}${i.subCategory ? ` (${i.subCategory})` : ''}`).join('\n  ')
       : issue.issueCategory || 'N/A';
 
-    return `*🔔 Issue Report*\n\n` +
+    return `*Issue Report*\n\n` +
       `*SLID:* ${issue.slid}\n` +
       `*👤 Customer Info*\n` +
       `Customer Name: ${issue.customerName || 'N/A'}\n` +
       `Customer Contact: ${issue.customerContact || 'N/A'}\n` +
       `*PIS Date:* ${format(new Date(issue.pisDate), 'MMM dd, yyyy')}\n` +
       `*Report Date:* ${format(new Date(issue.date), 'MMM dd, yyyy')}\n` +
-      `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Unresolved'}\n\n` +
+      `*Status:* ${issue.solved === 'yes' ? 'Resolved' : 'Unresolved'}\n\n` +
 
-      `*📍 Source & Team*\n` +
+      `*Source & Team*\n` +
       `Team Company: ${issue.teamCompany}\n` +
       `Installing Team: ${issue.installingTeam || 'N/A'}\n` +
       `Assigned To: ${issue.assignedTo || 'Unassigned'}\n\n` +
 
-      `*🔍 Issue Details*\n` +
+      `*Issue Details*\n` +
       `Issues:\n  ${issuesMsg}\n` +
       `${issue.reporterNote ? `Reporter Notes: ${issue.reporterNote}\n` : ''}` +
       `${issue.resolutionDetails ? `\n*✅ Resolution*\nDetails: ${issue.resolutionDetails}\n` : ''}`;

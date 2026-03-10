@@ -523,7 +523,7 @@ const AuditorDashboard = () => {
             <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>Overview & Tasks</Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Chip label={`Pending: ${stats.pending}`} color="warning" variant="outlined" sx={{ fontWeight: 700 }} />
+            <Chip label={`Not validated: ${stats.pending}`} color="warning" variant="outlined" sx={{ fontWeight: 700 }} />
             <Chip label={`Completion: ${stats.completionRate}%`} color="success" variant="outlined" sx={{ fontWeight: 700 }} />
             <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchTasks} sx={{ borderColor: 'divider', color: 'text.secondary', '&:hover': { borderColor: 'primary.main', color: 'primary.main', bgcolor: 'rgba(255,255,255,0.05)' } }}>Refresh</Button>
           </Box>

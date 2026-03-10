@@ -980,6 +980,9 @@ const AllTasksList = () => {
     const reasons = getCountsWithPercent('reason');
     const subReasons = getCountsWithPercent('subReason');
     const rootCauses = getCountsWithPercent('rootCause');
+    const owners = getCountsWithPercent('responsible');
+    const itnRelated = getCountsWithPercent('itnRelated');
+    const subRelated = getCountsWithPercent('relatedToSubscription');
 
     const wsReasons = utils.aoa_to_sheet([[`Reported Period: ${periodStr}`]]);
     utils.sheet_add_aoa(wsReasons, [["REASON ANALYSIS"]], { origin: "A3" });
@@ -988,6 +991,12 @@ const AllTasksList = () => {
     utils.sheet_add_json(wsReasons, subReasons, { origin: "E4", skipHeader: false });
     utils.sheet_add_aoa(wsReasons, [["ROOT CAUSE ANALYSIS"]], { origin: "I3" });
     utils.sheet_add_json(wsReasons, rootCauses, { origin: "I4", skipHeader: false });
+    utils.sheet_add_aoa(wsReasons, [["OWNER ANALYSIS"]], { origin: "M3" });
+    utils.sheet_add_json(wsReasons, owners, { origin: "M4", skipHeader: false });
+    utils.sheet_add_aoa(wsReasons, [["ITN RELATED ANALYSIS"]], { origin: "Q3" });
+    utils.sheet_add_json(wsReasons, itnRelated, { origin: "Q4", skipHeader: false });
+    utils.sheet_add_aoa(wsReasons, [["SUBSCRIPTION RELATED ANALYSIS"]], { origin: "U3" });
+    utils.sheet_add_json(wsReasons, subRelated, { origin: "U4", skipHeader: false });
     utils.book_append_sheet(workbook, wsReasons, 'Reason Analytics');
 
     // 4. Owner & Team Performance Sheet
@@ -1004,13 +1013,13 @@ const AllTasksList = () => {
             'Field Team': fieldTeam,
             'Total Tasks': 0,
             'Validated': 0,
-            'Pending/Failed': 0,
+            'Not validated': 0,
             'Detractors': 0
           };
         }
         ownerStats[key]['Total Tasks']++;
         if (t.validationStatus === 'Validated') ownerStats[key]['Validated']++;
-        if (t.validationStatus === 'Not validated' || t.validationStatus === 'Pending') ownerStats[key]['Pending/Failed']++;
+        if (t.validationStatus === 'Not validated' || t.validationStatus === 'Not validated') ownerStats[key]['Not validated']++;
         if (t.evaluationScore !== null && t.evaluationScore <= 6) ownerStats[key]['Detractors']++;
       });
     });
@@ -1037,6 +1046,26 @@ const AllTasksList = () => {
     // 6. Deep Raw Data Sheet
     const maxTickets = filteredTasks.reduce((max, t) => Math.max(max, (t.tickets || []).length), 0);
 
+    // Calculate max counts for multi-value fields
+    const multiValueFieldsMapping = [
+      { field: 'reason', label: 'Reason' },
+      { field: 'subReason', label: 'Sub-Reason' },
+      { field: 'rootCause', label: 'Root Cause' },
+      { field: 'responsible', label: 'Owner' },
+      { field: 'itnRelated', label: 'ITN Related' },
+      { field: 'relatedToSubscription', label: 'Related to Subscription' }
+    ];
+
+    const fieldMaxCounts = {};
+    multiValueFieldsMapping.forEach(({ field }) => {
+      fieldMaxCounts[field] = filteredTasks.reduce((max, t) => {
+        const val = t[field];
+        if (Array.isArray(val)) return Math.max(max, val.length);
+        if (typeof val === 'string' && val.trim()) return Math.max(max, val.split(',').length);
+        return Math.max(max, val ? 1 : 0);
+      }, 0);
+    });
+
     const rawData = filteredTasks.map(task => {
       const baseData = {
         // --- TASK CORE ---
@@ -1047,7 +1076,7 @@ const AllTasksList = () => {
         'Operation': task.operation || 'N/A',
         'Tariff Name': task.tarrifName || 'N/A',
         'Speed (Mbps)': task.speed || 'N/A',
-        'Validation Status': task.validationStatus || 'Pending',
+        'Validation Status': task.validationStatus || 'Not validated',
         'Evaluation Score': task.evaluationScore !== null ? task.evaluationScore : 'N/A',
 
         // --- CUSTOMER DETAILS ---
@@ -1065,16 +1094,38 @@ const AllTasksList = () => {
         'Extender Count': task.extenderNumber || 0,
         'GAIA Check': task.gaiaCheck || 'N/A',
         'GAIA Content': task.gaiaContent || 'N/A',
+      };
 
-        // --- AUDIT METADATA ---
-        'Reasons': Array.isArray(task.reason) ? task.reason.join(', ') : (task.reason || 'N/A'),
-        'Sub-Reasons': Array.isArray(task.subReason) ? task.subReason.join(', ') : (task.subReason || 'N/A'),
-        'Root Causes': Array.isArray(task.rootCause) ? task.rootCause.join(', ') : (task.rootCause || 'N/A'),
-        'Ownership': Array.isArray(task.responsible) ? task.responsible.join(', ') : (task.responsible || 'N/A'),
-        'ITN Related': Array.isArray(task.itnRelated) ? task.itnRelated.join(', ') : (task.itnRelated || 'N/A'),
-        'Related to Subscription': Array.isArray(task.relatedToSubscription) ? task.relatedToSubscription.join(', ') : (task.relatedToSubscription || 'N/A'),
+      // Split multi-value fields into separate columns - Interleaved as requested
+      const interleavedFields = [
+        { field: 'reason', label: 'Reason' },
+        { field: 'subReason', label: 'Sub-Reason' },
+        { field: 'rootCause', label: 'Root Cause' },
+        { field: 'responsible', label: 'Owner' },
+        { field: 'itnRelated', label: 'ITN Related' },
+        { field: 'relatedToSubscription', label: 'Related to Subscription' }
+      ];
 
-        // --- TEAM & ASSIGNMENT ---
+      // 1. Calculate the overall max count for the interleaved block
+      const maxInterleaved = interleavedFields.reduce((max, { field }) => Math.max(max, fieldMaxCounts[field]), 0);
+
+      // 2. Add columns interleaved: Reason 1, Sub-Reason 1, Root Cause 1, Owner 1, ITN Related 1, Related to Subscription 1, Reason 2...
+      for (let i = 0; i < maxInterleaved; i++) {
+        interleavedFields.forEach(({ field, label }) => {
+          const val = task[field];
+          let values = [];
+          if (Array.isArray(val)) {
+            values = val.map(v => String(v).trim()).filter(Boolean);
+          } else if (typeof val === 'string' && val.trim()) {
+            values = val.split(',').map(s => s.trim()).filter(Boolean);
+          } else if (val) {
+            values = [String(val).trim()];
+          }
+          baseData[`${label} ${i + 1}`] = values[i] || '';
+        });
+      }
+
+      Object.assign(baseData, {
         'Field Team Name': task.teamName || 'N/A',
         'Team Company': task.teamCompany || 'N/A',
         'Assigned To': task.assignedTo?.map(u => u.name).join(', ') || 'Unassigned',
@@ -1085,7 +1136,7 @@ const AllTasksList = () => {
         'Latest GAIA State': task.latestGaia?.transactionState || 'N/A',
         'Latest GAIA Reason Code': task.latestGaia?.unfReasonCode || 'N/A',
         'Latest Action Taken': task.latestGaia?.actionTaken || 'N/A',
-      };
+      });
 
       // --- ALL AGENT NOTES ---
       const sortedTickets = [...(task.tickets || [])].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));

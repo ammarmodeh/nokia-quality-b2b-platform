@@ -93,10 +93,11 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                 <FormControl fullWidth size="small">
                   <InputLabel>ITN Related</InputLabel>
                   <Select
-                    value={row.itnRelated || 'No'}
+                    value={row.itnRelated || 'Not specified'}
                     label="ITN Related"
                     onChange={(e) => handleChange(index, 'itnRelated', e.target.value)}
                   >
+                    <MenuItem value="Not specified">Not specified</MenuItem>
                     <MenuItem value="Yes">Yes</MenuItem>
                     <MenuItem value="No">No</MenuItem>
                   </Select>
@@ -106,10 +107,11 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                 <FormControl fullWidth size="small">
                   <InputLabel>Related to Current Subscription</InputLabel>
                   <Select
-                    value={row.relatedToSubscription || 'No'}
+                    value={row.relatedToSubscription || 'Not specified'}
                     label="Related to Current Subscription"
                     onChange={(e) => handleChange(index, 'relatedToSubscription', e.target.value)}
                   >
+                    <MenuItem value="Not specified">Not specified</MenuItem>
                     <MenuItem value="Yes">Yes</MenuItem>
                     <MenuItem value="No">No</MenuItem>
                   </Select>
@@ -169,9 +171,9 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
           const formatted = {};
           Object.keys(data).forEach(key => {
             if (key === "REASON_SUB" || key === "ROOT_CAUSE" || key === "REASON" || key === "RESPONSIBILITY") {
-              formatted[key] = data[key]; // Store full objects for hierarchical options
+              formatted[key] = [{ value: "Not specified", label: "Not specified" }, ...data[key]]; // Store full objects for hierarchical options
             } else {
-              formatted[key] = data[key].map(opt => opt.value);
+              formatted[key] = ["Not specified", ...data[key].map(opt => opt.value)];
             }
           });
           setDropdownOptions(prev => ({ ...prev, ...formatted }));
@@ -248,23 +250,23 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
 
   const [assignedTo, setAssignedTo] = useState(task?.assignedTo || []);
   const [whomItMayConcern, setWhomItMayConcern] = useState([]);
-  const [priority, setPriority] = useState(task?.priority?.toUpperCase() || dropdownOptions.PRIORITY[0]);
-  const [teamCompany, setTeamCompany] = useState(dropdownOptions.TEAM_COMPANY[0]);
-  const [evaluationScore, setEvaluationScore] = useState(dropdownOptions.EVALUATION_SCORE[0]);
-  const [governorate, setGovernorate] = useState(dropdownOptions.GOVERNORATES[0]);
+  const [priority, setPriority] = useState(task?.priority?.toUpperCase() || "Not specified");
+  const [teamCompany, setTeamCompany] = useState("Not specified");
+  const [evaluationScore, setEvaluationScore] = useState("Not specified");
+  const [governorate, setGovernorate] = useState("Not specified");
   const [district, setDistrict] = useState("");
-  const [customerType, setCustomerType] = useState(dropdownOptions.CUSTOMER_TYPE[0]);
-  const [validationStatus, setValidationStatus] = useState(dropdownOptions.VALIDATION_STATUS[1] || dropdownOptions.VALIDATION_STATUS[0]);
+  const [customerType, setCustomerType] = useState("Not specified");
+  const [validationStatus, setValidationStatus] = useState("Not specified");
   const [rcaRows, setRcaRows] = useState([
-    { responsible: '', reason: '', subReason: '', rootCause: '', itnRelated: 'No', relatedToSubscription: 'Yes' }
+    { responsible: 'Not specified', reason: 'Not specified', subReason: 'Not specified', rootCause: 'Not specified', itnRelated: 'Not specified', relatedToSubscription: 'Not specified' }
   ]);
-  const [ontType, setOntType] = useState("");
-  const [freeExtender, setFreeExtender] = useState("No");
-  const [extenderType, setExtenderType] = useState("");
+  const [ontType, setOntType] = useState("Not specified");
+  const [freeExtender, setFreeExtender] = useState("Not specified");
+  const [extenderType, setExtenderType] = useState("Not specified");
   const [extenderNumber, setExtenderNumber] = useState(0);
   const [closureCallEvaluation, setClosureCallEvaluation] = useState("");
   const [closureCallFeedback, setClosureCallFeedback] = useState("");
-  const [gaiaCheck, setGaiaCheck] = useState("No");
+  const [gaiaCheck, setGaiaCheck] = useState("Not specified");
   const [gaiaContent, setGaiaContent] = useState("");
   const [isQoS, setIsQoS] = useState(false);
   const [scoringKeyOptions, setScoringKeyOptions] = useState([]);
@@ -382,7 +384,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
     setOpen(false);
   };
 
-  const handleAddRcaRow = () => setRcaRows([...rcaRows, { responsible: '', reason: '', subReason: '', rootCause: '', itnRelated: 'No', relatedToSubscription: 'No' }]);
+  const handleAddRcaRow = () => setRcaRows([...rcaRows, { responsible: 'Not specified', reason: 'Not specified', subReason: 'Not specified', rootCause: 'Not specified', itnRelated: 'Not specified', relatedToSubscription: 'Not specified' }]);
   const handleRemoveRcaRow = (index) => setRcaRows(rcaRows.filter((_, i) => i !== index));
   const handleChangeRcaRow = (index, field, newValue) => {
     const updated = [...rcaRows];
@@ -569,6 +571,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
                 onChange={(e) => setGaiaCheck(e.target.value)}
                 label="GAIA Check"
               >
+                <MenuItem value="Not specified">Not specified</MenuItem>
                 <MenuItem value="Yes">Yes</MenuItem>
                 <MenuItem value="No">No</MenuItem>
               </Select>
@@ -723,6 +726,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
                 }}
                 label="Free Extender"
               >
+                <MenuItem value="Not specified">Not specified</MenuItem>
                 <MenuItem value="Yes">Yes</MenuItem>
                 <MenuItem value="No">No</MenuItem>
               </Select>
@@ -819,7 +823,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             <FormControl fullWidth variant="outlined">
               <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
               <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
-                <MenuItem value=""><em>None</em></MenuItem>
+                <MenuItem value=""><em>Not specified</em></MenuItem>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                   <MenuItem key={num} value={num}>{num}</MenuItem>
                 ))}

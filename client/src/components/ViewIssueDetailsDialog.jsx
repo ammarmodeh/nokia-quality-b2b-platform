@@ -191,29 +191,29 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
   };
 
   const handleShareWhatsApp = async () => {
-    let formattedMessage = `*🔔 Issue Report*\n\n`;
+    let formattedMessage = `*Issue Report*\n\n`;
     formattedMessage += `*SLID:* ${issue.slid}\n`;
-    formattedMessage += `*👤 Customer Info*\n`;
+    formattedMessage += `*Customer Info*\n`;
     formattedMessage += `Name: ${issue.customerName || 'N/A'}\n`;
     formattedMessage += `Contact: ${issue.customerContact || 'N/A'}\n`;
     formattedMessage += `Area: ${issue.area || 'N/A'}\n`;
     formattedMessage += `Caller: ${issue.callerName || 'N/A'} (${issue.callerDetails || 'N/A'})\n`;
     formattedMessage += `Call Date: ${issue.callDate ? format(new Date(issue.callDate), 'MMM dd, yyyy') : 'N/A'}\n`;
     if (issue.ticketId) formattedMessage += `*Ticket ID:* ${issue.ticketId}\n`;
-    formattedMessage += `*Status:* ${issue.solved === 'yes' ? '✅ Resolved' : '⚠️ Open'}\n\n`;
+    formattedMessage += `*Status:* ${issue.solved === 'yes' ? 'Resolved' : 'Open'}\n\n`;
 
-    formattedMessage += `*📍 Source & Team*\n`;
+    formattedMessage += `*Source & Team*\n`;
     formattedMessage += `Team Company: ${issue.teamCompany}\n`;
     formattedMessage += `Installing Team: ${issue.installingTeam || 'N/A'}\n`;
     formattedMessage += `Assigned To: ${issue.assignedTo || 'Unassigned'}\n\n`;
 
-    formattedMessage += `*🔍 Issue Details*\n`;
+    formattedMessage += `*Issue Details*\n`;
     formattedMessage += `Categories: ${issue.issues?.map(i => i.category + (i.subCategory ? ` (${i.subCategory})` : '')).join(', ') || 'N/A'}\n`;
     if (issue.reporterNote) formattedMessage += `Reporter Note: ${issue.reporterNote}\n`;
     if (issue.assigneeNote) formattedMessage += `Assignee Note: ${issue.assigneeNote}\n`;
     formattedMessage += `\n`;
 
-    formattedMessage += `*📅 Timeline*\n`;
+    formattedMessage += `*Timeline*\n`;
     formattedMessage += `Reported: ${issue.date ? new Date(issue.date).toLocaleDateString() : 'Unknown'}\n`;
     if (issue.pisDate) formattedMessage += `PIS Date: ${new Date(issue.pisDate).toLocaleDateString()}\n`;
     if (issue.dispatched === 'yes') {
@@ -221,7 +221,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
     }
 
     if (issue.solved === 'yes') {
-      formattedMessage += `\n*✅ Resolution*\n`;
+      formattedMessage += `\n*Resolution*\n`;
       if (issue.resolveDate) formattedMessage += `Resolved: ${new Date(issue.resolveDate).toLocaleDateString()}\n`;
       if (issue.resolvedBy) formattedMessage += `Method: ${issue.resolvedBy}\n`;
       if (issue.closedBy) formattedMessage += `Supervisor: ${issue.closedBy}\n`;

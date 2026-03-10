@@ -78,10 +78,11 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                 <FormControl fullWidth size="small">
                   <InputLabel>ITN Related</InputLabel>
                   <Select
-                    value={row.itnRelated || 'No'}
+                    value={row.itnRelated || 'Not specified'}
                     label="ITN Related"
                     onChange={(e) => handleChange(index, 'itnRelated', e.target.value)}
                   >
+                    <MenuItem value="Not specified">Not specified</MenuItem>
                     <MenuItem value="Yes">Yes</MenuItem>
                     <MenuItem value="No">No</MenuItem>
                   </Select>
@@ -91,10 +92,11 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                 <FormControl fullWidth size="small">
                   <InputLabel>Related to Current Subscription</InputLabel>
                   <Select
-                    value={row.relatedToSubscription || 'No'}
+                    value={row.relatedToSubscription || 'Not specified'}
                     label="Related to Current Subscription"
                     onChange={(e) => handleChange(index, 'relatedToSubscription', e.target.value)}
                   >
+                    <MenuItem value="Not specified">Not specified</MenuItem>
                     <MenuItem value="Yes">Yes</MenuItem>
                     <MenuItem value="No">No</MenuItem>
                   </Select>
@@ -193,18 +195,18 @@ const EditTaskDialog = ({
   const [fieldTeams, setFieldTeams] = useState([]);
   const [teamInfo, setTeamInfo] = useState({ teamName: '', teamId: '' });
   const [customerType, setCustomerType] = useState('');
-  const [validationStatus, setValidationStatus] = useState("");
+  const [validationStatus, setValidationStatus] = useState("Not specified");
   const [rcaRows, setRcaRows] = useState([
-    { responsible: '', reason: '', subReason: '', rootCause: '', itnRelated: 'No', relatedToSubscription: 'Yes' }
+    { responsible: 'Not specified', reason: 'Not specified', subReason: 'Not specified', rootCause: 'Not specified', itnRelated: 'Not specified', relatedToSubscription: 'Not specified' }
   ]);
-  const [ontType, setOntType] = useState("");
-  const [freeExtender, setFreeExtender] = useState("No");
-  const [extenderType, setExtenderType] = useState("");
+  const [ontType, setOntType] = useState("Not specified");
+  const [freeExtender, setFreeExtender] = useState("Not specified");
+  const [extenderType, setExtenderType] = useState("Not specified");
   const [extenderNumber, setExtenderNumber] = useState(0);
   const [closureCallEvaluation, setClosureCallEvaluation] = useState("");
   const [closureCallFeedback, setClosureCallFeedback] = useState("");
   const [operation, setOperation] = useState("");
-  const [gaiaCheck, setGaiaCheck] = useState("No");
+  const [gaiaCheck, setGaiaCheck] = useState("Not specified");
   const [gaiaContent, setGaiaContent] = useState("");
   const [isQoS, setIsQoS] = useState(false);
   const [contractDate, setContractDate] = useState("");
@@ -240,9 +242,9 @@ const EditTaskDialog = ({
           const formatted = {};
           Object.keys(data).forEach(key => {
             if (key === "REASON_SUB" || key === "ROOT_CAUSE" || key === "REASON" || key === "RESPONSIBILITY") {
-              formatted[key] = data[key]; // Store full objects for hierarchical options
+              formatted[key] = [{ value: "Not specified", label: "Not specified" }, ...data[key]]; // Store full objects for hierarchical options
             } else {
-              formatted[key] = data[key].map(opt => opt.value);
+              formatted[key] = ["Not specified", ...data[key].map(opt => opt.value)];
             }
           });
           setDropdownOptions(prev => ({ ...prev, ...formatted }));
@@ -381,24 +383,24 @@ const EditTaskDialog = ({
       const rows = [];
       for (let i = 0; i < maxLen; i++) {
         rows.push({
-          responsible: resps[i] || '',
-          reason: reas[i] || '',
-          subReason: subReas[i] || '',
-          rootCause: roots[i] || '',
-          itnRelated: itns[i] || 'No',
-          relatedToSubscription: subs[i] || 'No'
+          responsible: resps[i] || 'Not specified',
+          reason: reas[i] || 'Not specified',
+          subReason: subReas[i] || 'Not specified',
+          rootCause: roots[i] || 'Not specified',
+          itnRelated: itns[i] || 'Not specified',
+          relatedToSubscription: subs[i] || 'Not specified'
         });
       }
       setRcaRows(rows);
 
-      setOntType(task.ontType || "");
-      setFreeExtender(task.freeExtender || "No");
-      setExtenderType(task.extenderType || "");
+      setOntType(task.ontType || "Not specified");
+      setFreeExtender(task.freeExtender || "Not specified");
+      setExtenderType(task.extenderType || "Not specified");
       setExtenderNumber(task.extenderNumber || 0);
       setClosureCallEvaluation(task.closureCallEvaluation || "");
       setClosureCallFeedback(task.closureCallFeedback || "");
       setOperation(task.operation || "");
-      setGaiaCheck(task.gaiaCheck || "No");
+      setGaiaCheck(task.gaiaCheck || "Not specified");
       setGaiaContent(task.gaiaContent || "");
       setIsQoS(task.isQoS || false);
       setContractDate(task.contractDate ? new Date(task.contractDate).toISOString().split('T')[0] : "");
@@ -655,6 +657,7 @@ const EditTaskDialog = ({
                   onChange={(e) => setGaiaCheck(e.target.value)}
                   label="GAIA Check"
                 >
+                  <MenuItem value="Not specified">Not specified</MenuItem>
                   <MenuItem value="Yes">Yes</MenuItem>
                   <MenuItem value="No">No</MenuItem>
                 </Select>
@@ -801,6 +804,7 @@ const EditTaskDialog = ({
                   }}
                   label="Free Extender"
                 >
+                  <MenuItem value="Not specified">Not specified</MenuItem>
                   <MenuItem value="Yes">Yes</MenuItem>
                   <MenuItem value="No">No</MenuItem>
                 </Select>
@@ -880,7 +884,7 @@ const EditTaskDialog = ({
               <FormControl fullWidth variant="outlined">
                 <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
                 <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
-                  <MenuItem value=""><em>None</em></MenuItem>
+                  <MenuItem value=""><em>Not specified</em></MenuItem>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                     <MenuItem key={num} value={num}>{num}</MenuItem>
                   ))}

@@ -306,7 +306,7 @@ const DetractorTasks = () => {
       // Status & Priority
       "Status": task.status || "",
       "Priority": task.priority || "",
-      "Validation Status": task.validationStatus || "",
+      "Validation Status": task.validationStatus || "Not validated",
       "Category": task.category || "",
 
       // Scores & Evaluation
@@ -1005,7 +1005,7 @@ const DetractorTasks = () => {
                       >
                         <MenuItem value="all">All Statuses</MenuItem>
                         <MenuItem value="Validated">🛡️ Validated</MenuItem>
-                        <MenuItem value="Pending">🕒 Not Validated</MenuItem>
+                        <MenuItem value="Not validated">🕒 Not Validated</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
