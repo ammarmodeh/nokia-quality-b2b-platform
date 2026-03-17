@@ -174,7 +174,7 @@ const taskSchema = new mongoose.Schema(
     tarrifName: { type: String, trim: true, default: null },
     speed: { type: Number, default: null },
     ontType: { type: String, trim: true, default: null },
-    freeExtender: { type: String, enum: ["Yes", "No", null], default: null },
+    freeExtender: { type: String, enum: ["Yes", "No", null, "Not specified"], default: null },
     extenderType: { type: String, trim: true, default: null },
     extenderNumber: { type: Number, default: 0 },
     itnRelated: { type: [String], default: [] },
@@ -182,7 +182,7 @@ const taskSchema = new mongoose.Schema(
     reason: { type: [String], default: [] },
     subReason: { type: [String], default: [] },
     rootCause: { type: [String], default: [] },
-    gaiaCheck: { type: String, enum: ["Yes", "No", null], default: null },
+    gaiaCheck: { type: String, enum: ["Yes", "No", null, "Not specified"], default: null },
     isQoS: { type: Boolean, default: false },
     scoringKeys: { type: [String], default: [] },
     gaiaContent: { type: String, trim: true, default: null },
@@ -224,10 +224,10 @@ const taskSchema = new mongoose.Schema(
     priority: {
       type: String,
       enum: {
-        values: ["High", "Medium", "Normal", "Low"],
-        message: "Priority must be one of High, Medium, Normal, or Low",
+        values: ["High", "Medium", "Normal", "Low", "Not specified"],
+        message: "Priority must be one of High, Medium, Normal, Low, or Not specified",
       },
-      default: "Normal",
+      default: "Not specified",
     },
     status: {
       type: String,
@@ -269,13 +269,13 @@ const taskSchema = new mongoose.Schema(
     validationStatus: {
       type: String,
       enum: {
-        values: ["Validated", "Not validated"],
-        message: "Validation status must be either Validated or Not validated",
+        values: ["Validated", "Not validated", "Not specified"],
+        message: "Validation status must be either Validated, Not validated, or Not specified",
       },
     },
     evaluationScore: {
-      type: Number,
-      default: 1,
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
       required: false,
     },
   },
