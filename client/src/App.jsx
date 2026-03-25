@@ -10,7 +10,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 import clickUpDarkTheme from "./theme/clickUpDarkTheme";
 
 // Lazy load pages
-const Layout = lazy(() => import("./components/Layout"));
+const Layout = lazy(() => import("./components/Layout.jsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AssignedToMe = lazy(() => import("./pages/AssignedToMe"));
 const Users = lazy(() => import("./pages/Users"));

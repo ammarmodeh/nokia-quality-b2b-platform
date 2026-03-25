@@ -1,4 +1,5 @@
-import { ExpandMore, Assessment } from "@mui/icons-material";
+import ExpandMore from "@mui/icons-material/ExpandMore";
+import Assessment from "@mui/icons-material/Assessment";
 import { Accordion, AccordionDetails, AccordionSummary, Stack, useMediaQuery } from "@mui/material";
 import clsx from "clsx";
 import { useEffect, useState } from "react";

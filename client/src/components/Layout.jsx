@@ -5,7 +5,8 @@ import { Outlet } from "react-router-dom";
 import clsx from "clsx";
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
-import { AutoGraph, Close } from "@mui/icons-material";
+import AutoGraph from "@mui/icons-material/AutoGraph";
+import Close from "@mui/icons-material/Close";
 import FieldTeamsFloatingTable from "./FieldTeamsFloatingTable";
 
 const Layout = () => {
@@ -38,7 +39,7 @@ const Layout = () => {
       >
         <Sidebar
           toggleSidebar={toggleSidebar}
-          isSidebarOpen={sidebarOpen}
+          isCollapsed={!sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           isMobileOrMedium={isMobileOrMedium}
         />
