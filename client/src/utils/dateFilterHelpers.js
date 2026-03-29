@@ -36,25 +36,15 @@ export const filterTasksByWeek = (tasks, year, weekNumber, settings = {}) => {
  */
 export const filterTasksByMonth = (tasks, year, month, settings = {}) => {
   if (!Array.isArray(tasks)) return [];
-  const ranges = generateMonthRanges(tasks, settings);
-  // Find range for "Month-X"
-  // Note: month param here might be 0-based index or 1-based number depending on caller.
-  // NPSSummaryCard passes parseInt(selectedPeriod). If selectedPeriod is "1", returns 1.
-  // getAvailableMonths below generates keys "Month-1", "Month-2".
-
-  // If caller passes index (0-11), we might need to adjust. 
-  // But let's assume standardizing on 1-based Month numbers.
-
-  const targetKey = `Month-${month}`;
-  const targetRange = ranges.find(r => r.key === targetKey);
-
-  if (!targetRange) return [];
 
   return tasks.filter(task => {
     if (!task.interviewDate) return false;
     const d = new Date(task.interviewDate);
-    // Include boundary? Usually yes.
-    return d >= targetRange.start && d <= targetRange.end;
+    // Ignore invalid dates
+    if (isNaN(d.getTime())) return false;
+    
+    // Check if task matches the requested year and calendar month (1-based index)
+    return d.getFullYear() === year && (d.getMonth() + 1) === Number(month);
   });
 };
 
@@ -389,34 +379,28 @@ export const aggregateSamples = (samplesData, type, value, settings = {}) => {
 
   if (type === 'month') {
     const { month } = value;
-    // We need to find which weeks fall into this month.
-    // Using generateMonthRanges to get the date range of the month
-    const ranges = generateMonthRanges([], settings);
-    const targetKey = `Month-${month}`;
-    const targetRange = ranges.find(r => r.key === targetKey);
+    const targetMonth = Number(month);
 
-    if (!targetRange) return 0;
-
-    // Filter samples that fall within the month range
+    // Filter samples that fall within the calendar month
     return samplesData.filter(s => {
-      // 1. Preferred: Calculate specific week start from settings (Consistency Guarantee)
-      // This ensures we verify the week number against the exact month definitions from settings
+      // 1. Exact match on stored startDate if available
+      if (s.startDate) {
+        const sDate = new Date(s.startDate);
+        return (sDate.getMonth() + 1) === targetMonth;
+      }
+
+      // 2. Estimate start date from week1StartDate
       if (settings.week1StartDate && s.weekNumber) {
         const w1Start = new Date(settings.week1StartDate);
         const estimatedStart = new Date(w1Start);
         estimatedStart.setDate(w1Start.getDate() + (s.weekNumber - 1) * 7);
-
-        // Check if week START falls within the month range based on calculation
-        // Strict assignment: A week belongs to the month that contains its start date
-        const startInRange = estimatedStart >= targetRange.start && estimatedStart <= targetRange.end;
-        return startInRange;
+        return (estimatedStart.getMonth() + 1) === targetMonth;
       }
-
-      // 2. Fallback: If settings missing, use stored startDate if available
-      if (s.startDate) {
-        const sDate = new Date(s.startDate);
-        // Same logic: check if start date is in range
-        return sDate >= targetRange.start && sDate <= targetRange.end;
+      
+      // 3. Very rough fallback using year and weekNumber
+      if (s.year && s.weekNumber) {
+        const roughStart = new Date(s.year, 0, 1 + (s.weekNumber - 1) * 7);
+        return (roughStart.getMonth() + 1) === targetMonth;
       }
 
       return false; // Can't determine

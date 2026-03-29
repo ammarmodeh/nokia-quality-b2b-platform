@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -55,7 +55,7 @@ const ItemTypes = {
 };
 
 // Draggable Row Component
-const DraggableRow = ({ question, index, moveRow, handleOpenDialog, handleDelete, handleDuplicate, colors }) => {
+const DraggableRow = ({ question, index, globalIndex, moveRow, handleOpenDialog, handleDelete, handleDuplicate, onSwapClick, colors }) => {
   const ref = useRef(null);
   const [{ handlerId }, drop] = useDrop({
     accept: ItemTypes.QUESTION,
@@ -106,8 +106,33 @@ const DraggableRow = ({ question, index, moveRow, handleOpenDialog, handleDelete
         opacity: isDragging ? 0.5 : 1
       }}
     >
-      <TableCell sx={{ color: colors.textSecondary }}>
+      <TableCell sx={{ color: colors.textSecondary, width: '40px' }}>
         <DragIcon sx={{ cursor: 'move', color: colors.textSecondary }} />
+      </TableCell>
+      {/* Order Badge */}
+      <TableCell sx={{ width: '60px' }}>
+        <Tooltip title={`Position ${globalIndex + 1} — Click to swap with another question`} placement="right">
+          <Box
+            onClick={() => onSwapClick(globalIndex)}
+            sx={{
+              cursor: 'pointer',
+              width: 36, height: 36,
+              borderRadius: '10px',
+              bgcolor: 'rgba(123, 104, 238, 0.12)',
+              border: '1.5px solid rgba(123, 104, 238, 0.35)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: colors.primary, fontWeight: 'bold', fontSize: '13px',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: 'rgba(123, 104, 238, 0.28)',
+                borderColor: colors.primary,
+                transform: 'scale(1.08)'
+              }
+            }}
+          >
+            {globalIndex + 1}
+          </Box>
+        </Tooltip>
       </TableCell>
       <TableCell sx={{ color: colors.textPrimary, maxWidth: '400px' }}>
         <Typography variant="body2" sx={{
@@ -206,6 +231,18 @@ const QuizManagement = () => {
     categoryDistribution: []
   });
 
+  // Frontend Pagination & Filtering State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [typeFilter, setTypeFilter] = useState('All');
+  const [page, setPage] = useState(1);
+  const [rowsPerPage] = useState(10);
+
+  // Swap Dialog State
+  const [swapDialogOpen, setSwapDialogOpen] = useState(false);
+  const [swapSourceIndex, setSwapSourceIndex] = useState(null);
+  const [swapSearchQuery, setSwapSearchQuery] = useState('');
+
   const [formData, setFormData] = useState({
     question: '',
     questionImage: '',
@@ -294,7 +331,28 @@ const QuizManagement = () => {
 
   useEffect(() => {
     fetchQuestions();
+    setPage(1); // Reset page on type change
   }, [selectedQuizType]);
+
+  // Derived filtered questions
+  const filteredQuestions = useMemo(() => {
+    return questions.filter(q => {
+      const questionText = q.question || '';
+      const matchesSearch = questionText.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === 'All' || q.category === categoryFilter;
+      const matchesType = typeFilter === 'All' || (q.type || 'options') === typeFilter;
+      return matchesSearch && matchesCategory && matchesType;
+    });
+  }, [questions, searchQuery, categoryFilter, typeFilter]);
+
+  // Is Drag & Drop enabled (only when no filters are active)
+  const isDndEnabled = searchQuery === '' && categoryFilter === 'All' && typeFilter === 'All';
+
+  // Derived paginated questions
+  const paginatedQuestions = useMemo(() => {
+    const startIndex = (page - 1) * rowsPerPage;
+    return filteredQuestions.slice(startIndex, startIndex + rowsPerPage);
+  }, [filteredQuestions, page, rowsPerPage]);
 
   const handleDuplicate = async (questionToDuplicate) => {
     const duplicatedData = {
@@ -320,15 +378,44 @@ const QuizManagement = () => {
     }
   };
 
+  // Swap handlers
+  const handleSwapClick = useCallback((globalIdx) => {
+    setSwapSourceIndex(globalIdx);
+    setSwapSearchQuery('');
+    setSwapDialogOpen(true);
+  }, []);
+
+  const handleSwapConfirm = useCallback((targetGlobalIndex) => {
+    if (targetGlobalIndex === swapSourceIndex) {
+      setSwapDialogOpen(false);
+      return;
+    }
+    setQuestions(prev => {
+      const updated = [...prev];
+      const temp = updated[swapSourceIndex];
+      updated[swapSourceIndex] = updated[targetGlobalIndex];
+      updated[targetGlobalIndex] = temp;
+      return updated;
+    });
+    setSwapDialogOpen(false);
+    toast.success(`Question #${swapSourceIndex + 1} swapped with #${targetGlobalIndex + 1}`);
+  }, [swapSourceIndex]);
+
   // Drag and Drop Logic
   const moveRow = useCallback((dragIndex, hoverIndex) => {
+    if (!isDndEnabled) return;
+
+    const startIndex = (page - 1) * rowsPerPage;
+    const actualDragIndex = startIndex + dragIndex;
+    const actualHoverIndex = startIndex + hoverIndex;
+
     setQuestions((prevQuestions) => {
       const updatedQuestions = [...prevQuestions];
-      const [movedRow] = updatedQuestions.splice(dragIndex, 1);
-      updatedQuestions.splice(hoverIndex, 0, movedRow);
+      const [movedRow] = updatedQuestions.splice(actualDragIndex, 1);
+      updatedQuestions.splice(actualHoverIndex, 0, movedRow);
       return updatedQuestions;
     });
-  }, []);
+  }, [page, rowsPerPage, isDndEnabled]);
 
   const saveOrder = async () => {
     try {
@@ -609,6 +696,86 @@ const QuizManagement = () => {
           </Grid>
         </Grid>
 
+        {/* Filter Toolbar */}
+        <Box sx={{
+          bgcolor: colors.surface,
+          p: 2,
+          mb: 3,
+          borderRadius: '16px',
+          border: `1px solid ${colors.border}`,
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: 2,
+          alignItems: 'center'
+        }}>
+          <TextField
+            placeholder="Search questions..."
+            size="small"
+            fullWidth
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+            InputProps={{
+              startAdornment: (
+                <Box component="span" sx={{ mr: 1, color: colors.textSecondary, display: 'flex' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </Box>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                bgcolor: 'rgba(255,255,255,0.03)',
+                '& fieldset': { borderColor: colors.border },
+                '&:hover fieldset': { borderColor: colors.primary },
+              },
+              '& input': { color: colors.textPrimary }
+            }}
+          />
+          <Stack direction="row" spacing={2} sx={{ minWidth: { md: '450px' }, width: { xs: '100%', md: 'auto' } }}>
+            <TextField
+              select
+              label="Category"
+              size="small"
+              fullWidth
+              value={categoryFilter}
+              onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: 'rgba(255,255,255,0.03)',
+                  '& fieldset': { borderColor: colors.border },
+                },
+                '& .MuiInputLabel-root': { color: colors.textSecondary },
+                '& .MuiSelect-select': { color: colors.textPrimary }
+              }}
+            >
+              <MenuItem value="All">All Categories</MenuItem>
+              <MenuItem value="General">General</MenuItem>
+              {availableCategories.map(cat => (
+                <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Type"
+              size="small"
+              fullWidth
+              value={typeFilter}
+              onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: 'rgba(255,255,255,0.03)',
+                  '& fieldset': { borderColor: colors.border },
+                },
+                '& .MuiInputLabel-root': { color: colors.textSecondary },
+                '& .MuiSelect-select': { color: colors.textPrimary }
+              }}
+            >
+              <MenuItem value="All">All Types</MenuItem>
+              <MenuItem value="options">Multiple Choice</MenuItem>
+              <MenuItem value="essay">Essay</MenuItem>
+            </TextField>
+          </Stack>
+        </Box>
+
         <TableContainer component={Paper} sx={{
           bgcolor: colors.surface,
           backgroundImage: 'none',
@@ -620,7 +787,8 @@ const QuizManagement = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.03)' }}>
-                <TableCell width="50" sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}` }}></TableCell>
+                <TableCell width="40" sx={{ borderBottom: `2px solid ${colors.border}` }}></TableCell>
+                <TableCell width="60" sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}`, fontSize: '12px', letterSpacing: '0.08em' }}>ORDER</TableCell>
                 <TableCell sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}` }}>Question</TableCell>
                 <TableCell sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}` }}>Category</TableCell>
                 <TableCell sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}` }}>Type</TableCell>
@@ -628,29 +796,82 @@ const QuizManagement = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {questions.map((q, index) => (
-                <DraggableRow
-                  key={q._id}
-                  index={index}
-                  question={q}
-                  moveRow={moveRow}
-                  handleOpenDialog={handleOpenDialog}
-                  handleDelete={handleDelete}
-                  handleDuplicate={handleDuplicate}
-                  colors={colors}
-                />
-              ))}
-              {questions.length === 0 && (
+              {paginatedQuestions.map((q, index) => {
+                const globalIndex = questions.findIndex(fullQ => fullQ._id === q._id);
+                return (
+                  <DraggableRow
+                    key={q._id}
+                    index={index}
+                    globalIndex={globalIndex}
+                    question={q}
+                    moveRow={moveRow}
+                    handleOpenDialog={handleOpenDialog}
+                    handleDelete={handleDelete}
+                    handleDuplicate={handleDuplicate}
+                    onSwapClick={handleSwapClick}
+                    colors={colors}
+                  />
+                );
+              })}
+              {paginatedQuestions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 10 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
                     <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                      No questions found. Add your first question to start!
+                      {questions.length === 0 ? 'No questions found. Add your first question to start!' : 'No questions match your filters.'}
                     </Typography>
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+
+          {/* Pagination Controls */}
+          {filteredQuestions.length > rowsPerPage && (
+            <Box sx={{ p: 2, display: 'flex', justifyContent: 'center', borderTop: `1px solid ${colors.border}` }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Typography variant="body2" sx={{ color: colors.textSecondary }}>
+                  Showing {Math.min(filteredQuestions.length, (page - 1) * rowsPerPage + 1)}-{Math.min(filteredQuestions.length, page * rowsPerPage)} of {filteredQuestions.length}
+                </Typography>
+                <Box sx={{
+                  '& .MuiPaginationItem-root': {
+                    color: colors.textSecondary,
+                    '&.Mui-selected': {
+                      bgcolor: 'rgba(123, 104, 238, 0.2)',
+                      color: colors.primary,
+                      fontWeight: 'bold'
+                    },
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.05)'
+                    }
+                  }
+                }}>
+                  <Box component="nav">
+                    <Stack direction="row" spacing={1}>
+                      <IconButton
+                        disabled={page === 1}
+                        onClick={() => setPage(page - 1)}
+                        sx={{ color: colors.textSecondary }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                      </IconButton>
+                      <Box sx={{ display: 'flex', alignItems: 'center', px: 2 }}>
+                        <Typography sx={{ color: colors.textPrimary, fontWeight: 'bold' }}>
+                          Page {page} of {Math.ceil(filteredQuestions.length / rowsPerPage)}
+                        </Typography>
+                      </Box>
+                      <IconButton
+                        disabled={page >= Math.ceil(filteredQuestions.length / rowsPerPage)}
+                        onClick={() => setPage(page + 1)}
+                        sx={{ color: colors.textSecondary }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </IconButton>
+                    </Stack>
+                  </Box>
+                </Box>
+              </Stack>
+            </Box>
+          )}
         </TableContainer>
 
         <Dialog
@@ -984,6 +1205,173 @@ const QuizManagement = () => {
             )}
           </DialogActions>
         </Dialog>
+
+        {/* ─── Swap Position Dialog ─── */}
+        <Dialog
+          open={swapDialogOpen}
+          onClose={() => setSwapDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              bgcolor: '#121212',
+              color: colors.textPrimary,
+              backgroundImage: 'none',
+              borderRadius: '20px',
+              border: `1px solid ${colors.border}`,
+              boxShadow: '0 25px 60px rgba(0,0,0,0.7)'
+            }
+          }}
+        >
+          <DialogTitle sx={{ borderBottom: `1px solid ${colors.border}`, px: 3, py: 2.5 }}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              {/* swap icon */}
+              <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(123,104,238,0.15)', color: colors.primary, display: 'flex' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.textPrimary, lineHeight: 1.2 }}>
+                  Swap Question Order
+                </Typography>
+                <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                  {swapSourceIndex !== null ? `Moving #${swapSourceIndex + 1} — pick the question to swap with` : ''}
+                </Typography>
+              </Box>
+            </Stack>
+          </DialogTitle>
+
+          <DialogContent sx={{ p: 0 }}>
+            {/* Source question preview */}
+            {swapSourceIndex !== null && questions[swapSourceIndex] && (
+              <Box sx={{ px: 3, pt: 2.5, pb: 2, bgcolor: 'rgba(123,104,238,0.06)', borderBottom: `1px solid ${colors.border}` }}>
+                <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  Selected (Position #{swapSourceIndex + 1})
+                </Typography>
+                <Typography variant="body2" sx={{
+                  color: colors.textPrimary, mt: 0.5, fontWeight: '500',
+                  direction: /[\u0600-\u06FF]/.test(questions[swapSourceIndex].question) ? 'rtl' : 'ltr',
+                  textAlign: /[\u0600-\u06FF]/.test(questions[swapSourceIndex].question) ? 'right' : 'left',
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                }}>
+                  {questions[swapSourceIndex].question}
+                </Typography>
+              </Box>
+            )}
+
+            {/* Search */}
+            <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${colors.border}` }}>
+              <TextField
+                placeholder="Search questions to swap with..."
+                size="small"
+                fullWidth
+                autoFocus
+                value={swapSearchQuery}
+                onChange={(e) => setSwapSearchQuery(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <Box component="span" sx={{ mr: 1, color: colors.textSecondary, display: 'flex' }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </Box>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'rgba(255,255,255,0.04)',
+                    '& fieldset': { borderColor: colors.border },
+                    '&:hover fieldset': { borderColor: colors.primary },
+                    '&.Mui-focused fieldset': { borderColor: colors.primary },
+                  },
+                  '& input': { color: colors.textPrimary }
+                }}
+              />
+            </Box>
+
+            {/* Questions list */}
+            <Box sx={{ maxHeight: '380px', overflowY: 'auto', px: 1.5, py: 1 }}>
+              {questions
+                .map((q, idx) => ({ q, idx }))
+                .filter(({ q, idx }) =>
+                  idx !== swapSourceIndex &&
+                  (q.question || '').toLowerCase().includes(swapSearchQuery.toLowerCase())
+                )
+                .map(({ q, idx }) => (
+                  <Box
+                    key={q._id}
+                    onClick={() => handleSwapConfirm(idx)}
+                    sx={{
+                      p: 1.5,
+                      mb: 0.5,
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      border: '1px solid transparent',
+                      display: 'flex',
+                      gap: 1.5,
+                      alignItems: 'flex-start',
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        bgcolor: 'rgba(123,104,238,0.1)',
+                        borderColor: 'rgba(123,104,238,0.4)'
+                      }
+                    }}
+                  >
+                    {/* Position badge */}
+                    <Box sx={{
+                      flexShrink: 0,
+                      width: 34, height: 34,
+                      borderRadius: '8px',
+                      bgcolor: 'rgba(62,166,255,0.12)',
+                      border: '1px solid rgba(62,166,255,0.3)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: colors.secondary, fontWeight: 'bold', fontSize: '13px'
+                    }}>
+                      {idx + 1}
+                    </Box>
+                    {/* Question content */}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" sx={{
+                        color: colors.textPrimary, fontWeight: '500',
+                        direction: /[\u0600-\u06FF]/.test(q.question) ? 'rtl' : 'ltr',
+                        textAlign: /[\u0600-\u06FF]/.test(q.question) ? 'right' : 'left',
+                        display: '-webkit-box', WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                      }}>
+                        {q.question}
+                      </Typography>
+                      <Stack direction="row" spacing={1} mt={0.5} flexWrap="wrap">
+                        {q.category && (
+                          <Typography variant="caption" sx={{ color: colors.primary }}>
+                            {q.category}
+                          </Typography>
+                        )}
+                        <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                          {q.type === 'essay' ? 'Essay' : 'Multiple Choice'}
+                        </Typography>
+                      </Stack>
+                    </Box>
+                    {/* Swap arrow hint */}
+                    <Box sx={{ flexShrink: 0, color: 'rgba(123,104,238,0.4)', display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </Box>
+                  </Box>
+                ))}
+              {questions.filter((q, idx) =>
+                idx !== swapSourceIndex &&
+                (q.question || '').toLowerCase().includes(swapSearchQuery.toLowerCase())
+              ).length === 0 && (
+                <Box sx={{ py: 6, textAlign: 'center' }}>
+                  <Typography variant="body2" sx={{ color: colors.textSecondary }}>No questions found matching your search.</Typography>
+                </Box>
+              )}
+            </Box>
+          </DialogContent>
+
+          <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${colors.border}` }}>
+            <Button onClick={() => setSwapDialogOpen(false)} sx={{ color: colors.textSecondary, fontWeight: 'bold' }}>
+              Cancel
+            </Button>
+          </DialogActions>
+        </Dialog>
+
       </Box>
     </DndProvider>
   );

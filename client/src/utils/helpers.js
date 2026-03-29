@@ -521,123 +521,75 @@ export const getCompanyViolations = (tasks) => {
 // ============================================
 
 /**
- * Generate month ranges based on month1 configuration
- * Month 1 is defined by user.
- * Subsequent months are calculated as strict 4-week (28-day) periods.
- * This results in a 13-month year (52 weeks / 4 weeks = 13).
+ * Generate month ranges based on standard calendar months
+ * Month 1 is January, Month 12 is December.
  */
 export const generateMonthRanges = (tasks, settings = {}) => {
-  const { month1StartDate, month1EndDate } = settings;
-
-  if (!month1StartDate || !month1EndDate) {
-    return [];
+  // Use current year or year from settings if preferred.
+  // We'll use the current year as default to cover all dashboard data consistently.
+  const currentYear = new Date().getFullYear();
+  let year = currentYear;
+  
+  if (settings && settings.month1StartDate) {
+     year = new Date(settings.month1StartDate).getFullYear();
   }
 
   const ranges = [];
-  const month1Start = new Date(month1StartDate);
-  const month1End = new Date(month1EndDate);
 
-  // Add Month 1
   const formatDateRange = (s, e) => {
     const format = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     return `${format(s)} - ${format(e)}`;
   };
 
-  ranges.push({
-    key: `Month-1`,
-    label: `Month 1 (${formatDateRange(month1Start, month1End)})`,
-    start: month1Start,
-    end: month1End
-  });
-
-  // Calculate subsequent months (strict 4-week periods = 28 days)
-  let currentStart = new Date(month1End);
-  currentStart.setDate(currentStart.getDate() + 1); // Day after Month 1 ends
-
-  for (let i = 2; i <= 13; i++) { // Generate up to 13 months to cover full year
-    // Every month is exactly 4 weeks (28 days)
-    const daysInMonth = 28;
-
-    const currentEnd = new Date(currentStart);
-    currentEnd.setDate(currentEnd.getDate() + (daysInMonth - 1));
+  for (let i = 0; i < 12; i++) {
+    const start = new Date(year, i, 1);
+    const end = new Date(year, i + 1, 0, 23, 59, 59, 999);
+    const monthName = start.toLocaleDateString("en-US", { month: "long" });
 
     ranges.push({
-      key: `Month-${i}`,
-      label: `Month ${i} (${formatDateRange(currentStart, currentEnd)})`,
-      start: new Date(currentStart),
-      end: new Date(currentEnd)
+      key: `Month-${i + 1}`,
+      label: `${monthName} (${formatDateRange(start, end)})`,
+      start: start,
+      end: end
     });
-
-    // Next month starts the day after current month ends
-    currentStart = new Date(currentEnd);
-    currentStart.setDate(currentStart.getDate() + 1);
   }
 
   return ranges;
 };
 
 /**
- * Get month number for a given date
+ * Get standard month number (1-12) for a given date
  */
 export const getMonthNumber = (date, settings = {}) => {
-  const { month1StartDate, month1EndDate } = settings;
-
-  if (!month1StartDate || !month1EndDate) {
-    return null;
-  }
-
+  if (!date) return null;
   const targetDate = new Date(date);
-  const month1Start = new Date(month1StartDate);
-  const month1End = new Date(month1EndDate);
+  if (isNaN(targetDate.getTime())) return null;
 
-  // Check if date is in Month 1
-  if (targetDate >= month1Start && targetDate <= month1End) {
-    return { monthNumber: 1, key: 'Month-1' };
-  }
-
-  // Calculate which 4-week period the date falls into
-  let currentStart = new Date(month1End);
-  currentStart.setDate(currentStart.getDate() + 1);
-
-  for (let i = 2; i <= 12; i++) {
-    const currentEnd = new Date(currentStart);
-    currentEnd.setDate(currentEnd.getDate() + 27);
-
-    if (targetDate >= currentStart && targetDate <= currentEnd) {
-      return { monthNumber: i, key: `Month-${i}` };
-    }
-
-    currentStart = new Date(currentEnd);
-    currentStart.setDate(currentStart.getDate() + 1);
-  }
-
-  // Handle Month 13 separately if not covered in loop
-  if (targetDate >= currentStart) {
-    const currentEnd = new Date(currentStart);
-    currentEnd.setDate(currentEnd.getDate() + 27);
-    if (targetDate <= currentEnd) {
-      return { monthNumber: 13, key: 'Month-13' };
-    }
-  }
-
-  return null; // Date doesn't fall in any configured month
+  const month = targetDate.getMonth() + 1;
+  return { monthNumber: month, key: `Month-${month}` };
 };
 
 /**
- * Group data by month
+ * Group data by standard calendar month
  */
 export const groupDataByMonth = (data, monthRange, settings = {}, samplesData = []) => {
   if (!Array.isArray(data)) return {};
   if (data.length === 0 && (!monthRange || monthRange.length === 0)) return {};
 
   const groupedData = {};
-  const monthRanges = generateMonthRanges(data, settings);
 
   // Initialize grouped data for selected months
   if (Array.isArray(monthRange)) {
     monthRange.forEach((month) => {
       groupedData[month] = { Detractors: 0, Neutrals: 0, Promoters: 0, sampleSize: 0 };
     });
+  } else if (typeof monthRange === "string") {
+    groupedData[monthRange] = { Detractors: 0, Neutrals: 0, Promoters: 0, sampleSize: 0 };
+  } else {
+    // If all months
+    for (let i = 1; i <= 12; i++) {
+      groupedData[`Month-${i}`] = { Detractors: 0, Neutrals: 0, Promoters: 0, sampleSize: 0 };
+    }
   }
 
   // Process feedback tasks
@@ -658,28 +610,28 @@ export const groupDataByMonth = (data, monthRange, settings = {}, samplesData = 
     }
   });
 
-  // Process samplesData - aggregate by month
-  const monthRangesMap = {};
-  monthRanges.forEach(range => {
-    monthRangesMap[range.key] = range;
-  });
-
+  // Process samplesData - aggregate by strict month logic
   samplesData.forEach((sample) => {
-    // To associate a sample (week) with a month, we find a date in that week.
-    // We can use the calibration settings to find the start of that week.
-    const { weekStartDay = 0, week1StartDate = null, week1EndDate = null, startWeekNumber = 1 } = settings;
+    let sampleMonthInfo = null;
 
-    if (week1StartDate) {
-      const w1Start = new Date(week1StartDate);
-      const diffWeeks = sample.weekNumber - startWeekNumber;
-      // Approximate the middle of the week to be safe with timezones/boundaries
-      const weekMidDate = new Date(w1Start);
-      weekMidDate.setDate(w1Start.getDate() + (diffWeeks * 7) + 3);
+    if (sample.startDate) {
+      // If sample has an exact start date, use that
+      sampleMonthInfo = getMonthNumber(sample.startDate, settings);
+    } else if (settings.week1StartDate && sample.weekNumber) {
+      // Estimate start date based on week offset
+      const w1Start = new Date(settings.week1StartDate);
+      const diffWeeks = sample.weekNumber - (settings.startWeekNumber || 1);
+      const weekDate = new Date(w1Start);
+      weekDate.setDate(w1Start.getDate() + (diffWeeks * 7));
+      sampleMonthInfo = getMonthNumber(weekDate, settings);
+    } else if (sample.year && sample.weekNumber) {
+      // Very basic fallback
+      const roughStart = new Date(sample.year, 0, 1 + (sample.weekNumber - 1) * 7);
+      sampleMonthInfo = getMonthNumber(roughStart, settings);
+    }
 
-      const monthInfo = getMonthNumber(weekMidDate, settings);
-      if (monthInfo && groupedData[monthInfo.key]) {
-        groupedData[monthInfo.key].sampleSize += (sample.sampleSize || 0);
-      }
+    if (sampleMonthInfo && groupedData[sampleMonthInfo.key]) {
+      groupedData[sampleMonthInfo.key].sampleSize += (Number(sample.sampleSize) || 0);
     }
   });
 
