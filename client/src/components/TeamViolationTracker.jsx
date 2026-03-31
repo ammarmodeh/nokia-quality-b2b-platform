@@ -207,46 +207,66 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
   }, [fieldTeams]);
 
   const { teamDetractorLimit, teamNeutralLimit, calculationBreakdown } = useMemo(() => {
-    // Step 1: Year-to-Date allowed violations (Global)
-    const ytdDetractorLimitGlobal = ytdTotalSamples * 0.09;
-    const ytdNeutralLimitGlobal = ytdTotalSamples * 0.16;
+    // ---- Fair-Share Dynamic Distribution Model (FDDM) ----
+    const DETRACTOR_TARGET = 0.08; // 8% target
+    const NEUTRAL_TARGET = 0.17;   // 17% target (100% - 75% Promoters - 8% Detractors)
+    
+    // Baseline grace limits to protect teams during low-volume/early-year periods
+    const BASELINE_DETRACTORS = 1;
+    const BASELINE_NEUTRALS = 2;
 
-    // Step 2: Per-team YTD limits (Used for compliance status)
-    const ytdDetractorPerTeam = activeTeamsCount > 0 ? ytdDetractorLimitGlobal / activeTeamsCount : 0;
-    const ytdNeutralPerTeam = activeTeamsCount > 0 ? ytdNeutralLimitGlobal / activeTeamsCount : 0;
+    const activeTeams = activeTeamsCount > 0 ? activeTeamsCount : 1;
 
-    // Step 3: Yearly Limits (Based on all entered samples)
-    const yearlyDetractorLimitGlobal = yearlyTotalSamples * 0.09;
-    const yearlyNeutralLimitGlobal = yearlyTotalSamples * 0.16;
+    // 1. Calculate the theoretically fair distribution of random samples per team
+    const fairShareSamplesYTD = ytdTotalSamples / activeTeams;
+    const fairShareSamplesYearly = yearlyTotalSamples / activeTeams;
 
-    const yearlyDetractorPerTeam = activeTeamsCount > 0 ? yearlyDetractorLimitGlobal / activeTeamsCount : 0;
-    const yearlyNeutralPerTeam = activeTeamsCount > 0 ? yearlyNeutralLimitGlobal / activeTeamsCount : 0;
+    // 2. Calculate Strict Proportional Limits based on their fair share of global samples
+    const strictDetractorLimitYTD = fairShareSamplesYTD * DETRACTOR_TARGET;
+    const strictNeutralLimitYTD = fairShareSamplesYTD * NEUTRAL_TARGET;
 
-    // Step 4: Monthly Limits (Informative)
-    const monthlyDetractorPerTeam = yearlyDetractorPerTeam / 12;
-    const monthlyNeutralPerTeam = yearlyNeutralPerTeam / 12;
+    // 3. Apply the Fairness Model: Max(Baseline, Ceil(Strict Limit))
+    // Math.ceil() is used to give the benefit of the doubt on fractional allowances
+    const finalDetractorLimitYTD = Math.max(BASELINE_DETRACTORS, Math.ceil(strictDetractorLimitYTD));
+    const finalNeutralLimitYTD = Math.max(BASELINE_NEUTRALS, Math.ceil(strictNeutralLimitYTD));
+
+    // For Global informative tracking
+    const ytdDetractorLimitGlobal = ytdTotalSamples * DETRACTOR_TARGET;
+    const ytdNeutralLimitGlobal = ytdTotalSamples * NEUTRAL_TARGET;
+
+    // Yearly informative numbers
+    const strictDetractorLimitYearly = fairShareSamplesYearly * DETRACTOR_TARGET;
+    const strictNeutralLimitYearly = fairShareSamplesYearly * NEUTRAL_TARGET;
+    
+    const finalDetractorLimitYearly = Math.max(BASELINE_DETRACTORS, Math.ceil(strictDetractorLimitYearly));
+    const finalNeutralLimitYearly = Math.max(BASELINE_NEUTRALS, Math.ceil(strictNeutralLimitYearly));
+
+    const monthlyDetractorPerTeam = finalDetractorLimitYearly / 12;
+    const monthlyNeutralPerTeam = finalNeutralLimitYearly / 12;
 
     return {
-      teamDetractorLimit: Math.floor(ytdDetractorPerTeam),
-      teamNeutralLimit: Math.floor(ytdNeutralPerTeam),
+      teamDetractorLimit: finalDetractorLimitYTD,
+      teamNeutralLimit: finalNeutralLimitYTD,
       calculationBreakdown: {
+        modelName: "Fair-Share Dynamic Distribution Model (FDDM)",
         ytdTotal: ytdTotalSamples,
         ytdDetractorLimitGlobal: ytdDetractorLimitGlobal.toFixed(1),
         ytdNeutralLimitGlobal: ytdNeutralLimitGlobal.toFixed(1),
-        ytdDetractorPerTeam: ytdDetractorPerTeam.toFixed(2),
-        ytdNeutralPerTeam: ytdNeutralPerTeam.toFixed(2),
+        ytdDetractorPerTeam: strictDetractorLimitYTD.toFixed(2),
+        ytdNeutralPerTeam: strictNeutralLimitYTD.toFixed(2),
+        
+        baselineDetractors: BASELINE_DETRACTORS,
+        baselineNeutrals: BASELINE_NEUTRALS,
+        
+        targetDetractor: DETRACTOR_TARGET,
+        targetNeutral: NEUTRAL_TARGET,
 
         yearlyTotal: yearlyTotalSamples,
-        yearlyDetractorLimit: yearlyDetractorLimitGlobal.toFixed(1),
-        yearlyNeutralLimit: yearlyNeutralLimitGlobal.toFixed(1),
-        yearlyDetractorPerTeam: yearlyDetractorPerTeam.toFixed(2),
-        yearlyNeutralPerTeam: yearlyNeutralPerTeam.toFixed(2),
-
         monthlyDetractorPerTeam: monthlyDetractorPerTeam.toFixed(2),
         monthlyNeutralPerTeam: monthlyNeutralPerTeam.toFixed(2),
 
-        activeTeams: activeTeamsCount,
-        note: "Limits are dynamic based on accumulated Year-to-Date samples."
+        activeTeams: activeTeams,
+        note: `Limit = MAX(Baseline, CEILING(Fair Share Samples × Target %))`
       }
     };
   }, [ytdTotalSamples, yearlyTotalSamples, activeTeamsCount]);
@@ -721,17 +741,17 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
         let neededSamples = 0;
 
         if (isDetractorViolated) {
-          // Formula: Count <= (NewTotal * 0.09) / Teams
-          // NewTotal >= (Count * Teams) / 0.09
-          const targetYTD = (totalDetractors * activeTeamsCount) / 0.09;
+          // Formula: Count <= (NewTotal * 0.08) / Teams
+          // NewTotal >= (Count * Teams) / 0.08
+          const targetYTD = (totalDetractors * activeTeamsCount) / 0.08;
           const requiredAdditional = Math.max(0, targetYTD - sampleBase);
           neededSamples = Math.max(neededSamples, requiredAdditional);
         }
 
         if (isNeutralViolated) {
-          // Formula: Count <= (NewTotal * 0.16) / Teams
-          // NewTotal >= (Count * Teams) / 0.16
-          const targetYTD = (totalNeutrals * activeTeamsCount) / 0.16;
+          // Formula: Count <= (NewTotal * 0.17) / Teams
+          // NewTotal >= (Count * Teams) / 0.17
+          const targetYTD = (totalNeutrals * activeTeamsCount) / 0.17;
           const requiredAdditional = Math.max(0, targetYTD - sampleBase);
           neededSamples = Math.max(neededSamples, requiredAdditional);
         }
@@ -962,26 +982,32 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
         <Collapse in={showLimitsInfo}>
           <Paper sx={{ p: 2, backgroundColor: '#1e1e1e', border: '1px solid #333', mb: 1 }}>
             <Typography variant="h6" sx={{ color: '#fff', mb: 2, fontSize: '1rem', fontWeight: 600 }}>
-              📊 Year-to-Date Dynamic Limits
+              📊 {calculationBreakdown?.modelName || "Year-to-Date Dynamic Limits"}
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
               <Box>
                 <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
-                  <strong style={{ color: '#4caf50' }}>✓ Dynamic Limit:</strong> Limits grow as year progresses (Samples × Limit %) / Active Teams.
+                  <strong style={{ color: '#4caf50' }}>✓ Model Math:</strong> {calculationBreakdown?.note}
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
-                  <strong style={{ color: '#f44336' }}>⚠️ Violation:</strong> Total year-to-date violations exceed the current dynamic allowed limit.
+                  <strong style={{ color: '#7b68ee' }}>⚖️ Justice Baseline:</strong> Every team is guaranteed a grace limit of {calculationBreakdown?.baselineDetractors} Detractor(s) & {calculationBreakdown?.baselineNeutrals} Neutral(s) to protect against low-volume random sample variance.
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
+                  <strong style={{ color: '#f44336' }}>⚠️ Violation:</strong> Team's YTD violations exceed their fair-share allowed limit.
                 </Typography>
               </Box>
               <Box sx={{ borderLeft: '1px solid #444', pl: 2 }}>
                 <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
-                  Current YTD Total Samples: <strong style={{ color: '#fff' }}>{calculationBreakdown?.ytdTotal}</strong>
+                  Global Total Samples: <strong style={{ color: '#fff' }}>{calculationBreakdown?.ytdTotal}</strong> | Active Teams: <strong style={{ color: '#fff' }}>{calculationBreakdown?.activeTeams}</strong>
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
-                  Global YTD Allowed: <strong style={{ color: '#f44336' }}>{calculationBreakdown?.ytdDetractorLimitGlobal} Detractors</strong> | <strong style={{ color: '#ff9800' }}>{calculationBreakdown?.ytdNeutralLimitGlobal} Neutrals</strong>
+                  Fair Share Allocation: <strong style={{ color: '#fff' }}>{calculationBreakdown?.activeTeams ? (calculationBreakdown.ytdTotal / calculationBreakdown.activeTeams).toFixed(1) : 0} samples / team</strong>
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
+                  Global Targets: <strong style={{ color: '#f44336' }}>≤{(calculationBreakdown?.targetDetractor * 100).toFixed(0)}% Detractors</strong> | <strong style={{ color: '#ff9800' }}>≤{(calculationBreakdown?.targetNeutral * 100).toFixed(0)}% Neutrals</strong>
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
-                  Per Team Limit (Active: {calculationBreakdown?.activeTeams}): <strong style={{ color: '#f44336' }}>{teamDetractorLimit} Detractors</strong> | <strong style={{ color: '#ff9800' }}>{teamNeutralLimit} Neutrals</strong>
+                  Per-Team Enforced Limit: <strong style={{ color: '#f44336' }}>{teamDetractorLimit} Detractors</strong> | <strong style={{ color: '#ff9800' }}>{teamNeutralLimit} Neutrals</strong>
                 </Typography>
               </Box>
             </Box>

@@ -276,11 +276,11 @@ const SearchAndExport = ({
           <Collapse in={showLimitsInfo} sx={{ width: '100%' }}>
             <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '8px', p: 2, flexDirection: 'column', border: '1px solid #333' }}>
               <Typography variant="caption" sx={{ color: '#5b5b5b', fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                📊 Monthly Per-Team Limits (Based on Yearly Calculation)
+                📊 Monthly Per-Team Baseline (Guideline)
               </Typography>
               <Stack direction="row" gap={2} flexWrap="wrap">
                 <Chip
-                  label={`Allow Max ${calculationBreakdown.monthlyDetractorPerTeam} Detractors/Team/Month (≤9%)`}
+                  label={`Allow Max ${calculationBreakdown.monthlyDetractorPerTeam} Detractors/Team/Month (≤${calculationBreakdown.targetDetractor * 100}%)`}
                   size="small"
                   sx={{
                     backgroundColor: 'rgba(244, 67, 54, 0.05)',
@@ -291,7 +291,7 @@ const SearchAndExport = ({
                   }}
                 />
                 <Chip
-                  label={`Allow Max ${calculationBreakdown.monthlyNeutralPerTeam} Neutrals/Team/Month (≤16%)`}
+                  label={`Allow Max ${calculationBreakdown.monthlyNeutralPerTeam} Neutrals/Team/Month (≤${calculationBreakdown.targetNeutral * 100}%)`}
                   size="small"
                   sx={{
                     backgroundColor: 'rgba(255, 152, 0, 0.05)',
@@ -303,11 +303,13 @@ const SearchAndExport = ({
                 />
               </Stack>
               <Typography variant="caption" sx={{ color: '#7b7b7b', fontSize: '0.65rem', mt: 1.5, fontFamily: 'monospace', opacity: 0.8 }}>
-                📐 Calculation: Yearly Total ({calculationBreakdown.yearlyTotal}) × Threshold (9% or 16%) ÷ Teams ({calculationBreakdown.activeTeams}) ÷ 12 months
+                📐 Calculation Process (Fair-Share Model):
                 <br />
-                Detractors: {calculationBreakdown.yearlyTotal} × 0.09 = {calculationBreakdown.yearlyDetractorLimit} → ÷{calculationBreakdown.activeTeams} = {calculationBreakdown.yearlyDetractorPerTeam}/year → ÷12 = {calculationBreakdown.monthlyDetractorPerTeam}/month
+                Fair-Share per team = Yearly Total ({calculationBreakdown.yearlyTotal}) ÷ Active Teams ({calculationBreakdown.activeTeams})
                 <br />
-                Neutrals: {calculationBreakdown.yearlyTotal} × 0.16 = {calculationBreakdown.yearlyNeutralLimit} → ÷{calculationBreakdown.activeTeams} = {calculationBreakdown.yearlyNeutralPerTeam}/year → ÷12 = {calculationBreakdown.monthlyNeutralPerTeam}/month
+                Detractors Target: CEILING(Fair-Share × {calculationBreakdown.targetDetractor * 100}%) → ÷ 12 months = {calculationBreakdown.monthlyDetractorPerTeam}/month
+                <br />
+                Neutrals Target: CEILING(Fair-Share × {calculationBreakdown.targetNeutral * 100}%) → ÷ 12 months = {calculationBreakdown.monthlyNeutralPerTeam}/month
               </Typography>
             </Stack>
           </Collapse>
