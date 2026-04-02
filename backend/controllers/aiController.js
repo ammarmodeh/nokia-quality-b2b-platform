@@ -363,7 +363,7 @@ export const generateInsights = async (req, res) => {
 
     // 3. Execute with Retry
     const apiCall = async () => {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const result = await model.generateContent(prompt);
       return result.response.text();
     };
@@ -410,7 +410,7 @@ export const analyzeChartData = async (req, res) => {
 
     // Execute with Retry
     const apiCall = async () => {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const result = await model.generateContent(prompt);
       return result.response.text();
     };
@@ -472,7 +472,7 @@ export const handleChat = async (req, res) => {
 
     // Execute with Retry
     const apiCall = async () => {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       // Send the entire history and context as a single request
       const result = await model.generateContent({
@@ -789,7 +789,7 @@ ${allTeamsStatsText}
 
     // --- 5. Generate Prompt (Dynamic) ---
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       temperature: 0.3,
     });
 
@@ -941,7 +941,7 @@ ${allTeamsStatsText}
     // --- 7. Save Report to History ---
     // Extract metadata for saving
     const reportMetadata = {
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       period: periodTitle,
       totalCases: totalCases,
       mostRepeatedCurrentMonth,
@@ -1259,7 +1259,7 @@ Provide **3-5 actionable recommendations** based on this trend data:
     // Execute AI generation with retry
     const apiCall = async () => {
       const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         temperature: 0.3,
       });
       const result = await model.generateContent(prompt);

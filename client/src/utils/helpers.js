@@ -611,7 +611,19 @@ export const groupDataByMonth = (data, monthRange, settings = {}, samplesData = 
   });
 
   // Process samplesData - aggregate by strict month logic
+  const MONTH_WEEK_OFFSET = 100;
+  const manualMonthlyTotals = {};
+  const weeklySamplesSum = {};
+
   samplesData.forEach((sample) => {
+    // 1. Manually-entered monthly total records
+    if (sample.weekNumber > MONTH_WEEK_OFFSET && sample.weekNumber <= MONTH_WEEK_OFFSET + 12) {
+      const monthNum = sample.weekNumber - MONTH_WEEK_OFFSET;
+      manualMonthlyTotals[`Month-${monthNum}`] = Number(sample.sampleSize) || 0;
+      return; // Skip date-based aggregation for these marker records
+    }
+
+    // 2. Weekly records
     let sampleMonthInfo = null;
 
     if (sample.startDate) {
@@ -630,8 +642,16 @@ export const groupDataByMonth = (data, monthRange, settings = {}, samplesData = 
       sampleMonthInfo = getMonthNumber(roughStart, settings);
     }
 
-    if (sampleMonthInfo && groupedData[sampleMonthInfo.key]) {
-      groupedData[sampleMonthInfo.key].sampleSize += (Number(sample.sampleSize) || 0);
+    if (sampleMonthInfo) {
+      weeklySamplesSum[sampleMonthInfo.key] = (weeklySamplesSum[sampleMonthInfo.key] || 0) + (Number(sample.sampleSize) || 0);
+    }
+  });
+
+  Object.keys(groupedData).forEach((monthKey) => {
+    if (manualMonthlyTotals[monthKey] > 0) {
+      groupedData[monthKey].sampleSize = manualMonthlyTotals[monthKey];
+    } else {
+      groupedData[monthKey].sampleSize = weeklySamplesSum[monthKey] || 0;
     }
   });
 

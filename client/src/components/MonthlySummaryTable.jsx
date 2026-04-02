@@ -149,6 +149,26 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
     if (!filteredTasks.length) return 0;
 
     try {
+      // ── Priority 1: Manually-entered monthly total ──
+      // Only apply this logic if we are viewing a single month (not custom range)
+      if (!isCustomRange && selectedMonth) {
+        const monthNumMatch = selectedMonth.match(/Month-(\d+)/);
+        if (monthNumMatch) {
+          const mNum = parseInt(monthNumMatch[1], 10);
+          const targetWeekNumber = 100 + mNum;
+          
+          // Try to find it in the fetched years
+          const availableYears = Object.keys(samplesTokenData);
+          for (let y of availableYears) {
+            const manualRecord = samplesTokenData[y][`W${targetWeekNumber}`];
+            if (manualRecord && Number(manualRecord.sampleSize) > 0) {
+               return Number(manualRecord.sampleSize);
+            }
+          }
+        }
+      }
+
+      // ── Priority 2: Fallback to summing individual weeks ──
       const uniqueWeeks = new Set();
 
       filteredTasks.forEach(task => {
@@ -157,7 +177,10 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
           const start = startOfWeek(date, { weekStartsOn: weekStartDay });
           const year = start.getFullYear();
           const weekNum = getCustomWeekNumber(start, year, settings || {}); // Use existing helper
-          uniqueWeeks.add(`${year}-W${weekNum}`);
+          // Exclude our manual month markers (101-112)
+          if (weekNum <= 100) {
+            uniqueWeeks.add(`${year}-W${weekNum}`);
+          }
         }
       });
 
@@ -174,7 +197,7 @@ const MonthlySummaryTable = ({ tasks, fieldTeams = [] }) => {
       console.error("Error calculating total samples:", error);
       return 0;
     }
-  }, [filteredTasks, samplesTokenData]);
+  }, [filteredTasks, samplesTokenData, isCustomRange, selectedMonth, settings, weekStartDay]);
 
   // Calculate violation data for each team
   const rows = useMemo(() => {

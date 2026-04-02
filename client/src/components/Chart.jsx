@@ -89,47 +89,74 @@ const prepareChartData = (groupedData, timeRange, settings = {}) => {
   return {
     labels: sortedLabels,
     datasets: [
-      ...categories.map((category) => ({
-        label: category,
-        data: sortedLabels.map((week) => {
+      ...categories.map((category) => {
+        const dataArr = sortedLabels.map((week) => {
           if (category === "NPS") {
             const promoters = groupedData[week].Promoters || 0;
             const detractors = groupedData[week].Detractors || 0;
             return promoters - detractors;
           }
           return groupedData[week][category] || 0;
-        }),
-        backgroundColor: colors[category],
-        borderColor: colors[category],
-        pointBackgroundColor: colors[category],
-        pointBorderColor: colors[category],
-        pointStyle: category === "Promoters" ? "rectRot" : "rect",
-        borderWidth: 2.5,
-        tension: 0,
-        fill: false,
-        datalabels: {
-          align: category === 'NPS' ? 'top' : (category === 'Promoters' ? 'top' : (category === 'Neutrals' ? 45 : 'right')),
-          anchor: category === 'NPS' || category === 'Promoters' ? 'end' : 'center',
-          offset: category === 'NPS' ? 10 : 6,
-          backgroundColor: colors[category].replace('0.9', '0.15'), // Subtle background
-          borderColor: colors[category],
-          borderWidth: 1,
-          borderRadius: 4,
-          padding: { top: 2, bottom: 2, left: 4, right: 4 },
-          font: { weight: 'bold', size: 10 },
-          color: '#ffffff',
-          display: (context) => {
-            // Show all labels, but hide NPS if it's identical to Promoter (rare, but happens if detractors=0)
-            const val = context.parsed?.y;
-            const promoterVal = context.chart.data.datasets[1]?.data?.[context.dataIndex];
+        });
 
-            if (category === 'NPS' && val !== undefined && val === promoterVal) {
-              return 'auto'; // Only show if it doesn't collide
+        // Helper to check if a value is failing its specific target
+        const checkFailing = (val) => {
+          if (category === "Promoters" && val < promoterTarget) return true;
+          if (category === "Detractors" && val > detractorTarget) return true;
+          if (category === "NPS" && val < npsTarget) return true;
+          return false;
+        };
+
+        const bgColors = dataArr.map(val => checkFailing(val) ? "rgba(239, 68, 68, 1)" : colors[category]);
+        const borderColors = dataArr.map(val => checkFailing(val) ? "#ffffff" : colors[category]);
+        const radii = dataArr.map(val => checkFailing(val) ? 7 : 4);
+        const bWidths = dataArr.map(val => checkFailing(val) ? 2 : 1);
+        const pointStyles = dataArr.map(val => checkFailing(val) ? "circle" : (category === "Promoters" ? "rectRot" : "rect"));
+
+        return {
+          label: category,
+          data: dataArr,
+          backgroundColor: colors[category],
+          borderColor: colors[category],
+          pointBackgroundColor: bgColors,
+          pointBorderColor: borderColors,
+          pointRadius: radii,
+          pointHoverRadius: radii.map(r => r + 2),
+          pointBorderWidth: bWidths,
+          pointStyle: pointStyles,
+          borderWidth: 2.5,
+          tension: 0,
+          fill: false,
+          datalabels: {
+            align: category === 'NPS' ? 'top' : (category === 'Promoters' ? 'top' : (category === 'Neutrals' ? 45 : 'right')),
+            anchor: category === 'NPS' || category === 'Promoters' ? 'end' : 'center',
+            offset: category === 'NPS' ? 10 : 6,
+            backgroundColor: (context) => {
+              const val = context.parsed?.y;
+              return checkFailing(val) ? "rgba(239, 68, 68, 1)" : colors[category].replace('0.9', '0.15');
+            },
+            borderColor: (context) => {
+              const val = context.parsed?.y;
+              return checkFailing(val) ? "#ffffff" : colors[category];
+            },
+            borderWidth: 1,
+            borderRadius: 4,
+            padding: { top: 2, bottom: 2, left: 4, right: 4 },
+            font: { weight: 'bold', size: 10 },
+            color: '#ffffff',
+            display: (context) => {
+              // Show all labels, but hide NPS if it's identical to Promoter
+              const val = context.parsed?.y;
+              const promoterVal = context.chart.data.datasets[1]?.data?.[context.dataIndex];
+
+              if (category === 'NPS' && val !== undefined && val === promoterVal) {
+                return 'auto'; 
+              }
+              return true;
             }
-            return true;
           }
-        }
-      })),
+        };
+      }),
       // NPS Target Line (Dynamic)
       {
         label: `NPS Target (≥${npsTarget})`,
