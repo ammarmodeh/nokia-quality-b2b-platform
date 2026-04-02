@@ -210,32 +210,43 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
     district: null
   });
 
-  // Extract unique values for filters
-  const uniqueFilters = useMemo(() => {
-    if (!initialTasks || initialTasks.length === 0) return { teams: [], owners: [], reasons: [], governorates: [], districts: [] };
-
-    const teams = new Set();
-    const owners = new Set();
-    const reasons = new Set();
-    const governorates = new Set();
-    const districts = new Set();
-
-    initialTasks.forEach(task => {
-      if (task.teamName) teams.add(task.teamName);
-      if (task.responsible) owners.add(task.responsible);
-      if (task.reason) reasons.add(task.reason);
-      if (task.governorate) governorates.add(task.governorate);
-      if (task.district) districts.add(task.district);
+  // ── Dedup helper: trim + case-insensitive (keeps first occurrence) ──────
+  const dedup = (arr) => {
+    const map = new Map();
+    arr.forEach(v => {
+      if (!v) return;
+      const trimmed = String(v).trim();
+      if (!trimmed) return;
+      const key = trimmed.toLowerCase();
+      if (!map.has(key)) map.set(key, trimmed);
     });
+    return Array.from(map.values()).sort();
+  };
 
-    return {
-      teams: Array.from(teams).sort(),
-      owners: Array.from(owners).sort(),
-      reasons: Array.from(reasons).sort(),
-      governorates: Array.from(governorates).sort(),
-      districts: Array.from(districts).sort()
-    };
-  }, [initialTasks]);
+  // ── Cascading filter options ──────────────────────────────────────────────
+  // Each dropdown narrows based on all preceding selections.
+  const uniqueFilters = useMemo(() => {
+    if (!initialTasks || initialTasks.length === 0) {
+      return { teams: [], owners: [], reasons: [], governorates: [], districts: [] };
+    }
+
+    const teams = dedup(initialTasks.map(t => t.teamName));
+
+    let base = initialTasks;
+    if (queryFilters.teamName) base = base.filter(t => (t.teamName || '').trim() === queryFilters.teamName);
+    const owners = dedup(base.map(t => t.responsible));
+
+    if (queryFilters.responsible) base = base.filter(t => (t.responsible || '').trim() === queryFilters.responsible);
+    const reasons = dedup(base.map(t => t.reason));
+
+    if (queryFilters.reason) base = base.filter(t => (t.reason || '').trim() === queryFilters.reason);
+    const governorates = dedup(base.map(t => t.governorate));
+
+    if (queryFilters.governorate) base = base.filter(t => (t.governorate || '').trim() === queryFilters.governorate);
+    const districts = dedup(base.map(t => t.district));
+
+    return { teams, owners, reasons, governorates, districts };
+  }, [initialTasks, queryFilters]);
 
   useEffect(() => {
     if (initialTasks && initialTasks.length > 0 && settings) {
@@ -260,13 +271,13 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
 
   // Apply all filters (Time Range + Custom Queries)
   const processData = (allTasks, range, filters, currentSettings, samples, mode, days, months) => {
-    // 1. Filter tasks by Custom Queries
+    // 1. Filter tasks by Custom Queries (trim to handle whitespace inconsistencies)
     let filtered = allTasks;
-    if (filters.teamName) filtered = filtered.filter(t => t.teamName === filters.teamName);
-    if (filters.responsible) filtered = filtered.filter(t => t.responsible === filters.responsible);
-    if (filters.reason) filtered = filtered.filter(t => t.reason === filters.reason);
-    if (filters.governorate) filtered = filtered.filter(t => t.governorate === filters.governorate);
-    if (filters.district) filtered = filtered.filter(t => t.district === filters.district);
+    if (filters.teamName)    filtered = filtered.filter(t => (t.teamName    || '').trim() === filters.teamName);
+    if (filters.responsible) filtered = filtered.filter(t => (t.responsible || '').trim() === filters.responsible);
+    if (filters.reason)      filtered = filtered.filter(t => (t.reason      || '').trim() === filters.reason);
+    if (filters.governorate) filtered = filtered.filter(t => (t.governorate || '').trim() === filters.governorate);
+    if (filters.district)    filtered = filtered.filter(t => (t.district    || '').trim() === filters.district);
 
     // 2. Filter by Time Mode
     let finalRange = range; // 'range' here is the `timeRange` state, which is an array of week keys
@@ -728,91 +739,143 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
               mt: 1
             }}
           >
+            {/* ── Team Name ── */}
             <Autocomplete
               size="small"
               options={uniqueFilters.teams}
               value={queryFilters.teamName}
-              onChange={(e, newVal) => setQueryFilters(prev => ({ ...prev, teamName: newVal }))}
+              onChange={(e, newVal) => setQueryFilters(prev => ({
+                ...prev, teamName: newVal,
+                responsible: null, reason: null, governorate: null, district: null
+              }))}
+              isOptionEqualToValue={(opt, val) => opt === val}
               renderInput={(params) => (
-                <TextField {...params} label="Team Name" variant="outlined" />
+                <TextField
+                  {...params}
+                  label={`Team Name (${uniqueFilters.teams.length})`}
+                  variant="outlined"
+                  placeholder="All teams…"
+                />
               )}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   color: "#cbd5e1",
-                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                  "& fieldset": { borderColor: queryFilters.teamName ? "#3b82f6" : "rgba(255,255,255,0.1)" },
                   "&:hover fieldset": { borderColor: "#3b82f6" },
                 },
-                "& .MuiInputLabel-root": { color: "#94a3b8" }
+                "& .MuiInputLabel-root": { color: queryFilters.teamName ? "#3b82f6" : "#94a3b8" }
               }}
             />
+
+            {/* ── Owner — cascades from Team ── */}
             <Autocomplete
               size="small"
               options={uniqueFilters.owners}
               value={queryFilters.responsible}
-              onChange={(e, newVal) => setQueryFilters(prev => ({ ...prev, responsible: newVal }))}
+              onChange={(e, newVal) => setQueryFilters(prev => ({
+                ...prev, responsible: newVal,
+                reason: null, governorate: null, district: null
+              }))}
+              isOptionEqualToValue={(opt, val) => opt === val}
               renderInput={(params) => (
-                <TextField {...params} label="Owner" variant="outlined" />
+                <TextField
+                  {...params}
+                  label={`Owner (${uniqueFilters.owners.length})`}
+                  variant="outlined"
+                  placeholder={queryFilters.teamName ? `From "${queryFilters.teamName}"…` : 'All owners…'}
+                />
               )}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   color: "#cbd5e1",
-                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                  "& fieldset": { borderColor: queryFilters.responsible ? "#3b82f6" : "rgba(255,255,255,0.1)" },
                   "&:hover fieldset": { borderColor: "#3b82f6" },
                 },
-                "& .MuiInputLabel-root": { color: "#94a3b8" }
+                "& .MuiInputLabel-root": { color: queryFilters.responsible ? "#3b82f6" : "#94a3b8" }
               }}
             />
+
+            {/* ── Reason — cascades from Team + Owner ── */}
             <Autocomplete
               size="small"
               options={uniqueFilters.reasons}
               value={queryFilters.reason}
-              onChange={(e, newVal) => setQueryFilters(prev => ({ ...prev, reason: newVal }))}
+              onChange={(e, newVal) => setQueryFilters(prev => ({
+                ...prev, reason: newVal,
+                governorate: null, district: null
+              }))}
+              isOptionEqualToValue={(opt, val) => opt === val}
               renderInput={(params) => (
-                <TextField {...params} label="Reason" variant="outlined" />
+                <TextField
+                  {...params}
+                  label={`Reason (${uniqueFilters.reasons.length})`}
+                  variant="outlined"
+                  placeholder="All reasons…"
+                />
               )}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   color: "#cbd5e1",
-                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                  "& fieldset": { borderColor: queryFilters.reason ? "#3b82f6" : "rgba(255,255,255,0.1)" },
                   "&:hover fieldset": { borderColor: "#3b82f6" },
                 },
-                "& .MuiInputLabel-root": { color: "#94a3b8" }
+                "& .MuiInputLabel-root": { color: queryFilters.reason ? "#3b82f6" : "#94a3b8" }
               }}
             />
+
+            {/* ── Governorate — cascades from Team + Owner + Reason ── */}
             <Autocomplete
               size="small"
               options={uniqueFilters.governorates}
               value={queryFilters.governorate}
-              onChange={(e, newVal) => setQueryFilters(prev => ({ ...prev, governorate: newVal }))}
+              onChange={(e, newVal) => setQueryFilters(prev => ({
+                ...prev, governorate: newVal,
+                district: null
+              }))}
+              isOptionEqualToValue={(opt, val) => opt === val}
               renderInput={(params) => (
-                <TextField {...params} label="Governorate" variant="outlined" />
+                <TextField
+                  {...params}
+                  label={`Governorate (${uniqueFilters.governorates.length})`}
+                  variant="outlined"
+                  placeholder="All governorates…"
+                />
               )}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   color: "#cbd5e1",
-                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                  "& fieldset": { borderColor: queryFilters.governorate ? "#3b82f6" : "rgba(255,255,255,0.1)" },
                   "&:hover fieldset": { borderColor: "#3b82f6" },
                 },
-                "& .MuiInputLabel-root": { color: "#94a3b8" }
+                "& .MuiInputLabel-root": { color: queryFilters.governorate ? "#3b82f6" : "#94a3b8" }
               }}
             />
+
+            {/* ── District — cascades from all above ── */}
             <Autocomplete
               size="small"
               options={uniqueFilters.districts}
               value={queryFilters.district}
               onChange={(e, newVal) => setQueryFilters(prev => ({ ...prev, district: newVal }))}
+              isOptionEqualToValue={(opt, val) => opt === val}
               renderInput={(params) => (
-                <TextField {...params} label="District" variant="outlined" />
+                <TextField
+                  {...params}
+                  label={`District (${uniqueFilters.districts.length})`}
+                  variant="outlined"
+                  placeholder="All districts…"
+                />
               )}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   color: "#cbd5e1",
-                  "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                  "& fieldset": { borderColor: queryFilters.district ? "#3b82f6" : "rgba(255,255,255,0.1)" },
                   "&:hover fieldset": { borderColor: "#3b82f6" },
                 },
-                "& .MuiInputLabel-root": { color: "#94a3b8" }
+                "& .MuiInputLabel-root": { color: queryFilters.district ? "#3b82f6" : "#94a3b8" }
               }}
             />
+
             <Button
               startIcon={<FilterAltOffIcon />}
               onClick={handleReset}

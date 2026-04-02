@@ -381,29 +381,42 @@ export const aggregateSamples = (samplesData, type, value, settings = {}) => {
     const { month } = value;
     const targetMonth = Number(month);
 
-    // Filter samples that fall within the calendar month
+    // ── Priority 1: Manually-entered monthly total record ──────────────────
+    // These are stored with weekNumber = 100 + month (e.g. Jan=101, Dec=112)
+    const MONTH_WEEK_OFFSET = 100;
+    const monthlyRecord = samplesData.find(
+      s => Number(s.weekNumber) === MONTH_WEEK_OFFSET + targetMonth
+    );
+    if (monthlyRecord && Number(monthlyRecord.sampleSize) > 0) {
+      return Number(monthlyRecord.sampleSize);
+    }
+
+    // ── Priority 2: Fall back to summing weekly sample sizes ──────────────
     return samplesData.filter(s => {
-      // 1. Exact match on stored startDate if available
+      // Skip month-marker records (weekNumber 101–112)
+      if (Number(s.weekNumber) > MONTH_WEEK_OFFSET) return false;
+
+      // 1. Exact match on stored startDate
       if (s.startDate) {
         const sDate = new Date(s.startDate);
         return (sDate.getMonth() + 1) === targetMonth;
       }
 
-      // 2. Estimate start date from week1StartDate
+      // 2. Estimate from week1StartDate setting
       if (settings.week1StartDate && s.weekNumber) {
         const w1Start = new Date(settings.week1StartDate);
         const estimatedStart = new Date(w1Start);
         estimatedStart.setDate(w1Start.getDate() + (s.weekNumber - 1) * 7);
         return (estimatedStart.getMonth() + 1) === targetMonth;
       }
-      
-      // 3. Very rough fallback using year and weekNumber
+
+      // 3. Rough fallback using year + weekNumber
       if (s.year && s.weekNumber) {
         const roughStart = new Date(s.year, 0, 1 + (s.weekNumber - 1) * 7);
         return (roughStart.getMonth() + 1) === targetMonth;
       }
 
-      return false; // Can't determine
+      return false;
     }).reduce((sum, s) => sum + (Number(s.sampleSize) || 0), 0);
   }
 
