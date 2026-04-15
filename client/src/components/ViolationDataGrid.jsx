@@ -35,6 +35,8 @@ const ViolationDataGrid = ({
   onAddSessionClick,
   onViewSessionsClick,
   onReportAbsenceClick,
+  selectionModel,
+  onSelectionModelChange
 }) => {
   const isMobile = useMediaQuery('(max-width:503px)');
   const [evaluationData, setEvaluationData] = useState([]);
@@ -641,7 +643,11 @@ const ViolationDataGrid = ({
           pageSizeOptions={[5, 10, 25]}
           paginationModel={paginationModel}
           onPaginationModelChange={onPaginationModelChange}
-          disableSelectionOnClick
+          checkboxSelection
+          rowSelectionModel={selectionModel}
+          onRowSelectionModelChange={onSelectionModelChange}
+          disableRowSelectionOnClick
+          keepNonExistentRowsSelected
           slots={{ toolbar: GridToolbar }}
           slotProps={{
             toolbar: {

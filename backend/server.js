@@ -23,6 +23,7 @@ import actionPlanRoutes from "./routes/actionPlanRoutes.js";
 import dropdownOptionRoutes from "./routes/dropdownOptionRoutes.js";
 import ontTypeRoutes from "./routes/ontTypeRoutes.js";
 import labAssessmentRoutes from "./routes/labAssessmentRoutes.js";
+import trainingSessionRoutes from "./routes/trainingSessionRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import docRoutes from "./routes/docRoutes.js";
 import userNoteRoutes from "./routes/userNoteRoutes.js";
@@ -58,17 +59,30 @@ app.use((req, res, next) => {
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   "http://localhost:3000",
+  "http://localhost:3002",
   "http://localhost:5173", // Common Vite port
-].filter(Boolean);
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3002",
+  "http://127.0.0.1:5173",
+].map(o => o?.trim()).filter(Boolean);
 
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (server-to-server, Postman, health checks)
     if (!origin) return callback(null, true);
+
+    // Development fallback: Allow all localhost/127.0.0.1 origins
+    if (process.env.NODE_ENV !== 'production') {
+      if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+        return callback(null, true);
+      }
+    }
+
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    console.warn(`[CORS] Blocked request from origin: ${origin}`);
+    console.warn(`[CORS] Blocked request from origin: "${origin}"`);
+    console.warn(`[CORS] Allowed Origins were: ${JSON.stringify(allowedOrigins)}`);
     return callback(new Error(`CORS policy: origin ${origin} is not allowed`));
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -118,6 +132,7 @@ app.use("/api/docs", docRoutes);
 app.use("/api/user-notes", userNoteRoutes);
 app.use("/api/audit", fieldAuditRoutes);
 app.use("/api/health", healthRoutes);
+app.use("/api/training-sessions", trainingSessionRoutes);
 
 // Static Uploads Folder
 const __dirname = path.resolve();

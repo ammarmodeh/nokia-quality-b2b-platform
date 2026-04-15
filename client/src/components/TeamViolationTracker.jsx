@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Box, Paper, Stack, Typography, Collapse } from "@mui/material";
+import { Box, Paper, Stack, Typography, Collapse, Button } from "@mui/material";
 import { startOfWeek } from "date-fns";
 import { getCustomWeekNumber } from "../utils/helpers";
 import { useSelector } from "react-redux";
@@ -9,6 +9,7 @@ import SessionDialogs from "./ViolationSessionDialogs";
 import api from "../api/api";
 import * as XLSX from 'xlsx';
 import SearchAndExport from "./ViolationSearchAndExport";
+import { MdAdd } from "react-icons/md";
 
 const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) => {
   const { enqueueSnackbar } = useSnackbar();
@@ -28,6 +29,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
   const [evaluationData, setEvaluationData] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all'); // New: 'all', 'detractorFail', 'neutralFail'
   const [showLimitsInfo, setShowLimitsInfo] = useState(false); // New: collapsed by default
+  const [selectionModel, setSelectionModel] = useState([]);
 
   // Dialog states
   const [addSessionDialogOpen, setAddSessionDialogOpen] = useState(false);
@@ -481,10 +483,65 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
   const handleAddSessionDialogClose = () => {
     setAddSessionDialogOpen(false);
     setSelectedTeamForSession(null);
+    if (selectionModel.length <= 1) {
+      setSelectedTeamIdForSession(null);
+    }
+  };
+
+  const handleBulkAddSessionClick = () => {
+    if (selectionModel.length === 0) return;
+    setSelectedTeamForSession(`${selectionModel.length} Teams Selected`);
+    setAddSessionDialogOpen(true);
   };
 
   const handleSaveSession = async (sessionData) => {
     try {
+      // Check if it's a bulk operation
+      if (selectionModel.length > 1) {
+        const response = await api.post(
+          `/field-teams/bulk-add-session`,
+          {
+            teamIds: selectionModel,
+            sessionData
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            }
+          }
+        );
+
+        if (!response.data?.success) {
+          throw new Error(response.data?.message || "Failed to add bulk sessions");
+        }
+
+        // Ideally we should refresh the whole fieldTeams list or update each one locally
+        // For simplicity and immediate feedback, let's refresh the page data if a callback is provided
+        // but the current structure of fieldTeams is passed as a prop from parent (TeamList/Dashboard)
+        // so we might need a refresh function or rely on the user to refresh.
+        // Or we can manually update the optimistic state for all selected teams.
+        
+        const updatedFieldTeams = fieldTeams.map((team) => {
+          if (selectionModel.includes(team._id)) {
+            // Subtracting 2 points is consistent with backend logic
+            const newTotalPoints = Math.max(0, (team.totalViolationPoints || 0) - 2);
+            return {
+              ...team,
+              sessionHistory: [...(team.sessionHistory || []), { ...sessionData, status: "Completed", createdAt: new Date().toISOString() }],
+              totalViolationPoints: newTotalPoints
+            };
+          }
+          return team;
+        });
+        setFieldTeams(updatedFieldTeams);
+        setSelectionModel([]);
+
+        enqueueSnackbar(`Session added successfully for ${selectionModel.length} teams!`, { variant: "success" });
+        setAddSessionDialogOpen(false);
+        return;
+      }
+
+      // Single team addition (existing logic)
       const tempSessionId = `temp-${Date.now()}`;
       const optimisticSession = {
         ...sessionData,
@@ -493,7 +550,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
       };
 
       const updatedFieldTeams = fieldTeams.map((team) => {
-        if (team._id === selectedTeamIdForSession) {
+        if (team._id === (selectedTeamIdForSession || selectionModel[0])) {
           return {
             ...team,
             sessionHistory: [...(team.sessionHistory || []), optimisticSession],
@@ -507,8 +564,9 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
         setSelectedTeamSessions(prev => [...(prev || []), optimisticSession]);
       }
 
+      const teamIdToUse = selectedTeamIdForSession || selectionModel[0];
       const response = await api.post(
-        `/field-teams/${selectedTeamIdForSession}/add-session`,
+        `/field-teams/${teamIdToUse}/add-session`,
         sessionData,
         {
           headers: {
@@ -518,8 +576,9 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
       );
 
       if (!response.data?.success) {
+        // Revert optimistic update
         const revertedFieldTeams = fieldTeams.map((team) => {
-          if (team._id === selectedTeamIdForSession) {
+          if (team._id === teamIdToUse) {
             return {
               ...team,
               sessionHistory: (team.sessionHistory || []).filter(s => s._id !== tempSessionId),
@@ -537,7 +596,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
       }
 
       const finalFieldTeams = updatedFieldTeams.map((team) => {
-        if (team._id === selectedTeamIdForSession) {
+        if (team._id === teamIdToUse) {
           return {
             ...team,
             sessionHistory: team.sessionHistory.map(s =>
@@ -1014,6 +1073,23 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
           </Paper>
         </Collapse>
 
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<MdAdd />}
+            disabled={selectionModel.length === 0}
+            onClick={handleBulkAddSessionClick}
+            sx={{
+              backgroundColor: selectionModel.length === 0 ? 'rgba(76, 175, 80, 0.3)' : '#4caf50',
+              fontWeight: 'bold',
+              '&:hover': { backgroundColor: '#45a049' }
+            }}
+          >
+            Bulk Add Session {selectionModel.length > 0 ? `for ${selectionModel.length} Selected Teams` : ''}
+          </Button>
+        </Box>
+
         <ViolationDataGrid
           rows={filteredRows}
           user={user}
@@ -1027,6 +1103,8 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
             setSelectedTeamIdForSession(teamId);
             setReportAbsenceDialogOpen(true);
           }}
+          selectionModel={selectionModel}
+          onSelectionModelChange={setSelectionModel}
         />
       </Stack>
 

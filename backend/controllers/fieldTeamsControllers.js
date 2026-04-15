@@ -1,4 +1,5 @@
 import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
+import { TrainingSession } from "../models/trainingSessionModel.js";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 dotenv.config();
@@ -176,7 +177,11 @@ export const getFieldTeamByQuizCode = async (req, res) => {
 
 export const addFieldTeam = async (req, res) => {
   try {
-    const { teamName, firstName, secondName, thirdName, surname, teamCompany, contactNumber, fsmSerialNumber, laptopSerialNumber, teamCode } = req.body;
+    const {
+      teamName, firstName, secondName, thirdName, surname, teamCompany, contactNumber,
+      fsmSerialNumber, laptopSerialNumber, teamCode,
+      isNewToInstallation, isNewToActivation, installationStartDate, activationStartDate
+    } = req.body;
 
     if (!teamCode) return res.status(400).json({ error: "Team ID/Code is required" });
     if (!teamName) return res.status(400).json({ error: "Team Name is required" });
@@ -226,6 +231,10 @@ export const addFieldTeam = async (req, res) => {
       isActive: true,
       isSuspended: false,
       isTerminated: false,
+      isNewToInstallation: isNewToInstallation || false,
+      isNewToActivation: isNewToActivation || false,
+      installationStartDate: installationStartDate || null,
+      activationStartDate: activationStartDate || null,
     });
 
     await newFieldTeam.save();
@@ -633,6 +642,17 @@ export const addSession = async (req, res) => {
       status: "Completed"
     };
 
+    // If requested to save as template, create a record in TrainingSession collection
+    if (req.body.isTemplate) {
+      const templateSession = new TrainingSession({
+        ...newSession,
+        participants: [teamId],
+        isTemplate: true
+      });
+      await templateSession.save();
+      newSession._id = templateSession._id; // Share ID if created
+    }
+
     team.sessionHistory.push(newSession);
     team.totalViolationPoints = Math.max(0, (team.totalViolationPoints || 0) - 2);
 
@@ -650,6 +670,95 @@ export const addSession = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error adding session",
+      error: error.message
+    });
+  }
+};
+
+export const bulkAddSession = async (req, res) => {
+  const { teamIds, sessionData } = req.body;
+  const { sessionDate, conductedBy, sessionTitle, outlines, location, sessionType, duration, violationPoints, notes } = sessionData;
+
+  if (!Array.isArray(teamIds) || teamIds.length === 0) {
+    return res.status(400).json({ success: false, message: "No teams selected" });
+  }
+
+  try {
+    // 1. Save to global TrainingSession collection first
+    const globalSession = new TrainingSession({
+      sessionDate,
+      conductedBy,
+      sessionTitle,
+      outlines,
+      location,
+      sessionType,
+      duration,
+      violationPoints: Number(violationPoints) || 0,
+      notes: notes || "",
+      participants: teamIds,
+      isTemplate: true // Markers for templates
+    });
+    await globalSession.save();
+
+    const newSession = {
+      _id: globalSession._id, // Share the same ID
+      sessionDate,
+      conductedBy,
+      sessionTitle,
+      outlines,
+      location,
+      sessionType,
+      duration,
+      violationPoints: Number(violationPoints) || 0,
+      notes: notes || "",
+      status: "Completed"
+    };
+
+    // 2. Update each team's sessionHistory
+    const updatePromises = teamIds.map(async (teamId) => {
+      const team = await FieldTeamsSchema.findById(teamId);
+      if (team) {
+        team.sessionHistory.push(newSession);
+        // Standard deduction: 2 points for a completed training session
+        team.totalViolationPoints = Math.max(0, (team.totalViolationPoints || 0) - 2);
+        return team.save();
+      }
+      return null;
+    });
+
+    await Promise.all(updatePromises);
+
+    res.status(200).json({
+      success: true,
+      message: `Session added and recorded successfully for ${teamIds.length} teams`,
+      sessionId: globalSession._id
+    });
+  } catch (error) {
+    console.error("Error in bulkAddSession:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error adding bulk sessions",
+      error: error.message
+    });
+  }
+};
+
+export const getRecentSessions = async (req, res) => {
+  try {
+    // Fetch unique sessions by title and outlines to use as templates
+    // Limit to 20 recent sessions
+    const sessions = await TrainingSession.find({ isTemplate: true })
+      .sort({ createdAt: -1 })
+      .limit(30);
+
+    res.status(200).json({
+      success: true,
+      sessions
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch recent sessions",
       error: error.message
     });
   }

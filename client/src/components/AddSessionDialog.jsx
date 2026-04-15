@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import api from "../api/api";
 import {
   Dialog,
   DialogTitle,
@@ -25,6 +26,53 @@ import { MdAdd, MdDelete } from 'react-icons/md';
 
 
 const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
+
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await api.get('/field-teams/get-recent-sessions', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+        });
+        if (response.data?.success) {
+          setTemplates(response.data.sessions || []);
+        }
+      } catch (error) {
+        console.error("Error fetching session templates:", error);
+      }
+    };
+
+    if (open) {
+      fetchTemplates();
+    }
+  }, [open]);
+
+  const handleApplyTemplate = (template) => {
+    if (!template) return;
+    setSelectedTemplate(template);
+    setSessionTitle(template.sessionTitle || "");
+    setLocation(template.location || "");
+    setSessionType(template.sessionType || "");
+    setConductedBy(template.conductedBy || []);
+    
+    // Parse duration string (e.g., "1 hr 30 mins")
+    const duration = template.duration || "";
+    const hoursMatch = duration.match(/(\d+)\s*hr/);
+    const minutesMatch = duration.match(/(\d+)\s*mins/);
+    
+    setDurationHours(hoursMatch ? hoursMatch[1] : "");
+    setDurationMinutes(minutesMatch ? minutesMatch[1] : "");
+    
+    if (template.outlines) {
+      setOutlines(template.outlines.map(o => ({
+        mainTopic: o.mainTopic || "",
+        subTopics: o.subTopics && o.subTopics.length > 0 ? o.subTopics : [""]
+      })));
+    }
+  };
+
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -94,6 +142,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
       sessionType: sessionType,
       duration: durationString || "0 mins",
       outlines: filteredOutlines,
+      isTemplate: saveAsTemplate
     };
     onSave(sessionData);
     handleClose();
@@ -109,6 +158,8 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
     setDurationHours("");
     setDurationMinutes("");
     setOutlines([{ mainTopic: "", subTopics: [""] }]);
+    setSelectedTemplate(null);
+    setSaveAsTemplate(false);
     setErrors({
       sessionDate: false,
       conductedBy: false,
@@ -217,6 +268,49 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
           padding: '20px 24px',
         },
       }}>
+        {/* Template Selection */}
+        <Box sx={{ mb: 3 }}>
+          <Autocomplete
+            options={templates}
+            getOptionLabel={(option) => `${option.sessionTitle} (${option.sessionType || 'Training'}) - ${new Date(option.createdAt).toLocaleDateString()}`}
+            value={selectedTemplate}
+            onChange={(e, newValue) => handleApplyTemplate(newValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Quick Fill: Load from Past Sessions"
+                placeholder="Search past sessions..."
+                sx={{
+                  '& .MuiInputBase-root': { color: '#ffffff' },
+                  '& .MuiInputLabel-root': { color: '#6b7280' },
+                  '& .MuiOutlinedInput-root fieldset': { borderColor: '#e5e7eb' },
+                  '& .MuiOutlinedInput-root:hover fieldset': { borderColor: '#666' },
+                  '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                }}
+              />
+            )}
+            sx={{
+              '& .MuiAutocomplete-endAdornment .MuiIconButton-root': { color: '#6b7280' },
+            }}
+            componentsProps={{
+              paper: {
+                sx: {
+                  backgroundColor: '#1e1e1e',
+                  color: '#ffffff',
+                  border: '1px solid #444',
+                  '& .MuiAutocomplete-option': {
+                    fontSize: '0.85rem',
+                    '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.15)' },
+                    '&[aria-selected="true"]': { backgroundColor: 'rgba(123, 104, 238, 0.25)' },
+                  }
+                }
+              }
+            }}
+          />
+          <Typography variant="caption" sx={{ color: '#6b7280', mt: 1, display: 'block' }}>
+            Select a previous session to automatically fill the form fields below.
+          </Typography>
+        </Box>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
           <Box>
             <TextField
@@ -584,7 +678,36 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
         backgroundColor: '#2d2d2d',
         borderTop: '1px solid #e5e7eb',
         padding: '12px 24px',
+        display: 'flex',
+        alignItems: 'center',
       }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', ml: 1 }}>
+          <Box
+            component="label"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              cursor: 'pointer',
+              color: '#9ca3af',
+              fontSize: '0.875rem',
+              '&:hover': { color: '#ffffff' }
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={saveAsTemplate}
+              onChange={(e) => setSaveAsTemplate(e.target.checked)}
+              style={{
+                width: '16px',
+                height: '16px',
+                accentColor: '#7b68ee',
+                cursor: 'pointer'
+              }}
+            />
+            Save as Template for future use
+          </Box>
+        </Box>
         <Button
           onClick={handleClose}
           sx={{

@@ -450,6 +450,16 @@ export const aggregateSamples = (samplesData, type, value, settings = {}) => {
     }).reduce((sum, s) => sum + (Number(s.sampleSize) || 0), 0);
   }
 
-  // Default 'all'
-  return samplesData.reduce((sum, s) => sum + (Number(s.sampleSize) || 0), 0);
+  // Default 'all' - Sum monthly targets (deduplicated)
+  const uniqueTokensMap = new Map();
+  samplesData.forEach(s => {
+    const key = `${s.year}-${s.weekNumber}`;
+    if (!uniqueTokensMap.has(key)) {
+      uniqueTokensMap.set(key, s);
+    }
+  });
+
+  return Array.from(uniqueTokensMap.values())
+    .filter(s => s.weekNumber >= 101 && s.weekNumber <= 112)
+    .reduce((sum, s) => sum + (Number(s.sampleSize) || 0), 0);
 };

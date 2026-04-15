@@ -21,6 +21,7 @@ import {
   Badge,
   Phone,
   Business,
+  DeviceHub,
   History,
   Info,
   Laptop,
@@ -317,6 +318,44 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                     <DetailItem icon={<Business />} label="Company" value={team.teamCompany} />
                   </Grid>
                 </Grid>
+              </SectionCard>
+
+              <SectionCard title="Role Expertise" icon={<VerifiedUser />}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {(!team.isNewToInstallation && !team.isNewToActivation) ? (
+                    <Box sx={{ p: 2, bgcolor: 'rgba(76, 175, 80, 0.1)', border: '1px solid #4caf50', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <VerifiedUser sx={{ color: '#4caf50' }} />
+                      <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600 }}>
+                        Identified as a Rich Expert in all roles.
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <DetailItem
+                          icon={<Settings />}
+                          label="Installation"
+                          value={team.isNewToInstallation
+                            ? `Learning (Since ${team.installationStartDate ? new Date(team.installationStartDate).toLocaleDateString() : 'N/A'})`
+                            : 'Expert'
+                          }
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <DetailItem
+                          icon={<DeviceHub />}
+                          label="Activation"
+                          value={team.isNewToActivation
+                            ? `Learning (Since ${team.activationStartDate ? new Date(team.activationStartDate).toLocaleDateString() : 'N/A'})`
+                            : 'Expert'
+                          }
+                          fullWidth
+                        />
+                      </Grid>
+                    </Grid>
+                  )}
+                </Box>
               </SectionCard>
 
               <SectionCard title="Hardware Assets" icon={<Laptop />}>

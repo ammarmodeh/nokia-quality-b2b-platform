@@ -147,6 +147,48 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
           <TextField label="FSM Serial" size="small" {...register('fsmSerialNumber')} sx={sharedInputSx} />
           <TextField label="Laptop Serial" size="small" {...register('laptopSerialNumber')} sx={sharedInputSx} />
         </Box>
+
+        <Divider sx={{ borderColor: '#222' }} />
+
+        {/* Section 4: Role Expertise */}
+        <Typography variant="overline" sx={{ color: '#7b68ee', fontWeight: 'bold', display: 'block' }}>
+          Role Expertise
+        </Typography>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+              <input type="checkbox" {...register('isNewToInstallation')} id="new-install" style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
+              <label htmlFor="new-install" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer' }}>New to Installation</label>
+            </Box>
+            <TextField
+              label="Start Date"
+              type="date"
+              size="small"
+              {...register('installationStartDate')}
+              sx={{ ...sharedInputSx, flex: 1 }}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+              <input type="checkbox" {...register('isNewToActivation')} id="new-activation" style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
+              <label htmlFor="new-activation" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer' }}>New to Activation</label>
+            </Box>
+            <TextField
+              label="Start Date"
+              type="date"
+              size="small"
+              {...register('activationStartDate')}
+              sx={{ ...sharedInputSx, flex: 1 }}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Box>
+          <Typography variant="caption" sx={{ color: '#555', fontStyle: 'italic' }}>
+            * If not checked, team is considered a Rich Expert.
+          </Typography>
+        </Box>
       </Stack>
 
       {errorMessage && (

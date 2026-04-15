@@ -21,6 +21,7 @@ import { MdOutlineDoneAll, MdClose } from "react-icons/md";
 import { LuTableProperties } from "react-icons/lu";
 import TaskStatusDialog from "./TaskStatusDialog";
 import api from "../api/api";
+import { aggregateSamples } from "../utils/dateFilterHelpers";
 
 function countStatuses(tasks = []) {
   const statusCount = { Closed: 0, "In Progress": 0, Todo: 0, Neutral: 0, Detractor: 0 };
@@ -235,7 +236,7 @@ const Card = ({ tasks = [], samplesData = [], setUpdateTasksList }) => {
 
 
 
-  const totalSamples = samplesData?.reduce((acc, curr) => acc + (curr.sampleSize || 0), 0) || 0;
+  const totalSamples = aggregateSamples(samplesData, 'all');
   const violationPercentage = totalSamples > 0 ? ((tasks.length / totalSamples) * 100).toFixed(2) : 0;
   const detractorPercentage = totalSamples > 0 ? ((counts.Detractor / totalSamples) * 100).toFixed(2) : 0;
   const neutralPercentage = totalSamples > 0 ? ((counts.Neutral / totalSamples) * 100).toFixed(2) : 0;

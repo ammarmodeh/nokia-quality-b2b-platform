@@ -1,6 +1,6 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
-import { addFieldTeam, getAllFieldTeams, deleteFieldTeam, updateFieldTeam, updateTeamScore, getFieldTeamByQuizCode, getTeamEvaluationHistory, suspendTeam, terminateTeam, reactivateTeam, onLeaveTeam, resignedTeam, addSession, updateSessionForTeam, deleteSessionForTeam, reportAbsence, getTeamViolations, toggleQuizPermission, validateTeam, loginFieldTeam } from "../controllers/fieldTeamsControllers.js";
+import { addFieldTeam, getAllFieldTeams, deleteFieldTeam, updateFieldTeam, updateTeamScore, getFieldTeamByQuizCode, getTeamEvaluationHistory, suspendTeam, terminateTeam, reactivateTeam, onLeaveTeam, resignedTeam, addSession, bulkAddSession, getRecentSessions, updateSessionForTeam, deleteSessionForTeam, reportAbsence, getTeamViolations, toggleQuizPermission, validateTeam, loginFieldTeam } from "../controllers/fieldTeamsControllers.js";
 
 const router = express.Router();
 
@@ -51,6 +51,8 @@ router.get('/get-evaluation-history/:teamId', protect, getTeamEvaluationHistory)
 
 
 // Add Session data
+router.get("/get-recent-sessions", protect, getRecentSessions);
+router.post("/bulk-add-session", protect, bulkAddSession);
 router.post("/:teamId/add-session", protect, addSession);
 
 router.put("/:teamId/update-session/:sessionId", protect, updateSessionForTeam);

@@ -169,6 +169,22 @@ const fieldTeamsSchema = new mongoose.Schema(
       default: "fieldTeam",
       enum: ["fieldTeam"], // Add other roles as needed
     },
+    isNewToInstallation: {
+      type: Boolean,
+      default: false
+    },
+    isNewToActivation: {
+      type: Boolean,
+      default: false
+    },
+    installationStartDate: {
+      type: Date,
+      default: null
+    },
+    activationStartDate: {
+      type: Date,
+      default: null
+    },
   },
   { timestamps: true }
 );

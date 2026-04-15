@@ -69,21 +69,7 @@ import {
   MdExpandMore,
   MdBarChart
 } from 'react-icons/md';
-import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
+
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -99,7 +85,7 @@ import { utils, writeFile } from 'xlsx';
 import AddTask from '../components/task/AddTask';
 import AdvancedSearch from '../components/common/AdvancedSearch';
 import moment from 'moment';
-import AllTasksDeepDiveAnalytics from '../components/task/AllTasksDeepDiveAnalytics';
+
 
 const DEFAULT_SETTINGS_STATE = { settings: {} };
 
@@ -254,7 +240,7 @@ const AllTasksList = () => {
   const [teamNameFilter, setTeamNameFilter] = useState('all');
   const [validationFilter, setValidationFilter] = useState('all');
   const [filter, setFilter] = useState('all'); // Eval score filter
-  const [analyticsView, setAnalyticsView] = useState('basic'); // 'basic' or 'deep'
+
 
   // Dialogs & Selection
   const [selectedTask, setSelectedTask] = useState(null);
@@ -274,7 +260,7 @@ const AllTasksList = () => {
   const [dropdownOptions, setDropdownOptions] = useState({});
   const [favoriteTasks, setFavoriteTasks] = useState([]);
   // const [visitedRowIds, setVisitedRowIds] = useState([]); // Removed in favor of backend persistence
-  const [hiddenSeries, setHiddenSeries] = useState(new Set());
+
   const [recordTicketDialogOpen, setRecordTicketDialogOpen] = useState(false);
   const [ticketTask, setTicketTask] = useState(null);
   const [gaiaStepsDialogOpen, setGaiaStepsDialogOpen] = useState(false);
@@ -410,19 +396,6 @@ const AllTasksList = () => {
     });
     return result;
   }, [allTasks]);
-
-  const handleLegendClick = (e) => {
-    const { dataKey } = e;
-    setHiddenSeries((prev) => {
-      const next = new Set(prev);
-      if (next.has(dataKey)) {
-        next.delete(dataKey);
-      } else {
-        next.add(dataKey);
-      }
-      return next;
-    });
-  };
 
   // Fetch ALL Data on Mount
   useEffect(() => {
@@ -620,41 +593,7 @@ const AllTasksList = () => {
       return taskId;
     });
   };  // Chart Data Processing
-  const analyticsData = useMemo(() => {
-    const sourceData = filteredTasks;
-    if (!sourceData.length) return { reason: [], subReason: [], rootCause: [] };
 
-    // Helper to count frequencies — handles arrays and comma-separated strings
-    const count = (key) => {
-      const map = {};
-      sourceData.forEach(t => {
-        const val = t[key];
-        let values = [];
-        if (Array.isArray(val)) {
-          values = val.flatMap(v => (typeof v === 'string' ? v.split(',').map(s => s.trim()) : [v])).filter(Boolean);
-        } else if (typeof val === 'string' && val.trim()) {
-          values = val.split(',').map(s => s.trim()).filter(Boolean);
-        } else if (val) {
-          values = [val];
-        }
-        if (values.length === 0) {
-          map['Unknown'] = (map['Unknown'] || 0) + 1;
-        } else {
-          values.forEach(v => { map[v] = (map[v] || 0) + 1; });
-        }
-      });
-      return Object.entries(map)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 10);
-    };
-
-    return {
-      reason: count('reason'),
-      subReason: count('subReason'),
-      rootCause: count('rootCause')
-    };
-  }, [filteredTasks]);
 
   // --- ADVANCED KPI CALCULATIONS ---
   const dashboardStats = useMemo(() => {
@@ -751,75 +690,7 @@ const AllTasksList = () => {
   );
 
   // Weekly Trend Data Processing
-  const trendData = useMemo(() => {
-    if (!filteredTasks.length) return { data: [], topReasons: [], topOwners: [] };
 
-    // 1. Group by Week
-    const weekMap = {};
-    filteredTasks.forEach(t => {
-      const week = getWeekDisplay(t.interviewDate);
-      if (week === "-") return;
-      if (!weekMap[week]) weekMap[week] = { week, tasks: [] };
-      weekMap[week].tasks.push(t);
-    });
-
-    // 2. Sort weeks chronologically (simplified assuming "W1", "W2" format or similar)
-    // For robust sorting, we might need the actual date, but let's stick to the labels for now
-    const sortedWeeks = Object.keys(weekMap).sort((a, b) => parseInt(a) - parseInt(b));
-
-    // 3. Find top Reasons/Owners across all data to track them
-    const getTopKeys = (field, limit = 5) => {
-      const counts = {};
-      filteredTasks.forEach(t => {
-        const val = t[field];
-        if (Array.isArray(val)) {
-          val.forEach(v => {
-            const key = v || 'Unknown';
-            counts[key] = (counts[key] || 0) + 1;
-          });
-        } else {
-          const key = val || 'Unknown';
-          counts[key] = (counts[key] || 0) + 1;
-        }
-      });
-      return Object.entries(counts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, limit)
-        .map(([key, total]) => ({ name: key, total }));
-    };
-
-    const topReasons = getTopKeys('reason');
-    const topSubReasons = getTopKeys('subReason');
-    const topRootCauses = getTopKeys('rootCause');
-    const topOwners = getTopKeys('responsible');
-    const topITN = getTopKeys('itnRelated');
-    const topSubRel = getTopKeys('relatedToSubscription');
-    const topTeams = getTopKeys('teamName', 5);
-
-    // 4. Transform into Recharts format
-    const data = sortedWeeks.map(weekLabel => {
-      const dataPoint = { name: `W${weekLabel}` };
-      const tasksInWeek = weekMap[weekLabel].tasks;
-
-      const checkMatch = (task, field, target) => {
-        const val = task[field];
-        if (Array.isArray(val)) return val.includes(target);
-        return (val || 'Unknown') === target;
-      };
-
-      topReasons.forEach(obj => { dataPoint[obj.name] = tasksInWeek.filter(t => checkMatch(t, 'reason', obj.name)).length; });
-      topSubReasons.forEach(obj => { dataPoint[obj.name] = tasksInWeek.filter(t => checkMatch(t, 'subReason', obj.name)).length; });
-      topRootCauses.forEach(obj => { dataPoint[obj.name] = tasksInWeek.filter(t => checkMatch(t, 'rootCause', obj.name)).length; });
-      topOwners.forEach(obj => { dataPoint[obj.name] = tasksInWeek.filter(t => checkMatch(t, 'responsible', obj.name)).length; });
-      topITN.forEach(obj => { dataPoint[obj.name] = tasksInWeek.filter(t => checkMatch(t, 'itnRelated', obj.name)).length; });
-      topSubRel.forEach(obj => { dataPoint[obj.name] = tasksInWeek.filter(t => checkMatch(t, 'relatedToSubscription', obj.name)).length; });
-      topTeams.forEach(obj => { dataPoint[obj.name] = tasksInWeek.filter(t => checkMatch(t, 'teamName', obj.name)).length; });
-
-      return dataPoint;
-    });
-
-    return { data, topReasons, topSubReasons, topRootCauses, topOwners, topITN, topSubRel, topTeams };
-  }, [filteredTasks, settings]); // settings needed for getWeekDisplay
 
 
 
@@ -1055,12 +926,6 @@ const AllTasksList = () => {
     utils.sheet_add_aoa(wsOwners, [[`Owner & Team Performance Analysis - Period: ${periodStr}`]], { origin: "A1" });
     utils.book_append_sheet(workbook, wsOwners, 'Owner Performance');
 
-    // 5. KPI Comparison Sheet (Weekly Breakdown)
-    if (trendData.data?.length > 0) {
-      const wsTrends = utils.json_to_sheet(trendData.data, { origin: "A2" });
-      utils.sheet_add_aoa(wsTrends, [[`Weekly KPI Comparison - Reported Period: ${periodStr}`]], { origin: "A1" });
-      utils.book_append_sheet(workbook, wsTrends, 'Historical KPI Comparison');
-    }
 
     // 6. Deep Raw Data Sheet
     const maxTickets = filteredTasks.reduce((max, t) => Math.max(max, (t.tickets || []).length), 0);
@@ -1471,512 +1336,7 @@ const AllTasksList = () => {
         </Box>
 
 
-        {/* View Selection Toggle */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
-          <ButtonGroup variant="outlined" sx={{ borderRadius: '12px', overflow: 'hidden', mb: 2 }}>
-            <Button
-              onClick={() => setAnalyticsView('basic')}
-              variant={analyticsView === 'basic' ? 'contained' : 'outlined'}
-              sx={{ px: 4, py: 1, textTransform: 'none', fontWeight: 600 }}
-              startIcon={<MdInsights />}
-            >
-              Basic Overview
-            </Button>
-            <Button
-              onClick={() => setAnalyticsView('deep')}
-              variant={analyticsView === 'deep' ? 'contained' : 'outlined'}
-              sx={{ px: 4, py: 1, textTransform: 'none', fontWeight: 600 }}
-              startIcon={<MdVisibility />}
-            >
-              Deep Dive Analysis
-            </Button>
-          </ButtonGroup>
 
-          <Typography variant="caption" sx={{ color: alpha('#fff', 0.4), fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
-            Reporting Period: <span style={{ color: '#7b68ee' }}>{
-              dateFilter.label || (dateFilter.type === 'all' ? 'All Time' : `${format(dateFilter.start, 'dd MMM')} - ${format(dateFilter.end, 'dd MMM')}`)
-            }</span>
-          </Typography>
-        </Box>
-
-        {/* Basic Analytics Dashboard */}
-        {analyticsView === 'basic' && (
-          <>
-            <Box sx={{ mt: 3 }}>
-              <Grid container spacing={3}>
-                {/* Reason Chart */}
-                <Grid item xs={12} md={4}>
-                  <Paper sx={{
-                    p: 2.5,
-                    borderRadius: '20px',
-                    background: 'rgba(45, 45, 45, 0.4)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid #3d3d3d',
-                    height: 400,
-                    color: '#fff'
-                  }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#7b68ee' }}>Top Reasons Analysis</Typography>
-                    <ResponsiveContainer width="100%" height="85%">
-                      <AreaChart data={analyticsData.reason} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorReason" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#7b68ee" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#7b68ee" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#b3b3b3' }} />
-                        <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} />
-                        <RechartsTooltip
-                          contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                        />
-                        <Area type="monotone" dataKey="value" stroke="#7b68ee" strokeWidth={3} fillOpacity={1} fill="url(#colorReason)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </Paper>
-                </Grid>
-                {/* Sub-Reason Chart */}
-                <Grid item xs={12} md={4}>
-                  <Paper sx={{
-                    p: 2.5,
-                    borderRadius: '20px',
-                    background: 'rgba(45, 45, 45, 0.4)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid #3d3d3d',
-                    height: 400,
-                    color: '#fff'
-                  }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#10b981' }}>Sub-Reason Breakdown</Typography>
-                    <ResponsiveContainer width="100%" height="85%">
-                      <AreaChart data={analyticsData.subReason} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorSub" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#b3b3b3' }} />
-                        <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} />
-                        <RechartsTooltip
-                          contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                        />
-                        <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorSub)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </Paper>
-                </Grid>
-                {/* Root Cause Chart */}
-                <Grid item xs={12} md={4}>
-                  <Paper sx={{
-                    p: 2.5,
-                    borderRadius: '20px',
-                    background: 'rgba(45, 45, 45, 0.4)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid #3d3d3d',
-                    height: 400,
-                    color: '#fff'
-                  }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3, color: '#f59e0b' }}>Root Cause Identification</Typography>
-                    <ResponsiveContainer width="100%" height="85%">
-                      <AreaChart data={analyticsData.rootCause} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorRoot" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#b3b3b3' }} />
-                        <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} />
-                        <RechartsTooltip
-                          contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                        />
-                        <Area type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorRoot)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </Paper>
-                </Grid>
-              </Grid>
-            </Box>
-            {/* Weekly KPI Comparison (NEW) */}
-            {trendData.data?.length > 0 && (
-              <Box sx={{ mt: 4 }}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5, color: '#7b68ee', letterSpacing: '-0.5px' }}>
-                  <MdTimeline /> Historical Comparison for KPIs
-                </Typography>
-                <Grid container spacing={3}>
-                  {/* Reason Trends */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{
-                      p: 3,
-                      borderRadius: '20px',
-                      background: 'rgba(45, 45, 45, 0.4)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid #3d3d3d',
-                      height: 450,
-                      color: '#fff'
-                    }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Reason Comparison</Typography>
-                      <ResponsiveContainer width="100%" height="85%">
-                        <LineChart data={trendData.data}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                          />
-                          <Legend
-                            iconType="circle"
-                            wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
-                            onClick={handleLegendClick}
-                            formatter={(value) => {
-                              const item = trendData.topReasons.find(r => r.name === value);
-                              const isHidden = hiddenSeries.has(value);
-                              return (
-                                <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
-                                  {value} ({item?.total || 0})
-                                </span>
-                              );
-                            }}
-                          />
-                          {trendData.topReasons.map((item, index) => (
-                            <Line
-                              key={item.name}
-                              type="monotone"
-                              dataKey={item.name}
-                              stroke={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
-                              strokeWidth={3}
-                              dot={{ r: 4, fill: '#2d2d2d', strokeWidth: 2 }}
-                              activeDot={{ r: 6, strokeWidth: 0 }}
-                              hide={hiddenSeries.has(item.name)}
-                            />
-                          ))}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </Paper>
-                  </Grid>
-
-                  {/* Sub-Reason Trends */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{
-                      p: 3,
-                      borderRadius: '20px',
-                      background: 'rgba(45, 45, 45, 0.4)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid #3d3d3d',
-                      height: 450,
-                      color: '#fff'
-                    }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Sub-Reason Comparison</Typography>
-                      <ResponsiveContainer width="100%" height="85%">
-                        <LineChart data={trendData.data}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                          />
-                          <Legend
-                            iconType="circle"
-                            wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
-                            onClick={handleLegendClick}
-                            formatter={(value) => {
-                              const item = trendData.topSubReasons.find(r => r.name === value);
-                              const isHidden = hiddenSeries.has(value);
-                              return (
-                                <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
-                                  {value} ({item?.total || 0})
-                                </span>
-                              );
-                            }}
-                          />
-                          {trendData.topSubReasons.map((item, index) => (
-                            <Line
-                              key={item.name}
-                              type="monotone"
-                              dataKey={item.name}
-                              stroke={['#06b6d4', '#8b5cf6', '#ec4899', '#10b981', '#7b68ee'][index % 5]}
-                              strokeWidth={3}
-                              dot={{ r: 4, fill: '#2d2d2d', strokeWidth: 2 }}
-                              activeDot={{ r: 6, strokeWidth: 0 }}
-                              hide={hiddenSeries.has(item.name)}
-                            />
-                          ))}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </Paper>
-                  </Grid>
-
-                  {/* Root Cause Trends */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{
-                      p: 3,
-                      borderRadius: '20px',
-                      background: 'rgba(45, 45, 45, 0.4)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid #3d3d3d',
-                      height: 450,
-                      color: '#fff'
-                    }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Root Cause Comparison</Typography>
-                      <ResponsiveContainer width="100%" height="85%">
-                        <LineChart data={trendData.data}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                          />
-                          <Legend
-                            iconType="circle"
-                            wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
-                            onClick={handleLegendClick}
-                            formatter={(value) => {
-                              const item = trendData.topRootCauses.find(r => r.name === value);
-                              const isHidden = hiddenSeries.has(value);
-                              return (
-                                <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
-                                  {value} ({item?.total || 0})
-                                </span>
-                              );
-                            }}
-                          />
-                          {trendData.topRootCauses.map((item, index) => (
-                            <Line
-                              key={item.name}
-                              type="monotone"
-                              dataKey={item.name}
-                              stroke={['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6'][index % 5]}
-                              strokeWidth={3}
-                              dot={{ r: 4, fill: '#2d2d2d', strokeWidth: 2 }}
-                              activeDot={{ r: 6, strokeWidth: 0 }}
-                              hide={hiddenSeries.has(item.name)}
-                            />
-                          ))}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </Paper>
-                  </Grid>
-
-                  {/* ITN Related Trends */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{
-                      p: 3,
-                      borderRadius: '20px',
-                      background: 'rgba(45, 45, 45, 0.4)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid #3d3d3d',
-                      height: 450,
-                      color: '#fff'
-                    }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>ITN Related Comparison</Typography>
-                      <ResponsiveContainer width="100%" height="85%">
-                        <LineChart data={trendData.data}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                          />
-                          <Legend
-                            iconType="circle"
-                            wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
-                            onClick={handleLegendClick}
-                            formatter={(value) => {
-                              const item = trendData.topITN.find(r => r.name === value);
-                              const isHidden = hiddenSeries.has(value);
-                              return (
-                                <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
-                                  {value} ({item?.total || 0})
-                                </span>
-                              );
-                            }}
-                          />
-                          {trendData.topITN.map((item, index) => (
-                            <Line
-                              key={item.name}
-                              type="monotone"
-                              dataKey={item.name}
-                              stroke={['#f59e0b', '#10b981', '#7b68ee', '#ef4444', '#06b6d4'][index % 5]}
-                              strokeWidth={3}
-                              dot={{ r: 4, fill: '#2d2d2d', strokeWidth: 2 }}
-                              activeDot={{ r: 6, strokeWidth: 0 }}
-                              hide={hiddenSeries.has(item.name)}
-                            />
-                          ))}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </Paper>
-                  </Grid>
-
-                  {/* Subscription Related Trends */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{
-                      p: 3,
-                      borderRadius: '20px',
-                      background: 'rgba(45, 45, 45, 0.4)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid #3d3d3d',
-                      height: 450,
-                      color: '#fff'
-                    }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Subscription Related Comparison</Typography>
-                      <ResponsiveContainer width="100%" height="85%">
-                        <LineChart data={trendData.data}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                          />
-                          <Legend
-                            iconType="circle"
-                            wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
-                            onClick={handleLegendClick}
-                            formatter={(value) => {
-                              const item = trendData.topSubRel.find(r => r.name === value);
-                              const isHidden = hiddenSeries.has(value);
-                              return (
-                                <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
-                                  {value} ({item?.total || 0})
-                                </span>
-                              );
-                            }}
-                          />
-                          {trendData.topSubRel.map((item, index) => (
-                            <Line
-                              key={item.name}
-                              type="monotone"
-                              dataKey={item.name}
-                              stroke={['#06b6d4', '#7b68ee', '#10b981', '#f59e0b', '#ef4444'][index % 5]}
-                              strokeWidth={3}
-                              dot={{ r: 4, fill: '#2d2d2d', strokeWidth: 2 }}
-                              activeDot={{ r: 6, strokeWidth: 0 }}
-                              hide={hiddenSeries.has(item.name)}
-                            />
-                          ))}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </Paper>
-                  </Grid>
-
-                  {/* Owner Trends */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{
-                      p: 3,
-                      borderRadius: '20px',
-                      background: 'rgba(45, 45, 45, 0.4)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid #3d3d3d',
-                      height: 450,
-                      color: '#fff'
-                    }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Owner Comparison</Typography>
-                      <ResponsiveContainer width="100%" height="85%">
-                        <LineChart data={trendData.data}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                          />
-                          <Legend
-                            iconType="circle"
-                            wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
-                            onClick={handleLegendClick}
-                            formatter={(value) => {
-                              const item = trendData.topOwners.find(o => o.name === value);
-                              const isHidden = hiddenSeries.has(value);
-                              return (
-                                <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
-                                  {value} ({item?.total || 0})
-                                </span>
-                              );
-                            }}
-                          />
-                          {trendData.topOwners.map((item, index) => (
-                            <Line
-                              key={item.name}
-                              type="monotone"
-                              dataKey={item.name}
-                              stroke={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
-                              strokeWidth={3}
-                              dot={{ r: 4, fill: '#2d2d2d', strokeWidth: 2 }}
-                              activeDot={{ r: 6, strokeWidth: 0 }}
-                              hide={hiddenSeries.has(item.name)}
-                            />
-                          ))}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </Paper>
-                  </Grid>
-
-                  {/* Team Trends */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{
-                      p: 3,
-                      borderRadius: '20px',
-                      background: 'rgba(45, 45, 45, 0.4)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid #3d3d3d',
-                      height: 450,
-                      color: '#fff'
-                    }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 3 }}>Team Load Comparison</Typography>
-                      <ResponsiveContainer width="100%" height="85%">
-                        <AreaChart data={trendData.data}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3d3d3d" />
-                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <YAxis tick={{ fontSize: 11, fill: '#b3b3b3' }} axisLine={{ stroke: '#3d3d3d' }} />
-                          <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', borderRadius: '12px', color: '#fff' }}
-                          />
-                          <Legend
-                            iconType="circle"
-                            wrapperStyle={{ fontSize: '11px', paddingTop: '20px', cursor: 'pointer' }}
-                            onClick={handleLegendClick}
-                            formatter={(value) => {
-                              const item = trendData.topTeams.find(o => o.name === value);
-                              const isHidden = hiddenSeries.has(value);
-                              return (
-                                <span style={{ color: isHidden ? '#666' : '#fff', textDecoration: isHidden ? 'line-through' : 'none' }}>
-                                  {value} ({item?.total || 0})
-                                </span>
-                              );
-                            }}
-                          />
-                          {trendData.topTeams.map((item, index) => (
-                            <Area
-                              key={item.name}
-                              type="monotone"
-                              dataKey={item.name}
-                              stackId="1"
-                              stroke={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
-                              fill={['#7b68ee', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'][index % 5]}
-                              fillOpacity={0.4}
-                              hide={hiddenSeries.has(item.name)}
-                            />
-                          ))}
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </Paper>
-                  </Grid>
-                </Grid>
-              </Box>
-            )}
-
-          </>
-        )}
-
-        {/* Deep Dive Analytics Component */}
-        {analyticsView === 'deep' && (
-          <AllTasksDeepDiveAnalytics
-            tasks={filteredTasks}
-            periodLabel={dateFilter.label || (dateFilter.type === 'all' ? 'All Time' : `${format(dateFilter.start, 'dd MMM')} - ${format(dateFilter.end, 'dd MMM')}`)}
-            onDrillDown={handleDrillDownRowClick}
-          />
-        )}
       </Paper>
 
 
@@ -2747,7 +2107,7 @@ const AllTasksList = () => {
                   />
                 </TableCell>
               ))}
-              <TableCell sx={{ p: '4px !important' }} /> {/* Week column */}
+              <TableCell sx={{ p: '4px !important' }} />{/* Week column */}
               {[
                 { key: 'gaiaCheck', placeholder: 'GAIA' }
               ].map((col) => (
@@ -2776,7 +2136,7 @@ const AllTasksList = () => {
                   />
                 </TableCell>
               ))}
-              <TableCell sx={{ p: '4px !important' }} /> {/* GAIA Content column */}
+              <TableCell sx={{ p: '4px !important' }} />{/* GAIA Content column */}
               {[
                 { key: 'latestGaiaType', placeholder: 'Type' },
                 { key: 'latestGaiaReason', placeholder: 'Reason' }
@@ -2806,9 +2166,9 @@ const AllTasksList = () => {
                   />
                 </TableCell>
               ))}
-              <TableCell sx={{ p: '4px !important' }} /> {/* GAIA Content column */}
-              <TableCell sx={{ p: '4px !important' }} /> {/* Steps */}
-              <TableCell sx={{ p: '4px !important' }} /> {/* Actions */}
+              <TableCell sx={{ p: '4px !important' }} />{/* GAIA Content column */}
+              <TableCell sx={{ p: '4px !important' }} />{/* Steps */}
+              <TableCell sx={{ p: '4px !important' }} />{/* Actions */}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -3283,10 +2643,10 @@ const AllTasksList = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer >
+      </TableContainer>
 
       {/* Pagination */}
-      < Box sx={{
+      <Box sx={{
         display: 'flex',
         justifyContent: 'flex-start',
         mt: 0,
@@ -3332,7 +2692,7 @@ const AllTasksList = () => {
             }
           }}
         />
-      </Box >
+      </Box>
 
       {/* Edit Task Dialog */}
       {
@@ -3681,7 +3041,7 @@ const AllTasksList = () => {
           setAdvancedSearchOpen(false);
         }}
       />
-    </Box >
+    </Box>
   );
 };
 

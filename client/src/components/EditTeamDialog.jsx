@@ -59,6 +59,10 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
         laptopSerialNumber: team.laptopSerialNumber === 'N/A' ? '' : team.laptopSerialNumber,
         teamCompany: team.teamCompany || (fieldTeamsCompany.length > 0 ? fieldTeamsCompany[0] : ''),
         teamCode: team.teamCode || '',
+        isNewToInstallation: team.isNewToInstallation || false,
+        isNewToActivation: team.isNewToActivation || false,
+        installationStartDate: team.installationStartDate ? new Date(team.installationStartDate).toISOString().split('T')[0] : '',
+        activationStartDate: team.activationStartDate ? new Date(team.activationStartDate).toISOString().split('T')[0] : '',
       });
     }
   }, [team, reset]);
@@ -350,6 +354,63 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               InputProps={{ style: { color: '#ffffff' } }}
               InputLabelProps={{ style: { color: '#888' }, shrink: true }}
             />
+          </Box>
+
+          {/* Section: Role Expertise */}
+          <Typography variant="overline" sx={{ color: '#7b68ee', fontWeight: 'bold', mt: 4, mb: 2, display: 'block' }}>
+            Role Expertise
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mb: 4 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 3, alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#1a1a1a', p: 1.5, borderRadius: 1, border: '1px solid #333' }}>
+                <input type="checkbox" {...register('isNewToInstallation')} id="edit-new-install" style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
+                <label htmlFor="edit-new-install" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer' }}>New to Installation</label>
+              </Box>
+              <TextField
+                label="Installation Start Date"
+                type="date"
+                variant="outlined"
+                fullWidth
+                {...register('installationStartDate')}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: '#1a1a1a',
+                    '& fieldset': { borderColor: '#333' },
+                    '&:hover fieldset': { borderColor: '#7b68ee' },
+                    '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  },
+                }}
+                InputProps={{ style: { color: '#ffffff' } }}
+                InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+              />
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 3, alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#1a1a1a', p: 1.5, borderRadius: 1, border: '1px solid #333' }}>
+                <input type="checkbox" {...register('isNewToActivation')} id="edit-new-activation" style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
+                <label htmlFor="edit-new-activation" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer' }}>New to Activation</label>
+              </Box>
+              <TextField
+                label="Activation Start Date"
+                type="date"
+                variant="outlined"
+                fullWidth
+                {...register('activationStartDate')}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: '#1a1a1a',
+                    '& fieldset': { borderColor: '#333' },
+                    '&:hover fieldset': { borderColor: '#7b68ee' },
+                    '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  },
+                }}
+                InputProps={{ style: { color: '#ffffff' } }}
+                InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+              />
+            </Box>
+            <Typography variant="caption" sx={{ color: '#666', fontStyle: 'italic' }}>
+              * If not checked, team is considered a Rich Expert for that role.
+            </Typography>
           </Box>
 
           {errorMessage && (

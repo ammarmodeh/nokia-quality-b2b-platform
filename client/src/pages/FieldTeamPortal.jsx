@@ -20,10 +20,17 @@ import {
   TrendingFlat, PieChart as PieChartIcon, CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon, PictureAsPdf as PictureAsPdfIcon, TableChart as TableChartIcon,
   Search as SearchIcon, FilterList as FilterListIcon, CalendarToday as CalendarTodayIcon,
-  Event as EventIcon, Update as UpdateIcon, Visibility as VisibilityIcon
+  Event as EventIcon, Update as UpdateIcon, Visibility as VisibilityIcon, VerifiedUser,
+  LocationOn
 } from '@mui/icons-material';
 import moment from "moment";
-import { subDays, isAfter, format } from 'date-fns';
+import { subDays, isAfter } from 'date-fns';
+
+const normalizeText = (value) => {
+  if (value === undefined || value === null) return '';
+  if (Array.isArray(value)) return value.join(' ').toLowerCase().trim();
+  return String(value).toLowerCase().trim();
+};
 import { generateWeekRanges, getWeekNumber, getMonthNumber, generateMonthRanges } from "../utils/helpers";
 import api from "../api/api";
 import {
@@ -64,10 +71,12 @@ import {
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
-import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport, FaEnvelope } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport, FaEnvelope, FaRegSmile } from 'react-icons/fa';
 import { MdInsights } from 'react-icons/md';
 import ViewIssueDetailsDialog from "../components/ViewIssueDetailsDialog";
 import { TaskDetailsDialog } from "../components/TaskDetailsDialog";
+import TeamViolationOverview from "../components/FieldTeamPortal/TeamViolationOverview";
+import ComparisonAnalytics from "../components/FieldTeamPortal/ComparisonAnalytics";
 
 // Register ChartJS components
 ChartJS.register(
@@ -89,15 +98,15 @@ import FieldTeamTicketsForPortalReview from "../components/FieldTeamTicketsForPo
 
 // --- Components ---
 
-const StatCard = ({ title, count, total, color, icon, percentage }) => (
-  <Card sx={{
-    height: '100%',
-    position: 'relative',
-    overflow: 'visible',
-    borderRadius: 3,
-    bgcolor: 'rgba(30, 41, 59, 0.5)',
+const StatCard = ({ title, count, total, color, icon, percentage, subtext, mainValue }) => (
+  <Paper sx={{
+    p: 2.5,
+    background: 'rgba(15, 23, 42, 0.4)',
+    backdropFilter: 'blur(10px)',
     border: '1px solid rgba(255, 255, 255, 0.05)',
-    backdropFilter: 'blur(10px)'
+    borderRadius: '24px',
+    height: '100%',
+    position: 'relative'
   }}>
     <CardContent sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="start" mb={2}>
@@ -145,7 +154,7 @@ const StatCard = ({ title, count, total, color, icon, percentage }) => (
         {count} of {total} tasks
       </Typography>
     </CardContent>
-  </Card>
+  </Paper>
 );
 
 // --- Compact Data Table Helper ---
@@ -202,6 +211,56 @@ const normalizeValue = (name) => {
   if (uppercased === 'CUSTOMER') return 'Customer';
 
   return n;
+};
+
+const getViolationCohortLabel = (count) => {
+  if (count === 0) return '0';
+  if (count <= 4) return '1-4';
+  if (count <= 8) return '5-8';
+  if (count <= 12) return '9-12';
+  if (count <= 16) return '13-16';
+  if (count <= 20) return '17-20';
+  return '21+';
+};
+
+const getTeamStatusLabel = (team) => {
+  if (!team) return 'Inactive';
+  if (team.isTerminated) return 'Terminated';
+  if (team.isResigned) return 'Resigned';
+  if (team.isSuspended) return 'Suspended';
+  if (team.isOnLeave) return 'On Leave';
+  return 'Active';
+};
+
+const buildCohortSummary = (teamItems = []) => {
+  const summary = {};
+  teamItems.forEach((team) => {
+    const label = getViolationCohortLabel(team.count);
+    if (!summary[label]) {
+      summary[label] = { label, teams: 0, trainedTeams: 0, totalViolations: 0, activeTeams: 0, inactiveTeams: 0 };
+    }
+    summary[label].teams += 1;
+    summary[label].totalViolations += team.count;
+    if (team.trained) {
+      summary[label].trainedTeams += 1;
+    }
+    if (team.active) {
+      summary[label].activeTeams += 1;
+    } else {
+      summary[label].inactiveTeams += 1;
+    }
+  });
+  return Object.values(summary).sort((a, b) => {
+    const parseRange = (label) => {
+      if (label === '0') return 0;
+      const parts = label.split(/[-+]/);
+      return Number(parts[0]) || 0;
+    };
+    return parseRange(a.label) - parseRange(b.label);
+  }).map((item) => ({
+    ...item,
+    trainedPercent: item.teams > 0 ? Math.round((item.trainedTeams / item.teams) * 100) : 0
+  }));
 };
 
 const extractOwners = (task) => {
@@ -285,10 +344,27 @@ const FieldTeamPortal = () => {
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [leaderboardDateFilter, setLeaderboardDateFilter] = useState({ start: '', end: '' });
   const [leaderboardThresholds, setLeaderboardThresholds] = useState({ minIssues: '', minSuccessRate: '' });
+  const [allTrainingSessionsGlobal, setAllTrainingSessionsGlobal] = useState([]);
 
   // NEW: State for Global Analytics Tab
   const [globalTab, setGlobalTab] = useState(0);
   const [analyticsSubTab, setAnalyticsSubTab] = useState(0); // 0: All, 1: Detractors, 2: Neutrals
+  const [samplesTokenData, setSamplesTokenData] = useState([]);
+
+  // Fetch Samples Token Data for targets
+  useEffect(() => {
+    const fetchSamplesToken = async () => {
+      try {
+        const response = await api.get(`/samples-token/${new Date().getFullYear()}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+        });
+        setSamplesTokenData(response.data || []);
+      } catch (err) {
+        console.error("Error fetching samples token:", err);
+      }
+    };
+    fetchSamplesToken();
+  }, []);
   const [offendersPage, setOffendersPage] = useState(1);
 
   // Analytics Drill-Down State
@@ -299,6 +375,9 @@ const FieldTeamPortal = () => {
   });
   const [selectedTask, setSelectedTask] = useState(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [cohortDialogOpen, setCohortDialogOpen] = useState(false);
+  const [cohortDialogItems, setCohortDialogItems] = useState([]);
+  const [cohortDialogLabel, setCohortDialogLabel] = useState('');
 
   // Updated Premium Colors & Glassmorphism Theme
   const colors = {
@@ -408,6 +487,8 @@ const FieldTeamPortal = () => {
     }
   }, [allTechnicalTasksGlobal, settings]);
 
+
+
   // --- NEW: Global Analytics Logic ---
   const globalAnalytics = useMemo(() => {
     // 1. Time Filtering
@@ -440,23 +521,15 @@ const FieldTeamPortal = () => {
 
     // 2. Sub-tab Filtering (All/Detractors/Neutrals)
     let tasksToProcess = timeFiltered;
-    if (analyticsSubTab === 1) { // Detractors
+    if (analyticsSubTab === 1) { // Detractors (score <= 6)
       tasksToProcess = timeFiltered.filter(t => {
         let score = t.evaluationScore;
-        if (score && score > 0) {
-          if (score <= 10) score = score * 10;
-          return score <= 60;
-        }
-        return false;
+        return score && score > 0 && score <= 6;
       });
-    } else if (analyticsSubTab === 2) { // Neutrals
+    } else if (analyticsSubTab === 2) { // Neutrals (score 7-8)
       tasksToProcess = timeFiltered.filter(t => {
         let score = t.evaluationScore;
-        if (score && score > 0) {
-          if (score <= 10) score = score * 10;
-          return score > 60 && score <= 80;
-        }
-        return false;
+        return score && score >= 7 && score <= 8;
       });
     }
 
@@ -465,6 +538,7 @@ const FieldTeamPortal = () => {
       byReason: {},
       bySubReason: {},
       byRootCause: {},
+      byGovernorate: {},
       byFieldTeam: {},
       fieldTeamDetails: {},
       contributionMatrix: {}, // Owner vs Reason
@@ -475,6 +549,7 @@ const FieldTeamPortal = () => {
       detailedReasons: {},
       detailedSubReasons: {},
       detailedRootCauses: {},
+      detailedGovernorates: {},
       detailedFieldTeams: {}
     };
 
@@ -533,8 +608,20 @@ const FieldTeamPortal = () => {
         }
       }
 
+      const governorate = task.governorate ? String(task.governorate).trim() : 'Not specified';
       const fieldTeam = task.teamName || 'Unknown';
       const category = task.category || 'Not specified';
+
+      // Track governorate counts and details
+      stats.byGovernorate[governorate] = (stats.byGovernorate[governorate] || 0) + 1;
+      const hasITN = tuples.some(t => t.isITN);
+      const hasSubscription = tuples.some(t => t.isSubscription);
+      if (!stats.detailedGovernorates[governorate]) {
+        stats.detailedGovernorates[governorate] = { total: 0, itn: 0, subscription: 0 };
+      }
+      stats.detailedGovernorates[governorate].total++;
+      if (hasITN) stats.detailedGovernorates[governorate].itn++;
+      if (hasSubscription) stats.detailedGovernorates[governorate].subscription++;
 
       // Calculate Points (apply once per task, or shared across owners?)
       // User likely wants points to be associated with the task itself, but we display them per owner.
@@ -631,18 +718,23 @@ const FieldTeamPortal = () => {
       });
 
       // Calculate NPS stats (this is per task, not per tuple)
+      // Evaluation score scale: 0-10
+      // Detractors: <= 6, Neutrals: 7-8, Promoters: 9-10
       let score = task.evaluationScore;
       if (score && score > 0) {
-        if (score <= 10) score = score * 10; // Normalize
-        if (score <= 60) {
+        if (score <= 6) {
           teamStats.npsBreakdown.Detractor++;
           stats.sentiment.Detractor++;
-        } else if (score > 60 && score <= 80) {
+        } else if (score >= 7 && score <= 8) {
           teamStats.npsBreakdown.Neutral++;
           stats.sentiment.Neutral++;
-        } else {
+        } else if (score >= 9) {
           teamStats.npsBreakdown.Promoter++;
           stats.sentiment.Promoter++;
+        } else {
+          // 0 score or invalid
+          teamStats.npsBreakdown.NotEvaluated++;
+          stats.sentiment.NotEvaluated++;
         }
       } else {
         teamStats.npsBreakdown.NotEvaluated++;
@@ -711,6 +803,52 @@ const FieldTeamPortal = () => {
 
     const topFieldTeams = toChartData(stats.byFieldTeam);
 
+    const teamNameById = new Map((fieldTeams || []).map(team => [team._id?.toString(), team.teamName]));
+    const trainedTeamNames = new Set();
+
+    // Use field team session history first, to match the trained count used by the Insights and Performance views.
+    (fieldTeams || []).forEach(team => {
+      if (Array.isArray(team.sessionHistory) && team.sessionHistory.some(session => session?.sessionDate)) {
+        trainedTeamNames.add(normalizeText(team.teamName));
+      }
+    });
+
+    // Also include any additional training sessions discovered in the global training session source.
+    (Array.isArray(allTrainingSessionsGlobal) ? allTrainingSessionsGlobal : []).forEach(session => {
+      (session.participants || []).forEach(participant => {
+        let teamName = null;
+        if (participant && typeof participant === 'object') {
+          teamName = participant.teamName || participant.name || teamNameById.get(participant._id?.toString() || participant.teamId?.toString());
+        } else if (participant) {
+          teamName = teamNameById.get(participant.toString());
+        }
+        if (teamName) trainedTeamNames.add(normalizeText(teamName));
+      });
+    });
+
+    const teamCountItems = (fieldTeams || []).map(team => {
+      const teamName = team.teamName || 'Unknown Team';
+      const count = stats.byFieldTeam[teamName] || 0;
+      const status = getTeamStatusLabel(team);
+      return {
+        teamId: team._id?.toString() || teamName,
+        teamName,
+        count,
+        trained: trainedTeamNames.has(normalizeText(teamName)),
+        status,
+        active: status === 'Active'
+      };
+    });
+
+    const fieldTeamCohorts = buildCohortSummary(teamCountItems);
+    const fieldTeamCohortDetails = teamCountItems.reduce((acc, item) => {
+      const label = getViolationCohortLabel(item.count);
+      if (!acc[label]) acc[label] = [];
+      acc[label].push(item);
+      return acc;
+    }, {});
+    Object.values(fieldTeamCohortDetails).forEach(list => list.sort((a, b) => b.count - a.count));
+
     const fieldTeamAnalytics = topFieldTeams.map(team => ({
       teamName: team.name,
       totalIssues: team.value,
@@ -730,9 +868,37 @@ const FieldTeamPortal = () => {
     const matrixOwners = Object.keys(stats.byOwner)
       .filter(o => o !== 'Not specified' && stats.byOwner[o] > 0)
       .sort((a, b) => stats.byOwner[b] - stats.byOwner[a]);
-    
+
     // Always include 'Not specified' as the last column
     matrixOwners.push('Not specified');
+
+    // FIX: Data Doubling Bug (1710 vs 855)
+    // Deduplicate samplesTokenData based on year and weekNumber
+    const uniqueTokensMap = new Map();
+    samplesTokenData.forEach(s => {
+      const key = `${s.year}-${s.weekNumber}`;
+      if (!uniqueTokensMap.has(key)) {
+        uniqueTokensMap.set(key, s);
+      }
+    });
+    const cleanTokens = Array.from(uniqueTokensMap.values());
+
+    const totalSamplesTarget = (() => {
+      if (timeFilterMode === 'weeks' && selectedWeeks.length > 0) {
+        return cleanTokens
+          .filter(s => s.weekNumber < 100 && selectedWeeks.some(w => w.includes(`Wk-${s.weekNumber}`)))
+          .reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+      } else if (timeFilterMode === 'months' && selectedMonths.length > 0) {
+        return cleanTokens
+          .filter(s => s.weekNumber >= 101 && s.weekNumber <= 112 && selectedMonths.some(m => m.includes(`Month-${s.weekNumber - 100}`)))
+          .reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+      } else if (timeFilterMode === 'all') {
+        return cleanTokens
+          .filter(s => s.weekNumber >= 101 && s.weekNumber <= 112)
+          .reduce((sum, s) => sum + (s.sampleSize || 0), 0);
+      }
+      return 0;
+    })();
 
     return {
       ownerData: toChartData(stats.byOwner).sort((a, b) => {
@@ -740,26 +906,26 @@ const FieldTeamPortal = () => {
         if (b.name === 'Not specified') return -1;
         return b.value - a.value;
       }),
+      governorateData: toChartData(stats.byGovernorate).sort((a, b) => b.value - a.value),
       reasonData: toChartData(stats.byReason),
       subReasonData: toChartData(stats.bySubReason),
       rootCauseData: toChartData(stats.byRootCause),
       sentimentData: (() => {
-        const totalSentiment = stats.sentiment.Promoter + stats.sentiment.Neutral + stats.sentiment.Detractor;
+        const auditedCount = stats.sentiment.Promoter + stats.sentiment.Neutral + stats.sentiment.Detractor;
         const entries = [
           { name: 'Promoters', value: stats.sentiment.Promoter, color: '#10b981' },
           { name: 'Neutrals', value: stats.sentiment.Neutral, color: '#f59e0b' },
           { name: 'Detractors', value: stats.sentiment.Detractor, color: '#ef4444' }
         ].filter(s => s.value > 0);
 
-        const total = entries.reduce((sum, item) => sum + item.value, 0);
         let items = entries.map(item => ({
           ...item,
-          floatPct: total > 0 ? (item.value / total) * 100 : 0
+          floatPct: auditedCount > 0 ? (item.value / auditedCount) * 100 : 0
         }));
 
         const floorSum = items.reduce((sum, item) => sum + Math.floor(item.floatPct), 0);
         const diff = 100 - floorSum;
-        if (total > 0 && diff > 0 && diff < items.length) {
+        if (auditedCount > 0 && diff > 0 && diff < items.length) {
           items = items
             .map(item => ({ ...item, remainder: item.floatPct - Math.floor(item.floatPct) }))
             .sort((a, b) => b.remainder - a.remainder);
@@ -779,7 +945,6 @@ const FieldTeamPortal = () => {
         matrix: stats.rootCauseMatrix,
         topOwners: matrixOwners
       },
-      // Pre-calculated detailed stats with LRM
       detailedOwners: toDetailedTableData(stats.detailedOwners).sort((a, b) => {
         if (a.name === 'Not specified') return 1;
         if (b.name === 'Not specified') return -1;
@@ -788,18 +953,28 @@ const FieldTeamPortal = () => {
       detailedReasons: toDetailedTableData(stats.detailedReasons),
       detailedSubReasons: toDetailedTableData(stats.detailedSubReasons),
       detailedRootCauses: toDetailedTableData(stats.detailedRootCauses),
+      detailedGovernorates: toDetailedTableData(stats.detailedGovernorates),
       detailedFieldTeams: toDetailedTableData(stats.detailedFieldTeams),
       fieldTeamAnalytics,
+      fieldTeamCohorts,
+      fieldTeamCohortDetails,
       totalProcessed: tasksToProcess.length,
+      totalPeriodTasks: timeFiltered.length,
+      totalAuditedTransactions: timeFiltered.length,
+      totalSamplesTaken: stats.sentiment.Promoter + stats.sentiment.Neutral + stats.sentiment.Detractor,
+      totalSamplesTarget,
+      totalAuditedLowSatisfaction: stats.sentiment.Neutral + stats.sentiment.Detractor,
+
       categoryTotals: {
         owners: Object.values(stats.byOwner).reduce((a, b) => a + b, 0),
         reasons: Object.values(stats.byReason).reduce((a, b) => a + b, 0),
         subReasons: Object.values(stats.bySubReason).reduce((a, b) => a + b, 0),
         rootCauses: Object.values(stats.byRootCause).reduce((a, b) => a + b, 0)
       },
-      tasks: tasksToProcess
+      tasks: tasksToProcess,
+      teamCohorts: []
     };
-  }, [allTechnicalTasksGlobal, analyticsSubTab, timeFilterMode, recentDaysValue, selectedWeeks, selectedMonths, customDateRange, settings]);
+  }, [allTechnicalTasksGlobal, analyticsSubTab, timeFilterMode, recentDaysValue, selectedWeeks, selectedMonths, customDateRange, settings, fieldTeams, samplesTokenData]);
 
   const calculateItemPoints = (item, type = 'task') => {
     let points = 0;
@@ -1150,23 +1325,15 @@ const FieldTeamPortal = () => {
 
     // Apply sub-tab filtering (All/Detractors/Neutrals)
     let tasksToProcess = timeFiltered;
-    if (analyticsSubTab === 1) { // Detractors
+    if (analyticsSubTab === 1) { // Detractors (score <= 6)
       tasksToProcess = timeFiltered.filter(t => {
         let score = t.evaluationScore;
-        if (score && score > 0) {
-          if (score <= 10) score = score * 10;
-          return score <= 60;
-        }
-        return false;
+        return score && score > 0 && score <= 6;
       });
-    } else if (analyticsSubTab === 2) { // Neutrals
+    } else if (analyticsSubTab === 2) { // Neutrals (score 7-8)
       tasksToProcess = timeFiltered.filter(t => {
         let score = t.evaluationScore;
-        if (score && score > 0) {
-          if (score <= 10) score = score * 10;
-          return score > 60 && score <= 80;
-        }
-        return false;
+        return score && score >= 7 && score <= 8;
       });
     }
 
@@ -1224,6 +1391,10 @@ const FieldTeamPortal = () => {
         if (filters.reason && tuple.reason !== filters.reason) match = false;
         if (filters.subReason && tuple.subReason !== filters.subReason) match = false;
         if (filters.rootCause && tuple.rootCause !== filters.rootCause) match = false;
+        if (filters.governorate) {
+          const governorate = task.governorate ? String(task.governorate).trim() : 'Not specified';
+          if (governorate !== filters.governorate) match = false;
+        }
 
         // Apply ITN/Subscription filters at the tuple level
         if (filters.itn && !tuple.isITN) match = false;
@@ -1243,6 +1414,7 @@ const FieldTeamPortal = () => {
     if (filters.reason) titleParts.push(`Reason: ${filters.reason}`);
     if (filters.subReason) titleParts.push(`Sub-Reason: ${filters.subReason}`);
     if (filters.rootCause) titleParts.push(`Root Cause: ${filters.rootCause}`);
+    if (filters.governorate) titleParts.push(`Governorate: ${filters.governorate}`);
     if (filters.itn) titleParts.push(`ITN Related`);
     if (filters.subscription) titleParts.push(`Subscription Related`);
 
@@ -1295,14 +1467,13 @@ const FieldTeamPortal = () => {
     technicalTasks.forEach(t => {
       let score = t.evaluationScore || 0;
       if (score > 0) { // Only count if evaluated
-        // Normalize 1-10 scale to 0-100
-        if (score <= 10) score = score * 10;
-
-        if (score <= 60) {
+        // Evaluation score scale: 0-10
+        // Detractors: <= 6, Neutrals: 7-8, Promoters: 9-10
+        if (score <= 6) {
           technicalDetractors++;
           totalDetractors++;
         }
-        else if (score > 60 && score <= 80) {
+        else if (score >= 7 && score <= 8) {
           technicalNeutrals++;
           totalNeutrals++;
         }
@@ -1613,39 +1784,71 @@ const FieldTeamPortal = () => {
   const fetchFieldTeams = async () => {
     try {
       setLoading(true);
-      // Fetch from both endpoints and combine results
       const [fieldTeamsRes, quizTeamsRes] = await Promise.all([
         api.get("/field-teams/get-field-teams", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         }),
         api.get("/quiz-results/teams/all", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         })
       ]);
 
-      // Combine and deduplicate teams
-      const combinedTeams = [
-        ...fieldTeamsRes.data,
-        ...quizTeamsRes.data.data.map(qt => ({
-          _id: qt.teamId,
-          teamName: qt.teamName,
-          teamCompany: "N/A" // Default value for quiz teams
-        }))
-      ];
+      const dbTeams = fieldTeamsRes.data || [];
+      const quizTeams = (quizTeamsRes.data?.data || []).map(qt => ({
+        _id: qt.teamId,
+        teamName: qt.teamName,
+        teamCompany: "N/A"
+      }));
 
-      // Remove duplicates
-      const uniqueTeams = combinedTeams.reduce((acc, team) => {
-        if (!acc.some(t => t._id === team._id)) {
-          acc.push(team);
+      // Build teamMap keyed by _id. Track ALL names to prevent name-based duplicates.
+      const teamMap = new Map();
+      const existingNames = new Set();
+
+      const addToMap = (team) => {
+        const key = team._id?.toString();
+        if (!key || teamMap.has(key)) return;
+        teamMap.set(key, team);
+      };
+
+      // Priority 1: Official DB records (richest data)
+      dbTeams.forEach(addToMap);
+
+      // Priority 2: Quiz teams
+      quizTeams.forEach(t => {
+        const key = t._id?.toString();
+        if (key && !teamMap.has(key)) {
+          teamMap.set(key, t);
         }
-        return acc;
-      }, []);
+      });
 
-      setFieldTeams(uniqueTeams);
+      // Priority 3: Discovery from global tasks & sessions (orphan teams only)
+      const techTasks = Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [];
+      const sessions = Array.isArray(allTrainingSessionsGlobal) ? allTrainingSessionsGlobal : [];
+
+      techTasks.forEach(task => {
+        const name = task.teamName;
+        const normName = normalizeText(name);
+        if (name && !existingNames.has(normName)) {
+          const key = `disc_${normName}`;
+          teamMap.set(key, { _id: key, teamName: name, teamCompany: 'Discovery (Task Log)', isDiscovered: true });
+          existingNames.add(normName);
+        }
+      });
+
+      sessions.forEach(s => {
+        (s.participants || []).forEach(p => {
+          const name = p.teamName || p.name || (typeof p === 'string' ? p : null);
+          const id = p._id || p.teamId;
+          const normName = name ? normalizeText(name) : null;
+          const key = id?.toString() || (normName ? `disc_${normName}` : null);
+          if (key && !teamMap.has(key) && (!normName || !existingNames.has(normName))) {
+            teamMap.set(key, { _id: key, teamName: name || 'Unknown Team', teamCompany: 'Discovery (Session)', isDiscovered: true });
+            if (normName) existingNames.add(normName);
+          }
+        });
+      });
+
+      setFieldTeams(Array.from(teamMap.values()));
     } catch (error) {
       console.error("Error fetching field teams:", error);
       setError("Failed to fetch field teams");
@@ -1654,23 +1857,77 @@ const FieldTeamPortal = () => {
     }
   };
 
+  // Discovery effect: re-run when global data arrives to catch orphan teams
+  useEffect(() => {
+    if ((allTechnicalTasksGlobal?.length > 0 || allTrainingSessionsGlobal?.length > 0) && fieldTeams.length > 0) {
+      const techTasks = allTechnicalTasksGlobal;
+      const sessions = allTrainingSessionsGlobal;
+
+      setFieldTeams(prev => {
+        const teamMap = new Map();
+        const existingNames = new Set();
+
+        // Keep all existing teams, but filter out internal duplicates by name
+        prev.forEach(t => {
+          const key = t._id?.toString();
+          const normName = normalizeText(t.teamName);
+          if (key && !teamMap.has(key)) {
+            teamMap.set(key, t);
+            if (normName) existingNames.add(normName);
+          }
+        });
+
+        // Discover orphan teams from tasks
+        techTasks.forEach(task => {
+          const name = task.teamName;
+          const normName = normalizeText(name);
+          if (name && !existingNames.has(normName)) {
+            const key = `disc_${normName}`;
+            teamMap.set(key, { _id: key, teamName: name, teamCompany: 'Discovery (Task Log)', isDiscovered: true });
+            existingNames.add(normName);
+          }
+        });
+
+        // Discover orphan teams from sessions
+        sessions.forEach(s => {
+          (s.participants || []).forEach(p => {
+            const name = p.teamName || p.name || (typeof p === 'string' ? p : null);
+            const id = p._id || p.teamId;
+            const normName = name ? normalizeText(name) : null;
+            const key = id?.toString() || (normName ? `disc_${normName}` : null);
+            if (key && !teamMap.has(key) && (!normName || !existingNames.has(normName))) {
+              teamMap.set(key, { _id: key, teamName: name || 'Unknown Team', teamCompany: 'Discovery (Session)', isDiscovered: true });
+              if (normName) existingNames.add(normName);
+            }
+          });
+        });
+
+        return Array.from(teamMap.values());
+      });
+    }
+  }, [allTechnicalTasksGlobal, allTrainingSessionsGlobal]);
+
   const fetchGlobalData = async () => {
     try {
       setLoadingGlobal(true);
-      const [techRes, issuesRes] = await Promise.all([
+      const [techRes, issuesRes, sessionsRes] = await Promise.all([
         api.get("/tasks/get-all-tasks", {
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         }),
         api.get("/customer-issues", {
           params: { limit: 10000 },
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        }),
+        api.get("/training-sessions", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         })
       ]);
       const techData = techRes.data?.data || techRes.data || [];
       setAllTechnicalTasksGlobal(Array.isArray(techData) ? techData : []);
-      // Ensure we always have an array even if structure is different
       const issuesData = issuesRes.data?.data || issuesRes.data || [];
       setAllCustomerIssuesGlobal(Array.isArray(issuesData) ? issuesData : []);
+      const sessionsData = sessionsRes.data?.data || sessionsRes.data || [];
+      setAllTrainingSessionsGlobal(Array.isArray(sessionsData) ? sessionsData : []);
     } catch (err) {
       console.error("Error fetching global leaderboard data:", err);
     } finally {
@@ -1683,42 +1940,66 @@ const FieldTeamPortal = () => {
     fetchFieldTeams();
   }, []);
 
-  const handleDrillDown = (team, type) => {
+  const handleDrillDown = (item, type) => {
+    if (type === 'task' && item) {
+      const taskId = item._id || item.id || item.taskId;
+      if (taskId) {
+        const fetchFullTask = async () => {
+          try {
+            const response = await api.get(`/tasks/get-task/${taskId}`);
+            setSelectedTask(response.data);
+            setViewDialogOpen(true);
+          } catch (err) {
+            console.error('Error fetching task:', err);
+            setSelectedTask(item);
+            setViewDialogOpen(true);
+          }
+        };
+        fetchFullTask();
+        return;
+      }
+
+      setSelectedTask(item);
+      setViewDialogOpen(true);
+      return;
+    }
+
+    // Team drill down
     let items = [];
     let title = '';
     let dataType = 'issue';
     let defaultTab = 'tasks';
 
     if (type === 'detractors') {
-      items = team.rawDetractors;
-      title = `${team.teamName} - NPS Detractors`;
+      items = item.rawDetractors;
+      title = `${item.teamName} - NPS Detractors`;
       dataType = 'task';
       defaultTab = 'tasks';
     } else if (type === 'neutrals') {
-      items = team.rawNeutrals;
-      title = `${team.teamName} - NPS Neutrals`;
+      items = item.rawNeutrals;
+      title = `${item.teamName} - NPS Neutrals`;
       dataType = 'task';
       defaultTab = 'tasks';
     } else if (type === 'open') {
-      items = team.rawOpen;
-      title = `${team.teamName} - Total Open Cases (Dispatched but not closed)`;
+      items = item.rawOpen;
+      title = `${item.teamName} - Total Open Cases (Dispatched but not closed)`;
       dataType = 'issue';
       defaultTab = 'issues';
     } else if (type === 'issues') {
-      items = team.rawIssues;
-      title = `${team.teamName} - Total Customer Issues (Snags & Complaints)`;
+      items = item.rawIssues;
+      title = `${item.teamName} - Total Customer Issues (Snags & Complaints)`;
       dataType = 'issue';
       defaultTab = 'issues';
     } else if (type === 'violations') {
       items = [
-        ...team.rawIssues.map(i => ({ ...i, __drillType: 'issue' })),
-        ...team.rawDetractors.map(t => ({ ...t, __drillType: 'task' })),
-        ...team.rawNeutrals.map(t => ({ ...t, __drillType: 'task' }))
+        ...item.rawIssues.map(i => ({ ...i, __drillType: 'issue' })),
+        ...item.rawDetractors.map(t => ({ ...t, __drillType: 'task' })),
+        ...item.rawNeutrals.map(t => ({ ...t, __drillType: 'task' }))
       ];
-      title = `${team.teamName} - Total Violations Detail`;
+      title = `${item.teamName} - Total Violations Detail`;
       dataType = 'mixed';
       // If there are issues, default to tasks but let user switch
-      defaultTab = team.rawDetractors.length + team.rawNeutrals.length > 0 ? 'tasks' : 'issues';
+      defaultTab = item.rawDetractors.length + item.rawNeutrals.length > 0 ? 'tasks' : 'issues';
     }
 
     setDrillDownItems(items);
@@ -1730,6 +2011,13 @@ const FieldTeamPortal = () => {
 
   const handleTeamSelect = (team) => {
     navigate(`/fieldTeams-portal/${team._id}`);
+  };
+
+  const handleOpenCohortDialog = (label) => {
+    const items = globalAnalytics?.fieldTeamCohortDetails?.[label] || [];
+    setCohortDialogItems(items);
+    setCohortDialogLabel(label);
+    setCohortDialogOpen(true);
   };
 
   // Sync selectedTeam with URL teamId
@@ -2640,3519 +2928,3498 @@ ${data.map((a, i) => `
   };
 
   return (
-    <Box sx={{
-      // backgroundColor: colors.background,
-      minHeight: '100vh',
-      // maxWidth: '1100px',
-      mx: 'auto',
-      overflowX: 'hidden',
-      color: colors.textPrimary,
-      p: 2,
-      px: isMobile ? 0 : undefined
-    }}>
-      {/* Back Button */}
-      <Button
-        startIcon={<ArrowBack />}
-        onClick={() => navigate('/')}
-        sx={{
-          mb: 2,
-          color: colors.primary,
-          '&:hover': {
-            backgroundColor: colors.primaryHover
-          }
-        }}
-      >
-        Back to Dashboard
-      </Button>
-
-      {/* Header with Premium Gradient */}
+    <>
       <Box sx={{
-        mb: 4,
-        p: 4,
-        background: `linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)`, // Deep tech gradient
-        borderRadius: '24px',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        position: 'relative',
-        overflow: 'hidden',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
+        // backgroundColor: colors.background,
+        minHeight: '100vh',
+        // maxWidth: '1100px',
+        mx: 'auto',
+        overflowX: 'hidden',
+        color: colors.textPrimary,
+        p: 2,
+        px: isMobile ? 0 : undefined
       }}>
-        <Box sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography variant="h3" sx={{
-            background: 'linear-gradient(90deg, #fff 0%, #a5b4fc 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            fontWeight: '900',
-            mb: 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            letterSpacing: '-1px'
-          }}>
-            Field Team Portal
-          </Typography>
-          <Typography variant="h6" sx={{ color: colors.textSecondary, fontWeight: 400 }}>
-            Advanced Performance Analytics & Operational Intelligence
-          </Typography>
-        </Box>
-        {/* Decorative Circle */}
-        <Box sx={{
-          position: 'absolute',
-          top: '-50%',
-          right: '-10%',
-          width: '300px',
-          height: '300px',
-          background: colors.primary,
-          filter: 'blur(100px)',
-          opacity: 0.2,
-          borderRadius: '50%'
-        }} />
-      </Box>
-
-      {/* Team Selection with Glass Effect */}
-      <Paper sx={{
-        p: 3,
-        mb: 4,
-        ...colors.glass,
-        borderRadius: '20px',
-      }}>
-        <Autocomplete
-          options={fieldTeams}
-          getOptionLabel={(option) => `${option.teamName} (${option.teamCompany})`}
-          value={selectedTeam}
-          onChange={(event, newValue) => {
-            if (newValue) {
-              navigate(`/fieldTeams-portal/${newValue._id}`);
-            } else {
-              navigate('/fieldTeams-portal');
+        {/* Back Button */}
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/')}
+          sx={{
+            mb: 2,
+            color: colors.primary,
+            '&:hover': {
+              backgroundColor: colors.primaryHover
             }
-            setQuizPage(0);
-            setJobPage(0);
           }}
-          disabled={loading}
-          fullWidth
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Select Field Team to Analyze"
-              variant="outlined"
-              placeholder="Search by team name..."
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'rgba(0,0,0,0.2)',
-                  borderRadius: '12px',
-                  color: '#fff',
-                  '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
-                  '&:hover fieldset': { borderColor: colors.primary },
-                  '&.Mui-focused fieldset': { borderColor: colors.primary, borderWidth: '2px' },
-                },
-                '& .MuiInputLabel-root': { color: colors.textSecondary },
-                '& .MuiInputLabel-root.Mui-focused': { color: colors.primary }
-              }}
-            />
-          )}
-          PaperComponent={({ children }) => (
-            <Paper sx={{ ...colors.glass, bgcolor: '#1a1a1a', mt: 1 }}>{children}</Paper>
-          )}
-        />
-      </Paper>
+        >
+          Back to Dashboard
+        </Button>
 
-      {/* 8. LEADERBOARD (Visible only when no team is selected) */}
-      {!selectedTeam && (
-        <Box sx={{ animation: 'fadeIn 0.5s ease-in', mb: 6 }}>
-          <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography variant="h4" sx={{ color: '#fff', fontWeight: 900, letterSpacing: -1 }}>
-                Team <span style={{ color: colors.primary }}>Leaderboard</span>
-              </Typography>
-              <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                Global ranking of teams by total violations (NPS Detractors + Customer Issues)
-              </Typography>
-            </Box>
-            {loadingGlobal && <CircularProgress size={24} sx={{ color: colors.primary }} />}
-          </Box>
-
-          {/* Global View Tabs */}
-          <Box sx={{ borderBottom: 1, borderColor: 'rgba(255,255,255,0.1)', mb: 3 }}>
-            <Tabs
-              value={globalTab}
-              onChange={(e, v) => setGlobalTab(v)}
-              sx={{
-                '& .MuiTab-root': { color: colors.textSecondary, textTransform: 'none', fontSize: '1rem', fontWeight: 500, minHeight: 48 },
-                '& .Mui-selected': { color: colors.primary },
-                '& .MuiTabs-indicator': { bgcolor: colors.primary }
-              }}
-            >
-              <Tab label="Leaderboard" icon={<LeaderboardIcon />} iconPosition="start" />
-              <Tab label="Global Analytics" icon={<BarChartIconMUI />} iconPosition="start" />
-            </Tabs>
-          </Box>
-
-          {/* TAB 0: LEADERBOARD */}
-          {globalTab === 0 && (
-            <>
-              {/* Magic Table Controls: Advanced Search & Filter */}
-              <Box sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'stretch', mb: 2 }}>
-                  <Paper sx={{
-                    p: 2,
-                    flex: 1,
-                    minWidth: '300px',
-                    ...colors.glass,
-                    borderRadius: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    border: '1px solid rgba(255,255,255,0.1)'
-                  }}>
-                    <SearchIcon sx={{ color: colors.primary, mr: 2, fontSize: '1.2rem' }} />
-                    <TextField
-                      placeholder="Search by Team Name, Company, or Region..."
-                      variant="standard"
-                      fullWidth
-                      value={leaderboardSearchQuery}
-                      onChange={(e) => {
-                        setLeaderboardSearchQuery(e.target.value);
-                        setLeaderboardPage(0); // Reset to first page on search
-                      }}
-                      InputProps={{
-                        disableUnderline: true,
-                        sx: { color: '#fff', fontSize: '1rem', fontWeight: 300, letterSpacing: '0.5px' }
-                      }}
-                    />
-                    {leaderboardSearchQuery && (
-                      <IconButton size="small" onClick={() => setLeaderboardSearchQuery('')} sx={{ color: colors.textSecondary }}>
-                        <FaTimes />
-                      </IconButton>
-                    )}
-                  </Paper>
-
-                  <FormControl sx={{ minWidth: 200, ...colors.glass, borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <Select
-                      value={leaderboardStatusQuery}
-                      onChange={(e) => {
-                        setLeaderboardStatusQuery(e.target.value);
-                        setLeaderboardPage(0);
-                      }}
-                      displayEmpty
-                      variant="standard"
-                      disableUnderline
-                      sx={{
-                        height: '100%',
-                        px: 2,
-                        color: '#fff',
-                        fontWeight: 300,
-                        '& .MuiSelect-select': { py: 1.5 }
-                      }}
-                    >
-                      <MenuItem value="all">All Rankings</MenuItem>
-                      <MenuItem value="detractors">Has Detractors</MenuItem>
-                      <MenuItem value="issues">Has Key Issues</MenuItem>
-                      <MenuItem value="open">Has Open Cases</MenuItem>
-                    </Select>
-                  </FormControl>
-
-                  <Button
-                    variant="outlined"
-                    startIcon={<FaFilter />}
-                    onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}
-                    sx={{
-                      borderRadius: '16px',
-                      color: advancedFiltersOpen ? colors.primary : colors.textSecondary,
-                      borderColor: advancedFiltersOpen ? colors.primary : 'rgba(255,255,255,0.1)',
-                      background: advancedFiltersOpen ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      transition: 'all 0.2s',
-                      '&:hover': { borderColor: colors.primary, background: 'rgba(139, 92, 246, 0.1)' }
-                    }}
-                  >
-                    Advanced
-                  </Button>
-
-                  <Button
-                    variant="contained"
-                    startIcon={<TableChartIcon />}
-                    onClick={handleExportLeaderboard}
-                    sx={{
-                      borderRadius: '16px',
-                      px: 3,
-                      background: colors.primaryGradient,
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      boxShadow: `0 8px 20px ${colors.primary}40`,
-                      '&:hover': { transform: 'translateY(-2px)', filter: 'brightness(1.1)' },
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    Export Ranking
-                  </Button>
-                </Box>
-
-                {advancedFiltersOpen && (
-                  <Box sx={{
-                    p: 3,
-                    mb: 3,
-                    ...colors.glass,
-                    borderRadius: '20px',
-                    border: '1px solid rgba(139, 92, 246, 0.2)',
-                    animation: 'slideDown 0.3s ease-out'
-                  }}>
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} sm={3}>
-                        <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>START DATE</Typography>
-                        <TextField
-                          type="date"
-                          fullWidth
-                          variant="standard"
-                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
-                          value={leaderboardDateFilter.start}
-                          onChange={(e) => {
-                            setLeaderboardDateFilter({ ...leaderboardDateFilter, start: e.target.value });
-                            setLeaderboardPage(0);
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={3}>
-                        <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>END DATE</Typography>
-                        <TextField
-                          type="date"
-                          fullWidth
-                          variant="standard"
-                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
-                          value={leaderboardDateFilter.end}
-                          onChange={(e) => {
-                            setLeaderboardDateFilter({ ...leaderboardDateFilter, end: e.target.value });
-                            setLeaderboardPage(0);
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={3}>
-                        <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>MIN ISSUES</Typography>
-                        <TextField
-                          placeholder="e.g. 5"
-                          type="number"
-                          fullWidth
-                          variant="standard"
-                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
-                          value={leaderboardThresholds.minIssues}
-                          onChange={(e) => {
-                            setLeaderboardThresholds({ ...leaderboardThresholds, minIssues: e.target.value });
-                            setLeaderboardPage(0);
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={3}>
-                        <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>MIN SUCCESS %</Typography>
-                        <TextField
-                          placeholder="e.g. 80"
-                          type="number"
-                          fullWidth
-                          variant="standard"
-                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
-                          value={leaderboardThresholds.minSuccessRate}
-                          onChange={(e) => {
-                            setLeaderboardThresholds({ ...leaderboardThresholds, minSuccessRate: e.target.value });
-                            setLeaderboardPage(0);
-                          }}
-                        />
-                      </Grid>
-                    </Grid>
-                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                      <Button
-                        size="small"
-                        sx={{ color: colors.error, fontWeight: 700 }}
-                        onClick={() => {
-                          setLeaderboardDateFilter({ start: '', end: '' });
-                          setLeaderboardThresholds({ minIssues: '', minSuccessRate: '' });
-                        }}
-                      >
-                        Clear All Filters
-                      </Button>
-                    </Box>
-                  </Box>
-                )}
-              </Box>
-
-              <TableContainer component={Paper} sx={{
-                ...colors.glass,
-                borderRadius: '24px',
-                overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.08)'
-              }}>
-                <Table size="small">
-                  <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
-                    <TableRow>
-                      <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>RANK</TableCell>
-                      <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'teamName', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TEAM NAME</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>STATUS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalNpsTickets', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL NPS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsDetractors', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>DETRACTORS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsNeutrals', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>NEUTRALS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'issueViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>KEY ISSUES</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'openCount', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>OPEN CASES</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'avgResolutionTime', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>AVG SPEED</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'resPercent', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>SUCCESS %</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalPoints', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL POINTS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL VIOLATIONS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>ACTIONS</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {paginatedLeaderboardData.map((team, index) => {
-                      const actualRank = (leaderboardPage * leaderboardRowsPerPage) + index + 1;
-                      return (
-                        <TableRow
-                          key={team._id}
-                          sx={{
-                            bgcolor: 'transparent',
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
-                            transition: 'background 0.2s'
-                          }}
-                        >
-                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', py: 1 }}>
-                            <Box sx={{
-                              width: '24px',
-                              height: '24px',
-                              borderRadius: '6px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              bgcolor: index + (leaderboardPage * leaderboardRowsPerPage) === 0 ? 'rgba(245, 158, 11, 0.2)' : index + (leaderboardPage * leaderboardRowsPerPage) === 1 ? 'rgba(209, 213, 219, 0.2)' : index + (leaderboardPage * leaderboardRowsPerPage) === 2 ? 'rgba(180, 83, 9, 0.2)' : 'rgba(255,255,255,0.05)',
-                              color: index + (leaderboardPage * leaderboardRowsPerPage) === 0 ? '#f59e0b' : index + (leaderboardPage * leaderboardRowsPerPage) === 1 ? '#d1d5db' : index + (leaderboardPage * leaderboardRowsPerPage) === 2 ? '#b45309' : colors.textSecondary,
-                              fontWeight: 800,
-                              fontSize: '0.75rem'
-                            }}>
-                              {actualRank}
-                            </Box>
-                          </TableCell>
-                          <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
-                            <Box sx={{ cursor: 'pointer' }} onClick={() => handleTeamSelect(team)}>
-                              <Typography sx={{ color: '#fff', fontWeight: 300, fontSize: '0.85rem' }}>{team.teamName}</Typography>
-                              <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.7rem' }}>{team.teamCompany} | {team.governorate}</Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
-                            {(() => {
-                              let label = 'Active';
-                              let bg = 'rgba(16, 185, 129, 0.15)';
-                              let color = '#10b981';
-                              if (team.isTerminated) { label = 'Terminated'; bg = 'rgba(239, 68, 68, 0.15)'; color = '#ef4444'; }
-                              else if (team.isResigned) { label = 'Resigned'; bg = 'rgba(249, 115, 22, 0.15)'; color = '#f97316'; }
-                              else if (team.isSuspended) { label = 'Suspended'; bg = 'rgba(245, 158, 11, 0.15)'; color = '#f59e0b'; }
-                              else if (team.isOnLeave) { label = 'On Leave'; bg = 'rgba(99, 102, 241, 0.15)'; color = '#6366f1'; }
-                              return (
-                                <Chip
-                                  label={label}
-                                  size="small"
-                                  sx={{
-                                    background: bg,
-                                    color: color,
-                                    fontWeight: 700,
-                                    borderRadius: '8px',
-                                    height: '20px',
-                                    fontSize: '0.68rem',
-                                    border: `1px solid ${color}40`,
-                                    letterSpacing: '0.3px'
-                                  }}
-                                />
-                              );
-                            })()}
-                          </TableCell>
-                          <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>{team.totalNpsTickets}</TableCell>
-                          <TableCell align="center" onClick={() => handleDrillDown(team, 'detractors')} sx={{ color: colors.error, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsDetractors}</TableCell>
-                          <TableCell align="center" onClick={() => handleDrillDown(team, 'neutrals')} sx={{ color: colors.warning, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsNeutrals}</TableCell>
-                          <TableCell align="center" onClick={() => handleDrillDown(team, 'issues')} sx={{ color: '#3b82f6', fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.issueViolations}</TableCell>
-                          <TableCell align="center" onClick={() => team.openCount > 0 && handleDrillDown(team, 'open')} sx={{ color: team.openCount > 0 ? colors.error : colors.textSecondary, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: team.openCount > 0 ? 'pointer' : 'default' }}>{team.openCount}</TableCell>
-                          <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>{team.avgResolutionTime}d</TableCell>
-                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
-                            <Typography variant="body2" sx={{
-                              color: team.resPercent > 90 ? colors.success : team.resPercent > 70 ? colors.warning : colors.error,
-                              fontWeight: 500,
-                              fontSize: '0.8rem'
-                            }}>
-                              {team.resPercent}%
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
-                            <Chip
-                              label={team.totalPoints}
-                              size="small"
-                              sx={{
-                                background: 'rgba(139, 92, 246, 0.1)',
-                                color: colors.primary,
-                                fontWeight: 800,
-                                borderRadius: '8px',
-                                height: '22px',
-                                fontSize: '0.75rem',
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
-                            <Chip
-                              label={team.totalViolations}
-                              onClick={() => handleDrillDown(team, 'violations')}
-                              size="small"
-                              sx={{
-                                background: team.totalViolations === 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                color: team.totalViolations === 0 ? colors.success : colors.error,
-                                fontWeight: 700,
-                                borderRadius: '8px',
-                                height: '22px',
-                                fontSize: '0.75rem',
-                                cursor: 'pointer',
-                                '&:hover': { transform: 'scale(1.1)' }
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
-                            <MuiTooltip title="Export Detailed Team Report">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleExportIndividualTeam(team)}
-                                sx={{
-                                  color: colors.success,
-                                  bgcolor: 'rgba(16, 185, 129, 0.1)',
-                                  '&:hover': {
-                                    bgcolor: 'rgba(16, 185, 129, 0.2)',
-                                    transform: 'scale(1.1)'
-                                  },
-                                  transition: 'all 0.2s'
-                                }}
-                              >
-                                <FaFileExcel size={14} />
-                              </IconButton>
-                            </MuiTooltip>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-                <TablePagination
-                  rowsPerPageOptions={[10, 25, 50, 100]}
-                  component="div"
-                  count={leaderboardData.length}
-                  rowsPerPage={leaderboardRowsPerPage}
-                  page={leaderboardPage}
-                  onPageChange={(e, newPage) => setLeaderboardPage(newPage)}
-                  onRowsPerPageChange={(e) => {
-                    setLeaderboardRowsPerPage(parseInt(e.target.value, 10));
-                    setLeaderboardPage(0);
-                  }}
-                  sx={{
-                    color: colors.textSecondary,
-                    borderTop: '1px solid rgba(255,255,255,0.08)',
-                    '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
-                    '& .MuiIconButton-root': { color: colors.primary }
-                  }}
-                />
-              </TableContainer >
-            </>
-          )}
-
-          {/* TAB 1: GLOBAL ANALYTICS */}
-          {globalTab === 1 && (
-            <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-              <Box sx={{
-                display: 'flex',
-                flexDirection: isMedium ? 'column' : 'row',
-                justifyContent: 'space-between',
-                alignItems: isMedium ? 'start' : 'center',
-                gap: 2,
-                mb: 3,
-                pb: 1,
-                borderBottom: '1px solid rgba(255,255,255,0.05)'
-              }}>
-                <Tabs
-                  value={analyticsSubTab}
-                  onChange={(e, v) => setAnalyticsSubTab(v)}
-                  sx={{
-                    minHeight: '40px',
-                    '& .MuiTab-root': {
-                      color: colors.textSecondary,
-                      minHeight: '40px',
-                      py: 0.5,
-                      fontSize: '0.85rem',
-                      textTransform: 'none'
-                    },
-                    '& .Mui-selected': { color: '#fff !important', fontWeight: 'bold' },
-                    '& .MuiTabs-indicator': { backgroundColor: '#3b82f6' }
-                  }}
-                >
-                  <Tab label="All Analysis" />
-                  <Tab label="Detractors" />
-                  <Tab label="Neutrals" />
-                </Tabs>
-
-                <Box sx={{
-                  px: 2,
-                  py: 0.5,
-                  borderRadius: '20px',
-                  bgcolor: 'rgba(59, 130, 246, 0.1)',
-                  border: '1px solid rgba(59, 130, 246, 0.2)'
-                }}>
-                  <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.85rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Analyzing:</span> <span style={{ fontWeight: '800', color: '#3b82f6' }}>{globalAnalytics.totalProcessed}</span> <span style={{ color: '#94a3b8' }}>Tasks</span>
-                  </Typography>
-                </Box>
-
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<FaFileExcel size={13} />}
-                  onClick={handleExportAnalyticsDistributions}
-                  sx={{
-                    borderColor: 'rgba(34, 197, 94, 0.4)',
-                    color: '#22c55e',
-                    fontSize: '0.75rem',
-                    '&:hover': { bgcolor: 'rgba(34, 197, 94, 0.1)', borderColor: '#22c55e' }
-                  }}
-                >
-                  Export Analytics
-                </Button>
-              </Box>
-              <Paper sx={{ p: 2, mb: 3, ...colors.glass, borderRadius: 3 }} elevation={0}>
-                <Stack direction={isMedium ? "column" : "row"} spacing={3} alignItems={isMedium ? "start" : "center"}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <FilterListIcon sx={{ color: colors.primary }} />
-                    <Typography variant="subtitle2" sx={{ color: colors.textSecondary, fontWeight: 700, minWidth: '80px' }}>
-                      Time Filter:
-                    </Typography>
-                  </Box>
-
-                  <ToggleButtonGroup
-                    value={timeFilterMode}
-                    exclusive
-                    onChange={(e, val) => val && setTimeFilterMode(val)}
-                    size="small"
-                    sx={{
-                      bgcolor: 'rgba(0,0,0,0.2)',
-                      '& .MuiToggleButton-root': {
-                        color: '#94a3b8',
-                        borderColor: 'rgba(255,255,255,0.05)',
-                        px: 2,
-                        py: 0.5,
-                        fontSize: '0.75rem',
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        '&.Mui-selected': {
-                          bgcolor: 'rgba(139, 92, 246, 0.1)',
-                          color: colors.primary,
-                          borderColor: 'rgba(139, 92, 246, 0.3)',
-                          '&:hover': { bgcolor: 'rgba(139, 92, 246, 0.2)' }
-                        }
-                      }
-                    }}
-                  >
-                    <ToggleButton value="all" sx={{ gap: 1 }}><CalendarTodayIcon sx={{ fontSize: 16 }} /> All Time</ToggleButton>
-                    <ToggleButton value="weeks" sx={{ gap: 1 }}><EventIcon sx={{ fontSize: 16 }} /> Weeks</ToggleButton>
-                    <ToggleButton value="months" sx={{ gap: 1 }}><CalendarTodayIcon sx={{ fontSize: 16 }} /> Months</ToggleButton>
-                    <ToggleButton value="days" sx={{ gap: 1 }}><UpdateIcon sx={{ fontSize: 16 }} /> Recent Days</ToggleButton>
-                    <ToggleButton value="custom" sx={{ gap: 1 }}><FilterListIcon sx={{ fontSize: 16 }} /> Custom</ToggleButton>
-                  </ToggleButtonGroup>
-
-                  <Box sx={{ flexGrow: 1, width: '100%' }}>
-                    {timeFilterMode === 'days' && (
-                      <Stack direction="row" spacing={3} alignItems="center">
-                        <Slider
-                          value={recentDaysValue}
-                          onChange={(e, val) => setRecentDaysValue(val)}
-                          min={7}
-                          max={365}
-                          sx={{ flexGrow: 1, color: colors.primary }}
-                          valueLabelDisplay="auto"
-                        />
-                        <TextField
-                          size="small"
-                          label="Days"
-                          type="number"
-                          value={recentDaysValue}
-                          onChange={(e) => setRecentDaysValue(Number(e.target.value))}
-                          sx={{
-                            width: 80,
-                            '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
-                            '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
-                          }}
-                        />
-                      </Stack>
-                    )}
-
-                    {timeFilterMode === 'weeks' && (
-                      <Autocomplete
-                        multiple
-                        size="small"
-                        options={weekRanges}
-                        value={selectedWeeks}
-                        onChange={(e, newVal) => setSelectedWeeks(newVal)}
-                        renderInput={(params) => (
-                          <TextField {...params} label="Select Weeks" variant="outlined" placeholder="Search weeks..." />
-                        )}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            color: '#fff', fontSize: '0.8rem',
-                            '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
-                          },
-                          '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
-                        }}
-                      />
-                    )}
-
-                    {timeFilterMode === 'months' && (
-                      <Autocomplete
-                        multiple
-                        size="small"
-                        options={monthOptions}
-                        getOptionLabel={(option) => option.label}
-                        value={monthOptions.filter(m => selectedMonths.includes(m.key))}
-                        onChange={(e, newVal) => setSelectedMonths(newVal.map(v => v.key))}
-                        renderInput={(params) => (
-                          <TextField {...params} label="Select Monthly Periods" variant="outlined" placeholder="Search months..." />
-                        )}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            color: '#fff', fontSize: '0.8rem',
-                            '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
-                          },
-                          '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
-                        }}
-                      />
-                    )}
-
-                    {timeFilterMode === 'custom' && (
-                      <Stack direction="row" spacing={2}>
-                        <TextField
-                          size="small"
-                          label="Start Date"
-                          type="date"
-                          value={customDateRange.start}
-                          onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
-                          InputLabelProps={{ shrink: true }}
-                          sx={{
-                            '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
-                            '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
-                          }}
-                        />
-                        <TextField
-                          size="small"
-                          label="End Date"
-                          type="date"
-                          value={customDateRange.end}
-                          onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
-                          InputLabelProps={{ shrink: true }}
-                          sx={{
-                            '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
-                            '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
-                          }}
-                        />
-                      </Stack>
-                    )}
-                  </Box>
-
-                  <Button
-                    size="small"
-                    sx={{ color: colors.textSecondary, textTransform: 'none', minWidth: '80px' }}
-                  >
-                    Reset Filter
-                  </Button>
-                </Stack>
-              </Paper>
-
-              {/* 1. Global Sentiment Segmentation - Deep Dive Port */}
-              <Grid container spacing={4} sx={{ mb: 6 }}>
-                <Grid item xs={12} md={7}>
-                  <Paper sx={{ p: 2.5, ...colors.glass, borderRadius: 4, border: '1px solid rgba(139, 92, 246, 0.2)' }} elevation={0}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Box sx={{ width: 3, height: 20, bgcolor: '#8b5cf6', borderRadius: 4 }} />
-                        <Typography variant="h6" fontWeight="800" color="#fff" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.95rem' }}>
-                          Sentiment Segmentation <span style={{ color: alpha('#fff', 0.5), fontSize: '0.75rem' }}>Deep Analysis</span>
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => setChartDialog({ open: true, title: 'Sentiment Analysis', data: globalAnalytics.sentimentData, type: 'pie' })}
-                          sx={{ color: '#8b5cf6', bgcolor: 'rgba(139, 92, 246, 0.1)', '&:hover': { bgcolor: 'rgba(139, 92, 246, 0.2)' } }}
-                        >
-                          <MdInsights size={18} />
-                        </IconButton>
-                      </Box>
-                    </Box>
-                    <TableContainer sx={{ maxHeight: 200, overflowY: 'auto' }}>
-                      <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, fontSize: '0.75rem' } }}>
-                        <TableHead>
-                          <TableRow sx={{ '& .MuiTableCell-root': { bgcolor: 'rgba(255,255,255,0.03)', color: '#94a3b8', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' } }}>
-                            <TableCell>Customer Sentiment</TableCell>
-                            <TableCell align="right">Hit Count</TableCell>
-                            <TableCell align="right">Matrix Share</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {globalAnalytics.sentimentData.map((row) => (
-                            <TableRow key={row.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                              <TableCell sx={{ color: row.color, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{row.name}</TableCell>
-                              <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{row.value}</TableCell>
-                              <TableCell align="right" sx={{
-                                bgcolor: getHeatmapColor(parseFloat(row.percentage), 0, 100, row.name === 'Promoters' ? 'green' : row.name === 'Neutrals' ? 'orange' : 'red'),
-                                color: '#fff', fontWeight: 800, borderBottom: '1px solid rgba(255,255,255,0.05)'
-                              }}>
-                                {row.percentage}%
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Paper>
-                </Grid>
-                <Grid item xs={12} md={5}>
-                  <Paper sx={{ p: 2.5, ...colors.glass, borderRadius: 4, border: '1px solid rgba(139, 92, 246, 0.1)', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} elevation={0}>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <RechartsPieChart>
-                        <RechartsPie
-                          data={globalAnalytics.sentimentData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={90}
-                          paddingAngle={6}
-                          dataKey="value"
-                          label={({ name, percentage }) => `${percentage}%`}
-                        >
-                          {globalAnalytics.sentimentData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                        </RechartsPie>
-                        <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
-                        <RechartsLegend verticalAlign="bottom" height={30} />
-                      </RechartsPieChart>
-                    </ResponsiveContainer>
-                  </Paper>
-                </Grid>
-              </Grid>
-
-              {/* Analytical Matrices removed */}
-
-
-              <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Divider sx={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
-                <Typography variant="h6" sx={{ color: '#3b82f6', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' }}>Advanced Analytics Charts & Tables</Typography>
-                <Divider sx={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
-              </Box>
-
-              {/* Advanced Analytics Charts & Tables */}
-              <Grid container spacing={3}>
-                {/* Owner Analysis */}
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(59, 130, 246, 0.2)' }} elevation={0}>
-                    <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <SupportAgent sx={{ color: '#3b82f6' }} /> Owner Distribution
-                    </Typography>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <RechartsBarChart data={globalAnalytics.ownerData}>
-                        <defs>
-                          <linearGradient id="ownerGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.2} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                        <RechartsTooltip
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}>
-                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
-                                  <Typography sx={{ color: '#3b82f6', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
-                                </Paper>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <RechartsBar dataKey="value" fill="url(#ownerGradient)" radius={[6, 6, 0, 0]} />
-                      </RechartsBarChart>
-                    </ResponsiveContainer>
-                    {/* Detailed Owner Table - Compact Style */}
-                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
-                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Owner</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Points</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {globalAnalytics.detailedOwners.map((data) => (
-                            <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                              <TableCell sx={{ color: '#e2e8f0' }}>{data.name}</TableCell>
-                              <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{data.points}</TableCell>
-                              <TableCell
-                                align="right"
-                                onClick={() => handleAnalyticsDrillDown({ owner: data.name })}
-                                sx={{
-                                  color: '#e2e8f0',
-                                  fontWeight: 'bold',
-                                  cursor: 'pointer',
-                                  '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' }
-                                }}
-                              >
-                                {data.total}
-                              </TableCell>
-                              <TableCell
-                                align="right"
-                                onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ owner: data.name, itn: true })}
-                                sx={{
-                                  color: data.itn > 0 ? '#f59e0b' : '#64748b',
-                                  cursor: data.itn > 0 ? 'pointer' : 'default',
-                                  '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
-                                }}
-                              >
-                                {data.itn}
-                              </TableCell>
-                              <TableCell
-                                align="right"
-                                onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ owner: data.name, subscription: true })}
-                                sx={{
-                                  color: data.subscription > 0 ? '#10b981' : '#64748b',
-                                  cursor: data.subscription > 0 ? 'pointer' : 'default',
-                                  '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
-                                }}
-                              >
-                                {data.subscription}
-                              </TableCell>
-                              <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-
-                  </Paper>
-                </Grid>
-
-                {/* Reason Breakdown */}
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(16, 185, 129, 0.2)' }} elevation={0}>
-                    <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PriorityHigh sx={{ color: '#10b981' }} /> Reason Distribution
-                    </Typography>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <RechartsPieChart>
-                        <RechartsPie
-                          data={globalAnalytics.reasonData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={90}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {globalAnalytics.reasonData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'][index % 8]} />
-                          ))}
-                        </RechartsPie>
-                        <RechartsTooltip
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
-                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{payload[0].name}</Typography>
-                                  <Typography sx={{ color: payload[0].payload.fill, fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Weight: {payload[0].payload.percentage}%</Typography>
-                                </Paper>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <RechartsLegend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '0.7rem', color: '#94a3b8' }} />
-                      </RechartsPieChart>
-                    </ResponsiveContainer>
-                    {/* Detailed Reason Table - Compact Style */}
-                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
-                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Reason</TableCell>
-                            {globalAnalytics.matrixOwners.map(owner => (
-                              <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
-                            ))}
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {globalAnalytics.detailedReasons.slice(0, 15).map((data) => {
-                            const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
-                            return (
-                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                                <TableCell
-                                  onClick={() => handleAnalyticsDrillDown({ reason: data.name })}
-                                  sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
-                                >
-                                  {data.name}
-                                </TableCell>
-                                {globalAnalytics.matrixOwners.map(owner => {
-                                  const count = data.ownerBreakdown[owner] || 0;
-                                  const pct = rowTotal > 0 ? ((count / rowTotal) * 100).toFixed(0) : 0;
-                                  return (
-                                    <TableCell
-                                      key={owner}
-                                      align="right"
-                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ reason: data.name, owner })}
-                                      sx={{
-                                        color: count > 0 ? '#e2e8f0' : 'rgba(255,255,255,0.1)',
-                                        fontWeight: count > 0 ? 'bold' : 'normal',
-                                        cursor: count > 0 ? 'pointer' : 'default',
-                                        '&:hover': count > 0 ? { bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' } : {}
-                                      }}
-                                    >
-                                      {count}
-                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
-                                    </TableCell>
-                                  );
-                                })}
-                                <TableCell
-                                  align="right"
-                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ reason: data.name, itn: true })}
-                                  sx={{
-                                    color: data.itn > 0 ? '#f59e0b' : '#64748b',
-                                    cursor: data.itn > 0 ? 'pointer' : 'default',
-                                    '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
-                                  }}
-                                >
-                                  {data.itn}
-                                </TableCell>
-                                <TableCell
-                                  align="right"
-                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ reason: data.name, subscription: true })}
-                                  sx={{
-                                    color: data.subscription > 0 ? '#10b981' : '#64748b',
-                                    cursor: data.subscription > 0 ? 'pointer' : 'default',
-                                    '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
-                                  }}
-                                >
-                                  {data.subscription}
-                                </TableCell>
-                                <TableCell
-                                  align="right"
-                                  onClick={() => handleAnalyticsDrillDown({ reason: data.name })}
-                                  sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
-                                >
-                                  {data.total}
-                                </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
-                              </TableRow>
-                            );
-                          })}
-                          {/* Total Row */}
-                          <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                            <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
-                            {globalAnalytics.matrixOwners.map(owner => {
-                              const totalForOwner = Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
-                              return (
-                                <TableCell key={owner} align="right" sx={{ color: '#3b82f6', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
-                              );
-                            })}
-                            <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
-                              {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.itn, 0)}
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
-                              {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.subscription, 0)}
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
-                              {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.total, 0)}
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-
-                  </Paper>
-                </Grid>
-
-                {/* Sub-reason Analysis */}
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(245, 158, 11, 0.2)' }} elevation={0}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                      <Typography variant="h6" fontWeight="700" color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Assignment sx={{ color: '#f59e0b' }} /> Sub-Reason Breakdown
-                      </Typography>
-                      <IconButton
-                        size="small"
-                        onClick={() => setChartDialog({ open: true, title: 'Sub-Reason Analysis', data: globalAnalytics.subReasonData, type: 'bar' })}
-                        sx={{ color: '#f59e0b', bgcolor: 'rgba(245, 158, 11, 0.1)' }}
-                      >
-                        <MdInsights size={20} />
-                      </IconButton>
-                    </Box>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <RechartsBarChart data={globalAnalytics.subReasonData}>
-                        <defs>
-                          <linearGradient id="subReasonGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.2} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                        <RechartsTooltip
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
-                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
-                                  <Typography sx={{ color: '#f59e0b', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
-                                </Paper>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <RechartsBar dataKey="value" fill="url(#subReasonGradient)" radius={[6, 6, 0, 0]} />
-                      </RechartsBarChart>
-                    </ResponsiveContainer>
-                    {/* Detailed Sub-Reason Table - Compact Style */}
-                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
-                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub-Reason</TableCell>
-                            {globalAnalytics.matrixOwners.map(owner => (
-                              <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
-                            ))}
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {globalAnalytics.detailedSubReasons.slice(0, 15).map((data) => {
-                            const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
-                            return (
-                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                                <TableCell
-                                  onClick={() => handleAnalyticsDrillDown({ subReason: data.name })}
-                                  sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
-                                >
-                                  {data.name}
-                                </TableCell>
-                                {globalAnalytics.matrixOwners.map(owner => {
-                                  const count = data.ownerBreakdown[owner] || 0;
-                                  const pct = rowTotal > 0 ? ((count / rowTotal) * 100).toFixed(0) : 0;
-                                  return (
-                                    <TableCell
-                                      key={owner}
-                                      align="right"
-                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ subReason: data.name, owner })}
-                                      sx={{
-                                        color: count > 0 ? '#f59e0b' : 'rgba(255,255,255,0.1)',
-                                        fontWeight: count > 0 ? 'bold' : 'normal',
-                                        cursor: count > 0 ? 'pointer' : 'default',
-                                        '&:hover': count > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#fff' } : {}
-                                      }}
-                                    >
-                                      {count}
-                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
-                                    </TableCell>
-                                  );
-                                })}
-                                <TableCell
-                                  align="right"
-                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ subReason: data.name, itn: true })}
-                                  sx={{
-                                    color: data.itn > 0 ? '#f59e0b' : '#64748b',
-                                    cursor: data.itn > 0 ? 'pointer' : 'default',
-                                    '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
-                                  }}
-                                >
-                                  {data.itn}
-                                </TableCell>
-                                <TableCell
-                                  align="right"
-                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ subReason: data.name, subscription: true })}
-                                  sx={{
-                                    color: data.subscription > 0 ? '#10b981' : '#64748b',
-                                    cursor: data.subscription > 0 ? 'pointer' : 'default',
-                                    '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
-                                  }}
-                                >
-                                  {data.subscription}
-                                </TableCell>
-                                <TableCell
-                                  align="right"
-                                  onClick={() => handleAnalyticsDrillDown({ subReason: data.name })}
-                                  sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
-                                >
-                                  {data.total}
-                                </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
-                              </TableRow>
-                            );
-                          })}
-                          {/* Total Row */}
-                          <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                            <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
-                            {globalAnalytics.matrixOwners.map(owner => {
-                              const totalForOwner = Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
-                              return (
-                                <TableCell key={owner} align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
-                              );
-                            })}
-                            <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
-                              {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.itn, 0)}
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
-                              {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.subscription, 0)}
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
-                              {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.total, 0)}
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-
-                  </Paper>
-                </Grid>
-
-                {/* Root Cause Analysis */}
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(139, 92, 246, 0.2)' }} elevation={0}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                      <Typography variant="h6" fontWeight="700" color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <SearchIcon sx={{ color: '#8b5cf6' }} /> Root Cause Matrix
-                      </Typography>
-                      <IconButton
-                        size="small"
-                        onClick={() => setChartDialog({ open: true, title: 'Root Cause Analysis', data: globalAnalytics.rootCauseData, type: 'area' })}
-                        sx={{ color: '#8b5cf6', bgcolor: 'rgba(139, 92, 246, 0.1)' }}
-                      >
-                        <MdInsights size={20} />
-                      </IconButton>
-                    </Box>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <RechartsBarChart data={globalAnalytics.rootCauseData}>
-                        <defs>
-                          <linearGradient id="rootCauseGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.2} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                        <RechartsTooltip
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
-                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
-                                  <Typography sx={{ color: '#8b5cf6', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
-                                </Paper>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <RechartsBar dataKey="value" fill="url(#rootCauseGradient)" radius={[6, 6, 0, 0]} />
-                      </RechartsBarChart>
-                    </ResponsiveContainer>
-                    {/* Detailed Root Cause Table - Compact Style */}
-                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
-                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Root Cause</TableCell>
-                            {globalAnalytics.matrixOwners.map(owner => (
-                              <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
-                            ))}
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {globalAnalytics.detailedRootCauses.slice(0, 15).map((data) => {
-                            const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
-                            return (
-                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                                <TableCell
-                                  onClick={() => handleAnalyticsDrillDown({ rootCause: data.name })}
-                                  sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
-                                >
-                                  {data.name}
-                                </TableCell>
-                                {globalAnalytics.matrixOwners.map(owner => {
-                                  const count = data.ownerBreakdown[owner] || 0;
-                                  const pct = rowTotal > 0 ? ((count / rowTotal) * 100).toFixed(0) : 0;
-                                  return (
-                                    <TableCell
-                                      key={owner}
-                                      align="right"
-                                      onClick={() => count > 0 && handleAnalyticsDrillDown({ rootCause: data.name, owner })}
-                                      sx={{
-                                        color: count > 0 ? '#e2e8f0' : 'rgba(255,255,255,0.1)',
-                                        fontWeight: count > 0 ? 'bold' : 'normal',
-                                        cursor: count > 0 ? 'pointer' : 'default',
-                                        '&:hover': count > 0 ? { bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' } : {}
-                                      }}
-                                    >
-                                      {count}
-                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
-                                    </TableCell>
-                                  );
-                                })}
-                                <TableCell
-                                  align="right"
-                                  onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ rootCause: data.name, itn: true })}
-                                  sx={{
-                                    color: data.itn > 0 ? '#f59e0b' : '#64748b',
-                                    cursor: data.itn > 0 ? 'pointer' : 'default',
-                                    '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
-                                  }}
-                                >
-                                  {data.itn}
-                                </TableCell>
-                                <TableCell
-                                  align="right"
-                                  onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ rootCause: data.name, subscription: true })}
-                                  sx={{
-                                    color: data.subscription > 0 ? '#10b981' : '#64748b',
-                                    cursor: data.subscription > 0 ? 'pointer' : 'default',
-                                    '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
-                                  }}
-                                >
-                                  {data.subscription}
-                                </TableCell>
-                                <TableCell
-                                  align="right"
-                                  onClick={() => handleAnalyticsDrillDown({ rootCause: data.name })}
-                                  sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
-                                >
-                                  {data.total}
-                                </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
-                              </TableRow>
-                            );
-                          })}
-                          {/* Total Row */}
-                          <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                            <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
-                            {globalAnalytics.matrixOwners.map(owner => {
-                              const totalForOwner = Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
-                              return (
-                                <TableCell key={owner} align="right" sx={{ color: '#8b5cf6', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
-                              );
-                            })}
-                            <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
-                              {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.itn, 0)}
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
-                              {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.subscription, 0)}
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
-                              {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.total, 0)}
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-
-                  </Paper>
-                </Grid>
-              </Grid>
-
-              {/* Field Team Analysis Section using Blue Theme */}
-              <Box sx={{ mt: 4 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                  <Typography variant="h5" fontWeight="700" color="#3b82f6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    Field Team Offenders Analysis
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    startIcon={<FaFileExcel />}
-                    onClick={handleExportAllTeamsViolations}
-                    sx={{ borderColor: '#10b981', color: '#10b981', '&:hover': { borderColor: '#059669', bgcolor: 'rgba(16, 185, 129, 0.1)' } }}
-                  >
-                    Export All Teams Detailed Report
-                  </Button>
-                </Box>
-
-                {globalAnalytics.fieldTeamAnalytics && globalAnalytics.fieldTeamAnalytics.length > 0 ? (
-                  <Grid container spacing={2}>
-                    {globalAnalytics.fieldTeamAnalytics
-                      .slice((offendersPage - 1) * 10, offendersPage * 10)
-                      .map((team, idx) => (
-                        <Grid item xs={12} key={idx}>
-                          <Paper sx={{
-                            p: 2,
-                            ...colors.glass,
-                            borderRadius: 2,
-                            border: '2px solid rgba(59, 130, 246, 0.3)',
-                            '&:hover': { borderColor: 'rgba(59, 130, 246, 0.6)' }
-                          }} elevation={0}>
-                            {/* Team Header */}
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                              <Box>
-                                <Typography variant="h6" fontWeight="700" color="#fff">
-                                  #{(offendersPage - 1) * 10 + idx + 1} {team.teamName}
-                                </Typography>
-                                <Typography variant="body2" color="#b3b3b3">
-                                  Total Issues: <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{team.totalIssues}</span>
-                                </Typography>
-                              </Box>
-                              <Button
-                                size="small"
-                                startIcon={<FaFileExcel />}
-                                onClick={() => handleExportTeamViolations(team)}
-                                sx={{ color: '#94a3b8', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' } }}
-                              >
-                                Export
-                              </Button>
-                            </Box>
-
-                            {/* Analysis Grid */}
-                            <Grid container spacing={4}>
-                              {/* Left Column: People & Reasons */}
-                              <Grid item xs={12} md={4}>
-                                <Stack spacing={3}>
-                                  <Box>
-                                    <Typography variant="subtitle2" fontWeight="700" mb={1.5} color="#3b82f6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <SupportAgent sx={{ fontSize: 18 }} /> Responsible Owners
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxHeight: 300, overflowY: 'auto', pr: 1 }}>
-                                      {team.owners.map((owner, i) => (
-                                        <Box key={i} sx={{ position: 'relative' }}>
-                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{owner.name}</Typography>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>{owner.value}</Typography>
-                                          </Box>
-                                          <LinearProgress
-                                            variant="determinate"
-                                            value={(owner.value / team.totalIssues) * 100}
-                                            sx={{
-                                              height: 4,
-                                              borderRadius: 2,
-                                              bgcolor: 'rgba(59, 130, 246, 0.1)',
-                                              '& .MuiLinearProgress-bar': { bgcolor: '#3b82f6' }
-                                            }}
-                                          />
-                                        </Box>
-                                      ))}
-                                    </Box>
-                                  </Box>
-                                  <Box>
-                                    <Typography variant="subtitle2" fontWeight="700" mb={1.5} color="#f59e0b" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <PriorityHigh sx={{ fontSize: 18 }} /> Issue Reasons
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxHeight: 300, overflowY: 'auto', pr: 1 }}>
-                                      {team.reasons.map((reason, i) => (
-                                        <Box key={i}>
-                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{reason.name}</Typography>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 'bold' }}>{reason.value}</Typography>
-                                          </Box>
-                                          <LinearProgress
-                                            variant="determinate"
-                                            value={(reason.value / team.totalIssues) * 100}
-                                            sx={{
-                                              height: 4,
-                                              borderRadius: 2,
-                                              bgcolor: 'rgba(245, 158, 11, 0.1)',
-                                              '& .MuiLinearProgress-bar': { bgcolor: '#f59e0b' }
-                                            }}
-                                          />
-                                        </Box>
-                                      ))}
-                                    </Box>
-                                  </Box>
-                                </Stack>
-                              </Grid>
-
-                              {/* Middle Column: Root Causes & Sub-reasons */}
-                              <Grid item xs={12} md={4}>
-                                <Stack spacing={3}>
-                                  <Box>
-                                    <Typography variant="subtitle2" fontWeight="700" mb={1.5} color="#10b981" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <SearchIcon sx={{ fontSize: 18 }} /> Root Cause Distribution
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxHeight: 300, overflowY: 'auto', pr: 1 }}>
-                                      {team.rootCauses.map((rc, i) => (
-                                        <Box key={i}>
-                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{rc.name}</Typography>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>{rc.value}</Typography>
-                                          </Box>
-                                          <LinearProgress
-                                            variant="determinate"
-                                            value={(rc.value / team.totalIssues) * 100}
-                                            sx={{
-                                              height: 4,
-                                              borderRadius: 2,
-                                              bgcolor: 'rgba(16, 185, 129, 0.1)',
-                                              '& .MuiLinearProgress-bar': { bgcolor: '#10b981' }
-                                            }}
-                                          />
-                                        </Box>
-                                      ))}
-                                    </Box>
-                                  </Box>
-                                  <Box>
-                                    <Typography variant="subtitle2" fontWeight="700" mb={1.5} color="#8b5cf6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <Assignment sx={{ fontSize: 18 }} /> Sub-Reason Analysis
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxHeight: 300, overflowY: 'auto', pr: 1 }}>
-                                      {team.subReasons.map((sr, i) => (
-                                        <Box key={i}>
-                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{sr.name}</Typography>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 'bold' }}>{sr.value}</Typography>
-                                          </Box>
-                                          <LinearProgress
-                                            variant="determinate"
-                                            value={(sr.value / team.totalIssues) * 100}
-                                            sx={{
-                                              height: 4,
-                                              borderRadius: 2,
-                                              bgcolor: 'rgba(139, 92, 246, 0.1)',
-                                              '& .MuiLinearProgress-bar': { bgcolor: '#8b5cf6' }
-                                            }}
-                                          />
-                                        </Box>
-                                      ))}
-                                    </Box>
-                                  </Box>
-                                </Stack>
-                              </Grid>
-
-                              {/* Right Column: NPS Satisfaction */}
-                              <Grid item xs={12} md={4}>
-                                <Typography variant="subtitle2" fontWeight="700" mb={2} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <TrendingUp sx={{ fontSize: 18 }} /> Customer Satisfaction (NPS)
-                                </Typography>
-                                <Paper sx={{
-                                  p: 2,
-                                  bgcolor: 'rgba(15, 23, 42, 0.6)',
-                                  borderRadius: 3,
-                                  border: '1px solid rgba(255,255,255,0.05)',
-                                  height: '240px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  justifyContent: 'center'
-                                }}>
-                                  <ResponsiveContainer width="100%" height="100%">
-                                    <RechartsBarChart data={team.npsBreakdown} layout="vertical" margin={{ left: 20 }}>
-                                      <XAxis type="number" hide />
-                                      <YAxis
-                                        dataKey="name"
-                                        type="category"
-                                        width={80}
-                                        stroke="#94a3b8"
-                                        fontSize={11}
-                                        fontWeight={600}
-                                      />
-                                      <RechartsTooltip
-                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 12, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}
-                                        itemStyle={{ color: '#fff', fontSize: '0.8rem' }}
-                                      />
-                                      <RechartsBar dataKey="value" radius={[0, 6, 6, 0]} barSize={32}>
-                                        {team.npsBreakdown.map((entry, index) => (
-                                          <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                      </RechartsBar>
-                                    </RechartsBarChart>
-                                  </ResponsiveContainer>
-                                  <Box sx={{ mt: 1, px: 1, display: 'flex', justifyContent: 'space-around' }}>
-                                    {team.npsBreakdown.map((entry, i) => (
-                                      <Stack key={i} direction="row" spacing={1} alignItems="center">
-                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: entry.color }} />
-                                        <Typography sx={{ fontSize: '0.65rem', color: '#94a3b8' }}>
-                                          {entry.name}: <strong>{entry.value}</strong>
-                                        </Typography>
-                                      </Stack>
-                                    ))}
-                                  </Box>
-                                </Paper>
-                              </Grid>
-                            </Grid>
-                          </Paper>
-                        </Grid>
-                      ))}
-                  </Grid>
-                ) : (
-                  <Typography variant="body2" color="#b3b3b3" textAlign="center" py={4}>
-                    No field team data available
-                  </Typography>
-                )}
-
-                {/* Pagination Controls */}
-                {globalAnalytics.fieldTeamAnalytics && globalAnalytics.fieldTeamAnalytics.length > 10 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 2 }}>
-                    <Pagination
-                      count={Math.ceil(globalAnalytics.fieldTeamAnalytics.length / 10)}
-                      page={offendersPage}
-                      onChange={(e, v) => setOffendersPage(v)}
-                      color="primary"
-                      sx={{
-                        '& .MuiPaginationItem-root': { color: '#fff' },
-                        '& .Mui-selected': { bgcolor: 'rgba(59, 130, 246, 0.3) !important' }
-                      }}
-                    />
-                  </Box>
-                )}
-              </Box>
-            </Box>
-          )}
-
-        </Box >
-      )
-      }
-
-      {/* Drill-down Transaction Dialog */}
-      <Dialog
-        open={drillDownOpen}
-        onClose={() => setDrillDownOpen(false)}
-        maxWidth="xl"
-        fullWidth
-        PaperProps={{
-          sx: {
-            ...colors.glass,
-            bgcolor: '#1a1a1a',
-            borderRadius: '24px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            minHeight: '60vh'
-          }
-        }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <Box>
-            <Typography variant="h5" sx={{ color: '#fff', fontWeight: 800 }}>{drillDownTitle}</Typography>
-            <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-              Related {drillDownItems.length} transaction records
+        {/* Header with Premium Gradient */}
+        <Box sx={{
+          mb: 4,
+          p: 4,
+          background: `linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)`, // Deep tech gradient
+          borderRadius: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
+        }}>
+          <Box sx={{ position: 'relative', zIndex: 1 }}>
+            <Typography variant="h3" sx={{
+              background: 'linear-gradient(90deg, #fff 0%, #a5b4fc 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontWeight: '900',
+              mb: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              letterSpacing: '-1px'
+            }}>
+              Field Team Portal
+            </Typography>
+            <Typography variant="h6" sx={{ color: colors.textSecondary, fontWeight: 400 }}>
+              Advanced Performance Analytics & Operational Intelligence
             </Typography>
           </Box>
-          <IconButton onClick={() => setDrillDownOpen(false)} sx={{ color: colors.textSecondary }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          {drillDownType === 'mixed' && (
-            <Box sx={{ borderBottom: 1, borderColor: 'rgba(255,255,255,0.1)', px: 2, bgcolor: '#1a1a1a' }}>
-              <Tabs
-                value={drillDownTab}
-                onChange={(e, val) => setDrillDownTab(val)}
-                sx={{
-                  '& .MuiTab-root': {
-                    color: 'rgba(255,255,255,0.5)',
-                    minHeight: 48,
-                    fontWeight: 500,
-                    fontSize: '0.8rem',
-                    textTransform: 'none'
-                  },
-                  '& .Mui-selected': { color: colors.primary + ' !important' },
-                  '& .MuiTabs-indicator': { bgcolor: colors.primary }
-                }}
-              >
-                <Tab
-                  label={`TASKS (${drillDownItems.filter(i => i.__drillType === 'task' || (drillDownType === 'task')).length})`}
-                  value="tasks"
-                />
-                <Tab
-                  label={`ISSUES (${drillDownItems.filter(i => i.__drillType === 'issue' || (drillDownType === 'issue')).length})`}
-                  value="issues"
-                />
-              </Tabs>
-            </Box>
-          )}
-          <TableContainer sx={{ maxHeight: '70vh' }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>TYPE</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SLID</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>DATE</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>CUSTOMER / CATEGORY</TableCell>
-                  {(drillDownType === 'task' || (drillDownType === 'mixed' && drillDownTab === 'tasks')) && (
-                    <>
-                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>REASON</TableCell>
-                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SUB-REASON</TableCell>
-                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>RC</TableCell>
-                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>OWNER</TableCell>
-                      <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>FEEDBACK (VERBATIM)</TableCell>
-                    </>
-                  )}
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>STATUS</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>POINTS</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SCORE / INFO</TableCell>
-                  <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', fontSize: '0.75rem', py: 1 }}>ACTIONS</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {drillDownItems
-                  .filter(item => {
-                    if (drillDownType === 'mixed') {
-                      const itemType = item.__drillType || 'task';
-                      return itemType === (drillDownTab === 'tasks' ? 'task' : 'issue');
-                    }
-                    if (drillDownType === 'issue') return (item.__drillType || 'issue') === 'issue';
-                    if (drillDownType === 'task') return (item.__drillType || 'task') === 'task';
-                    return true;
-                  })
-                  .map((item, idx) => {
-                    const isIssue = item.__drillType === 'issue' || drillDownType === 'issue';
-                    const date = isIssue ? (item.date || item.createdAt) : (item.pisDate || item.createdAt);
-                    const status = isIssue ? (item.solved === 'yes' ? 'Solved' : 'Open') : (item.validationStatus || 'Pending');
-                    const score = !isIssue ? (item.evaluationScore ? `${item.evaluationScore}${item.evaluationScore <= 10 ? '/10' : '%'}` : 'N/A') : (item.priority || 'Medium');
+          {/* Decorative Circle */}
+          <Box sx={{
+            position: 'absolute',
+            top: '-50%',
+            right: '-10%',
+            width: '300px',
+            height: '300px',
+            background: colors.primary,
+            filter: 'blur(100px)',
+            opacity: 0.2,
+            borderRadius: '50%'
+          }} />
+        </Box>
 
-                    return (
-                      <TableRow
-                        key={item._id || idx}
+        {/* Team Selection with Glass Effect */}
+        <Paper sx={{
+          p: 3,
+          mb: 4,
+          ...colors.glass,
+          borderRadius: '20px',
+        }}>
+          <Autocomplete
+            options={fieldTeams}
+            getOptionLabel={(option) => `${option.teamName} (${option.teamCompany})`}
+            value={selectedTeam}
+            onChange={(event, newValue) => {
+              if (newValue) {
+                navigate(`/fieldTeams-portal/${newValue._id}`);
+              } else {
+                navigate('/fieldTeams-portal');
+              }
+              setQuizPage(0);
+              setJobPage(0);
+            }}
+            disabled={loading}
+            fullWidth
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Select Field Team to Analyze"
+                variant="outlined"
+                placeholder="Search by team name..."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'rgba(0,0,0,0.2)',
+                    borderRadius: '12px',
+                    color: '#fff',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                    '&:hover fieldset': { borderColor: colors.primary },
+                    '&.Mui-focused fieldset': { borderColor: colors.primary, borderWidth: '2px' },
+                  },
+                  '& .MuiInputLabel-root': { color: colors.textSecondary },
+                  '& .MuiInputLabel-root.Mui-focused': { color: colors.primary }
+                }}
+              />
+            )}
+            PaperComponent={({ children }) => (
+              <Paper sx={{ ...colors.glass, bgcolor: '#1a1a1a', mt: 1 }}>{children}</Paper>
+            )}
+          />
+        </Paper>
+
+        {/* 8. LEADERBOARD (Visible only when no team is selected) */}
+        {!selectedTeam && (
+          <>
+            <Box sx={{ animation: 'fadeIn 0.5s ease-in', mb: 6 }}>
+              <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="h4" sx={{ color: '#fff', fontWeight: 900, letterSpacing: -1 }}>
+                    Team <span style={{ color: colors.primary }}>Leaderboard</span>
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: colors.textSecondary }}>
+                    Global ranking of teams by total violations (NPS Detractors + Customer Issues)
+                  </Typography>
+                </Box>
+                {loadingGlobal && <CircularProgress size={24} sx={{ color: colors.primary }} />}
+              </Box>
+
+              {/* Global View Tabs */}
+              <Box sx={{ borderBottom: 1, borderColor: 'rgba(255,255,255,0.1)', mb: 3 }}>
+                <Tabs
+                  value={globalTab}
+                  onChange={(e, v) => setGlobalTab(v)}
+                  sx={{
+                    '& .MuiTab-root': { color: colors.textSecondary, textTransform: 'none', fontSize: '1rem', fontWeight: 500, minHeight: 48 },
+                    '& .Mui-selected': { color: colors.primary },
+                    '& .MuiTabs-indicator': { bgcolor: colors.primary }
+                  }}
+                >
+                  <Tab label="Leaderboard" icon={<LeaderboardIcon />} iconPosition="start" />
+                  <Tab label="Global Analytics" icon={<BarChartIconMUI />} iconPosition="start" />
+                  <Tab label="Comparison Chart" icon={<Timeline />} iconPosition="start" />
+                </Tabs>
+              </Box>
+
+              {/* TAB 0: LEADERBOARD */}
+              {globalTab === 0 && (
+                <>
+                  {/* Magic Table Controls: Advanced Search & Filter */}
+                  <Box sx={{ mb: 3 }}>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'stretch', mb: 2 }}>
+                      <Paper sx={{
+                        p: 2,
+                        flex: 1,
+                        minWidth: '300px',
+                        ...colors.glass,
+                        borderRadius: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                      }}>
+                        <SearchIcon sx={{ color: colors.primary, mr: 2, fontSize: '1.2rem' }} />
+                        <TextField
+                          placeholder="Search by Team Name, Company, or Region..."
+                          variant="standard"
+                          fullWidth
+                          value={leaderboardSearchQuery}
+                          onChange={(e) => {
+                            setLeaderboardSearchQuery(e.target.value);
+                            setLeaderboardPage(0); // Reset to first page on search
+                          }}
+                          InputProps={{
+                            disableUnderline: true,
+                            sx: { color: '#fff', fontSize: '1rem', fontWeight: 300, letterSpacing: '0.5px' }
+                          }}
+                        />
+                        {leaderboardSearchQuery && (
+                          <IconButton size="small" onClick={() => setLeaderboardSearchQuery('')} sx={{ color: colors.textSecondary }}>
+                            <FaTimes />
+                          </IconButton>
+                        )}
+                      </Paper>
+
+                      <FormControl sx={{ minWidth: 200, ...colors.glass, borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <Select
+                          value={leaderboardStatusQuery}
+                          onChange={(e) => {
+                            setLeaderboardStatusQuery(e.target.value);
+                            setLeaderboardPage(0);
+                          }}
+                          displayEmpty
+                          variant="standard"
+                          disableUnderline
+                          sx={{
+                            height: '100%',
+                            px: 2,
+                            color: '#fff',
+                            fontWeight: 300,
+                            '& .MuiSelect-select': { py: 1.5 }
+                          }}
+                        >
+                          <MenuItem value="all">All Rankings</MenuItem>
+                          <MenuItem value="detractors">Has Detractors</MenuItem>
+                          <MenuItem value="issues">Has Key Issues</MenuItem>
+                          <MenuItem value="open">Has Open Cases</MenuItem>
+                        </Select>
+                      </FormControl>
+
+                      <Button
+                        variant="outlined"
+                        startIcon={<FaFilter />}
+                        onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}
                         sx={{
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' }
+                          borderRadius: '16px',
+                          color: advancedFiltersOpen ? colors.primary : colors.textSecondary,
+                          borderColor: advancedFiltersOpen ? colors.primary : 'rgba(255,255,255,0.1)',
+                          background: advancedFiltersOpen ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          transition: 'all 0.2s',
+                          '&:hover': { borderColor: colors.primary, background: 'rgba(139, 92, 246, 0.1)' }
                         }}
                       >
-                        <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                          <Chip
-                            label={isIssue ? 'ISSUE' : 'TASK'}
+                        Advanced
+                      </Button>
+
+                      <Button
+                        variant="contained"
+                        startIcon={<TableChartIcon />}
+                        onClick={handleExportLeaderboard}
+                        sx={{
+                          borderRadius: '16px',
+                          px: 3,
+                          background: colors.primaryGradient,
+                          textTransform: 'none',
+                          fontWeight: 700,
+                          boxShadow: `0 8px 20px ${colors.primary}40`,
+                          '&:hover': { transform: 'translateY(-2px)', filter: 'brightness(1.1)' },
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        Export Ranking
+                      </Button>
+                    </Box>
+
+                    {advancedFiltersOpen && (
+                      <Box sx={{
+                        p: 3,
+                        mb: 3,
+                        ...colors.glass,
+                        borderRadius: '20px',
+                        border: '1px solid rgba(139, 92, 246, 0.2)',
+                        animation: 'slideDown 0.3s ease-out'
+                      }}>
+                        <Grid container spacing={3}>
+                          <Grid item xs={12} sm={3}>
+                            <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>START DATE</Typography>
+                            <TextField
+                              type="date"
+                              fullWidth
+                              variant="standard"
+                              InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                              value={leaderboardDateFilter.start}
+                              onChange={(e) => {
+                                setLeaderboardDateFilter({ ...leaderboardDateFilter, start: e.target.value });
+                                setLeaderboardPage(0);
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={3}>
+                            <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>END DATE</Typography>
+                            <TextField
+                              type="date"
+                              fullWidth
+                              variant="standard"
+                              InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                              value={leaderboardDateFilter.end}
+                              onChange={(e) => {
+                                setLeaderboardDateFilter({ ...leaderboardDateFilter, end: e.target.value });
+                                setLeaderboardPage(0);
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={3}>
+                            <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>MIN ISSUES</Typography>
+                            <TextField
+                              placeholder="e.g. 5"
+                              type="number"
+                              fullWidth
+                              variant="standard"
+                              InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                              value={leaderboardThresholds.minIssues}
+                              onChange={(e) => {
+                                setLeaderboardThresholds({ ...leaderboardThresholds, minIssues: e.target.value });
+                                setLeaderboardPage(0);
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={3}>
+                            <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 900, mb: 1, display: 'block' }}>MIN SUCCESS %</Typography>
+                            <TextField
+                              placeholder="e.g. 80"
+                              type="number"
+                              fullWidth
+                              variant="standard"
+                              InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                              value={leaderboardThresholds.minSuccessRate}
+                              onChange={(e) => {
+                                setLeaderboardThresholds({ ...leaderboardThresholds, minSuccessRate: e.target.value });
+                                setLeaderboardPage(0);
+                              }}
+                            />
+                          </Grid>
+                        </Grid>
+                        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                          <Button
                             size="small"
-                            sx={{
-                              bgcolor: isIssue ? `${colors.error}20` : `${colors.primary}20`,
-                              color: isIssue ? colors.error : colors.primary,
-                              fontWeight: 800,
-                              fontSize: '0.55rem',
-                              height: '18px'
+                            sx={{ color: colors.error, fontWeight: 700 }}
+                            onClick={() => {
+                              setLeaderboardDateFilter({ start: '', end: '' });
+                              setLeaderboardThresholds({ minIssues: '', minSuccessRate: '' });
                             }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ py: 1, color: '#fff', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>{item.slid}</TableCell>
-                        <TableCell sx={{ py: 1, color: colors.textSecondary, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>{formatDate(date)}</TableCell>
-                        <TableCell sx={{ py: 1, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {isIssue ? (
-                              item.issueCategory || (item.issues?.[0]?.category) || 'Technical Issue'
-                            ) : (
-                              <>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff', fontSize: '0.8rem' }}>
-                                  {item.customerName || 'N/A'}
-                                </Typography>
-                                {item.customerType && (
-                                  <Chip
-                                    label={item.customerType}
-                                    size="small"
-                                    sx={{
-                                      height: '16px',
-                                      fontSize: '0.55rem',
-                                      bgcolor: 'rgba(255,255,255,0.1)',
-                                      color: colors.textSecondary,
-                                      borderRadius: '4px'
-                                    }}
-                                  />
-                                )}
-                              </>
-                            )}
-                          </Box>
-                          <Typography variant="caption" sx={{ display: 'block', color: colors.textSecondary, fontSize: '0.65rem' }}>
-                            {isIssue ? (item.issueDetails || item.reporterNote || item.assigneeNote || '').substring(0, 50) : item.faultDescription?.substring(0, 30)}
-                            {(isIssue ? (item.issueDetails || item.reporterNote || item.assigneeNote || '').length > 50 : (item.faultDescription || '').length > 30) ? '...' : ''}
-                          </Typography>
-                        </TableCell>
-                        {!isIssue && (() => {
-                          const rawOwners = extractOwners(item);
-                          const rawReasons = splitValues(item.reason);
-                          const rawSubReasons = splitValues(item.subReason);
-                          const rawRoots = splitValues(item.rootCause);
-                          const maxLen = Math.max(rawOwners.length, rawReasons.length, rawSubReasons.length, rawRoots.length, 1);
+                          >
+                            Clear All Filters
+                          </Button>
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
 
-                          const validTuples = [];
-                          for (let i = 0; i < maxLen; i++) {
-                            const owner = rawOwners[i] || 'Empty';
-                            const reason = rawReasons[i] || 'N/A';
-                            const subReason = rawSubReasons[i] || 'N/A';
-                            const rootCause = rawRoots[i] || 'N/A';
-
-                            const isGarbage = (owner === 'Empty' || !owner) &&
-                              (reason === 'N/A' || !reason) &&
-                              (subReason === 'N/A' || !subReason) &&
-                              (rootCause === 'N/A' || !rootCause);
-
-                            if (!isGarbage || i === 0) {
-                              validTuples.push({ owner, reason, subReason, rootCause });
-                            }
-                          }
-
-                          const max = validTuples.length;
-
+                  <TableContainer component={Paper} sx={{
+                    ...colors.glass,
+                    borderRadius: '24px',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.08)'
+                  }}>
+                    <Table size="small">
+                      <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
+                        <TableRow>
+                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>RANK</TableCell>
+                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'teamName', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TEAM NAME</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>STATUS</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalNpsTickets', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL NPS</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsDetractors', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>DETRACTORS</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsNeutrals', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>NEUTRALS</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'issueViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>KEY ISSUES</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'openCount', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>OPEN CASES</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'avgResolutionTime', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>AVG SPEED</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'resPercent', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>SUCCESS %</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalPoints', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL POINTS</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL VIOLATIONS</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>ACTIONS</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {paginatedLeaderboardData.map((team, index) => {
+                          const actualRank = (leaderboardPage * leaderboardRowsPerPage) + index + 1;
                           return (
-                            <>
-                              <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
-                                {validTuples.map((tuple, i) => (
-                                  <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
-                                    {tuple.reason || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
-                                  </Box>
-                                ))}
+                            <TableRow
+                              key={team._id}
+                              sx={{
+                                bgcolor: 'transparent',
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                                transition: 'background 0.2s'
+                              }}
+                            >
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', py: 1 }}>
+                                <Box sx={{
+                                  width: '24px',
+                                  height: '24px',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  bgcolor: index + (leaderboardPage * leaderboardRowsPerPage) === 0 ? 'rgba(245, 158, 11, 0.2)' : index + (leaderboardPage * leaderboardRowsPerPage) === 1 ? 'rgba(209, 213, 219, 0.2)' : index + (leaderboardPage * leaderboardRowsPerPage) === 2 ? 'rgba(180, 83, 9, 0.2)' : 'rgba(255,255,255,0.05)',
+                                  color: index + (leaderboardPage * leaderboardRowsPerPage) === 0 ? '#f59e0b' : index + (leaderboardPage * leaderboardRowsPerPage) === 1 ? '#d1d5db' : index + (leaderboardPage * leaderboardRowsPerPage) === 2 ? '#b45309' : colors.textSecondary,
+                                  fontWeight: 800,
+                                  fontSize: '0.75rem'
+                                }}>
+                                  {actualRank}
+                                </Box>
                               </TableCell>
-                              <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
-                                {validTuples.map((tuple, i) => (
-                                  <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
-                                    {tuple.subReason || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
-                                  </Box>
-                                ))}
+                              <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
+                                <Box sx={{ cursor: 'pointer' }} onClick={() => handleTeamSelect(team)}>
+                                  <Typography sx={{ color: '#fff', fontWeight: 300, fontSize: '0.85rem' }}>{team.teamName}</Typography>
+                                  <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.7rem' }}>{team.teamCompany} | {team.governorate}</Typography>
+                                </Box>
                               </TableCell>
-                              <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
-                                {validTuples.map((tuple, i) => (
-                                  <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
-                                    {tuple.rootCause || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
-                                  </Box>
-                                ))}
-                              </TableCell>
-                              <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.7rem' }}>
-                                {validTuples.map((tuple, i) => (
-                                  <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                              <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
+                                {(() => {
+                                  let label = 'Active';
+                                  let bg = 'rgba(16, 185, 129, 0.15)';
+                                  let color = '#10b981';
+                                  if (team.isTerminated) { label = 'Terminated'; bg = 'rgba(239, 68, 68, 0.15)'; color = '#ef4444'; }
+                                  else if (team.isResigned) { label = 'Resigned'; bg = 'rgba(249, 115, 22, 0.15)'; color = '#f97316'; }
+                                  else if (team.isSuspended) { label = 'Suspended'; bg = 'rgba(245, 158, 11, 0.15)'; color = '#f59e0b'; }
+                                  else if (team.isOnLeave) { label = 'On Leave'; bg = 'rgba(99, 102, 241, 0.15)'; color = '#6366f1'; }
+                                  return (
                                     <Chip
-                                      label={tuple.owner || 'Empty'}
+                                      label={label}
                                       size="small"
                                       sx={{
-                                        height: '16px',
-                                        fontSize: '0.6rem',
-                                        bgcolor: 'rgba(255,255,255,0.05)',
-                                        color: tuple.owner !== 'N/A' ? '#fff' : 'rgba(255,255,255,0.3)',
-                                        border: '1px solid rgba(255,255,255,0.1)'
+                                        background: bg,
+                                        color: color,
+                                        fontWeight: 700,
+                                        borderRadius: '8px',
+                                        height: '20px',
+                                        fontSize: '0.68rem',
+                                        border: `1px solid ${color}40`,
+                                        letterSpacing: '0.3px'
                                       }}
                                     />
-                                  </Box>
-                                ))}
-                              </TableCell>
-                              <TableCell sx={{ py: 1, color: `${colors.warning}cc`, borderBottom: '1px solid rgba(255,255,255,0.05)', fontStyle: 'italic', maxWidth: '200px', fontSize: '0.75rem' }}>
-                                {(() => {
-                                  const feedback = item.customerFeedback || item.feedback || 'No verbatim feedback provided';
-                                  return (
-                                    <>
-                                      {feedback.substring(0, 50)}
-                                      {feedback.length > 50 && (
-                                        <Button
-                                          size="small"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedVerbatim(feedback);
-                                            setVerbatimDialogOpen(true);
-                                          }}
-                                          sx={{
-                                            textTransform: 'none',
-                                            fontSize: '0.65rem',
-                                            color: colors.primary,
-                                            ml: 1,
-                                            minWidth: 0,
-                                            p: 0,
-                                            '&:hover': { background: 'transparent', textDecoration: 'underline' }
-                                          }}
-                                        >
-                                          Read More
-                                        </Button>
-                                      )}
-                                    </>
                                   );
                                 })()}
                               </TableCell>
-                            </>
+                              <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>{team.totalNpsTickets}</TableCell>
+                              <TableCell align="center" onClick={() => handleDrillDown(team, 'detractors')} sx={{ color: colors.error, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsDetractors}</TableCell>
+                              <TableCell align="center" onClick={() => handleDrillDown(team, 'neutrals')} sx={{ color: colors.warning, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsNeutrals}</TableCell>
+                              <TableCell align="center" onClick={() => handleDrillDown(team, 'issues')} sx={{ color: '#3b82f6', fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.issueViolations}</TableCell>
+                              <TableCell align="center" onClick={() => team.openCount > 0 && handleDrillDown(team, 'open')} sx={{ color: team.openCount > 0 ? colors.error : colors.textSecondary, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: team.openCount > 0 ? 'pointer' : 'default' }}>{team.openCount}</TableCell>
+                              <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>{team.avgResolutionTime}d</TableCell>
+                              <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
+                                <Typography variant="body2" sx={{
+                                  color: team.resPercent > 90 ? colors.success : team.resPercent > 70 ? colors.warning : colors.error,
+                                  fontWeight: 500,
+                                  fontSize: '0.8rem'
+                                }}>
+                                  {team.resPercent}%
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
+                                <Chip
+                                  label={team.totalPoints}
+                                  size="small"
+                                  sx={{
+                                    background: 'rgba(139, 92, 246, 0.1)',
+                                    color: colors.primary,
+                                    fontWeight: 800,
+                                    borderRadius: '8px',
+                                    height: '22px',
+                                    fontSize: '0.75rem',
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
+                                <Chip
+                                  label={team.totalViolations}
+                                  onClick={() => handleDrillDown(team, 'violations')}
+                                  size="small"
+                                  sx={{
+                                    background: team.totalViolations === 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                    color: team.totalViolations === 0 ? colors.success : colors.error,
+                                    fontWeight: 700,
+                                    borderRadius: '8px',
+                                    height: '22px',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer',
+                                    '&:hover': { transform: 'scale(1.1)' }
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
+                                <MuiTooltip title="Export Detailed Team Report">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleExportIndividualTeam(team)}
+                                    sx={{
+                                      color: colors.success,
+                                      bgcolor: 'rgba(16, 185, 129, 0.1)',
+                                      '&:hover': {
+                                        bgcolor: 'rgba(16, 185, 129, 0.2)',
+                                        transform: 'scale(1.1)'
+                                      },
+                                      transition: 'all 0.2s'
+                                    }}
+                                  >
+                                    <FaFileExcel size={14} />
+                                  </IconButton>
+                                </MuiTooltip>
+                              </TableCell>
+                            </TableRow>
                           );
-                        })()}
-                        <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                          <Chip
-                            label={status}
-                            size="small"
-                            sx={{
-                              bgcolor: status === 'Solved' || status === 'Approved' ? `${colors.success}20` : status === 'Open' ? `${colors.error}20` : 'rgba(255,255,255,0.1)',
-                              color: status === 'Solved' || status === 'Approved' ? colors.success : status === 'Open' ? colors.error : colors.textSecondary,
-                              fontWeight: 700,
-                              fontSize: '0.7rem',
-                              height: '20px'
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                          <Chip
-                            label={calculateItemPoints(item, isIssue ? 'issue' : 'task')}
-                            size="small"
-                            sx={{
+                        })}
+                      </TableBody>
+                    </Table>
+                    <TablePagination
+                      rowsPerPageOptions={[10, 25, 50, 100]}
+                      component="div"
+                      count={leaderboardData.length}
+                      rowsPerPage={leaderboardRowsPerPage}
+                      page={leaderboardPage}
+                      onPageChange={(e, newPage) => setLeaderboardPage(newPage)}
+                      onRowsPerPageChange={(e) => {
+                        setLeaderboardRowsPerPage(parseInt(e.target.value, 10));
+                        setLeaderboardPage(0);
+                      }}
+                      sx={{
+                        color: colors.textSecondary,
+                        borderTop: '1px solid rgba(255,255,255,0.08)',
+                        '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
+                        '& .MuiIconButton-root': { color: colors.primary }
+                      }}
+                    />
+                  </TableContainer >
+                </>
+              )}
+
+              {/* TAB 1: GLOBAL ANALYTICS */}
+              {globalTab === 1 && (
+                <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+                  <Box sx={{
+                    display: 'flex',
+                    flexDirection: isMedium ? 'column' : 'row',
+                    justifyContent: 'space-between',
+                    alignItems: isMedium ? 'start' : 'center',
+                    gap: 2,
+                    mb: 3,
+                    pb: 1,
+                    borderBottom: '1px solid rgba(255,255,255,0.05)'
+                  }}>
+                    <Tabs
+                      value={analyticsSubTab}
+                      onChange={(e, v) => setAnalyticsSubTab(v)}
+                      sx={{
+                        minHeight: '40px',
+                        '& .MuiTab-root': {
+                          color: colors.textSecondary,
+                          minHeight: '40px',
+                          py: 0.5,
+                          fontSize: '0.85rem',
+                          textTransform: 'none'
+                        },
+                        '& .Mui-selected': { color: '#fff !important', fontWeight: 'bold' },
+                        '& .MuiTabs-indicator': { backgroundColor: '#3b82f6' }
+                      }}
+                    >
+                      <Tab label="All Analysis" />
+                      <Tab label="Detractors" />
+                      <Tab label="Neutrals" />
+                    </Tabs>
+
+                    <Box sx={{
+                      px: 2,
+                      py: 0.5,
+                      borderRadius: '20px',
+                      bgcolor: 'rgba(59, 130, 246, 0.1)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
+                    }}>
+                      <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.85rem' }}>
+                        <span style={{ color: '#94a3b8' }}>Analyzing:</span> <span style={{ fontWeight: '800', color: '#3b82f6' }}>{globalAnalytics.totalProcessed}</span> <span style={{ color: '#94a3b8' }}>Tasks</span>
+                      </Typography>
+                    </Box>
+
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<FaFileExcel size={13} />}
+                      onClick={handleExportAnalyticsDistributions}
+                      sx={{
+                        borderColor: 'rgba(34, 197, 94, 0.4)',
+                        color: '#22c55e',
+                        fontSize: '0.75rem',
+                        '&:hover': { bgcolor: 'rgba(34, 197, 94, 0.1)', borderColor: '#22c55e' }
+                      }}
+                    >
+                      Export Analytics
+                    </Button>
+                  </Box>
+                  <Paper sx={{ p: 2, mb: 3, ...colors.glass, borderRadius: 3 }} elevation={0}>
+                    <Stack direction={isMedium ? "column" : "row"} spacing={3} alignItems={isMedium ? "start" : "center"}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <FilterListIcon sx={{ color: colors.primary }} />
+                        <Typography variant="subtitle2" sx={{ color: colors.textSecondary, fontWeight: 700, minWidth: '80px' }}>
+                          Time Filter:
+                        </Typography>
+                      </Box>
+
+                      <ToggleButtonGroup
+                        value={timeFilterMode}
+                        exclusive
+                        onChange={(e, val) => val && setTimeFilterMode(val)}
+                        size="small"
+                        sx={{
+                          bgcolor: 'rgba(0,0,0,0.2)',
+                          '& .MuiToggleButton-root': {
+                            color: '#94a3b8',
+                            borderColor: 'rgba(255,255,255,0.05)',
+                            px: 2,
+                            py: 0.5,
+                            fontSize: '0.75rem',
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            '&.Mui-selected': {
                               bgcolor: 'rgba(139, 92, 246, 0.1)',
                               color: colors.primary,
-                              fontWeight: 800,
-                              borderRadius: '6px',
-                              height: '20px',
-                              fontSize: '0.7rem',
+                              borderColor: 'rgba(139, 92, 246, 0.3)',
+                              '&:hover': { bgcolor: 'rgba(139, 92, 246, 0.2)' }
+                            }
+                          }
+                        }}
+                      >
+                        <ToggleButton value="all" sx={{ gap: 1 }}><CalendarTodayIcon sx={{ fontSize: 16 }} /> All Time</ToggleButton>
+                        <ToggleButton value="weeks" sx={{ gap: 1 }}><EventIcon sx={{ fontSize: 16 }} /> Weeks</ToggleButton>
+                        <ToggleButton value="months" sx={{ gap: 1 }}><CalendarTodayIcon sx={{ fontSize: 16 }} /> Months</ToggleButton>
+                        <ToggleButton value="days" sx={{ gap: 1 }}><UpdateIcon sx={{ fontSize: 16 }} /> Recent Days</ToggleButton>
+                        <ToggleButton value="custom" sx={{ gap: 1 }}><FilterListIcon sx={{ fontSize: 16 }} /> Custom</ToggleButton>
+                      </ToggleButtonGroup>
+
+                      <Box sx={{ flexGrow: 1, width: '100%' }}>
+                        {timeFilterMode === 'days' && (
+                          <Stack direction="row" spacing={3} alignItems="center">
+                            <Slider
+                              value={recentDaysValue}
+                              onChange={(e, val) => setRecentDaysValue(val)}
+                              min={7}
+                              max={365}
+                              sx={{ flexGrow: 1, color: colors.primary }}
+                              valueLabelDisplay="auto"
+                            />
+                            <TextField
+                              size="small"
+                              label="Days"
+                              type="number"
+                              value={recentDaysValue}
+                              onChange={(e) => setRecentDaysValue(Number(e.target.value))}
+                              sx={{
+                                width: 80,
+                                '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
+                                '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                              }}
+                            />
+                          </Stack>
+                        )}
+
+                        {timeFilterMode === 'weeks' && (
+                          <Autocomplete
+                            multiple
+                            size="small"
+                            options={weekRanges}
+                            value={selectedWeeks}
+                            onChange={(e, newVal) => setSelectedWeeks(newVal)}
+                            renderInput={(params) => (
+                              <TextField {...params} label="Select Weeks" variant="outlined" placeholder="Search weeks..." />
+                            )}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                color: '#fff', fontSize: '0.8rem',
+                                '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
+                              },
+                              '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
                             }}
                           />
-                        </TableCell>
-                        <TableCell sx={{ py: 1, color: colors.textPrimary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>
-                          {score}
-                        </TableCell>
-                        <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-                          <MuiTooltip title="View Full Details">
+                        )}
+
+                        {timeFilterMode === 'months' && (
+                          <Autocomplete
+                            multiple
+                            size="small"
+                            options={monthOptions}
+                            getOptionLabel={(option) => option.label}
+                            value={monthOptions.filter(m => selectedMonths.includes(m.key))}
+                            onChange={(e, newVal) => setSelectedMonths(newVal.map(v => v.key))}
+                            renderInput={(params) => (
+                              <TextField {...params} label="Select Monthly Periods" variant="outlined" placeholder="Search months..." />
+                            )}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                color: '#fff', fontSize: '0.8rem',
+                                '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
+                              },
+                              '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                            }}
+                          />
+                        )}
+
+                        {timeFilterMode === 'custom' && (
+                          <Stack direction="row" spacing={2}>
+                            <TextField
+                              size="small"
+                              label="Start Date"
+                              type="date"
+                              value={customDateRange.start}
+                              onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                              InputLabelProps={{ shrink: true }}
+                              sx={{
+                                '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
+                                '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                              }}
+                            />
+                            <TextField
+                              size="small"
+                              label="End Date"
+                              type="date"
+                              value={customDateRange.end}
+                              onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                              InputLabelProps={{ shrink: true }}
+                              sx={{
+                                '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
+                                '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                              }}
+                            />
+                          </Stack>
+                        )}
+                      </Box>
+
+                      <Button
+                        size="small"
+                        sx={{ color: colors.textSecondary, textTransform: 'none', minWidth: '80px' }}
+                      >
+                        Reset Filter
+                      </Button>
+                    </Stack>
+                  </Paper>
+
+                  {/* 1. Global Sentiment Segmentation - Deep Dive Port */}
+                  <Grid container spacing={4} sx={{ mb: 6 }}>
+                    <Grid item xs={12} md={7}>
+                      <Paper sx={{ p: 2.5, ...colors.glass, borderRadius: 4, border: '1px solid rgba(139, 92, 246, 0.2)' }} elevation={0}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Box sx={{ width: 3, height: 20, bgcolor: '#8b5cf6', borderRadius: 4 }} />
+                            <Typography variant="h6" fontWeight="800" color="#fff" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.95rem' }}>
+                              Sentiment Segmentation <span style={{ color: alpha('#fff', 0.5), fontSize: '0.75rem' }}>Deep Analysis</span>
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
                             <IconButton
                               size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (isIssue) {
-                                  setSelectedDetailIssue(item);
-                                  setDetailIssueOpen(true);
-                                } else {
-                                  setSelectedTask(item);
-                                  setViewDialogOpen(true);
-                                }
-                              }}
-                              sx={{
-                                color: colors.primary,
-                                p: 0.5,
-                                '&:hover': { bgcolor: `${colors.primary}20` }
-                              }}
+                              onClick={() => setChartDialog({ open: true, title: 'Sentiment Analysis', data: globalAnalytics.sentimentData, type: 'pie' })}
+                              sx={{ color: '#8b5cf6', bgcolor: 'rgba(139, 92, 246, 0.1)', '&:hover': { bgcolor: 'rgba(139, 92, 246, 0.2)' } }}
                             >
-                              <VisibilityIcon sx={{ fontSize: '1.1rem' }} />
+                              <MdInsights size={18} />
                             </IconButton>
-                          </MuiTooltip>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          <Button onClick={() => setDrillDownOpen(false)} sx={{ color: colors.textSecondary }}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Verbatim Feedback Dialog */}
-      <Dialog
-        open={verbatimDialogOpen}
-        onClose={() => setVerbatimDialogOpen(false)}
-        PaperProps={{
-          sx: {
-            ...colors.glass,
-            bgcolor: '#1a1a1a',
-            borderRadius: '16px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            maxWidth: '500px'
-          }
-        }}
-      >
-        <DialogTitle sx={{ color: colors.warning, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          Full Customer Feedback
-        </DialogTitle>
-        <DialogContent sx={{ p: 4 }}>
-          <Typography sx={{ color: '#fff', fontStyle: 'italic', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-            "{selectedVerbatim}"
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.05)', p: 2 }}>
-          <Button
-            onClick={() => setVerbatimDialogOpen(false)}
-            sx={{
-              color: colors.primary,
-              fontWeight: 700,
-              '&:hover': { background: 'rgba(139, 92, 246, 0.1)' }
-            }}
-          >
-            Got it
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Main Content Area */}
-      {
-        selectedTeam && (
-          <Box sx={{ animation: 'fadeIn 0.5s ease-out' }}>
-
-            {/* Navigation Tabs */}
-            <Paper sx={{
-              mb: 4,
-              bgcolor: 'transparent',
-              boxShadow: 'none',
-              borderBottom: '1px solid rgba(255,255,255,0.1)'
-            }}>
-              <Tabs
-                value={activeTab}
-                onChange={handleTabChange}
-                variant="scrollable"
-                scrollButtons="auto"
-                sx={{
-                  '& .MuiTab-root': {
-                    color: colors.textSecondary,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    fontWeight: 500,
-                    py: 3,
-                    px: 4,
-                    minHeight: 64,
-                    transition: '0.3s',
-                    '&.Mui-selected': { color: colors.primary, fontWeight: 700 }
-                  },
-                  '& .MuiTabs-indicator': {
-                    height: '4px',
-                    borderRadius: '4px 4px 0 0',
-                    background: colors.primaryGradient
-                  }
-                }}
-              >
-                <Tab label="Executive Overview" icon={<BarChartIconMUI />} iconPosition="start" />
-                <Tab label="Customer Issues" icon={<SupportAgent />} iconPosition="start" />
-                <Tab label="Tasks & Tickets" icon={<Assignment />} iconPosition="start" />
-                <Tab label="Theoretical" icon={<Quiz />} iconPosition="start" />
-                <Tab label="Practical" icon={<CheckCircle />} iconPosition="start" />
-                <Tab label="Lab" icon={<Assessment />} iconPosition="start" />
-                <Tab label="Smart Reports" icon={<Timeline />} iconPosition="start" />
-              </Tabs>
-            </Paper>
-
-            {/* TAB PANELS */}
-
-            {/* 1. EXECUTIVE OVERVIEW */}
-            {activeTab === 0 && (
-              <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                  <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>
-                    Executive Overview: <span style={{ color: colors.primary }}>{selectedTeam?.teamName}</span>
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<FaFileExport />}
-                    onClick={handleExportFullPerformanceToExcel}
-                    sx={{
-                      background: colors.primaryGradient,
-                      borderRadius: '12px',
-                      px: 3,
-                      py: 1,
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
-                      '&:hover': {
-                        boxShadow: '0 6px 20px rgba(139, 92, 246, 0.4)',
-                        transform: 'translateY(-2px)'
-                      }
-                    }}
-                  >
-                    Export Full Performance Data
-                  </Button>
-                </Box>
-
-                <Grid container spacing={3}>
-                  {/* High Level KPI Cards */}
-                  {[
-                    {
-                      title: 'NPS Tickets',
-                      value: stats.technicalTasksCount,
-                      unit: 'Total',
-                      desc: `Detractors: ${stats.technicalDetractors} | Neutrals: ${stats.technicalNeutrals}`,
-                      color: colors.warning,
-                      icon: <Assignment />
-                    },
-                    {
-                      title: 'Customer Issues (Snags and Complaints)',
-                      value: stats.customerIssuesCount,
-                      unit: 'Reported',
-                      desc: `${stats.resolutionRate}% Resolution Rate`,
-                      color: colors.error,
-                      icon: <SupportAgent />
-                    },
-                    {
-                      title: 'Theoretical Score',
-                      value: calculateAverageScore(quizResults),
-                      max: 100,
-                      unit: '%',
-                      desc: 'Average Quiz Performance',
-                      color: colors.primary,
-                      icon: <Quiz />
-                    },
-                    {
-                      title: 'Practical Score',
-                      value: calculateAverageScore(jobAssessments),
-                      max: 5,
-                      unit: '/ 5',
-                      desc: 'Field Assessment Proficiency',
-                      color: colors.success,
-                      icon: <CheckCircle />
-                    },
-                    {
-                      title: 'Lab Score',
-                      value: calculateAverageScore(labAssessments),
-                      max: 100,
-                      unit: '%',
-                      desc: 'Average Lab Proficiency',
-                      color: colors.info,
-                      icon: <Assessment />
-                    },
-                  ].map((kpi, i) => (
-                    <Grid item xs={12} sm={6} md={2.4} key={i}>
-                      <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 3, position: 'relative', height: '100%' }}>
-                        <Box sx={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: kpi.color }} />
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                          <Typography variant="overline" sx={{ color: colors.textSecondary, letterSpacing: 1.2, fontWeight: 600 }}>
-                            {kpi.title}
-                          </Typography>
-                          <Box sx={{ color: kpi.color, opacity: 0.8 }}>
-                            {kpi.icon}
                           </Box>
                         </Box>
-                        <Typography variant="h3" sx={{ fontWeight: 800, color: '#fff', mb: 0.5 }}>
-                          {typeof kpi.value === 'number' ?
-                            (kpi.max === 5 ? kpi.value.toFixed(1) : Math.round(kpi.value))
-                            : kpi.value}
-                          <Typography component="span" variant="h6" sx={{ color: colors.textSecondary, ml: 1 }}>{kpi.unit}</Typography>
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block' }}>
-                          {kpi.desc}
-                        </Typography>
+                        <TableContainer sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                          <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, fontSize: '0.75rem' } }}>
+                            <TableHead>
+                              <TableRow sx={{ '& .MuiTableCell-root': { bgcolor: 'rgba(255,255,255,0.03)', color: '#94a3b8', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' } }}>
+                                <TableCell>Customer Sentiment</TableCell>
+                                <TableCell align="right">Hit Count</TableCell>
+                                <TableCell align="right">Matrix Share</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {globalAnalytics.sentimentData.map((row) => (
+                                <TableRow key={row.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                  <TableCell sx={{ color: row.color, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{row.name}</TableCell>
+                                  <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{row.value}</TableCell>
+                                  <TableCell align="right" sx={{
+                                    bgcolor: getHeatmapColor(parseFloat(row.percentage), 0, 100, row.name === 'Promoters' ? 'green' : row.name === 'Neutrals' ? 'orange' : 'red'),
+                                    color: '#fff', fontWeight: 800, borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                  }}>
+                                    {row.percentage}%
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                              <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', fontWeight: 'bold' }}>
+                                <TableCell sx={{ color: '#e2e8f0', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Total Audited</TableCell>
+                                <TableCell align="right" sx={{ color: '#3b82f6', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{globalAnalytics.totalSamplesTaken}</TableCell>
+                                <TableCell align="right" sx={{ color: '#3b82f6', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>100%</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+
+                        <Box sx={{ mt: 3, p: 2, borderRadius: 3, bgcolor: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          <Typography variant="subtitle2" color="#94a3b8" sx={{ mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                            Total Audited Tasks
+                          </Typography>
+                          <Typography variant="h5" sx={{ color: '#fff', fontWeight: 800, mb: 0.5 }}>
+                            {globalAnalytics.totalProcessed}
+                          </Typography>
+                          <Typography variant="body2" color="#94a3b8">
+                            {globalAnalytics.totalProcessed} Audited / {globalAnalytics.totalSamplesTarget} Target
+                          </Typography>
+                        </Box>
+
+                        <Box sx={{ mt: 3 }}>
+                          <Typography variant="subtitle2" color="#94a3b8" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                            Violation Cohorts
+                          </Typography>
+                          <TableContainer sx={{ maxHeight: 240, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)' }}>
+                            <Table stickyHeader size="small" sx={{ '& .MuiTableCell-root': { py: 1, fontSize: '0.75rem' } }}>
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell sx={{ bgcolor: '#111827', color: '#94a3b8', fontWeight: 'bold' }}>Cohort</TableCell>
+                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: '#94a3b8', fontWeight: 'bold' }}>Teams</TableCell>
+                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: '#94a3b8', fontWeight: 'bold' }}>Active / Inactive</TableCell>
+                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: '#94a3b8', fontWeight: 'bold' }}>Trained %</TableCell>
+                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: '#94a3b8', fontWeight: 'bold' }}>Action</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {(globalAnalytics.fieldTeamCohorts || []).map((cohort) => (
+                                  <TableRow key={cohort.label} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                    <TableCell sx={{ color: '#fff', fontWeight: 700 }}>{cohort.label}</TableCell>
+                                    <TableCell align="right" sx={{ color: '#fff', fontWeight: 700 }}>{cohort.teams}</TableCell>
+                                    <TableCell align="right" sx={{ color: '#fff', fontWeight: 700 }}>
+                                      {cohort.activeTeams}/{cohort.inactiveTeams}
+                                    </TableCell>
+                                    <TableCell align="right" sx={{ color: cohort.trainedPercent >= 80 ? '#22c55e' : cohort.trainedPercent >= 50 ? '#f59e0b' : '#f43f5e', fontWeight: 700 }}>
+                                      {cohort.trainedPercent}% ({cohort.trainedTeams}/{cohort.teams})
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={() => handleOpenCohortDialog(cohort.label)}
+                                        sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.15)', textTransform: 'none', fontSize: '0.7rem', px: 1.5 }}
+                                      >
+                                        View teams
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </Box>
                       </Paper>
                     </Grid>
-                  ))}
+                    <Grid item xs={12} md={5}>
+                      <Paper sx={{ p: 2.5, ...colors.glass, borderRadius: 4, border: '1px solid rgba(139, 92, 246, 0.1)', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} elevation={0}>
+                        <ResponsiveContainer width="100%" height={220}>
+                          <RechartsPieChart>
+                            <RechartsPie
+                              data={globalAnalytics.sentimentData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={90}
+                              paddingAngle={6}
+                              dataKey="value"
+                              label={({ name, percentage }) => `${percentage}%`}
+                            >
+                              {globalAnalytics.sentimentData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                            </RechartsPie>
+                            <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+                            <RechartsLegend verticalAlign="bottom" height={30} />
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                      </Paper>
+                    </Grid>
+                  </Grid>
 
-                  {/* Operational Efficiency & Deep Stats */}
-                  <Grid item xs={12} md={8}>
-                    <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450, display: 'flex', flexDirection: 'column' }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>Operational Efficiency & Responsivity</Typography>
-                        <Chip
-                          label="Live Operational Data"
-                          size="small"
-                          sx={{ bgcolor: `${colors.primary}20`, color: colors.primary, fontWeight: 700, border: `1px solid ${colors.primary}40` }}
-                        />
-                      </Box>
-                      <Box sx={{ flex: 1, minHeight: 0 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RechartsBarChart
-                            data={operationalEfficiencyData}
-                            layout="vertical"
-                            margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                            <XAxis type="number" domain={[0, 100]} hide />
-                            <YAxis
-                              type="category"
-                              dataKey="name"
-                              stroke={colors.textSecondary}
-                              fontSize={12}
-                              width={120}
-                            />
+                  {/* Analytical Matrices removed */}
+
+
+                  <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Divider sx={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+                    <Typography variant="h6" sx={{ color: '#3b82f6', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' }}>Advanced Analytics Charts & Tables</Typography>
+                    <Divider sx={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+                  </Box>
+
+                  {/* Advanced Analytics Charts & Tables */}
+                  <Grid container spacing={3}>
+                    {/* Owner Analysis */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(59, 130, 246, 0.2)' }} elevation={0}>
+                        <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <SupportAgent sx={{ color: '#3b82f6' }} /> Owner Distribution
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <RechartsBarChart data={globalAnalytics.ownerData}>
+                            <defs>
+                              <linearGradient id="ownerGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.2} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
                             <RechartsTooltip
-                              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                              contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                              content={({ active, payload, label }) => {
+                                if (active && payload && payload.length) {
+                                  return (
+                                    <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}>
+                                      <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                      <Typography sx={{ color: '#3b82f6', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
+                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                    </Paper>
+                                  );
+                                }
+                                return null;
+                              }}
                             />
-                            <RechartsBar dataKey="value" radius={[0, 4, 4, 0]} barSize={32}>
-                              {operationalEfficiencyData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </RechartsBar>
+                            <RechartsBar dataKey="value" fill="url(#ownerGradient)" radius={[6, 6, 0, 0]} />
                           </RechartsBarChart>
                         </ResponsiveContainer>
-                      </Box>
+                        {/* Detailed Owner Table - Compact Style */}
+                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                          <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                            <TableHead>
+                              <TableRow>
+                                <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Owner</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Points</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {globalAnalytics.detailedOwners.map((data) => (
+                                <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                  <TableCell sx={{ color: '#e2e8f0' }}>{data.name}</TableCell>
+                                  <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{data.points}</TableCell>
+                                  <TableCell
+                                    align="right"
+                                    onClick={() => handleAnalyticsDrillDown({ owner: data.name })}
+                                    sx={{
+                                      color: '#e2e8f0',
+                                      fontWeight: 'bold',
+                                      cursor: 'pointer',
+                                      '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' }
+                                    }}
+                                  >
+                                    {data.total}
+                                  </TableCell>
+                                  <TableCell
+                                    align="right"
+                                    onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ owner: data.name, itn: true })}
+                                    sx={{
+                                      color: data.itn > 0 ? '#f59e0b' : '#64748b',
+                                      cursor: data.itn > 0 ? 'pointer' : 'default',
+                                      '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
+                                    }}
+                                  >
+                                    {data.itn}
+                                  </TableCell>
+                                  <TableCell
+                                    align="right"
+                                    onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ owner: data.name, subscription: true })}
+                                    sx={{
+                                      color: data.subscription > 0 ? '#10b981' : '#64748b',
+                                      cursor: data.subscription > 0 ? 'pointer' : 'default',
+                                      '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
+                                    }}
+                                  >
+                                    {data.subscription}
+                                  </TableCell>
+                                  <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
 
-                      {/* Deep Stats Sub-grid */}
-                      <Grid container spacing={2} sx={{ mt: 2 }}>
-                        {[
-                          { label: 'Reliability Index', value: `${deepStats.reliabilityIndex}%`, icon: <TrendingUpIcon fontSize="small" />, color: colors.secondary },
-                          { label: 'Avg Resolution', value: `${deepStats.avgResolutionSpeed}d`, icon: <Schedule fontSize="small" />, color: colors.info },
-                          { label: 'Aging Issues', value: deepStats.highAgingCount, icon: <Warning fontSize="small" />, color: colors.error },
-                          { label: 'Express Fixes', value: deepStats.expressResolutionCount, icon: <CheckCircleIcon fontSize="small" />, color: colors.success },
-                        ].map((s, i) => (
-                          <Grid item xs={3} key={i}>
-                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
-                                <Box sx={{ color: s.color, display: 'flex' }}>{s.icon}</Box>
-                                <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', fontSize: '1rem' }}>{s.value}</Typography>
-                              </Box>
-                              <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.65rem', display: 'block' }}>{s.label}</Typography>
-                            </Box>
-                          </Grid>
-                        ))}
-                      </Grid>
-                    </Paper>
+                      </Paper>
+                    </Grid>
+
+                    {/* Governorate Distribution */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(14, 165, 233, 0.2)' }} elevation={0}>
+                        <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <LocationOn sx={{ color: '#0ea5e9' }} /> Governorate Distribution
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <RechartsBarChart data={globalAnalytics.governorateData}>
+                            <defs>
+                              <linearGradient id="governorateGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.8} />
+                                <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.2} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                            <RechartsTooltip
+                              content={({ active, payload, label }) => {
+                                if (active && payload && payload.length) {
+                                  return (
+                                    <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}>
+                                      <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                      <Typography sx={{ color: '#0ea5e9', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
+                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                    </Paper>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <RechartsBar dataKey="value" fill="url(#governorateGradient)" radius={[6, 6, 0, 0]} />
+                          </RechartsBarChart>
+                        </ResponsiveContainer>
+                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                          <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                            <TableHead>
+                              <TableRow>
+                                <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Governorate</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {globalAnalytics.detailedGovernorates.slice(0, 15).map((data) => (
+                                <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                  <TableCell sx={{ color: '#e2e8f0' }}>{data.name}</TableCell>
+                                  <TableCell
+                                    align="right"
+                                    onClick={() => handleAnalyticsDrillDown({ governorate: data.name })}
+                                    sx={{
+                                      color: '#e2e8f0',
+                                      fontWeight: 'bold',
+                                      cursor: 'pointer',
+                                      '&:hover': { bgcolor: 'rgba(14, 165, 233, 0.2)', color: '#0ea5e9' }
+                                    }}
+                                  >
+                                    {data.total}
+                                  </TableCell>
+                                  <TableCell align="right" sx={{ color: data.itn > 0 ? '#f59e0b' : '#64748b' }}>{data.itn}</TableCell>
+                                  <TableCell align="right" sx={{ color: data.subscription > 0 ? '#10b981' : '#64748b' }}>{data.subscription}</TableCell>
+                                  <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                </TableRow>
+                              ))}
+                              <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                                <TableCell align="right" sx={{ color: '#0ea5e9', fontWeight: 'bold' }}>{globalAnalytics.detailedGovernorates.reduce((sum, item) => sum + item.total, 0)}</TableCell>
+                                <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>{globalAnalytics.detailedGovernorates.reduce((sum, item) => sum + item.itn, 0)}</TableCell>
+                                <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{globalAnalytics.detailedGovernorates.reduce((sum, item) => sum + item.subscription, 0)}</TableCell>
+                                <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Paper>
+                    </Grid>
+
+                    {/* Reason Breakdown */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(16, 185, 129, 0.2)' }} elevation={0}>
+                        <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <PriorityHigh sx={{ color: '#10b981' }} /> Reason Distribution
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <RechartsPieChart>
+                            <RechartsPie
+                              data={globalAnalytics.reasonData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={90}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {globalAnalytics.reasonData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'][index % 8]} />
+                              ))}
+                            </RechartsPie>
+                            <RechartsTooltip
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  return (
+                                    <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
+                                      <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{payload[0].name}</Typography>
+                                      <Typography sx={{ color: payload[0].payload.fill, fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
+                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Weight: {payload[0].payload.percentage}%</Typography>
+                                    </Paper>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <RechartsLegend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '0.7rem', color: '#94a3b8' }} />
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                        {/* Detailed Reason Table - Compact Style */}
+                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                          <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                            <TableHead>
+                              <TableRow>
+                                <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Reason</TableCell>
+                                {globalAnalytics.matrixOwners.map(owner => (
+                                  <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                                ))}
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {globalAnalytics.detailedReasons.slice(0, 15).map((data) => {
+                                const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
+                                return (
+                                  <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                    <TableCell
+                                      onClick={() => handleAnalyticsDrillDown({ reason: data.name })}
+                                      sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                    >
+                                      {data.name}
+                                    </TableCell>
+                                    {globalAnalytics.matrixOwners.map(owner => {
+                                      const count = data.ownerBreakdown[owner] || 0;
+                                      const pct = rowTotal > 0 ? ((count / rowTotal) * 100).toFixed(0) : 0;
+                                      return (
+                                        <TableCell
+                                          key={owner}
+                                          align="right"
+                                          onClick={() => count > 0 && handleAnalyticsDrillDown({ reason: data.name, owner })}
+                                          sx={{
+                                            color: count > 0 ? '#e2e8f0' : 'rgba(255,255,255,0.1)',
+                                            fontWeight: count > 0 ? 'bold' : 'normal',
+                                            cursor: count > 0 ? 'pointer' : 'default',
+                                            '&:hover': count > 0 ? { bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' } : {}
+                                          }}
+                                        >
+                                          {count}
+                                          {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                        </TableCell>
+                                      );
+                                    })}
+                                    <TableCell
+                                      align="right"
+                                      onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ reason: data.name, itn: true })}
+                                      sx={{
+                                        color: data.itn > 0 ? '#f59e0b' : '#64748b',
+                                        cursor: data.itn > 0 ? 'pointer' : 'default',
+                                        '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
+                                      }}
+                                    >
+                                      {data.itn}
+                                    </TableCell>
+                                    <TableCell
+                                      align="right"
+                                      onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ reason: data.name, subscription: true })}
+                                      sx={{
+                                        color: data.subscription > 0 ? '#10b981' : '#64748b',
+                                        cursor: data.subscription > 0 ? 'pointer' : 'default',
+                                        '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
+                                      }}
+                                    >
+                                      {data.subscription}
+                                    </TableCell>
+                                    <TableCell
+                                      align="right"
+                                      onClick={() => handleAnalyticsDrillDown({ reason: data.name })}
+                                      sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                    >
+                                      {data.total}
+                                    </TableCell>
+                                    <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                              {/* Total Row */}
+                              <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                                {globalAnalytics.matrixOwners.map(owner => {
+                                  const totalForOwner = Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                                  return (
+                                    <TableCell key={owner} align="right" sx={{ color: '#3b82f6', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
+                                  );
+                                })}
+                                <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
+                                  {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.itn, 0)}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
+                                  {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.subscription, 0)}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                                  {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.total, 0)}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+
+                      </Paper>
+                    </Grid>
+
+                    {/* Sub-reason Analysis */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(245, 158, 11, 0.2)' }} elevation={0}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                          <Typography variant="h6" fontWeight="700" color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Assignment sx={{ color: '#f59e0b' }} /> Sub-Reason Breakdown
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => setChartDialog({ open: true, title: 'Sub-Reason Analysis', data: globalAnalytics.subReasonData, type: 'bar' })}
+                            sx={{ color: '#f59e0b', bgcolor: 'rgba(245, 158, 11, 0.1)' }}
+                          >
+                            <MdInsights size={20} />
+                          </IconButton>
+                        </Box>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <RechartsBarChart data={globalAnalytics.subReasonData}>
+                            <defs>
+                              <linearGradient id="subReasonGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
+                                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.2} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                            <RechartsTooltip
+                              content={({ active, payload, label }) => {
+                                if (active && payload && payload.length) {
+                                  return (
+                                    <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
+                                      <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                      <Typography sx={{ color: '#f59e0b', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
+                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                    </Paper>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <RechartsBar dataKey="value" fill="url(#subReasonGradient)" radius={[6, 6, 0, 0]} />
+                          </RechartsBarChart>
+                        </ResponsiveContainer>
+                        {/* Detailed Sub-Reason Table - Compact Style */}
+                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                          <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                            <TableHead>
+                              <TableRow>
+                                <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub-Reason</TableCell>
+                                {globalAnalytics.matrixOwners.map(owner => (
+                                  <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                                ))}
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {globalAnalytics.detailedSubReasons.slice(0, 15).map((data) => {
+                                const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
+                                return (
+                                  <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                    <TableCell
+                                      onClick={() => handleAnalyticsDrillDown({ subReason: data.name })}
+                                      sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                    >
+                                      {data.name}
+                                    </TableCell>
+                                    {globalAnalytics.matrixOwners.map(owner => {
+                                      const count = data.ownerBreakdown[owner] || 0;
+                                      const pct = rowTotal > 0 ? ((count / rowTotal) * 100).toFixed(0) : 0;
+                                      return (
+                                        <TableCell
+                                          key={owner}
+                                          align="right"
+                                          onClick={() => count > 0 && handleAnalyticsDrillDown({ subReason: data.name, owner })}
+                                          sx={{
+                                            color: count > 0 ? '#f59e0b' : 'rgba(255,255,255,0.1)',
+                                            fontWeight: count > 0 ? 'bold' : 'normal',
+                                            cursor: count > 0 ? 'pointer' : 'default',
+                                            '&:hover': count > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#fff' } : {}
+                                          }}
+                                        >
+                                          {count}
+                                          {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                        </TableCell>
+                                      );
+                                    })}
+                                    <TableCell
+                                      align="right"
+                                      onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ subReason: data.name, itn: true })}
+                                      sx={{
+                                        color: data.itn > 0 ? '#f59e0b' : '#64748b',
+                                        cursor: data.itn > 0 ? 'pointer' : 'default',
+                                        '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
+                                      }}
+                                    >
+                                      {data.itn}
+                                    </TableCell>
+                                    <TableCell
+                                      align="right"
+                                      onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ subReason: data.name, subscription: true })}
+                                      sx={{
+                                        color: data.subscription > 0 ? '#10b981' : '#64748b',
+                                        cursor: data.subscription > 0 ? 'pointer' : 'default',
+                                        '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
+                                      }}
+                                    >
+                                      {data.subscription}
+                                    </TableCell>
+                                    <TableCell
+                                      align="right"
+                                      onClick={() => handleAnalyticsDrillDown({ subReason: data.name })}
+                                      sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                    >
+                                      {data.total}
+                                    </TableCell>
+                                    <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                              {/* Total Row */}
+                              <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                                {globalAnalytics.matrixOwners.map(owner => {
+                                  const totalForOwner = Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                                  return (
+                                    <TableCell key={owner} align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
+                                  );
+                                })}
+                                <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
+                                  {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.itn, 0)}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
+                                  {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.subscription, 0)}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                                  {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.total, 0)}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+
+                      </Paper>
+                    </Grid>
+
+                    {/* Root Cause Analysis */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(139, 92, 246, 0.2)' }} elevation={0}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                          <Typography variant="h6" fontWeight="700" color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <SearchIcon sx={{ color: '#8b5cf6' }} /> Root Cause Matrix
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => setChartDialog({ open: true, title: 'Root Cause Analysis', data: globalAnalytics.rootCauseData, type: 'area' })}
+                            sx={{ color: '#8b5cf6', bgcolor: 'rgba(139, 92, 246, 0.1)' }}
+                          >
+                            <MdInsights size={20} />
+                          </IconButton>
+                        </Box>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <RechartsBarChart data={globalAnalytics.rootCauseData}>
+                            <defs>
+                              <linearGradient id="rootCauseGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.2} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                            <RechartsTooltip
+                              content={({ active, payload, label }) => {
+                                if (active && payload && payload.length) {
+                                  return (
+                                    <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
+                                      <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                      <Typography sx={{ color: '#8b5cf6', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
+                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                    </Paper>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <RechartsBar dataKey="value" fill="url(#rootCauseGradient)" radius={[6, 6, 0, 0]} />
+                          </RechartsBarChart>
+                        </ResponsiveContainer>
+                        {/* Detailed Root Cause Table - Compact Style */}
+                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                          <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                            <TableHead>
+                              <TableRow>
+                                <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Root Cause</TableCell>
+                                {globalAnalytics.matrixOwners.map(owner => (
+                                  <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                                ))}
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {globalAnalytics.detailedRootCauses.slice(0, 15).map((data) => {
+                                const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
+                                return (
+                                  <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                    <TableCell
+                                      onClick={() => handleAnalyticsDrillDown({ rootCause: data.name })}
+                                      sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                    >
+                                      {data.name}
+                                    </TableCell>
+                                    {globalAnalytics.matrixOwners.map(owner => {
+                                      const count = data.ownerBreakdown[owner] || 0;
+                                      const pct = rowTotal > 0 ? ((count / rowTotal) * 100).toFixed(0) : 0;
+                                      return (
+                                        <TableCell
+                                          key={owner}
+                                          align="right"
+                                          onClick={() => count > 0 && handleAnalyticsDrillDown({ rootCause: data.name, owner })}
+                                          sx={{
+                                            color: count > 0 ? '#e2e8f0' : 'rgba(255,255,255,0.1)',
+                                            fontWeight: count > 0 ? 'bold' : 'normal',
+                                            cursor: count > 0 ? 'pointer' : 'default',
+                                            '&:hover': count > 0 ? { bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' } : {}
+                                          }}
+                                        >
+                                          {count}
+                                          {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                        </TableCell>
+                                      );
+                                    })}
+                                    <TableCell
+                                      align="right"
+                                      onClick={() => data.itn > 0 && handleAnalyticsDrillDown({ rootCause: data.name, itn: true })}
+                                      sx={{
+                                        color: data.itn > 0 ? '#f59e0b' : '#64748b',
+                                        cursor: data.itn > 0 ? 'pointer' : 'default',
+                                        '&:hover': data.itn > 0 ? { bgcolor: 'rgba(245, 158, 11, 0.2)' } : {}
+                                      }}
+                                    >
+                                      {data.itn}
+                                    </TableCell>
+                                    <TableCell
+                                      align="right"
+                                      onClick={() => data.subscription > 0 && handleAnalyticsDrillDown({ rootCause: data.name, subscription: true })}
+                                      sx={{
+                                        color: data.subscription > 0 ? '#10b981' : '#64748b',
+                                        cursor: data.subscription > 0 ? 'pointer' : 'default',
+                                        '&:hover': data.subscription > 0 ? { bgcolor: 'rgba(16, 185, 129, 0.2)' } : {}
+                                      }}
+                                    >
+                                      {data.subscription}
+                                    </TableCell>
+                                    <TableCell
+                                      align="right"
+                                      onClick={() => handleAnalyticsDrillDown({ rootCause: data.name })}
+                                      sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                    >
+                                      {data.total}
+                                    </TableCell>
+                                    <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                              {/* Total Row */}
+                              <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                                {globalAnalytics.matrixOwners.map(owner => {
+                                  const totalForOwner = Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                                  return (
+                                    <TableCell key={owner} align="right" sx={{ color: '#8b5cf6', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
+                                  );
+                                })}
+                                <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
+                                  {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.itn, 0)}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
+                                  {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.subscription, 0)}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                                  {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.total, 0)}
+                                </TableCell>
+                                <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+
+                      </Paper>
+                    </Grid>
                   </Grid>
 
-                  <Grid item xs={12} md={4}>
-                    <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450, display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="h6" sx={{ mb: 3, color: '#fff', fontWeight: 600 }}>Recent Activity</Typography>
-                      <Box sx={{ flex: 1, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {allActivities.slice(0, 15).map((activity, idx) => (
-                            <Box key={activity.id || idx} sx={{
-                              p: 2,
-                              borderRadius: '16px',
-                              bgcolor: 'rgba(255,255,255,0.02)',
-                              border: '1px solid rgba(255,255,255,0.05)',
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                              position: 'relative',
-                              overflow: 'hidden',
-                              '&:hover': {
-                                bgcolor: 'rgba(255,255,255,0.04)',
-                                borderColor: `${activity.color}40`,
-                                transform: 'translateX(4px)'
-                              }
-                            }}>
-                              {/* Vertical Accent */}
-                              <Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', bgcolor: activity.color, opacity: 0.6 }} />
+                  <TeamViolationOverview
+                    fieldTeams={fieldTeams}
+                    leaderboardData={leaderboardData}
+                    allTechnicalTasksGlobal={allTechnicalTasksGlobal}
+                    allCustomerIssuesGlobal={allCustomerIssuesGlobal}
+                    allTrainingSessionsGlobal={allTrainingSessionsGlobal}
+                    handleDrillDown={handleDrillDown}
+                    handleExportTeamViolations={handleExportTeamViolations}
+                    handleExportAllTeamsViolations={handleExportAllTeamsViolations}
+                    colors={colors}
+                  />
 
-                              <Stack spacing={1}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                  <Stack direction="row" spacing={1.5} alignItems="center">
-                                    <Box sx={{
-                                      p: 1,
-                                      borderRadius: '10px',
-                                      bgcolor: `${activity.color}15`,
-                                      color: activity.color,
-                                      display: 'flex',
-                                      backdropFilter: 'blur(4px)'
-                                    }}>
-                                      {activity.icon}
-                                    </Box>
-                                    <Box>
-                                      <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 0.2, fontSize: '0.65rem' }}>
-                                        {activity.title}
-                                      </Typography>
-                                      <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, lineHeight: 1.3 }}>
-                                        {activity.detail}
-                                      </Typography>
-                                    </Box>
-                                  </Stack>
-                                  <Typography variant="caption" sx={{ color: colors.textSecondary, whiteSpace: 'nowrap', fontSize: '0.7rem', opacity: 0.7 }}>
-                                    {formatDate(activity.date)}
-                                  </Typography>
-                                </Box>
 
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', fontWeight: 400 }}>
-                                    {activity.metadata}
-                                  </Typography>
-                                  {activity.status && (
-                                    <Chip
-                                      label={activity.status}
-                                      size="small"
-                                      sx={{
-                                        height: '20px',
-                                        fontSize: '0.62rem',
-                                        fontWeight: 800,
-                                        textTransform: 'uppercase',
-                                        bgcolor: `${activity.color}15`,
-                                        color: activity.color,
-                                        border: `1px solid ${activity.color}30`,
-                                        '& .MuiChip-label': { px: 1 }
-                                      }}
-                                    />
+                </Box>
+              )}
+            </Box>
+
+            {/* Drill-down Transaction Dialog */}
+            <Dialog
+              open={drillDownOpen}
+              onClose={() => setDrillDownOpen(false)}
+              maxWidth="xl"
+              fullWidth
+              PaperProps={{
+                sx: {
+                  ...colors.glass,
+                  bgcolor: '#1a1a1a',
+                  borderRadius: '24px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  minHeight: '60vh'
+                }
+              }}
+            >
+              <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <Box>
+                  <Typography variant="h5" sx={{ color: '#fff', fontWeight: 800 }}>{drillDownTitle}</Typography>
+                  <Typography variant="body2" sx={{ color: colors.textSecondary }}>
+                    Related {drillDownItems.length} transaction records
+                  </Typography>
+                </Box>
+                <IconButton onClick={() => setDrillDownOpen(false)} sx={{ color: colors.textSecondary }}>
+                  <CloseIcon />
+                </IconButton>
+              </DialogTitle>
+              <DialogContent sx={{ p: 0 }}>
+                {drillDownType === 'mixed' && (
+                  <Box sx={{ borderBottom: 1, borderColor: 'rgba(255,255,255,0.1)', px: 2, bgcolor: '#1a1a1a' }}>
+                    <Tabs
+                      value={drillDownTab}
+                      onChange={(e, val) => setDrillDownTab(val)}
+                      sx={{
+                        '& .MuiTab-root': {
+                          color: 'rgba(255,255,255,0.5)',
+                          minHeight: 48,
+                          fontWeight: 500,
+                          fontSize: '0.8rem',
+                          textTransform: 'none'
+                        },
+                        '& .Mui-selected': { color: colors.primary + ' !important' },
+                        '& .MuiTabs-indicator': { bgcolor: colors.primary }
+                      }}
+                    >
+                      <Tab
+                        label={`TASKS (${drillDownItems.filter(i => i.__drillType === 'task' || (drillDownType === 'task')).length})`}
+                        value="tasks"
+                      />
+                      <Tab
+                        label={`ISSUES (${drillDownItems.filter(i => i.__drillType === 'issue' || (drillDownType === 'issue')).length})`}
+                        value="issues"
+                      />
+                    </Tabs>
+                  </Box>
+                )}
+                <TableContainer sx={{ maxHeight: '70vh' }}>
+                  <Table stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>TYPE</TableCell>
+                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SLID</TableCell>
+                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>DATE</TableCell>
+                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>CUSTOMER / CATEGORY</TableCell>
+                        {(drillDownType === 'task' || (drillDownType === 'mixed' && drillDownTab === 'tasks')) && (
+                          <>
+                            <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>REASON</TableCell>
+                            <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SUB-REASON</TableCell>
+                            <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>RC</TableCell>
+                            <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>OWNER</TableCell>
+                            <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>FEEDBACK (VERBATIM)</TableCell>
+                          </>
+                        )}
+                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>STATUS</TableCell>
+                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>POINTS</TableCell>
+                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SCORE / INFO</TableCell>
+                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', fontSize: '0.75rem', py: 1 }}>ACTIONS</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {drillDownItems
+                        .filter(item => {
+                          if (drillDownType === 'mixed') {
+                            const itemType = item.__drillType || 'task';
+                            return itemType === (drillDownTab === 'tasks' ? 'task' : 'issue');
+                          }
+                          if (drillDownType === 'issue') return (item.__drillType || 'issue') === 'issue';
+                          if (drillDownType === 'task') return (item.__drillType || 'task') === 'task';
+                          return true;
+                        })
+                        .map((item, idx) => {
+                          const isIssue = item.__drillType === 'issue' || drillDownType === 'issue';
+                          const date = isIssue ? (item.date || item.createdAt) : (item.pisDate || item.createdAt);
+                          const status = isIssue ? (item.solved === 'yes' ? 'Solved' : 'Open') : (item.validationStatus || 'Pending');
+                          const score = !isIssue ? (item.evaluationScore ? `${item.evaluationScore}${item.evaluationScore <= 10 ? '/10' : '%'}` : 'N/A') : (item.priority || 'Medium');
+
+                          return (
+                            <TableRow
+                              key={item._id || idx}
+                              sx={{
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' }
+                              }}
+                            >
+                              <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <Chip
+                                  label={isIssue ? 'ISSUE' : 'TASK'}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: isIssue ? `${colors.error}20` : `${colors.primary}20`,
+                                    color: isIssue ? colors.error : colors.primary,
+                                    fontWeight: 800,
+                                    fontSize: '0.55rem',
+                                    height: '18px'
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ py: 1, color: '#fff', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>{item.slid}</TableCell>
+                              <TableCell sx={{ py: 1, color: colors.textSecondary, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>{formatDate(date)}</TableCell>
+                              <TableCell sx={{ py: 1, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  {isIssue ? (
+                                    item.issueCategory || (item.issues?.[0]?.category) || 'Technical Issue'
+                                  ) : (
+                                    <>
+                                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff', fontSize: '0.8rem' }}>
+                                        {item.customerName || 'N/A'}
+                                      </Typography>
+                                      {item.customerType && (
+                                        <Chip
+                                          label={item.customerType}
+                                          size="small"
+                                          sx={{
+                                            height: '16px',
+                                            fontSize: '0.55rem',
+                                            bgcolor: 'rgba(255,255,255,0.1)',
+                                            color: colors.textSecondary,
+                                            borderRadius: '4px'
+                                          }}
+                                        />
+                                      )}
+                                    </>
                                   )}
                                 </Box>
-                              </Stack>
-                            </Box>
-                          ))}
-                        </Box>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                </Grid>
-              </Box>
-            )}
+                                <Typography variant="caption" sx={{ display: 'block', color: colors.textSecondary, fontSize: '0.65rem' }}>
+                                  {isIssue ? (item.issueDetails || item.reporterNote || item.assigneeNote || '').substring(0, 50) : item.faultDescription?.substring(0, 30)}
+                                  {(isIssue ? (item.issueDetails || item.reporterNote || item.assigneeNote || '').length > 50 : (item.faultDescription || '').length > 30) ? '...' : ''}
+                                </Typography>
+                              </TableCell>
+                              {!isIssue && (() => {
+                                const rawOwners = extractOwners(item);
+                                const rawReasons = splitValues(item.reason);
+                                const rawSubReasons = splitValues(item.subReason);
+                                const rawRoots = splitValues(item.rootCause);
+                                const maxLen = Math.max(rawOwners.length, rawReasons.length, rawSubReasons.length, rawRoots.length, 1);
 
-            {/* 2. CUSTOMER ISSUES TAB (Deep Insights) */}
-            {activeTab === 1 && (
-              <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                  <Box>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>Customer Issues Dashboard</Typography>
-                    <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
-                      Technical analysis and performance metrics for {selectedTeam?.teamName}
+                                const validTuples = [];
+                                for (let i = 0; i < maxLen; i++) {
+                                  const owner = rawOwners[i] || 'Empty';
+                                  const reason = rawReasons[i] || 'N/A';
+                                  const subReason = rawSubReasons[i] || 'N/A';
+                                  const rootCause = rawRoots[i] || 'N/A';
+
+                                  const isGarbage = (owner === 'Empty' || !owner) &&
+                                    (reason === 'N/A' || !reason) &&
+                                    (subReason === 'N/A' || !subReason) &&
+                                    (rootCause === 'N/A' || !rootCause);
+
+                                  if (!isGarbage || i === 0) {
+                                    validTuples.push({ owner, reason, subReason, rootCause });
+                                  }
+                                }
+
+                                const max = validTuples.length;
+
+                                return (
+                                  <>
+                                    <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
+                                      {validTuples.map((tuple, i) => (
+                                        <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                          {tuple.reason || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
+                                        </Box>
+                                      ))}
+                                    </TableCell>
+                                    <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
+                                      {validTuples.map((tuple, i) => (
+                                        <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                          {tuple.subReason || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
+                                        </Box>
+                                      ))}
+                                    </TableCell>
+                                    <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
+                                      {validTuples.map((tuple, i) => (
+                                        <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                          {tuple.rootCause || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
+                                        </Box>
+                                      ))}
+                                    </TableCell>
+                                    <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.7rem' }}>
+                                      {validTuples.map((tuple, i) => (
+                                        <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
+                                          <Chip
+                                            label={tuple.owner || 'Empty'}
+                                            size="small"
+                                            sx={{
+                                              height: '16px',
+                                              fontSize: '0.6rem',
+                                              bgcolor: 'rgba(255,255,255,0.05)',
+                                              color: tuple.owner !== 'N/A' ? '#fff' : 'rgba(255,255,255,0.3)',
+                                              border: '1px solid rgba(255,255,255,0.1)'
+                                            }}
+                                          />
+                                        </Box>
+                                      ))}
+                                    </TableCell>
+                                    <TableCell sx={{ py: 1, color: `${colors.warning}cc`, borderBottom: '1px solid rgba(255,255,255,0.05)', fontStyle: 'italic', maxWidth: '200px', fontSize: '0.75rem' }}>
+                                      {(() => {
+                                        const feedback = item.customerFeedback || item.feedback || 'No verbatim feedback provided';
+                                        return (
+                                          <>
+                                            {feedback.substring(0, 50)}
+                                            {feedback.length > 50 && (
+                                              <Button
+                                                size="small"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSelectedVerbatim(feedback);
+                                                  setVerbatimDialogOpen(true);
+                                                }}
+                                                sx={{
+                                                  textTransform: 'none',
+                                                  fontSize: '0.65rem',
+                                                  color: colors.primary,
+                                                  ml: 1,
+                                                  minWidth: 0,
+                                                  p: 0,
+                                                  '&:hover': { background: 'transparent', textDecoration: 'underline' }
+                                                }}
+                                              >
+                                                Read More
+                                              </Button>
+                                            )}
+                                          </>
+                                        );
+                                      })()}
+                                    </TableCell>
+                                  </>
+                                );
+                              })()}
+                              <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <Chip
+                                  label={status}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: status === 'Solved' || status === 'Approved' ? `${colors.success}20` : status === 'Open' ? `${colors.error}20` : 'rgba(255,255,255,0.1)',
+                                    color: status === 'Solved' || status === 'Approved' ? colors.success : status === 'Open' ? colors.error : colors.textSecondary,
+                                    fontWeight: 700,
+                                    fontSize: '0.7rem',
+                                    height: '20px'
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <Chip
+                                  label={calculateItemPoints(item, isIssue ? 'issue' : 'task')}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: 'rgba(139, 92, 246, 0.1)',
+                                    color: colors.primary,
+                                    fontWeight: 800,
+                                    borderRadius: '6px',
+                                    height: '20px',
+                                    fontSize: '0.7rem',
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ py: 1, color: colors.textPrimary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>
+                                {score}
+                              </TableCell>
+                              <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                                <MuiTooltip title="View Full Details">
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (isIssue) {
+                                        setSelectedDetailIssue(item);
+                                        setDetailIssueOpen(true);
+                                      } else {
+                                        setSelectedTask(item);
+                                        setViewDialogOpen(true);
+                                      }
+                                    }}
+                                    sx={{
+                                      color: colors.primary,
+                                      p: 0.5,
+                                      '&:hover': { bgcolor: `${colors.primary}20` }
+                                    }}
+                                  >
+                                    <VisibilityIcon sx={{ fontSize: '1.1rem' }} />
+                                  </IconButton>
+                                </MuiTooltip>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </DialogContent>
+              <DialogActions sx={{ p: 3, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <Button onClick={() => setDrillDownOpen(false)} sx={{ color: colors.textSecondary }}>Close</Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* Cohort Team List Dialog */}
+            <Dialog
+              open={cohortDialogOpen}
+              onClose={() => setCohortDialogOpen(false)}
+              maxWidth="md"
+              fullWidth
+              PaperProps={{
+                sx: {
+                  ...colors.glass,
+                  bgcolor: '#1a1a1a',
+                  borderRadius: '24px',
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }
+              }}
+            >
+              <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <Typography variant="h6" sx={{ color: '#fff', fontWeight: 800 }}>Teams in {cohortDialogLabel} Cohort</Typography>
+                <IconButton onClick={() => setCohortDialogOpen(false)} sx={{ color: colors.textSecondary }}>
+                  <CloseIcon />
+                </IconButton>
+              </DialogTitle>
+              <DialogContent>
+                <TableContainer sx={{ maxHeight: '50vh' }}>
+                  <Table stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700 }}>Team</TableCell>
+                        <TableCell align="right" sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700 }}>Violations</TableCell>
+                        <TableCell align="right" sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700 }}>Trained</TableCell>
+                        <TableCell align="right" sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700 }}>Status</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {cohortDialogItems.map((item, idx) => (
+                        <TableRow key={`${item.teamName}-${idx}`} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
+                          <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.teamName}</TableCell>
+                          <TableCell align="right" sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.count}</TableCell>
+                          <TableCell align="right" sx={{ color: item.trained ? '#22c55e' : '#f43f5e', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                            {item.trained ? 'Yes' : 'No'}
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: item.active ? '#22c55e' : '#f59e0b', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                            {item.active ? 'Active' : 'Inactive'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </DialogContent>
+              <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <Button onClick={() => setCohortDialogOpen(false)} sx={{ color: colors.textSecondary }}>Close</Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* Verbatim Feedback Dialog */}
+            <Dialog
+              open={verbatimDialogOpen}
+              onClose={() => setVerbatimDialogOpen(false)}
+              PaperProps={{
+                sx: {
+                  ...colors.glass,
+                  bgcolor: '#1a1a1a',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  maxWidth: '500px'
+                }
+              }}
+            >
+              <DialogTitle sx={{ color: colors.warning, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                Full Customer Feedback
+              </DialogTitle>
+              <DialogContent sx={{ p: 4 }}>
+                <Typography sx={{ color: '#fff', fontStyle: 'italic', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                  "{selectedVerbatim}"
+                </Typography>
+              </DialogContent>
+              <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.05)', p: 2 }}>
+                <Button
+                  onClick={() => setVerbatimDialogOpen(false)}
+                  sx={{
+                    color: colors.primary,
+                    fontWeight: 700,
+                    '&:hover': { background: 'rgba(139, 92, 246, 0.1)' }
+                  }}
+                >
+                  Got it
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* TAB 2: COMPARISON CHART */}
+            {globalTab === 2 && (
+              <ComparisonAnalytics
+                technicalTasks={allTechnicalTasksGlobal}
+                settings={settings}
+                colors={colors}
+                totalSamplesTarget={globalAnalytics.totalSamplesTarget}
+              />
+            )}
+          </>
+        )}
+
+        {/* Main Content Area */}
+        {selectedTeam && (
+          <>
+            <Box sx={{ animation: 'fadeIn 0.5s ease-out' }}>
+
+              {/* Navigation Tabs */}
+              <Paper sx={{
+                mb: 4,
+                bgcolor: 'transparent',
+                boxShadow: 'none',
+                borderBottom: '1px solid rgba(255,255,255,0.1)'
+              }}>
+                <Tabs
+                  value={activeTab}
+                  onChange={handleTabChange}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  sx={{
+                    '& .MuiTab-root': {
+                      color: colors.textSecondary,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 500,
+                      py: 3,
+                      px: 4,
+                      minHeight: 64,
+                      transition: '0.3s',
+                      '&.Mui-selected': { color: colors.primary, fontWeight: 700 }
+                    },
+                    '& .MuiTabs-indicator': {
+                      height: '4px',
+                      borderRadius: '4px 4px 0 0',
+                      background: colors.primaryGradient
+                    }
+                  }}
+                >
+                  <Tab label="Executive Overview" icon={<BarChartIconMUI />} iconPosition="start" />
+                  <Tab label="Customer Issues" icon={<SupportAgent />} iconPosition="start" />
+                  <Tab label="Tasks & Tickets" icon={<Assignment />} iconPosition="start" />
+                  <Tab label="Theoretical" icon={<Quiz />} iconPosition="start" />
+                  <Tab label="Practical" icon={<CheckCircle />} iconPosition="start" />
+                  <Tab label="Lab" icon={<Assessment />} iconPosition="start" />
+                  <Tab label="Smart Reports" icon={<Timeline />} iconPosition="start" />
+                </Tabs>
+              </Paper>
+
+              {/* TAB PANELS */}
+
+              {/* 1. EXECUTIVE OVERVIEW */}
+              {activeTab === 0 && (
+                <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>
+                      Executive Overview: <span style={{ color: colors.primary }}>{selectedTeam?.teamName}</span>
                     </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#2d2d2d', px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>From:</Typography>
-                        <TextField
-                          type="date"
-                          size="small"
-                          value={dateFilter.start}
-                          onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
-                          sx={{
-                            bgcolor: '#1a1a1a',
-                            borderRadius: 1,
-                            '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
-                            '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
-                          }}
-                        />
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>To:</Typography>
-                        <TextField
-                          type="date"
-                          size="small"
-                          value={dateFilter.end}
-                          onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
-                          sx={{
-                            bgcolor: '#1a1a1a',
-                            borderRadius: 1,
-                            '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
-                            '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
-                          }}
-                        />
-                      </Box>
-                      {(dateFilter.start || dateFilter.end) && (
-                        <Button size="small" onClick={() => setDateFilter({ start: '', end: '' })} sx={{ color: '#f44336', minWidth: 0, p: 0.5 }}>
-                          Clear
-                        </Button>
-                      )}
-                    </Box>
                     <Button
                       variant="contained"
                       startIcon={<FaFileExport />}
-                      disabled
-                      sx={{ bgcolor: '#4e73df', '&:hover': { bgcolor: '#2e59d9' } }}
-                    >
-                      Email Report
-                    </Button>
-                  </Box>
-                </Box>
-
-                {/* KPI Section - Match Reference Layout */}
-                <Grid container spacing={2} mb={4}>
-                  <Grid item xs={12} sm={6} md={2.4}><StatCard title="Total Transactions" value={stats.totalTransactions} icon={<FaClipboardList />} color="#2196f3" subtext="Total records" /></Grid>
-                  <Grid item xs={12} sm={6} md={2.4}><StatCard title="Issues Highlighted" value={stats.totalIssuesHighlighted} icon={<FaExclamationCircle />} color="#ffc107" subtext={`Avg: ${stats.issueDensity} per txn`} /></Grid>
-                  <Grid item xs={12} sm={6} md={2.4}><StatCard title="Closed" value={stats.closed} icon={<FaCheckCircle />} color="#4caf50" subtext={`${stats.resolutionRate}% Rate`} /></Grid>
-                  <Grid item xs={12} sm={6} md={2.4}><StatCard title="Open" value={stats.open} icon={<FaExclamationCircle />} color="#f44336" subtext="Require attention" /></Grid>
-                  <Grid item xs={12} sm={6} md={2.4}><StatCard title="Avg. Daily Issues" value={(stats.totalTransactions / (trendData.labels.length || 1)).toFixed(1)} icon={<FaChartLine />} color="#ff9800" subtext="Trend metric" /></Grid>
-                </Grid>
-
-                {/* Process Efficiency Spotlight - Match Reference Layout */}
-                <Box mb={4}>
-                  <Grid container spacing={4}>
-                    <Grid item xs={12} md={4}>
-                      <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
-                        <Typography variant="subtitle2" color="grey.500" mb={1}>SUPERVISOR DISPATCH SPEED (Incl. Aging)</Typography>
-                        <Typography variant="h3" fontWeight="800" color={Number(stats.avgDispatchTime) > 1 ? "warning.main" : "info.main"}>
-                          {stats.avgDispatchTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                          Avg time from <b>Reported</b> → <b>Dispatched</b> (Or <b>Reported</b> → <b>Now</b> if pending)
-                        </Typography>
-                        <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
-                            * Calculation: (Dispatched Date - Reported Date) OR (Now - Reported Date) if undispatched.
-                          </Typography>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
-                        <Typography variant="subtitle2" color="grey.500" mb={1}>FIELD RESOLUTION SPEED (Incl. Aging)</Typography>
-                        <Typography variant="h3" fontWeight="800" color="success.main">
-                          {stats.avgResolutionTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                          Avg time from <b>Dispatched</b> → <b>Resolved</b> (Or <b>Reported</b> → <b>Now</b> if pending)
-                        </Typography>
-                        <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
-                            * Calculation: Resolved cases use (Resolved - Dispatched). Pending cases use (Now - Reported) to reflect negligence.
-                          </Typography>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
-                        <Typography variant="subtitle2" color="grey.500" mb={1}>TOTAL LIFECYCLE (Accountability)</Typography>
-                        <Typography variant="h3" fontWeight="800" color="white">
-                          {stats.avgLifecycleTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                          Total time from <b>Initial Report</b> → <b>Closed/Now</b>
-                        </Typography>
-                        <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
-                            * Calculation: Full duration from (Report Date) to (Closed Date) OR (Now) if the case is still open.
-                          </Typography>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  </Grid>
-                </Box>
-
-                {/* Charts - Match Reference Layout */}
-                <Grid container spacing={3} mb={4}>
-                  <Grid item xs={12} lg={8}>
-                    <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography variant="h6" fontWeight="bold">Issue Reporting Trend</Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <FormControl size="small" variant="outlined">
-                            <Select
-                              value={trendTimeframe}
-                              onChange={(e) => setTrendTimeframe(e.target.value)}
-                              sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
-                            >
-                              <MenuItem value="day">Daily</MenuItem>
-                              <MenuItem value="week">Weekly</MenuItem>
-                              <MenuItem value="month">Monthly</MenuItem>
-                            </Select>
-                          </FormControl>
-                          <FormControl size="small" variant="outlined">
-                            <Select
-                              value={trendChartType}
-                              onChange={(e) => setTrendChartType(e.target.value)}
-                              sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
-                            >
-                              <MenuItem value="mixed">Mixed</MenuItem>
-                              <MenuItem value="bar">Bar</MenuItem>
-                              <MenuItem value="line">Line</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Box>
-                      </Box>
-                      <Box sx={{ height: 300 }}><Bar data={trendData} options={commonOptions} /></Box>
-                    </Paper>
-                  </Grid>
-                  <Grid item xs={12} lg={4}>
-                    <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
-                      <Typography variant="h6" gutterBottom fontWeight="bold">Resolution Status</Typography>
-                      <Box sx={{ height: 260, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                        <Doughnut data={statusData} options={doughnutOptions} />
-                        <Box sx={{ position: 'absolute', textAlign: 'center' }}>
-                          <Typography variant="h4" fontWeight="bold" sx={{ color: '#1cc88a' }}>{stats.resolutionRate}%</Typography>
-                          <Typography variant="caption" color="#b3b3b3">Resolved</Typography>
-                        </Box>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                </Grid>
-
-                {/* Detailed Issue Registry - Styled like Supervisor Performance Table */}
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 0,
-                    bgcolor: '#1e293b',
-                    borderRadius: 3,
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    overflow: 'hidden',
-                    background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                  }}
-                >
-                  <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.02)' }}>
-                    <Box>
-                      <Typography variant="h6" fontWeight="700" color="#f8fafc">
-                        Issue History & Registry
-                      </Typography>
-                      <Typography variant="body2" color="#94a3b8" sx={{ mt: 0.5 }}>
-                        Full list of issues associated with this team
-                      </Typography>
-                    </Box>
-                    <Chip
-                      label={`${filteredIssuesByDate.length} Records`}
-                      size="small"
-                      sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)', fontWeight: 600 }}
-                    />
-                  </Box>
-                  <Box sx={{ width: '100%', overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
-                      <thead>
-                        <tr style={{ background: '#0f172a' }}>
-                          <th style={{ padding: '16px 24px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Date</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>SLID</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Reporter</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Category</th>
-                          <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredIssuesByDate
-                          .slice(issuesPage * issuesRowsPerPage, issuesPage * issuesRowsPerPage + issuesRowsPerPage)
-                          .map((issue) => (
-                            <tr
-                              key={issue._id}
-                              style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background-color 0.2s ease' }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                            >
-                              <td style={{ padding: '16px 24px', color: '#f8fafc', fontSize: '0.85rem' }}>{formatDate(issue.date || issue.createdAt)}</td>
-                              <td style={{ padding: '16px', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.85rem' }}>{issue.slid}</td>
-                              <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{issue.reporter || 'N/A'}</td>
-                              <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>
-                                {issue.issues?.[0]?.category || issue.issueCategory || 'Uncategorized'}
-                                <Typography variant="caption" sx={{ display: 'block', color: '#64748b' }}>{issue.issues?.[0]?.subCategory || '-'}</Typography>
-                              </td>
-                              <td style={{ padding: '16px', textAlign: 'center' }}>
-                                <Chip
-                                  label={issue.solved === 'yes' ? 'Closed' : 'Open'}
-                                  size="small"
-                                  sx={{
-                                    bgcolor: issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                    color: issue.solved === 'yes' ? '#4ade80' : '#f87171',
-                                    border: `1px solid ${issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
-                                    fontWeight: 600
-                                  }}
-                                />
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                    <TablePagination
-                      rowsPerPageOptions={[10, 25, 50]}
-                      component="div"
-                      count={filteredIssuesByDate.length}
-                      rowsPerPage={issuesRowsPerPage}
-                      page={issuesPage}
-                      onPageChange={(e, p) => setIssuesPage(p)}
-                      onRowsPerPageChange={(e) => {
-                        setIssuesRowsPerPage(parseInt(e.target.value, 10));
-                        setIssuesPage(0);
-                      }}
-                      sx={{ color: '#94a3b8' }}
-                    />
-                  </Box>
-                </Paper>
-              </Box>
-            )}
-
-            {/* 3. TASKS & TICKETS TAB (Full Premium Dashboard) */}
-            {activeTab === 2 && (
-              <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                  <Box>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>NPS Tickets</Typography>
-                    <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
-                      Operational workload and technical assessment registry for {selectedTeam?.teamName}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<FaFileExcel />}
-                      sx={{ color: colors.success, borderColor: colors.success }}
-                      onClick={() => {
-                        const data = technicalTasks.map(t => ({
-                          SLID: t.slid,
-                          'Request Number': t.requestNumber,
-                          'Customer Name': t.customerName,
-                          'PIS Date': t.pisDate ? new Date(t.pisDate).toLocaleDateString() : 'N/A',
-                          Priority: t.priority,
-                          Status: t.validationStatus,
-                          Score: t.evaluationScore || 'N/A'
-                        }));
-                        const ws = XLSX.utils.json_to_sheet(data);
-                        const wb = XLSX.utils.book_new();
-                        XLSX.utils.book_append_sheet(wb, ws, "Tasks");
-                        XLSX.writeFile(wb, `${selectedTeam.teamName}_Technical_Tasks.xlsx`);
+                      onClick={handleExportFullPerformanceToExcel}
+                      sx={{
+                        background: colors.primaryGradient,
+                        borderRadius: '12px',
+                        px: 3,
+                        py: 1,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
+                        '&:hover': {
+                          boxShadow: '0 6px 20px rgba(139, 92, 246, 0.4)',
+                          transform: 'translateY(-2px)'
+                        }
                       }}
                     >
-                      Export Excel
+                      Export Full Performance Data
                     </Button>
                   </Box>
-                </Box>
 
-                {/* Technical KPI Section */}
-                <Grid container spacing={2} mb={4}>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                      title="Total Tasks"
-                      value={technicalTasks.length}
-                      icon={<FaClipboardList />}
-                      color={colors.primary}
-                      subtext="Technical workload"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                      title="High Priority"
-                      value={technicalTasks.filter(t => t.priority === 'High').length}
-                      icon={<PriorityHigh />}
-                      color={colors.error}
-                      subtext="Requires urgent action"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                      title="Detractors"
-                      value={technicalTasks.filter(t => t.evaluationScore > 0 && t.evaluationScore <= 60).length}
-                      icon={<FaExclamationCircle />}
-                      color={colors.warning}
-                      subtext="Score below 60%"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                      title="Avg. Quality"
-                      value={(() => {
-                        const evaluated = technicalTasks.filter(t => t.evaluationScore > 0);
-                        return evaluated.length > 0 ? (evaluated.reduce((a, b) => a + b.evaluationScore, 0) / evaluated.length).toFixed(1) : 'N/A';
-                      })()}
-                      icon={<CheckCircle />}
-                      color={colors.success}
-                      subtext="Technical score avg"
-                    />
-                  </Grid>
-                </Grid>
-
-                {/* Technical Charts */}
-                <Grid container spacing={3} mb={4}>
-                  <Grid item xs={12} lg={6}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Task Distribution by Priority</Typography>
-                      <Box sx={{ height: 300 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RechartsBarChart data={[
-                            { name: 'High', value: technicalTasks.filter(t => t.priority === 'High').length, color: colors.error },
-                            { name: 'Medium', value: technicalTasks.filter(t => t.priority === 'Medium').length, color: colors.warning },
-                            { name: 'Low', value: technicalTasks.filter(t => t.priority === 'Low').length, color: colors.success },
-                          ]}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
-                            <XAxis dataKey="name" stroke={colors.textSecondary} fontSize={12} />
-                            <YAxis stroke={colors.textSecondary} fontSize={12} />
-                            <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
-                            <RechartsBar dataKey="value" radius={[4, 4, 0, 0]}>
-                              {[colors.error, colors.warning, colors.success].map((color, idx) => <Cell key={`cell-${idx}`} fill={color} />)}
-                            </RechartsBar>
-                          </RechartsBarChart>
-                        </ResponsiveContainer>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                  <Grid item xs={12} lg={6}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Operational Status</Typography>
-                      <Box sx={{ height: 300 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RechartsPieChart>
-                            <RechartsPie
-                              data={[
-                                { name: 'Validated', value: technicalTasks.filter(t => t.validationStatus === 'Validated').length, color: colors.success },
-                                { name: 'Pending', value: technicalTasks.filter(t => t.validationStatus === 'Pending').length, color: colors.warning },
-                                { name: 'Rejected', value: technicalTasks.filter(t => t.validationStatus === 'Rejected').length, color: colors.error },
-                              ].filter(d => d.value > 0)}
-                              cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
-                            >
-                              {[colors.success, colors.warning, colors.error].map((color, idx) => <Cell key={`cell-${idx}`} fill={color} />)}
-                            </RechartsPie>
-                            <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
-                            <RechartsLegend verticalAlign="bottom" height={36} />
-                          </RechartsPieChart>
-                        </ResponsiveContainer>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                </Grid>
-
-                {/* Task Registry Table */}
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 0,
-                    bgcolor: '#1e293b',
-                    borderRadius: 3,
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    overflow: 'hidden',
-                    background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-                  }}
-                >
-                  <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" fontWeight="700" color="#f8fafc">Technical Task Registry</Typography>
-                    <Chip label={`${technicalTasks.length} Tasks`} size="small" sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }} />
-                  </Box>
-                  <Box sx={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead style={{ background: '#0f172a' }}>
-                        <tr>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>REQUEST NO</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>CUSTOMER</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>SLID</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>PIS DATE</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>PRIORITY</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>STATUS</th>
-                          <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>SCORE</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {technicalTasks.map((task) => (
-                          <tr key={task._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: '0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                            <td style={{ padding: '16px', color: '#fff', fontSize: '0.85rem' }}>{task.requestNumber || 'N/A'}</td>
-                            <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{task.customerName}</td>
-                            <td style={{ padding: '16px', color: colors.primary, fontWeight: 'bold' }}>{task.slid}</td>
-                            <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>{formatDate(task.pisDate || task.createdAt)}</td>
-                            <td style={{ padding: '16px' }}>
-                              <Chip label={task.priority} size="small" color={task.priority === 'High' ? 'error' : task.priority === 'Medium' ? 'warning' : 'success'} variant="outlined" />
-                            </td>
-                            <td style={{ padding: '16px' }}>
-                              <Chip
-                                label={task.validationStatus}
-                                size="small"
-                                sx={{
-                                  bgcolor: task.validationStatus === 'Validated' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
-                                  color: task.validationStatus === 'Validated' ? '#4ade80' : '#facc15',
-                                  border: `1px solid ${task.validationStatus === 'Validated' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)'}`
-                                }}
-                              />
-                            </td>
-                            <td style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold', color: (task.evaluationScore && (task.evaluationScore > 80 || (task.evaluationScore <= 10 && task.evaluationScore > 8))) ? colors.success : colors.warning }}>
-                              {task.evaluationScore ? `${task.evaluationScore}${task.evaluationScore <= 10 ? '/10' : '%'}` : '-'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </Box>
-                </Paper>
-              </Box>
-            )}
-
-            {/* 4. THEORETICAL ASSESSMENTS (Updated Styling) */}
-            {activeTab === 3 && (
-              <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Box>
-                    <Typography variant="h5" sx={{ color: colors.primary }}>Theoretical Assessments</Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<TableChartIcon />}
-                        onClick={exportTheoreticalToExcel}
-                        disabled={quizResults.length === 0}
-                        sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
-                      >
-                        Pro Excel
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<PictureAsPdfIcon />}
-                        onClick={() => exportTestToPDF('theoretical', quizResults)}
-                        disabled={quizResults.length === 0}
-                        sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
-                      >
-                        Pro PDF Report
-                      </Button>
-                    </Box>
-                  </Box>
-                  <Chip
-                    label={`Avg: ${Math.round(calculateAverageScore(quizResults))}%`}
-                    variant="outlined"
-                    sx={{ borderColor: getPerformanceColor(calculateAverageScore(quizResults), 'quiz'), color: getPerformanceColor(calculateAverageScore(quizResults), 'quiz') }}
-                  />
-                </Box>
-
-                {loading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                    <CircularProgress sx={{ color: colors.primary }} />
-                  </Box>
-                ) : quizResults.length > 0 ? (
-                  <>
-                    <TableContainer component={Paper} sx={{
-                      mb: 2,
-                      ...darkThemeStyles.paper,
-                      "& .MuiTable-root": darkThemeStyles.table
-                    }}>
-                      <Table>
-                        <TableHead sx={darkThemeStyles.tableHead}>
-                          <TableRow>
-                            <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>Quiz Code</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>Score</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>Correct Answers</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>Percentage</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {quizResults
-                            .slice(quizPage * quizRowsPerPage, quizPage * quizRowsPerPage + quizRowsPerPage)
-                            .map((result) => (
-                              <TableRow key={result._id}
-                                sx={{
-                                  "&:hover": {
-                                    backgroundColor: colors.tableRowHover
-                                  }
-                                }}
-                              >
-                                <TableCell sx={darkThemeStyles.tableCell}>{formatDate(result.submittedAt)}</TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>{result.quizCode}</TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>
-                                  <Chip
-                                    label={result.score}
-                                    sx={{
-                                      bgcolor: `${getPerformanceColor(result.percentage)}22`,
-                                      color: getPerformanceColor(result.percentage),
-                                      borderColor: getPerformanceColor(result.percentage),
-                                      fontWeight: 'bold'
-                                    }}
-                                    variant="outlined"
-                                  />
-                                </TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>{result.correctAnswers}/{result.totalQuestions}</TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>{result.percentage}%</TableCell>
-                              </TableRow>
-                            ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                    <TablePagination
-                      rowsPerPageOptions={[10, 25, 50]}
-                      component="div"
-                      count={quizResults.length}
-                      rowsPerPage={quizRowsPerPage}
-                      page={quizPage}
-                      onPageChange={(e, newPage) => setQuizPage(newPage)}
-                      onRowsPerPageChange={(e) => {
-                        setQuizRowsPerPage(parseInt(e.target.value, 10));
-                        setQuizPage(0);
-                      }}
-                      sx={{
-                        ...darkThemeStyles.tablePagination,
-                        color: colors.textPrimary,
-                        "& .MuiTablePagination-select": {
-                          color: colors.textPrimary
-                        },
-                        "& .MuiTablePagination-selectIcon": {
-                          color: colors.textPrimary
-                        }
-                      }}
-                      labelRowsPerPage={
-                        <Typography color={colors.textPrimary}>Rows per page:</Typography>
-                      }
-                    />
-                  </>
-                ) : (
-                  <Paper sx={{ p: 3, textAlign: 'center', ...darkThemeStyles.paper }}>
-                    <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                      No theoretical assessments found for this team
-                    </Typography>
-                  </Paper>
-                )}
-              </Box>
-            )}
-
-            {/* 5. PRACTICAL ASSESSMENTS (Updated Styling) */}
-            {activeTab === 4 && (
-              <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Box>
-                    <Typography variant="h5" sx={{ color: colors.primary }}>Practical Assessments</Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<TableChartIcon />}
-                        onClick={exportPracticalToExcel}
-                        disabled={jobAssessments.length === 0}
-                        sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
-                      >
-                        Pro Excel
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<PictureAsPdfIcon />}
-                        onClick={() => exportTestToPDF('practical', jobAssessments)}
-                        disabled={jobAssessments.length === 0}
-                        sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
-                      >
-                        Pro PDF Report
-                      </Button>
-                    </Box>
-                  </Box>
-                  <Chip
-                    label={`Avg: ${Number(calculateAverageScore(jobAssessments)).toFixed(1)}/5`}
-                    variant="outlined"
-                    sx={{ borderColor: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical'), color: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical') }}
-                  />
-                </Box>
-
-                {loading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                    <CircularProgress sx={{ color: colors.primary }} />
-                  </Box>
-                ) : jobAssessments.length > 0 ? (
-                  <>
-                    <TableContainer component={Paper} sx={{
-                      mb: 2,
-                      ...darkThemeStyles.paper,
-                      "& .MuiTable-root": darkThemeStyles.table
-                    }}>
-                      <Table>
-                        <TableHead sx={darkThemeStyles.tableHead}>
-                          <TableRow>
-                            <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>Conducted By</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>Score</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>Status</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {jobAssessments
-                            .slice(jobPage * jobRowsPerPage, jobPage * jobRowsPerPage + jobRowsPerPage)
-                            .map((assessment) => (
-                              <TableRow key={assessment._id}
-                                sx={{
-                                  "&:hover": {
-                                    backgroundColor: colors.tableRowHover
-                                  }
-                                }}
-                              >
-                                <TableCell sx={darkThemeStyles.tableCell}>{formatDate(assessment.assessmentDate)}</TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>{assessment.conductedBy}</TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>
-                                  <Chip
-                                    label={`${Number(assessment.overallScore).toFixed(1)}/5`}
-                                    sx={{
-                                      bgcolor: `${getAssessmentStatus(assessment.overallScore, 'practical').color}22`,
-                                      color: getAssessmentStatus(assessment.overallScore, 'practical').color,
-                                      borderColor: getAssessmentStatus(assessment.overallScore, 'practical').color,
-                                      border: '1px solid',
-                                      fontWeight: 'bold'
-                                    }}
-                                    variant="outlined"
-                                  />
-                                </TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>
-                                  <Chip
-                                    label={getAssessmentStatus(assessment.overallScore, 'practical').label}
-                                    size="small"
-                                    sx={{
-                                      borderColor: getAssessmentStatus(assessment.overallScore, 'practical').color,
-                                      color: getAssessmentStatus(assessment.overallScore, 'practical').color,
-                                      border: '1px solid'
-                                    }}
-                                    variant="outlined"
-                                  />
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                    <TablePagination
-                      rowsPerPageOptions={[10, 25, 50]}
-                      component="div"
-                      count={jobAssessments.length}
-                      rowsPerPage={jobRowsPerPage}
-                      page={jobPage}
-                      onPageChange={(e, newPage) => setJobPage(newPage)}
-                      onRowsPerPageChange={(e) => {
-                        setJobRowsPerPage(parseInt(e.target.value, 10));
-                        setJobPage(0);
-                      }}
-                      sx={{
-                        ...darkThemeStyles.tablePagination,
-                        color: colors.textPrimary,
-                        "& .MuiTablePagination-select": {
-                          color: colors.textPrimary
-                        },
-                        "& .MuiTablePagination-selectIcon": {
-                          color: colors.textPrimary
-                        }
-                      }}
-                      labelRowsPerPage={
-                        <Typography color={colors.textPrimary}>Rows per page:</Typography>
-                      }
-                    />
-                  </>
-                ) : (
-                  <Paper sx={{ p: 3, textAlign: 'center', ...darkThemeStyles.paper }}>
-                    <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                      No practical assessments found for this team
-                    </Typography>
-                  </Paper>
-                )}
-              </Box>
-            )}
-
-            {/* 6. LAB ASSESSMENTS (Updated Styling) */}
-            {activeTab === 5 && (
-              <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Box>
-                    <Typography variant="h5" sx={{ color: colors.primary }}>Lab Assessments</Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<TableChartIcon />}
-                        onClick={exportLabToExcel}
-                        disabled={labAssessments.length === 0}
-                        sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
-                      >
-                        Pro Excel
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<PictureAsPdfIcon />}
-                        onClick={() => exportTestToPDF('lab', labAssessments)}
-                        disabled={labAssessments.length === 0}
-                        sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
-                      >
-                        Pro PDF Report
-                      </Button>
-                    </Box>
-                  </Box>
-                  <Chip
-                    label={`Avg: ${Math.round(calculateAverageScore(labAssessments))}%`}
-                    variant="outlined"
-                    sx={{ borderColor: getPerformanceColor(calculateAverageScore(labAssessments)), color: getPerformanceColor(calculateAverageScore(labAssessments)) }}
-                  />
-                </Box>
-
-                {loading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                    <CircularProgress sx={{ color: colors.primary }} />
-                  </Box>
-                ) : labAssessments.length > 0 ? (
-                  <>
-                    <TableContainer component={Paper} sx={{
-                      mb: 2,
-                      ...darkThemeStyles.paper,
-                      "& .MuiTable-root": darkThemeStyles.table
-                    }}>
-                      <Table>
-                        <TableHead sx={darkThemeStyles.tableHead}>
-                          <TableRow>
-                            <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>Type</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>ONT Type</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>Splicing Status</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>Score</TableCell>
-                            <TableCell sx={darkThemeStyles.tableCell}>Comments</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {labAssessments
-                            .slice(labPage * labRowsPerPage, labPage * labRowsPerPage + labRowsPerPage)
-                            .map((assessment) => (
-                              <TableRow key={assessment._id}
-                                sx={{
-                                  "&:hover": {
-                                    backgroundColor: colors.tableRowHover
-                                  }
-                                }}
-                              >
-                                <TableCell sx={darkThemeStyles.tableCell}>{formatDate(assessment.createdAt)}</TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>
-                                  <Chip label={assessment.assessmentType || 'Technical'} size="small" variant="outlined" sx={{ color: colors.primary, borderColor: colors.primary }} />
-                                </TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>{assessment.ontType?.name || 'N/A'}</TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>
-                                  {assessment.assessmentType === 'Infrastructure' ? (
-                                    <Chip
-                                      label={assessment.splicingMachineStatus || 'Good'}
-                                      size="small"
-                                      sx={{
-                                        bgcolor: assessment.splicingMachineStatus === 'Poor' ? `${colors.error}22` : assessment.splicingMachineStatus === 'Fair' ? `${colors.warning}22` : `${colors.success}22`,
-                                        color: assessment.splicingMachineStatus === 'Poor' ? colors.error : assessment.splicingMachineStatus === 'Fair' ? colors.warning : colors.success,
-                                        borderColor: assessment.splicingMachineStatus === 'Poor' ? colors.error : assessment.splicingMachineStatus === 'Fair' ? colors.warning : colors.success,
-                                      }}
-                                      variant="outlined"
-                                    />
-                                  ) : 'N/A'}
-                                </TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>
-                                  <Chip
-                                    label={`${assessment.totalScore}%`}
-                                    sx={{
-                                      bgcolor: `${getPerformanceColor(assessment.totalScore)}22`,
-                                      color: getPerformanceColor(assessment.totalScore),
-                                      borderColor: getPerformanceColor(assessment.totalScore),
-                                      fontWeight: 'bold'
-                                    }}
-                                    variant="outlined"
-                                  />
-                                </TableCell>
-                                <TableCell sx={darkThemeStyles.tableCell}>{assessment.comments || '-'}</TableCell>
-                              </TableRow>
-                            ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                    <TablePagination
-                      rowsPerPageOptions={[10, 25, 50]}
-                      component="div"
-                      count={labAssessments.length}
-                      rowsPerPage={labRowsPerPage}
-                      page={labPage}
-                      onPageChange={(e, newPage) => setLabPage(newPage)}
-                      onRowsPerPageChange={(e) => {
-                        setLabRowsPerPage(parseInt(e.target.value, 10));
-                        setLabPage(0);
-                      }}
-                      sx={{
-                        ...darkThemeStyles.tablePagination,
-                        color: colors.textPrimary,
-                        "& .MuiTablePagination-select": {
-                          color: colors.textPrimary
-                        },
-                        "& .MuiTablePagination-selectIcon": {
-                          color: colors.textPrimary
-                        }
-                      }}
-                      labelRowsPerPage={
-                        <Typography color={colors.textPrimary}>Rows per page:</Typography>
-                      }
-                    />
-                  </>
-                ) : (
-                  <Paper sx={{ p: 3, textAlign: 'center', ...darkThemeStyles.paper }}>
-                    <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                      No lab assessments found for this team
-                    </Typography>
-                  </Paper>
-                )}
-              </Box>
-            )}
-
-            {/* Tab index 6 now corresponds to Smart Reports */}
-
-            {/* 8. REPORTS (Index 6 after removal of Leaderboard tab) */}
-            {activeTab === 6 && (
-              <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                  <Typography variant="h5" sx={{ color: colors.primary }}>Advanced Analytics & Reporting</Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={generatingReport ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <PictureAsPdfIcon />}
-                    onClick={handleGenerateFullReport}
-                    disabled={generatingReport || (quizResults.length === 0 && jobAssessments.length === 0 && labAssessments.length === 0)}
-                    sx={{
-                      bgcolor: colors.primary,
-                      '&:hover': { bgcolor: colors.primary, opacity: 0.9 },
-                      '&:disabled': { bgcolor: colors.textSecondary }
-                    }}
-                  >
-                    {generatingReport ? 'Generating...' : 'Generate Full Evaluation'}
-                  </Button>
-                </Box>
-
-                <Grid container spacing={3}>
-                  {/* Strategic Benchmarking */}
-                  <Grid item xs={12} md={4}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <TrendingUpIcon /> Strategic Benchmarking
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {(() => {
-                          const avgMastery = Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3);
-                          const isMaster = avgMastery >= 85;
-                          return (
-                            <>
-                              <Box>
-                                <Typography variant="caption" color={colors.textSecondary}>Current Status</Typography>
-                                <Typography variant="h5" sx={{ fontWeight: 700, color: isMaster ? colors.success : colors.warning }}>
-                                  {isMaster ? 'Mastery Level' : 'Development Phase'}
-                                </Typography>
-                              </Box>
-                              <Box>
-                                <Typography variant="caption" color={colors.textSecondary}>Distance to Top Tier</Typography>
-                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                  {avgMastery >= 90 ? 'Elite (Top 5%)' : `${90 - avgMastery}% to Elite`}
-                                </Typography>
-                                <LinearProgress
-                                  variant="determinate"
-                                  value={Math.min(100, (avgMastery / 90) * 100)}
-                                  sx={{ mt: 1, height: 6, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: colors.primary } }}
-                                />
-                              </Box>
-                              <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                <Typography variant="caption" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>
-                                  {avgMastery < 70 ? 'Recommendation: Remedial training required in core domains.'
-                                    : avgMastery < 85 ? 'Recommendation: Focus on consistency and error reduction.'
-                                      : 'Recommendation: Maintain performance; mentor other teams.'}
-                                </Typography>
-                              </Box>
-                            </>
-                          );
-                        })()}
-                      </Box>
-                    </Paper>
-                  </Grid>
-
-                  {/* Operational Balance Radar */}
-                  <Grid item xs={12} md={4}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Performance Balance</Typography>
-                      <ResponsiveContainer width="100%" height={280}>
-                        <RadarChart data={[
-                          {
-                            subject: 'Theoretical',
-                            score: calculateAverageScore(quizResults),
-                            fullMark: 100
-                          },
-                          {
-                            subject: 'Practical',
-                            score: calculateAverageScore(jobAssessments) * 20, // Scale to 100
-                            fullMark: 100
-                          },
-                          {
-                            subject: 'Lab',
-                            score: calculateAverageScore(labAssessments),
-                            fullMark: 100
-                          }
-                        ]}>
-                          <PolarGrid stroke={colors.border} />
-                          <PolarAngleAxis dataKey="subject" tick={{ fill: colors.textPrimary, fontSize: 10 }} />
-                          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: colors.textSecondary, fontSize: 8 }} />
-                          <Radar name="Score" dataKey="score" stroke={colors.primary} fill={colors.primary} fillOpacity={0.3} />
-                          <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }}
-                            formatter={(value) => `${Math.round(value)}%`}
-                          />
-                        </RadarChart>
-                      </ResponsiveContainer>
-                    </Paper>
-                  </Grid>
-
-                  {/* Strengths & Weaknesses */}
-                  <Grid item xs={12} md={4}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Strengths & Weaknesses</Typography>
-                      {(() => {
-                        const { strengths, weaknesses } = identifyStrengthsAndWeaknesses();
-                        return (
-                          <Box>
-                            <Typography variant="subtitle2" sx={{ color: colors.success, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <CheckCircleIcon fontSize="small" /> Top Strengths
+                  <Grid container spacing={3}>
+                    {/* High Level KPI Cards */}
+                    {[
+                      {
+                        title: 'NPS Tickets',
+                        value: stats.technicalTasksCount,
+                        unit: 'Total',
+                        desc: `Detractors: ${stats.technicalDetractors} | Neutrals: ${stats.technicalNeutrals}`,
+                        color: colors.warning,
+                        icon: <Assignment />
+                      },
+                      {
+                        title: 'Customer Issues (Snags and Complaints)',
+                        value: stats.customerIssuesCount,
+                        unit: 'Reported',
+                        desc: `${stats.resolutionRate}% Resolution Rate`,
+                        color: colors.error,
+                        icon: <SupportAgent />
+                      },
+                      {
+                        title: 'Theoretical Score',
+                        value: calculateAverageScore(quizResults),
+                        max: 100,
+                        unit: '%',
+                        desc: 'Average Quiz Performance',
+                        color: colors.primary,
+                        icon: <Quiz />
+                      },
+                      {
+                        title: 'Practical Score',
+                        value: calculateAverageScore(jobAssessments),
+                        max: 5,
+                        unit: '/ 5',
+                        desc: 'Field Assessment Proficiency',
+                        color: colors.success,
+                        icon: <CheckCircle />
+                      },
+                      {
+                        title: 'Lab Score',
+                        value: calculateAverageScore(labAssessments),
+                        max: 100,
+                        unit: '%',
+                        desc: 'Average Lab Proficiency',
+                        color: colors.info,
+                        icon: <Assessment />
+                      },
+                    ].map((kpi, i) => (
+                      <Grid item xs={12} sm={6} md={2.4} key={i}>
+                        <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 3, position: 'relative', height: '100%' }}>
+                          <Box sx={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: kpi.color }} />
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                            <Typography variant="overline" sx={{ color: colors.textSecondary, letterSpacing: 1.2, fontWeight: 600 }}>
+                              {kpi.title}
                             </Typography>
-                            {strengths.length > 0 ? (
-                              <Box sx={{ mb: 3 }}>
-                                {strengths.map((s, i) => (
-                                  <Chip
-                                    key={i}
-                                    label={`${s.name}: ${Math.round(s.score)}%`}
-                                    size="small"
-                                    sx={{ m: 0.5, bgcolor: `${colors.success}22`, color: colors.success, borderColor: colors.success }}
-                                    variant="outlined"
-                                  />
-                                ))}
-                              </Box>
-                            ) : (
-                              <Typography variant="body2" color={colors.textSecondary} sx={{ mb: 3 }}>No data available</Typography>
-                            )}
-
-                            <Typography variant="subtitle2" sx={{ color: colors.error, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <CancelIcon fontSize="small" /> Areas for Improvement
-                            </Typography>
-                            {weaknesses.length > 0 ? (
-                              <Box>
-                                {weaknesses.map((w, i) => (
-                                  <Chip
-                                    key={i}
-                                    label={`${w.name}: ${Math.round(w.score)}%`}
-                                    size="small"
-                                    sx={{ m: 0.5, bgcolor: `${colors.error}22`, color: colors.error, borderColor: colors.error }}
-                                    variant="outlined"
-                                  />
-                                ))}
-                              </Box>
-                            ) : (
-                              <Typography variant="body2" color={colors.textSecondary}>No data available</Typography>
-                            )}
+                            <Box sx={{ color: kpi.color, opacity: 0.8 }}>
+                              {kpi.icon}
+                            </Box>
                           </Box>
-                        );
-                      })()}
-                    </Paper>
-                  </Grid>
-
-                  {/* Mastery & Consistency Metrics */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Consistency & Mastery Analysis</Typography>
-                      <Grid container spacing={2}>
-                        {[
-                          { label: 'Overall Mastery', value: `${Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3)}%`, color: colors.primary },
-                          { label: 'Theoretical Volatility', value: `${Math.round(calculateStandardDeviation(quizResults))}%`, color: colors.warning },
-                          { label: 'Practical Consistency', value: calculateStandardDeviation(jobAssessments) < 10 ? 'High' : 'Variable', color: colors.success },
-                          { label: 'Lab Mastery Rate', value: `${Math.round(calculatePercentageAboveThreshold(labAssessments, 80))}%`, color: colors.primary }
-                        ].map((metric, i) => (
-                          <Grid item xs={6} key={i}>
-                            <Card sx={{ bgcolor: colors.surfaceElevated, border: `1px solid ${colors.border}` }}>
-                              <CardContent sx={{ p: 2 }}>
-                                <Typography variant="caption" color={colors.textSecondary}>{metric.label}</Typography>
-                                <Typography variant="h6" sx={{ color: metric.color, fontWeight: 'bold' }}>{metric.value}</Typography>
-                              </CardContent>
-                            </Card>
-                          </Grid>
-                        ))}
+                          <Typography variant="h3" sx={{ fontWeight: 800, color: '#fff', mb: 0.5 }}>
+                            {typeof kpi.value === 'number' ?
+                              (kpi.max === 5 ? kpi.value.toFixed(1) : Math.round(kpi.value))
+                              : kpi.value}
+                            <Typography component="span" variant="h6" sx={{ color: colors.textSecondary, ml: 1 }}>{kpi.unit}</Typography>
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block' }}>
+                            {kpi.desc}
+                          </Typography>
+                        </Paper>
                       </Grid>
-                    </Paper>
-                  </Grid>
+                    ))}
 
-                  {/* Process Efficiency Analysis */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                      <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Process Efficiency Analysis</Typography>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {[
-                          { label: 'Avg Dispatch Speed', value: stats.avgDispatchTime, unit: 'days', color: colors.info },
-                          { label: 'Avg Resolution Speed', value: stats.avgResolutionTime, unit: 'days', color: colors.success },
-                          { label: 'Full Lifecycle Time', value: stats.avgLifecycleTime, unit: 'days', color: colors.warning }
-                        ].map((metric, i) => (
-                          <Box key={i}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                              <Typography variant="body2" color={colors.textSecondary}>{metric.label}</Typography>
-                              <Typography variant="body2" fontWeight="bold" sx={{ color: metric.color }}>{metric.value} {metric.unit}</Typography>
-                            </Box>
-                            <LinearProgress
-                              variant="determinate"
-                              value={Math.min(100, (metric.value / 10) * 100)}
-                              sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: metric.color } }}
-                            />
-                          </Box>
-                        ))}
-                        <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(59, 130, 246, 0.05)', borderRadius: 2, border: '1px solid rgba(59, 130, 246, 0.1)' }}>
-                          <Typography variant="caption" sx={{ color: colors.info, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Info sx={{ fontSize: '1rem' }} /> Values normalized against 10-day benchmark.
-                          </Typography>
+                    {/* Operational Efficiency & Deep Stats */}
+                    <Grid item xs={12} md={8}>
+                      <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450, display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>Operational Efficiency & Responsivity</Typography>
+                          <Chip
+                            label="Live Operational Data"
+                            size="small"
+                            sx={{ bgcolor: `${colors.primary}20`, color: colors.primary, fontWeight: 700, border: `1px solid ${colors.primary}40` }}
+                          />
                         </Box>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                </Grid>
-              </Box>
-            )}
+                        <Box sx={{ flex: 1, minHeight: 0 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RechartsBarChart
+                              data={operationalEfficiencyData}
+                              layout="vertical"
+                              margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                              <XAxis type="number" domain={[0, 100]} hide />
+                              <YAxis
+                                type="category"
+                                dataKey="name"
+                                stroke={colors.textSecondary}
+                                fontSize={12}
+                                width={120}
+                              />
+                              <RechartsTooltip
+                                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                              />
+                              <RechartsBar dataKey="value" radius={[0, 4, 4, 0]} barSize={32}>
+                                {operationalEfficiencyData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </RechartsBar>
+                            </RechartsBarChart>
+                          </ResponsiveContainer>
+                        </Box>
 
-            {/* Performance Summary Section */}
-            {(quizResults.length > 0 || jobAssessments.length > 0 || labAssessments.length > 0) && (
-              <Box sx={{ mt: 5 }}>
-                <Typography variant="h5" sx={{ color: colors.primary, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Assessment /> Advanced Analytics
-                </Typography>
-
-                <Grid container spacing={3}>
-                  {[
-                    { name: 'Theoretical', data: quizResults, color: colors.primary },
-                    { name: 'Practical', data: jobAssessments, color: colors.success },
-                    { name: 'Lab', data: labAssessments, color: colors.warning }
-                  ].filter(group => group.data.length > 0).map((group, idx) => (
-                    <Grid item xs={12} key={idx}>
-                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, position: 'relative' }}>
-                        <Typography variant="h6" sx={{ color: group.color, mb: 2 }}>{group.name} Analytics</Typography>
-                        <Grid container spacing={4}>
-                          <Grid item xs={12} md={4}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <Typography color={colors.textSecondary}>Median Score</Typography>
-                                <Typography fontWeight="bold">{Math.round(calculateMedianScore(group.data))}%</Typography>
+                        {/* Deep Stats Sub-grid */}
+                        <Grid container spacing={2} sx={{ mt: 2 }}>
+                          {[
+                            { label: 'Reliability Index', value: `${deepStats.reliabilityIndex}%`, icon: <TrendingUpIcon fontSize="small" />, color: colors.secondary },
+                            { label: 'Avg Resolution', value: `${deepStats.avgResolutionSpeed}d`, icon: <Schedule fontSize="small" />, color: colors.info },
+                            { label: 'Aging Issues', value: deepStats.highAgingCount, icon: <Warning fontSize="small" />, color: colors.error },
+                            { label: 'Express Fixes', value: deepStats.expressResolutionCount, icon: <CheckCircleIcon fontSize="small" />, color: colors.success },
+                          ].map((s, i) => (
+                            <Grid item xs={3} key={i}>
+                              <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+                                  <Box sx={{ color: s.color, display: 'flex' }}>{s.icon}</Box>
+                                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', fontSize: '1rem' }}>{s.value}</Typography>
+                                </Box>
+                                <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.65rem', display: 'block' }}>{s.label}</Typography>
                               </Box>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <Typography color={colors.textSecondary}>Volatility (StdDev)</Typography>
-                                <Typography fontWeight="bold">{Math.round(calculateStandardDeviation(group.data))}%</Typography>
-                              </Box>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <Typography color={colors.textSecondary}>Top Score</Typography>
-                                <Typography sx={{ color: colors.success }} fontWeight="bold">{calculateHighestScore(group.data)}%</Typography>
-                              </Box>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <Typography color={colors.textSecondary}>Mastery Rate ({'>'}80%)</Typography>
-                                <Typography fontWeight="bold">{Math.round(calculatePercentageAboveThreshold(group.data, 80))}%</Typography>
-                              </Box>
-                            </Box>
-                          </Grid>
-                          <Grid item xs={12} md={8}>
-                            <Box sx={{ height: 200 }}>
-                              <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={group.data.map(item => ({
-                                  date: formatDate(item.submittedAt || item.assessmentDate || item.createdAt),
-                                  score: item.percentage || item.overallScore || item.totalScore || 0
-                                })).reverse()}>
-                                  <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
-                                  <XAxis dataKey="date" hide />
-                                  <YAxis domain={[0, 100]} hide />
-                                  <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
-                                  <Area
-                                    type="monotone"
-                                    dataKey="score"
-                                    stroke={group.color}
-                                    fill={group.color}
-                                    fillOpacity={0.1}
-                                    strokeWidth={2}
-                                  />
-                                </AreaChart>
-                              </ResponsiveContainer>
-                            </Box>
-                          </Grid>
+                            </Grid>
+                          ))}
                         </Grid>
                       </Paper>
                     </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            )}
-          </Box>
-        )
-      }
-      <ViewIssueDetailsDialog
-        open={detailIssueOpen}
-        onClose={() => setDetailIssueOpen(false)}
-        issue={selectedDetailIssue}
-        onUpdate={() => {
-          // Refresh data if needed, but since we are in drill-down,
-          // maybe just update local state or dispatch global refresh
-          window.dispatchEvent(new CustomEvent('cin-refresh'));
-        }}
-      />
 
-      <ProfessionalChartDialog
-        open={chartDialog.open}
-        onClose={() => setChartDialog({ ...chartDialog, open: false })}
-        title={chartDialog.title}
-        data={chartDialog.data}
-        type={chartDialog.type}
-        stackKeys={chartDialog.stackKeys}
-      />
+                    <Grid item xs={12} md={4}>
+                      <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450, display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="h6" sx={{ mb: 3, color: '#fff', fontWeight: 600 }}>Recent Activity</Typography>
+                        <Box sx={{ flex: 1, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {allActivities.slice(0, 15).map((activity, idx) => (
+                              <Box key={activity.id || idx} sx={{
+                                p: 2,
+                                borderRadius: '16px',
+                                bgcolor: 'rgba(255,255,255,0.02)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                '&:hover': {
+                                  bgcolor: 'rgba(255,255,255,0.04)',
+                                  borderColor: `${activity.color}40`,
+                                  transform: 'translateX(4px)'
+                                }
+                              }}>
+                                {/* Vertical Accent */}
+                                <Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', bgcolor: activity.color, opacity: 0.6 }} />
 
-      {/* Analytics Drill-Down Dialog */}
-      <Dialog
-        open={analyticsDrillDown.open}
-        onClose={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))}
-        fullWidth
-        maxWidth="lg"
-        PaperProps={{
-          sx: {
-            backgroundColor: '#1a1a1a',
-            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
-            borderRadius: '24px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            minHeight: '60vh'
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          pb: 1,
-          borderBottom: '1px solid rgba(255,255,255,0.1)'
-        }}>
-          <Box>
-            <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 0.5 }}>
-              Task List
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
-              {analyticsDrillDown.title} ({analyticsDrillDown.tasks.length} Tasks)
-            </Typography>
-          </Box>
-          <IconButton onClick={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))} sx={{ color: '#fff' }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Week</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Sub-Reason</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Root Cause</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Feedback</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {analyticsDrillDown.tasks.map((task) => (
-                  <TableRow key={task._id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}>
-                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                      {task.interviewDate ? getWeekNumber(task.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber).week : '-'}
-                    </TableCell>
-                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
-                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
-                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
-                      {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
-                    </TableCell>
-                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
-                      {Array.isArray(task.subReason) ? task.subReason.join(', ') : task.subReason || '-'}
-                    </TableCell>
-                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
-                      {Array.isArray(task.rootCause) ? task.rootCause.join(', ') : task.rootCause || '-'}
-                    </TableCell>
-                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
-                      {[...new Set(splitValues(task.responsible || task.assignedTo?.name))].join(', ') || '-'}
-                    </TableCell>
-                    <TableCell sx={{ color: alpha('#fff', 0.6), fontSize: '0.7rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {task.customerFeedback || '-'}
-                    </TableCell>
-                    <TableCell>
-                      {task.evaluationScore !== undefined && task.evaluationScore !== null && (
-                        <Chip
-                          label={task.evaluationScore}
-                          size="small"
-                          sx={{
-                            height: 20,
-                            fontSize: '0.65rem',
-                            fontWeight: 'bold',
-                            bgcolor: task.evaluationScore >= 9 ? 'rgba(76, 175, 80, 0.2)' :
-                              task.evaluationScore >= 7 ? 'rgba(255, 152, 0, 0.2)' : 'rgba(244, 67, 54, 0.2)',
-                            color: task.evaluationScore >= 9 ? '#4caf50' :
-                              task.evaluationScore >= 7 ? '#ff9800' : '#f44336'
-                          }}
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell align="right">
+                                <Stack spacing={1}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <Stack direction="row" spacing={1.5} alignItems="center">
+                                      <Box sx={{
+                                        p: 1,
+                                        borderRadius: '10px',
+                                        bgcolor: `${activity.color}15`,
+                                        color: activity.color,
+                                        display: 'flex',
+                                        backdropFilter: 'blur(4px)'
+                                      }}>
+                                        {activity.icon}
+                                      </Box>
+                                      <Box>
+                                        <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 0.2, fontSize: '0.65rem' }}>
+                                          {activity.title}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, lineHeight: 1.3 }}>
+                                          {activity.detail}
+                                        </Typography>
+                                      </Box>
+                                    </Stack>
+                                    <Typography variant="caption" sx={{ color: colors.textSecondary, whiteSpace: 'nowrap', fontSize: '0.7rem', opacity: 0.7 }}>
+                                      {formatDate(activity.date)}
+                                    </Typography>
+                                  </Box>
+
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', fontWeight: 400 }}>
+                                      {activity.metadata}
+                                    </Typography>
+                                    {activity.status && (
+                                      <Chip
+                                        label={activity.status}
+                                        size="small"
+                                        sx={{
+                                          height: '20px',
+                                          fontSize: '0.62rem',
+                                          fontWeight: 800,
+                                          textTransform: 'uppercase',
+                                          bgcolor: `${activity.color}15`,
+                                          color: activity.color,
+                                          border: `1px solid ${activity.color}30`,
+                                          '& .MuiChip-label': { px: 1 }
+                                        }}
+                                      />
+                                    )}
+                                  </Box>
+                                </Stack>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+
+              {/* 2. CUSTOMER ISSUES TAB (Deep Insights) */}
+              {activeTab === 1 && (
+                <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Box>
+                      <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>Customer Issues Dashboard</Typography>
+                      <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                        Technical analysis and performance metrics for {selectedTeam?.teamName}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#2d2d2d', px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>From:</Typography>
+                          <TextField
+                            type="date"
+                            size="small"
+                            value={dateFilter.start}
+                            onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
+                            sx={{
+                              bgcolor: '#1a1a1a',
+                              borderRadius: 1,
+                              '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                              '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                            }}
+                          />
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>To:</Typography>
+                          <TextField
+                            type="date"
+                            size="small"
+                            value={dateFilter.end}
+                            onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
+                            sx={{
+                              bgcolor: '#1a1a1a',
+                              borderRadius: 1,
+                              '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                              '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                            }}
+                          />
+                        </Box>
+                        {(dateFilter.start || dateFilter.end) && (
+                          <Button size="small" onClick={() => setDateFilter({ start: '', end: '' })} sx={{ color: '#f44336', minWidth: 0, p: 0.5 }}>
+                            Clear
+                          </Button>
+                        )}
+                      </Box>
                       <Button
+                        variant="contained"
+                        startIcon={<FaFileExport />}
+                        disabled
+                        sx={{ bgcolor: '#4e73df', '&:hover': { bgcolor: '#2e59d9' } }}
+                      >
+                        Email Report
+                      </Button>
+                    </Box>
+                  </Box>
+
+                  {/* KPI Section - Match Reference Layout */}
+                  <Grid container spacing={2} mb={4}>
+                    <Grid item xs={12} sm={6} md={2.4}><StatCard title="Total Transactions" value={stats.totalTransactions} icon={<FaClipboardList />} color="#2196f3" subtext="Total records" /></Grid>
+                    <Grid item xs={12} sm={6} md={2.4}><StatCard title="Issues Highlighted" value={stats.totalIssuesHighlighted} icon={<FaExclamationCircle />} color="#ffc107" subtext={`Avg: ${stats.issueDensity} per txn`} /></Grid>
+                    <Grid item xs={12} sm={6} md={2.4}><StatCard title="Closed" value={stats.closed} icon={<FaCheckCircle />} color="#4caf50" subtext={`${stats.resolutionRate}% Rate`} /></Grid>
+                    <Grid item xs={12} sm={6} md={2.4}><StatCard title="Open" value={stats.open} icon={<FaExclamationCircle />} color="#f44336" subtext="Require attention" /></Grid>
+                    <Grid item xs={12} sm={6} md={2.4}><StatCard title="Avg. Daily Issues" value={(stats.totalTransactions / (trendData.labels.length || 1)).toFixed(1)} icon={<FaChartLine />} color="#ff9800" subtext="Trend metric" /></Grid>
+                  </Grid>
+
+                  {/* Process Efficiency Spotlight - Match Reference Layout */}
+                  <Box mb={4}>
+                    <Grid container spacing={4}>
+                      <Grid item xs={12} md={4}>
+                        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                          <Typography variant="subtitle2" color="grey.500" mb={1}>SUPERVISOR DISPATCH SPEED (Incl. Aging)</Typography>
+                          <Typography variant="h3" fontWeight="800" color={Number(stats.avgDispatchTime) > 1 ? "warning.main" : "info.main"}>
+                            {stats.avgDispatchTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                            Avg time from <b>Reported</b> → <b>Dispatched</b> (Or <b>Reported</b> → <b>Now</b> if pending)
+                          </Typography>
+                          <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
+                            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                              * Calculation: (Dispatched Date - Reported Date) OR (Now - Reported Date) if undispatched.
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                          <Typography variant="subtitle2" color="grey.500" mb={1}>FIELD RESOLUTION SPEED (Incl. Aging)</Typography>
+                          <Typography variant="h3" fontWeight="800" color="success.main">
+                            {stats.avgResolutionTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                            Avg time from <b>Dispatched</b> → <b>Resolved</b> (Or <b>Reported</b> → <b>Now</b> if pending)
+                          </Typography>
+                          <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
+                            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                              * Calculation: Resolved cases use (Resolved - Dispatched). Pending cases use (Now - Reported) to reflect negligence.
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                          <Typography variant="subtitle2" color="grey.500" mb={1}>TOTAL LIFECYCLE (Accountability)</Typography>
+                          <Typography variant="h3" fontWeight="800" color="white">
+                            {stats.avgLifecycleTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                            Total time from <b>Initial Report</b> → <b>Closed/Now</b>
+                          </Typography>
+                          <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
+                            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                              * Calculation: Full duration from (Report Date) to (Closed Date) OR (Now) if the case is still open.
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      </Grid>
+                    </Grid>
+                  </Box>
+
+                  {/* Charts - Match Reference Layout */}
+                  <Grid container spacing={3} mb={4}>
+                    <Grid item xs={12} lg={8}>
+                      <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                          <Typography variant="h6" fontWeight="bold">Issue Reporting Trend</Typography>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <FormControl size="small" variant="outlined">
+                              <Select
+                                value={trendTimeframe}
+                                onChange={(e) => setTrendTimeframe(e.target.value)}
+                                sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                              >
+                                <MenuItem value="day">Daily</MenuItem>
+                                <MenuItem value="week">Weekly</MenuItem>
+                                <MenuItem value="month">Monthly</MenuItem>
+                              </Select>
+                            </FormControl>
+                            <FormControl size="small" variant="outlined">
+                              <Select
+                                value={trendChartType}
+                                onChange={(e) => setTrendChartType(e.target.value)}
+                                sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                              >
+                                <MenuItem value="mixed">Mixed</MenuItem>
+                                <MenuItem value="bar">Bar</MenuItem>
+                                <MenuItem value="line">Line</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Box>
+                        </Box>
+                        <Box sx={{ height: 300 }}><Bar data={trendData} options={commonOptions} /></Box>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} lg={4}>
+                      <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
+                        <Typography variant="h6" gutterBottom fontWeight="bold">Resolution Status</Typography>
+                        <Box sx={{ height: 260, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                          <Doughnut data={statusData} options={doughnutOptions} />
+                          <Box sx={{ position: 'absolute', textAlign: 'center' }}>
+                            <Typography variant="h4" fontWeight="bold" sx={{ color: '#1cc88a' }}>{stats.resolutionRate}%</Typography>
+                            <Typography variant="caption" color="#b3b3b3">Resolved</Typography>
+                          </Box>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+
+                  {/* Detailed Issue Registry - Styled like Supervisor Performance Table */}
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 0,
+                      bgcolor: '#1e293b',
+                      borderRadius: 3,
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      overflow: 'hidden',
+                      background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                    }}
+                  >
+                    <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.02)' }}>
+                      <Box>
+                        <Typography variant="h6" fontWeight="700" color="#f8fafc">
+                          Issue History & Registry
+                        </Typography>
+                        <Typography variant="body2" color="#94a3b8" sx={{ mt: 0.5 }}>
+                          Full list of issues associated with this team
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={`${filteredIssuesByDate.length} Records`}
                         size="small"
-                        variant="text"
-                        onClick={() => {
-                          setSelectedTask(task);
-                          setViewDialogOpen(true);
+                        sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)', fontWeight: 600 }}
+                      />
+                    </Box>
+                    <Box sx={{ width: '100%', overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+                        <thead>
+                          <tr style={{ background: '#0f172a' }}>
+                            <th style={{ padding: '16px 24px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Date</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>SLID</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Reporter</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Category</th>
+                            <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredIssuesByDate
+                            .slice(issuesPage * issuesRowsPerPage, issuesPage * issuesRowsPerPage + issuesRowsPerPage)
+                            .map((issue) => (
+                              <tr
+                                key={issue._id}
+                                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background-color 0.2s ease' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                              >
+                                <td style={{ padding: '16px 24px', color: '#f8fafc', fontSize: '0.85rem' }}>{formatDate(issue.date || issue.createdAt)}</td>
+                                <td style={{ padding: '16px', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.85rem' }}>{issue.slid}</td>
+                                <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{issue.reporter || 'N/A'}</td>
+                                <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                  {issue.issues?.[0]?.category || issue.issueCategory || 'Uncategorized'}
+                                  <Typography variant="caption" sx={{ display: 'block', color: '#64748b' }}>{issue.issues?.[0]?.subCategory || '-'}</Typography>
+                                </td>
+                                <td style={{ padding: '16px', textAlign: 'center' }}>
+                                  <Chip
+                                    label={issue.solved === 'yes' ? 'Closed' : 'Open'}
+                                    size="small"
+                                    sx={{
+                                      bgcolor: issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                      color: issue.solved === 'yes' ? '#4ade80' : '#f87171',
+                                      border: `1px solid ${issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                                      fontWeight: 600
+                                    }}
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                      <TablePagination
+                        rowsPerPageOptions={[10, 25, 50]}
+                        component="div"
+                        count={filteredIssuesByDate.length}
+                        rowsPerPage={issuesRowsPerPage}
+                        page={issuesPage}
+                        onPageChange={(e, p) => setIssuesPage(p)}
+                        onRowsPerPageChange={(e) => {
+                          setIssuesRowsPerPage(parseInt(e.target.value, 10));
+                          setIssuesPage(0);
                         }}
-                        sx={{
-                          textTransform: 'none',
-                          color: '#7b68ee',
-                          fontWeight: 'bold',
-                          '&:hover': { bgcolor: alpha('#7b68ee', 0.1) }
+                        sx={{ color: '#94a3b8' }}
+                      />
+                    </Box>
+                  </Paper>
+                </Box>
+              )}
+
+              {/* 3. TASKS & TICKETS TAB (Full Premium Dashboard) */}
+              {activeTab === 2 && (
+                <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Box>
+                      <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>NPS Tickets</Typography>
+                      <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                        Operational workload and technical assessment registry for {selectedTeam?.teamName}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<FaFileExcel />}
+                        sx={{ color: colors.success, borderColor: colors.success }}
+                        onClick={() => {
+                          const data = technicalTasks.map(t => ({
+                            SLID: t.slid,
+                            'Request Number': t.requestNumber,
+                            'Customer Name': t.customerName,
+                            'PIS Date': t.pisDate ? new Date(t.pisDate).toLocaleDateString() : 'N/A',
+                            Priority: t.priority,
+                            Status: t.validationStatus,
+                            Score: t.evaluationScore || 'N/A'
+                          }));
+                          const ws = XLSX.utils.json_to_sheet(data);
+                          const wb = XLSX.utils.book_new();
+                          XLSX.utils.book_append_sheet(wb, ws, "Tasks");
+                          XLSX.writeFile(wb, `${selectedTeam.teamName}_Technical_Tasks.xlsx`);
                         }}
                       >
-                        View Details
+                        Export Excel
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-      </Dialog>
+                    </Box>
+                  </Box>
 
-      {/* Task Details Dialog */}
-      {selectedTask && (
-        <TaskDetailsDialog
-          open={viewDialogOpen}
-          onClose={() => {
-            setViewDialogOpen(false);
-            setSelectedTask(null);
-          }}
-          tasks={[selectedTask]}
-          teamName={selectedTask.teamName || "Unknown Team"}
-          onTaskUpdated={fetchGlobalData}
-        />
-      )}
+                  {/* Technical KPI Section */}
+                  <Grid container spacing={2} mb={4}>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <StatCard
+                        title="Total Tasks"
+                        value={technicalTasks.length}
+                        icon={<FaClipboardList />}
+                        color={colors.primary}
+                        subtext="Technical workload"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <StatCard
+                        title="High Priority"
+                        value={technicalTasks.filter(t => t.priority === 'High').length}
+                        icon={<PriorityHigh />}
+                        color={colors.error}
+                        subtext="Requires urgent action"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <StatCard
+                        title="Detractors"
+                        value={technicalTasks.filter(t => t.evaluationScore > 0 && t.evaluationScore <= 60).length}
+                        icon={<FaExclamationCircle />}
+                        color={colors.warning}
+                        subtext="Score below 60%"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <StatCard
+                        title="Avg. Quality"
+                        value={(() => {
+                          const evaluated = technicalTasks.filter(t => t.evaluationScore > 0);
+                          return evaluated.length > 0 ? (evaluated.reduce((a, b) => a + b.evaluationScore, 0) / evaluated.length).toFixed(1) : 'N/A';
+                        })()}
+                        icon={<CheckCircle />}
+                        color={colors.success}
+                        subtext="Technical score avg"
+                      />
+                    </Grid>
+                  </Grid>
 
-    </Box >
+                  {/* Technical Charts */}
+                  <Grid container spacing={3} mb={4}>
+                    <Grid item xs={12} lg={6}>
+                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Task Distribution by Priority</Typography>
+                        <Box sx={{ height: 300 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RechartsBarChart data={[
+                              { name: 'High', value: technicalTasks.filter(t => t.priority === 'High').length, color: colors.error },
+                              { name: 'Medium', value: technicalTasks.filter(t => t.priority === 'Medium').length, color: colors.warning },
+                              { name: 'Low', value: technicalTasks.filter(t => t.priority === 'Low').length, color: colors.success },
+                            ]}>
+                              <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
+                              <XAxis dataKey="name" stroke={colors.textSecondary} fontSize={12} />
+                              <YAxis stroke={colors.textSecondary} fontSize={12} />
+                              <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                              <RechartsBar dataKey="value" radius={[4, 4, 0, 0]}>
+                                {[colors.error, colors.warning, colors.success].map((color, idx) => <Cell key={`cell-${idx}`} fill={color} />)}
+                              </RechartsBar>
+                            </RechartsBarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} lg={6}>
+                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Operational Status</Typography>
+                        <Box sx={{ height: 300 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RechartsPieChart>
+                              <RechartsPie
+                                data={[
+                                  { name: 'Validated', value: technicalTasks.filter(t => t.validationStatus === 'Validated').length, color: colors.success },
+                                  { name: 'Pending', value: technicalTasks.filter(t => t.validationStatus === 'Pending').length, color: colors.warning },
+                                  { name: 'Rejected', value: technicalTasks.filter(t => t.validationStatus === 'Rejected').length, color: colors.error },
+                                ].filter(d => d.value > 0)}
+                                cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
+                              >
+                                {[colors.success, colors.warning, colors.error].map((color, idx) => <Cell key={`cell-${idx}`} fill={color} />)}
+                              </RechartsPie>
+                              <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                              <RechartsLegend verticalAlign="bottom" height={36} />
+                            </RechartsPieChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+
+                  {/* Task Registry Table */}
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 0,
+                      bgcolor: '#1e293b',
+                      borderRadius: 3,
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      overflow: 'hidden',
+                      background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+                    }}
+                  >
+                    <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="h6" fontWeight="700" color="#f8fafc">Technical Task Registry</Typography>
+                      <Chip label={`${technicalTasks.length} Tasks`} size="small" sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }} />
+                    </Box>
+                    <Box sx={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead style={{ background: '#0f172a' }}>
+                          <tr>
+                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>REQUEST NO</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>CUSTOMER</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>SLID</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>PIS DATE</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>PRIORITY</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>STATUS</th>
+                            <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>SCORE</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {technicalTasks.map((task) => (
+                            <tr key={task._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: '0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                              <td style={{ padding: '16px', color: '#fff', fontSize: '0.85rem' }}>{task.requestNumber || 'N/A'}</td>
+                              <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{task.customerName}</td>
+                              <td style={{ padding: '16px', color: colors.primary, fontWeight: 'bold' }}>{task.slid}</td>
+                              <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>{formatDate(task.pisDate || task.createdAt)}</td>
+                              <td style={{ padding: '16px' }}>
+                                <Chip label={task.priority} size="small" color={task.priority === 'High' ? 'error' : task.priority === 'Medium' ? 'warning' : 'success'} variant="outlined" />
+                              </td>
+                              <td style={{ padding: '16px' }}>
+                                <Chip
+                                  label={task.validationStatus}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: task.validationStatus === 'Validated' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                                    color: task.validationStatus === 'Validated' ? '#4ade80' : '#facc15',
+                                    border: `1px solid ${task.validationStatus === 'Validated' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)'}`
+                                  }}
+                                />
+                              </td>
+                              <td style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold', color: (task.evaluationScore && (task.evaluationScore > 80 || (task.evaluationScore <= 10 && task.evaluationScore > 8))) ? colors.success : colors.warning }}>
+                                {task.evaluationScore ? `${task.evaluationScore}${task.evaluationScore <= 10 ? '/10' : '%'}` : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </Box>
+                  </Paper>
+                </Box>
+              )}
+
+              {/* 4. THEORETICAL ASSESSMENTS (Updated Styling) */}
+              {activeTab === 3 && (
+                <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Box>
+                      <Typography variant="h5" sx={{ color: colors.primary }}>Theoretical Assessments</Typography>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<TableChartIcon />}
+                          onClick={exportTheoreticalToExcel}
+                          disabled={quizResults.length === 0}
+                          sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
+                        >
+                          Pro Excel
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<PictureAsPdfIcon />}
+                          onClick={() => exportTestToPDF('theoretical', quizResults)}
+                          disabled={quizResults.length === 0}
+                          sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
+                        >
+                          Pro PDF Report
+                        </Button>
+                      </Box>
+                    </Box>
+                    <Chip
+                      label={`Avg: ${Math.round(calculateAverageScore(quizResults))}%`}
+                      variant="outlined"
+                      sx={{ borderColor: getPerformanceColor(calculateAverageScore(quizResults), 'quiz'), color: getPerformanceColor(calculateAverageScore(quizResults), 'quiz') }}
+                    />
+                  </Box>
+
+                  {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                      <CircularProgress sx={{ color: colors.primary }} />
+                    </Box>
+                  ) : quizResults.length > 0 ? (
+                    <>
+                      <TableContainer component={Paper} sx={{
+                        mb: 2,
+                        ...darkThemeStyles.paper,
+                        "& .MuiTable-root": darkThemeStyles.table
+                      }}>
+                        <Table>
+                          <TableHead sx={darkThemeStyles.tableHead}>
+                            <TableRow>
+                              <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Quiz Code</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Score</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Correct Answers</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Percentage</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {quizResults
+                              .slice(quizPage * quizRowsPerPage, quizPage * quizRowsPerPage + quizRowsPerPage)
+                              .map((result) => (
+                                <TableRow key={result._id}
+                                  sx={{
+                                    "&:hover": {
+                                      backgroundColor: colors.tableRowHover
+                                    }
+                                  }}
+                                >
+                                  <TableCell sx={darkThemeStyles.tableCell}>{formatDate(result.submittedAt)}</TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>{result.quizCode}</TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>
+                                    <Chip
+                                      label={result.score}
+                                      sx={{
+                                        bgcolor: `${getPerformanceColor(result.percentage)}22`,
+                                        color: getPerformanceColor(result.percentage),
+                                        borderColor: getPerformanceColor(result.percentage),
+                                        fontWeight: 'bold'
+                                      }}
+                                      variant="outlined"
+                                    />
+                                  </TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>{result.correctAnswers}/{result.totalQuestions}</TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>{result.percentage}%</TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                      <TablePagination
+                        rowsPerPageOptions={[10, 25, 50]}
+                        component="div"
+                        count={quizResults.length}
+                        rowsPerPage={quizRowsPerPage}
+                        page={quizPage}
+                        onPageChange={(e, newPage) => setQuizPage(newPage)}
+                        onRowsPerPageChange={(e) => {
+                          setQuizRowsPerPage(parseInt(e.target.value, 10));
+                          setQuizPage(0);
+                        }}
+                        sx={{
+                          ...darkThemeStyles.tablePagination,
+                          color: colors.textPrimary,
+                          "& .MuiTablePagination-select": {
+                            color: colors.textPrimary
+                          },
+                          "& .MuiTablePagination-selectIcon": {
+                            color: colors.textPrimary
+                          }
+                        }}
+                        labelRowsPerPage={
+                          <Typography color={colors.textPrimary}>Rows per page:</Typography>
+                        }
+                      />
+                    </>
+                  ) : (
+                    <Paper sx={{ p: 3, textAlign: 'center', ...darkThemeStyles.paper }}>
+                      <Typography variant="body1" sx={{ color: colors.textSecondary }}>
+                        No theoretical assessments found for this team
+                      </Typography>
+                    </Paper>
+                  )}
+                </Box>
+              )}
+
+              {/* 5. PRACTICAL ASSESSMENTS (Updated Styling) */}
+              {activeTab === 4 && (
+                <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Box>
+                      <Typography variant="h5" sx={{ color: colors.primary }}>Practical Assessments</Typography>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<TableChartIcon />}
+                          onClick={exportPracticalToExcel}
+                          disabled={jobAssessments.length === 0}
+                          sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
+                        >
+                          Pro Excel
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<PictureAsPdfIcon />}
+                          onClick={() => exportTestToPDF('practical', jobAssessments)}
+                          disabled={jobAssessments.length === 0}
+                          sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
+                        >
+                          Pro PDF Report
+                        </Button>
+                      </Box>
+                    </Box>
+                    <Chip
+                      label={`Avg: ${Number(calculateAverageScore(jobAssessments)).toFixed(1)}/5`}
+                      variant="outlined"
+                      sx={{ borderColor: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical'), color: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical') }}
+                    />
+                  </Box>
+
+                  {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                      <CircularProgress sx={{ color: colors.primary }} />
+                    </Box>
+                  ) : jobAssessments.length > 0 ? (
+                    <>
+                      <TableContainer component={Paper} sx={{
+                        mb: 2,
+                        ...darkThemeStyles.paper,
+                        "& .MuiTable-root": darkThemeStyles.table
+                      }}>
+                        <Table>
+                          <TableHead sx={darkThemeStyles.tableHead}>
+                            <TableRow>
+                              <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Conducted By</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Score</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Status</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {jobAssessments
+                              .slice(jobPage * jobRowsPerPage, jobPage * jobRowsPerPage + jobRowsPerPage)
+                              .map((assessment) => (
+                                <TableRow key={assessment._id}
+                                  sx={{
+                                    "&:hover": {
+                                      backgroundColor: colors.tableRowHover
+                                    }
+                                  }}
+                                >
+                                  <TableCell sx={darkThemeStyles.tableCell}>{formatDate(assessment.assessmentDate)}</TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>{assessment.conductedBy}</TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>
+                                    <Chip
+                                      label={`${Number(assessment.overallScore).toFixed(1)}/5`}
+                                      sx={{
+                                        bgcolor: `${getAssessmentStatus(assessment.overallScore, 'practical').color}22`,
+                                        color: getAssessmentStatus(assessment.overallScore, 'practical').color,
+                                        borderColor: getAssessmentStatus(assessment.overallScore, 'practical').color,
+                                        border: '1px solid',
+                                        fontWeight: 'bold'
+                                      }}
+                                      variant="outlined"
+                                    />
+                                  </TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>
+                                    <Chip
+                                      label={getAssessmentStatus(assessment.overallScore, 'practical').label}
+                                      size="small"
+                                      sx={{
+                                        borderColor: getAssessmentStatus(assessment.overallScore, 'practical').color,
+                                        color: getAssessmentStatus(assessment.overallScore, 'practical').color,
+                                        border: '1px solid'
+                                      }}
+                                      variant="outlined"
+                                    />
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                      <TablePagination
+                        rowsPerPageOptions={[10, 25, 50]}
+                        component="div"
+                        count={jobAssessments.length}
+                        rowsPerPage={jobRowsPerPage}
+                        page={jobPage}
+                        onPageChange={(e, newPage) => setJobPage(newPage)}
+                        onRowsPerPageChange={(e) => {
+                          setJobRowsPerPage(parseInt(e.target.value, 10));
+                          setJobPage(0);
+                        }}
+                        sx={{
+                          ...darkThemeStyles.tablePagination,
+                          color: colors.textPrimary,
+                          "& .MuiTablePagination-select": {
+                            color: colors.textPrimary
+                          },
+                          "& .MuiTablePagination-selectIcon": {
+                            color: colors.textPrimary
+                          }
+                        }}
+                        labelRowsPerPage={
+                          <Typography color={colors.textPrimary}>Rows per page:</Typography>
+                        }
+                      />
+                    </>
+                  ) : (
+                    <Paper sx={{ p: 3, textAlign: 'center', ...darkThemeStyles.paper }}>
+                      <Typography variant="body1" sx={{ color: colors.textSecondary }}>
+                        No practical assessments found for this team
+                      </Typography>
+                    </Paper>
+                  )}
+                </Box>
+              )}
+
+              {/* 6. LAB ASSESSMENTS (Updated Styling) */}
+              {activeTab === 5 && (
+                <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Box>
+                      <Typography variant="h5" sx={{ color: colors.primary }}>Lab Assessments</Typography>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<TableChartIcon />}
+                          onClick={exportLabToExcel}
+                          disabled={labAssessments.length === 0}
+                          sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
+                        >
+                          Pro Excel
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<PictureAsPdfIcon />}
+                          onClick={() => exportTestToPDF('lab', labAssessments)}
+                          disabled={labAssessments.length === 0}
+                          sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
+                        >
+                          Pro PDF Report
+                        </Button>
+                      </Box>
+                    </Box>
+                    <Chip
+                      label={`Avg: ${Math.round(calculateAverageScore(labAssessments))}%`}
+                      variant="outlined"
+                      sx={{ borderColor: getPerformanceColor(calculateAverageScore(labAssessments)), color: getPerformanceColor(calculateAverageScore(labAssessments)) }}
+                    />
+                  </Box>
+
+                  {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                      <CircularProgress sx={{ color: colors.primary }} />
+                    </Box>
+                  ) : labAssessments.length > 0 ? (
+                    <>
+                      <TableContainer component={Paper} sx={{
+                        mb: 2,
+                        ...darkThemeStyles.paper,
+                        "& .MuiTable-root": darkThemeStyles.table
+                      }}>
+                        <Table>
+                          <TableHead sx={darkThemeStyles.tableHead}>
+                            <TableRow>
+                              <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Type</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>ONT Type</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Splicing Status</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Score</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Comments</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {labAssessments
+                              .slice(labPage * labRowsPerPage, labPage * labRowsPerPage + labRowsPerPage)
+                              .map((assessment) => (
+                                <TableRow key={assessment._id}
+                                  sx={{
+                                    "&:hover": {
+                                      backgroundColor: colors.tableRowHover
+                                    }
+                                  }}
+                                >
+                                  <TableCell sx={darkThemeStyles.tableCell}>{formatDate(assessment.createdAt)}</TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>
+                                    <Chip label={assessment.assessmentType || 'Technical'} size="small" variant="outlined" sx={{ color: colors.primary, borderColor: colors.primary }} />
+                                  </TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>{assessment.ontType?.name || 'N/A'}</TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>
+                                    {assessment.assessmentType === 'Infrastructure' ? (
+                                      <Chip
+                                        label={assessment.splicingMachineStatus || 'Good'}
+                                        size="small"
+                                        sx={{
+                                          bgcolor: assessment.splicingMachineStatus === 'Poor' ? `${colors.error}22` : assessment.splicingMachineStatus === 'Fair' ? `${colors.warning}22` : `${colors.success}22`,
+                                          color: assessment.splicingMachineStatus === 'Poor' ? colors.error : assessment.splicingMachineStatus === 'Fair' ? colors.warning : colors.success,
+                                          borderColor: assessment.splicingMachineStatus === 'Poor' ? colors.error : assessment.splicingMachineStatus === 'Fair' ? colors.warning : colors.success,
+                                        }}
+                                        variant="outlined"
+                                      />
+                                    ) : 'N/A'}
+                                  </TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>
+                                    <Chip
+                                      label={`${assessment.totalScore}%`}
+                                      sx={{
+                                        bgcolor: `${getPerformanceColor(assessment.totalScore)}22`,
+                                        color: getPerformanceColor(assessment.totalScore),
+                                        borderColor: getPerformanceColor(assessment.totalScore),
+                                        fontWeight: 'bold'
+                                      }}
+                                      variant="outlined"
+                                    />
+                                  </TableCell>
+                                  <TableCell sx={darkThemeStyles.tableCell}>{assessment.comments || '-'}</TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                      <TablePagination
+                        rowsPerPageOptions={[10, 25, 50]}
+                        component="div"
+                        count={labAssessments.length}
+                        rowsPerPage={labRowsPerPage}
+                        page={labPage}
+                        onPageChange={(e, newPage) => setLabPage(newPage)}
+                        onRowsPerPageChange={(e) => {
+                          setLabRowsPerPage(parseInt(e.target.value, 10));
+                          setLabPage(0);
+                        }}
+                        sx={{
+                          ...darkThemeStyles.tablePagination,
+                          color: colors.textPrimary,
+                          "& .MuiTablePagination-select": {
+                            color: colors.textPrimary
+                          },
+                          "& .MuiTablePagination-selectIcon": {
+                            color: colors.textPrimary
+                          }
+                        }}
+                        labelRowsPerPage={
+                          <Typography color={colors.textPrimary}>Rows per page:</Typography>
+                        }
+                      />
+                    </>
+                  ) : (
+                    <Paper sx={{ p: 3, textAlign: 'center', ...darkThemeStyles.paper }}>
+                      <Typography variant="body1" sx={{ color: colors.textSecondary }}>
+                        No lab assessments found for this team
+                      </Typography>
+                    </Paper>
+                  )}
+                </Box>
+              )}
+
+              {/* Tab index 6 now corresponds to Smart Reports */}
+
+              {/* 8. REPORTS (Index 6 after removal of Leaderboard tab) */}
+              {activeTab === 6 && (
+                <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Typography variant="h5" sx={{ color: colors.primary }}>Advanced Analytics & Reporting</Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={generatingReport ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <PictureAsPdfIcon />}
+                      onClick={handleGenerateFullReport}
+                      disabled={generatingReport || (quizResults.length === 0 && jobAssessments.length === 0 && labAssessments.length === 0)}
+                      sx={{
+                        bgcolor: colors.primary,
+                        '&:hover': { bgcolor: colors.primary, opacity: 0.9 },
+                        '&:disabled': { bgcolor: colors.textSecondary }
+                      }}
+                    >
+                      {generatingReport ? 'Generating...' : 'Generate Full Evaluation'}
+                    </Button>
+                  </Box>
+
+                  <Grid container spacing={3}>
+                    {/* Strategic Benchmarking */}
+                    <Grid item xs={12} md={4}>
+                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)' }}>
+                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <TrendingUpIcon /> Strategic Benchmarking
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {(() => {
+                            const avgMastery = Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3);
+                            const isMaster = avgMastery >= 85;
+                            return (
+                              <>
+                                <Box>
+                                  <Typography variant="caption" color={colors.textSecondary}>Current Status</Typography>
+                                  <Typography variant="h5" sx={{ fontWeight: 700, color: isMaster ? colors.success : colors.warning }}>
+                                    {isMaster ? 'Mastery Level' : 'Development Phase'}
+                                  </Typography>
+                                </Box>
+                                <Box>
+                                  <Typography variant="caption" color={colors.textSecondary}>Distance to Top Tier</Typography>
+                                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                    {avgMastery >= 90 ? 'Elite (Top 5%)' : `${90 - avgMastery}% to Elite`}
+                                  </Typography>
+                                  <LinearProgress
+                                    variant="determinate"
+                                    value={Math.min(100, (avgMastery / 90) * 100)}
+                                    sx={{ mt: 1, height: 6, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: colors.primary } }}
+                                  />
+                                </Box>
+                                <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                  <Typography variant="caption" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>
+                                    {avgMastery < 70 ? 'Recommendation: Remedial training required in core domains.'
+                                      : avgMastery < 85 ? 'Recommendation: Focus on consistency and error reduction.'
+                                        : 'Recommendation: Maintain performance; mentor other teams.'}
+                                  </Typography>
+                                </Box>
+                              </>
+                            );
+                          })()}
+                        </Box>
+                      </Paper>
+                    </Grid>
+
+                    {/* Operational Balance Radar */}
+                    <Grid item xs={12} md={4}>
+                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Performance Balance</Typography>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <RadarChart data={[
+                            {
+                              subject: 'Theoretical',
+                              score: calculateAverageScore(quizResults),
+                              fullMark: 100
+                            },
+                            {
+                              subject: 'Practical',
+                              score: calculateAverageScore(jobAssessments) * 20, // Scale to 100
+                              fullMark: 100
+                            },
+                            {
+                              subject: 'Lab',
+                              score: calculateAverageScore(labAssessments),
+                              fullMark: 100
+                            }
+                          ]}>
+                            <PolarGrid stroke={colors.border} />
+                            <PolarAngleAxis dataKey="subject" tick={{ fill: colors.textPrimary, fontSize: 10 }} />
+                            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: colors.textSecondary, fontSize: 8 }} />
+                            <Radar name="Score" dataKey="score" stroke={colors.primary} fill={colors.primary} fillOpacity={0.3} />
+                            <RechartsTooltip
+                              contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }}
+                              formatter={(value) => `${Math.round(value)}%`}
+                            />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </Paper>
+                    </Grid>
+
+                    {/* Strengths & Weaknesses */}
+                    <Grid item xs={12} md={4}>
+                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Strengths & Weaknesses</Typography>
+                        {(() => {
+                          const { strengths, weaknesses } = identifyStrengthsAndWeaknesses();
+                          return (
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ color: colors.success, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <CheckCircleIcon fontSize="small" /> Top Strengths
+                              </Typography>
+                              {strengths.length > 0 ? (
+                                <Box sx={{ mb: 3 }}>
+                                  {strengths.map((s, i) => (
+                                    <Chip
+                                      key={i}
+                                      label={`${s.name}: ${Math.round(s.score)}%`}
+                                      size="small"
+                                      sx={{ m: 0.5, bgcolor: `${colors.success}22`, color: colors.success, borderColor: colors.success }}
+                                      variant="outlined"
+                                    />
+                                  ))}
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" color={colors.textSecondary} sx={{ mb: 3 }}>No data available</Typography>
+                              )}
+
+                              <Typography variant="subtitle2" sx={{ color: colors.error, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <CancelIcon fontSize="small" /> Areas for Improvement
+                              </Typography>
+                              {weaknesses.length > 0 ? (
+                                <Box>
+                                  {weaknesses.map((w, i) => (
+                                    <Chip
+                                      key={i}
+                                      label={`${w.name}: ${Math.round(w.score)}%`}
+                                      size="small"
+                                      sx={{ m: 0.5, bgcolor: `${colors.error}22`, color: colors.error, borderColor: colors.error }}
+                                      variant="outlined"
+                                    />
+                                  ))}
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" color={colors.textSecondary}>No data available</Typography>
+                              )}
+                            </Box>
+                          );
+                        })()}
+                      </Paper>
+                    </Grid>
+
+                    {/* Mastery & Consistency Metrics */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Consistency & Mastery Analysis</Typography>
+                        <Grid container spacing={2}>
+                          {[
+                            { label: 'Overall Mastery', value: `${Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3)}%`, color: colors.primary },
+                            { label: 'Theoretical Volatility', value: `${Math.round(calculateStandardDeviation(quizResults))}%`, color: colors.warning },
+                            { label: 'Practical Consistency', value: calculateStandardDeviation(jobAssessments) < 10 ? 'High' : 'Variable', color: colors.success },
+                            { label: 'Lab Mastery Rate', value: `${Math.round(calculatePercentageAboveThreshold(labAssessments, 80))}%`, color: colors.primary }
+                          ].map((metric, i) => (
+                            <Grid item xs={6} key={i}>
+                              <Card sx={{ bgcolor: colors.surfaceElevated, border: `1px solid ${colors.border}` }}>
+                                <CardContent sx={{ p: 2 }}>
+                                  <Typography variant="caption" color={colors.textSecondary}>{metric.label}</Typography>
+                                  <Typography variant="h6" sx={{ color: metric.color, fontWeight: 'bold' }}>{metric.value}</Typography>
+                                </CardContent>
+                              </Card>
+                            </Grid>
+                          ))}
+                        </Grid>
+                      </Paper>
+                    </Grid>
+
+                    {/* Process Efficiency Analysis */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
+                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Process Efficiency Analysis</Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {[
+                            { label: 'Avg Dispatch Speed', value: stats.avgDispatchTime, unit: 'days', color: colors.info },
+                            { label: 'Avg Resolution Speed', value: stats.avgResolutionTime, unit: 'days', color: colors.success },
+                            { label: 'Full Lifecycle Time', value: stats.avgLifecycleTime, unit: 'days', color: colors.warning }
+                          ].map((metric, i) => (
+                            <Box key={i}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Typography variant="body2" color={colors.textSecondary}>{metric.label}</Typography>
+                                <Typography variant="body2" fontWeight="bold" sx={{ color: metric.color }}>{metric.value} {metric.unit}</Typography>
+                              </Box>
+                              <LinearProgress
+                                variant="determinate"
+                                value={Math.min(100, (metric.value / 10) * 100)}
+                                sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: metric.color } }}
+                              />
+                            </Box>
+                          ))}
+                          <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(59, 130, 246, 0.05)', borderRadius: 2, border: '1px solid rgba(59, 130, 246, 0.1)' }}>
+                            <Typography variant="caption" sx={{ color: colors.info, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Info sx={{ fontSize: '1rem' }} /> Values normalized against 10-day benchmark.
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+
+              {/* Performance Summary Section */}
+              {(quizResults.length > 0 || jobAssessments.length > 0 || labAssessments.length > 0) && (
+                <Box sx={{ mt: 5 }}>
+                  <Typography variant="h5" sx={{ color: colors.primary, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Assessment /> Advanced Analytics
+                  </Typography>
+
+                  <Grid container spacing={3}>
+                    {[
+                      { name: 'Theoretical', data: quizResults, color: colors.primary },
+                      { name: 'Practical', data: jobAssessments, color: colors.success },
+                      { name: 'Lab', data: labAssessments, color: colors.warning }
+                    ].filter(group => group.data.length > 0).map((group, idx) => (
+                      <Grid item xs={12} key={idx}>
+                        <Paper sx={{ p: 3, ...darkThemeStyles.paper, position: 'relative' }}>
+                          <Typography variant="h6" sx={{ color: group.color, mb: 2 }}>{group.name} Analytics</Typography>
+                          <Grid container spacing={4}>
+                            <Grid item xs={12} md={4}>
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <Typography color={colors.textSecondary}>Median Score</Typography>
+                                  <Typography fontWeight="bold">{Math.round(calculateMedianScore(group.data))}%</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <Typography color={colors.textSecondary}>Volatility (StdDev)</Typography>
+                                  <Typography fontWeight="bold">{Math.round(calculateStandardDeviation(group.data))}%</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <Typography color={colors.textSecondary}>Top Score</Typography>
+                                  <Typography sx={{ color: colors.success }} fontWeight="bold">{calculateHighestScore(group.data)}%</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <Typography color={colors.textSecondary}>Mastery Rate ({'>'}80%)</Typography>
+                                  <Typography fontWeight="bold">{Math.round(calculatePercentageAboveThreshold(group.data, 80))}%</Typography>
+                                </Box>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={12} md={8}>
+                              <Box sx={{ height: 200 }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <AreaChart data={group.data.map(item => ({
+                                    date: formatDate(item.submittedAt || item.assessmentDate || item.createdAt),
+                                    score: item.percentage || item.overallScore || item.totalScore || 0
+                                  })).reverse()}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
+                                    <XAxis dataKey="date" hide />
+                                    <YAxis domain={[0, 100]} hide />
+                                    <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                                    <Area
+                                      type="monotone"
+                                      dataKey="score"
+                                      stroke={group.color}
+                                      fill={group.color}
+                                      fillOpacity={0.1}
+                                      strokeWidth={2}
+                                    />
+                                  </AreaChart>
+                                </ResponsiveContainer>
+                              </Box>
+                            </Grid>
+                          </Grid>
+                        </Paper>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              )}
+            </Box>
+            <ViewIssueDetailsDialog
+              open={detailIssueOpen}
+              onClose={() => setDetailIssueOpen(false)}
+              issue={selectedDetailIssue}
+              onUpdate={() => {
+                // Refresh data if needed, but since we are in drill-down,
+                // maybe just update local state or dispatch global refresh
+                window.dispatchEvent(new CustomEvent('cin-refresh'));
+              }}
+            />
+
+            <ProfessionalChartDialog
+              open={chartDialog.open}
+              onClose={() => setChartDialog({ ...chartDialog, open: false })}
+              title={chartDialog.title}
+              data={chartDialog.data}
+              type={chartDialog.type}
+              stackKeys={chartDialog.stackKeys}
+            />
+
+            {/* Analytics Drill-Down Dialog */}
+            <Dialog
+              open={analyticsDrillDown.open}
+              onClose={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))}
+              fullWidth
+              maxWidth="lg"
+              PaperProps={{
+                sx: {
+                  backgroundColor: '#1a1a1a',
+                  backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
+                  borderRadius: '24px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  minHeight: '60vh'
+                }
+              }}
+            >
+              <DialogTitle sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                pb: 1,
+                borderBottom: '1px solid rgba(255,255,255,0.1)'
+              }}>
+                <Box>
+                  <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 0.5 }}>
+                    Task List
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+                    {analyticsDrillDown.title} ({analyticsDrillDown.tasks.length} Tasks)
+                  </Typography>
+                </Box>
+                <IconButton onClick={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))} sx={{ color: '#fff' }}>
+                  <CloseIcon />
+                </IconButton>
+              </DialogTitle>
+              <DialogContent sx={{ p: 0 }}>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
+                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Week</TableCell>
+                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
+                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
+                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
+                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Sub-Reason</TableCell>
+                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Root Cause</TableCell>
+                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
+                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Feedback</TableCell>
+                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
+                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {analyticsDrillDown.tasks.map((task) => (
+                        <TableRow key={task._id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}>
+                          <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                            {task.interviewDate ? getWeekNumber(task.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber).week : '-'}
+                          </TableCell>
+                          <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
+                          <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
+                          <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                            {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
+                          </TableCell>
+                          <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                            {Array.isArray(task.subReason) ? task.subReason.join(', ') : task.subReason || '-'}
+                          </TableCell>
+                          <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                            {Array.isArray(task.rootCause) ? task.rootCause.join(', ') : task.rootCause || '-'}
+                          </TableCell>
+                          <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                            {[...new Set(splitValues(task.responsible || task.assignedTo?.name))].join(', ') || '-'}
+                          </TableCell>
+                          <TableCell sx={{ color: alpha('#fff', 0.6), fontSize: '0.7rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {task.customerFeedback || '-'}
+                          </TableCell>
+                          <TableCell>
+                            {task.evaluationScore !== undefined && task.evaluationScore !== null && (
+                              <Chip
+                                label={task.evaluationScore}
+                                size="small"
+                                sx={{
+                                  height: 20,
+                                  fontSize: '0.65rem',
+                                  fontWeight: 'bold',
+                                  bgcolor: task.evaluationScore >= 9 ? 'rgba(76, 175, 80, 0.2)' :
+                                    task.evaluationScore >= 7 ? 'rgba(255, 152, 0, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                                  color: task.evaluationScore >= 9 ? '#4caf50' :
+                                    task.evaluationScore >= 7 ? '#ff9800' : '#f44336'
+                                }}
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell align="right">
+                            <Button
+                              size="small"
+                              variant="text"
+                              onClick={() => {
+                                setSelectedTask(task);
+                                setViewDialogOpen(true);
+                              }}
+                              sx={{
+                                textTransform: 'none',
+                                color: '#7b68ee',
+                                fontWeight: 'bold',
+                                '&:hover': { bgcolor: alpha('#7b68ee', 0.1) }
+                              }}
+                            >
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </DialogContent>
+            </Dialog>
+
+            {/* Task Details Dialog */}
+            {selectedTask && (
+              <TaskDetailsDialog
+                open={viewDialogOpen}
+                onClose={() => {
+                  setViewDialogOpen(false);
+                  setSelectedTask(null);
+                }}
+                tasks={[selectedTask]}
+                teamName={selectedTask.teamName || "Unknown Team"}
+                onTaskUpdated={fetchGlobalData}
+              />
+            )}
+          </>
+        )}
+
+      </Box>
+    </>
   );
 };
 

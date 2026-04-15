@@ -100,6 +100,10 @@ const FieldTeamForm = () => {
         teamCode: data.teamCode,
         fsmSerialNumber: data.fsmSerialNumber || 'N/A',
         laptopSerialNumber: data.laptopSerialNumber || 'N/A',
+        isNewToInstallation: data.isNewToInstallation,
+        isNewToActivation: data.isNewToActivation,
+        installationStartDate: data.installationStartDate,
+        activationStartDate: data.activationStartDate,
       };
 
       const response = await api.post('/field-teams/add-field-team', formData, {
@@ -266,6 +270,10 @@ const FieldTeamForm = () => {
       teamCode: data.teamCode,
       fsmSerialNumber: data.fsmSerialNumber || 'N/A',
       laptopSerialNumber: data.laptopSerialNumber || 'N/A',
+      isNewToInstallation: data.isNewToInstallation,
+      isNewToActivation: data.isNewToActivation,
+      installationStartDate: data.installationStartDate,
+      activationStartDate: data.activationStartDate,
       forceRegenerateQuizCode: data.forceRegenerateQuizCode,
     };
 
@@ -320,6 +328,10 @@ const FieldTeamForm = () => {
       ContactNumber: team.contactNumber,
       FSMSerialNumber: team.fsmSerialNumber,
       LaptopSerialNumber: team.laptopSerialNumber,
+      IsNewToInstallation: team.isNewToInstallation ? 'Yes' : 'No',
+      InstallationStartDate: team.installationStartDate ? new Date(team.installationStartDate).toLocaleDateString() : 'N/A',
+      IsNewToActivation: team.isNewToActivation ? 'Yes' : 'No',
+      ActivationStartDate: team.activationStartDate ? new Date(team.activationStartDate).toLocaleDateString() : 'N/A',
       EvaluationScore: team.evaluationScore || 0,
       IsEvaluated: team.isEvaluated ? 'Yes' : 'No',
       LastEvaluationDate: team.lastEvaluationDate ? new Date(team.lastEvaluationDate).toLocaleDateString() : 'Never',

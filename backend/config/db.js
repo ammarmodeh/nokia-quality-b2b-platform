@@ -37,9 +37,14 @@ export const connectDB = async () => {
       console.error("Try using a non-SRV connection string or check your firewall settings.");
     }
 
-    // In serverless environments like Vercel, process.exit(1) can cause ERR_CONNECTION_RESET.
-    if (!process.env.VERCEL && process.env.NODE_ENV !== "production") {
-      process.exit(1);
+    if (error.code === "ETIMEDOUT") {
+      console.error("💡 TIP: The connection to MongoDB Atlas timed out.");
+      console.error("1. Ensure your IP address is whitelisted in MongoDB Atlas settings.");
+      console.error("2. Check if your corporate firewall or local network blocks port 27017.");
     }
+
+    // Removed process.exit(1) to prevent the app from crashing on connection failure.
+    // This allows the server to stay up and show diagnostics to the user.
+    // Mongoose will automatically try to reconnect if configured.
   }
 };

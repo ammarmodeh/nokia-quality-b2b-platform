@@ -5,7 +5,8 @@ import mongoose from "mongoose";
 // Add task to trash
 export const addToTrash = async (req, res) => {
   try {
-    const { slid, deletedBy, ...taskData } = req.body;
+    const { deletedBy, ...taskData } = req.body;
+    const slid = taskData.slid;
 
     if (!slid || !deletedBy) {
       return res.status(400).json({
@@ -173,6 +174,7 @@ export const restoreFromTrash = async (req, res) => {
 
     const newTask = new TaskSchema({
       ...taskData,
+      slid: taskData.slid || trashItem.slid, // Ensure slid is present (fix for items already in trash)
       isDeleted: false,
       updatedAt: new Date()
     });
@@ -191,7 +193,7 @@ export const restoreFromTrash = async (req, res) => {
     });
   } catch (error) {
     await session.abortTransaction();
-    // console.error("Error restoring from trash:", error);
+    console.error("Error restoring from trash:", error); // Log the actual error for debugging
     res.status(500).json({
       success: false,
       message: "Failed to restore from trash",

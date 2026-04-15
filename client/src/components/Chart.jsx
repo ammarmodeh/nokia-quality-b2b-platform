@@ -64,7 +64,13 @@ const prepareChartData = (groupedData, timeRange, settings = {}) => {
   const detractorTarget = settings?.npsTargets?.detractors ?? 8;
   const npsTarget = promoterTarget - detractorTarget;
 
+  const monthOrder = {
+    January: 1, February: 2, March: 3, April: 4, May: 5, June: 6,
+    July: 7, August: 8, September: 9, October: 10, November: 11, December: 12
+  };
+
   const sortedLabels = Object.keys(groupedData).sort((a, b) => {
+    // 1. Week Sorting: Wk-01 (2026)
     const matchWkA = a.match(/Wk-(\d+) \((\d+)\)/);
     const matchWkB = b.match(/Wk-(\d+) \((\d+)\)/);
     if (matchWkA && matchWkB) {
@@ -76,9 +82,16 @@ const prepareChartData = (groupedData, timeRange, settings = {}) => {
       return weekA - weekB;
     }
 
-    // Handle Month-X (descriptive) sorting
-    const matchMonA = a.match(/Month (\d+)/);
-    const matchMonB = b.match(/Month (\d+)/);
+    // 2. Descriptive Month Sorting: "January (Jan 1 - Jan 31)"
+    const monthA = a.split(' ')[0];
+    const monthB = b.split(' ')[0];
+    if (monthOrder[monthA] && monthOrder[monthB]) {
+      return monthOrder[monthA] - monthOrder[monthB];
+    }
+
+    // 3. Month-X sorting (internal fallback)
+    const matchMonA = a.match(/Month-(\d+)/);
+    const matchMonB = b.match(/Month-(\d+)/);
     if (matchMonA && matchMonB) {
       return parseInt(matchMonA[1], 10) - parseInt(matchMonB[1], 10);
     }
@@ -398,17 +411,33 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
     const detractorTarget = activeSettings?.npsTargets?.detractors ?? 8;
     const npsTarget = promoterTarget - detractorTarget;
 
+    const monthOrder = {
+      January: 1, February: 2, March: 3, April: 4, May: 5, June: 6,
+      July: 7, August: 8, September: 9, October: 10, November: 11, December: 12
+    };
+
     // Sort weeks descending for the report
     const sortedWeeks = Object.keys(groupedData).sort((a, b) => {
+      // 1. Week Sorting Descending
       const matchA = a.match(/Wk-(\d+) \((\d+)\)/);
       const matchB = b.match(/Wk-(\d+) \((\d+)\)/);
-      if (!matchA || !matchB) return 0;
-      const yearA = parseInt(matchA[2], 10);
-      const yearB = parseInt(matchB[2], 10);
-      const weekA = parseInt(matchA[1], 10);
-      const weekB = parseInt(matchB[1], 10);
-      if (yearA !== yearB) return yearB - yearA;
-      return weekB - weekA;
+      if (matchA && matchB) {
+        const yearA = parseInt(matchA[2], 10);
+        const yearB = parseInt(matchB[2], 10);
+        const weekA = parseInt(matchA[1], 10);
+        const weekB = parseInt(matchB[1], 10);
+        if (yearA !== yearB) return yearB - yearA;
+        return weekB - weekA;
+      }
+
+      // 2. Month-specific Sorting Descending
+      const monthA = a.split(' ')[0];
+      const monthB = b.split(' ')[0];
+      if (monthOrder[monthA] && monthOrder[monthB]) {
+        return monthOrder[monthB] - monthOrder[monthA];
+      }
+
+      return b.localeCompare(a);
     });
 
     const exportData = sortedWeeks.map((week) => {
