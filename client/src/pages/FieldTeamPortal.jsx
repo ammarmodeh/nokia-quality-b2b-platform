@@ -1295,9 +1295,10 @@ const FieldTeamPortal = () => {
 
   // Analytics Drill-Down Handler
   const handleAnalyticsDrillDown = (filters = {}) => {
-    // Apply time filtering first
+    // Apply time filtering first (Must match useMemo logic exactly)
     const techTasks = Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [];
     let timeFiltered = techTasks;
+    
     if (timeFilterMode === 'days') {
       const cutoff = subDays(new Date(), recentDaysValue);
       timeFiltered = techTasks.filter(t => t.interviewDate && isAfter(new Date(t.interviewDate), cutoff));
@@ -1323,7 +1324,7 @@ const FieldTeamPortal = () => {
       });
     }
 
-    // Apply sub-tab filtering (All/Detractors/Neutrals)
+    // Apply sub-tab filtering (All/Detractors/Neutrals) - Must match useMemo logic exactly
     let tasksToProcess = timeFiltered;
     if (analyticsSubTab === 1) { // Detractors (score <= 6)
       tasksToProcess = timeFiltered.filter(t => {
@@ -1337,7 +1338,10 @@ const FieldTeamPortal = () => {
       });
     }
 
-    // Filter tasks based on the tuple logic
+    console.log(`[DrillDown] Mode: ${timeFilterMode}, SubTab: ${analyticsSubTab}`);
+    console.log(`[DrillDown] Input Tasks: ${techTasks.length}, Time Filtered: ${timeFiltered.length}, Final Pool: ${tasksToProcess.length}`);
+
+    // Filter tasks based on the tuple logic (Must match useMemo tuple alignment)
     const finalFiltered = tasksToProcess.filter(task => {
       const rawOwners = extractOwners(task);
       const rawReasons = splitValues(task.reason).map(normalizeValue);
@@ -1391,6 +1395,7 @@ const FieldTeamPortal = () => {
         if (filters.reason && tuple.reason !== filters.reason) match = false;
         if (filters.subReason && tuple.subReason !== filters.subReason) match = false;
         if (filters.rootCause && tuple.rootCause !== filters.rootCause) match = false;
+        
         if (filters.governorate) {
           const governorate = task.governorate ? String(task.governorate).trim() : 'Not specified';
           if (governorate !== filters.governorate) match = false;
@@ -1403,10 +1408,10 @@ const FieldTeamPortal = () => {
         return match;
       });
 
-      if (!tupleMatches) return false;
-
-      return true;
+      return tupleMatches;
     });
+
+    console.log(`[DrillDown] Final Filtered Tasks: ${finalFiltered.length}`);
 
     // Generate Title
     const titleParts = [];
@@ -6264,6 +6269,8 @@ ${data.map((a, i) => `
                 </Box>
               )}
             </Box>
+          </>
+        )}
             <ViewIssueDetailsDialog
               open={detailIssueOpen}
               onClose={() => setDetailIssueOpen(false)}
@@ -6415,13 +6422,10 @@ ${data.map((a, i) => `
                 onTaskUpdated={fetchGlobalData}
               />
             )}
-          </>
-        )}
-
-      </Box>
-    </>
-  );
-};
+          </Box>
+        </>
+      );
+    };
 
 // --- Professional Chart Dialog Ported from Deep Dive ---
 const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType = 'line', stackKeys = [] }) => {
