@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { alpha } from "@mui/material/styles";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -21,7 +21,12 @@ import {
   Cancel as CancelIcon, PictureAsPdf as PictureAsPdfIcon, TableChart as TableChartIcon,
   Search as SearchIcon, FilterList as FilterListIcon, CalendarToday as CalendarTodayIcon,
   Event as EventIcon, Update as UpdateIcon, Visibility as VisibilityIcon, VerifiedUser,
-  LocationOn
+  LocationOn,
+  Shield,
+  AutoStories,
+  FactCheck,
+  BugReport,
+  Lightbulb
 } from '@mui/icons-material';
 import moment from "moment";
 import { subDays, isAfter } from 'date-fns';
@@ -71,7 +76,7 @@ import {
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
-import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport, FaEnvelope, FaRegSmile } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport, FaEnvelope, FaRegSmile, FaEquals } from 'react-icons/fa';
 import { MdInsights } from 'react-icons/md';
 import ViewIssueDetailsDialog from "../components/ViewIssueDetailsDialog";
 import { TaskDetailsDialog } from "../components/TaskDetailsDialog";
@@ -281,6 +286,8 @@ const FieldTeamPortal = () => {
   const navigate = useNavigate();
 
   // Field Teams state
+  const [activeGlobalOwnershipInsight, setActiveGlobalOwnershipInsight] = useState(null);
+  const [feedbackDialog, setFeedbackDialog] = useState({ open: false, content: '' });
   const [fieldTeams, setFieldTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   // console.log({ selectedTeam });
@@ -289,6 +296,116 @@ const FieldTeamPortal = () => {
 
   // Quiz results state
   const [quizResults, setQuizResults] = useState([]);
+
+  const getAssessmentStatus = (score, type = "quiz") => {
+    let thresholds = {
+      average: 70,
+      fail: 60,
+    };
+
+    if (type === "practical") {
+      thresholds = {
+        average: 3.5,
+        fail: 3,
+      };
+    }
+
+    const passThreshold = type === "practical" ? 4.5 : 85;
+
+    if (score >= passThreshold) return { label: "Excellent", color: "#2e7d32" };
+    if (score >= thresholds.average) return { label: "Pass (Minor Comments)", color: "#66bb6a" };
+    if (score >= thresholds.fail) return { label: "Pass (With Comments)", color: "#ffa726" };
+    return { label: "Fail", color: "#d32f2f" };
+  };
+
+  const getPerformanceColor = (score, type = 'general') => {
+    return getAssessmentStatus(score, type).color;
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const calculateAverageScore = (results) => {
+    if (results.length === 0) return 0;
+    const totalScore = results.reduce((sum, result) => {
+      return sum + (result.overallScore || result.percentage || 0);
+    }, 0);
+    return totalScore / results.length;
+  };
+
+  const calculateMedianScore = (results) => {
+    const scores = results.map((result) => result.overallScore || result.percentage || 0).sort((a, b) => a - b);
+    const mid = Math.floor(scores.length / 2);
+    return scores.length % 2 !== 0 ? scores[mid] : (scores[mid - 1] + scores[mid]) / 2;
+  };
+
+  const calculateStandardDeviation = (results) => {
+    const average = calculateAverageScore(results);
+    const variance = results.reduce((sum, result) => {
+      const score = result.overallScore || result.percentage || 0;
+      return sum + Math.pow(score - average, 2);
+    }, 0) / results.length;
+    return Math.sqrt(variance);
+  };
+
+  const calculatePercentageAboveThreshold = (data, threshold) => {
+    if (!data || data.length === 0) return 0;
+    const above = data.filter(item => (item.percentage || item.overallScore || item.totalScore || 0) >= threshold);
+    return (above.length / data.length) * 100;
+  };
+
+  const getHeatmapColor = (value, min = 0, max = 100, type = 'blue') => {
+    const percentage = Math.min(Math.max((value - min) / (max - min), 0), 1);
+    const colors = {
+      green: `rgba(16, 185, 129, ${percentage * 0.4 + 0.05})`,
+      blue: `rgba(59, 130, 246, ${percentage * 0.4 + 0.05})`,
+      orange: `rgba(245, 158, 11, ${percentage * 0.4 + 0.05})`,
+      red: `rgba(239, 68, 68, ${percentage * 0.4 + 0.05})`,
+      purple: `rgba(139, 92, 246, ${percentage * 0.4 + 0.05})`
+    };
+    return colors[type] || colors.blue;
+  };
+
+  const calculateHighestScore = (results) => {
+    if (results.length === 0) return 0;
+    return Math.max(...results.map(result => result.overallScore || result.percentage || 0));
+  };
+
+  const calculateLowestScore = (results) => {
+    if (results.length === 0) return 0;
+    return Math.min(...results.map(result => result.overallScore || result.percentage || 0));
+  };
+
+  const getScoreDistribution = (results) => {
+    const distribution = {
+      '0-49': 0,
+      '50-74': 0,
+      '75-89': 0,
+      '90-100': 0
+    };
+
+    results.forEach((result) => {
+      const score = result.overallScore || result.percentage || 0;
+      if (score < 50) distribution['0-49']++;
+      else if (score < 75) distribution['50-74']++;
+      else if (score < 90) distribution['75-89']++;
+      else distribution['90-100']++;
+    });
+
+    return Object.keys(distribution).map((range) => ({
+      range,
+      count: distribution[range],
+    }));
+  };
+
   const [quizPage, setQuizPage] = useState(0);
   const [quizRowsPerPage, setQuizRowsPerPage] = useState(10);
 
@@ -304,9 +421,13 @@ const FieldTeamPortal = () => {
 
   // Navigation and UI state
   const [activeTab, setActiveTab] = useState(0);
-  const [generatingReport, setGeneratingReport] = useState(false);
   const isMobile = useMediaQuery('(max-width:600px)');
   const isMedium = useMediaQuery('(max-width:960px)');
+
+  // New Analytical States
+  const [activeOwnershipInsight, setActiveOwnershipInsight] = useState(null);
+  const [showPostSessionRegistry, setShowPostSessionRegistry] = useState(false);
+  const [activePostSessionOwner, setActivePostSessionOwner] = useState(null);
 
   // Drill-down state
   const [drillDownOpen, setDrillDownOpen] = useState(false);
@@ -433,8 +554,414 @@ const FieldTeamPortal = () => {
   const [trendChartType, setTrendChartType] = useState('mixed');
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
 
+  // --- Task Overview Filtering State ---
+  const [taskTimeFilterMode, setTaskTimeFilterMode] = useState('all');
+  const [taskRecentDaysValue, setTaskRecentDaysValue] = useState(30);
+  const [taskSelectedWeeks, setTaskSelectedWeeks] = useState([]);
+  const [taskSelectedMonths, setTaskSelectedMonths] = useState([]);
+  const [taskCustomDateRange, setTaskCustomDateRange] = useState({ start: '', end: '' });
+
+  const filteredTechnicalTasks = useMemo(() => {
+    const techTasks = Array.isArray(technicalTasks) ? technicalTasks : [];
+    let filtered = techTasks;
+
+    const getDate = (t) => t.pisDate || t.createdAt;
+    // For week/month/custom categorization use interviewDate — this is what the rest of the
+    // portal uses to assign tasks to a given week (see lines 973, 1778, 6753).
+    // Falls back to pisDate or createdAt if interviewDate is absent.
+    const getCatDate = (t) => t.interviewDate || t.pisDate || t.createdAt;
+
+    if (taskTimeFilterMode === 'days') {
+      const cutoff = subDays(new Date(), taskRecentDaysValue);
+      filtered = techTasks.filter(t => getDate(t) && isAfter(new Date(getDate(t)), cutoff));
+    } else if (taskTimeFilterMode === 'weeks' && taskSelectedWeeks.length > 0) {
+      filtered = techTasks.filter(t => {
+        if (!getCatDate(t)) return false;
+        const { key } = getWeekNumber(getCatDate(t), settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber);
+        return taskSelectedWeeks.includes(key);
+      });
+    } else if (taskTimeFilterMode === 'months' && taskSelectedMonths.length > 0) {
+      filtered = techTasks.filter(t => {
+        if (!getCatDate(t)) return false;
+        const monthInfo = getMonthNumber(getCatDate(t), settings);
+        // Handle both string keys and month objects
+        return monthInfo && taskSelectedMonths.some(m => (typeof m === 'string' ? m : m.key) === monthInfo.key);
+      });
+    } else if (taskTimeFilterMode === 'custom' && taskCustomDateRange.start && taskCustomDateRange.end) {
+      const start = new Date(taskCustomDateRange.start);
+      const end = new Date(taskCustomDateRange.end);
+      end.setHours(23, 59, 59, 999);
+      filtered = techTasks.filter(t => {
+        const d = new Date(getCatDate(t));
+        return d >= start && d <= end;
+      });
+    }
+    return filtered;
+  }, [technicalTasks, taskTimeFilterMode, taskRecentDaysValue, taskSelectedWeeks, taskSelectedMonths, taskCustomDateRange, settings]);
+
   // --- Statistics Calculation (Ported from CustomerIssuesAnalytics.jsx) ---
-  const filteredIssuesByDate = useMemo(() => {
+  const individualTeamAnalytics = useMemo(() => {
+    const tasksToProcess = filteredTechnicalTasks || [];
+
+    const stats = {
+      byOwner: {},
+      byReason: {},
+      bySubReason: {},
+      byRootCause: {},
+      detailedOwners: {},
+      detailedReasons: {},
+      detailedSubReasons: {},
+      detailedRootCauses: {},
+      sentiment: { Promoter: 0, Neutral: 0, Detractor: 0, NotEvaluated: 0 }
+    };
+
+    const scoringKeysMap = (settings?.scoringKeys || [])
+      .filter(k => k.targetForm === 'Task' || k.targetForm === 'Both')
+      .reduce((acc, key) => {
+        acc[key.label] = key.points || 0;
+        return acc;
+      }, {});
+
+    tasksToProcess.forEach(task => {
+      const rawOwners = extractOwners(task);
+      const rawReasons = splitValues(task.reason).map(normalizeValue);
+      const rawSubReasons = splitValues(task.subReason).map(normalizeValue);
+      const rawRootCauses = splitValues(task.rootCause).map(normalizeValue);
+      const rawItnRelated = splitValues(task.itnRelated);
+      const rawSubscriptionRelated = splitValues(task.relatedToSubscription);
+
+      const maxLen = Math.max(
+        rawReasons.length,
+        rawSubReasons.length,
+        rawRootCauses.length,
+        rawOwners.length,
+        rawItnRelated.length,
+        rawSubscriptionRelated.length,
+        1
+      );
+
+      const tuples = [];
+      for (let i = 0; i < maxLen; i++) {
+        const owner = rawOwners[i] || 'Not specified';
+        const reason = rawReasons[i] || 'Not specified';
+        const subReason = rawSubReasons[i] || 'Not specified';
+        const rootCause = rawRootCauses[i] || 'Not specified';
+        const itnVal = rawItnRelated[i] || 'No';
+        const subVal = rawSubscriptionRelated[i] || 'No';
+
+        const isGarbage = (owner === 'Not specified' || !owner) &&
+          (reason === 'Not specified' || !reason) &&
+          (subReason === 'Not specified' || !subReason) &&
+          (rootCause === 'Not specified' || !rootCause);
+
+        if (!isGarbage || i === 0) {
+          tuples.push({
+            owner,
+            reason,
+            subReason,
+            rootCause,
+            isITN: itnVal === 'Yes' || itnVal === true,
+            isSubscription: subVal === 'Yes' || subVal === true
+          });
+        }
+      }
+
+      let taskPoints = 0;
+      if (Array.isArray(task.scoringKeys)) {
+        task.scoringKeys.forEach(keyLabel => {
+          if (scoringKeysMap[keyLabel]) taskPoints += scoringKeysMap[keyLabel];
+        });
+      }
+
+      tuples.forEach(tuple => {
+        const { owner, reason, subReason, rootCause, isITN, isSubscription } = tuple;
+        stats.byOwner[owner] = (stats.byOwner[owner] || 0) + 1;
+        stats.byReason[reason] = (stats.byReason[reason] || 0) + 1;
+        stats.bySubReason[subReason] = (stats.bySubReason[subReason] || 0) + 1;
+        stats.byRootCause[rootCause] = (stats.byRootCause[rootCause] || 0) + 1;
+
+        if (!stats.detailedOwners[owner]) {
+          stats.detailedOwners[owner] = { total: 0, itn: 0, subscription: 0, points: 0 };
+        }
+        stats.detailedOwners[owner].total++;
+        if (isITN) stats.detailedOwners[owner].itn++;
+        if (isSubscription) stats.detailedOwners[owner].subscription++;
+
+        const updateDetail = (map, label) => {
+          if (!map[label]) map[label] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
+          map[label].total++;
+          if (isITN) map[label].itn++;
+          if (isSubscription) map[label].subscription++;
+          map[label].ownerBreakdown[owner] = (map[label].ownerBreakdown[owner] || 0) + 1;
+        };
+
+        updateDetail(stats.detailedReasons, reason);
+        updateDetail(stats.detailedSubReasons, subReason);
+        updateDetail(stats.detailedRootCauses, rootCause);
+      });
+
+      [...new Set(rawOwners)].forEach(o => {
+        if (!stats.detailedOwners[o]) {
+          stats.detailedOwners[o] = { total: 0, itn: 0, subscription: 0, points: 0 };
+        }
+        stats.detailedOwners[o].points += taskPoints;
+      });
+
+      let score = task.evaluationScore;
+      if (score && score > 0) {
+        if (score <= 6) stats.sentiment.Detractor++;
+        else if (score >= 7 && score <= 8) stats.sentiment.Neutral++;
+        else if (score >= 9) stats.sentiment.Promoter++;
+        else stats.sentiment.NotEvaluated++;
+      } else {
+        stats.sentiment.NotEvaluated++;
+      }
+    });
+
+    const toChartData = (obj) => {
+      const entries = Object.entries(obj).map(([name, value]) => ({ name, value }));
+      const total = entries.reduce((sum, item) => sum + item.value, 0);
+      return entries.map(item => ({
+        ...item,
+        percentage: total > 0 ? ((item.value / total) * 100).toFixed(1) : 0
+      })).sort((a, b) => b.value - a.value);
+    };
+
+    const matrixOwners = Object.keys(stats.detailedOwners).sort((a, b) => stats.detailedOwners[b].total - stats.detailedOwners[a].total).slice(0, 5);
+
+    // Calculate focused data if an ownership is selected
+    let focusedData = null;
+    if (activeOwnershipInsight) {
+      const ownerTasks = tasksToProcess.filter(t => extractOwners(t).includes(activeOwnershipInsight));
+      const fStats = { byReason: {}, bySubReason: {}, byRootCause: {} };
+
+      ownerTasks.forEach(task => {
+        const rawReasons = splitValues(task.reason).map(normalizeValue);
+        const rawSubReasons = splitValues(task.subReason).map(normalizeValue);
+        const rawRootCauses = splitValues(task.rootCause).map(normalizeValue);
+
+        const mLen = Math.max(rawReasons.length, rawSubReasons.length, rawRootCauses.length, 1);
+        for (let i = 0; i < mLen; i++) {
+          const r = rawReasons[i] || 'Not specified';
+          const sr = rawSubReasons[i] || 'Not specified';
+          const rc = rawRootCauses[i] || 'Not specified';
+
+          if (r !== 'Not specified' || sr !== 'Not specified' || rc !== 'Not specified' || i === 0) {
+            fStats.byReason[r] = (fStats.byReason[r] || 0) + 1;
+            fStats.bySubReason[sr] = (fStats.bySubReason[sr] || 0) + 1;
+            fStats.byRootCause[rc] = (fStats.byRootCause[rc] || 0) + 1;
+          }
+        }
+      });
+
+      focusedData = {
+        reasonData: toChartData(fStats.byReason),
+        subReasonData: toChartData(fStats.bySubReason),
+        rootCauseData: toChartData(fStats.byRootCause),
+        total: ownerTasks.length
+      };
+    }
+
+    return {
+      totalProcessed: tasksToProcess.length,
+      ownerData: toChartData(stats.byOwner),
+      reasonData: toChartData(stats.byReason),
+      subReasonData: toChartData(stats.bySubReason),
+      rootCauseData: toChartData(stats.byRootCause),
+      detailedOwners: Object.entries(stats.detailedOwners).map(([name, d]) => ({ name, ...d, percentage: tasksToProcess.length > 0 ? ((d.total / tasksToProcess.length) * 100).toFixed(1) : 0 })).sort((a, b) => b.total - a.total),
+      detailedReasons: Object.entries(stats.detailedReasons).map(([name, d]) => ({ name, ...d, percentage: tasksToProcess.length > 0 ? ((d.total / tasksToProcess.length) * 100).toFixed(1) : 0 })).sort((a, b) => b.total - a.total),
+      detailedSubReasons: Object.entries(stats.detailedSubReasons).map(([name, d]) => ({ name, ...d, percentage: tasksToProcess.length > 0 ? ((d.total / tasksToProcess.length) * 100).toFixed(1) : 0 })).sort((a, b) => b.total - a.total),
+      detailedRootCauses: Object.entries(stats.detailedRootCauses).map(([name, d]) => ({ name, ...d, percentage: tasksToProcess.length > 0 ? ((d.total / tasksToProcess.length) * 100).toFixed(1) : 0 })).sort((a, b) => b.total - a.total),
+      sentimentData: [
+        { name: 'Promoters', value: stats.sentiment.Promoter, color: '#10b981', percentage: tasksToProcess.length > 0 ? ((stats.sentiment.Promoter / tasksToProcess.length) * 100).toFixed(1) : 0 },
+        { name: 'Neutrals', value: stats.sentiment.Neutral, color: '#f59e0b', percentage: tasksToProcess.length > 0 ? ((stats.sentiment.Neutral / tasksToProcess.length) * 100).toFixed(1) : 0 },
+        { name: 'Detractors', value: stats.sentiment.Detractor, color: '#ef4444', percentage: tasksToProcess.length > 0 ? ((stats.sentiment.Detractor / tasksToProcess.length) * 100).toFixed(1) : 0 },
+      ],
+      matrixOwners,
+      sentiment: stats.sentiment,
+      focusedData
+    };
+  }, [filteredTechnicalTasks, settings, activeOwnershipInsight]);
+
+  // --- NEW: Post-Session Deep Dive Logic ---
+  const postSessionAnalytics = useMemo(() => {
+    if (!selectedTeam || !Array.isArray(selectedTeam.sessionHistory) || selectedTeam.sessionHistory.length === 0) {
+      return null;
+    }
+
+    // 1. Find latest session date
+    const sessionDates = selectedTeam.sessionHistory
+      .map(s => s.sessionDate)
+      .filter(d => d)
+      .map(d => new Date(d));
+
+    if (sessionDates.length === 0) return null;
+    const latestSessionDate = new Date(Math.max(...sessionDates));
+
+    // 2. Pre-session tasks (BEFORE the session) — used for recurrence detection
+    const preSessionTasks = (technicalTasks || []).filter(t => {
+      const taskDate = new Date(t.pisDate || t.createdAt);
+      return taskDate <= latestSessionDate;
+    });
+
+    // Build known pre-session reason/subReason/rootCause sets
+    const preReasons = new Set();
+    const preSubReasons = new Set();
+    const preRootCauses = new Set();
+    preSessionTasks.forEach(t => {
+      splitValues(t.reason).map(normalizeValue).forEach(v => { if (v !== 'Not specified') preReasons.add(v); });
+      splitValues(t.subReason).map(normalizeValue).forEach(v => { if (v !== 'Not specified') preSubReasons.add(v); });
+      splitValues(t.rootCause).map(normalizeValue).forEach(v => { if (v !== 'Not specified') preRootCauses.add(v); });
+    });
+
+    // 3. Post-session tasks (AFTER latest session)
+    const postSessionTasks = (technicalTasks || []).filter(t => {
+      const taskDate = new Date(t.pisDate || t.createdAt);
+      return isAfter(taskDate, latestSessionDate);
+    });
+
+    if (postSessionTasks.length === 0) {
+      return {
+        hasTasks: false,
+        latestSessionDate,
+        totalPostTasks: 0
+      };
+    }
+
+    // 4. Process detailed stats
+    const stats = {
+      Detractor: 0,
+      Neutral: 0,
+      Promoter: 0,
+      byOwner: {},
+      byReason: {},
+      bySubReason: {},
+      byRootCause: {}
+    };
+
+    const toChartDataLocal = (obj) => {
+      const entries = Object.entries(obj).map(([name, value]) => ({ name, value }));
+      const total = entries.reduce((sum, item) => sum + item.value, 0);
+      return entries.map(item => ({
+        ...item,
+        percentage: total > 0 ? ((item.value / total) * 100).toFixed(1) : 0
+      })).sort((a, b) => b.value - a.value);
+    };
+
+    // Per-owner breakdown map: { ownerName: { byReason, bySubReason, byRootCause } }
+    const byOwnerDetail = {};
+
+    const enrichedTasks = postSessionTasks.map(task => {
+      let score = task.evaluationScore;
+      if (score && score > 0) {
+        if (score <= 6) stats.Detractor++;
+        else if (score >= 7 && score <= 8) stats.Neutral++;
+        else if (score >= 9) stats.Promoter++;
+      }
+
+      const owners = extractOwners(task);
+      const rawReasons = splitValues(task.reason).map(normalizeValue);
+      const rawSubReasons = splitValues(task.subReason).map(normalizeValue);
+      const rawRootCauses = splitValues(task.rootCause).map(normalizeValue);
+
+      // Recurrence: true if ALL main reasons/subReasons/rootCauses existed pre-session
+      const isRepeatReason = rawReasons.length > 0 && rawReasons.filter(r => r !== 'Not specified').every(r => preReasons.has(r));
+      const isRepeatSubReason = rawSubReasons.length > 0 && rawSubReasons.filter(r => r !== 'Not specified').every(r => preSubReasons.has(r));
+      const isRepeatRootCause = rawRootCauses.length > 0 && rawRootCauses.filter(r => r !== 'Not specified').every(r => preRootCauses.has(r));
+      const isRepeat = isRepeatReason && isRepeatSubReason && isRepeatRootCause;
+
+      owners.forEach(o => {
+        stats.byOwner[o] = (stats.byOwner[o] || 0) + 1;
+        if (!byOwnerDetail[o]) byOwnerDetail[o] = { byReason: {}, bySubReason: {}, byRootCause: {} };
+      });
+
+      const mLen = Math.max(rawReasons.length, rawSubReasons.length, rawRootCauses.length, 1);
+      for (let i = 0; i < mLen; i++) {
+        const r = rawReasons[i] || 'Not specified';
+        const sr = rawSubReasons[i] || 'Not specified';
+        const rc = rawRootCauses[i] || 'Not specified';
+        if (r !== 'Not specified' || i === 0) stats.byReason[r] = (stats.byReason[r] || 0) + 1;
+        if (sr !== 'Not specified' || i === 0) stats.bySubReason[sr] = (stats.bySubReason[sr] || 0) + 1;
+        if (rc !== 'Not specified' || i === 0) stats.byRootCause[rc] = (stats.byRootCause[rc] || 0) + 1;
+
+        owners.forEach(o => {
+          if (byOwnerDetail[o]) {
+            if (r !== 'Not specified' || i === 0) byOwnerDetail[o].byReason[r] = (byOwnerDetail[o].byReason[r] || 0) + 1;
+            if (sr !== 'Not specified' || i === 0) byOwnerDetail[o].bySubReason[sr] = (byOwnerDetail[o].bySubReason[sr] || 0) + 1;
+            if (rc !== 'Not specified' || i === 0) byOwnerDetail[o].byRootCause[rc] = (byOwnerDetail[o].byRootCause[rc] || 0) + 1;
+          }
+        });
+      }
+
+      return { ...task, isRepeat, isRepeatReason, isRepeatSubReason, isRepeatRootCause };
+    });
+
+    const ownerData = toChartDataLocal(stats.byOwner).slice(0, 10);
+
+    // Build per-owner chart data
+    const ownerChartData = {};
+    Object.entries(byOwnerDetail).forEach(([owner, detail]) => {
+      ownerChartData[owner] = {
+        reasonData: toChartDataLocal(detail.byReason),
+        subReasonData: toChartDataLocal(detail.bySubReason),
+        rootCauseData: toChartDataLocal(detail.byRootCause),
+      };
+    });
+
+    return {
+      hasTasks: true,
+      latestSessionDate,
+      totalPostTasks: postSessionTasks.length,
+      sentiment: stats,
+      ownerData,
+      ownerChartData,
+      reasonData: toChartDataLocal(stats.byReason),
+      subReasonData: toChartDataLocal(stats.bySubReason),
+      rootCauseData: toChartDataLocal(stats.byRootCause),
+      tasks: enrichedTasks,
+      preReasons,
+      preSubReasons,
+      preRootCauses,
+    };
+  }, [selectedTeam, technicalTasks]);
+
+  const handleIndividualAnalyticsDrillDown = useCallback(({ owner, reason, subReason, rootCause, itn, subscription }) => {
+    let tasks = filteredTechnicalTasks || [];
+
+    if (owner) {
+      tasks = tasks.filter(t => {
+        const owners = extractOwners(t);
+        return owners.includes(owner);
+      });
+    }
+
+    if (reason) {
+      tasks = tasks.filter(t => splitValues(t.reason).map(normalizeValue).includes(reason));
+    }
+
+    if (subReason) {
+      tasks = tasks.filter(t => splitValues(t.subReason).map(normalizeValue).includes(subReason));
+    }
+
+    if (rootCause) {
+      tasks = tasks.filter(t => splitValues(t.rootCause).map(normalizeValue).includes(rootCause));
+    }
+
+    if (itn) {
+      tasks = tasks.filter(t => splitValues(t.itnRelated).includes('Yes'));
+    }
+
+    if (subscription) {
+      tasks = tasks.filter(t => splitValues(t.relatedToSubscription).includes('Yes'));
+    }
+
+    setAnalyticsDrillDown({
+      open: true,
+      title: `Team Analytics: ${owner || reason || subReason || rootCause || 'Filtered'}`,
+      tasks: tasks.map(t => ({ ...t, __drillType: 'task' }))
+    });
+  }, [filteredTechnicalTasks]);
+  const filteredCustomerIssues = useMemo(() => {
     return customerIssues.filter(issue => {
       // 1. Team filter: Only include issues belonging to the selected team
       if (selectedTeam) {
@@ -976,6 +1503,128 @@ const FieldTeamPortal = () => {
     };
   }, [allTechnicalTasksGlobal, analyticsSubTab, timeFilterMode, recentDaysValue, selectedWeeks, selectedMonths, customDateRange, settings, fieldTeams, samplesTokenData]);
 
+  // --- NEW: Focused Global Analytics Logic ---
+  const focusedGlobalAnalytics = useMemo(() => {
+    if (!activeGlobalOwnershipInsight || !globalAnalytics?.tasks) return null;
+
+    const focusedTasks = globalAnalytics.tasks.filter(t => 
+      extractOwners(t).includes(activeGlobalOwnershipInsight)
+    );
+
+    const stats = {
+      byReason: {},
+      bySubReason: {},
+      byRootCause: {},
+      byGovernorate: {},
+      detailedReasons: {},
+      detailedSubReasons: {},
+      detailedRootCauses: {},
+      detailedGovernorates: {}
+    };
+
+    const normalizeVal = (val) => {
+      if (typeof val === 'string') return val.trim().replace(/^_+|_+$/g, '');
+      return val;
+    };
+
+    const splitVals = (val) => {
+      if (!val) return [];
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string') return val.split(',').map(s => s.trim()).filter(Boolean);
+      return [val];
+    };
+
+    focusedTasks.forEach(task => {
+      const rawOwners = extractOwners(task);
+      if (!rawOwners.includes(activeGlobalOwnershipInsight)) return;
+
+      const rawReasons = splitVals(task.reason).map(normalizeVal);
+      const rawSubReasons = splitVals(task.subReason).map(normalizeVal);
+      const rawRootCauses = splitVals(task.rootCause).map(normalizeVal);
+      const rawItnRelated = splitVals(task.itnRelated);
+      const rawSubscriptionRelated = splitVals(task.relatedToSubscription);
+      
+      const hasItn = rawItnRelated.some(v => v === 'Yes' || v === true);
+      const hasSub = rawSubscriptionRelated.some(v => v === 'Yes' || v === true);
+      
+      const maxLen = Math.max(
+        rawReasons.length,
+        rawSubReasons.length,
+        rawRootCauses.length,
+        1
+      );
+
+      for (let i = 0; i < maxLen; i++) {
+        const reason = rawReasons[i] !== undefined ? rawReasons[i] : (rawReasons[0] || 'Not specified');
+        const subReason = rawSubReasons[i] !== undefined ? rawSubReasons[i] : (rawSubReasons[0] || 'Not specified');
+        const rootCause = rawRootCauses[i] !== undefined ? rawRootCauses[i] : (rawRootCauses[0] || 'Not specified');
+        
+        // Count for Reason
+        stats.byReason[reason] = (stats.byReason[reason] || 0) + 1;
+        if (!stats.detailedReasons[reason]) stats.detailedReasons[reason] = { count: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
+        stats.detailedReasons[reason].count += 1;
+        if (hasItn) stats.detailedReasons[reason].itn += 1;
+        if (hasSub) stats.detailedReasons[reason].subscription += 1;
+        stats.detailedReasons[reason].ownerBreakdown[activeGlobalOwnershipInsight] = (stats.detailedReasons[reason].ownerBreakdown[activeGlobalOwnershipInsight] || 0) + 1;
+
+        // SubReason
+        stats.bySubReason[subReason] = (stats.bySubReason[subReason] || 0) + 1;
+        if (!stats.detailedSubReasons[subReason]) stats.detailedSubReasons[subReason] = { count: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
+        stats.detailedSubReasons[subReason].count += 1;
+        if (hasItn) stats.detailedSubReasons[subReason].itn += 1;
+        if (hasSub) stats.detailedSubReasons[subReason].subscription += 1;
+        stats.detailedSubReasons[subReason].ownerBreakdown[activeGlobalOwnershipInsight] = (stats.detailedSubReasons[subReason].ownerBreakdown[activeGlobalOwnershipInsight] || 0) + 1;
+
+        // Root Cause
+        stats.byRootCause[rootCause] = (stats.byRootCause[rootCause] || 0) + 1;
+        if (!stats.detailedRootCauses[rootCause]) stats.detailedRootCauses[rootCause] = { count: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
+        stats.detailedRootCauses[rootCause].count += 1;
+        if (hasItn) stats.detailedRootCauses[rootCause].itn += 1;
+        if (hasSub) stats.detailedRootCauses[rootCause].subscription += 1;
+        stats.detailedRootCauses[rootCause].ownerBreakdown[activeGlobalOwnershipInsight] = (stats.detailedRootCauses[rootCause].ownerBreakdown[activeGlobalOwnershipInsight] || 0) + 1;
+      }
+
+      // Governorate (1 per task)
+      const gov = normalizeVal(task.governorate) || 'Not specified';
+      stats.byGovernorate[gov] = (stats.byGovernorate[gov] || 0) + 1;
+      if (!stats.detailedGovernorates[gov]) stats.detailedGovernorates[gov] = { count: 0, itn: 0, subscription: 0 };
+      stats.detailedGovernorates[gov].count += 1;
+      if (hasItn) stats.detailedGovernorates[gov].itn += 1;
+      if (hasSub) stats.detailedGovernorates[gov].subscription += 1;
+    });
+
+    const toDetailedTableData = (detailedObj, totalTasks) => {
+      return Object.entries(detailedObj).map(([name, data]) => ({
+        name,
+        total: data.count,
+        percentage: ((data.count / totalTasks) * 100).toFixed(1),
+        itn: data.itn,
+        subscription: data.subscription,
+        ownerBreakdown: data.ownerBreakdown || {}
+      })).sort((a, b) => b.total - a.total);
+    };
+
+    const toChartData = (obj) => {
+      const total = Object.values(obj).reduce((a, b) => a + b, 0);
+      return Object.entries(obj).map(([name, value]) => ({
+        name,
+        value,
+        percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0.0'
+      })).sort((a, b) => b.value - a.value);
+    };
+
+    return {
+      reasonData: toChartData(stats.byReason),
+      subReasonData: toChartData(stats.bySubReason),
+      rootCauseData: toChartData(stats.byRootCause),
+      governorateData: toChartData(stats.byGovernorate),
+      detailedReasons: toDetailedTableData(stats.detailedReasons, focusedTasks.length),
+      detailedSubReasons: toDetailedTableData(stats.detailedSubReasons, focusedTasks.length),
+      detailedRootCauses: toDetailedTableData(stats.detailedRootCauses, focusedTasks.length),
+      detailedGovernorates: toDetailedTableData(stats.detailedGovernorates, focusedTasks.length),
+    };
+  }, [activeGlobalOwnershipInsight, globalAnalytics?.tasks]);
+
   const calculateItemPoints = (item, type = 'task') => {
     let points = 0;
 
@@ -1298,7 +1947,7 @@ const FieldTeamPortal = () => {
     // Apply time filtering first (Must match useMemo logic exactly)
     const techTasks = Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [];
     let timeFiltered = techTasks;
-    
+
     if (timeFilterMode === 'days') {
       const cutoff = subDays(new Date(), recentDaysValue);
       timeFiltered = techTasks.filter(t => t.interviewDate && isAfter(new Date(t.interviewDate), cutoff));
@@ -1395,7 +2044,7 @@ const FieldTeamPortal = () => {
         if (filters.reason && tuple.reason !== filters.reason) match = false;
         if (filters.subReason && tuple.subReason !== filters.subReason) match = false;
         if (filters.rootCause && tuple.rootCause !== filters.rootCause) match = false;
-        
+
         if (filters.governorate) {
           const governorate = task.governorate ? String(task.governorate).trim() : 'Not specified';
           if (governorate !== filters.governorate) match = false;
@@ -1430,8 +2079,27 @@ const FieldTeamPortal = () => {
     });
   };
 
+  const filteredIssuesByDate = useMemo(() => {
+    return allCustomerIssuesGlobal.filter(issue => {
+      // 1. apply basic date filtering
+      if (!dateFilter.start && !dateFilter.end) return true;
+      const reportDate = new Date(issue.date || issue.createdAt);
+      const start = dateFilter.start ? new Date(dateFilter.start) : null;
+      const end = dateFilter.end ? new Date(dateFilter.end) : null;
+      if (start && reportDate < start) return false;
+      if (end) {
+        const endDay = new Date(end);
+        endDay.setHours(23, 59, 59, 999);
+        if (reportDate > endDay) return false;
+      }
+      return true;
+    });
+  }, [allCustomerIssuesGlobal, dateFilter]);
+
   const stats = useMemo(() => {
-    const issuesToProcess = filteredIssuesByDate;
+    // Corrected: Use team-aware filteredCustomerIssues when a team is selected, 
+    // otherwise fallback to global date-filtered issues.
+    const issuesToProcess = selectedTeam ? filteredCustomerIssues : filteredIssuesByDate;
     const totalTransactions = issuesToProcess.length;
     let totalIssuesHighlighted = 0;
     const closed = issuesToProcess.filter(i => i.solved === 'yes').length;
@@ -1768,7 +2436,7 @@ const FieldTeamPortal = () => {
     }
   };
 
-  const StatCard = ({ title, value, icon, color, subtext }) => (
+  const MiniStatCard = ({ title, value, icon, color, subtext }) => (
     <Card sx={{ bgcolor: '#2d2d2d', color: '#fff', height: '100%', border: '1px solid #3d3d3d' }}>
       <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3 }}>
         <Box>
@@ -2126,236 +2794,7 @@ const FieldTeamPortal = () => {
     setActiveTab(newValue);
   };
 
-  const getAssessmentStatus = (score, type = 'general') => {
-    const thresholds = settings?.thresholds || { pass: 85, average: 70, fail: 50, quizPassScore: 70, labPassScore: 75 };
 
-    if (type === 'practical') {
-      // 1-5 Scale
-      if (score >= 4.5) return { label: "Excellent", color: "#2e7d32" };
-      if (score >= 3.5) return { label: "Good", color: "#66bb6a" };
-      if (score >= 2.5) return { label: "Satisfactory", color: "#ffa726" };
-      if (score >= 1.5) return { label: "Needs Improvement", color: "#ff9800" };
-      return { label: "Poor", color: "#d32f2f" };
-    }
-
-    let passThreshold = thresholds.pass;
-    if (type === 'quiz') passThreshold = thresholds.quizPassScore || 70;
-    if (type === 'lab') passThreshold = thresholds.labPassScore || 75;
-
-    if (score >= passThreshold) return { label: "Excellent", color: "#2e7d32" };
-    if (score >= thresholds.average) return { label: "Pass (Minor Comments)", color: "#66bb6a" };
-    if (score >= thresholds.fail) return { label: "Pass (With Comments)", color: "#ffa726" };
-    return { label: "Fail", color: "#d32f2f" };
-  };
-
-  const getPerformanceColor = (score, type = 'general') => {
-    return getAssessmentStatus(score, type).color;
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const calculateAverageScore = (results) => {
-    if (results.length === 0) return 0;
-    const totalScore = results.reduce((sum, result) => {
-      return sum + (result.overallScore || result.percentage || 0);
-    }, 0);
-    return totalScore / results.length;
-  };
-
-  const calculateMedianScore = (results) => {
-    const scores = results.map((result) => result.overallScore || result.percentage || 0).sort((a, b) => a - b);
-    const mid = Math.floor(scores.length / 2);
-    return scores.length % 2 !== 0 ? scores[mid] : (scores[mid - 1] + scores[mid]) / 2;
-  };
-
-  const calculateStandardDeviation = (results) => {
-    const average = calculateAverageScore(results);
-    const variance = results.reduce((sum, result) => {
-      const score = result.overallScore || result.percentage || 0;
-      return sum + Math.pow(score - average, 2);
-    }, 0) / results.length;
-    return Math.sqrt(variance);
-  };
-
-  const calculatePercentageAboveThreshold = (data, threshold) => {
-    if (!data || data.length === 0) return 0;
-    const above = data.filter(item => (item.percentage || item.overallScore || item.totalScore || 0) >= threshold);
-    return (above.length / data.length) * 100;
-  };
-
-  const getHeatmapColor = (value, min = 0, max = 100, type = 'blue') => {
-    const percentage = Math.min(Math.max((value - min) / (max - min), 0), 1);
-    const colors = {
-      green: `rgba(16, 185, 129, ${percentage * 0.4 + 0.05})`,
-      blue: `rgba(59, 130, 246, ${percentage * 0.4 + 0.05})`,
-      orange: `rgba(245, 158, 11, ${percentage * 0.4 + 0.05})`,
-      red: `rgba(239, 68, 68, ${percentage * 0.4 + 0.05})`,
-      purple: `rgba(139, 92, 246, ${percentage * 0.4 + 0.05})`
-    };
-    return colors[type] || colors.blue;
-  };
-
-  const calculateHighestScore = (results) => {
-    if (results.length === 0) return 0;
-    return Math.max(...results.map(result => result.overallScore || result.percentage || 0));
-  };
-
-  const calculateLowestScore = (results) => {
-    if (results.length === 0) return 0;
-    return Math.min(...results.map(result => result.overallScore || result.percentage || 0));
-  };
-
-  const getScoreDistribution = (results) => {
-    const distribution = {
-      '0-49': 0,
-      '50-74': 0,
-      '75-89': 0,
-      '90-100': 0
-    };
-
-    results.forEach(result => {
-      const score = result.overallScore || result.percentage || 0;
-      if (score >= 90) {
-        distribution['90-100']++;
-      } else if (score >= 75) {
-        distribution['75-89']++;
-      } else if (score >= 50) {
-        distribution['50-74']++;
-      } else {
-        distribution['0-49']++;
-      }
-    });
-
-    return distribution;
-  };
-
-  const identifyStrengthsAndWeaknesses = () => {
-    const categories = {};
-
-    // Aggregate from quizzes
-    quizResults.forEach(res => {
-      res.userAnswers?.forEach(ans => {
-        if (!ans.category) return;
-        if (!categories[ans.category]) categories[ans.category] = { total: 0, count: 0, type: 'theoretical' };
-        categories[ans.category].total += (ans.score || 0);
-        categories[ans.category].count += 2; // Each MCQ is 2 points
-      });
-    });
-
-    // Aggregate from practicals
-    jobAssessments.forEach(res => {
-      res.checkpoints?.forEach(cp => {
-        if (!cp.category) return;
-        if (!categories[cp.category]) categories[cp.category] = { total: 0, count: 0, type: 'practical' };
-        categories[cp.category].total += (cp.score || 0);
-        categories[cp.category].count += 5; // practical scale 0-5
-      });
-    });
-
-    const analysis = Object.keys(categories).map(cat => ({
-      name: cat,
-      score: (categories[cat].total / categories[cat].count) * 100,
-      type: categories[cat].type
-    })).sort((a, b) => b.score - a.score);
-
-    return {
-      strengths: analysis.slice(0, 3).filter(a => a.score >= 75),
-      weaknesses: analysis.slice(-3).reverse().filter(a => a.score < 60)
-    };
-  };
-
-  const handleGenerateFullReport = async () => {
-    try {
-      setGeneratingReport(true);
-      const { strengths, weaknesses } = identifyStrengthsAndWeaknesses();
-      const theoreticalAvg = quizResults.length > 0 ? calculateAverageScore(quizResults) : null;
-      const practicalAvg = jobAssessments.length > 0 ? calculateAverageScore(jobAssessments) : null;
-      const labAvg = labAssessments.length > 0 ? calculateAverageScore(labAssessments) : null;
-
-      const assessedCount = [theoreticalAvg, practicalAvg, labAvg].filter(v => v !== null).length;
-      if (assessedCount === 0) {
-        alert('No assessments available for this team.');
-        setGeneratingReport(false);
-        return;
-      }
-
-      const markdown = `
-**Team Name:** ${selectedTeam.teamName}
-**Company:** ${selectedTeam.teamCompany}
-**Date:** ${new Date().toLocaleDateString()}
-
-
----
-
-## 1. PERFORMANCE SUMMARY
-This report provides a comprehensive analysis of the team's proficiency across Theoretical knowledge, Practical field application, and Lab environments.
-
-| Assessment Type | Average Score | Status |
-| :--- | :--- | :--- |
-| **Theoretical (Quiz)** | ${theoreticalAvg !== null ? `${Math.round(theoreticalAvg)}%` : 'Not Assessed'} | ${theoreticalAvg !== null ? getAssessmentStatus(theoreticalAvg, 'quiz').label : 'N/A'} |
-| **Practical (Field)** | ${practicalAvg !== null ? `${Number(practicalAvg).toFixed(1)}/5` : 'Not Assessed'} | ${practicalAvg !== null ? getAssessmentStatus(practicalAvg, 'practical').label : 'N/A'} |
-| **Lab Assessment** | ${labAvg !== null ? `${Math.round(labAvg)}%` : 'Not Assessed'} | ${labAvg !== null ? getAssessmentStatus(labAvg, 'lab').label : 'N/A'} |
-
----
-
-## 2. ADVANCED ANALYTICS
-**Mastery Level:** ${Math.round(([theoreticalAvg, practicalAvg ? practicalAvg * 20 : null, labAvg].filter(v => v !== null).reduce((a, b) => a + b, 0)) / assessedCount)}%
-
-### Key Strengths
-${strengths.map(s => `- **${s.name}**: Demonstrating mastery with ${Math.round(s.score)}% proficiency.`).join('\n') || 'N/A'}
-
-### Areas for Improvement
-${weaknesses.map(w => `- **${w.name}**: Scoring ${Math.round(w.score)}%. Focused training recommended.`).join('\n') || 'N/A'}
-
----
-
-## 3. TREND ANALYSIS
-- **Theoretical Trend:** ${quizResults.length > 1 ? (quizResults[0].percentage > quizResults[1].percentage ? 'Improving' : 'Declining') : theoreticalAvg !== null ? 'Stable' : 'Not Assessed'}
-- **Practical Consistency:** ${jobAssessments.length > 0 ? (calculateStandardDeviation(jobAssessments) < 10 ? 'High (Low Variance)' : 'Variable (High Variance)') : 'Not Assessed'}
-
----
-
-## 4. FINAL RECOMMENDATIONS
-${([theoreticalAvg, practicalAvg ? practicalAvg * 20 : null, labAvg].filter(v => v !== null).reduce((a, b) => a + b, 0)) / assessedCount > 85
-          ? "The team shows excellent alignment with quality standards. Recommend for high-complexity projects."
-          : "Focused technical workshops and practical drills are recommended to bridge identified gaps."}
-
----
-*Report generated automatically by Reach Quality Management System*
-      `;
-
-      const response = await api.post("/ai/report/download", {
-        reportContent: markdown,
-        format: 'pdf',
-        title: `Full Evaluation - ${selectedTeam.teamName}`
-      }, {
-        responseType: 'blob'
-      });
-
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Final_Evaluation_${selectedTeam.teamName.replace(/\s+/g, '_')}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Report generation failed:", err);
-    } finally {
-      setGeneratingReport(false);
-    }
-  };
 
   // Export functions for individual test types
   const exportTheoreticalToExcel = () => {
@@ -3826,7 +4265,25 @@ ${data.map((a, i) => `
                                 return null;
                               }}
                             />
-                            <RechartsBar dataKey="value" fill="url(#ownerGradient)" radius={[6, 6, 0, 0]} />
+                            <RechartsBar 
+                              dataKey="value" 
+                              radius={[6, 6, 0, 0]}
+                              onClick={(data) => {
+                                if (activeGlobalOwnershipInsight === data.name) {
+                                  setActiveGlobalOwnershipInsight(null);
+                                } else {
+                                  setActiveGlobalOwnershipInsight(data.name);
+                                }
+                              }}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              {globalAnalytics.ownerData.map((entry, index) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={activeGlobalOwnershipInsight && activeGlobalOwnershipInsight !== entry.name ? "rgba(59,130,246,0.2)" : "url(#ownerGradient)"} 
+                                />
+                              ))}
+                            </RechartsBar>
                           </RechartsBarChart>
                         </ResponsiveContainer>
                         {/* Detailed Owner Table - Compact Style */}
@@ -3844,8 +4301,20 @@ ${data.map((a, i) => `
                             </TableHead>
                             <TableBody>
                               {globalAnalytics.detailedOwners.map((data) => (
-                                <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                                  <TableCell sx={{ color: '#e2e8f0' }}>{data.name}</TableCell>
+                                <TableRow 
+                                  key={data.name} 
+                                  sx={{ 
+                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' },
+                                    bgcolor: activeGlobalOwnershipInsight === data.name ? 'rgba(59,130,246,0.15)' : 'transparent'
+                                  }}
+                                >
+                                  <TableCell 
+                                    sx={{ color: activeGlobalOwnershipInsight === data.name ? '#3b82f6' : '#e2e8f0', cursor: 'pointer', fontWeight: activeGlobalOwnershipInsight === data.name ? 'bold' : 'normal' }}
+                                    onClick={() => setActiveGlobalOwnershipInsight(activeGlobalOwnershipInsight === data.name ? null : data.name)}
+                                  >
+                                    {data.name}
+                                    {activeGlobalOwnershipInsight === data.name && <Chip label="Filtered" size="small" sx={{ ml: 1, height: 16, fontSize: '0.6rem', bgcolor: '#3b82f6', color: '#fff' }} />}
+                                  </TableCell>
                                   <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{data.points}</TableCell>
                                   <TableCell
                                     align="right"
@@ -3898,7 +4367,7 @@ ${data.map((a, i) => `
                           <LocationOn sx={{ color: '#0ea5e9' }} /> Governorate Distribution
                         </Typography>
                         <ResponsiveContainer width="100%" height={280}>
-                          <RechartsBarChart data={globalAnalytics.governorateData}>
+                          <RechartsBarChart data={activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.governorateData : globalAnalytics.governorateData}>
                             <defs>
                               <linearGradient id="governorateGradient" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.8} />
@@ -3937,7 +4406,7 @@ ${data.map((a, i) => `
                               </TableRow>
                             </TableHead>
                             <TableBody>
-                              {globalAnalytics.detailedGovernorates.slice(0, 15).map((data) => (
+                              {((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedGovernorates : globalAnalytics.detailedGovernorates) || []).slice(0, 15).map((data) => (
                                 <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                                   <TableCell sx={{ color: '#e2e8f0' }}>{data.name}</TableCell>
                                   <TableCell
@@ -3959,9 +4428,9 @@ ${data.map((a, i) => `
                               ))}
                               <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
                                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
-                                <TableCell align="right" sx={{ color: '#0ea5e9', fontWeight: 'bold' }}>{globalAnalytics.detailedGovernorates.reduce((sum, item) => sum + item.total, 0)}</TableCell>
-                                <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>{globalAnalytics.detailedGovernorates.reduce((sum, item) => sum + item.itn, 0)}</TableCell>
-                                <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{globalAnalytics.detailedGovernorates.reduce((sum, item) => sum + item.subscription, 0)}</TableCell>
+                                <TableCell align="right" sx={{ color: '#0ea5e9', fontWeight: 'bold' }}>{((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedGovernorates : globalAnalytics.detailedGovernorates) || []).reduce((sum, item) => sum + item.total, 0)}</TableCell>
+                                <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>{((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedGovernorates : globalAnalytics.detailedGovernorates) || []).reduce((sum, item) => sum + item.itn, 0)}</TableCell>
+                                <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedGovernorates : globalAnalytics.detailedGovernorates) || []).reduce((sum, item) => sum + item.subscription, 0)}</TableCell>
                                 <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
                               </TableRow>
                             </TableBody>
@@ -3979,7 +4448,7 @@ ${data.map((a, i) => `
                         <ResponsiveContainer width="100%" height={280}>
                           <RechartsPieChart>
                             <RechartsPie
-                              data={globalAnalytics.reasonData}
+                              data={(activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.reasonData : globalAnalytics.reasonData) || []}
                               cx="50%"
                               cy="50%"
                               innerRadius={60}
@@ -3987,7 +4456,7 @@ ${data.map((a, i) => `
                               paddingAngle={5}
                               dataKey="value"
                             >
-                              {globalAnalytics.reasonData.map((entry, index) => (
+                              {((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.reasonData : globalAnalytics.reasonData) || []).map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'][index % 8]} />
                               ))}
                             </RechartsPie>
@@ -4024,7 +4493,7 @@ ${data.map((a, i) => `
                               </TableRow>
                             </TableHead>
                             <TableBody>
-                              {globalAnalytics.detailedReasons.slice(0, 15).map((data) => {
+                              {((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedReasons : globalAnalytics.detailedReasons) || []).slice(0, 15).map((data) => {
                                 const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
                                 return (
                                   <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
@@ -4091,19 +4560,19 @@ ${data.map((a, i) => `
                               <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
                                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
                                 {globalAnalytics.matrixOwners.map(owner => {
-                                  const totalForOwner = Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                                  const totalForOwner = Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedReasons : globalAnalytics.detailedReasons) || []).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                                   return (
                                     <TableCell key={owner} align="right" sx={{ color: '#3b82f6', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
                                   );
                                 })}
                                 <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
-                                  {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.itn, 0)}
+                                  {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedReasons : globalAnalytics.detailedReasons) || []).reduce((sum, data) => sum + data.itn, 0)}
                                 </TableCell>
                                 <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
-                                  {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.subscription, 0)}
+                                  {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedReasons : globalAnalytics.detailedReasons) || []).reduce((sum, data) => sum + data.subscription, 0)}
                                 </TableCell>
                                 <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
-                                  {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.total, 0)}
+                                  {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedReasons : globalAnalytics.detailedReasons) || []).reduce((sum, data) => sum + data.total, 0)}
                                 </TableCell>
                                 <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
                               </TableRow>
@@ -4123,14 +4592,14 @@ ${data.map((a, i) => `
                           </Typography>
                           <IconButton
                             size="small"
-                            onClick={() => setChartDialog({ open: true, title: 'Sub-Reason Analysis', data: globalAnalytics.subReasonData, type: 'bar' })}
+                            onClick={() => setChartDialog({ open: true, title: 'Sub-Reason Analysis', data: activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.subReasonData : globalAnalytics.subReasonData, type: 'bar' })}
                             sx={{ color: '#f59e0b', bgcolor: 'rgba(245, 158, 11, 0.1)' }}
                           >
                             <MdInsights size={20} />
                           </IconButton>
                         </Box>
                         <ResponsiveContainer width="100%" height={280}>
-                          <RechartsBarChart data={globalAnalytics.subReasonData}>
+                          <RechartsBarChart data={activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.subReasonData : globalAnalytics.subReasonData}>
                             <defs>
                               <linearGradient id="subReasonGradient" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
@@ -4174,7 +4643,7 @@ ${data.map((a, i) => `
                               </TableRow>
                             </TableHead>
                             <TableBody>
-                              {globalAnalytics.detailedSubReasons.slice(0, 15).map((data) => {
+                              {((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedSubReasons : globalAnalytics.detailedSubReasons) || []).slice(0, 15).map((data) => {
                                 const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
                                 return (
                                   <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
@@ -4241,19 +4710,19 @@ ${data.map((a, i) => `
                               <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
                                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
                                 {globalAnalytics.matrixOwners.map(owner => {
-                                  const totalForOwner = Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                                  const totalForOwner = Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedSubReasons : globalAnalytics.detailedSubReasons) || []).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                                   return (
                                     <TableCell key={owner} align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
                                   );
                                 })}
                                 <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
-                                  {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.itn, 0)}
+                                  {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedSubReasons : globalAnalytics.detailedSubReasons) || []).reduce((sum, data) => sum + data.itn, 0)}
                                 </TableCell>
                                 <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
-                                  {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.subscription, 0)}
+                                  {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedSubReasons : globalAnalytics.detailedSubReasons) || []).reduce((sum, data) => sum + data.subscription, 0)}
                                 </TableCell>
                                 <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
-                                  {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.total, 0)}
+                                  {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedSubReasons : globalAnalytics.detailedSubReasons) || []).reduce((sum, data) => sum + data.total, 0)}
                                 </TableCell>
                                 <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
                               </TableRow>
@@ -4273,14 +4742,14 @@ ${data.map((a, i) => `
                           </Typography>
                           <IconButton
                             size="small"
-                            onClick={() => setChartDialog({ open: true, title: 'Root Cause Analysis', data: globalAnalytics.rootCauseData, type: 'area' })}
+                            onClick={() => setChartDialog({ open: true, title: 'Root Cause Analysis', data: activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.rootCauseData : globalAnalytics.rootCauseData, type: 'area' })}
                             sx={{ color: '#8b5cf6', bgcolor: 'rgba(139, 92, 246, 0.1)' }}
                           >
                             <MdInsights size={20} />
                           </IconButton>
                         </Box>
                         <ResponsiveContainer width="100%" height={280}>
-                          <RechartsBarChart data={globalAnalytics.rootCauseData}>
+                          <RechartsBarChart data={activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.rootCauseData : globalAnalytics.rootCauseData}>
                             <defs>
                               <linearGradient id="rootCauseGradient" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
@@ -4323,7 +4792,7 @@ ${data.map((a, i) => `
                               </TableRow>
                             </TableHead>
                             <TableBody>
-                              {globalAnalytics.detailedRootCauses.slice(0, 15).map((data) => {
+                              {((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedRootCauses : globalAnalytics.detailedRootCauses) || []).slice(0, 15).map((data) => {
                                 const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
                                 return (
                                   <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
@@ -4390,19 +4859,19 @@ ${data.map((a, i) => `
                               <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
                                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
                                 {globalAnalytics.matrixOwners.map(owner => {
-                                  const totalForOwner = Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
+                                  const totalForOwner = Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedRootCauses : globalAnalytics.detailedRootCauses) || []).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                                   return (
                                     <TableCell key={owner} align="right" sx={{ color: '#8b5cf6', fontWeight: 'bold' }}>{totalForOwner}</TableCell>
                                   );
                                 })}
                                 <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>
-                                  {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.itn, 0)}
+                                  {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedRootCauses : globalAnalytics.detailedRootCauses) || []).reduce((sum, data) => sum + data.itn, 0)}
                                 </TableCell>
                                 <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
-                                  {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.subscription, 0)}
+                                  {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedRootCauses : globalAnalytics.detailedRootCauses) || []).reduce((sum, data) => sum + data.subscription, 0)}
                                 </TableCell>
                                 <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
-                                  {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.total, 0)}
+                                  {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedRootCauses : globalAnalytics.detailedRootCauses) || []).reduce((sum, data) => sum + data.total, 0)}
                                 </TableCell>
                                 <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
                               </TableRow>
@@ -4424,6 +4893,7 @@ ${data.map((a, i) => `
                     handleExportTeamViolations={handleExportTeamViolations}
                     handleExportAllTeamsViolations={handleExportAllTeamsViolations}
                     colors={colors}
+                    settings={settings}
                   />
 
 
@@ -4890,7 +5360,6 @@ ${data.map((a, i) => `
                   <Tab label="Theoretical" icon={<Quiz />} iconPosition="start" />
                   <Tab label="Practical" icon={<CheckCircle />} iconPosition="start" />
                   <Tab label="Lab" icon={<Assessment />} iconPosition="start" />
-                  <Tab label="Smart Reports" icon={<Timeline />} iconPosition="start" />
                 </Tabs>
               </Paper>
 
@@ -5201,11 +5670,11 @@ ${data.map((a, i) => `
 
                   {/* KPI Section - Match Reference Layout */}
                   <Grid container spacing={2} mb={4}>
-                    <Grid item xs={12} sm={6} md={2.4}><StatCard title="Total Transactions" value={stats.totalTransactions} icon={<FaClipboardList />} color="#2196f3" subtext="Total records" /></Grid>
-                    <Grid item xs={12} sm={6} md={2.4}><StatCard title="Issues Highlighted" value={stats.totalIssuesHighlighted} icon={<FaExclamationCircle />} color="#ffc107" subtext={`Avg: ${stats.issueDensity} per txn`} /></Grid>
-                    <Grid item xs={12} sm={6} md={2.4}><StatCard title="Closed" value={stats.closed} icon={<FaCheckCircle />} color="#4caf50" subtext={`${stats.resolutionRate}% Rate`} /></Grid>
-                    <Grid item xs={12} sm={6} md={2.4}><StatCard title="Open" value={stats.open} icon={<FaExclamationCircle />} color="#f44336" subtext="Require attention" /></Grid>
-                    <Grid item xs={12} sm={6} md={2.4}><StatCard title="Avg. Daily Issues" value={(stats.totalTransactions / (trendData.labels.length || 1)).toFixed(1)} icon={<FaChartLine />} color="#ff9800" subtext="Trend metric" /></Grid>
+                    <Grid item xs={12} sm={6} md={2.4}><MiniStatCard title="Total Transactions" value={stats.totalTransactions} icon={<FaClipboardList />} color="#2196f3" subtext="Total records" /></Grid>
+                    <Grid item xs={12} sm={6} md={2.4}><MiniStatCard title="Issues Highlighted" value={stats.totalIssuesHighlighted} icon={<FaExclamationCircle />} color="#ffc107" subtext={`Avg: ${stats.issueDensity} per txn`} /></Grid>
+                    <Grid item xs={12} sm={6} md={2.4}><MiniStatCard title="Closed" value={stats.closed} icon={<FaCheckCircle />} color="#4caf50" subtext={`${stats.resolutionRate}% Rate`} /></Grid>
+                    <Grid item xs={12} sm={6} md={2.4}><MiniStatCard title="Open" value={stats.open} icon={<FaExclamationCircle />} color="#f44336" subtext="Require attention" /></Grid>
+                    <Grid item xs={12} sm={6} md={2.4}><MiniStatCard title="Avg. Daily Issues" value={(stats.totalTransactions / (trendData.labels.length || 1)).toFixed(1)} icon={<FaChartLine />} color="#ff9800" subtext="Trend metric" /></Grid>
                   </Grid>
 
                   {/* Process Efficiency Spotlight - Match Reference Layout */}
@@ -5403,20 +5872,136 @@ ${data.map((a, i) => `
               {/* 3. TASKS & TICKETS TAB (Full Premium Dashboard) */}
               {activeTab === 2 && (
                 <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexWrap: 'wrap', gap: 3 }}>
                     <Box>
-                      <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>NPS Tickets</Typography>
-                      <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
-                        Operational workload and technical assessment registry for {selectedTeam?.teamName}
+                      <Typography variant="h5" sx={{ fontWeight: 900, color: '#fff', mb: 0.5 }}>
+                        Advanced Performance Analytics
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#94a3b8', fontWeight: 500 }}>
+                        Operational workload and technical assessment deep-dive for <span style={{ color: colors.primary, fontWeight: 700 }}>{selectedTeam?.teamName}</span>
                       </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
+
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {/* Time Filter Controls */}
+                      <Paper sx={{
+                        display: 'inline-flex',
+                        p: 0.5,
+                        bgcolor: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '14px',
+                        backdropFilter: 'blur(10px)'
+                      }}>
+                        <ToggleButtonGroup
+                          value={taskTimeFilterMode}
+                          exclusive
+                          onChange={(e, val) => val && setTaskTimeFilterMode(val)}
+                          size="small"
+                          sx={{
+                            '& .MuiToggleButton-root': {
+                              border: 'none',
+                              color: '#64748b',
+                              px: 2,
+                              borderRadius: '10px !important',
+                              textTransform: 'none',
+                              fontWeight: 600,
+                              '&.Mui-selected': {
+                                bgcolor: colors.primary,
+                                color: '#fff',
+                                '&:hover': { bgcolor: colors.primary }
+                              }
+                            }
+                          }}
+                        >
+                          <ToggleButton value="all">All</ToggleButton>
+                          <ToggleButton value="days">Last {taskRecentDaysValue}d</ToggleButton>
+                          <ToggleButton value="weeks">Weeks</ToggleButton>
+                          <ToggleButton value="months">Months</ToggleButton>
+                          <ToggleButton value="custom">Custom</ToggleButton>
+                        </ToggleButtonGroup>
+                      </Paper>
+
+                      {/* Mode Specific Controls */}
+                      {taskTimeFilterMode === 'days' && (
+                        <TextField
+                          select
+                          size="small"
+                          value={taskRecentDaysValue}
+                          onChange={(e) => setTaskRecentDaysValue(e.target.value)}
+                          sx={{
+                            width: 100,
+                            '& .MuiOutlinedInput-root': {
+                              bgcolor: 'rgba(255,255,255,0.03)',
+                              borderRadius: '12px',
+                              color: '#fff'
+                            }
+                          }}
+                        >
+                          {[1, 7, 30, 60, 90, 180, 365].map(d => (
+                            <MenuItem key={d} value={d}>{d} Days</MenuItem>
+                          ))}
+                        </TextField>
+                      )}
+
+                      {taskTimeFilterMode === 'weeks' && (
+                        <Autocomplete
+                          multiple
+                          size="small"
+                          options={weekRanges}
+                          value={taskSelectedWeeks}
+                          onChange={(e, val) => setTaskSelectedWeeks(val)}
+                          renderInput={(params) => (
+                            <TextField {...params} placeholder="Select Weeks" sx={{ width: 250 }} />
+                          )}
+                          sx={{
+                            '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px' },
+                            '& .MuiChip-root': { bgcolor: colors.primary, color: '#fff' }
+                          }}
+                        />
+                      )}
+
+                      {taskTimeFilterMode === 'months' && (
+                        <Autocomplete
+                          multiple
+                          size="small"
+                          options={monthOptions}
+                          value={taskSelectedMonths}
+                          onChange={(e, val) => setTaskSelectedMonths(val)}
+                          renderInput={(params) => (
+                            <TextField {...params} placeholder="Select Months" sx={{ width: 250 }} />
+                          )}
+                          sx={{
+                            '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px' },
+                            '& .MuiChip-root': { bgcolor: colors.primary, color: '#fff' }
+                          }}
+                        />
+                      )}
+
+                      {taskTimeFilterMode === 'custom' && (
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <TextField
+                            type="date"
+                            size="small"
+                            value={taskCustomDateRange.start}
+                            onChange={(e) => setTaskCustomDateRange({ ...taskCustomDateRange, start: e.target.value })}
+                            sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', color: '#fff' } }}
+                          />
+                          <Typography sx={{ color: '#94a3b8' }}>-</Typography>
+                          <TextField
+                            type="date"
+                            size="small"
+                            value={taskCustomDateRange.end}
+                            onChange={(e) => setTaskCustomDateRange({ ...taskCustomDateRange, end: e.target.value })}
+                            sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', color: '#fff' } }}
+                          />
+                        </Box>
+                      )}
+
                       <Button
-                        variant="outlined"
+                        variant="contained"
                         startIcon={<FaFileExcel />}
-                        sx={{ color: colors.success, borderColor: colors.success }}
                         onClick={() => {
-                          const data = technicalTasks.map(t => ({
+                          const data = filteredTechnicalTasks.map(t => ({
                             SLID: t.slid,
                             'Request Number': t.requestNumber,
                             'Customer Name': t.customerName,
@@ -5428,107 +6013,572 @@ ${data.map((a, i) => `
                           const ws = XLSX.utils.json_to_sheet(data);
                           const wb = XLSX.utils.book_new();
                           XLSX.utils.book_append_sheet(wb, ws, "Tasks");
-                          XLSX.writeFile(wb, `${selectedTeam.teamName}_Technical_Tasks.xlsx`);
+                          XLSX.writeFile(wb, `${selectedTeam.teamName}_Filtered_Tasks.xlsx`);
+                        }}
+                        sx={{
+                          background: colors.primaryGradient,
+                          borderRadius: '12px',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          px: 3
                         }}
                       >
-                        Export Excel
+                        Export Filtered
                       </Button>
                     </Box>
                   </Box>
 
                   {/* Technical KPI Section */}
-                  <Grid container spacing={2} mb={4}>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard
-                        title="Total Tasks"
-                        value={technicalTasks.length}
+                  <Grid container spacing={3} mb={4}>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <MiniStatCard
+                        title="Total NPS Tasks"
+                        value={filteredTechnicalTasks.length}
                         icon={<FaClipboardList />}
                         color={colors.primary}
-                        subtext="Technical workload"
+                        subtext="Scoped period tasks"
                       />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard
-                        title="High Priority"
-                        value={technicalTasks.filter(t => t.priority === 'High').length}
-                        icon={<PriorityHigh />}
-                        color={colors.error}
-                        subtext="Requires urgent action"
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard
-                        title="Detractors"
-                        value={technicalTasks.filter(t => t.evaluationScore > 0 && t.evaluationScore <= 60).length}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <MiniStatCard
+                        title="NPS Detractors"
+                        value={individualTeamAnalytics.sentiment.Detractor}
                         icon={<FaExclamationCircle />}
-                        color={colors.warning}
-                        subtext="Score below 60%"
+                        color={colors.error}
+                        subtext={`Score below 6/10 (${individualTeamAnalytics.sentimentData.find(d => d.name === 'Detractors')?.percentage || 0}%)`}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard
-                        title="Avg. Quality"
-                        value={(() => {
-                          const evaluated = technicalTasks.filter(t => t.evaluationScore > 0);
-                          return evaluated.length > 0 ? (evaluated.reduce((a, b) => a + b.evaluationScore, 0) / evaluated.length).toFixed(1) : 'N/A';
-                        })()}
-                        icon={<CheckCircle />}
-                        color={colors.success}
-                        subtext="Technical score avg"
+                    <Grid item xs={12} sm={6} md={4}>
+                      <MiniStatCard
+                        title="NPS Neutrals"
+                        value={individualTeamAnalytics.sentiment.Neutral}
+                        icon={<FaEquals />}
+                        color={colors.warning}
+                        subtext={`Score 7-8/10 (${individualTeamAnalytics.sentimentData.find(d => d.name === 'Neutrals')?.percentage || 0}%)`}
                       />
                     </Grid>
                   </Grid>
 
-                  {/* Technical Charts */}
+                  {/* ADVANCED ANALYTICS CHARTS (Mirroring Global Dashboard) */}
                   <Grid container spacing={3} mb={4}>
-                    <Grid item xs={12} lg={6}>
-                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Task Distribution by Priority</Typography>
+                    {/* FOCUSED OWNERSHIP INTELLIGENCE BANNER */}
+                    {activeOwnershipInsight && individualTeamAnalytics.focusedData && (
+                      <Grid item xs={12}>
+                        <Paper sx={{
+                          p: 2,
+                          mb: 2,
+                          background: `linear-gradient(90deg, ${colors.primary}20 0%, transparent 100%)`,
+                          border: `1px solid ${colors.primary}40`,
+                          borderRadius: '16px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ p: 1, bgcolor: colors.primary, borderRadius: '8px' }}>
+                              <FaUserTie color="#fff" />
+                            </Box>
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ color: colors.primary, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>Focused Analytical Mode</Typography>
+                              <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700 }}>Ownership: {activeOwnershipInsight}</Typography>
+                            </Box>
+                          </Box>
+                          <Box sx={{ textAlign: 'right', display: 'flex', gap: 2, alignItems: 'center' }}>
+                            <Box>
+                              <Typography variant="h5" sx={{ color: colors.primary, fontWeight: 900 }}>{individualTeamAnalytics.focusedData.total}</Typography>
+                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>TOTAL VIOLATIONS</Typography>
+                            </Box>
+                            <Button
+                              variant="outlined"
+                              onClick={() => setActiveOwnershipInsight(null)}
+                              sx={{
+                                color: '#fff',
+                                borderColor: 'rgba(255,255,255,0.2)',
+                                borderRadius: '10px',
+                                textTransform: 'none'
+                              }}
+                            >
+                              Reset View
+                            </Button>
+                          </Box>
+                        </Paper>
+                      </Grid>
+                    )}
+
+                    {/* Reason Analysis */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <MdInsights style={{ color: colors.success }} />
+                          {activeOwnershipInsight ? `Reason Analysis (${activeOwnershipInsight})` : 'Reason Analysis'}
+                        </Typography>
                         <Box sx={{ height: 300 }}>
                           <ResponsiveContainer width="100%" height="100%">
-                            <RechartsBarChart data={[
-                              { name: 'High', value: technicalTasks.filter(t => t.priority === 'High').length, color: colors.error },
-                              { name: 'Medium', value: technicalTasks.filter(t => t.priority === 'Medium').length, color: colors.warning },
-                              { name: 'Low', value: technicalTasks.filter(t => t.priority === 'Low').length, color: colors.success },
-                            ]}>
-                              <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
-                              <XAxis dataKey="name" stroke={colors.textSecondary} fontSize={12} />
-                              <YAxis stroke={colors.textSecondary} fontSize={12} />
-                              <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
-                              <RechartsBar dataKey="value" radius={[4, 4, 0, 0]}>
-                                {[colors.error, colors.warning, colors.success].map((color, idx) => <Cell key={`cell-${idx}`} fill={color} />)}
+                            <RechartsBarChart
+                              data={activeOwnershipInsight ? individualTeamAnalytics.focusedData?.reasonData : individualTeamAnalytics.reasonData.slice(0, 8)}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                              <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} angle={-25} textAnchor="end" height={60} />
+                              <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                              <RechartsTooltip
+                                contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 12 }}
+                                itemStyle={{ color: colors.secondary }}
+                              />
+                              <RechartsBar
+                                dataKey="value"
+                                fill={colors.secondary}
+                                radius={[6, 6, 0, 0]}
+                                onClick={(data) => handleIndividualAnalyticsDrillDown({ reason: data.name })}
+                                style={{ cursor: 'pointer' }}
+                              >
+                                {individualTeamAnalytics.reasonData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={['#10b981', '#34d399', '#059669', '#065f46'][index % 4]} />
+                                ))}
                               </RechartsBar>
                             </RechartsBarChart>
                           </ResponsiveContainer>
                         </Box>
                       </Paper>
                     </Grid>
-                    <Grid item xs={12} lg={6}>
-                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Operational Status</Typography>
+
+                    {/* Ownership Selection */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: '1px solid rgba(59, 130, 246, 0.1)' }}>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <FaUserTie style={{ color: colors.info }} /> Ownership Distribution
+                        </Typography>
                         <Box sx={{ height: 300 }}>
                           <ResponsiveContainer width="100%" height="100%">
-                            <RechartsPieChart>
-                              <RechartsPie
-                                data={[
-                                  { name: 'Validated', value: technicalTasks.filter(t => t.validationStatus === 'Validated').length, color: colors.success },
-                                  { name: 'Pending', value: technicalTasks.filter(t => t.validationStatus === 'Pending').length, color: colors.warning },
-                                  { name: 'Rejected', value: technicalTasks.filter(t => t.validationStatus === 'Rejected').length, color: colors.error },
-                                ].filter(d => d.value > 0)}
-                                cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
+                            <RechartsBarChart data={individualTeamAnalytics.ownerData.slice(0, 8)} layout="vertical">
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                              <XAxis type="number" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                              <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} width={120} />
+                              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 12 }} />
+                              <RechartsBar
+                                dataKey="value"
+                                onClick={(data) => {
+                                  if (activeOwnershipInsight === data.name) {
+                                    setActiveOwnershipInsight(null);
+                                  } else {
+                                    setActiveOwnershipInsight(data.name);
+                                  }
+                                }}
+                                style={{ cursor: 'pointer' }}
                               >
-                                {[colors.success, colors.warning, colors.error].map((color, idx) => <Cell key={`cell-${idx}`} fill={color} />)}
-                              </RechartsPie>
-                              <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
-                              <RechartsLegend verticalAlign="bottom" height={36} />
-                            </RechartsPieChart>
+                                {individualTeamAnalytics.ownerData.slice(0, 8).map((entry, index) => (
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={activeOwnershipInsight === entry.name ? colors.primary : colors.info}
+                                    stroke={activeOwnershipInsight === entry.name ? '#fff' : 'none'}
+                                    strokeWidth={2}
+                                  />
+                                ))}
+                              </RechartsBar>
+                            </RechartsBarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      </Paper>
+                    </Grid>
+
+                    {/* Sub-Reason Analysis */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: '1px solid rgba(245, 158, 11, 0.1)' }}>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <MdInsights style={{ color: colors.warning }} />
+                          {activeOwnershipInsight ? `Sub-Reason Breakdown (${activeOwnershipInsight})` : 'Sub-Reason Breakdown'}
+                        </Typography>
+                        <Box sx={{ height: 300 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RechartsBarChart
+                              data={activeOwnershipInsight ? individualTeamAnalytics.focusedData?.subReasonData : individualTeamAnalytics.subReasonData.slice(0, 8)}
+                              layout="vertical"
+                            >
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                              <XAxis type="number" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                              <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} width={120} />
+                              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 12 }} />
+                              <RechartsBar
+                                dataKey="value"
+                                fill={colors.warning}
+                                radius={[0, 6, 6, 0]}
+                                onClick={(data) => handleIndividualAnalyticsDrillDown({ subReason: data.name })}
+                                style={{ cursor: 'pointer' }}
+                              />
+                            </RechartsBarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      </Paper>
+                    </Grid>
+
+                    {/* Root Cause Analysis */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Warning sx={{ color: colors.error }} />
+                          {activeOwnershipInsight ? `Root Cause Distribution (${activeOwnershipInsight})` : 'Root Cause Distribution'}
+                        </Typography>
+                        <Box sx={{ height: 300 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RechartsBarChart
+                              data={activeOwnershipInsight ? individualTeamAnalytics.focusedData?.rootCauseData : individualTeamAnalytics.rootCauseData.slice(0, 10)}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                              <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} angle={-25} textAnchor="end" height={60} />
+                              <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 12 }} />
+                              <RechartsBar
+                                dataKey="value"
+                                fill={colors.error}
+                                radius={[6, 6, 0, 0]}
+                                onClick={(data) => handleIndividualAnalyticsDrillDown({ rootCause: data.name })}
+                                style={{ cursor: 'pointer' }}
+                              />
+                            </RechartsBarChart>
                           </ResponsiveContainer>
                         </Box>
                       </Paper>
                     </Grid>
                   </Grid>
 
-                  {/* Task Registry Table */}
+                  {/* POST-SESSION DEEP DIVE SECTION */}
+                  {postSessionAnalytics && (
+                    <Box sx={{ mb: 6 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+                        <Box sx={{ p: 1.5, borderRadius: '12px', background: 'rgba(139, 92, 246, 0.1)', color: colors.primary }}>
+                          <Timeline fontSize="medium" />
+                        </Box>
+                        <Box>
+                          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 900 }}>Post-Session Performance Analysis</Typography>
+                          <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                            Analyzing commitment and violations recorded after the latest session ({formatDate(postSessionAnalytics.latestSessionDate)})
+                          </Typography>
+                        </Box>
+                        <Box sx={{ ml: 'auto' }}>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={showPostSessionRegistry ? <VisibilityIcon /> : <TableChartIcon />}
+                            onClick={() => setShowPostSessionRegistry(!showPostSessionRegistry)}
+                            sx={{
+                              bgcolor: colors.primary,
+                              borderRadius: '12px',
+                              textTransform: 'none',
+                              fontWeight: 700,
+                              boxShadow: `0 4px 14px 0 ${colors.primary}40`,
+                              '&:hover': { bgcolor: colors.primary, boxShadow: `0 6px 20px 0 ${colors.primary}60` }
+                            }}
+                          >
+                            {showPostSessionRegistry ? 'Hide Registry' : 'Detailed Violation Registry'}
+                          </Button>
+                        </Box>
+                      </Box>
+
+                      {postSessionAnalytics.hasTasks ? (
+                        <Grid container spacing={3}>
+                          <Grid item xs={12} md={4}>
+                            <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: '1px solid rgba(139, 92, 246, 0.1)', height: '100%' }}>
+                              <Typography variant="subtitle2" sx={{ color: '#94a3b8', mb: 2, fontWeight: 700 }}>POST-SESSION SENTIMENT</Typography>
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <Typography sx={{ color: colors.error, fontWeight: 600 }}>Detractors</Typography>
+                                  <Typography sx={{ color: '#fff', fontWeight: 900 }}>{postSessionAnalytics.sentiment.Detractor} ({((postSessionAnalytics.sentiment.Detractor / postSessionAnalytics.totalPostTasks) * 100).toFixed(1)}%)</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <Typography sx={{ color: colors.warning, fontWeight: 600 }}>Neutrals</Typography>
+                                  <Typography sx={{ color: '#fff', fontWeight: 900 }}>{postSessionAnalytics.sentiment.Neutral} ({((postSessionAnalytics.sentiment.Neutral / postSessionAnalytics.totalPostTasks) * 100).toFixed(1)}%)</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <Typography sx={{ color: colors.success, fontWeight: 600 }}>Promoters</Typography>
+                                  <Typography sx={{ color: '#fff', fontWeight: 900 }}>{postSessionAnalytics.sentiment.Promoter} ({((postSessionAnalytics.sentiment.Promoter / postSessionAnalytics.totalPostTasks) * 100).toFixed(1)}%)</Typography>
+                                </Box>
+                                <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.05)' }} />
+                                <Typography variant="caption" sx={{ color: '#64748b', fontStyle: 'italic' }}>
+                                  Total of {postSessionAnalytics.totalPostTasks} violations recorded since last training.
+                                </Typography>
+                              </Box>
+                            </Paper>
+                          </Grid>
+                          <Grid item xs={12} md={8}>
+                            <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: `1px solid ${activePostSessionOwner ? colors.primary + '40' : 'rgba(59, 130, 246, 0.1)'}` }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ color: '#94a3b8', fontWeight: 700 }}>
+                                  POST-SESSION OWNERSHIP BREAKDOWN
+                                  <Typography component="span" variant="caption" sx={{ ml: 1, color: '#64748b' }}>click a bar to drill down</Typography>
+                                </Typography>
+                                {activePostSessionOwner && (
+                                  <Chip
+                                    label={`Focused: ${activePostSessionOwner}`}
+                                    size="small"
+                                    onDelete={() => setActivePostSessionOwner(null)}
+                                    sx={{ bgcolor: `${colors.primary}20`, color: colors.primary, fontWeight: 700, fontSize: '0.7rem' }}
+                                  />
+                                )}
+                              </Box>
+                              <Box sx={{ height: 200 }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <RechartsBarChart data={postSessionAnalytics.ownerData} layout="vertical">
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} width={120} />
+                                    <RechartsTooltip
+                                      contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 12 }}
+                                      formatter={(value, name, props) => [value, 'Violations']}
+                                    />
+                                    <RechartsBar
+                                      dataKey="value"
+                                      radius={[0, 4, 4, 0]}
+                                      style={{ cursor: 'pointer' }}
+                                      onClick={(data) => setActivePostSessionOwner(prev => prev === data.name ? null : data.name)}
+                                    >
+                                      {postSessionAnalytics.ownerData.map((entry, index) => (
+                                        <Cell
+                                          key={`cell-${index}`}
+                                          fill={activePostSessionOwner === entry.name ? colors.primary : colors.info}
+                                          stroke={activePostSessionOwner === entry.name ? '#fff' : 'none'}
+                                          strokeWidth={activePostSessionOwner === entry.name ? 2 : 0}
+                                        />
+                                      ))}
+                                    </RechartsBar>
+                                  </RechartsBarChart>
+                                </ResponsiveContainer>
+                              </Box>
+                            </Paper>
+                          </Grid>
+
+                          {/* Owner Drill-Down: Reason / SubReason / RootCause */}
+                          {activePostSessionOwner && postSessionAnalytics.ownerChartData[activePostSessionOwner] && (
+                            <Grid item xs={12}>
+                              <Paper sx={{
+                                p: 3,
+                                ...colors.glass,
+                                borderRadius: '24px',
+                                border: `1px solid ${colors.primary}30`,
+                                background: `linear-gradient(135deg, rgba(139,92,246,0.05) 0%, rgba(15,23,42,0.9) 100%)`
+                              }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                                  <Box sx={{ p: 1, borderRadius: '10px', bgcolor: `${colors.primary}20` }}>
+                                    <FaUserTie color={colors.primary} />
+                                  </Box>
+                                  <Box>
+                                    <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 800 }}>
+                                      Violation Breakdown — {activePostSessionOwner}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                      {postSessionAnalytics.ownerData.find(o => o.name === activePostSessionOwner)?.value || 0} post-session violations attributed to this owner
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                                <Grid container spacing={3}>
+                                  {/* Reason */}
+                                  <Grid item xs={12} md={4}>
+                                    <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 1.5 }}>By Reason</Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                      {postSessionAnalytics.ownerChartData[activePostSessionOwner].reasonData.slice(0, 6).map((item, idx) => (
+                                        <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <Box sx={{ flex: 1 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
+                                              <Typography variant="caption" sx={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.78rem' }}>{item.name}</Typography>
+                                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 800 }}>{item.value}</Typography>
+                                                {postSessionAnalytics.preReasons.has(item.name) ? (
+                                                  <Chip label="Repeat" size="small" sx={{ height: 16, fontSize: '0.6rem', bgcolor: 'rgba(239,68,68,0.15)', color: '#f87171', fontWeight: 700, px: 0.3 }} />
+                                                ) : (
+                                                  <Chip label="New" size="small" sx={{ height: 16, fontSize: '0.6rem', bgcolor: 'rgba(34,197,94,0.15)', color: '#4ade80', fontWeight: 700, px: 0.3 }} />
+                                                )}
+                                              </Box>
+                                            </Box>
+                                            <Box sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                                              <Box sx={{ height: '100%', width: `${item.percentage}%`, bgcolor: postSessionAnalytics.preReasons.has(item.name) ? colors.error : colors.success, borderRadius: 2, transition: 'width 0.6s ease' }} />
+                                            </Box>
+                                          </Box>
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  </Grid>
+                                  {/* Sub-Reason */}
+                                  <Grid item xs={12} md={4}>
+                                    <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 1.5 }}>By Sub-Reason</Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                      {postSessionAnalytics.ownerChartData[activePostSessionOwner].subReasonData.slice(0, 6).map((item, idx) => (
+                                        <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <Box sx={{ flex: 1 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
+                                              <Typography variant="caption" sx={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.78rem' }}>{item.name}</Typography>
+                                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Typography variant="caption" sx={{ color: colors.warning, fontWeight: 800 }}>{item.value}</Typography>
+                                                {postSessionAnalytics.preSubReasons.has(item.name) ? (
+                                                  <Chip label="Repeat" size="small" sx={{ height: 16, fontSize: '0.6rem', bgcolor: 'rgba(239,68,68,0.15)', color: '#f87171', fontWeight: 700, px: 0.3 }} />
+                                                ) : (
+                                                  <Chip label="New" size="small" sx={{ height: 16, fontSize: '0.6rem', bgcolor: 'rgba(34,197,94,0.15)', color: '#4ade80', fontWeight: 700, px: 0.3 }} />
+                                                )}
+                                              </Box>
+                                            </Box>
+                                            <Box sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                                              <Box sx={{ height: '100%', width: `${item.percentage}%`, bgcolor: postSessionAnalytics.preSubReasons.has(item.name) ? colors.error : colors.success, borderRadius: 2, transition: 'width 0.6s ease' }} />
+                                            </Box>
+                                          </Box>
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  </Grid>
+                                  {/* Root Cause */}
+                                  <Grid item xs={12} md={4}>
+                                    <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 1.5 }}>By Root Cause</Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                      {postSessionAnalytics.ownerChartData[activePostSessionOwner].rootCauseData.slice(0, 6).map((item, idx) => (
+                                        <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <Box sx={{ flex: 1 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
+                                              <Typography variant="caption" sx={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.78rem' }}>{item.name}</Typography>
+                                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Typography variant="caption" sx={{ color: colors.error, fontWeight: 800 }}>{item.value}</Typography>
+                                                {postSessionAnalytics.preRootCauses.has(item.name) ? (
+                                                  <Chip label="Repeat" size="small" sx={{ height: 16, fontSize: '0.6rem', bgcolor: 'rgba(239,68,68,0.15)', color: '#f87171', fontWeight: 700, px: 0.3 }} />
+                                                ) : (
+                                                  <Chip label="New" size="small" sx={{ height: 16, fontSize: '0.6rem', bgcolor: 'rgba(34,197,94,0.15)', color: '#4ade80', fontWeight: 700, px: 0.3 }} />
+                                                )}
+                                              </Box>
+                                            </Box>
+                                            <Box sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                                              <Box sx={{ height: '100%', width: `${item.percentage}%`, bgcolor: postSessionAnalytics.preRootCauses.has(item.name) ? colors.error : colors.success, borderRadius: 2, transition: 'width 0.6s ease' }} />
+                                            </Box>
+                                          </Box>
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  </Grid>
+                                </Grid>
+                              </Paper>
+                            </Grid>
+                          )}
+                        </Grid>
+                      ) : (
+                        <Paper sx={{ p: 4, ...colors.glass, borderRadius: '24px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                          <Typography sx={{ color: '#94a3b8' }}>Excellent! No violations recorded since the last session on {formatDate(postSessionAnalytics.latestSessionDate)}.</Typography>
+                        </Paper>
+                      )}
+                    </Box>
+                  )}
+
+                  {/* Post-Session Violation Registry — appears BEFORE the Technical Task Registry */}
+                  {showPostSessionRegistry && postSessionAnalytics.hasTasks && (
+                    <Box sx={{ mb: 4, animation: 'fadeIn 0.5s ease-in' }}>
+                      <Paper sx={{
+                        p: 0,
+                        bgcolor: '#1e293b',
+                        borderRadius: 3,
+                        border: `1px solid ${colors.primary}40`,
+                        overflow: 'hidden',
+                        background: `linear-gradient(145deg, #1e293b 0%, ${colors.primary}10 100%)`
+                      }}>
+                        <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box>
+                            <Typography variant="h6" fontWeight="700" color="#f8fafc">Detailed Violation History</Typography>
+                            <Typography variant="caption" sx={{ color: colors.primary }}>Granular view of violations occurring after {formatDate(postSessionAnalytics.latestSessionDate)}</Typography>
+                          </Box>
+                          <Chip label={`${postSessionAnalytics.totalPostTasks} Violations`} size="small" sx={{ bgcolor: `${colors.primary}20`, color: colors.primary, fontWeight: 800 }} />
+                        </Box>
+                        <Box sx={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead style={{ background: '#0f172a' }}>
+                              <tr>
+                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>DATE</th>
+                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>SLID</th>
+                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>REASON (PRIMARY)</th>
+                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>SUB-REASON</th>
+                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>ROOT CAUSE</th>
+                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>OWNERSHIP</th>
+                                <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>RECURRENCE</th>
+                                <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>SENTIMENT</th>
+                                <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>ACTIONS</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {postSessionAnalytics.tasks.map((task) => {
+                                const reasons = splitValues(task.reason);
+                                const subReasons = splitValues(task.subReason);
+                                const rootCauses = splitValues(task.rootCause);
+                                const owners = extractOwners(task);
+
+                                return (
+                                  <tr key={task._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: '0.2s', background: task.isRepeat ? 'rgba(239,68,68,0.03)' : 'rgba(34,197,94,0.03)' }}>
+                                    <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.8rem' }}>{formatDate(task.pisDate || task.createdAt)}</td>
+                                    <td style={{ padding: '16px', color: colors.primary, fontWeight: 'bold' }}>{task.slid}</td>
+                                    <td style={{ padding: '16px', color: '#fff', fontSize: '0.8rem' }}>
+                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+                                        <span>{reasons[0] || 'N/A'}</span>
+                                        {task.isRepeatReason && reasons[0] && reasons[0] !== 'N/A' && (
+                                          <Typography variant="caption" sx={{ color: '#f87171', fontSize: '0.6rem' }}>⚠ seen before training session</Typography>
+                                        )}
+                                      </Box>
+                                    </td>
+                                    <td style={{ padding: '16px', color: '#fff', fontSize: '0.8rem' }}>{subReasons[0] || 'N/A'}</td>
+                                    <td style={{ padding: '16px', color: '#fff', fontSize: '0.8rem' }}>{rootCauses[0] || 'N/A'}</td>
+                                    <td style={{ padding: '16px' }}>
+                                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                        {owners.map((o, idx) => (
+                                          <Chip key={idx} label={o} size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: 'rgba(255,255,255,0.05)', color: '#fff' }} />
+                                        ))}
+                                      </Box>
+                                    </td>
+                                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                                      <Chip
+                                        label={task.isRepeat ? '🔄 Repeat' : '🆕 New'}
+                                        size="small"
+                                        sx={{
+                                          height: 20,
+                                          fontSize: '0.65rem',
+                                          bgcolor: task.isRepeat ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)',
+                                          color: task.isRepeat ? '#f87171' : '#4ade80',
+                                          fontWeight: 700,
+                                          border: `1px solid ${task.isRepeat ? 'rgba(239,68,68,0.25)' : 'rgba(34,197,94,0.25)'}`
+                                        }}
+                                      />
+                                    </td>
+                                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                                      <Chip
+                                        label={task.evaluationScore >= 9 ? 'Promoter' : task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'}
+                                        size="small"
+                                        sx={{
+                                          height: 20,
+                                          fontSize: '0.65rem',
+                                          bgcolor: task.evaluationScore >= 9 ? `${colors.success}20` : task.evaluationScore >= 7 ? `${colors.warning}20` : `${colors.error}20`,
+                                          color: task.evaluationScore >= 9 ? colors.success : task.evaluationScore >= 7 ? colors.warning : colors.error,
+                                          fontWeight: 700
+                                        }}
+                                      />
+                                    </td>
+                                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={() => { setSelectedTask(task); setViewDialogOpen(true); }}
+                                        sx={{
+                                          fontSize: '0.65rem',
+                                          py: 0.3,
+                                          px: 1.2,
+                                          borderRadius: '8px',
+                                          borderColor: `${colors.primary}50`,
+                                          color: colors.primary,
+                                          textTransform: 'none',
+                                          fontWeight: 700,
+                                          '&:hover': { borderColor: colors.primary, bgcolor: `${colors.primary}10` }
+                                        }}
+                                      >
+                                        View Details
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </Box>
+                      </Paper>
+                    </Box>
+                  )}
+
+                  {/* Technical Task Registry — appears AFTER Violation History */}
                   <Paper
                     elevation={0}
                     sx={{
@@ -5542,7 +6592,17 @@ ${data.map((a, i) => `
                   >
                     <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="h6" fontWeight="700" color="#f8fafc">Technical Task Registry</Typography>
-                      <Chip label={`${technicalTasks.length} Tasks`} size="small" sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }} />
+                      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                        {taskTimeFilterMode !== 'all' && (
+                          <Chip
+                            label="Filter Active"
+                            size="small"
+                            onDelete={() => setTaskTimeFilterMode('all')}
+                            sx={{ bgcolor: 'rgba(245, 158, 11, 0.1)', color: colors.warning, fontWeight: 700 }}
+                          />
+                        )}
+                        <Chip label={`${filteredTechnicalTasks.length} Tasks`} size="small" sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }} />
+                      </Box>
                     </Box>
                     <Box sx={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -5555,11 +6615,12 @@ ${data.map((a, i) => `
                             <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>PRIORITY</th>
                             <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>STATUS</th>
                             <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>SCORE</th>
+                            <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>ACTIONS</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {technicalTasks.map((task) => (
-                            <tr key={task._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: '0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                          {filteredTechnicalTasks.map((task) => (
+                            <tr key={task._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: '0.2s' }}>
                               <td style={{ padding: '16px', color: '#fff', fontSize: '0.85rem' }}>{task.requestNumber || 'N/A'}</td>
                               <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{task.customerName}</td>
                               <td style={{ padding: '16px', color: colors.primary, fontWeight: 'bold' }}>{task.slid}</td>
@@ -5578,11 +6639,38 @@ ${data.map((a, i) => `
                                   }}
                                 />
                               </td>
-                              <td style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold', color: (task.evaluationScore && (task.evaluationScore > 80 || (task.evaluationScore <= 10 && task.evaluationScore > 8))) ? colors.success : colors.warning }}>
+                              <td style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold', color: (task.evaluationScore && (task.evaluationScore > 8 || (task.evaluationScore > 80))) ? colors.success : colors.warning }}>
                                 {task.evaluationScore ? `${task.evaluationScore}${task.evaluationScore <= 10 ? '/10' : '%'}` : '-'}
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'center' }}>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  onClick={() => { setSelectedTask(task); setViewDialogOpen(true); }}
+                                  sx={{
+                                    fontSize: '0.65rem',
+                                    py: 0.3,
+                                    px: 1.2,
+                                    borderRadius: '8px',
+                                    borderColor: 'rgba(59,130,246,0.4)',
+                                    color: '#60a5fa',
+                                    textTransform: 'none',
+                                    fontWeight: 700,
+                                    '&:hover': { borderColor: '#60a5fa', bgcolor: 'rgba(59,130,246,0.08)' }
+                                  }}
+                                >
+                                  View Details
+                                </Button>
                               </td>
                             </tr>
                           ))}
+                          {filteredTechnicalTasks.length === 0 && (
+                            <tr>
+                              <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                                No tasks found matching the selected filters.
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </Box>
@@ -5992,441 +7080,208 @@ ${data.map((a, i) => `
                 </Box>
               )}
 
-              {/* Tab index 6 now corresponds to Smart Reports */}
 
-              {/* 8. REPORTS (Index 6 after removal of Leaderboard tab) */}
-              {activeTab === 6 && (
-                <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Typography variant="h5" sx={{ color: colors.primary }}>Advanced Analytics & Reporting</Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={generatingReport ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <PictureAsPdfIcon />}
-                      onClick={handleGenerateFullReport}
-                      disabled={generatingReport || (quizResults.length === 0 && jobAssessments.length === 0 && labAssessments.length === 0)}
-                      sx={{
-                        bgcolor: colors.primary,
-                        '&:hover': { bgcolor: colors.primary, opacity: 0.9 },
-                        '&:disabled': { bgcolor: colors.textSecondary }
-                      }}
-                    >
-                      {generatingReport ? 'Generating...' : 'Generate Full Evaluation'}
-                    </Button>
-                  </Box>
-
-                  <Grid container spacing={3}>
-                    {/* Strategic Benchmarking */}
-                    <Grid item xs={12} md={4}>
-                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)' }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <TrendingUpIcon /> Strategic Benchmarking
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {(() => {
-                            const avgMastery = Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3);
-                            const isMaster = avgMastery >= 85;
-                            return (
-                              <>
-                                <Box>
-                                  <Typography variant="caption" color={colors.textSecondary}>Current Status</Typography>
-                                  <Typography variant="h5" sx={{ fontWeight: 700, color: isMaster ? colors.success : colors.warning }}>
-                                    {isMaster ? 'Mastery Level' : 'Development Phase'}
-                                  </Typography>
-                                </Box>
-                                <Box>
-                                  <Typography variant="caption" color={colors.textSecondary}>Distance to Top Tier</Typography>
-                                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                    {avgMastery >= 90 ? 'Elite (Top 5%)' : `${90 - avgMastery}% to Elite`}
-                                  </Typography>
-                                  <LinearProgress
-                                    variant="determinate"
-                                    value={Math.min(100, (avgMastery / 90) * 100)}
-                                    sx={{ mt: 1, height: 6, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: colors.primary } }}
-                                  />
-                                </Box>
-                                <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                  <Typography variant="caption" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>
-                                    {avgMastery < 70 ? 'Recommendation: Remedial training required in core domains.'
-                                      : avgMastery < 85 ? 'Recommendation: Focus on consistency and error reduction.'
-                                        : 'Recommendation: Maintain performance; mentor other teams.'}
-                                  </Typography>
-                                </Box>
-                              </>
-                            );
-                          })()}
-                        </Box>
-                      </Paper>
-                    </Grid>
-
-                    {/* Operational Balance Radar */}
-                    <Grid item xs={12} md={4}>
-                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Performance Balance</Typography>
-                        <ResponsiveContainer width="100%" height={280}>
-                          <RadarChart data={[
-                            {
-                              subject: 'Theoretical',
-                              score: calculateAverageScore(quizResults),
-                              fullMark: 100
-                            },
-                            {
-                              subject: 'Practical',
-                              score: calculateAverageScore(jobAssessments) * 20, // Scale to 100
-                              fullMark: 100
-                            },
-                            {
-                              subject: 'Lab',
-                              score: calculateAverageScore(labAssessments),
-                              fullMark: 100
-                            }
-                          ]}>
-                            <PolarGrid stroke={colors.border} />
-                            <PolarAngleAxis dataKey="subject" tick={{ fill: colors.textPrimary, fontSize: 10 }} />
-                            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: colors.textSecondary, fontSize: 8 }} />
-                            <Radar name="Score" dataKey="score" stroke={colors.primary} fill={colors.primary} fillOpacity={0.3} />
-                            <RechartsTooltip
-                              contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }}
-                              formatter={(value) => `${Math.round(value)}%`}
-                            />
-                          </RadarChart>
-                        </ResponsiveContainer>
-                      </Paper>
-                    </Grid>
-
-                    {/* Strengths & Weaknesses */}
-                    <Grid item xs={12} md={4}>
-                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Strengths & Weaknesses</Typography>
-                        {(() => {
-                          const { strengths, weaknesses } = identifyStrengthsAndWeaknesses();
-                          return (
-                            <Box>
-                              <Typography variant="subtitle2" sx={{ color: colors.success, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <CheckCircleIcon fontSize="small" /> Top Strengths
-                              </Typography>
-                              {strengths.length > 0 ? (
-                                <Box sx={{ mb: 3 }}>
-                                  {strengths.map((s, i) => (
-                                    <Chip
-                                      key={i}
-                                      label={`${s.name}: ${Math.round(s.score)}%`}
-                                      size="small"
-                                      sx={{ m: 0.5, bgcolor: `${colors.success}22`, color: colors.success, borderColor: colors.success }}
-                                      variant="outlined"
-                                    />
-                                  ))}
-                                </Box>
-                              ) : (
-                                <Typography variant="body2" color={colors.textSecondary} sx={{ mb: 3 }}>No data available</Typography>
-                              )}
-
-                              <Typography variant="subtitle2" sx={{ color: colors.error, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <CancelIcon fontSize="small" /> Areas for Improvement
-                              </Typography>
-                              {weaknesses.length > 0 ? (
-                                <Box>
-                                  {weaknesses.map((w, i) => (
-                                    <Chip
-                                      key={i}
-                                      label={`${w.name}: ${Math.round(w.score)}%`}
-                                      size="small"
-                                      sx={{ m: 0.5, bgcolor: `${colors.error}22`, color: colors.error, borderColor: colors.error }}
-                                      variant="outlined"
-                                    />
-                                  ))}
-                                </Box>
-                              ) : (
-                                <Typography variant="body2" color={colors.textSecondary}>No data available</Typography>
-                              )}
-                            </Box>
-                          );
-                        })()}
-                      </Paper>
-                    </Grid>
-
-                    {/* Mastery & Consistency Metrics */}
-                    <Grid item xs={12} md={6}>
-                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Consistency & Mastery Analysis</Typography>
-                        <Grid container spacing={2}>
-                          {[
-                            { label: 'Overall Mastery', value: `${Math.round((calculateAverageScore(quizResults) + (calculateAverageScore(jobAssessments) * 20) + calculateAverageScore(labAssessments)) / 3)}%`, color: colors.primary },
-                            { label: 'Theoretical Volatility', value: `${Math.round(calculateStandardDeviation(quizResults))}%`, color: colors.warning },
-                            { label: 'Practical Consistency', value: calculateStandardDeviation(jobAssessments) < 10 ? 'High' : 'Variable', color: colors.success },
-                            { label: 'Lab Mastery Rate', value: `${Math.round(calculatePercentageAboveThreshold(labAssessments, 80))}%`, color: colors.primary }
-                          ].map((metric, i) => (
-                            <Grid item xs={6} key={i}>
-                              <Card sx={{ bgcolor: colors.surfaceElevated, border: `1px solid ${colors.border}` }}>
-                                <CardContent sx={{ p: 2 }}>
-                                  <Typography variant="caption" color={colors.textSecondary}>{metric.label}</Typography>
-                                  <Typography variant="h6" sx={{ color: metric.color, fontWeight: 'bold' }}>{metric.value}</Typography>
-                                </CardContent>
-                              </Card>
-                            </Grid>
-                          ))}
-                        </Grid>
-                      </Paper>
-                    </Grid>
-
-                    {/* Process Efficiency Analysis */}
-                    <Grid item xs={12} md={6}>
-                      <Paper sx={{ p: 3, ...darkThemeStyles.paper, height: '100%' }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: colors.primary }}>Process Efficiency Analysis</Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {[
-                            { label: 'Avg Dispatch Speed', value: stats.avgDispatchTime, unit: 'days', color: colors.info },
-                            { label: 'Avg Resolution Speed', value: stats.avgResolutionTime, unit: 'days', color: colors.success },
-                            { label: 'Full Lifecycle Time', value: stats.avgLifecycleTime, unit: 'days', color: colors.warning }
-                          ].map((metric, i) => (
-                            <Box key={i}>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                <Typography variant="body2" color={colors.textSecondary}>{metric.label}</Typography>
-                                <Typography variant="body2" fontWeight="bold" sx={{ color: metric.color }}>{metric.value} {metric.unit}</Typography>
-                              </Box>
-                              <LinearProgress
-                                variant="determinate"
-                                value={Math.min(100, (metric.value / 10) * 100)}
-                                sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: metric.color } }}
-                              />
-                            </Box>
-                          ))}
-                          <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(59, 130, 246, 0.05)', borderRadius: 2, border: '1px solid rgba(59, 130, 246, 0.1)' }}>
-                            <Typography variant="caption" sx={{ color: colors.info, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <Info sx={{ fontSize: '1rem' }} /> Values normalized against 10-day benchmark.
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  </Grid>
-                </Box>
-              )}
-
-              {/* Performance Summary Section */}
-              {(quizResults.length > 0 || jobAssessments.length > 0 || labAssessments.length > 0) && (
-                <Box sx={{ mt: 5 }}>
-                  <Typography variant="h5" sx={{ color: colors.primary, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Assessment /> Advanced Analytics
-                  </Typography>
-
-                  <Grid container spacing={3}>
-                    {[
-                      { name: 'Theoretical', data: quizResults, color: colors.primary },
-                      { name: 'Practical', data: jobAssessments, color: colors.success },
-                      { name: 'Lab', data: labAssessments, color: colors.warning }
-                    ].filter(group => group.data.length > 0).map((group, idx) => (
-                      <Grid item xs={12} key={idx}>
-                        <Paper sx={{ p: 3, ...darkThemeStyles.paper, position: 'relative' }}>
-                          <Typography variant="h6" sx={{ color: group.color, mb: 2 }}>{group.name} Analytics</Typography>
-                          <Grid container spacing={4}>
-                            <Grid item xs={12} md={4}>
-                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography color={colors.textSecondary}>Median Score</Typography>
-                                  <Typography fontWeight="bold">{Math.round(calculateMedianScore(group.data))}%</Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography color={colors.textSecondary}>Volatility (StdDev)</Typography>
-                                  <Typography fontWeight="bold">{Math.round(calculateStandardDeviation(group.data))}%</Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography color={colors.textSecondary}>Top Score</Typography>
-                                  <Typography sx={{ color: colors.success }} fontWeight="bold">{calculateHighestScore(group.data)}%</Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography color={colors.textSecondary}>Mastery Rate ({'>'}80%)</Typography>
-                                  <Typography fontWeight="bold">{Math.round(calculatePercentageAboveThreshold(group.data, 80))}%</Typography>
-                                </Box>
-                              </Box>
-                            </Grid>
-                            <Grid item xs={12} md={8}>
-                              <Box sx={{ height: 200 }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                  <AreaChart data={group.data.map(item => ({
-                                    date: formatDate(item.submittedAt || item.assessmentDate || item.createdAt),
-                                    score: item.percentage || item.overallScore || item.totalScore || 0
-                                  })).reverse()}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
-                                    <XAxis dataKey="date" hide />
-                                    <YAxis domain={[0, 100]} hide />
-                                    <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
-                                    <Area
-                                      type="monotone"
-                                      dataKey="score"
-                                      stroke={group.color}
-                                      fill={group.color}
-                                      fillOpacity={0.1}
-                                      strokeWidth={2}
-                                    />
-                                  </AreaChart>
-                                </ResponsiveContainer>
-                              </Box>
-                            </Grid>
-                          </Grid>
-                        </Paper>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Box>
-              )}
             </Box>
           </>
         )}
-            <ViewIssueDetailsDialog
-              open={detailIssueOpen}
-              onClose={() => setDetailIssueOpen(false)}
-              issue={selectedDetailIssue}
-              onUpdate={() => {
-                // Refresh data if needed, but since we are in drill-down,
-                // maybe just update local state or dispatch global refresh
-                window.dispatchEvent(new CustomEvent('cin-refresh'));
-              }}
-            />
+        <ViewIssueDetailsDialog
+          open={detailIssueOpen}
+          onClose={() => setDetailIssueOpen(false)}
+          issue={selectedDetailIssue}
+          onUpdate={() => {
+            // Refresh data if needed, but since we are in drill-down,
+            // maybe just update local state or dispatch global refresh
+            window.dispatchEvent(new CustomEvent('cin-refresh'));
+          }}
+        />
 
-            <ProfessionalChartDialog
-              open={chartDialog.open}
-              onClose={() => setChartDialog({ ...chartDialog, open: false })}
-              title={chartDialog.title}
-              data={chartDialog.data}
-              type={chartDialog.type}
-              stackKeys={chartDialog.stackKeys}
-            />
+        <ProfessionalChartDialog
+          open={chartDialog.open}
+          onClose={() => setChartDialog({ ...chartDialog, open: false })}
+          title={chartDialog.title}
+          data={chartDialog.data}
+          type={chartDialog.type}
+          stackKeys={chartDialog.stackKeys}
+        />
 
-            {/* Analytics Drill-Down Dialog */}
-            <Dialog
-              open={analyticsDrillDown.open}
-              onClose={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))}
-              fullWidth
-              maxWidth="lg"
-              PaperProps={{
-                sx: {
-                  backgroundColor: '#1a1a1a',
-                  backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
-                  borderRadius: '24px',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  minHeight: '60vh'
-                }
-              }}
+        {/* Feedback Read More Dialog */}
+        <Dialog
+          open={feedbackDialog.open}
+          onClose={() => setFeedbackDialog({ open: false, content: '' })}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              backgroundColor: '#1a1a1a',
+              backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
+              borderRadius: '16px',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }
+          }}
+        >
+          <DialogTitle sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" fontWeight="bold">Customer Feedback</Typography>
+            <IconButton 
+              onClick={() => setFeedbackDialog({ open: false, content: '' })}
+              sx={{ color: '#aaa', '&:hover': { color: '#fff' } }}
             >
-              <DialogTitle sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                pb: 1,
-                borderBottom: '1px solid rgba(255,255,255,0.1)'
-              }}>
-                <Box>
-                  <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 0.5 }}>
-                    Task List
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
-                    {analyticsDrillDown.title} ({analyticsDrillDown.tasks.length} Tasks)
-                  </Typography>
-                </Box>
-                <IconButton onClick={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))} sx={{ color: '#fff' }}>
-                  <CloseIcon />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent sx={{ p: 0 }}>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
-                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Week</TableCell>
-                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
-                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
-                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
-                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Sub-Reason</TableCell>
-                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Root Cause</TableCell>
-                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
-                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Feedback</TableCell>
-                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
-                        <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {analyticsDrillDown.tasks.map((task) => (
-                        <TableRow key={task._id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}>
-                          <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                            {task.interviewDate ? getWeekNumber(task.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber).week : '-'}
-                          </TableCell>
-                          <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
-                          <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
-                          <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
-                            {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
-                          </TableCell>
-                          <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
-                            {Array.isArray(task.subReason) ? task.subReason.join(', ') : task.subReason || '-'}
-                          </TableCell>
-                          <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
-                            {Array.isArray(task.rootCause) ? task.rootCause.join(', ') : task.rootCause || '-'}
-                          </TableCell>
-                          <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
-                            {[...new Set(splitValues(task.responsible || task.assignedTo?.name))].join(', ') || '-'}
-                          </TableCell>
-                          <TableCell sx={{ color: alpha('#fff', 0.6), fontSize: '0.7rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {task.customerFeedback || '-'}
-                          </TableCell>
-                          <TableCell>
-                            {task.evaluationScore !== undefined && task.evaluationScore !== null && (
-                              <Chip
-                                label={task.evaluationScore}
-                                size="small"
-                                sx={{
-                                  height: 20,
-                                  fontSize: '0.65rem',
-                                  fontWeight: 'bold',
-                                  bgcolor: task.evaluationScore >= 9 ? 'rgba(76, 175, 80, 0.2)' :
-                                    task.evaluationScore >= 7 ? 'rgba(255, 152, 0, 0.2)' : 'rgba(244, 67, 54, 0.2)',
-                                  color: task.evaluationScore >= 9 ? '#4caf50' :
-                                    task.evaluationScore >= 7 ? '#ff9800' : '#f44336'
-                                }}
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell align="right">
-                            <Button
-                              size="small"
-                              variant="text"
-                              onClick={() => {
-                                setSelectedTask(task);
-                                setViewDialogOpen(true);
-                              }}
-                              sx={{
-                                textTransform: 'none',
-                                color: '#7b68ee',
-                                fontWeight: 'bold',
-                                '&:hover': { bgcolor: alpha('#7b68ee', 0.1) }
-                              }}
-                            >
-                              View Details
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </DialogContent>
-            </Dialog>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ mt: 2 }}>
+            <Typography variant="body1" sx={{ color: '#e2e8f0', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+              {feedbackDialog.content}
+            </Typography>
+          </DialogContent>
+        </Dialog>
 
-            {/* Task Details Dialog */}
-            {selectedTask && (
-              <TaskDetailsDialog
-                open={viewDialogOpen}
-                onClose={() => {
-                  setViewDialogOpen(false);
-                  setSelectedTask(null);
-                }}
-                tasks={[selectedTask]}
-                teamName={selectedTask.teamName || "Unknown Team"}
-                onTaskUpdated={fetchGlobalData}
-              />
-            )}
-          </Box>
-        </>
-      );
-    };
+        {/* Analytics Drill-Down Dialog */}
+        <Dialog
+          open={analyticsDrillDown.open}
+          onClose={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))}
+          fullWidth
+          maxWidth="lg"
+          PaperProps={{
+            sx: {
+              backgroundColor: '#1a1a1a',
+              backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
+              borderRadius: '24px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              minHeight: '60vh'
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            pb: 1,
+            borderBottom: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <Box>
+              <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 0.5 }}>
+                Task List
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+                {analyticsDrillDown.title} ({analyticsDrillDown.tasks.length} Tasks)
+              </Typography>
+            </Box>
+            <IconButton onClick={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))} sx={{ color: '#fff' }}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ p: 0 }}>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
+                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Week</TableCell>
+                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
+                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
+                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
+                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Sub-Reason</TableCell>
+                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Root Cause</TableCell>
+                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
+                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Feedback</TableCell>
+                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
+                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {analyticsDrillDown.tasks.map((task) => (
+                    <TableRow key={task._id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}>
+                      <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                        {task.interviewDate ? getWeekNumber(task.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber).week : '-'}
+                      </TableCell>
+                      <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
+                      <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
+                      <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                        {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
+                      </TableCell>
+                      <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                        {Array.isArray(task.subReason) ? task.subReason.join(', ') : task.subReason || '-'}
+                      </TableCell>
+                      <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                        {Array.isArray(task.rootCause) ? task.rootCause.join(', ') : task.rootCause || '-'}
+                      </TableCell>
+                      <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                        {[...new Set(splitValues(task.responsible || task.assignedTo?.name))].join(', ') || '-'}
+                      </TableCell>
+                      <TableCell sx={{ color: alpha('#fff', 0.6), fontSize: '0.7rem', maxWidth: 200 }}>
+                        {task.customerFeedback ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Typography noWrap sx={{ maxWidth: 120, fontSize: 'inherit' }}>{task.customerFeedback}</Typography>
+                            <Button 
+                              size="small" 
+                              variant="outlined"
+                              sx={{ minWidth: 'auto', p: '2px 6px', fontSize: '0.6rem', ml: 1, borderColor: 'rgba(59,130,246,0.3)', color: '#3b82f6' }}
+                              onClick={() => setFeedbackDialog({ open: true, content: task.customerFeedback })}
+                            >
+                              Read more
+                            </Button>
+                          </Box>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {task.evaluationScore !== undefined && task.evaluationScore !== null && (
+                          <Chip
+                            label={task.evaluationScore}
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.65rem',
+                              fontWeight: 'bold',
+                              bgcolor: task.evaluationScore >= 9 ? 'rgba(76, 175, 80, 0.2)' :
+                                task.evaluationScore >= 7 ? 'rgba(255, 152, 0, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                              color: task.evaluationScore >= 9 ? '#4caf50' :
+                                task.evaluationScore >= 7 ? '#ff9800' : '#f44336'
+                            }}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setViewDialogOpen(true);
+                          }}
+                          sx={{
+                            textTransform: 'none',
+                            color: '#7b68ee',
+                            fontWeight: 'bold',
+                            '&:hover': { bgcolor: alpha('#7b68ee', 0.1) }
+                          }}
+                        >
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </DialogContent>
+        </Dialog>
+
+        {/* Task Details Dialog */}
+        {selectedTask && (
+          <TaskDetailsDialog
+            open={viewDialogOpen}
+            onClose={() => {
+              setViewDialogOpen(false);
+              setSelectedTask(null);
+            }}
+            tasks={[selectedTask]}
+            teamName={selectedTask.teamName || "Unknown Team"}
+            onTaskUpdated={fetchGlobalData}
+          />
+        )}
+      </Box>
+    </>
+  );
+};
 
 // --- Professional Chart Dialog Ported from Deep Dive ---
 const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType = 'line', stackKeys = [] }) => {

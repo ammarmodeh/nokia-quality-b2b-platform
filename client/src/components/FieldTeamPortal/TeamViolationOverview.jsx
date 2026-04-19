@@ -37,6 +37,7 @@ import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, 
 import { FaFileExcel, FaEye, FaChartLine, FaInfo, FaTimes } from 'react-icons/fa';
 import { TaskDetailsDialog } from '../TaskDetailsDialog';
 import api from '../../api/api';
+import { getWeekNumber, getMonthNumber } from '../../utils/helpers';
 
 const normalizeText = (value) => {
   if (value === undefined || value === null) return '';
@@ -96,8 +97,8 @@ const getTeamTasks = (team, tasks) => {
     .map(item => ({
       ...item,
       _sourceType: 'task',
-      taskDate: item?.pisDate || item?.interviewDate || item?.createdAt,
-      taskDateIso: item?.pisDate || item?.interviewDate || item?.createdAt
+      taskDate: item?.interviewDate,
+      taskDateIso: item?.interviewDate
     }));
 };
 
@@ -226,7 +227,8 @@ const TeamViolationOverview = ({
   handleExportTeamViolations,
   handleExportAllTeamsViolations,
   colors = {},
-  title = 'Field Team Tasks Insights'
+  title = 'Field Team Tasks Insights',
+  settings = {}
 }) => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedTeamDetail, setSelectedTeamDetail] = useState(null);
@@ -241,6 +243,9 @@ const TeamViolationOverview = ({
   const [performanceFilterTrained, setPerformanceFilterTrained] = useState('all');
   const [performanceSearch, setPerformanceSearch] = useState('');
   const [chartCategoryFilter, setChartCategoryFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
+  const [tableWeekFilter, setTableWeekFilter] = useState('all');
+  const [tableMonthFilter, setTableMonthFilter] = useState('all');
 
   // Task Details Dialog state (matching /tasks-list page)
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -291,11 +296,81 @@ const TeamViolationOverview = ({
     setSelectedTeamDetail(null);
   };
 
+  const { availableMonths, availableWeeks } = useMemo(() => {
+    const mSet = new Set();
+    const wSet = new Set();
+    allTechnicalTasksGlobal.forEach(t => {
+      const d = t.interviewDate;
+      if (d) {
+        const dateObj = new Date(d);
+        if (!isNaN(dateObj.getTime())) {
+          const mInfo = getMonthNumber(d, settings);
+          if (mInfo && mInfo.key) mSet.add(mInfo.key);
+          
+          const wInfo = getWeekNumber(d, settings.weekStartDay, settings.week1StartDate, settings.week1EndDate, settings.startWeekNumber);
+          if (wInfo && wInfo.key) wSet.add(wInfo.key);
+        }
+      }
+    });
+    return {
+      availableMonths: Array.from(mSet).sort((a,b) => {
+        const m1 = parseInt(a.replace('Month-', ''), 10) || 0;
+        const m2 = parseInt(b.replace('Month-', ''), 10) || 0;
+        return m1 - m2;
+      }),
+      availableWeeks: Array.from(wSet).sort((a,b) => {
+        const matchA = a.match(/Wk-(\d+)\s*\((\d+)\)/);
+        const matchB = b.match(/Wk-(\d+)\s*\((\d+)\)/);
+        if (matchA && matchB) {
+          if (matchA[2] !== matchB[2]) return parseInt(matchA[2], 10) - parseInt(matchB[2], 10);
+          return parseInt(matchA[1], 10) - parseInt(matchB[1], 10);
+        }
+        return a.localeCompare(b);
+      })
+    };
+  }, [allTechnicalTasksGlobal]);
+
+  const filteredGlobalTasks = useMemo(() => {
+    let tasks = allTechnicalTasksGlobal;
+    if (dateFilter.start) {
+      const startDate = new Date(dateFilter.start);
+      tasks = tasks.filter(t => {
+        const d = t.interviewDate;
+        return d && new Date(d) >= startDate;
+      });
+    }
+    if (dateFilter.end) {
+      const endDate = new Date(dateFilter.end);
+      endDate.setHours(23, 59, 59, 999);
+      tasks = tasks.filter(t => {
+        const d = t.interviewDate;
+        return d && new Date(d) <= endDate;
+      });
+    }
+    if (tableMonthFilter !== 'all') {
+      tasks = tasks.filter(t => {
+        const d = t.interviewDate;
+        if (!d) return false;
+        const mInfo = getMonthNumber(d, settings);
+        return mInfo && mInfo.key === tableMonthFilter;
+      });
+    }
+    if (tableWeekFilter !== 'all') {
+      tasks = tasks.filter(t => {
+        const d = t.interviewDate;
+        if (!d) return false;
+        const wInfo = getWeekNumber(d, settings.weekStartDay, settings.week1StartDate, settings.week1EndDate, settings.startWeekNumber);
+        return wInfo && wInfo.key === tableWeekFilter;
+      });
+    }
+    return tasks;
+  }, [allTechnicalTasksGlobal, dateFilter, tableMonthFilter, tableWeekFilter, settings]);
+
   const teamRows = useMemo(() => {
     return (fieldTeams || []).map(team => {
       const latestSessionDate = getLatestSessionDate(team);
       const trained = !!latestSessionDate;
-      const teamTasks = getTeamTasks(team, allTechnicalTasksGlobal);
+      const teamTasks = getTeamTasks(team, filteredGlobalTasks);
       const totalTasks = teamTasks.length;
       const reachCount = teamTasks.reduce((sum, item) => {
         if (fieldContainsReach(item.owner) || fieldContainsReach(item.responsible) || fieldContainsReach(item.assignedTo) || fieldContainsReach(item.teamOwner)) {
@@ -416,7 +491,7 @@ const TeamViolationOverview = ({
         monthlyData
       };
     }).sort((a, b) => b.totalTasks - a.totalTasks);
-  }, [fieldTeams, leaderboardData, allTechnicalTasksGlobal]);
+  }, [fieldTeams, leaderboardData, filteredGlobalTasks]);
 
   // Team Performance Segments
   const filteredPerformanceTeams = useMemo(() => {
@@ -591,7 +666,24 @@ const TeamViolationOverview = ({
       };
     });
     return sessionReach;
-  }, [sessionBreakdown]);
+  }, [sessionBreakdown]);  const summaryStats = useMemo(() => {
+    const calcStats = (rows) => {
+      const total = rows.length;
+      if (total === 0) return { newToActivation: { count: 0, pct: '0.0' }, newToInstAct: { count: 0, pct: '0.0' } };
+      const n2a = rows.filter(r => r.cohort === 'New to Activation').length;
+      const n2ia = rows.filter(r => r.cohort === 'New to Installation & Activation').length;
+      return {
+        newToActivation: { count: n2a, pct: ((n2a / total) * 100).toFixed(1) },
+        newToInstAct: { count: n2ia, pct: ((n2ia / total) * 100).toFixed(1) }
+      };
+    };
+
+    return {
+      total: calcStats(teamRows),
+      trained: calcStats(teamRows.filter(r => r.trained)),
+      untrained: calcStats(teamRows.filter(r => !r.trained))
+    };
+  }, [teamRows]);
 
   const trainedCount = teamRows.filter(row => row.trained).length;
   const untrainedCount = teamRows.filter(row => !row.trained).length;
@@ -599,6 +691,7 @@ const TeamViolationOverview = ({
   const averageAfterRate = trainedCount > 0
     ? ((teamRows.filter(row => row.trained).reduce((sum, row) => sum + row.tasksAfterLatestSession, 0) / Math.max(1, teamRows.filter(row => row.trained).reduce((sum, row) => sum + row.totalTasks, 0))) * 100).toFixed(1)
     : '0.0';
+
   const teamTasksColumns = useMemo(() => [
     { field: 'teamName', headerName: 'Team', minWidth: 180, flex: 1, renderCell: (params) => <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{params.value}</span> },
     { 
@@ -751,6 +844,25 @@ const TeamViolationOverview = ({
     { field: 'latestSession', headerName: 'Latest Session', width: 140, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.row.trained ? (params.value || 'No session') : 'No sessions'}</span> },
   ], []);
 
+  const renderCohortMiniStats = (data) => (
+    <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <Stack spacing={0.8}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="caption" color="#94a3b8" sx={{ fontSize: '0.68rem' }}>New to Activation</Typography>
+          <Typography variant="caption" fontWeight={700} color="#fff" sx={{ fontSize: '0.72rem' }}>
+            {data.newToActivation.count} <Box component="span" sx={{ color: '#8b5cf6', ml: 0.5 }}>({data.newToActivation.pct}%)</Box>
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="caption" color="#94a3b8" sx={{ fontSize: '0.68rem' }}>New to Installation & Act.</Typography>
+          <Typography variant="caption" fontWeight={700} color="#fff" sx={{ fontSize: '0.72rem' }}>
+            {data.newToInstAct.count} <Box component="span" sx={{ color: '#8b5cf6', ml: 0.5 }}>({data.newToInstAct.pct}%)</Box>
+          </Typography>
+        </Box>
+      </Stack>
+    </Box>
+  );
+
   return (
     <Box sx={{ mt: 6 }}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
@@ -777,24 +889,27 @@ const TeamViolationOverview = ({
 
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)', height: '100%' }}>
               <Typography variant="subtitle2" color="#94a3b8" gutterBottom>Total Teams</Typography>
               <Typography variant="h4" fontWeight={800} color="#fff">{teamRows.length}</Typography>
-              <Typography variant="caption" color="#6b7280">Active team profiles combined from fieldteams collection.</Typography>
+              <Typography variant="caption" color="#6b7280" display="block" sx={{ mb: 1 }}>Active team profiles from fieldteams.</Typography>
+              {renderCohortMiniStats(summaryStats.total)}
             </Paper>
           </Grid>
           <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)', height: '100%' }}>
               <Typography variant="subtitle2" color="#94a3b8" gutterBottom>Trained</Typography>
               <Typography variant="h4" fontWeight={800} color="#10b981">{trainedCount}</Typography>
-              <Typography variant="caption" color="#6b7280">Teams with at least one training session recorded.</Typography>
+              <Typography variant="caption" color="#6b7280" display="block" sx={{ mb: 1 }}>Teams with recorded training sessions.</Typography>
+              {renderCohortMiniStats(summaryStats.trained)}
             </Paper>
           </Grid>
           <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)', height: '100%' }}>
               <Typography variant="subtitle2" color="#94a3b8" gutterBottom>Untrained</Typography>
               <Typography variant="h4" fontWeight={800} color="#ef4444">{untrainedCount}</Typography>
-              <Typography variant="caption" color="#6b7280">Teams without a recorded training session.</Typography>
+              <Typography variant="caption" color="#6b7280" display="block" sx={{ mb: 1 }}>Teams without a recorded session.</Typography>
+              {renderCohortMiniStats(summaryStats.untrained)}
             </Paper>
           </Grid>
         </Grid>
@@ -876,15 +991,95 @@ const TeamViolationOverview = ({
             <Typography variant="h6" fontWeight={700} color="#fff">Team Tasks Table</Typography>
             <Typography variant="body2" color="#94a3b8">Detailed task profile for each field team, including Reach ownership and session-aware counts.</Typography>
           </Box>
-          <Button
-            variant="outlined"
-            startIcon={<FaFileExcel />}
-            onClick={handleExportAllTeamsViolations}
-            size="small"
-            sx={{ borderColor: colors.primary || '#3b82f6', color: colors.primary || '#3b82f6' }}
-          >
-            Export Tasks
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'rgba(0,0,0,0.2)', px: 2, py: 1, borderRadius: 2, border: '1px solid rgba(255,255,255,0.08)', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>From:</Typography>
+                <TextField
+                  type="date"
+                  size="small"
+                  value={dateFilter.start}
+                  onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    borderRadius: 1,
+                    '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                  }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>To:</Typography>
+                <TextField
+                  type="date"
+                  size="small"
+                  value={dateFilter.end}
+                  onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    borderRadius: 1,
+                    '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                  }}
+                />
+              </Box>
+              {(dateFilter.start || dateFilter.end) && (
+                <Button size="small" onClick={() => setDateFilter({ start: '', end: '' })} sx={{ color: '#ef4444', minWidth: 0, p: 0.5 }}>
+                  Clear
+                </Button>
+              )}
+            </Box>
+            
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel sx={{ color: '#94a3b8' }}>Month</InputLabel>
+              <Select
+                value={tableMonthFilter}
+                label="Month"
+                onChange={(e) => setTableMonthFilter(e.target.value)}
+                sx={{
+                  color: '#fff',
+                  bgcolor: 'rgba(0,0,0,0.2)',
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.08)' },
+                  '& .MuiSvgIcon-root': { color: '#94a3b8' }
+                }}
+              >
+                <MenuItem value="all">All Months</MenuItem>
+                {availableMonths.map(m => (
+                  <MenuItem key={m} value={m}>{m}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel sx={{ color: '#94a3b8' }}>Week</InputLabel>
+              <Select
+                value={tableWeekFilter}
+                label="Week"
+                onChange={(e) => setTableWeekFilter(e.target.value)}
+                sx={{
+                  color: '#fff',
+                  bgcolor: 'rgba(0,0,0,0.2)',
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.08)' },
+                  '& .MuiSvgIcon-root': { color: '#94a3b8' }
+                }}
+              >
+                <MenuItem value="all">All Weeks</MenuItem>
+                {availableWeeks.map(w => (
+                  <MenuItem key={w} value={w}>{w}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <Button
+              variant="outlined"
+              startIcon={<FaFileExcel />}
+              onClick={handleExportAllTeamsViolations}
+              size="small"
+              sx={{ borderColor: colors.primary || '#3b82f6', color: colors.primary || '#3b82f6', height: 'fit-content' }}
+            >
+              Export Tasks
+            </Button>
+          </Box>
         </Box>
 
         <Box sx={{ height: 500, width: '100%', mt: 2 }}>
