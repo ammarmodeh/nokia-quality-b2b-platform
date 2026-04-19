@@ -4842,6 +4842,7 @@ ${data.map((a, i) => `
                 settings={settings}
                 colors={colors}
                 totalSamplesTarget={globalAnalytics.totalSamplesTarget}
+                samplesTokenData={samplesTokenData}
               />
             )}
           </>

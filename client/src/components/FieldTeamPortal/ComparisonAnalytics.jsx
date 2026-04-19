@@ -55,6 +55,7 @@ const CustomBarTooltip = ({ active, payload, label }) => {
 
   // Access total from the first bar's payload (always present regardless of hidden Line)
   const totalRaw = payload[0]?.payload?.total || 0;
+  const tokenValue = payload[0]?.payload?.tokenValue;
 
   return (
     <Box sx={{
@@ -64,11 +65,17 @@ const CustomBarTooltip = ({ active, payload, label }) => {
       p: 1.5,
       minWidth: 180
     }}>
-      <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, display: 'block', mb: 1 }}>
+      <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, display: 'block', mb: 0.5 }}>
         {label} — {totalRaw} total tasks
       </Typography>
+      {tokenValue !== undefined && tokenValue > 0 && (
+        <Typography variant="caption" sx={{ color: '#8b5cf6', fontWeight: 700, display: 'block', mb: 1 }}>
+          Total Samples Token: {tokenValue}
+        </Typography>
+      )}
+      <Box sx={{ mt: 1 }}>
       {payload
-        .filter(p => p.dataKey !== 'total' && !String(p.dataKey).endsWith('_raw'))
+        .filter(p => p.dataKey !== 'total' && p.dataKey !== 'tokenValue' && !String(p.dataKey).endsWith('_raw'))
         .map((p, i) => {
           const rawKey = `${p.dataKey}_raw`;
           const rawCount = p.payload?.[rawKey] ?? 0;
@@ -83,11 +90,12 @@ const CustomBarTooltip = ({ active, payload, label }) => {
             </Box>
           );
         })}
+      </Box>
     </Box>
   );
 };
 
-const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, totalSamplesTarget = 0 }) => {
+const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, totalSamplesTarget = 0, samplesTokenData = [] }) => {
   const [timeFilterMode, setTimeFilterMode] = useState('months'); // 'months', 'weeks', 'days'
   const [comparisonCategory, setComparisonCategory] = useState('reason'); // 'reason', 'subReason', 'rootCause', 'owner'
   const [selectedItemsFilters, setSelectedItemsFilters] = useState([]); // Array of selected string items
@@ -154,7 +162,39 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
       });
     });
 
-    const sortedBuckets = Object.values(buckets).sort((a, b) => a.sortOrder - b.sortOrder);
+    const uniqueTokensMap = new Map();
+    samplesTokenData.forEach(s => {
+      const key = `${s.year}-${s.weekNumber}`;
+      if (!uniqueTokensMap.has(key)) {
+        uniqueTokensMap.set(key, s);
+      }
+    });
+    const cleanTokens = Array.from(uniqueTokensMap.values());
+
+    const sortedBuckets = Object.values(buckets).sort((a, b) => a.sortOrder - b.sortOrder).map(b => {
+      let tokenValue = 0;
+      if (timeFilterMode === 'weeks') {
+        const match = b.period.match(/Wk-(\d+)\s*\((\d+)\)/);
+        if (match) {
+          const wk = parseInt(match[1], 10);
+          const yr = parseInt(match[2], 10);
+          const token = cleanTokens.find(s => s.weekNumber === wk && s.year === yr);
+          if (token) tokenValue = token.sampleSize || 0;
+        }
+      } else if (timeFilterMode === 'months') {
+        const match = b.period.match(/([a-zA-Z]+)\s+(\d+)/);
+        if (match) {
+          const monthStr = match[1];
+          const yr = parseInt(match[2], 10);
+          const date = new Date(`${monthStr} 1, ${yr}`);
+          const monthNum = date.getMonth() + 1; // 1-12
+          const token = cleanTokens.find(s => s.weekNumber === 100 + monthNum && s.year === yr);
+          if (token) tokenValue = token.sampleSize || 0;
+        }
+      }
+      return { ...b, tokenValue };
+    });
+    
     const allItems = Array.from(itemsSet);
 
     sortedBuckets.forEach(b => {
@@ -172,6 +212,7 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
         period: bucket.period,
         sortOrder: bucket.sortOrder,
         total: bucket.total, // keep for the trend line
+        tokenValue: bucket.tokenValue,
       };
       allItems.forEach(item => {
         const raw = bucket[item] || 0;
@@ -244,7 +285,7 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
         declinedCount: generatedRows.filter(r => r.trend === 'Declined').length
       }
     };
-  }, [technicalTasks, settings, timeFilterMode, comparisonCategory, dateRange]);
+  }, [technicalTasks, settings, timeFilterMode, comparisonCategory, dateRange, samplesTokenData]);
 
   const columns = [
     {
@@ -368,7 +409,7 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
           <Grid container spacing={2}>
             <Grid item xs={12} sm={3}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="caption" color="#64748b" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 700 }}>Total Samples (Tasks)</Typography>
+                <Typography variant="caption" color="#64748b" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 700 }}>Total Tasks (Low Sat. Score)</Typography>
                 <Typography variant="h6" color={colors.primary} fontWeight={800}>{totalStats.totalUniqueSamples}</Typography>
               </Box>
             </Grid>
