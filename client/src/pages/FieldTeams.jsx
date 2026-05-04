@@ -13,7 +13,7 @@ import {
   MoreVert,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import { useSelector } from 'react-redux';
 import { FaSignOutAlt } from 'react-icons/fa';
 import { MdClose, MdOutlineSearch } from 'react-icons/md';
@@ -322,34 +322,174 @@ const FieldTeamForm = () => {
 
   // Handle export to Excel
   const handleExportToExcel = useCallback(() => {
-    const dataToExport = teams.map(team => ({
-      TeamName: team.teamName,
-      TeamCompany: team.teamCompany,
-      ContactNumber: team.contactNumber,
-      FSMSerialNumber: team.fsmSerialNumber,
-      LaptopSerialNumber: team.laptopSerialNumber,
-      IsNewToInstallation: team.isNewToInstallation ? 'Yes' : 'No',
-      InstallationStartDate: team.installationStartDate ? new Date(team.installationStartDate).toLocaleDateString() : 'N/A',
-      IsNewToActivation: team.isNewToActivation ? 'Yes' : 'No',
-      ActivationStartDate: team.activationStartDate ? new Date(team.activationStartDate).toLocaleDateString() : 'N/A',
-      EvaluationScore: team.evaluationScore || 0,
-      IsEvaluated: team.isEvaluated ? 'Yes' : 'No',
-      LastEvaluationDate: team.lastEvaluationDate ? new Date(team.lastEvaluationDate).toLocaleDateString() : 'Never',
-      LatestEvaluationPercentage: team.evaluationHistory?.[0]?.percentage || 'N/A',
-      QuizCode: team.quizCode || 'N/A',
-      IsSuspended: team.isSuspended ? 'Yes' : 'No',
-      SuspensionDuration: team.suspensionDuration || '',
-      SuspensionReason: team.suspensionReason || '',
-      IsTerminated: team.isTerminated ? 'Yes' : 'No',
-      TerminationReason: team.terminationReason || '',
-      IsActive: team.isActive ? 'Yes' : 'No',
-      StateLogs: team.stateLogs.map(log => `${log.state} - ${log.reason || ''} - ${log.duration || ''} - ${new Date(log.changedAt).toLocaleString()}`).join(' | '),
-    }));
+    // 1. Calculate Stats
+    const total = teams.length;
+    let active = 0, terminated = 0, resigned = 0, suspended = 0, onLeave = 0, otherInactive = 0;
+    teams.forEach(team => {
+      if (team.isTerminated) terminated++;
+      else if (team.isResigned) resigned++;
+      else if (team.isSuspended) suspended++;
+      else if (team.isOnLeave) onLeave++;
+      else if (team.isActive === false) otherInactive++;
+      else active++;
+    });
+    const inactive = terminated + resigned + suspended + onLeave + otherInactive;
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const sheetData = [];
+
+    // Title Row
+    sheetData.push(["Field Teams Report"]);
+    sheetData.push([]); 
+    
+    // Stats Rows
+    sheetData.push(["Total Teams", total, "", "Terminated", terminated]);
+    sheetData.push(["Active", active, "", "Resigned", resigned]);
+    sheetData.push(["Inactive", inactive, "", "Suspended", suspended]);
+    sheetData.push(["", "", "", "On Leave", onLeave]);
+    sheetData.push([]); 
+
+    // Table Headers
+    const headers = [
+      "Team Name", "Team ID (4-digit)", "Quiz Code", "Status", "Quiz Access", 
+      "Company", "Contact Number", "Performance (%)", 
+      "New To Installation", "Installation Start",
+      "New To Activation", "Activation Start",
+      "FSM Serial", "Laptop Serial",
+      "State Logs"
+    ];
+    sheetData.push(headers);
+
+    // Table Data
+    teams.forEach(team => {
+      const latestEval = team.evaluationHistory?.[0];
+      const performance = latestEval ? `${latestEval.percentage}%` : 'No Data';
+      
+      let status = 'Inactive';
+      if (team.isTerminated) status = 'Terminated';
+      else if (team.isResigned) status = 'Resigned';
+      else if (team.isSuspended) status = 'Suspended';
+      else if (team.isOnLeave) status = 'On Leave';
+      else if (team.isActive !== false) status = 'Active';
+
+      const quizAccess = team.canTakeQuiz ? 'Allowed' : 'Blocked';
+
+      sheetData.push([
+        team.teamName || 'N/A',
+        team.teamCode || 'N/A',
+        team.quizCode || 'N/A',
+        status,
+        quizAccess,
+        team.teamCompany || 'N/A',
+        team.contactNumber || 'N/A',
+        performance,
+        team.isNewToInstallation ? 'Yes' : 'No',
+        team.installationStartDate ? new Date(team.installationStartDate).toLocaleDateString() : 'N/A',
+        team.isNewToActivation ? 'Yes' : 'No',
+        team.activationStartDate ? new Date(team.activationStartDate).toLocaleDateString() : 'N/A',
+        team.fsmSerialNumber || 'N/A',
+        team.laptopSerialNumber || 'N/A',
+        team.stateLogs ? team.stateLogs.map(log => `${log.state} (${new Date(log.changedAt).toLocaleDateString()})`).join(' | ') : ''
+      ]);
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+
+    // --- Styling ---
+    
+    // Title style
+    worksheet['A1'].s = {
+      font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "7B68EE" } }, // Match app primary color
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+    if (!worksheet['!merges']) worksheet['!merges'] = [];
+    worksheet['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } });
+
+    // Stats styling
+    const statHeaderStyle = { font: { bold: true, color: { rgb: "333333" } }, fill: { fgColor: { rgb: "E5E7EB" } } };
+    const statValueStyle = { font: { bold: true, color: { rgb: "1F2937" } }, alignment: { horizontal: "center" } };
+    
+    [2, 3, 4, 5].forEach(r => {
+      if (worksheet[XLSX.utils.encode_cell({r, c:0})]) worksheet[XLSX.utils.encode_cell({r, c:0})].s = statHeaderStyle;
+      if (worksheet[XLSX.utils.encode_cell({r, c:1})]) worksheet[XLSX.utils.encode_cell({r, c:1})].s = statValueStyle;
+      if (worksheet[XLSX.utils.encode_cell({r, c:3})]) worksheet[XLSX.utils.encode_cell({r, c:3})].s = statHeaderStyle;
+      if (worksheet[XLSX.utils.encode_cell({r, c:4})]) worksheet[XLSX.utils.encode_cell({r, c:4})].s = statValueStyle;
+    });
+
+    // Table Header Styling
+    const tableHeaderStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "1F2937" } }, // Dark Gray
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } }
+      }
+    };
+
+    const headerRow = 7;
+    for (let c = 0; c < headers.length; c++) {
+      const cellRef = XLSX.utils.encode_cell({r: headerRow, c});
+      if (worksheet[cellRef]) worksheet[cellRef].s = tableHeaderStyle;
+    }
+
+    // Data Row Styling
+    const dataRowStyle = {
+      alignment: { vertical: "center" },
+      border: { bottom: { style: "thin", color: { rgb: "E5E7EB" } } }
+    };
+    
+    // Status specific styling
+    const activeStyle = { ...dataRowStyle, font: { color: { rgb: "059669" }, bold: true } }; // Green
+    const inactiveStyle = { ...dataRowStyle, font: { color: { rgb: "DC2626" }, bold: true } }; // Red
+    const suspendedStyle = { ...dataRowStyle, font: { color: { rgb: "D97706" }, bold: true } }; // Orange
+    const onLeaveStyle = { ...dataRowStyle, font: { color: { rgb: "7C3AED" }, bold: true } }; // Purple
+    const resignedStyle = { ...dataRowStyle, font: { color: { rgb: "DC2626" }, bold: true } }; // Red
+
+    for (let r = headerRow + 1; r < sheetData.length; r++) {
+      const statusCellRef = XLSX.utils.encode_cell({r, c: 3});
+      const statusValue = worksheet[statusCellRef]?.v;
+      
+      for (let c = 0; c < headers.length; c++) {
+        const cellRef = XLSX.utils.encode_cell({r, c});
+        if (worksheet[cellRef]) {
+          if (c === 3) {
+            if (statusValue === 'Active') worksheet[cellRef].s = activeStyle;
+            else if (statusValue === 'Suspended') worksheet[cellRef].s = suspendedStyle;
+            else if (statusValue === 'On Leave') worksheet[cellRef].s = onLeaveStyle;
+            else if (statusValue === 'Resigned' || statusValue === 'Terminated') worksheet[cellRef].s = resignedStyle;
+            else worksheet[cellRef].s = inactiveStyle;
+          } else {
+            worksheet[cellRef].s = dataRowStyle;
+          }
+        }
+      }
+    }
+
+    // Set Column Widths
+    worksheet['!cols'] = [
+      { wch: 30 }, // Team Name
+      { wch: 18 }, // Team ID
+      { wch: 15 }, // Quiz Code
+      { wch: 15 }, // Status
+      { wch: 15 }, // Quiz Access
+      { wch: 20 }, // Company
+      { wch: 18 }, // Contact Number
+      { wch: 18 }, // Performance
+      { wch: 20 }, // New To Installation
+      { wch: 20 }, // Installation Start
+      { wch: 20 }, // New To Activation
+      { wch: 20 }, // Activation Start
+      { wch: 20 }, // FSM Serial
+      { wch: 20 }, // Laptop Serial
+      { wch: 40 }, // State Logs
+    ];
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Teams');
-    XLSX.writeFile(workbook, 'teams.xlsx');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Teams Overview');
+    XLSX.writeFile(workbook, 'Field_Teams_Report.xlsx');
   }, [teams]);
 
   // Handle view history click
@@ -479,11 +619,33 @@ const FieldTeamForm = () => {
     setSelectedTeamId(null);
   }, []);
 
-  // Handle close logs dialog
   const handleCloseLogsDialog = useCallback(() => {
     setOpenLogsDialog(false);
     setSelectedLogs([]);
   }, []);
+
+  const teamStatusStats = useMemo(() => {
+    const total = (teams || []).length;
+    let active = 0;
+    let terminated = 0;
+    let resigned = 0;
+    let suspended = 0;
+    let onLeave = 0;
+    let otherInactive = 0;
+
+    (teams || []).forEach(team => {
+      if (team.isTerminated) terminated++;
+      else if (team.isResigned) resigned++;
+      else if (team.isSuspended) suspended++;
+      else if (team.isOnLeave) onLeave++;
+      else if (team.isActive === false) otherInactive++;
+      else active++;
+    });
+
+    const inactive = terminated + resigned + suspended + onLeave + otherInactive;
+
+    return { total, active, inactive, terminated, resigned, suspended, onLeave, otherInactive };
+  }, [teams]);
 
   // Memoize filtered teams
   const filteredTeams = useMemo(() => {
@@ -807,6 +969,17 @@ const FieldTeamForm = () => {
               </IconButton>
             </Tooltip>
           </Stack>
+          
+          <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Chip size="small" label={`Total: ${teamStatusStats.total}`} sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 600 }} />
+            <Chip size="small" label={`Active: ${teamStatusStats.active}`} sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)', color: '#4caf50', border: '1px solid #4caf5040', fontWeight: 600 }} />
+            <Chip size="small" label={`Inactive: ${teamStatusStats.inactive}`} sx={{ bgcolor: 'rgba(244, 67, 54, 0.1)', color: '#f44336', border: '1px solid #f4433640', fontWeight: 600 }} />
+            {teamStatusStats.onLeave > 0 && <Chip size="small" label={`On Leave: ${teamStatusStats.onLeave}`} sx={{ bgcolor: 'rgba(156, 39, 176, 0.1)', color: '#9c27b0', border: '1px solid #9c27b040', fontWeight: 600 }} />}
+            {teamStatusStats.terminated > 0 && <Chip size="small" label={`Terminated: ${teamStatusStats.terminated}`} sx={{ bgcolor: 'rgba(211, 47, 47, 0.1)', color: '#d32f2f', border: '1px solid #d32f2f40', fontWeight: 600 }} />}
+            {teamStatusStats.resigned > 0 && <Chip size="small" label={`Resigned: ${teamStatusStats.resigned}`} sx={{ bgcolor: 'rgba(211, 47, 47, 0.1)', color: '#d32f2f', border: '1px solid #d32f2f40', fontWeight: 600 }} />}
+            {teamStatusStats.suspended > 0 && <Chip size="small" label={`Suspended: ${teamStatusStats.suspended}`} sx={{ bgcolor: 'rgba(237, 108, 2, 0.1)', color: '#ed6c02', border: '1px solid #ed6c0240', fontWeight: 600 }} />}
+          </Box>
+
           <Box
             sx={{
               width: '100%',

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogTitle, DialogContent, Button, TextField, Select, MenuItem, Stack, FormControl, InputLabel, FormHelperText, Autocomplete, Typography, IconButton, Divider, Box, Grid, FormControlLabel, Checkbox } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, Button, TextField, Select, MenuItem, Stack, FormControl, InputLabel, FormHelperText, Autocomplete, Typography, IconButton, Divider, Box, Grid, FormControlLabel, Checkbox, Radio, RadioGroup, FormLabel } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
@@ -102,6 +102,19 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                   </Select>
                 </FormControl>
               </Grid>
+              <Grid item xs={12} sm={2.1}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Team Accountability</InputLabel>
+                  <Select
+                    value={row.teamAccountability || 'No'}
+                    label="Team Accountability"
+                    onChange={(e) => handleChange(index, 'teamAccountability', e.target.value)}
+                  >
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
               <Grid item xs={12} sm={1.5}>
                 <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                   <IconButton color="primary" onClick={handleAdd} size="small">
@@ -197,7 +210,7 @@ const EditTaskDialog = ({
   const [customerType, setCustomerType] = useState('');
   const [validationStatus, setValidationStatus] = useState("Not specified");
   const [rcaRows, setRcaRows] = useState([
-    { responsible: 'Not specified', reason: 'Not specified', subReason: 'Not specified', rootCause: 'Not specified', itnRelated: 'Not specified', relatedToSubscription: 'Not specified' }
+    { responsible: 'Not specified', reason: 'Not specified', subReason: 'Not specified', rootCause: 'Not specified', itnRelated: 'Not specified', relatedToSubscription: 'Not specified', teamAccountability: 'No' }
   ]);
   const [ontType, setOntType] = useState("Not specified");
   const [freeExtender, setFreeExtender] = useState("Not specified");
@@ -378,8 +391,9 @@ const EditTaskDialog = ({
       const subReas = Array.isArray(task.subReason) ? task.subReason : (task.subReason ? [task.subReason] : []);
       const roots = Array.isArray(task.rootCause) ? task.rootCause : (task.rootCause ? [task.rootCause] : []);
       const subs = Array.isArray(task.relatedToSubscription) ? task.relatedToSubscription : (task.relatedToSubscription ? [task.relatedToSubscription] : []);
+      const teamAccs = Array.isArray(task.teamAccountability) ? task.teamAccountability : (task.teamAccountability ? [task.teamAccountability] : []);
 
-      const maxLen = Math.max(resps.length, reas.length, subReas.length, roots.length, itns.length, subs.length, 1);
+      const maxLen = Math.max(resps.length, reas.length, subReas.length, roots.length, itns.length, subs.length, teamAccs.length, 1);
       const rows = [];
       for (let i = 0; i < maxLen; i++) {
         rows.push({
@@ -388,7 +402,8 @@ const EditTaskDialog = ({
           subReason: subReas[i] || 'Not specified',
           rootCause: roots[i] || 'Not specified',
           itnRelated: itns[i] || 'Not specified',
-          relatedToSubscription: subs[i] || 'Not specified'
+          relatedToSubscription: subs[i] || 'Not specified',
+          teamAccountability: teamAccs[i] || task.accountability || 'No'
         });
       }
       setRcaRows(rows);
@@ -462,6 +477,7 @@ const EditTaskDialog = ({
       reason: rcaRows.map(r => r.reason),
       subReason: rcaRows.map(r => r.subReason),
       rootCause: rcaRows.map(r => r.rootCause),
+      teamAccountability: rcaRows.map(r => r.teamAccountability),
       itnRelated: rcaRows.map(r => r.itnRelated),
       relatedToSubscription: rcaRows.map(r => r.relatedToSubscription),
       ontType,
@@ -500,7 +516,7 @@ const EditTaskDialog = ({
     }
   };
 
-  const handleAddRcaRow = () => setRcaRows([...rcaRows, { responsible: '', reason: '', subReason: '', rootCause: '', itnRelated: 'No', relatedToSubscription: 'No' }]);
+  const handleAddRcaRow = () => setRcaRows([...rcaRows, { responsible: '', reason: '', subReason: '', rootCause: '', itnRelated: 'No', relatedToSubscription: 'No', teamAccountability: 'No' }]);
   const handleRemoveRcaRow = (index) => setRcaRows(rcaRows.filter((_, i) => i !== index));
   const handleChangeRcaRow = (index, field, newValue) => {
     const updated = [...rcaRows];

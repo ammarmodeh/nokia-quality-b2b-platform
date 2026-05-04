@@ -152,9 +152,7 @@ export const getAvailableMonths = (tasks, settings = {}) => {
   return ranges.map(range => {
     // extract number from key "Month-1"
     const monthNum = parseInt(range.key.split('-')[1]);
-    const startStr = format(range.start, 'MMM d');
-    const endStr = format(range.end, 'MMM d');
-    const label = `${range.label} (${startStr} - ${endStr})`;
+    const label = range.label; // range.label already contains the formatted month and date range
 
     return {
       year: range.start.getFullYear(),
@@ -378,14 +376,16 @@ export const aggregateSamples = (samplesData, type, value, settings = {}) => {
   }
 
   if (type === 'month') {
-    const { month } = value;
+    const { month, year } = value;
     const targetMonth = Number(month);
+    const targetYear = year ? Number(year) : null;
 
     // ── Priority 1: Manually-entered monthly total record ──────────────────
     // These are stored with weekNumber = 100 + month (e.g. Jan=101, Dec=112)
     const MONTH_WEEK_OFFSET = 100;
     const monthlyRecord = samplesData.find(
-      s => Number(s.weekNumber) === MONTH_WEEK_OFFSET + targetMonth
+      s => Number(s.weekNumber) === MONTH_WEEK_OFFSET + targetMonth &&
+           (!targetYear || Number(s.year) === targetYear)
     );
     if (monthlyRecord && Number(monthlyRecord.sampleSize) > 0) {
       return Number(monthlyRecord.sampleSize);
@@ -395,6 +395,9 @@ export const aggregateSamples = (samplesData, type, value, settings = {}) => {
     return samplesData.filter(s => {
       // Skip month-marker records (weekNumber 101–112)
       if (Number(s.weekNumber) > MONTH_WEEK_OFFSET) return false;
+      
+      // Match year if provided
+      if (targetYear && Number(s.year) !== targetYear) return false;
 
       // 1. Exact match on stored startDate
       if (s.startDate) {
@@ -426,6 +429,26 @@ export const aggregateSamples = (samplesData, type, value, settings = {}) => {
 
     const startDate = new Date(start);
     const endDate = new Date(end);
+    
+    // NEW: If the range exactly matches a calendar month, try Priority 1 month lookup first
+    // This handles the discrepancy in AllTasksList when filtering by specific month dates
+    if (startDate.getDate() === 1 && endDate.getDate() >= 28) {
+       const startMonth = startDate.getMonth() + 1;
+       const endMonth = endDate.getMonth() + 1;
+       const startYear = startDate.getFullYear();
+       const endYear = endDate.getFullYear();
+       
+       if (startMonth === endMonth && startYear === endYear) {
+          const MONTH_WEEK_OFFSET = 100;
+          const monthlyRecord = samplesData.find(
+            s => Number(s.weekNumber) === MONTH_WEEK_OFFSET + startMonth &&
+                 Number(s.year) === startYear
+          );
+          if (monthlyRecord && Number(monthlyRecord.sampleSize) > 0) {
+            return Number(monthlyRecord.sampleSize);
+          }
+       }
+    }
 
     return samplesData.filter(s => {
       // Preferred: use sample startDate

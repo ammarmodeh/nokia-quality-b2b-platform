@@ -36,6 +36,228 @@ const normalizeText = (value) => {
   if (Array.isArray(value)) return value.join(' ').toLowerCase().trim();
   return String(value).toLowerCase().trim();
 };
+
+const isTeamAccountable = (task) => Array.isArray(task?.teamAccountability) ? task?.teamAccountability.includes("Yes") : task?.teamAccountability === "Yes";
+
+const calculateTeamExportSummary = (teamTasks, settings, latestSessionDate) => {
+  const totalTasks = teamTasks.length;
+
+  const teamDetractors = teamTasks.filter(item => {
+    const score = item.evaluationScore || 0;
+    const normalized = score <= 10 ? score * 10 : score;
+    return normalized <= 60;
+  }).length;
+
+  const teamNeutrals = teamTasks.filter(item => {
+    const score = item.evaluationScore || 0;
+    const normalized = score <= 10 ? score * 10 : score;
+    return normalized > 60 && normalized <= 80;
+  }).length;
+
+  const reachTasks = teamTasks.filter(item => isTeamAccountable(item));
+  
+  const reachCount = reachTasks.length;
+  const reachDetractors = reachTasks.filter(item => {
+    const score = item.evaluationScore || 0;
+    const normalized = score <= 10 ? score * 10 : score;
+    return normalized <= 60;
+  }).length;
+  
+  const reachNeutrals = reachTasks.filter(item => {
+    const score = item.evaluationScore || 0;
+    const normalized = score <= 10 ? score * 10 : score;
+    return normalized > 60 && normalized <= 80;
+  }).length;
+
+  // Snapshot logic for weekly/monthly
+  const snapshots = {
+    weekly: { total: 0, detractors: 0, neutrals: 0, reach: 0, key: '-' },
+    monthly: { total: 0, detractors: 0, neutrals: 0, reach: 0, key: '-' }
+  };
+
+  if (totalTasks > 0) {
+    // Find latest Week and Month in the data
+    const taskDetails = teamTasks.map(t => {
+      const d = t.interviewDate || t.pisDate || t.createdAt;
+      const wInfo = getWeekNumber(d, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber);
+      const mInfo = getMonthNumber(d, settings);
+      return { 
+        ...t, 
+        weekKey: wInfo?.key || 'Unknown', 
+        monthKey: mInfo?.key || 'Unknown',
+        isReach: isTeamAccountable(t),
+        isOwnerReach: fieldContainsReach(t.responsible),
+        isDetractor: (() => { const s = t.evaluationScore || 0; return (s <= 10 ? s * 10 : s) <= 60; })(),
+        isNeutral: (() => { const s = t.evaluationScore || 0; const n = (s <= 10 ? s * 10 : s); return n > 60 && n <= 80; })()
+      };
+    });
+
+    const uniqueWeeks = [...new Set(taskDetails.map(t => t.weekKey))].sort().reverse();
+    const uniqueMonths = [...new Set(taskDetails.map(t => t.monthKey))].sort().reverse();
+
+    const latestWeek = uniqueWeeks[0];
+    const latestMonth = uniqueMonths[0];
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
+    const latestMonthName = latestMonth && latestMonth.startsWith('Month-') 
+      ? monthNames[parseInt(latestMonth.split('-')[1]) - 1] 
+      : latestMonth;
+
+    const weekTasks = taskDetails.filter(t => t.weekKey === latestWeek);
+    const monthTasks = taskDetails.filter(t => t.monthKey === latestMonth);
+
+    snapshots.weekly = {
+      key: latestWeek,
+      total: weekTasks.length,
+      detractors: weekTasks.filter(t => t.isDetractor).length,
+      neutrals: weekTasks.filter(t => t.isNeutral).length,
+      reach: weekTasks.filter(t => t.isReach).length,
+      reachDetractors: weekTasks.filter(t => t.isReach && t.isDetractor).length,
+      reachNeutrals: weekTasks.filter(t => t.isReach && t.isNeutral).length,
+      ownerReachDetractors: weekTasks.filter(t => t.isOwnerReach && t.isDetractor).length,
+      ownerReachNeutrals: weekTasks.filter(t => t.isOwnerReach && t.isNeutral).length
+    };
+
+    snapshots.monthly = {
+      key: latestMonthName,
+      total: monthTasks.length,
+      detractors: monthTasks.filter(t => t.isDetractor).length,
+      neutrals: monthTasks.filter(t => t.isNeutral).length,
+      reach: monthTasks.filter(t => t.isReach).length,
+      reachDetractors: monthTasks.filter(t => t.isReach && t.isDetractor).length,
+      reachNeutrals: monthTasks.filter(t => t.isReach && t.isNeutral).length,
+      ownerReachDetractors: monthTasks.filter(t => t.isOwnerReach && t.isDetractor).length,
+      ownerReachNeutrals: monthTasks.filter(t => t.isOwnerReach && t.isNeutral).length
+    };
+
+    // Post-Session Snapshots
+    if (latestSessionDate) {
+      const postTasks = taskDetails.filter(t => {
+        const d = t.interviewDate || t.pisDate || t.createdAt;
+        return new Date(d) > latestSessionDate;
+      });
+      snapshots.postSession = {
+        total: postTasks.length,
+        detractors: postTasks.filter(t => t.isDetractor).length,
+        neutrals: postTasks.filter(t => t.isNeutral).length,
+        reach: postTasks.filter(t => t.isReach).length,
+        reachDetractors: postTasks.filter(t => t.isReach && t.isDetractor).length,
+        reachNeutrals: postTasks.filter(t => t.isReach && t.isNeutral).length
+      };
+    } else {
+      snapshots.postSession = { total: 0, detractors: 0, neutrals: 0, reach: 0, reachDetractors: 0, reachNeutrals: 0 };
+    }
+  }
+
+  return {
+    totalTasks,
+    teamDetractors,
+    teamNeutrals,
+    reachCount,
+    reachDetractors,
+    reachNeutrals,
+    reachDetractorsPct: totalTasks > 0 ? Math.round((reachDetractors / totalTasks) * 100) : 0,
+    reachNeutralsPct: totalTasks > 0 ? Math.round((reachNeutrals / totalTasks) * 100) : 0,
+    snapshots,
+    latestSessionDate,
+    
+    // Comparison Metrics (Before vs After)
+    comparison: (() => {
+      if (!latestSessionDate) return { improvementRate: 0, violationRateDelta: 0 };
+      
+      const sessionDate = new Date(latestSessionDate);
+      const postTasks = teamTasks.filter(item => {
+        const d = item.interviewDate || item.pisDate || item.createdAt;
+        return d && new Date(d) > sessionDate;
+      });
+      const postViolations = postTasks.filter(item => {
+        const score = item.evaluationScore || 0;
+        const normalized = score <= 10 ? score * 10 : score;
+        return normalized > 0 && normalized <= 80;
+      }).length;
+      
+      const yearStart = new Date(sessionDate.getFullYear(), 0, 1);
+      const preTasks = teamTasks.filter(item => {
+        const d = item.interviewDate || item.pisDate || item.createdAt;
+        return d && new Date(d) >= yearStart && new Date(d) < sessionDate;
+      });
+      const preViolations = preTasks.filter(item => {
+        const score = item.evaluationScore || 0;
+        const normalized = score <= 10 ? score * 10 : score;
+        return normalized > 0 && normalized <= 80;
+      }).length;
+
+      const daysSince = Math.max(1, Math.ceil((new Date() - sessionDate) / (1000 * 60 * 60 * 24)));
+      const daysBefore = Math.max(1, Math.ceil((sessionDate - yearStart) / (1000 * 60 * 60 * 24)));
+      
+      const avgPost = postTasks.length / daysSince;
+      const avgPre = preTasks.length / daysBefore;
+      
+      const postRate = postTasks.length > 0 ? Math.round((postViolations / postTasks.length) * 100) : 0;
+      const preRate = preTasks.length > 0 ? Math.round((preViolations / preTasks.length) * 100) : 0;
+
+      return {
+        improvementRate: avgPre > 0 ? Math.round(((avgPre - avgPost) / avgPre) * 100) : 0,
+        violationRateDelta: postRate - preRate
+      };
+    })()
+  };
+};
+
+const applySnapshotStyles = (ws, data) => {
+  if (!ws || !data || data.length === 0) return;
+  const headers = Object.keys(data[0]);
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  
+  // Style definitions
+  const weeklyStyle = { fill: { fgColor: { rgb: "E3F2FD" } } }; // Very Light Blue
+  const monthlyStyle = { fill: { fgColor: { rgb: "F1F8E9" } } }; // Very Light Green
+  const postStyle = { fill: { fgColor: { rgb: "F3E5F5" } } };    // Very Light Purple
+  const snapshotLabelStyle = { fill: { fgColor: { rgb: "F5F5F5" } }, font: { italic: true } };
+  const headerBaseStyle = { 
+    font: { bold: true, color: { rgb: "FFFFFF" } }, 
+    fill: { fgColor: { rgb: "475569" } }, // Slate-600
+    alignment: { horizontal: "center" }
+  };
+
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    const colName = headers[C];
+    let bodyStyle = null;
+    
+    if (colName && colName.startsWith('Weekly:')) {
+      bodyStyle = weeklyStyle;
+    } else if (colName && colName.startsWith('Monthly:')) {
+      bodyStyle = monthlyStyle;
+    } else if (colName && (colName.startsWith('Post:') || colName === 'Latest Session')) {
+      bodyStyle = postStyle;
+    } else if (colName === 'Latest Week' || colName === 'Latest Month') {
+      bodyStyle = snapshotLabelStyle;
+    }
+
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!ws[cellRef]) ws[cellRef] = { t: 'z', v: '' }; // Ensure cell exists
+      
+      if (R === 0) {
+        // Header styling
+        let headerColor = "475569";
+        if (bodyStyle === weeklyStyle) headerColor = "1E88E5"; // Blue-600
+        if (bodyStyle === monthlyStyle) headerColor = "43A047"; // Green-600
+        if (bodyStyle === postStyle) headerColor = "8E24AA"; // Purple-600
+        
+        ws[cellRef].s = { 
+          ...headerBaseStyle,
+          fill: { fgColor: { rgb: headerColor } }
+        };
+      } else if (bodyStyle) {
+        // Body styling for snapshot columns
+        ws[cellRef].s = bodyStyle;
+      }
+    }
+  }
+};
 import { generateWeekRanges, getWeekNumber, getMonthNumber, generateMonthRanges } from "../utils/helpers";
 import api from "../api/api";
 import {
@@ -97,7 +319,7 @@ ChartJS.register(
   TimeScale
 );
 
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import FieldTeamTicketsForPortalReview from "../components/FieldTeamTicketsForPortalReview";
 
 
@@ -1077,7 +1299,12 @@ const FieldTeamPortal = () => {
       detailedSubReasons: {},
       detailedRootCauses: {},
       detailedGovernorates: {},
-      detailedFieldTeams: {}
+      detailedFieldTeams: {},
+      // Global Totals for Contribution Calculations
+      totalDetractors: 0,
+      totalNeutrals: 0,
+      totalReachDetractors: 0,
+      totalReachCounts: 0
     };
 
     // Create a lookup map for scoring keys: Label -> Points (filtered for Task/Both by default as this processes techTasks)
@@ -1159,64 +1386,7 @@ const FieldTeamPortal = () => {
         });
       }
 
-      // Process Tuples
-      tuples.forEach(tuple => {
-        const { owner, reason, subReason, rootCause, isITN, isSubscription } = tuple;
-
-        // Individual Stats
-        stats.byOwner[owner] = (stats.byOwner[owner] || 0) + 1;
-        stats.byReason[reason] = (stats.byReason[reason] || 0) + 1;
-        stats.bySubReason[subReason] = (stats.bySubReason[subReason] || 0) + 1;
-        stats.byRootCause[rootCause] = (stats.byRootCause[rootCause] || 0) + 1;
-
-        // Detailed Owner tracking
-        if (!stats.detailedOwners[owner]) {
-          stats.detailedOwners[owner] = { total: 0, itn: 0, subscription: 0, points: 0, ownerBreakdown: {} };
-        }
-        stats.detailedOwners[owner].total++;
-        if (isITN) stats.detailedOwners[owner].itn++;
-        if (isSubscription) stats.detailedOwners[owner].subscription++;
-
-        // Matrix: Owner vs Reason
-        if (!stats.contributionMatrix[reason]) stats.contributionMatrix[reason] = { total: 0 };
-        stats.contributionMatrix[reason][owner] = (stats.contributionMatrix[reason][owner] || 0) + 1;
-        stats.contributionMatrix[reason].total++;
-
-        // Matrix: Owner vs Root Cause
-        if (!stats.rootCauseMatrix[rootCause]) stats.rootCauseMatrix[rootCause] = { total: 0 };
-        stats.rootCauseMatrix[rootCause][owner] = (stats.rootCauseMatrix[rootCause][owner] || 0) + 1;
-        stats.rootCauseMatrix[rootCause].total++;
-
-        // Detailed Breakdown Maps (Label -> { details })
-        const updateDetail = (map, label) => {
-          if (!map[label]) map[label] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
-          map[label].total++;
-          if (isITN) map[label].itn++;
-          if (isSubscription) map[label].subscription++;
-          map[label].ownerBreakdown[owner] = (map[label].ownerBreakdown[owner] || 0) + 1;
-        };
-
-        updateDetail(stats.detailedReasons, reason);
-        updateDetail(stats.detailedSubReasons, subReason);
-        updateDetail(stats.detailedRootCauses, rootCause);
-
-        // Detailed Field Team tracking
-        if (!stats.detailedFieldTeams[fieldTeam]) {
-          stats.detailedFieldTeams[fieldTeam] = { total: 0, itn: 0, subscription: 0, ownerBreakdown: {} };
-        }
-        stats.detailedFieldTeams[fieldTeam].total++;
-        if (isITN) stats.detailedFieldTeams[fieldTeam].itn++;
-        if (isSubscription) stats.detailedFieldTeams[fieldTeam].subscription++;
-      });
-
-      // Distribute points once per unique owner in the task
-      [...new Set(rawOwners)].forEach(o => {
-        if (!stats.detailedOwners[o]) {
-          stats.detailedOwners[o] = { total: 0, itn: 0, subscription: 0, points: 0, ownerBreakdown: {} };
-        }
-        stats.detailedOwners[o].points += taskPoints;
-      });
-
+      // Track Team/Governorate Stats
       stats.byFieldTeam[fieldTeam] = (stats.byFieldTeam[fieldTeam] || 0) + 1;
 
       if (!stats.fieldTeamDetails[fieldTeam]) {
@@ -1235,38 +1405,103 @@ const FieldTeamPortal = () => {
       teamStats.total += 1;
       teamStats.byCategory[category] = (teamStats.byCategory[category] || 0) + 1;
 
-      // Update team stats based on tuples
-      tuples.forEach(tuple => {
-        const { owner, reason, subReason, rootCause } = tuple;
-        teamStats.byOwner[owner] = (teamStats.byOwner[owner] || 0) + 1;
-        teamStats.byReason[reason] = (teamStats.byReason[reason] || 0) + 1;
-        teamStats.bySubReason[subReason] = (teamStats.bySubReason[subReason] || 0) + 1;
-        teamStats.byRootCause[rootCause] = (teamStats.byRootCause[rootCause] || 0) + 1;
-      });
+      // Calculate Task-level NPS/Sentiment metrics
+      const score = task.evaluationScore;
+      const isDetractor = !!(score && score > 0 && score <= 6);
+      const isNeutral = !!(score && score >= 7 && score <= 8);
+      const isPromoter = !!(score && score >= 9);
+      const isReachTask = Array.isArray(task.teamAccountability) ? task.teamAccountability.includes("Yes") : task.teamAccountability === 'Yes';
 
-      // Calculate NPS stats (this is per task, not per tuple)
-      // Evaluation score scale: 0-10
-      // Detractors: <= 6, Neutrals: 7-8, Promoters: 9-10
-      let score = task.evaluationScore;
-      if (score && score > 0) {
-        if (score <= 6) {
-          teamStats.npsBreakdown.Detractor++;
-          stats.sentiment.Detractor++;
-        } else if (score >= 7 && score <= 8) {
-          teamStats.npsBreakdown.Neutral++;
-          stats.sentiment.Neutral++;
-        } else if (score >= 9) {
-          teamStats.npsBreakdown.Promoter++;
-          stats.sentiment.Promoter++;
-        } else {
-          // 0 score or invalid
-          teamStats.npsBreakdown.NotEvaluated++;
-          stats.sentiment.NotEvaluated++;
-        }
+      if (isDetractor) {
+        teamStats.npsBreakdown.Detractor++;
+        stats.sentiment.Detractor++;
+        stats.totalDetractors++;
+      } else if (isNeutral) {
+        teamStats.npsBreakdown.Neutral++;
+        stats.sentiment.Neutral++;
+        stats.totalNeutrals++;
+      } else if (isPromoter) {
+        teamStats.npsBreakdown.Promoter++;
+        stats.sentiment.Promoter++;
       } else {
         teamStats.npsBreakdown.NotEvaluated++;
         stats.sentiment.NotEvaluated++;
       }
+
+      // Unified Detail Updater Helper
+      const updateDetail = (map, label, owner, isITN, isSubscription) => {
+        if (!map[label]) {
+          map[label] = { 
+            total: 0, itn: 0, subscription: 0, 
+            detractors: 0, neutrals: 0, 
+            reachCounts: 0, reachDetractors: 0,
+            ownerBreakdown: {} 
+          };
+        }
+        const slice = map[label];
+        slice.total++;
+        if (isITN) slice.itn++;
+        if (isSubscription) slice.subscription++;
+        if (isDetractor) slice.detractors++;
+        if (isNeutral) slice.neutrals++;
+        if (owner === 'Reach') {
+          slice.reachCounts++;
+          stats.totalReachCounts++; // This is per-tuple reach contribution
+        }
+        if (isReachTask && isDetractor) {
+          // Note: This logic follows the per-task rule for "Reach Detractors" but can be tuple-aligned if needed.
+          // For now, if a task is a Reach Detractor, every tuple associated with it gets one "Reach Detractor" hit.
+          slice.reachDetractors++;
+        }
+        slice.ownerBreakdown[owner] = (slice.ownerBreakdown[owner] || 0) + 1;
+      };
+
+      // Process Tuples
+      tuples.forEach(tuple => {
+        const { owner, reason, subReason, rootCause, isITN, isSubscription } = tuple;
+
+        // Individual Stats
+        stats.byOwner[owner] = (stats.byOwner[owner] || 0) + 1;
+        stats.byReason[reason] = (stats.byReason[reason] || 0) + 1;
+        stats.bySubReason[subReason] = (stats.bySubReason[subReason] || 0) + 1;
+        stats.byRootCause[rootCause] = (stats.byRootCause[rootCause] || 0) + 1;
+
+        // Update team-specific stats based on tuples
+        teamStats.byOwner[owner] = (teamStats.byOwner[owner] || 0) + 1;
+        teamStats.byReason[reason] = (teamStats.byReason[reason] || 0) + 1;
+        teamStats.bySubReason[subReason] = (teamStats.bySubReason[subReason] || 0) + 1;
+        teamStats.byRootCause[rootCause] = (teamStats.byRootCause[rootCause] || 0) + 1;
+
+        // Matrix Tracking (Owner vs Reason/Root Cause)
+        if (!stats.contributionMatrix[reason]) stats.contributionMatrix[reason] = { total: 0 };
+        stats.contributionMatrix[reason][owner] = (stats.contributionMatrix[reason][owner] || 0) + 1;
+        stats.contributionMatrix[reason].total++;
+
+        if (!stats.rootCauseMatrix[rootCause]) stats.rootCauseMatrix[rootCause] = { total: 0 };
+        stats.rootCauseMatrix[rootCause][owner] = (stats.rootCauseMatrix[rootCause][owner] || 0) + 1;
+        stats.rootCauseMatrix[rootCause].total++;
+
+        // Global Detail Tracking Across All Dimensions
+        updateDetail(stats.detailedOwners, owner, owner, isITN, isSubscription);
+        updateDetail(stats.detailedReasons, reason, owner, isITN, isSubscription);
+        updateDetail(stats.detailedSubReasons, subReason, owner, isITN, isSubscription);
+        updateDetail(stats.detailedRootCauses, rootCause, owner, isITN, isSubscription);
+        updateDetail(stats.detailedFieldTeams, fieldTeam, owner, isITN, isSubscription);
+      });
+
+      // Special global increment for reach detractors (once per task)
+      if (isReachTask && isDetractor) {
+        stats.totalReachDetractors++;
+      }
+
+      // Distribute points once per unique owner in the task
+      [...new Set(rawOwners)].forEach(o => {
+        if (!stats.detailedOwners[o]) {
+          stats.detailedOwners[o] = { total: 0, itn: 0, subscription: 0, points: 0, ownerBreakdown: {} };
+        }
+        stats.detailedOwners[o].points += taskPoints;
+      });
+
     });
 
     const toChartData = (obj) => {
@@ -1498,6 +1733,10 @@ const FieldTeamPortal = () => {
         subReasons: Object.values(stats.bySubReason).reduce((a, b) => a + b, 0),
         rootCauses: Object.values(stats.byRootCause).reduce((a, b) => a + b, 0)
       },
+      totalReachDetractors: stats.totalReachDetractors,
+      totalReachCounts: stats.totalReachCounts,
+      totalDetractors: stats.totalDetractors,
+      totalNeutrals: stats.totalNeutrals,
       tasks: tasksToProcess,
       teamCohorts: []
     };
@@ -1668,7 +1907,7 @@ const FieldTeamPortal = () => {
     return points;
   };
 
-  const mapItemToExcelRow = (item, type) => {
+  const mapItemToExcelRow = (item, type, teamSummary = null) => {
     let displayScore = 'Not Evaluated';
     let satisfaction = 'N/A';
     let score = item.evaluationScore || 0;
@@ -1681,7 +1920,7 @@ const FieldTeamPortal = () => {
       else satisfaction = 'Promoter';
     }
 
-    return {
+    const baseRow = {
       'Type': type === 'task' ? 'NPS Ticket' : 'Customer Issue',
       'SLID': item.slid,
       'Customer': item.customerName || 'N/A',
@@ -1695,7 +1934,6 @@ const FieldTeamPortal = () => {
       'Points': calculateItemPoints(item, type),
 
       'Customer Feedback': (type === 'task' ? (item.customerFeedback || '-') : (item.reporterNote || '-')),
-      'Our Actions/Resolution': (type === 'issue' ? (item.resolutionDetails || item.assigneeNote || '-') : '-'),
 
       // Dynamic Interleaved Columns
       ...(() => {
@@ -1719,30 +1957,74 @@ const FieldTeamPortal = () => {
 
       'GAIA Check': item.gaiaCheck || 'N/A',
       'GAIA Content': item.gaiaContent || '-',
-      'Latest QOps Type': item.latestGaia?.transactionType || 'N/A',
-      'Latest QOps State': item.latestGaia?.transactionState || 'N/A',
-      'Latest QOps Reason': item.latestGaia?.unfReasonCode || 'N/A',
       'Latest QOps Note': item.latestGaia?.note || 'N/A',
       'QOps Transaction History': item.tickets?.map((t, idx) =>
         `[${idx + 1}] ${new Date(t.eventDate || t.createdAt).toLocaleDateString()} | ${t.transactionType || t.mainCategory} (${t.transactionState}) -> Note: ${t.note || 'No note'}`
       ).join('\n') || 'No logs',
-      'Action taken by assigned user': item.subTasks?.map((sub, index) =>
-        `Step ${index + 1}: ${sub.title} - ${sub.note}`
-      ).join('\n') || '',
       'ITN Related': ((Array.isArray(item.itnRelated) && item.itnRelated.includes('Yes')) || item.itnRelated === 'Yes' || item.itnRelated === true) ? 'Yes' : 'No',
       'Subscription Related': ((Array.isArray(item.relatedToSubscription) && item.relatedToSubscription.includes('Yes')) || item.relatedToSubscription === 'Yes' || item.relatedToSubscription === true) ? 'Yes' : 'No',
 
       'Team Name': item.teamName,
-      'Technician': item.technician || item.primaryTechnician || '-',
       // 'Team Company': item.teamCompany || '-',
 
-      'Date': new Date(item.interviewDate || item.date || item.createdAt).toLocaleDateString(),
+      'Interview Date': new Date(item.interviewDate || item.date || item.createdAt).toLocaleDateString(),
+      'Wk number': (() => {
+        const d = item.interviewDate || item.date || item.createdAt;
+        if (!d) return '-';
+        const { key } = getWeekNumber(d, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber);
+        return key;
+      })(),
       'Request Date': item.contractDate ? new Date(item.contractDate).toLocaleDateString() : '-',
       'UN Date': item.unDate ? new Date(item.unDate).toLocaleDateString() : '-',
       'FE Date': item.feDate ? new Date(item.feDate).toLocaleDateString() : (item.appDate ? new Date(item.appDate).toLocaleDateString() : '-'),
       'In Date': item.inDate ? new Date(item.inDate).toLocaleDateString() : '-',
       'Close Date': item.closeDate ? new Date(item.closeDate).toLocaleDateString() : '-'
     };
+
+    if (teamSummary) {
+      baseRow['Team Total Tasks'] = teamSummary.totalTasks;
+      baseRow['Team Detractors'] = teamSummary.teamDetractors;
+      baseRow['Team Neutrals'] = teamSummary.teamNeutrals;
+      baseRow['Accountability (Yes)'] = teamSummary.reachCount;
+      baseRow['Acc. Detractors'] = teamSummary.reachDetractors;
+      baseRow['Acc. Neutrals'] = teamSummary.reachNeutrals;
+      baseRow['Acc. %'] = `${teamSummary.reachOwnershipPct}%`;
+      baseRow['Acc. Detractors %'] = `${teamSummary.reachDetractorsPct}%`;
+      baseRow['Acc. Neutrals %'] = `${teamSummary.reachNeutralsPct}%`;
+
+      // New Snapshot Columns at the end
+      baseRow['Latest Week'] = teamSummary.snapshots.weekly.key;
+      baseRow['Weekly: Total'] = teamSummary.snapshots.weekly.total;
+      baseRow['Weekly: Detractors'] = teamSummary.snapshots.weekly.detractors;
+      baseRow['Weekly: Neutrals'] = teamSummary.snapshots.weekly.neutrals;
+      baseRow['Weekly: Reach Det.'] = teamSummary.snapshots.weekly.ownerReachDetractors || 0;
+      baseRow['Weekly: Reach Neu.'] = teamSummary.snapshots.weekly.ownerReachNeutrals || 0;
+      baseRow['Weekly: Accountability (Yes)'] = teamSummary.snapshots.weekly.reach;
+      baseRow['Weekly: Acc. Det.'] = teamSummary.snapshots.weekly.reachDetractors || 0;
+      baseRow['Weekly: Acc. Neu.'] = teamSummary.snapshots.weekly.reachNeutrals || 0;
+
+      baseRow['Latest Month'] = teamSummary.snapshots.monthly.key;
+      baseRow['Monthly: Total'] = teamSummary.snapshots.monthly.total;
+      baseRow['Monthly: Detractors'] = teamSummary.snapshots.monthly.detractors;
+      baseRow['Monthly: Neutrals'] = teamSummary.snapshots.monthly.neutrals;
+      baseRow['Monthly: Reach Det.'] = teamSummary.snapshots.monthly.ownerReachDetractors || 0;
+      baseRow['Monthly: Reach Neu.'] = teamSummary.snapshots.monthly.ownerReachNeutrals || 0;
+      baseRow['Monthly: Accountability (Yes)'] = teamSummary.snapshots.monthly.reach;
+      baseRow['Monthly: Acc. Det.'] = teamSummary.snapshots.monthly.reachDetractors || 0;
+      baseRow['Monthly: Acc. Neu.'] = teamSummary.snapshots.monthly.reachNeutrals || 0;
+      
+      // Post-Session Snapshots
+      baseRow['Latest Session'] = teamSummary.latestSessionDate ? teamSummary.latestSessionDate.toLocaleDateString() : 'Untrained';
+      baseRow['Post: Total'] = teamSummary.snapshots.postSession.total;
+      baseRow['Post: Detractors'] = teamSummary.snapshots.postSession.detractors;
+      baseRow['Post: Neutrals'] = teamSummary.snapshots.postSession.neutrals;
+      baseRow['Post: Accountability (Yes)'] = teamSummary.snapshots.postSession.reach;
+      baseRow['Post: Acc. Det.'] = teamSummary.snapshots.postSession.reachDetractors || 0;
+      baseRow['Post: Acc. Neu.'] = teamSummary.snapshots.postSession.reachNeutrals || 0;
+      baseRow['Post: Acc. %'] = teamSummary.snapshots.postSession.total > 0 ? Math.round((teamSummary.snapshots.postSession.reach / teamSummary.snapshots.postSession.total) * 100) + '%' : '0%';
+    }
+
+    return baseRow;
   };
 
   const handleExportIndividualTeam = (team) => {
@@ -1777,20 +2059,28 @@ const FieldTeamPortal = () => {
     }];
 
     // 2. Detailed Data
+    let latestSessionDate = null;
+    if (team?.sessionHistory?.length > 0) {
+      const dates = team.sessionHistory.map(s => s.sessionDate).filter(d => d).map(d => new Date(d));
+      if (dates.length > 0) latestSessionDate = new Date(Math.max(...dates));
+    }
+    const teamSummary = calculateTeamExportSummary([...team.rawDetractors, ...team.rawNeutrals], settings, latestSessionDate);
     const detailedData = [
-      ...team.rawDetractors.map(t => mapItemToExcelRow(t, 'task')),
-      ...team.rawNeutrals.map(t => mapItemToExcelRow(t, 'task')),
-      ...team.rawIssues.map(i => mapItemToExcelRow(i, 'issue'))
+      ...team.rawDetractors.map(t => mapItemToExcelRow(t, 'task', teamSummary)),
+      ...team.rawNeutrals.map(t => mapItemToExcelRow(t, 'task', teamSummary)),
+      ...team.rawIssues.map(i => mapItemToExcelRow(i, 'issue', teamSummary))
     ];
 
     const wb = XLSX.utils.book_new();
 
     // Summary Sheet
     const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+    applySnapshotStyles(wsSummary, summaryData);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Team Performance Summary");
 
     // Detailed Sheet
     const wsDetails = XLSX.utils.json_to_sheet(detailedData);
+    applySnapshotStyles(wsDetails, detailedData);
     XLSX.utils.book_append_sheet(wb, wsDetails, "Detailed Feedback & Actions");
 
     // Auto-size columns
@@ -1813,35 +2103,125 @@ const FieldTeamPortal = () => {
 
     XLSX.writeFile(wb, `${team.teamName}_Detailed_Quality_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
-
   const handleExportTeamViolations = (team) => {
-    // Filter tasks and issues for this team
-    const teamTasks = (Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [])
-      .filter(t => t.teamName === team.teamName)
-      .map(t => mapItemToExcelRow(t, 'task'));
+    const rawTeamTasks = (Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [])
+      .filter(t => t.teamName === team.teamName);
+
+    let latestSessionDate = null;
+    if (team?.sessionHistory?.length > 0) {
+      const dates = team.sessionHistory.map(s => s.sessionDate).filter(d => d).map(d => new Date(d));
+      if (dates.length > 0) latestSessionDate = new Date(Math.max(...dates));
+    }
+    const summary = calculateTeamExportSummary(rawTeamTasks, settings, latestSessionDate);
+
+    const teamTasks = rawTeamTasks.map(t => mapItemToExcelRow(t, 'task', summary));
 
     const teamIssues = (Array.isArray(filteredIssuesByDate) ? filteredIssuesByDate : [])
       .filter(i => i.teamName === team.teamName)
-      .map(i => mapItemToExcelRow(i, 'issue'));
+      .map(i => mapItemToExcelRow(i, 'issue', summary));
 
     const data = [...teamTasks, ...teamIssues];
     const ws = XLSX.utils.json_to_sheet(data);
+    applySnapshotStyles(ws, data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Violations Details");
     XLSX.writeFile(wb, `${team.teamName}_Violations_DeepDive_Report.xlsx`);
   };
 
   const handleExportAllTeamsViolations = () => {
+    const tasksByTeam = (Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [])
+      .reduce((acc, t) => {
+        const teamName = t.teamName || 'Unknown';
+        if (!acc[teamName]) acc[teamName] = [];
+        acc[teamName].push(t);
+        return acc;
+      }, {});
+
+    const teamSummaries = {};
+    Object.keys(tasksByTeam).forEach(teamName => {
+      const teamObj = (Array.isArray(fieldTeams) ? fieldTeams : []).find(t => t.teamName === teamName);
+      let latestSessionDate = null;
+      if (teamObj?.sessionHistory?.length > 0) {
+        const sessionDates = teamObj.sessionHistory
+          .map(s => s.sessionDate)
+          .filter(d => d)
+          .map(d => new Date(d));
+        if (sessionDates.length > 0) {
+          latestSessionDate = new Date(Math.max(...sessionDates));
+        }
+      }
+      teamSummaries[teamName] = calculateTeamExportSummary(tasksByTeam[teamName], settings, latestSessionDate);
+    });
+
+    // 1. Team Accountability Summary Sheet
+    const summaryRows = Object.keys(teamSummaries).map(teamName => {
+      const s = teamSummaries[teamName];
+      return {
+        'Team Name': teamName,
+        'Total Tasks': s.totalTasks,
+        'Team Detractors': s.teamDetractors,
+        'Team Neutrals': s.teamNeutrals,
+        'Accountability (Yes)': s.reachCount,
+        'Acc. Detractors': s.reachDetractors,
+        'Acc. Neutrals': s.reachNeutrals,
+        'Acc. %': `${s.reachOwnershipPct}%`,
+        'Acc. Detractors %': `${s.reachDetractorsPct}%`,
+        'Acc. Neutrals %': `${s.reachNeutralsPct}%`,
+        // Snapshot data
+        'Latest Week': s.snapshots.weekly.key,
+        'Weekly: Total': s.snapshots.weekly.total,
+        'Weekly: Detractors': s.snapshots.weekly.detractors,
+        'Weekly: Neutrals': s.snapshots.weekly.neutrals,
+        'Weekly: Reach Det.': s.snapshots.weekly.ownerReachDetractors || 0,
+        'Weekly: Reach Neu.': s.snapshots.weekly.ownerReachNeutrals || 0,
+        'Weekly: Accountability (Yes)': s.snapshots.weekly.reach,
+        'Weekly: Acc. Det.': s.snapshots.weekly.reachDetractors || 0,
+        'Weekly: Acc. Neu.': s.snapshots.weekly.reachNeutrals || 0,
+        'Latest Month': s.snapshots.monthly.key,
+        'Monthly: Total': s.snapshots.monthly.total,
+        'Monthly: Detractors': s.snapshots.monthly.detractors,
+        'Monthly: Neutrals': s.snapshots.monthly.neutrals,
+        'Monthly: Reach Det.': s.snapshots.monthly.ownerReachDetractors || 0,
+        'Monthly: Reach Neu.': s.snapshots.monthly.ownerReachNeutrals || 0,
+        'Monthly: Accountability (Yes)': s.snapshots.monthly.reach,
+        'Monthly: Acc. Det.': s.snapshots.monthly.reachDetractors || 0,
+        'Monthly: Acc. Neu.': s.snapshots.monthly.reachNeutrals || 0,
+        
+        // Post-Session Snapshots
+        'Latest Session': s.latestSessionDate ? s.latestSessionDate.toLocaleDateString() : 'Untrained',
+        'Post: Total': s.snapshots.postSession.total,
+        'Post: Detractors': s.snapshots.postSession.detractors,
+        'Post: Neutrals': s.snapshots.postSession.neutrals,
+        'Post: Accountability (Yes)': s.snapshots.postSession.reach,
+        'Post: Acc. Det.': s.snapshots.postSession.reachDetractors || 0,
+        'Post: Acc. Neu.': s.snapshots.postSession.reachNeutrals || 0,
+        'Post: Acc. %': s.snapshots.postSession.total > 0 ? Math.round((s.snapshots.postSession.reach / s.snapshots.postSession.total) * 100) + '%' : '0%',
+        'Post: Improve % (Volume)': `${s.comparison.improvementRate}%`
+      };
+    }).sort((a, b) => b['Total Tasks'] - a['Total Tasks']);
+
+    // 2. Detailed Sheet
     const allTasks = (Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [])
-      .map(t => mapItemToExcelRow(t, 'task'));
+      .map(t => mapItemToExcelRow(t, 'task', teamSummaries[t.teamName || 'Unknown']));
 
     const allIssues = (Array.isArray(filteredIssuesByDate) ? filteredIssuesByDate : [])
-      .map(i => mapItemToExcelRow(i, 'issue'));
+      .map(i => mapItemToExcelRow(i, 'issue', teamSummaries[i.teamName || 'Unknown']));
 
-    const data = [...allTasks, ...allIssues];
-    const ws = XLSX.utils.json_to_sheet(data);
+    const detailedData = [...allTasks, ...allIssues];
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Global Violations Report");
+
+    // Add Summary Sheet first as it's the high-level view
+    const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+    wsSummary['!cols'] = Object.keys(summaryRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 18) }));
+    applySnapshotStyles(wsSummary, summaryRows);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Team Accountability Summary");
+
+    // Add Detailed Sheet
+    const wsDetailed = XLSX.utils.json_to_sheet(detailedData);
+    applySnapshotStyles(wsDetailed, detailedData);
+    XLSX.utils.book_append_sheet(wb, wsDetailed, "Global Violations Report");
+
     XLSX.writeFile(wb, `Global_Violations_DeepDive_Analysis_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
@@ -1852,44 +2232,56 @@ const FieldTeamPortal = () => {
     const wb = XLSX.utils.book_new();
 
     // Helper: build a data array for simple chart data (ownerData, reasonData, etc.)
-    const buildSheetRows = (detailedArr) => {
-      const total = detailedArr.reduce((s, r) => s + (r.total || 0), 0);
-      return detailedArr.map(row => ({
-        'Label': row.name,
-        'Count': row.total || 0,
-        'Percentage (%)': row.percentage || row.floatPct?.toFixed(1) || '0.0',
-        'ITN Related': row.itn || 0,
-        'Subscription Related': row.subscription || 0,
-        'Contribution to Total Tasks (%)': total > 0 ? ((row.total / total) * 100).toFixed(1) : '0.0'
-      }));
+    const buildSheetRows = (detailedArr, labelName = 'Label', includeReach = true) => {
+      return (detailedArr || []).map(row => {
+        const base = {
+          [labelName]: row.name,
+          'Count': row.total || 0,
+          'Detractors': row.detractors || 0,
+          'Neutral': row.neutrals || 0,
+          'Total Count Contribution (%)': (globalAnalytics.totalProcessed || 0) > 0 ? ((row.total / globalAnalytics.totalProcessed) * 100).toFixed(1) : '0.0',
+          'Detractor Contribution (%)': (globalAnalytics.totalDetractors || 0) > 0 ? ((row.detractors / globalAnalytics.totalDetractors) * 100).toFixed(1) : '0.0',
+          'Neutral Contribution (%)': (globalAnalytics.totalNeutrals || 0) > 0 ? ((row.neutrals / globalAnalytics.totalNeutrals) * 100).toFixed(1) : '0.0',
+        };
+
+        if (includeReach) {
+          base['Acc. Share of Detractors (%)'] = (globalAnalytics.totalReachDetractors || 0) > 0 ? ((row.reachDetractors || 0) / globalAnalytics.totalReachDetractors * 100).toFixed(1) : '0.0';
+          base['Acc. Share of Total Counts (%)'] = (globalAnalytics.totalReachCounts || 0) > 0 ? ((row.reachCounts || 0) / globalAnalytics.totalReachCounts * 100).toFixed(1) : '0.0';
+          base['Acc. Counts'] = row.reachCounts || 0;
+        }
+
+        base['ITN Related'] = row.itn || 0;
+        base['Subscription Related'] = row.subscription || 0;
+        return base;
+      });
     };
 
     // Sheet 1: Owner Distribution
-    const ownerRows = buildSheetRows(globalAnalytics.detailedOwners);
+    const ownerRows = buildSheetRows(globalAnalytics.detailedOwners, 'Owner Name', false);
     const wsOwner = XLSX.utils.json_to_sheet(ownerRows);
     wsOwner['!cols'] = Object.keys(ownerRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 18) }));
     XLSX.utils.book_append_sheet(wb, wsOwner, 'Owner Distribution');
 
     // Sheet 2: Reason Distribution
-    const reasonRows = buildSheetRows(globalAnalytics.detailedReasons);
+    const reasonRows = buildSheetRows(globalAnalytics.detailedReasons, 'Reason');
     const wsReason = XLSX.utils.json_to_sheet(reasonRows);
     wsReason['!cols'] = Object.keys(reasonRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 20) }));
     XLSX.utils.book_append_sheet(wb, wsReason, 'Reason Distribution');
 
     // Sheet 3: Sub-Reason Breakdown
-    const subReasonRows = buildSheetRows(globalAnalytics.detailedSubReasons);
+    const subReasonRows = buildSheetRows(globalAnalytics.detailedSubReasons, 'Sub-Reason');
     const wsSubReason = XLSX.utils.json_to_sheet(subReasonRows);
     wsSubReason['!cols'] = Object.keys(subReasonRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 20) }));
     XLSX.utils.book_append_sheet(wb, wsSubReason, 'Sub-Reason Breakdown');
 
     // Sheet 4: Root Cause Matrix
-    const rootCauseRows = buildSheetRows(globalAnalytics.detailedRootCauses);
+    const rootCauseRows = buildSheetRows(globalAnalytics.detailedRootCauses, 'Root Cause');
     const wsRootCause = XLSX.utils.json_to_sheet(rootCauseRows);
     wsRootCause['!cols'] = Object.keys(rootCauseRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 20) }));
     XLSX.utils.book_append_sheet(wb, wsRootCause, 'Root Cause Matrix');
 
     // Sheet 5: Field Team Distribution (Offenders)
-    const teamRows = buildSheetRows(globalAnalytics.detailedFieldTeams);
+    const teamRows = buildSheetRows(globalAnalytics.detailedFieldTeams, 'Field Team Name');
     if (teamRows.length > 0) {
       const wsTeam = XLSX.utils.json_to_sheet(teamRows);
       wsTeam['!cols'] = Object.keys(teamRows[0] || {}).map(k => ({ wch: Math.max(k.length + 4, 25) }));

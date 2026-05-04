@@ -18,6 +18,9 @@ import {
   Checkbox,
   FormControlLabel,
   Grid,
+  Radio,
+  RadioGroup,
+  FormLabel,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import UserList from './UserList';
@@ -112,6 +115,19 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
                     onChange={(e) => handleChange(index, 'relatedToSubscription', e.target.value)}
                   >
                     <MenuItem value="Not specified">Not specified</MenuItem>
+                    <MenuItem value="Yes">Yes</MenuItem>
+                    <MenuItem value="No">No</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={2.1}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Team Accountability</InputLabel>
+                  <Select
+                    value={row.teamAccountability || 'No'}
+                    label="Team Accountability"
+                    onChange={(e) => handleChange(index, 'teamAccountability', e.target.value)}
+                  >
                     <MenuItem value="Yes">Yes</MenuItem>
                     <MenuItem value="No">No</MenuItem>
                   </Select>
@@ -258,7 +274,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
   const [customerType, setCustomerType] = useState("Not specified");
   const [validationStatus, setValidationStatus] = useState("Not specified");
   const [rcaRows, setRcaRows] = useState([
-    { responsible: 'Not specified', reason: 'Not specified', subReason: 'Not specified', rootCause: 'Not specified', itnRelated: 'Not specified', relatedToSubscription: 'Not specified' }
+    { responsible: 'Not specified', reason: 'Not specified', subReason: 'Not specified', rootCause: 'Not specified', itnRelated: 'Not specified', relatedToSubscription: 'Not specified', teamAccountability: 'No' }
   ]);
   const [ontType, setOntType] = useState("Not specified");
   const [freeExtender, setFreeExtender] = useState("Not specified");
@@ -325,6 +341,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
       reason: rcaRows.map(r => r.reason),
       subReason: rcaRows.map(r => r.subReason),
       rootCause: rcaRows.map(r => r.rootCause),
+      teamAccountability: rcaRows.map(r => r.teamAccountability),
       itnRelated: rcaRows.map(r => r.itnRelated),
       relatedToSubscription: rcaRows.map(r => r.relatedToSubscription),
       ontType,
@@ -384,7 +401,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
     setOpen(false);
   };
 
-  const handleAddRcaRow = () => setRcaRows([...rcaRows, { responsible: 'Not specified', reason: 'Not specified', subReason: 'Not specified', rootCause: 'Not specified', itnRelated: 'Not specified', relatedToSubscription: 'Not specified' }]);
+  const handleAddRcaRow = () => setRcaRows([...rcaRows, { responsible: 'Not specified', reason: 'Not specified', subReason: 'Not specified', rootCause: 'Not specified', itnRelated: 'Not specified', relatedToSubscription: 'Not specified', teamAccountability: 'No' }]);
   const handleRemoveRcaRow = (index) => setRcaRows(rcaRows.filter((_, i) => i !== index));
   const handleChangeRcaRow = (index, field, newValue) => {
     const updated = [...rcaRows];

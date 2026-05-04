@@ -34,7 +34,7 @@ import {
 } from '@mui/material';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, LineChart, Line, ComposedChart, AreaChart, Area } from 'recharts';
-import { FaFileExcel, FaEye, FaChartLine, FaInfo, FaTimes } from 'react-icons/fa';
+import { FaFileExcel, FaEye, FaChartLine, FaInfo, FaInfoCircle, FaTimes } from 'react-icons/fa';
 import { TaskDetailsDialog } from '../TaskDetailsDialog';
 import api from '../../api/api';
 import { getWeekNumber, getMonthNumber } from '../../utils/helpers';
@@ -45,6 +45,7 @@ const normalizeText = (value) => {
   return String(value);
 };
 
+// Legacy helper for field extraction (no longer used for accountability checks)
 const fieldContainsReach = (value) => {
   if (!value) return false;
   if (Array.isArray(value)) return value.some(v => normalizeText(v).toLowerCase().includes('reach'));
@@ -57,6 +58,17 @@ const matchTeam = (entry, team) => {
   if (entryName && teamName && entryName === teamName) return true;
   if (team?._id && (entry?.teamId === team._id || entry?._id === team._id)) return true;
   return false;
+};
+
+const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+];
+
+const getMonthNameFromKey = (key) => {
+  if (typeof key !== 'string' || !key.startsWith('Month-')) return key;
+  const num = parseInt(key.replace('Month-', ''), 10);
+  if (isNaN(num) || num < 1 || num > 12) return key;
+  return monthNames[num - 1];
 };
 
 const getCohortLabel = (team) => {
@@ -121,7 +133,7 @@ const getMonthlyTeamData = (team, tasks) => {
         };
       }
       monthlyMap[monthKey].totalTasks++;
-      if (fieldContainsReach(task.owner) || fieldContainsReach(task.responsible)) {
+      if (task.teamAccountability?.includes("Yes")) {
         monthlyMap[monthKey].reach++;
       }
       // Evaluation score scale: 0-10
@@ -373,13 +385,106 @@ const TeamViolationOverview = ({
       const teamTasks = getTeamTasks(team, filteredGlobalTasks);
       const totalTasks = teamTasks.length;
       const reachCount = teamTasks.reduce((sum, item) => {
-        if (fieldContainsReach(item.owner) || fieldContainsReach(item.responsible) || fieldContainsReach(item.assignedTo) || fieldContainsReach(item.teamOwner)) {
+        if (item.teamAccountability?.includes("Yes")) {
           return sum + 1;
         }
         return sum;
       }, 0);
-      const detractorsCount = teamTasks.filter(item => (item.evaluationScore || 0) <= 6).length;
-      const neutralsCount = teamTasks.filter(item => (item.evaluationScore || 0) >= 7 && (item.evaluationScore || 0) <= 8).length;
+      const detractorsCount = teamTasks.filter(item => {
+        const score = item.evaluationScore || 0;
+        const normalized = score <= 10 ? score * 10 : score;
+        return normalized > 0 && normalized <= 60;
+      }).length;
+      const neutralsCount = teamTasks.filter(item => {
+        const score = item.evaluationScore || 0;
+        const normalized = score <= 10 ? score * 10 : score;
+        return normalized > 60 && normalized <= 80;
+      }).length;
+      
+      const reachDetractors = teamTasks.filter(item => {
+        const isReach = item.teamAccountability?.includes("Yes");
+        const score = item.evaluationScore || 0;
+        const normalized = score <= 10 ? score * 10 : score;
+        return isReach && normalized > 0 && normalized <= 60;
+      }).length;
+
+      const reachNeutrals = teamTasks.filter(item => {
+        const isReach = item.teamAccountability?.includes("Yes");
+        const score = item.evaluationScore || 0;
+        const normalized = score <= 10 ? score * 10 : score;
+        return isReach && normalized > 60 && normalized <= 80;
+      }).length;
+
+      // Snapshot logic for UI table
+      let snapshotMetrics = {
+        weekly: { 
+          total: 0, detractors: 0, neutrals: 0, 
+          reach: 0, reachDetractors: 0, reachNeutrals: 0,
+          ownerReachDetractors: 0, ownerReachNeutrals: 0,
+          label: '-' 
+        },
+        monthly: { 
+          total: 0, detractors: 0, neutrals: 0, 
+          reach: 0, reachDetractors: 0, reachNeutrals: 0,
+          ownerReachDetractors: 0, ownerReachNeutrals: 0,
+          label: '-' 
+        }
+      };
+
+      if (totalTasks > 0) {
+        const taskDetails = teamTasks.map(t => {
+          const d = t.interviewDate || t.date || t.createdAt;
+          const wInfo = getWeekNumber(d, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber);
+          const mInfo = getMonthNumber(d, settings);
+          const score = t.evaluationScore || 0;
+          const normalized = score <= 10 ? score * 10 : score;
+          return {
+            weekKey: wInfo?.key || 'Unknown',
+            monthKey: mInfo?.key || 'Unknown',
+            isReach: t.teamAccountability?.includes("Yes"),
+            isOwnerReach: fieldContainsReach(t.responsible),
+            isDetractor: normalized > 0 && normalized <= 60,
+            isNeutral: normalized > 60 && normalized <= 80
+          };
+        });
+
+        const uniqueWeeks = [...new Set(taskDetails.map(t => t.weekKey))].sort().reverse();
+        const uniqueMonths = [...new Set(taskDetails.map(t => t.monthKey))].sort().reverse();
+        
+        const latestWkKey = uniqueWeeks[0];
+        const latestMoKey = uniqueMonths[0];
+
+        if (latestWkKey) {
+          const wkTasks = taskDetails.filter(t => t.weekKey === latestWkKey);
+          snapshotMetrics.weekly = {
+            label: latestWkKey,
+            total: wkTasks.length,
+            detractors: wkTasks.filter(t => t.isDetractor).length,
+            neutrals: wkTasks.filter(t => t.isNeutral).length,
+            reach: wkTasks.filter(t => t.isReach).length,
+            reachDetractors: wkTasks.filter(t => t.isReach && t.isDetractor).length,
+            reachNeutrals: wkTasks.filter(t => t.isReach && t.isNeutral).length,
+            ownerReachDetractors: wkTasks.filter(t => t.isOwnerReach && t.isDetractor).length,
+            ownerReachNeutrals: wkTasks.filter(t => t.isOwnerReach && t.isNeutral).length
+          };
+        }
+
+        if (latestMoKey) {
+          const moTasks = taskDetails.filter(t => t.monthKey === latestMoKey);
+          const moNum = parseInt(latestMoKey.split('-')[1]);
+          snapshotMetrics.monthly = {
+            label: !isNaN(moNum) ? monthNames[moNum - 1] : latestMoKey,
+            total: moTasks.length,
+            detractors: moTasks.filter(t => t.isDetractor).length,
+            neutrals: moTasks.filter(t => t.isNeutral).length,
+            reach: moTasks.filter(t => t.isReach).length,
+            reachDetractors: moTasks.filter(t => t.isReach && t.isDetractor).length,
+            reachNeutrals: moTasks.filter(t => t.isReach && t.isNeutral).length,
+            ownerReachDetractors: moTasks.filter(t => t.isOwnerReach && t.isDetractor).length,
+            ownerReachNeutrals: moTasks.filter(t => t.isOwnerReach && t.isNeutral).length
+          };
+        }
+      }
       const tasksAfterLatestSession = latestSessionDate
         ? teamTasks.filter(item => {
             const dateValue = item.taskDateIso;
@@ -425,16 +530,96 @@ const TeamViolationOverview = ({
             const dateValue = item.taskDateIso;
             const date = dateValue ? new Date(dateValue) : null;
             const score = item.evaluationScore || 0;
-            return date && date > latestSessionDate && score <= 8;
+            const normalized = score <= 10 ? score * 10 : score;
+            return date && date > latestSessionDate && normalized > 0 && normalized <= 80;
           }).length
         : 0;
-      const postSessionViolationRate = tasksAfterLatestSession > 0
-        ? Math.round((postSessionViolationsCount / tasksAfterLatestSession) * 100)
+
+      const postSessionDetractorsCount = latestSessionDate
+        ? teamTasks.filter(item => {
+            const dateValue = item.taskDateIso;
+            const date = dateValue ? new Date(dateValue) : null;
+            const score = item.evaluationScore || 0;
+            const normalized = score <= 10 ? score * 10 : score;
+            return date && date > latestSessionDate && normalized > 0 && normalized <= 60;
+          }).length
+        : 0;
+
+      const postSessionNeutralsCount = latestSessionDate
+        ? teamTasks.filter(item => {
+            const dateValue = item.taskDateIso;
+            const date = dateValue ? new Date(dateValue) : null;
+            const score = item.evaluationScore || 0;
+            const normalized = score <= 10 ? score * 10 : score;
+            return date && date > latestSessionDate && normalized > 60 && normalized <= 80;
+          }).length
+        : 0;
+
+      const postSessionReachCount = latestSessionDate
+        ? teamTasks.filter(item => {
+            const dateValue = item.taskDateIso;
+            const date = dateValue ? new Date(dateValue) : null;
+            const isReach = item.teamAccountability?.includes("Yes");
+            return date && date > latestSessionDate && isReach;
+          }).length
+        : 0;
+
+      const postSessionReachDetractorsCount = latestSessionDate
+        ? teamTasks.filter(item => {
+            const dateValue = item.taskDateIso;
+            const date = dateValue ? new Date(dateValue) : null;
+            const score = item.evaluationScore || 0;
+            const normalized = score <= 10 ? score * 10 : score;
+            const isReach = item.teamAccountability?.includes("Yes");
+            return date && date > latestSessionDate && isReach && normalized > 0 && normalized <= 60;
+          }).length
+        : 0;
+
+      const postSessionReachNeutralsCount = latestSessionDate
+        ? teamTasks.filter(item => {
+            const dateValue = item.taskDateIso;
+            const date = dateValue ? new Date(dateValue) : null;
+            const score = item.evaluationScore || 0;
+            const normalized = score <= 10 ? score * 10 : score;
+            const isReach = item.teamAccountability?.includes("Yes");
+            return date && date > latestSessionDate && isReach && normalized > 60 && normalized <= 80;
+          }).length
+        : 0;
+
+      // Owner "Reach" company-based post-session breakdown (responsible field contains "Reach")
+      const postSessionOwnerReachDetractorsCount = latestSessionDate
+        ? teamTasks.filter(item => {
+            const dateValue = item.taskDateIso;
+            const date = dateValue ? new Date(dateValue) : null;
+            const score = item.evaluationScore || 0;
+            const normalized = score <= 10 ? score * 10 : score;
+            const isOwnerReach = fieldContainsReach(item.responsible);
+            return date && date > latestSessionDate && isOwnerReach && normalized > 0 && normalized <= 60;
+          }).length
+        : 0;
+
+      const postSessionOwnerReachNeutralsCount = latestSessionDate
+        ? teamTasks.filter(item => {
+            const dateValue = item.taskDateIso;
+            const date = dateValue ? new Date(dateValue) : null;
+            const score = item.evaluationScore || 0;
+            const normalized = score <= 10 ? score * 10 : score;
+            const isOwnerReach = fieldContainsReach(item.responsible);
+            return date && date > latestSessionDate && isOwnerReach && normalized > 60 && normalized <= 80;
+          }).length
+        : 0;
+
+      
+      const postSessionTotal = tasksAfterLatestSession;
+      
+      const postSessionViolationRate = postSessionTotal > 0
+        ? Math.round((postSessionViolationsCount / postSessionTotal) * 100)
         : 0;
       const preSessionViolationRate = tasksBeforeLatestSessionSamePeriod > 0
         ? Math.round((violationsBeforeLatestSessionSamePeriod / tasksBeforeLatestSessionSamePeriod) * 100)
         : 0;
       const violationRateDelta = postSessionViolationRate - preSessionViolationRate;
+      
       const cohort = getCohortLabel(team);
 
       // Calculate latest PIS date
@@ -468,6 +653,46 @@ const TeamViolationOverview = ({
         reachOwnershipPct: totalTasks > 0 ? Math.round((reachCount / totalTasks) * 100) : 0,
         detractorsCount,
         neutralsCount,
+        teamDetractors: detractorsCount,
+        teamNeutrals: neutralsCount,
+        reachDetractors,
+        reachNeutrals,
+        reachDetractorsPct: totalTasks > 0 ? Math.round((reachDetractors / totalTasks) * 100) : 0,
+        reachNeutralsPct: totalTasks > 0 ? Math.round((reachNeutrals / totalTasks) * 100) : 0,
+
+        // Snapshots
+        latestWeekLabel: snapshotMetrics.weekly.label,
+        weeklyTotal: snapshotMetrics.weekly.total,
+        weeklyDetractors: snapshotMetrics.weekly.detractors,
+        weeklyNeutrals: snapshotMetrics.weekly.neutrals,
+        weeklyReach: snapshotMetrics.weekly.reach,
+        weeklyReachDetractors: snapshotMetrics.weekly.reachDetractors,
+        weeklyReachNeutrals: snapshotMetrics.weekly.reachNeutrals,
+        weeklyOwnerReachDetractors: snapshotMetrics.weekly.ownerReachDetractors,
+        weeklyOwnerReachNeutrals: snapshotMetrics.weekly.ownerReachNeutrals,
+
+        latestMonthLabel: snapshotMetrics.monthly.label,
+        monthlyTotal: snapshotMetrics.monthly.total,
+        monthlyDetractors: snapshotMetrics.monthly.detractors,
+        monthlyNeutrals: snapshotMetrics.monthly.neutrals,
+        monthlyReach: snapshotMetrics.monthly.reach,
+        monthlyReachDetractors: snapshotMetrics.monthly.reachDetractors,
+        monthlyReachNeutrals: snapshotMetrics.monthly.reachNeutrals,
+        monthlyOwnerReachDetractors: snapshotMetrics.monthly.ownerReachDetractors,
+        monthlyOwnerReachNeutrals: snapshotMetrics.monthly.ownerReachNeutrals,
+
+        // Post-Session Group
+        postSessionTotal,
+        postSessionDetractors: postSessionDetractorsCount,
+        postSessionNeutrals: postSessionNeutralsCount,
+        postSessionOwnerReachDetractors: postSessionOwnerReachDetractorsCount,
+        postSessionOwnerReachNeutrals: postSessionOwnerReachNeutralsCount,
+        postSessionReach: postSessionReachCount,
+        postSessionReachDetractors: postSessionReachDetractorsCount,
+        postSessionReachNeutrals: postSessionReachNeutralsCount,
+        postSessionReachPct: postSessionTotal > 0 ? Math.round((postSessionReachCount / postSessionTotal) * 100) : 0,
+
+
         tasksAfterLatestSession,
         tasksBeforeLatestSessionSamePeriod,
         violationsBeforeLatestSessionSamePeriod,
@@ -578,7 +803,7 @@ const TeamViolationOverview = ({
     const counts = {};
     filteredDetailedTasks.forEach(task => {
       const rootCause = normalizeText(task.rootCause) || 'Unknown';
-      const isReachOwned = fieldContainsReach(task.owner) || fieldContainsReach(task.responsible) || fieldContainsReach(task.assignedTo) || fieldContainsReach(task.teamOwner);
+      const isReachOwned = task.teamAccountability?.includes("Yes");
       const label = rootCause || 'Unknown';
 
       if (!counts[label]) {
@@ -602,32 +827,20 @@ const TeamViolationOverview = ({
     const allTeamTasks = selectedTeamDetail?.detailedTasks || [];
     const filteredTasks = filteredDetailedTasks;
     
-    const allReachCount = allTeamTasks.filter(t => 
-      fieldContainsReach(t.owner) || fieldContainsReach(t.responsible) || 
-      fieldContainsReach(t.assignedTo) || fieldContainsReach(t.teamOwner)
-    ).length;
+    const allReachCount = allTeamTasks.filter(t => t.teamAccountability?.includes("Yes")).length;
 
     const totalFilteredTasks = filteredTasks.length;
 
-    const filteredReachCount = filteredTasks.filter(t => 
-      fieldContainsReach(t.owner) || fieldContainsReach(t.responsible) || 
-      fieldContainsReach(t.assignedTo) || fieldContainsReach(t.teamOwner)
-    ).length;
+    const filteredReachCount = filteredTasks.filter(t => t.teamAccountability?.includes("Yes")).length;
 
     const filteredNonReachCount = totalFilteredTasks - filteredReachCount;
 
     const detractorsFiltered = filteredTasks.filter(t => t.evaluation <= 6);
     const neutralsFiltered = filteredTasks.filter(t => t.evaluation >= 7 && t.evaluation <= 8);
     
-    const reachDetractors = detractorsFiltered.filter(t => 
-      fieldContainsReach(t.owner) || fieldContainsReach(t.responsible) || 
-      fieldContainsReach(t.assignedTo) || fieldContainsReach(t.teamOwner)
-    ).length;
+    const reachDetractors = detractorsFiltered.filter(t => t.teamAccountability?.includes("Yes")).length;
 
-    const reachNeutrals = neutralsFiltered.filter(t => 
-      fieldContainsReach(t.owner) || fieldContainsReach(t.responsible) || 
-      fieldContainsReach(t.assignedTo) || fieldContainsReach(t.teamOwner)
-    ).length;
+    const reachNeutrals = neutralsFiltered.filter(t => t.teamAccountability?.includes("Yes")).length;
 
     return {
       totalFilteredTasks,
@@ -647,15 +860,9 @@ const TeamViolationOverview = ({
     const sessions = sessionBreakdown || [];
     const sessionReach = sessions.map(session => {
       const tasks = session.tasksAfterSession || [];
-      const reachTasks = tasks.filter(t =>
-        fieldContainsReach(t.owner) || fieldContainsReach(t.responsible) ||
-        fieldContainsReach(t.assignedTo) || fieldContainsReach(t.teamOwner)
-      ).length;
+      const reachTasks = tasks.filter(t => t.teamAccountability?.includes("Yes")).length;
       const reachDetractors = tasks.filter(t =>
-        (t.evaluationScore || 0) <= 6 && (
-          fieldContainsReach(t.owner) || fieldContainsReach(t.responsible) ||
-          fieldContainsReach(t.assignedTo) || fieldContainsReach(t.teamOwner)
-        )
+        (t.evaluationScore || 0) <= 6 && t.teamAccountability?.includes("Yes")
       ).length;
       return {
         sessionDate: session.sessionDate,
@@ -684,6 +891,29 @@ const TeamViolationOverview = ({
       untrained: calcStats(teamRows.filter(r => !r.trained))
     };
   }, [teamRows]);
+
+  const teamStatusStats = useMemo(() => {
+    const total = (fieldTeams || []).length;
+    let active = 0;
+    let terminated = 0;
+    let resigned = 0;
+    let suspended = 0;
+    let onLeave = 0;
+    let otherInactive = 0;
+
+    (fieldTeams || []).forEach(team => {
+      if (team.isTerminated) terminated++;
+      else if (team.isResigned) resigned++;
+      else if (team.isSuspended) suspended++;
+      else if (team.isOnLeave) onLeave++;
+      else if (team.isActive === false) otherInactive++;
+      else active++;
+    });
+
+    const inactive = terminated + resigned + suspended + onLeave + otherInactive;
+
+    return { total, active, inactive, terminated, resigned, suspended, onLeave, otherInactive };
+  }, [fieldTeams]);
 
   const trainedCount = teamRows.filter(row => row.trained).length;
   const untrainedCount = teamRows.filter(row => !row.trained).length;
@@ -730,19 +960,81 @@ const TeamViolationOverview = ({
     { field: 'totalTasks', headerName: 'Total Tasks', type: 'number', width: 120, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ fontWeight: 700, color: '#fff' }}>{params.value}</span> },
     { 
       field: 'reachOwnershipPct', 
-      headerName: 'Reach %', 
+      headerName: 'Acc. %', 
       type: 'number', 
-      width: 120,
+      width: 100, 
       align: 'center', headerAlign: 'center',
       renderCell: (params) => (
         <Tooltip title={`${params.row.reachCount} of ${params.row.totalTasks} tasks`}>
-          <span style={{ color: '#3b82f6' }}>{params.value}%</span>
+          <span style={{ color: '#3b82f6', fontWeight: 600 }}>{params.value}%</span>
         </Tooltip>
       )
     },
+    // New accountability columns
+    { field: 'teamDetractors', headerName: 'Team Det.', type: 'number', width: 90, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#ef4444', fontWeight: 600 }}>{params.value}</span> },
+    { field: 'teamNeutrals', headerName: 'Team Neu.', type: 'number', width: 90, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#f59e0b', fontWeight: 600 }}>{params.value}</span> },
+    { field: 'reachDetractors', headerName: 'Acc. Det.', type: 'number', width: 100, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.value}</span> },
+    { field: 'reachNeutrals', headerName: 'Acc. Neu.', type: 'number', width: 100, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#f59e0b' }}>{params.value}</span> },
+    { 
+      field: 'reachDetractorsPct', 
+      headerName: 'Acc. Det. %', 
+      type: 'number', 
+      width: 110, 
+      align: 'center', headerAlign: 'center', 
+      renderCell: (params) => (
+        <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{params.value}%</span>
+      )
+    },
+    { 
+      field: 'reachNeutralsPct', 
+      headerName: 'Acc. Neu. %', 
+      type: 'number', 
+      width: 110, 
+      align: 'center', headerAlign: 'center', 
+      renderCell: (params) => (
+        <span style={{ color: '#f59e0b', fontSize: '0.8rem' }}>{params.value}%</span>
+      )
+    },
+
+    // Snapshot - Weekly
+    { 
+      field: 'latestWeekLabel', 
+      headerName: 'Wk Snapshot', 
+      width: 130, 
+      headerClassName: 'weekly-group-header', 
+      cellClassName: 'weekly-group-cell',
+      renderCell: (params) => <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{params.value}</span>
+    },
+    { field: 'weeklyTotal', headerName: 'Wk Total', type: 'number', width: 90, headerClassName: 'weekly-group-header', cellClassName: 'weekly-group-cell' },
+    { field: 'weeklyDetractors', headerName: 'Wk Det.', type: 'number', width: 80, headerClassName: 'weekly-group-header', cellClassName: 'weekly-group-cell' },
+    { field: 'weeklyNeutrals', headerName: 'Wk Neu.', type: 'number', width: 80, headerClassName: 'weekly-group-header', cellClassName: 'weekly-group-cell' },
+    { field: 'weeklyOwnerReachDetractors', headerName: 'Wk Reach Det.', type: 'number', width: 110, headerClassName: 'weekly-group-header', cellClassName: 'weekly-group-cell', renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.value}</span> },
+    { field: 'weeklyOwnerReachNeutrals', headerName: 'Wk Reach Neu.', type: 'number', width: 110, headerClassName: 'weekly-group-header', cellClassName: 'weekly-group-cell', renderCell: (params) => <span style={{ color: '#f59e0b' }}>{params.value}</span> },
+    { field: 'weeklyReach', headerName: 'Wk Acc.', type: 'number', width: 90, headerClassName: 'weekly-group-header', cellClassName: 'weekly-group-cell' },
+    { field: 'weeklyReachDetractors', headerName: 'Wk Acc. Det.', type: 'number', width: 100, headerClassName: 'weekly-group-header', cellClassName: 'weekly-group-cell', renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.value}</span> },
+    { field: 'weeklyReachNeutrals', headerName: 'Wk Acc. Neu.', type: 'number', width: 100, headerClassName: 'weekly-group-header', cellClassName: 'weekly-group-cell', renderCell: (params) => <span style={{ color: '#f59e0b' }}>{params.value}</span> },
+
+    // Snapshot - Monthly
+    { 
+      field: 'latestMonthLabel', 
+      headerName: 'Mo Snapshot', 
+      width: 120, 
+      headerClassName: 'monthly-group-header', 
+      cellClassName: 'monthly-group-cell',
+      renderCell: (params) => <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{params.value}</span>
+    },
+    { field: 'monthlyTotal', headerName: 'Mo Total', type: 'number', width: 90, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell' },
+    { field: 'monthlyDetractors', headerName: 'Mo Det.', type: 'number', width: 80, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell' },
+    { field: 'monthlyNeutrals', headerName: 'Mo Neu.', type: 'number', width: 80, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell' },
+    { field: 'monthlyOwnerReachDetractors', headerName: 'Mo Reach Det.', type: 'number', width: 110, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell', renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.value}</span> },
+    { field: 'monthlyOwnerReachNeutrals', headerName: 'Mo Reach Neu.', type: 'number', width: 110, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell', renderCell: (params) => <span style={{ color: '#f59e0b' }}>{params.value}</span> },
+    { field: 'monthlyReach', headerName: 'Mo Acc.', type: 'number', width: 90, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell' },
+    { field: 'monthlyReachDetractors', headerName: 'Mo Acc. Det.', type: 'number', width: 100, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell', renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.value}</span> },
+    { field: 'monthlyReachNeutrals', headerName: 'Mo Acc. Neu.', type: 'number', width: 100, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell', renderCell: (params) => <span style={{ color: '#f59e0b' }}>{params.value}</span> },
+
     { 
       field: 'detractorsCount', 
-      headerName: 'Detractors', 
+      headerName: 'Global Det.', 
       type: 'number', 
       width: 120,
       align: 'center', headerAlign: 'center',
@@ -754,7 +1046,7 @@ const TeamViolationOverview = ({
     },
     { 
       field: 'neutralsCount', 
-      headerName: 'Neutrals', 
+      headerName: 'Global Neu.', 
       type: 'number', 
       width: 120,
       align: 'center', headerAlign: 'center',
@@ -765,6 +1057,86 @@ const TeamViolationOverview = ({
       )
     },
     { field: 'latestSession', headerName: 'Latest Session', width: 140, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.value}</span> },
+    
+    // Snapshot - Post Session Group (Purple)
+    { field: 'postSessionTotal', headerName: 'Post Total', type: 'number', width: 95, headerClassName: 'post-group-header', cellClassName: 'post-group-cell' },
+    { field: 'postSessionDetractors', headerName: 'Post Det.', type: 'number', width: 85, headerClassName: 'post-group-header', cellClassName: 'post-group-cell' },
+    { field: 'postSessionNeutrals', headerName: 'Post Neu.', type: 'number', width: 85, headerClassName: 'post-group-header', cellClassName: 'post-group-cell' },
+    {
+      field: 'postSessionOwnerReachDetractors',
+      headerName: 'Post Reach Det.',
+      type: 'number',
+      width: 125,
+      headerClassName: 'post-group-header',
+      cellClassName: 'post-group-cell',
+      renderCell: (params) => (
+        <Tooltip title={`Post-session tasks where 'responsible' owner is Reach (company) AND score ≤60`}>
+          <span style={{ color: '#ef4444', fontWeight: 600 }}>{params.value}</span>
+        </Tooltip>
+      )
+    },
+    {
+      field: 'postSessionOwnerReachNeutrals',
+      headerName: 'Post Reach Neu.',
+      type: 'number',
+      width: 125,
+      headerClassName: 'post-group-header',
+      cellClassName: 'post-group-cell',
+      renderCell: (params) => (
+        <Tooltip title={`Post-session tasks where 'responsible' owner is Reach (company) AND score 61–80`}>
+          <span style={{ color: '#f59e0b', fontWeight: 600 }}>{params.value}</span>
+        </Tooltip>
+      )
+    },
+    { field: 'postSessionReach', headerName: 'Post Acc.', type: 'number', width: 95, headerClassName: 'post-group-header', cellClassName: 'post-group-cell' },
+    {
+      field: 'postSessionReachDetractors',
+      headerName: 'Post Acc. Det.',
+      type: 'number',
+      width: 115,
+      headerClassName: 'post-group-header',
+      cellClassName: 'post-group-cell',
+      renderCell: (params) => (
+        <Tooltip title={`Accountable tasks (teamAccountability=Yes) that are also Detractors (score ≤60) post-session`}>
+          <span style={{ color: '#ef4444', fontWeight: 600 }}>{params.value}</span>
+        </Tooltip>
+      )
+    },
+    {
+      field: 'postSessionReachNeutrals',
+      headerName: 'Post Acc. Neu.',
+      type: 'number',
+      width: 115,
+      headerClassName: 'post-group-header',
+      cellClassName: 'post-group-cell',
+      renderCell: (params) => (
+        <Tooltip title={`Accountable tasks (teamAccountability=Yes) that are also Neutrals (score 61–80) post-session`}>
+          <span style={{ color: '#f59e0b', fontWeight: 600 }}>{params.value}</span>
+        </Tooltip>
+      )
+    },
+    { field: 'postSessionReachPct', headerName: 'Post Acc. %', type: 'number', width: 110, headerClassName: 'post-group-header', cellClassName: 'post-group-cell', renderCell: (params) => <span style={{ color: '#8b5cf6', fontWeight: 600 }}>{params.value}%</span> },
+    { 
+      field: 'improvementRate', 
+      headerName: 'Improve %', 
+      type: 'number', 
+      width: 125, 
+      headerClassName: 'post-group-header', 
+      cellClassName: 'post-group-cell',
+      renderHeader: (params) => (
+        <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Typography variant="caption" fontWeight={700}>Improve %</Typography>
+          <Tooltip title="Daily volume change: ((Daily Avg Before - Daily Avg After) / Daily Avg Before). Positive % means daily task volume decreased post-session (improvement).">
+            <span><FaInfoCircle style={{ fontSize: '0.85rem', opacity: 0.8 }} /></span>
+          </Tooltip>
+        </Stack>
+      ),
+      renderCell: (params) => {
+        if (!params.row.trained) return <span style={{ color: '#94a3b8' }}>-</span>;
+        return <span style={{ color: params.value >= 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>{params.value > 0 ? '+' : ''}{params.value}%</span>;
+      }
+    },
+
     { 
       field: 'tasksAfterLatestSession', 
       headerName: 'After Latest', 
@@ -830,7 +1202,7 @@ const TeamViolationOverview = ({
     { field: 'company', headerName: 'Company', width: 140, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.value}</span> },
     { field: 'cohort', headerName: 'Cohort', width: 120, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.value}</span> },
     { field: 'totalTasks', headerName: 'Total Tasks', type: 'number', width: 110, renderCell: (params) => <span style={{ color: '#fff' }}>{params.value}</span> },
-    { field: 'reachOwnershipPct', headerName: 'Reach %', type: 'number', width: 100, renderCell: (params) => <span style={{ color: '#3b82f6' }}>{params.value}%</span> },
+    { field: 'reachOwnershipPct', headerName: 'Acc. %', type: 'number', width: 100, renderCell: (params) => <span style={{ color: '#3b82f6' }}>{params.value}%</span> },
     { field: 'detractorsCount', headerName: 'Detractors', type: 'number', width: 100, renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.value}</span> },
     { field: 'neutralsCount', headerName: 'Neutrals', type: 'number', width: 100, renderCell: (params) => <span style={{ color: '#f59e0b' }}>{params.value}</span> },
     { field: 'tasksBeforeLatestSessionSamePeriod', headerName: 'Before Tasks', type: 'number', width: 120, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.row.trained ? (params.value ?? 'N/A') : 'N/A'}</span> },
@@ -915,81 +1287,22 @@ const TeamViolationOverview = ({
         </Grid>
       </Box>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={12}>
-          <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(59,130,246,0.15)' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-              <Box>
-                <Typography variant="subtitle2" color="#94a3b8">Training Impact</Typography>
-                <Typography variant="h6" fontWeight={700} color="#fff">Top 10 Teams: Before / After Session Tasks</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <FormControl size="small" sx={{ minWidth: 160 }}>
-                  <InputLabel sx={{ color: '#94a3b8' }}>Category Filter</InputLabel>
-                  <Select
-                    value={chartCategoryFilter}
-                    label="Category Filter"
-                    onChange={(e) => setChartCategoryFilter(e.target.value)}
-                    sx={{
-                      color: '#fff',
-                      height: 36,
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.3)' },
-                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.5)' },
-                      '& .MuiSvgIcon-root': { color: '#94a3b8' }
-                    }}
-                  >
-                    <MenuItem value="all">All Teams</MenuItem>
-                    <MenuItem value="improved">Improved Teams</MenuItem>
-                    <MenuItem value="underperforming">Underperforming Teams</MenuItem>
-                    <MenuItem value="untrained">Untrained Teams</MenuItem>
-                  </Select>
-                </FormControl>
-                <Chip label={`${averageAfterRate}% after-session task ratio`} size="small" sx={{ bgcolor: 'rgba(16,185,129,0.12)', color: '#10b981' }} />
-              </Box>
-            </Box>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={chartData} margin={{ top: 10, right: 16, left: -12, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-                <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} angle={-45} textAnchor="end" height={80} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <RechartsTooltip 
-                  wrapperStyle={{ backgroundColor: '#111827', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 10 }} 
-                  contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, color: '#fff', padding: '8px 12px' }}
-                  cursor={{ fill: 'rgba(59,130,246,0.1)' }}
-                  formatter={(value) => <span style={{ color: '#e2e8f0' }}>{value}</span>}
-                  labelFormatter={(label) => <span style={{ color: '#94a3b8', fontWeight: 600 }}>{label}</span>}
-                />
-                <Legend 
-                  wrapperStyle={{ color: '#94a3b8', fontSize: '0.85rem', paddingTop: '20px' }}
-                  payload={[
-                    { value: 'Improved Teams', type: 'square', color: '#10b981' },
-                    { value: 'Underperforming Teams', type: 'square', color: '#f59e0b' },
-                    { value: 'Untrained Teams', type: 'square', color: '#64748b' },
-                    { value: 'Post-Session Violations', type: 'square', color: '#ef4444' }
-                  ]}
-                />
-                <Bar dataKey="totalTasks" name="Total/Before Tasks" fill="#3b82f6" radius={[6, 6, 0, 0]}>
-                  {chartData.map((entry, index) => {
-                    let color = '#3b82f6'; // Generic blue
-                    if (entry.isUntrained) color = '#64748b'; // Slate for untrained
-                    else if (entry.isImproved) color = '#10b981'; // Green for improved
-                    else if (entry.isUnderperforming) color = '#f59e0b'; // Amber/Orange for underperforming
-                    return <Cell key={`cell-${index}`} fill={color} />;
-                  })}
-                </Bar>
-                <Bar dataKey="tasksAfterLatestSession" name="Post-Session Violations" fill="#ef4444" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
-
-      </Grid>
 
       <Paper sx={{ p: 2.5, ...colors.glass, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
           <Box>
             <Typography variant="h6" fontWeight={700} color="#fff">Team Tasks Table</Typography>
-            <Typography variant="body2" color="#94a3b8">Detailed task profile for each field team, including Reach ownership and session-aware counts.</Typography>
+            <Typography variant="body2" color="#94a3b8" sx={{ mb: 1.5 }}>Detailed task profile for each field team, including Team Accountability and session-aware counts.</Typography>
+            
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Chip size="small" label={`Total: ${teamStatusStats.total}`} sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 600 }} />
+              <Chip size="small" label={`Active: ${teamStatusStats.active}`} sx={{ bgcolor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 600 }} />
+              <Chip size="small" label={`Inactive: ${teamStatusStats.inactive}`} sx={{ bgcolor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', fontWeight: 600 }} />
+              {teamStatusStats.onLeave > 0 && <Chip size="small" label={`On Leave: ${teamStatusStats.onLeave}`} sx={{ bgcolor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 600 }} />}
+              {teamStatusStats.terminated > 0 && <Chip size="small" label={`Terminated: ${teamStatusStats.terminated}`} sx={{ bgcolor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', fontWeight: 600 }} />}
+              {teamStatusStats.resigned > 0 && <Chip size="small" label={`Resigned: ${teamStatusStats.resigned}`} sx={{ bgcolor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', fontWeight: 600 }} />}
+              {teamStatusStats.suspended > 0 && <Chip size="small" label={`Suspended: ${teamStatusStats.suspended}`} sx={{ bgcolor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', fontWeight: 600 }} />}
+            </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'rgba(0,0,0,0.2)', px: 2, py: 1, borderRadius: 2, border: '1px solid rgba(255,255,255,0.08)', gap: 2 }}>
@@ -1045,7 +1358,7 @@ const TeamViolationOverview = ({
               >
                 <MenuItem value="all">All Months</MenuItem>
                 {availableMonths.map(m => (
-                  <MenuItem key={m} value={m}>{m}</MenuItem>
+                  <MenuItem key={m} value={m}>{getMonthNameFromKey(m)}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -1106,7 +1419,19 @@ const TeamViolationOverview = ({
               '& .MuiDataGrid-columnHeaders': { bgcolor: '#111827', color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.08)' },
               '& .MuiDataGrid-footerContainer': { borderTop: '1px solid rgba(255,255,255,0.08)', color: '#94a3b8' },
               '& .MuiTablePagination-root': { color: '#94a3b8' },
-              '& .MuiDataGrid-toolbarContainer': { p: 1 }
+              '& .MuiDataGrid-toolbarContainer': { p: 1 },
+              
+              // Custom Weekly Snapshot Styles
+              '& .weekly-group-header': { backgroundColor: 'rgba(30, 58, 138, 0.4) !important', color: '#60a5fa !important', fontWeight: 'bold !important' },
+              '& .weekly-group-cell': { backgroundColor: 'rgba(30, 58, 138, 0.1)' },
+              
+              // Custom Monthly Snapshot Styles
+              '& .monthly-group-header': { backgroundColor: 'rgba(20, 83, 45, 0.4) !important', color: '#4ade80 !important', fontWeight: 'bold !important' },
+              '& .monthly-group-cell': { backgroundColor: 'rgba(20, 83, 45, 0.1)' },
+
+              // Custom Post-Session Styles
+              '& .post-group-header': { backgroundColor: 'rgba(91, 33, 182, 0.4) !important', color: '#a78bfa !important', fontWeight: 'bold !important' },
+              '& .post-group-cell': { backgroundColor: 'rgba(91, 33, 182, 0.1)' }
             }}
           />
         </Box>
@@ -1451,10 +1776,10 @@ const TeamViolationOverview = ({
                               <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Session Date</TableCell>
                               <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Status</TableCell>
                               <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Total Tasks</TableCell>
-                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Reach Tasks</TableCell>
-                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Reach %</TableCell>
+                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Acc. Tasks</TableCell>
+                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Acc. %</TableCell>
                               <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Detractors</TableCell>
-                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Reach Detractors</TableCell>
+                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Acc. Detractors</TableCell>
                               <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Neutrals</TableCell>
                                   </TableRow>
                           </TableHead>
@@ -1501,8 +1826,8 @@ const TeamViolationOverview = ({
                           <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
                           <RechartsTooltip wrapperStyle={{ backgroundColor: '#111827', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 10 }} contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, color: '#fff' }} formatter={(value) => [value, 'Tasks']} />
                           <Legend wrapperStyle={{ color: '#94a3b8', fontSize: '0.85rem' }} />
-                          <Bar dataKey="reach" name="Reach-Owned" fill="#3b82f6" stackId="a" radius={[6, 6, 0, 0]} />
-                          <Bar dataKey="nonReach" name="Non-Reach" fill="#f59e0b" stackId="a" radius={[6, 6, 0, 0]} />
+                          <Bar dataKey="reach" name="Team Accountable" fill="#3b82f6" stackId="a" radius={[6, 6, 0, 0]} />
+                          <Bar dataKey="nonReach" name="Non-Accountable" fill="#f59e0b" stackId="a" radius={[6, 6, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </Paper>
@@ -1522,25 +1847,25 @@ const TeamViolationOverview = ({
                       </Card>
                       <Card sx={{ bgcolor: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)' }}>
                         <CardContent sx={{ py: 1 }}>
-                          <Typography color="#94a3b8" variant="caption">Owned by Reach</Typography>
+                          <Typography color="#94a3b8" variant="caption">Team Accountable</Typography>
                           <Typography color="#3b82f6" variant="h6" fontWeight={700}>{reachAnalytics.filteredReachCount} ({reachAnalytics.filteredReachPct}%)</Typography>
                         </CardContent>
                       </Card>
                       <Card sx={{ bgcolor: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.1)' }}>
                         <CardContent sx={{ py: 1 }}>
-                          <Typography color="#94a3b8" variant="caption">Non-Reach Tasks</Typography>
+                          <Typography color="#94a3b8" variant="caption">Non-Accountable Tasks</Typography>
                           <Typography color="#f59e0b" variant="h6" fontWeight={700}>{reachAnalytics.filteredNonReachCount} ({reachAnalytics.filteredNonReachPct}%)</Typography>
                         </CardContent>
                       </Card>
                       <Card sx={{ bgcolor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
                         <CardContent sx={{ py: 1 }}>
-                          <Typography color="#94a3b8" variant="caption">Reach Detractors</Typography>
+                          <Typography color="#94a3b8" variant="caption">Acc. Detractors</Typography>
                           <Typography color="#ef4444" variant="h6" fontWeight={700}>{reachAnalytics.reachDetractors} ({reachAnalytics.reachDetractorsPct}%)</Typography>
                         </CardContent>
                       </Card>
                       <Card sx={{ bgcolor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
                         <CardContent sx={{ py: 1 }}>
-                          <Typography color="#94a3b8" variant="caption">Reach Neutrals</Typography>
+                          <Typography color="#94a3b8" variant="caption">Acc. Neutrals</Typography>
                           <Typography color="#f59e0b" variant="h6" fontWeight={700}>{reachAnalytics.reachNeutrals} ({reachAnalytics.reachNeutralsPct}%)</Typography>
                         </CardContent>
                       </Card>

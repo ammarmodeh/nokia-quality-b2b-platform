@@ -544,7 +544,7 @@ export const generateMonthRanges = (tasks, settings = {}) => {
   for (let i = 0; i < 12; i++) {
     const start = new Date(year, i, 1);
     const end = new Date(year, i + 1, 0, 23, 59, 59, 999);
-    const monthName = start.toLocaleDateString("en-US", { month: "long" });
+    const monthName = start.toLocaleDateString("en-US", { month: "short" });
 
     ranges.push({
       key: `Month-${i + 1}`,
@@ -566,7 +566,8 @@ export const getMonthNumber = (date, settings = {}) => {
   if (isNaN(targetDate.getTime())) return null;
 
   const month = targetDate.getMonth() + 1;
-  return { monthNumber: month, key: `Month-${month}` };
+  const monthName = targetDate.toLocaleString("en-US", { month: "short" });
+  return { monthNumber: month, key: `Month-${month}`, name: monthName };
 };
 
 /**

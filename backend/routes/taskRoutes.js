@@ -51,7 +51,9 @@ import {
   uploadReachSupervisorAudit,
   commitReachSupervisorData,
   updateAuditLogDates,
-  deleteAuditLog
+  deleteAuditLog,
+  softDeleteTask
+
 } from "../controllers/taskControllers.js";
 
 // Configure multer for memory storage
@@ -119,6 +121,10 @@ router.get("/search-tasks", protect, searchTasks);
 
 // Hard Delete Task (Admin deletes any)
 router.delete("/delete-task/:id", protect, deleteTask);
+
+// Soft Delete Task (Move to Trash)
+router.delete("/soft-delete-task/:id", protect, softDeleteTask);
+
 
 // Update Task (Admin updates any)
 router.put("/update-task/:id", protect, updateTask);
