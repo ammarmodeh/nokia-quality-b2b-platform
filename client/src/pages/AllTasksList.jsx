@@ -1299,6 +1299,201 @@ const AllTasksList = () => {
       return startR + maxRows + 3;
     };
 
+    const getOverlapHappyUnhappy = (task) => {
+      const techScore = Number(task.technicalTeamEvaluation);
+      const serviceScore = Number(task.serviceEvaluation);
+      const status = String(task.callStatus || '').trim().toLowerCase();
+      const technicalBad = !isNaN(techScore) && techScore <= 8;
+      const serviceBad = !isNaN(serviceScore) && serviceScore <= 8;
+      const closureNotDone = status === 'not done';
+      return technicalBad || serviceBad || closureNotDone ? 'Unhappy' : 'Happy';
+    };
+
+    const getDissatisfactionCategory = (task) => {
+      return task.categoryOfDissatisfaction || 'N/A';
+    };
+
+    const getReason = (task) => {
+      const formatArrayLike = (value) => {
+        if (Array.isArray(value) && value.length) return value.join(', ');
+        if (typeof value === 'string' && value.trim()) return value.trim();
+        return null;
+      };
+      return formatArrayLike(task.reason) || formatArrayLike(task.rootCause) || 'N/A';
+    };
+
+    const getRootCause = (task) => {
+      const formatArrayLike = (value) => {
+        if (Array.isArray(value) && value.length) return value.join(', ');
+        if (typeof value === 'string' && value.trim()) return value.trim();
+        return null;
+      };
+      return formatArrayLike(task.rootCause) || 'N/A';
+    };
+
+    const getOwnership = (task) => {
+      if (Array.isArray(task.responsible) && task.responsible.length) return task.responsible.join(', ');
+      if (typeof task.responsible === 'string' && task.responsible.trim()) return task.responsible;
+      return 'N/A';
+    };
+
+    const getTeamAccountability = (task) => {
+      if (Array.isArray(task.teamAccountability) && task.teamAccountability.length) return task.teamAccountability.join(', ');
+      if (typeof task.teamAccountability === 'string' && task.teamAccountability.trim()) return task.teamAccountability;
+      return 'N/A';
+    };
+
+    const getFieldTeam = (task) => {
+      return task.teamName || 'N/A';
+    };
+
+    const getSecondCallDispatchDate = (task) => {
+      return task.secondCallDispatchDate ? format(new Date(task.secondCallDispatchDate), 'yyyy-MM-dd') : 'N/A';
+    };
+
+    const getSecondCallResolutionDate = (task) => {
+      return task.secondCallResolutionDate ? format(new Date(task.secondCallResolutionDate), 'yyyy-MM-dd') : 'N/A';
+    };
+
+    const buildDvocCcOverlapRow = (task) => ({
+      SLID: task.slid || 'N/A',
+      'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
+      'Ticket Status': task.status || 'N/A',
+      Status: task.callStatus || 'N/A',
+      Comment: task.closureComment || 'N/A',
+      'Closure requested by field team': task.closureRequestedByFieldTeam || 'N/A',
+      'Technical team evaluation': task.technicalTeamEvaluation || 'N/A',
+      'Service evaluation': task.serviceEvaluation || 'N/A',
+      'Custom question/answer fields': Array.isArray(task.customFields) && task.customFields.length > 0 ? task.customFields.map(cf => `${cf.question || 'Question'}: ${cf.answer || 'N/A'}`).join(' | ') : 'N/A',
+      'Happy Vs Unhappy': getOverlapHappyUnhappy(task),
+      'Category of dissatisfaction': getDissatisfactionCategory(task),
+      'Second Call Initiated': task.secondCallInitiated || 'N/A',
+      'Second Call Status': task.secondCallStatus || 'N/A',
+      'Second Call Category': task.secondCallCategory || 'N/A',
+      'Second Call Action': task.secondCallAction || 'N/A',
+      'Second Call Team': task.secondCallTeam || 'N/A',
+      'Second Call Dispatch Date': getSecondCallDispatchDate(task),
+      'Second Call Secondary Status': task.secondCallSecondaryStatus || 'N/A',
+      'Second Call Resolution Method': task.secondCallResolutionMethod || 'N/A',
+      'Second Call Resolved By': task.secondCallResolvedBy || 'N/A',
+      'Second Call Root Cause': task.secondCallRootCause || 'N/A',
+      'Second Call Resolution Date': getSecondCallResolutionDate(task),
+      'Second Call Resolved Before Survey': task.secondCallResolvedBeforeSurvey || 'N/A',
+      'Customer Feedback / Comment': task.customerFeedback || 'N/A',
+      'Satisfaction Score': task.evaluationScore !== null && task.evaluationScore !== 'N/A' ? task.evaluationScore : 'N/A',
+      'Reason': getReason(task),
+      'Root Cause': getRootCause(task),
+      'Ownership': getOwnership(task),
+      'Team Accountability': getTeamAccountability(task),
+      'Field Team': getFieldTeam(task)
+    });
+
+    const dvocCcOverlapTasks = filteredTasks.filter(t => {
+      const score = Number(t.evaluationScore);
+      return !isNaN(score) && score <= 8;
+    });
+
+    const dvocCcDetractors = dvocCcOverlapTasks.filter(t => Number(t.evaluationScore) <= 6);
+    const dvocCcNeutrals = dvocCcOverlapTasks.filter(t => {
+      const score = Number(t.evaluationScore);
+      return score >= 7 && score <= 8;
+    });
+
+    const wsDvocCcOverlap = XLSX.utils.aoa_to_sheet([[]]);
+    wsDvocCcOverlap['A1'] = {
+      v: `DVOC-CC OVERLAP - Period: ${periodStr}`,
+      t: 's',
+      s: { font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F2937' } }, alignment: { horizontal: 'center', vertical: 'center' } }
+    };
+    const dvocHeaderCount = Object.keys(dvocCcDetractors.length ? dvocCcDetractors[0] : dvocCcNeutrals[0] || {}).length || 30;
+    wsDvocCcOverlap['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: dvocHeaderCount - 1 } }];
+
+    let overlapStartR = 2;
+    const appendOverlapSection = (title, rows, titleColor) => {
+      const titleRow = overlapStartR + 1;
+      const titleCell = XLSX.utils.encode_cell({ r: titleRow, c: 0 });
+      wsDvocCcOverlap[titleCell] = {
+        v: title,
+        t: 's',
+        s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: titleColor } }, alignment: { horizontal: 'center' } }
+      };
+      wsDvocCcOverlap['!merges'].push({ s: { r: titleRow, c: 0 }, e: { r: titleRow, c: dvocHeaderCount - 1 } });
+
+      const dataStartR = titleRow + 1;
+      if (rows.length > 0) {
+        const groupRowR = titleRow + 1;
+        const headerRowR = titleRow + 2;
+        const columns = Object.keys(rows[0]);
+
+        const addGroupHeader = (label, startCol, endCol) => {
+          const cell = XLSX.utils.encode_cell({ r: groupRowR, c: startCol });
+          wsDvocCcOverlap[cell] = {
+            v: label,
+            t: 's',
+            s: {
+              font: { bold: true, color: { rgb: 'FFFFFF' } },
+              fill: { fgColor: { rgb: '9D174D' } },
+              alignment: { horizontal: 'center', vertical: 'center' }
+            }
+          };
+          wsDvocCcOverlap['!merges'].push({ s: { r: groupRowR, c: startCol }, e: { r: groupRowR, c: endCol } });
+        };
+
+        addGroupHeader('FMC Closure', 3, 10);
+        addGroupHeader('Second Call initiated by Jawad', 11, 22);
+        addGroupHeader('DVOC Results', 23, columns.length - 1);
+
+        XLSX.utils.sheet_add_json(wsDvocCcOverlap, rows, { origin: XLSX.utils.encode_cell({ r: headerRowR, c: 0 }), skipHeader: false });
+        const headerRange = { s: { r: headerRowR, c: 0 }, e: { r: headerRowR, c: columns.length - 1 } };
+        applyHeaderStyle(wsDvocCcOverlap, headerRange, titleColor);
+        applyDataRowStyle(wsDvocCcOverlap, { s: { r: headerRowR + 1, c: 0 }, e: { r: headerRowR + rows.length, c: columns.length - 1 } });
+        overlapStartR = headerRowR + rows.length + 2;
+      } else {
+        const noDataCell = XLSX.utils.encode_cell({ r: dataStartR, c: 0 });
+        wsDvocCcOverlap[noDataCell] = { v: 'No records available', t: 's', s: { font: { italic: true }, alignment: { horizontal: 'left' } } };
+        overlapStartR = dataStartR + 2;
+      }
+    };
+
+    appendOverlapSection('DETRACTOR TASKS', dvocCcDetractors.map(buildDvocCcOverlapRow), 'B91C1C');
+    appendOverlapSection('NEUTRAL TASKS', dvocCcNeutrals.map(buildDvocCcOverlapRow), 'D97706');
+
+    wsDvocCcOverlap['!cols'] = Array(dvocHeaderCount).fill({ wch: 22 });
+    wsDvocCcOverlap['!cols'][0] = { wch: 15 };
+    wsDvocCcOverlap['!cols'][1] = { wch: 14 };
+    wsDvocCcOverlap['!cols'][2] = { wch: 16 };
+    wsDvocCcOverlap['!cols'][3] = { wch: 16 };
+    wsDvocCcOverlap['!cols'][4] = { wch: 25 };
+    wsDvocCcOverlap['!cols'][5] = { wch: 26 };
+    wsDvocCcOverlap['!cols'][6] = { wch: 26 };
+    wsDvocCcOverlap['!cols'][7] = { wch: 24 };
+    wsDvocCcOverlap['!cols'][8] = { wch: 30 };
+    wsDvocCcOverlap['!cols'][9] = { wch: 40 };
+    wsDvocCcOverlap['!cols'][10] = { wch: 18 };
+    wsDvocCcOverlap['!cols'][11] = { wch: 30 };
+    wsDvocCcOverlap['!cols'][12] = { wch: 20 };
+    wsDvocCcOverlap['!cols'][13] = { wch: 20 };
+    wsDvocCcOverlap['!cols'][14] = { wch: 20 };
+    wsDvocCcOverlap['!cols'][15] = { wch: 20 };
+    wsDvocCcOverlap['!cols'][16] = { wch: 20 };
+    wsDvocCcOverlap['!cols'][17] = { wch: 20 };
+    wsDvocCcOverlap['!cols'][18] = { wch: 25 };
+    wsDvocCcOverlap['!cols'][19] = { wch: 25 };
+    wsDvocCcOverlap['!cols'][20] = { wch: 20 };
+    wsDvocCcOverlap['!cols'][21] = { wch: 25 };
+    wsDvocCcOverlap['!cols'][22] = { wch: 20 };
+    wsDvocCcOverlap['!cols'][23] = { wch: 25 };
+    wsDvocCcOverlap['!cols'][24] = { wch: 30 };
+    wsDvocCcOverlap['!cols'][25] = { wch: 20 };
+    wsDvocCcOverlap['!cols'][26] = { wch: 20 };
+    wsDvocCcOverlap['!cols'][27] = { wch: 20 };
+    wsDvocCcOverlap['!cols'][28] = { wch: 20 };
+    if (dvocHeaderCount > 29) {
+      wsDvocCcOverlap['!cols'][29] = { wch: 20 };
+    }
+    fixSheetRange(wsDvocCcOverlap);
+    XLSX.utils.book_append_sheet(workbook, wsDvocCcOverlap, 'DVOC-CC Overlap');
+
     // 3.6 Detractor Special Analytics Window
     const detTasks = filteredTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== 'N/A' && t.evaluationScore <= 6);
     const detOwnerCounts = {};
@@ -1336,7 +1531,29 @@ const AllTasksList = () => {
     applyHeaderStyle(wsDetSpecial, { s: { r: 3, c: 0 }, e: { r: 3, c: 2 } }, "B91C1C");
     applyDataRowStyle(wsDetSpecial, { s: { r: 3, c: 0 }, e: { r: 3 + allDetOwnersData.length, c: 2 } });
 
-    let detCurrentR = Math.max(allDetOwnersData.length + 6, 8);
+    // Team Accountability Distribution for Detractors
+    const detTeamAccCounts = {};
+    detTasks.forEach(t => {
+      const acc = t.teamAccountability || 'Unknown';
+      detTeamAccCounts[acc] = (detTeamAccCounts[acc] || 0) + 1;
+    });
+    const detTeamAccData = Object.entries(detTeamAccCounts)
+      .map(([acc, count]) => ({
+        'Team Accountability': acc,
+        'Detractor Count': count,
+        'Share %': totalDetTasks > 0 ? `${((count / totalDetTasks) * 100).toFixed(1)}%` : "0%"
+      }))
+      .sort((a, b) => b['Detractor Count'] - a['Detractor Count']);
+
+    const detAccStartR = 4 + allDetOwnersData.length + 2;
+    XLSX.utils.sheet_add_aoa(wsDetSpecial, [["TEAM ACCOUNTABILITY DISTRIBUTION (DET)"]], { origin: `A${detAccStartR}` });
+    wsDetSpecial[`A${detAccStartR}`] = { v: "TEAM ACCOUNTABILITY DISTRIBUTION (DET)", t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "7F1D1D" } }, alignment: { horizontal: "center" } } };
+    wsDetSpecial['!merges'].push({ s: { r: detAccStartR - 1, c: 0 }, e: { r: detAccStartR - 1, c: 2 } });
+    XLSX.utils.sheet_add_json(wsDetSpecial, detTeamAccData, { origin: `A${detAccStartR + 1}`, skipHeader: false });
+    applyHeaderStyle(wsDetSpecial, { s: { r: detAccStartR, c: 0 }, e: { r: detAccStartR, c: 2 } }, "B91C1C");
+    applyDataRowStyle(wsDetSpecial, { s: { r: detAccStartR, c: 0 }, e: { r: detAccStartR + detTeamAccData.length, c: 2 } });
+
+    let detCurrentR = Math.max(detAccStartR + detTeamAccData.length + 6, 8);
 
     topDetOwners.forEach((owner) => {
       const ownerCell = XLSX.utils.encode_cell({ r: detCurrentR, c: 0 });
@@ -1556,7 +1773,29 @@ const AllTasksList = () => {
     applyHeaderStyle(wsNeuSpecial, { s: { r: 3, c: 0 }, e: { r: 3, c: 2 } }, "D97706");
     applyDataRowStyle(wsNeuSpecial, { s: { r: 3, c: 0 }, e: { r: 3 + allNeuOwnersData.length, c: 2 } });
 
-    let neuCurrentR = Math.max(allNeuOwnersData.length + 6, 8);
+    // Team Accountability Distribution for Neutrals
+    const neuTeamAccCounts = {};
+    neuTasks.forEach(t => {
+      const acc = t.teamAccountability || 'Unknown';
+      neuTeamAccCounts[acc] = (neuTeamAccCounts[acc] || 0) + 1;
+    });
+    const neuTeamAccData = Object.entries(neuTeamAccCounts)
+      .map(([acc, count]) => ({
+        'Team Accountability': acc,
+        'Neutral Count': count,
+        'Share %': totalNeuTasks > 0 ? `${((count / totalNeuTasks) * 100).toFixed(1)}%` : "0%"
+      }))
+      .sort((a, b) => b['Neutral Count'] - a['Neutral Count']);
+
+    const neuAccStartR = 4 + allNeuOwnersData.length + 2;
+    XLSX.utils.sheet_add_aoa(wsNeuSpecial, [["TEAM ACCOUNTABILITY DISTRIBUTION (NEU)"]], { origin: `A${neuAccStartR}` });
+    wsNeuSpecial[`A${neuAccStartR}`] = { v: "TEAM ACCOUNTABILITY DISTRIBUTION (NEU)", t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "B45309" } }, alignment: { horizontal: "center" } } };
+    wsNeuSpecial['!merges'].push({ s: { r: neuAccStartR - 1, c: 0 }, e: { r: neuAccStartR - 1, c: 2 } });
+    XLSX.utils.sheet_add_json(wsNeuSpecial, neuTeamAccData, { origin: `A${neuAccStartR + 1}`, skipHeader: false });
+    applyHeaderStyle(wsNeuSpecial, { s: { r: neuAccStartR, c: 0 }, e: { r: neuAccStartR, c: 2 } }, "D97706");
+    applyDataRowStyle(wsNeuSpecial, { s: { r: neuAccStartR, c: 0 }, e: { r: neuAccStartR + neuTeamAccData.length, c: 2 } });
+
+    let neuCurrentR = Math.max(neuAccStartR + neuTeamAccData.length + 6, 8);
 
     topNeuOwners.forEach((owner) => {
       const ownerCell = XLSX.utils.encode_cell({ r: neuCurrentR, c: 0 });
@@ -1753,8 +1992,8 @@ const AllTasksList = () => {
     const teamPerfData = [];
     const cohortAggregates = {};
     const trainingAggregates = { 
-      'Trained': { Count: 0, Tasks: 0, Reach: 0, DetReach: 0 }, 
-      'Untrained': { Count: 0, Tasks: 0, Reach: 0, DetReach: 0 } 
+      'Trained': { Count: 0, Tasks: 0, Reach: 0, DetReach: 0, NeuReach: 0 }, 
+      'Untrained': { Count: 0, Tasks: 0, Reach: 0, DetReach: 0, NeuReach: 0 } 
     };
 
     const globalTotalAcc = filteredTasks.filter(t => t.teamAccountability?.includes("Yes")).length;
@@ -1851,6 +2090,7 @@ const AllTasksList = () => {
        trainingAggregates[trKey].Tasks += totalTasks;
        trainingAggregates[trKey].Reach += reachCount;
        trainingAggregates[trKey].DetReach += reachDetractors;
+       trainingAggregates[trKey].NeuReach += reachNeutrals;
 
 
        let postSessionTotal = 0;
@@ -2023,6 +2263,18 @@ const AllTasksList = () => {
       };
     });
 
+    // 2.6 Training Neutral Summary
+    const globalNeuAcc = filteredTasks.filter(t => {
+      const score = t.evaluationScore || 0;
+      const normalized = score <= 10 ? score * 10 : score;
+      return normalized > 60 && normalized <= 80 && t.teamAccountability?.includes("Yes");
+    }).length;
+    const trainingNeuTableData = Object.entries(trainingAggregates).map(([status, data]) => ({
+      'Training Status': status,
+      'Acc. Neu.': data.NeuReach || 0,
+      'Neu. Share %': globalNeuAcc > 0 ? `${Math.round(((data.NeuReach || 0) / globalNeuAcc) * 100)}%` : '0%'
+    }));
+
     XLSX.utils.sheet_add_aoa(wsTeamPerf, [["TRAINING STATUS OVERVIEW"]], { origin: "J3" });
     wsTeamPerf['J3'] = { v: "TRAINING STATUS OVERVIEW", t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "059669" } }, alignment: { horizontal: "center" } } };
     wsTeamPerf['!merges'].push({ s: { r: 2, c: 9 }, e: { r: 2, c: 14 } });
@@ -2036,6 +2288,14 @@ const AllTasksList = () => {
     XLSX.utils.sheet_add_json(wsTeamPerf, trainingDetTableData, { origin: "J13", skipHeader: false });
     applyHeaderStyle(wsTeamPerf, { s: { r: 12, c: 9 }, e: { r: 12, c: 11 } }, "C2410C");
     applyDataRowStyle(wsTeamPerf, { s: { r: 12, c: 9 }, e: { r: 12 + trainingDetTableData.length, c: 11 } });
+
+    const neuTableStartR = 12 + trainingDetTableData.length + 2;
+    XLSX.utils.sheet_add_aoa(wsTeamPerf, [["TRAINING NEUTRAL ANALYSIS"]], { origin: `J${neuTableStartR}` });
+    wsTeamPerf[`J${neuTableStartR}`] = { v: "TRAINING NEUTRAL ANALYSIS", t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "D97706" } }, alignment: { horizontal: "center" } } };
+    wsTeamPerf['!merges'].push({ s: { r: neuTableStartR - 1, c: 9 }, e: { r: neuTableStartR - 1, c: 11 } });
+    XLSX.utils.sheet_add_json(wsTeamPerf, trainingNeuTableData, { origin: `J${neuTableStartR + 1}`, skipHeader: false });
+    applyHeaderStyle(wsTeamPerf, { s: { r: neuTableStartR, c: 9 }, e: { r: neuTableStartR, c: 11 } }, "92400E");
+    applyDataRowStyle(wsTeamPerf, { s: { r: neuTableStartR, c: 9 }, e: { r: neuTableStartR + trainingNeuTableData.length, c: 11 } });
 
     // 3. Main Detailed Table
     const mainTableStartR = 22; // Hardcoded space for 4 summary tables
@@ -2051,6 +2311,105 @@ const AllTasksList = () => {
     applyDataRowStyle(wsTeamPerf, { s: { r: mainTableStartR, c: 0 }, e: { r: mainTableStartR + teamPerfData.length, c: Math.max(0, teamPerfKeysCount - 1) } });
     
     wsTeamPerf['!cols'] = [{ wch: 25 }, { wch: 25 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
+    
+    // Add raw data breakdown for each team by Team Accountability
+    let teamRawCurrentR = mainTableStartR + teamPerfData.length + 3;
+    const buildTeamRawRows = (tasks) => tasks.map(task => ({
+      'SLID': task.slid || 'N/A',
+      'Request Number': task.requestNumber || 'N/A',
+      'Status': task.status || 'N/A',
+      'Team Accountability': task.teamAccountability || 'N/A',
+      'Q1-Score': task.evaluationScore !== null ? task.evaluationScore : 'N/A',
+      'Q1 - Scale Comment': task.customerFeedback || 'N/A',
+      'Severity': task.priority || 'Normal',
+      'Satisfaction Category': (() => {
+        if (task.evaluationScore === null || task.evaluationScore === 'N/A') return 'N/A';
+        const score = Number(task.evaluationScore);
+        if (score <= 6) return 'Detractor';
+        if (score >= 7 && score <= 8) return 'Neutral';
+        if (score >= 9) return 'Promoter';
+        return 'N/A';
+      })(),
+      'Customer Name': task.customerName || 'N/A',
+      'Contact Number': task.contactNumber || 'N/A',
+      'Governorate': task.governorate || 'N/A',
+      'District': task.district || 'N/A',
+      'Operation': task.operation || 'N/A',
+      'Tariff Name': task.tarrifName || 'N/A',
+      'Validation Status': task.validationStatus || 'Not validated',
+      'Reason': Array.isArray(task.reason) ? task.reason.join(', ') : (task.reason || 'N/A'),
+      'Sub-Reason': Array.isArray(task.subReason) ? task.subReason.join(', ') : (task.subReason || 'N/A'),
+      'Root Cause': Array.isArray(task.rootCause) ? task.rootCause.join(', ') : (task.rootCause || 'N/A'),
+      'ITN Related': Array.isArray(task.itnRelated) ? task.itnRelated.join(', ') : (task.itnRelated || 'N/A'),
+      'Subscription Related': Array.isArray(task.relatedToSubscription) ? task.relatedToSubscription.join(', ') : (task.relatedToSubscription || 'N/A'),
+      'Field Team Name': task.teamName || 'N/A',
+      'Request Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
+      'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
+      'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
+      'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
+    }));
+
+    teamPerfData.forEach(teamData => {
+      const teamName = teamData['Team Name'];
+      const teamTasks = filteredTasks.filter(t => t.teamName === teamName);
+      if (teamTasks.length === 0) return;
+
+      const teamAccTasks = teamTasks.filter(t => t.teamAccountability?.includes('Yes'));
+      const teamNonAccTasks = teamTasks.filter(t => !t.teamAccountability?.includes('Yes'));
+
+      // Section separator header
+      const sectionTitleR = teamRawCurrentR;
+      const sectionTitleCell = XLSX.utils.encode_cell({ r: sectionTitleR, c: 0 });
+      wsTeamPerf[sectionTitleCell] = {
+        v: `${teamName.toUpperCase()} — RAW DATA BREAKDOWN BY TEAM ACCOUNTABILITY`,
+        t: 's',
+        s: { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4F46E5' } }, alignment: { horizontal: 'center', vertical: 'center' } }
+      };
+      if (!wsTeamPerf['!merges']) wsTeamPerf['!merges'] = [];
+      wsTeamPerf['!merges'].push({ s: { r: sectionTitleR, c: 0 }, e: { r: sectionTitleR, c: 24 } });
+
+      // Table 1: Team Accountability = Yes (Accountable) - Red
+      const accTitleR = sectionTitleR + 2;
+      const accTitleCell = XLSX.utils.encode_cell({ r: accTitleR, c: 0 });
+      wsTeamPerf[accTitleCell] = {
+        v: `${teamName.toUpperCase()} ACCOUNTABLE RAW DATA (${teamAccTasks.length} record${teamAccTasks.length !== 1 ? 's' : ''})`,
+        t: 's',
+        s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'DC2626' } }, alignment: { horizontal: 'center', vertical: 'center' } }
+      };
+      wsTeamPerf['!merges'].push({ s: { r: accTitleR, c: 0 }, e: { r: accTitleR, c: 24 } });
+
+      let accEndR = accTitleR + 1;
+      if (teamAccTasks.length > 0) {
+        const rawAccData = buildTeamRawRows(teamAccTasks);
+        XLSX.utils.sheet_add_json(wsTeamPerf, rawAccData, { origin: XLSX.utils.encode_cell({ r: accTitleR + 1, c: 0 }), skipHeader: false });
+        const accKeys = Object.keys(rawAccData[0]);
+        applyHeaderStyle(wsTeamPerf, { s: { r: accTitleR + 1, c: 0 }, e: { r: accTitleR + 1, c: accKeys.length - 1 } }, 'B91C1C');
+        applyDataRowStyle(wsTeamPerf, { s: { r: accTitleR + 1, c: 0 }, e: { r: accTitleR + 1 + rawAccData.length, c: accKeys.length - 1 } });
+        accEndR = accTitleR + 1 + rawAccData.length;
+      }
+
+      // Table 2: Team Accountability = No (Non-Accountable) - Green
+      const nonAccTitleR = accEndR + 3;
+      const nonAccTitleCell = XLSX.utils.encode_cell({ r: nonAccTitleR, c: 0 });
+      wsTeamPerf[nonAccTitleCell] = {
+        v: `${teamName.toUpperCase()} NON-ACCOUNTABLE RAW DATA (${teamNonAccTasks.length} record${teamNonAccTasks.length !== 1 ? 's' : ''})`,
+        t: 's',
+        s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '059669' } }, alignment: { horizontal: 'center', vertical: 'center' } }
+      };
+      wsTeamPerf['!merges'].push({ s: { r: nonAccTitleR, c: 0 }, e: { r: nonAccTitleR, c: 24 } });
+
+      let nonAccEndR = nonAccTitleR + 1;
+      if (teamNonAccTasks.length > 0) {
+        const rawNonAccData = buildTeamRawRows(teamNonAccTasks);
+        XLSX.utils.sheet_add_json(wsTeamPerf, rawNonAccData, { origin: XLSX.utils.encode_cell({ r: nonAccTitleR + 1, c: 0 }), skipHeader: false });
+        const nonAccKeys = Object.keys(rawNonAccData[0]);
+        applyHeaderStyle(wsTeamPerf, { s: { r: nonAccTitleR + 1, c: 0 }, e: { r: nonAccTitleR + 1, c: nonAccKeys.length - 1 } }, '047857');
+        applyDataRowStyle(wsTeamPerf, { s: { r: nonAccTitleR + 1, c: 0 }, e: { r: nonAccTitleR + 1 + rawNonAccData.length, c: nonAccKeys.length - 1 } });
+        nonAccEndR = nonAccTitleR + 1 + rawNonAccData.length;
+      }
+
+      teamRawCurrentR = nonAccEndR + 5;
+    });
     
     XLSX.utils.book_append_sheet(workbook, wsTeamPerf, 'Team Performance');
 
@@ -2145,9 +2504,11 @@ const AllTasksList = () => {
       const ivDate = task.interviewDate ? new Date(task.interviewDate) : null;
       const pisDate = task.pisDate ? new Date(task.pisDate) : null;
       const closeDate = task.closeDate ? new Date(task.closeDate) : null;
+      const requestDate = task.contractDate ? new Date(task.contractDate) : null;
       
       const interviewToPis = ivDate && pisDate ? Math.max(0, Math.round((ivDate - pisDate) / (1000 * 60 * 60 * 24))) : 'N/A';
       const pisToClose = pisDate && closeDate ? Math.max(0, Math.round((pisDate - closeDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+      const requestToClose = requestDate && closeDate ? Math.max(0, Math.round((closeDate - requestDate) / (1000 * 60 * 60 * 24))) : 'N/A';
 
       const timelineData = {
         'Request Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
@@ -2158,6 +2519,7 @@ const AllTasksList = () => {
         'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
         'Interview to PIS (Days)': interviewToPis,
         'PIS to Close (Days)': pisToClose,
+        'Request to Close (Days)': requestToClose,
         'Interview Week': getWeekDisplay(task.interviewDate)
       };
 
@@ -4130,7 +4492,7 @@ const AllTasksList = () => {
         open={drillDownState.open}
         onClose={() => setDrillDownState(prev => ({ ...prev, open: false }))}
         fullWidth
-        maxWidth="md"
+        maxWidth="lg"
         PaperProps={{
           sx: {
             backgroundColor: '#1a1a1a',
@@ -4150,7 +4512,7 @@ const AllTasksList = () => {
         }}>
           <Box>
             <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 0.5 }}>
-              OJO Snags List
+              Detailed Breakdown Tasks
             </Typography>
             <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
               {drillDownState.title} ({drillDownState.tasks.length} Tasks)
@@ -4166,9 +4528,13 @@ const AllTasksList = () => {
               <TableHead>
                 <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Date</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Week</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Verbatim</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Root Cause</TableCell>
+                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Team Name</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
                   <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
@@ -4180,11 +4546,21 @@ const AllTasksList = () => {
                     <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>
                       {task.interviewDate ? format(new Date(task.interviewDate), 'dd/MM/yyyy') : '-'}
                     </TableCell>
+                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>
+                      {task.interviewDate ? getWeekDisplay(task.interviewDate) : '-'}
+                    </TableCell>
                     <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
                     <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
+                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem', maxWidth: 280, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                      {task.customerFeedback || task.feedback || task.verbatim || '-'}
+                    </TableCell>
                     <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
                       {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
                     </TableCell>
+                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                      {Array.isArray(task.rootCause) ? task.rootCause.join(', ') : task.rootCause || task.technicalDetails?.rootCause || '-'}
+                    </TableCell>
+                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.teamName || '-'}</TableCell>
                     <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
                       {Array.isArray(task.responsible) ? task.responsible.join(', ') : task.responsible || '-'}
                     </TableCell>

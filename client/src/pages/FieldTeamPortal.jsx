@@ -39,6 +39,13 @@ const normalizeText = (value) => {
 
 const isTeamAccountable = (task) => Array.isArray(task?.teamAccountability) ? task?.teamAccountability.includes("Yes") : task?.teamAccountability === "Yes";
 
+const fieldContainsReach = (field) => {
+  if (Array.isArray(field)) {
+    return field.some(item => typeof item === 'string' && item.toLowerCase().includes('reach'));
+  }
+  return typeof field === 'string' && field.toLowerCase().includes('reach');
+};
+
 const calculateTeamExportSummary = (teamTasks, settings, latestSessionDate) => {
   const totalTasks = teamTasks.length;
 

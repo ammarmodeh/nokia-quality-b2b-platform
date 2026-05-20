@@ -169,6 +169,56 @@ const taskSchema = new mongoose.Schema(
     governorate: { type: String, default: null },
     district: { type: String, default: null },
     customerFeedback: { type: String, trim: true, default: null },
+    closureComment: { type: String, trim: true, default: null },
+    callStatus: { type: String, trim: true, default: null },
+    closureRequestedByFieldTeam: {
+      type: String,
+      enum: ["True", "False", "Not specified"],
+      default: "Not specified",
+    },
+    technicalTeamEvaluation: {
+      type: Number,
+      min: 0,
+      max: 10,
+      default: null,
+    },
+    serviceEvaluation: {
+      type: Number,
+      min: 0,
+      max: 10,
+      default: null,
+    },
+    categoryOfDissatisfaction: { type: String, trim: true, default: null },
+    customFields: [
+      {
+        question: { type: String, trim: true, default: "" },
+        answer: {
+          type: String,
+          enum: ["Yes", "No", "Not specified"],
+          default: "Not specified",
+        },
+      },
+    ],
+    secondCallInitiated: {
+      type: String,
+      enum: ["Yes", "No", "Not specified"],
+      default: "Not specified",
+    },
+    secondCallStatus: { type: String, trim: true, default: null },
+    secondCallCategory: { type: String, trim: true, default: null },
+    secondCallAction: { type: String, trim: true, default: null },
+    secondCallTeam: { type: String, trim: true, default: null },
+    secondCallDispatchDate: { type: Date, default: null },
+    secondCallSecondaryStatus: { type: String, trim: true, default: null },
+    secondCallResolutionMethod: { type: String, trim: true, default: null },
+    secondCallResolvedBy: { type: String, trim: true, default: null },
+    secondCallRootCause: { type: String, trim: true, default: null },
+    secondCallResolutionDate: { type: Date, default: null },
+    secondCallResolvedBeforeSurvey: {
+      type: String,
+      enum: ["Yes", "No", "Not specified"],
+      default: "Not specified",
+    },
 
     operation: { type: String, trim: true },
     tarrifName: { type: String, trim: true, default: null },
@@ -248,14 +298,12 @@ const taskSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
       },
     ],
     whomItMayConcern: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
       },
     ],
     createdBy: {

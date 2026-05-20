@@ -6,7 +6,6 @@ import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import { useForm } from "react-hook-form";
 import SelectList from "../SelectList";
 import { useSelector } from "react-redux";
-import UserList from "./UserList";
 import api from "../../api/api";
 import { toast } from "sonner";
 
@@ -135,6 +134,10 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
   );
 };
 
+const callStatusOptions = ["Not Done", "No Answer", "Call Back", "Done"];
+const trueFalseOptions = ["True", "False"];
+const yesNoOptions = ["Yes", "No", "Not specified"];
+
 const EditTaskDialog = ({
   open,
   setOpen,
@@ -188,19 +191,12 @@ const EditTaskDialog = ({
   const user = useSelector((state) => state?.auth?.user);
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm();
 
-  const [assignedTo, setAssignedTo] = useState([]);
-  // console.log({ assignedTo });
-  const [whomItMayConcern, setWhomItMayConcern] = useState([]);
-  // const [status, setStatus] = useState(LISTS[0]);
   const [priority, setPriority] = useState("");
   const [department, setDepartment] = useState(DEPARTMENT[0]);
   const [date, setDate] = useState("");
   const [pisDate, setPisDate] = useState(""); // State for PIS Date
   const [interviewDate, setInterviewDate] = useState("");
   // console.log({ pisDate, interviewDate });
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [teamCompany, setTeamCompany] = useState('');
   const [evaluationScore, setEvaluationScore] = useState('');
   const [governorate, setGovernorate] = useState('');
@@ -209,6 +205,35 @@ const EditTaskDialog = ({
   const [teamInfo, setTeamInfo] = useState({ teamName: '', teamId: '' });
   const [customerType, setCustomerType] = useState('');
   const [validationStatus, setValidationStatus] = useState("Not specified");
+  const [callStatus, setCallStatus] = useState("");
+  const [closureRequestedByFieldTeam, setClosureRequestedByFieldTeam] = useState("False");
+  const [technicalTeamEvaluation, setTechnicalTeamEvaluation] = useState("");
+  const [serviceEvaluation, setServiceEvaluation] = useState("");
+  const [categoryOfDissatisfaction, setCategoryOfDissatisfaction] = useState("");
+  const [customFields, setCustomFields] = useState([{ question: "", answer: "Not specified" }]);
+  const handleAddCustomField = () => {
+    setCustomFields([...customFields, { question: "", answer: "Not specified" }]);
+  };
+  const handleRemoveCustomField = (index) => {
+    setCustomFields(customFields.filter((_, i) => i !== index));
+  };
+  const handleCustomFieldChange = (index, field, value) => {
+    const updated = [...customFields];
+    updated[index][field] = value;
+    setCustomFields(updated);
+  };
+  const [secondCallInitiated, setSecondCallInitiated] = useState("Not specified");
+  const [secondCallStatus, setSecondCallStatus] = useState("");
+  const [secondCallCategory, setSecondCallCategory] = useState("");
+  const [secondCallAction, setSecondCallAction] = useState("");
+  const [secondCallTeam, setSecondCallTeam] = useState("");
+  const [secondCallDispatchDate, setSecondCallDispatchDate] = useState("");
+  const [secondCallSecondaryStatus, setSecondCallSecondaryStatus] = useState("");
+  const [secondCallResolutionMethod, setSecondCallResolutionMethod] = useState("");
+  const [secondCallResolvedBy, setSecondCallResolvedBy] = useState("");
+  const [secondCallRootCause, setSecondCallRootCause] = useState("");
+  const [secondCallResolutionDate, setSecondCallResolutionDate] = useState("");
+  const [secondCallResolvedBeforeSurvey, setSecondCallResolvedBeforeSurvey] = useState("Not specified");
   const [rcaRows, setRcaRows] = useState([
     { responsible: 'Not specified', reason: 'Not specified', subReason: 'Not specified', rootCause: 'Not specified', itnRelated: 'Not specified', relatedToSubscription: 'Not specified', teamAccountability: 'No' }
   ]);
@@ -216,8 +241,6 @@ const EditTaskDialog = ({
   const [freeExtender, setFreeExtender] = useState("Not specified");
   const [extenderType, setExtenderType] = useState("Not specified");
   const [extenderNumber, setExtenderNumber] = useState(0);
-  const [closureCallEvaluation, setClosureCallEvaluation] = useState("");
-  const [closureCallFeedback, setClosureCallFeedback] = useState("");
   const [operation, setOperation] = useState("");
   const [gaiaCheck, setGaiaCheck] = useState("Not specified");
   const [gaiaContent, setGaiaContent] = useState("");
@@ -285,26 +308,6 @@ const EditTaskDialog = ({
     fetchSettings();
   }, []);
 
-  // Fetch all users when the component mounts
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const { data } = await api.get("/users/get-all-users", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-        });
-        // console.log("Fetched users:", data); // Debugging: Log fetched users
-        setUsers(data);
-      } catch (err) {
-        // console.error("Error fetching users:", err); // Debugging: Log error
-        setError("Failed to load users");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUsers();
-  }, [user]);
-
   // Initialize form and state when the task is loaded
   useEffect(() => {
     if (open && task) {
@@ -319,15 +322,6 @@ const EditTaskDialog = ({
         : "";
 
       // console.log("Formatted Interview Date:", formattedInterviewDate); // Debugging log
-
-      if (Array.isArray(task.assignedTo) && task.assignedTo.length > 0) {
-        // console.log("task.assignedTo:", task.assignedTo);
-        setAssignedTo(task.assignedTo.map((assignedUser) => assignedUser._id || assignedUser));
-      }
-
-      if (Array.isArray(task.whomItMayConcern)) {
-        setWhomItMayConcern(task.whomItMayConcern.map((u) => u._id || u));
-      }
 
       reset({
         slid: task.slid || "",
@@ -353,6 +347,7 @@ const EditTaskDialog = ({
       setValue("contactNumber", task.contactNumber || "");
       setValue("requestNumber", task.requestNumber || "");
       setValue("customerFeedback", task.customerFeedback || "");
+      setValue("closureComment", task.closureComment || "");
       setValue("reason", task.reason || "");
       setValue("responsible", task.responsible || "");
       setValue("customerName", task.customerName || "");
@@ -384,6 +379,24 @@ const EditTaskDialog = ({
       });
       setCustomerType(task.customerType || '');
       setValidationStatus(task.validationStatus || "");
+      setCallStatus(task.callStatus || "");
+      setClosureRequestedByFieldTeam(task.closureRequestedByFieldTeam || "False");
+      setTechnicalTeamEvaluation(task.technicalTeamEvaluation || "");
+      setServiceEvaluation(task.serviceEvaluation || "");
+      setCategoryOfDissatisfaction(task.categoryOfDissatisfaction || "");
+      setCustomFields(Array.isArray(task.customFields) && task.customFields.length > 0 ? task.customFields : [{ question: "", answer: "Not specified" }]);
+      setSecondCallInitiated(task.secondCallInitiated || "Not specified");
+      setSecondCallStatus(task.secondCallStatus || "");
+      setSecondCallCategory(task.secondCallCategory || "");
+      setSecondCallAction(task.secondCallAction || "");
+      setSecondCallTeam(task.secondCallTeam || "");
+      setSecondCallDispatchDate(task.secondCallDispatchDate ? new Date(task.secondCallDispatchDate).toISOString().split('T')[0] : "");
+      setSecondCallSecondaryStatus(task.secondCallSecondaryStatus || "");
+      setSecondCallResolutionMethod(task.secondCallResolutionMethod || "");
+      setSecondCallResolvedBy(task.secondCallResolvedBy || "");
+      setSecondCallRootCause(task.secondCallRootCause || "");
+      setSecondCallResolutionDate(task.secondCallResolutionDate ? new Date(task.secondCallResolutionDate).toISOString().split('T')[0] : "");
+      setSecondCallResolvedBeforeSurvey(task.secondCallResolvedBeforeSurvey || "Not specified");
 
       const itns = Array.isArray(task.itnRelated) ? task.itnRelated : (task.itnRelated ? [task.itnRelated] : []);
       const resps = Array.isArray(task.responsible) ? task.responsible : (task.responsible ? [task.responsible] : []);
@@ -412,8 +425,6 @@ const EditTaskDialog = ({
       setFreeExtender(task.freeExtender || "Not specified");
       setExtenderType(task.extenderType || "Not specified");
       setExtenderNumber(task.extenderNumber || 0);
-      setClosureCallEvaluation(task.closureCallEvaluation || "");
-      setClosureCallFeedback(task.closureCallFeedback || "");
       setOperation(task.operation || "");
       setGaiaCheck(task.gaiaCheck || "Not specified");
       setGaiaContent(task.gaiaContent || "");
@@ -448,20 +459,28 @@ const EditTaskDialog = ({
     fetchAllFieldTeams()
   }, [])
 
-  const handleAssignedToChange = (newAssignedTo) => {
-    setAssignedTo(newAssignedTo);
-  };
-
-  const handleWhomItMayConcernChange = (newWhomItMayConcern) => {
-    setWhomItMayConcern(newWhomItMayConcern);
-  };
-
   const handleSubmitForm = async (data) => {
     const formData = {
       ...data,
       slid: data.slid,
-      assignedTo,
-      whomItMayConcern,
+      callStatus,
+      closureRequestedByFieldTeam,
+      technicalTeamEvaluation,
+      serviceEvaluation,
+      categoryOfDissatisfaction,
+      customFields,
+      secondCallInitiated,
+      secondCallStatus,
+      secondCallCategory,
+      secondCallAction,
+      secondCallTeam,
+      secondCallDispatchDate,
+      secondCallSecondaryStatus,
+      secondCallResolutionMethod,
+      secondCallResolvedBy,
+      secondCallRootCause,
+      secondCallResolutionDate,
+      secondCallResolvedBeforeSurvey,
       priority,
       department,
       teamCompany,
@@ -484,8 +503,6 @@ const EditTaskDialog = ({
       freeExtender,
       extenderType: freeExtender === 'Yes' ? extenderType : null,
       extenderNumber: freeExtender === 'Yes' ? extenderNumber : 0,
-      closureCallEvaluation,
-      closureCallFeedback,
       gaiaCheck,
       gaiaContent: gaiaCheck === "Yes" ? gaiaContent : null,
       contractDate,
@@ -629,7 +646,6 @@ const EditTaskDialog = ({
               </Select>
             </FormControl>
 
-            {/* Row 6: Customer Feedback */}
             <TextField
               label="Customer Feedback / Comment"
               fullWidth
@@ -643,7 +659,6 @@ const EditTaskDialog = ({
               sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
             />
 
-            {/* New Row: Dashboard Short Note */}
             <TextField
               label="Dashboard Short Note"
               placeholder="A very short note for the main dashboard card"
@@ -862,11 +877,9 @@ const EditTaskDialog = ({
               />
             </Stack>
 
-            <Divider />
-
-            {/* RCA Section: Row 10 - Now Unified RCA Rows */}
             <UnifiedRCARows
               rcaRows={rcaRows}
+              setRcaRows={setRcaRows}
               dropdownOptions={dropdownOptions}
               handleAdd={handleAddRcaRow}
               handleRemove={handleRemoveRcaRow}
@@ -876,11 +889,14 @@ const EditTaskDialog = ({
             <Divider sx={{ my: 2 }} />
             <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 2 }}>Additional Details (Priority, Validation, etc.)</Typography>
 
-            {/* Additional Details Group */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel>Priority</InputLabel>
-                <Select value={priority} onChange={(e) => setPriority(e.target.value)} label="Priority">
+                <Select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  label="Priority"
+                >
                   {dropdownOptions.PRIORITY.map((level) => (
                     <MenuItem key={level} value={level}>{level}</MenuItem>
                   ))}
@@ -896,56 +912,241 @@ const EditTaskDialog = ({
               </FormControl>
             </Stack>
 
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Closure Call Evaluation (1-10)</InputLabel>
-                <Select value={closureCallEvaluation} onChange={(e) => setClosureCallEvaluation(e.target.value)} label="Closure Call Evaluation (1-10)">
-                  <MenuItem value=""><em>Not specified</em></MenuItem>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                    <MenuItem key={num} value={num}>{num}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                label="Closure Call Feedback"
-                fullWidth
-                variant="outlined"
-                multiline
-                rows={2}
-                value={closureCallFeedback}
-                onChange={(e) => setClosureCallFeedback(e.target.value)}
-                inputProps={{ dir: "auto" }}
-                sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
-              />
-            </Stack>
+            <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)' }}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>FMC Closure</Typography>
+              <Stack spacing={2}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Autocomplete
+                    freeSolo
+                    fullWidth
+                    size="small"
+                    options={callStatusOptions}
+                    value={callStatus}
+                    onChange={(event, newValue) => setCallStatus(newValue || '')}
+                    onInputChange={(event, newValue) => setCallStatus(newValue)}
+                    renderInput={(params) => <TextField {...params} label="Status" variant="outlined" />}
+                  />
+                </Stack>
+                <TextField
+                  label="Comment"
+                  fullWidth
+                  variant="outlined"
+                  multiline
+                  rows={4}
+                  {...register('closureComment')}
+                  inputProps={{ dir: "auto" }}
+                  sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+                />
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Autocomplete
+                    freeSolo
+                    fullWidth
+                    size="small"
+                    options={trueFalseOptions}
+                    value={closureRequestedByFieldTeam}
+                    onChange={(event, newValue) => setClosureRequestedByFieldTeam(newValue || 'False')}
+                    onInputChange={(event, newValue) => setClosureRequestedByFieldTeam(newValue)}
+                    renderInput={(params) => <TextField {...params} label="Closure requested by field team" variant="outlined" />}
+                  />
+                </Stack>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Technical Team Evaluation</InputLabel>
+                    <Select
+                      value={technicalTeamEvaluation}
+                      onChange={(e) => setTechnicalTeamEvaluation(e.target.value)}
+                      label="Technical Team Evaluation"
+                    >
+                      <MenuItem value=""><em>Not specified</em></MenuItem>
+                      {[...Array(11).keys()].map((num) => (
+                        <MenuItem key={num} value={num}>{num}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Service Evaluation</InputLabel>
+                    <Select
+                      value={serviceEvaluation}
+                      onChange={(e) => setServiceEvaluation(e.target.value)}
+                      label="Service Evaluation"
+                    >
+                      <MenuItem value=""><em>Not specified</em></MenuItem>
+                      {[...Array(11).keys()].map((num) => (
+                        <MenuItem key={num} value={num}>{num}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+                <TextField
+                  label="Category of dissatisfaction"
+                  fullWidth
+                  variant="outlined"
+                  value={categoryOfDissatisfaction}
+                  onChange={(e) => setCategoryOfDissatisfaction(e.target.value)}
+                  inputProps={{ dir: "auto" }}
+                  sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+                />
+              </Stack>
+            </Box>
+
+            <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)' }}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Custom Yes/No Fields</Typography>
+              <Stack spacing={2}>
+                {customFields.map((field, index) => (
+                  <Stack key={index} direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-end">
+                    <TextField
+                      label={`Question ${index + 1}`}
+                      placeholder="Enter custom question"
+                      fullWidth
+                      variant="outlined"
+                      value={field.question}
+                      onChange={(e) => handleCustomFieldChange(index, 'question', e.target.value)}
+                    />
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel>Answer</InputLabel>
+                      <Select
+                        value={field.answer}
+                        onChange={(e) => handleCustomFieldChange(index, 'answer', e.target.value)}
+                        label="Answer"
+                      >
+                        {yesNoOptions.map((option) => (
+                          <MenuItem key={option} value={option}>{option}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <IconButton color="error" onClick={() => handleRemoveCustomField(index)} size="small">
+                      <RemoveCircleIcon />
+                    </IconButton>
+                  </Stack>
+                ))}
+                <Button
+                  variant="outlined"
+                  startIcon={<AddCircleIcon />}
+                  onClick={handleAddCustomField}
+                  sx={{ alignSelf: 'flex-start' }}
+                >
+                  Add Custom Field
+                </Button>
+              </Stack>
+            </Box>
+
+            <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)' }}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Second Call Details</Typography>
+              <Stack spacing={2}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Autocomplete
+                    freeSolo
+                    fullWidth
+                    size="small"
+                    options={yesNoOptions}
+                    value={secondCallInitiated}
+                    onChange={(event, newValue) => setSecondCallInitiated(newValue || 'Not specified')}
+                    onInputChange={(event, newValue) => setSecondCallInitiated(newValue)}
+                    renderInput={(params) => <TextField {...params} label="Second Call" variant="outlined" />}
+                  />
+                  <Autocomplete
+                    freeSolo
+                    fullWidth
+                    size="small"
+                    options={callStatusOptions}
+                    value={secondCallStatus}
+                    onChange={(event, newValue) => setSecondCallStatus(newValue || '')}
+                    onInputChange={(event, newValue) => setSecondCallStatus(newValue)}
+                    renderInput={(params) => <TextField {...params} label="Status" variant="outlined" />}
+                  />
+                  <TextField
+                    label="Category of dissatisfaction"
+                    placeholder="Category of dissatisfaction"
+                    fullWidth
+                    variant="outlined"
+                    value={secondCallCategory}
+                    onChange={(e) => setSecondCallCategory(e.target.value)}
+                    inputProps={{ dir: "auto" }}
+                    sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
+                  />
+                </Stack>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <TextField
+                    label="Action"
+                    placeholder="Action"
+                    fullWidth
+                    variant="outlined"
+                    value={secondCallAction}
+                    onChange={(e) => setSecondCallAction(e.target.value)}
+                  />
+                  <TextField
+                    label="Team"
+                    placeholder="Team"
+                    fullWidth
+                    variant="outlined"
+                    value={secondCallTeam}
+                    onChange={(e) => setSecondCallTeam(e.target.value)}
+                  />
+                  <TextField
+                    label="Dispatch Date"
+                    type="date"
+                    fullWidth
+                    variant="outlined"
+                    value={secondCallDispatchDate}
+                    onChange={(e) => setSecondCallDispatchDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Stack>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <TextField
+                    label="Secondary Status"
+                    fullWidth
+                    variant="outlined"
+                    value={secondCallSecondaryStatus}
+                    onChange={(e) => setSecondCallSecondaryStatus(e.target.value)}
+                  />
+                  <TextField
+                    label="Resolution Method"
+                    fullWidth
+                    variant="outlined"
+                    value={secondCallResolutionMethod}
+                    onChange={(e) => setSecondCallResolutionMethod(e.target.value)}
+                  />
+                  <TextField
+                    label="Resolved By"
+                    fullWidth
+                    variant="outlined"
+                    value={secondCallResolvedBy}
+                    onChange={(e) => setSecondCallResolvedBy(e.target.value)}
+                  />
+                </Stack>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <TextField
+                    label="Root Cause"
+                    fullWidth
+                    variant="outlined"
+                    value={secondCallRootCause}
+                    onChange={(e) => setSecondCallRootCause(e.target.value)}
+                  />
+                  <TextField
+                    label="Resolution Date"
+                    type="date"
+                    fullWidth
+                    variant="outlined"
+                    value={secondCallResolutionDate}
+                    onChange={(e) => setSecondCallResolutionDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <Autocomplete
+                    freeSolo
+                    fullWidth
+                    size="small"
+                    options={yesNoOptions}
+                    value={secondCallResolvedBeforeSurvey}
+                    onChange={(event, newValue) => setSecondCallResolvedBeforeSurvey(newValue || 'Not specified')}
+                    onInputChange={(event, newValue) => setSecondCallResolvedBeforeSurvey(newValue)}
+                    renderInput={(params) => <TextField {...params} label="Resolved Before Survey" variant="outlined" />}
+                  />
+                </Stack>
+              </Stack>
+            </Box>
 
             <Divider sx={{ my: 2 }} />
-
-            {/* User Assignment Sections */}
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={4}>
-              <Box flex={1}>
-                <UserList
-                  setAssignedTo={handleAssignedToChange}
-                  assignedTo={assignedTo}
-                  users={users}
-                  loading={loading}
-                  error={error}
-                  label="Assign Task To:"
-                  filteredUsers={whomItMayConcern}
-                />
-              </Box>
-              <Box flex={1}>
-                <UserList
-                  setAssignedTo={handleWhomItMayConcernChange}
-                  assignedTo={whomItMayConcern}
-                  users={users}
-                  loading={loading}
-                  error={error}
-                  label="Whom It May Concern:"
-                  filteredUsers={assignedTo}
-                />
-              </Box>
-            </Stack>
 
             {/* Actions */}
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
