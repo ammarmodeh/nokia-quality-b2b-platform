@@ -664,6 +664,10 @@ const AllTasksList = () => {
     };
   }, [filteredTasks, totalSamplesToken]);
 
+  const todoCount = filteredTasks.filter(t => t.status === 'Todo').length;
+  const inProgressCount = filteredTasks.filter(t => t.status === 'In Progress').length;
+  const closedCount = filteredTasks.filter(t => t.status === 'Closed').length;
+
   const StatCard = ({ title, value, icon, color, subtitle, extra }) => (
     <Card sx={{
       background: 'rgba(45, 45, 45, 0.6)',
@@ -1031,10 +1035,6 @@ const AllTasksList = () => {
     const neutrals = auditedTasks.filter(t => Number(t.evaluationScore) >= 7 && Number(t.evaluationScore) <= 8).length;
     const promoters = Math.max(0, totalSamples - (detractors + neutrals));
     const nps = (totalSamples > 0) ? Math.round(((promoters / totalSamples) - (detractors / totalSamples)) * 100) : 0;
-
-    const todoCount = filteredTasks.filter(t => t.status === 'Todo').length;
-    const inProgressCount = filteredTasks.filter(t => t.status === 'In Progress').length;
-    const closedCount = filteredTasks.filter(t => t.status === 'Closed').length;
 
     const validatedDetractors = auditedTasks.filter(t => 
       Number(t.evaluationScore) <= 6 && t.validationStatus === 'Validated'
@@ -2942,6 +2942,28 @@ const AllTasksList = () => {
   const topITN = getTopK('itnRelated');
   const topSubRel = getTopK('relatedToSubscription');
 
+  const totalIssues = useMemo(() => {
+    return filteredTasks.reduce((acc, task) => {
+      const val = task.reason;
+      if (!val) return acc;
+
+      let values = [];
+      if (Array.isArray(val)) {
+        values = val.flatMap(v => typeof v === 'string' ? v.split(',').map(s => s.trim()) : [v]).filter(Boolean);
+      } else if (typeof val === 'string' && val.trim()) {
+        values = val.split(',').map(s => s.trim()).filter(Boolean);
+      } else if (val) {
+        values = [String(val).trim()];
+      }
+
+      return acc + values.length;
+    }, 0);
+  }, [filteredTasks]);
+
+  const totalTasks = useMemo(() => filteredTasks.length, [filteredTasks]);
+  const detractorsCount = useMemo(() => filteredTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) >= 1 && Number(t.evaluationScore) <= 6).length, [filteredTasks]);
+  const neutralsCount = useMemo(() => filteredTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) >= 7 && Number(t.evaluationScore) <= 8).length, [filteredTasks]);
+
   const StatBar = ({ label, value, color, icon, subLabel }) => (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, bgcolor: alpha(color, 0.1), borderRadius: 2, minWidth: 100, flex: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, color: color }}>
@@ -3054,12 +3076,19 @@ const AllTasksList = () => {
               value={loadingSamples ? "..." : totalSamples}
               color="#7b68ee"
               icon={<MdHistory />}
-              subLabel={`Actual Audits: ${actualAudits}`}
+              // subLabel={`Actual Audits: ${actualAudits}`}
             />
             <StatBar label="NPS Score" value={nps} color={nps >= 50 ? "#4caf50" : nps >= 0 ? "#ff9800" : "#f44336"} icon={<MdInsights />} />
             <StatBar label="Promoters" value={`${promoterRate}%`} color="#4caf50" icon={<MdStar />} />
             <StatBar label="Detractors" value={`${detractorRate}%`} color="#f44336" icon={<MdError />} />
             <StatBar label="Neutrals" value={`${neutralRate}%`} color="#ff9800" icon={<MdRadioButtonUnchecked />} />
+          </Stack>
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
+            <StatBar label="Total Tasks" value={totalTasks} color="#7b68ee" icon={<MdAssignmentTurnedIn />} />
+            <StatBar label="Total Issues" value={totalIssues} color="#7b68ee" icon={<MdAssignmentTurnedIn />} />
+            <StatBar label="Detractors" value={detractorsCount} color="#f44336" icon={<MdError />} />
+            <StatBar label="Neutrals" value={neutralsCount} color="#ff9800" icon={<MdRadioButtonUnchecked />} />
           </Stack>
 
           {/* Expandable Detailed Stats */}
@@ -3749,6 +3778,53 @@ const AllTasksList = () => {
       </Box>
 
       {/* Tasks Table */}
+      <Box sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 1,
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        mb: 1,
+        p: 1,
+        borderRadius: 2,
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#b3b3b3', fontWeight: 700 }}>Status Summary:</Typography>
+        </Box>
+        {[{
+          label: 'Closed',
+          count: closedCount,
+          color: '#4caf50'
+        }, {
+          label: 'In Progress',
+          count: inProgressCount,
+          color: '#2196f3'
+        }, {
+          label: 'Todo',
+          count: todoCount,
+          color: '#ffb300'
+        }].map((item) => (
+          <Box
+            key={item.label}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              px: 2,
+              py: 0.75,
+              borderRadius: 2,
+              bgcolor: 'rgba(255,255,255,0.05)',
+              border: `1px solid ${item.color}33`,
+              minWidth: 120,
+              justifyContent: 'space-between'
+            }}
+          >
+            <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 600 }}>{item.label}</Typography>
+            <Typography variant="subtitle2" sx={{ color: item.color, fontWeight: 800 }}>{item.count}</Typography>
+          </Box>
+        ))}
+      </Box>
       <TableContainer component={Paper} onClick={handleTableContainerClick}
         sx={{
           mt: 2,

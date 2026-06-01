@@ -212,7 +212,12 @@ const TaskViewPage = () => {
                     <DetailItem label="Close Date" value={task.closeDate ? format(new Date(task.closeDate), "MMM dd, yyyy") : '—'} />
                     <DetailItem label="PIS Date" value={task.pisDate ? format(new Date(task.pisDate), "MMM dd, yyyy") : '—'} />
                     <DetailItem label="Interview Date" value={task.interviewDate ? format(new Date(task.interviewDate), "MMM dd, yyyy") : '—'} />
-                    <DetailItem label="Initial Feedback" value={task.customerFeedback} fullWidth />
+                    <DetailItem 
+                      label="Initial Feedback" 
+                      value={task.customerFeedback} 
+                      fullWidth 
+                      direction="rtl" 
+                    />
                   </DetailGrid>
                 </DataSection>
                 <DataSection title="Operations">
