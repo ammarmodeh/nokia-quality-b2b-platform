@@ -65,6 +65,7 @@ const PerfAssessmentDashboard = () => {
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:503px)');
   const [exporting, setExporting] = useState(false);
+  const [globalStats, setGlobalStats] = useState(null);
 
   useEffect(() => {
     const fetchAllTeams = async () => {
@@ -92,6 +93,79 @@ const PerfAssessmentDashboard = () => {
     };
     fetchSettings();
   }, []);
+
+  // Calculate global stats
+  useEffect(() => {
+    const calculateGlobalStats = async () => {
+      try {
+        const response = await api.get('/quiz-results', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+        });
+        const allResults = response.data.data || [];
+        
+        if (allResults.length === 0) {
+          setGlobalStats(null);
+          return;
+        }
+
+        // Group by team
+        const teamStats = {};
+        allResults.forEach(result => {
+          if (!teamStats[result.teamId]) {
+            teamStats[result.teamId] = {
+              teamName: result.teamName,
+              results: [],
+              averageScore: 0,
+            };
+          }
+          teamStats[result.teamId].results.push(result);
+        });
+
+        // Calculate averages
+        Object.values(teamStats).forEach(team => {
+          const avg = team.results.reduce((sum, r) => sum + r.percentage, 0) / team.results.length;
+          team.averageScore = Math.round(avg);
+        });
+
+        // Sort teams by average score
+        const sortedTeams = Object.values(teamStats).sort((a, b) => b.averageScore - a.averageScore);
+
+        // Score distribution
+        const scoreDistribution = {
+          'Excellent (85+)': 0,
+          'Good (70-84)': 0,
+          'Average (50-69)': 0,
+          'Below Average (<50)': 0
+        };
+
+        Object.values(teamStats).forEach(team => {
+          if (team.averageScore >= 85) scoreDistribution['Excellent (85+)'] += 1;
+          else if (team.averageScore >= 70) scoreDistribution['Good (70-84)'] += 1;
+          else if (team.averageScore >= 50) scoreDistribution['Average (50-69)'] += 1;
+          else scoreDistribution['Below Average (<50)'] += 1;
+        });
+
+        setGlobalStats({
+          totalTeams: allTeams.length,
+          teamsWithResults: Object.keys(teamStats).length,
+          totalResults: allResults.length,
+          averageScore: Math.round(allResults.reduce((sum, r) => sum + r.percentage, 0) / allResults.length),
+          topTeams: sortedTeams.slice(0, 5),
+          bottomTeams: sortedTeams.slice(-3).reverse(),
+          scoreDistribution,
+          allTeamStats: sortedTeams
+        });
+      } catch (err) {
+        console.error('Failed to calculate global stats:', err);
+      }
+    };
+
+    if (allTeams.length > 0) {
+      calculateGlobalStats();
+    }
+  }, [allTeams]);
 
   useEffect(() => {
     if (selectedResult) {
@@ -801,6 +875,166 @@ const PerfAssessmentDashboard = () => {
           </Stack>
         </Box>
       </Paper>
+
+      {/* Global Stats Overview */}
+      {/* Global Stats Overview */}
+      {globalStats && (
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{
+            color: colors.primary,
+            fontWeight: 'bold',
+            mb: 2
+          }}>
+            Quiz Results Global Statistics
+          </Typography>
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: 2,
+            mb: 4
+          }}>
+            {/* Total Teams */}
+            <Paper sx={{
+              p: 2.5,
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px',
+            }}>
+              <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block', mb: 1 }}>
+                Total Teams
+              </Typography>
+              <Typography variant="h5" sx={{ color: colors.textPrimary, fontWeight: 'bold' }}>
+                {globalStats.totalTeams}
+              </Typography>
+            </Paper>
+
+            {/* Teams with Results */}
+            <Paper sx={{
+              p: 2.5,
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px',
+            }}>
+              <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block', mb: 1 }}>
+                Teams with Results
+              </Typography>
+              <Typography variant="h5" sx={{ color: '#10b981', fontWeight: 'bold' }}>
+                {globalStats.teamsWithResults}
+              </Typography>
+            </Paper>
+
+            {/* Total Results */}
+            <Paper sx={{
+              p: 2.5,
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px',
+            }}>
+              <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block', mb: 1 }}>
+                Total Results
+              </Typography>
+              <Typography variant="h5" sx={{ color: colors.primary, fontWeight: 'bold' }}>
+                {globalStats.totalResults}
+              </Typography>
+            </Paper>
+
+            {/* Average Score */}
+            <Paper sx={{
+              p: 2.5,
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px',
+            }}>
+              <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block', mb: 1 }}>
+                Global Average Score
+              </Typography>
+              <Typography variant="h5" sx={{ color: colors.textPrimary, fontWeight: 'bold' }}>
+                {globalStats.averageScore}%
+              </Typography>
+            </Paper>
+          </Box>
+
+          {/* Top and Bottom Teams */}
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: 2,
+            mb: 4
+          }}>
+            {/* Top Teams */}
+            <Paper sx={{
+              p: 3,
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px',
+            }}>
+              <Typography variant="subtitle2" sx={{
+                color: '#10b981',
+                fontWeight: 'bold',
+                mb: 2
+              }}>
+                Top Performing Teams
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {globalStats.topTeams.map((team, idx) => (
+                  <Box key={idx} sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    p: 1.5,
+                    backgroundColor: colors.surfaceElevated,
+                    borderRadius: '6px',
+                    borderLeft: `3px solid #10b981`
+                  }}>
+                    <Typography variant="body2" sx={{ color: colors.textPrimary }}>
+                      {idx + 1}. {team.teamName}
+                    </Typography>
+                    <Chip
+                      label={`${team.averageScore}%`}
+                      size="small"
+                      sx={{ backgroundColor: '#10b98130', color: '#10b981', fontWeight: 'bold' }}
+                    />
+                  </Box>
+                ))}
+              </Box>
+            </Paper>
+
+            {/* Score Distribution */}
+            <Paper sx={{
+              p: 3,
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px',
+            }}>
+              <Typography variant="subtitle2" sx={{
+                color: colors.primary,
+                fontWeight: 'bold',
+                mb: 2
+              }}>
+                Performance Distribution
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {Object.entries(globalStats.scoreDistribution).map(([category, count]) => (
+                  <Box key={category} sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}>
+                    <Typography variant="body2" sx={{ color: colors.textSecondary }}>
+                      {category}
+                    </Typography>
+                    <Chip
+                      label={count}
+                      size="small"
+                      sx={{ backgroundColor: colors.primaryHover, color: colors.primary, fontWeight: 'bold' }}
+                    />
+                  </Box>
+                ))}
+              </Box>
+            </Paper>
+          </Box>
+        </Box>
+      )}
 
       {error && (
         <Alert severity="error" sx={{

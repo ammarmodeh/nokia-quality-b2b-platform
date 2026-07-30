@@ -87,9 +87,16 @@ Note: ${note}
     const handleCopyAll = () => {
         if (!tickets.length) return;
 
+        const gaiaInfo = [];
+        if (task?.gaiaCheck) gaiaInfo.push(`GAIA Check: ${task.gaiaCheck}`);
+        if (task?.gaiaContent) gaiaInfo.push(`GAIA Content: ${task.gaiaContent}`);
+        if (task?.latestGaia?.transactionType) gaiaInfo.push(`Latest GAIA Type: ${task.latestGaia.transactionType}`);
+        if (task?.latestGaia?.transactionState) gaiaInfo.push(`Latest GAIA State: ${task.latestGaia.transactionState}`);
+        if (task?.latestGaia?.unfReasonCode) gaiaInfo.push(`Latest GAIA Reason: ${task.latestGaia.unfReasonCode}`);
+
         const header = `Q-Ops Transaction Log for ${task?.slid || 'N/A'} #${task?.requestNumber || 'N/A'}
 Customer: ${task?.customerName || "No Customer Name"}
-==========================================
+${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}==========================================
 `;
         const body = tickets.map(t => formatTicket(t)).join('\n');
         copyToClipboard(header + body);
@@ -153,6 +160,36 @@ Customer: ${task?.customerName || "No Customer Name"}
                                 {task.customerName || "No Customer Name"}
                             </Typography>
                         </Stack>
+                        {(task.gaiaCheck || task.gaiaContent || task.latestGaia) && (
+                            <Box sx={{ mt: 2, p: 2, bgcolor: '#1b1b1b', borderRadius: 2, border: '1px solid #333' }}>
+                                <Typography variant="subtitle2" sx={{ color: '#aaa', letterSpacing: 0.5, mb: 1, fontSize: '0.75rem' }}>
+                                    GAIA Summary
+                                </Typography>
+                                <Stack spacing={1}>
+                                    <Typography variant="body2" sx={{ color: '#eee' }}>
+                                        <strong>GAIA Check:</strong> {task.gaiaCheck || 'No'}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: '#eee', whiteSpace: 'pre-wrap' }}>
+                                        <strong>GAIA Content:</strong> {task.gaiaContent || 'N/A'}
+                                    </Typography>
+                                    {task.latestGaia?.transactionType && (
+                                        <Typography variant="body2" sx={{ color: '#eee' }}>
+                                            <strong>Latest GAIA Type:</strong> {task.latestGaia.transactionType}
+                                        </Typography>
+                                    )}
+                                    {task.latestGaia?.transactionState && (
+                                        <Typography variant="body2" sx={{ color: '#eee' }}>
+                                            <strong>Latest GAIA State:</strong> {task.latestGaia.transactionState}
+                                        </Typography>
+                                    )}
+                                    {task.latestGaia?.unfReasonCode && (
+                                        <Typography variant="body2" sx={{ color: '#eee' }}>
+                                            <strong>Latest GAIA Reason:</strong> {task.latestGaia.unfReasonCode}
+                                        </Typography>
+                                    )}
+                                </Stack>
+                            </Box>
+                        )}
                     </Box>
                 )}
 

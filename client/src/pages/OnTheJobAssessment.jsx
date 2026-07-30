@@ -54,6 +54,7 @@ const OnTheJobAssessment = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assessmentToDelete, setAssessmentToDelete] = useState(null);
   const [teamNameConfirmation, setTeamNameConfirmation] = useState("");
+  const [otjFilterStatus, setOtjFilterStatus] = useState('all'); // 'all', 'with', 'without'
 
   // Consistent scoring labels function
   const [settings, setSettings] = useState(null);
@@ -1364,8 +1365,73 @@ const OnTheJobAssessment = () => {
         </Box>
 
         {fieldTeams.length > 0 && (
+          <Box sx={{ mb: 3 }}>
+            <Typography sx={{ color: colors.textSecondary, mb: 2, fontWeight: 600 }}>
+              Filter Teams by OTJ Assessment Status:
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Button
+                onClick={() => setOtjFilterStatus('all')}
+                variant={otjFilterStatus === 'all' ? 'contained' : 'outlined'}
+                sx={{
+                  backgroundColor: otjFilterStatus === 'all' ? colors.primary : 'transparent',
+                  borderColor: otjFilterStatus === 'all' ? colors.primary : colors.border,
+                  color: otjFilterStatus === 'all' ? 'white' : colors.textPrimary,
+                  '&:hover': {
+                    backgroundColor: otjFilterStatus === 'all' ? '#1d4ed8' : colors.primaryHover,
+                    borderColor: colors.primary,
+                  },
+                  textTransform: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                All Teams ({fieldTeams.length})
+              </Button>
+              <Button
+                onClick={() => setOtjFilterStatus('with')}
+                variant={otjFilterStatus === 'with' ? 'contained' : 'outlined'}
+                sx={{
+                  backgroundColor: otjFilterStatus === 'with' ? '#10b981' : 'transparent',
+                  borderColor: otjFilterStatus === 'with' ? '#10b981' : colors.border,
+                  color: otjFilterStatus === 'with' ? 'white' : colors.textPrimary,
+                  '&:hover': {
+                    backgroundColor: otjFilterStatus === 'with' ? '#059669' : 'rgba(16, 185, 129, 0.15)',
+                    borderColor: '#10b981',
+                  },
+                  textTransform: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                With OTJ Assessment ({fieldTeams.filter(team => teamAssessmentsMap[team._id]?.length > 0).length})
+              </Button>
+              <Button
+                onClick={() => setOtjFilterStatus('without')}
+                variant={otjFilterStatus === 'without' ? 'contained' : 'outlined'}
+                sx={{
+                  backgroundColor: otjFilterStatus === 'without' ? '#f59e0b' : 'transparent',
+                  borderColor: otjFilterStatus === 'without' ? '#f59e0b' : colors.border,
+                  color: otjFilterStatus === 'without' ? 'white' : colors.textPrimary,
+                  '&:hover': {
+                    backgroundColor: otjFilterStatus === 'without' ? '#d97706' : 'rgba(245, 158, 11, 0.15)',
+                    borderColor: '#f59e0b',
+                  },
+                  textTransform: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                Without OTJ Assessment ({fieldTeams.filter(team => !teamAssessmentsMap[team._id]?.length).length})
+              </Button>
+            </Box>
+          </Box>
+        )}
+
+        {fieldTeams.length > 0 && (
           <TeamList
-            fieldTeams={fieldTeams}
+            fieldTeams={fieldTeams.filter(team => {
+              if (otjFilterStatus === 'with') return teamAssessmentsMap[team._id]?.length > 0;
+              if (otjFilterStatus === 'without') return !teamAssessmentsMap[team._id]?.length;
+              return true; // 'all'
+            })}
             colors={colors}
             isTeamAssessed={isTeamAssessed}
             teamAssessmentsMap={teamAssessmentsMap}

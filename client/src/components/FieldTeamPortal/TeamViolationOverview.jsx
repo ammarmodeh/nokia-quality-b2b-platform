@@ -971,8 +971,8 @@ const TeamViolationOverview = ({
       )
     },
     // New accountability columns
-    { field: 'teamDetractors', headerName: 'Team Det.', type: 'number', width: 90, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#ef4444', fontWeight: 600 }}>{params.value}</span> },
-    { field: 'teamNeutrals', headerName: 'Team Neu.', type: 'number', width: 90, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#f59e0b', fontWeight: 600 }}>{params.value}</span> },
+    { field: 'teamDetractors', headerName: 'Detractors', type: 'number', width: 90, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#ef4444', fontWeight: 600 }}>{params.value}</span> },
+    { field: 'teamNeutrals', headerName: 'Neutrals', type: 'number', width: 90, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#f59e0b', fontWeight: 600 }}>{params.value}</span> },
     { field: 'reachDetractors', headerName: 'Acc. Det.', type: 'number', width: 100, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.value}</span> },
     { field: 'reachNeutrals', headerName: 'Acc. Neu.', type: 'number', width: 100, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#f59e0b' }}>{params.value}</span> },
     { 

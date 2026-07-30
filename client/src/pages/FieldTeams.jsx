@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Box, TextField, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Divider, Tooltip, Typography, IconButton,
   useMediaQuery, List, ListItem, ListItemText, Chip,
-  Avatar, Menu, MenuItem, ListItemIcon
+  Avatar, Menu, MenuItem, ListItemIcon, Checkbox, FormControlLabel
 } from '@mui/material';
 import {
   Edit as EditIcon, Delete as DeleteIcon, PauseCircleOutline as PauseCircleOutlineIcon, Block as BlockIcon,
@@ -53,6 +53,7 @@ const FieldTeamForm = () => {
   const [leaveReason, setLeaveReason] = useState('');
   const [leaveStartDate, setLeaveStartDate] = useState('');
   const [leaveEndDate, setLeaveEndDate] = useState('');
+  const [leaveUseToday, setLeaveUseToday] = useState(false);
   const [resignationReason, setResignationReason] = useState('');
   const [paginationModel, setPaginationModel] = useState({
     pageSize: 10,
@@ -556,10 +557,11 @@ const FieldTeamForm = () => {
   // Handle confirm on leave and resigned
   const handleConfirmOnLeave = useCallback(async () => {
     try {
+      const startDate = leaveUseToday ? new Date().toISOString().split('T')[0] : leaveStartDate;
       const response = await api.post(`/field-teams/on-leave-field-team/${selectedTeamId}`, {
-        leaveReason,
-        leaveStartDate,
-        leaveEndDate,
+        leaveReason: leaveReason || null,
+        leaveStartDate: startDate,
+        leaveEndDate: leaveEndDate || null,
       }, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
@@ -576,7 +578,7 @@ const FieldTeamForm = () => {
     } catch (error) {
       alert('An error occurred while marking the team as on leave.');
     }
-  }, [leaveReason, leaveStartDate, leaveEndDate, selectedTeamId]);
+  }, [leaveReason, leaveStartDate, leaveEndDate, leaveUseToday, selectedTeamId]);
 
   const handleConfirmResigned = useCallback(async () => {
     try {
@@ -1332,8 +1334,24 @@ const FieldTeamForm = () => {
           </DialogTitle>
           <DialogContent sx={{ bgcolor: '#000', color: '#fff', p: 3 }}>
             <Stack spacing={2} sx={{ mt: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={leaveUseToday}
+                    onChange={(e) => {
+                      setLeaveUseToday(e.target.checked);
+                      if (e.target.checked) {
+                        setLeaveStartDate(new Date().toISOString().split('T')[0]);
+                      }
+                    }}
+                    sx={{ color: '#fff' }}
+                  />
+                }
+                label="Assign today as start date"
+                sx={{ color: '#fff' }}
+              />
               <TextField
-                label="Leave Reason"
+                label="Leave Reason (optional)"
                 fullWidth
                 value={leaveReason}
                 onChange={(e) => setLeaveReason(e.target.value)}
@@ -1355,7 +1373,12 @@ const FieldTeamForm = () => {
                   type="date"
                   fullWidth
                   value={leaveStartDate}
-                  onChange={(e) => setLeaveStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setLeaveStartDate(e.target.value);
+                    if (leaveUseToday && e.target.value !== new Date().toISOString().split('T')[0]) {
+                      setLeaveUseToday(false);
+                    }
+                  }}
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
@@ -1479,14 +1502,14 @@ const FieldTeamForm = () => {
             }
           }}
         >
-          {menuTeam?.isSuspended && (
+          {(menuTeam?.isSuspended || menuTeam?.isOnLeave) && (
             <MenuItem onClick={() => { handleReactivateClick(menuTeam._id); handleMenuClose(); }}>
               <ListItemIcon><PlayCircleOutlineIcon fontSize="small" sx={{ color: '#4caf50' }} /></ListItemIcon>
               Reactivate
             </MenuItem>
           )}
 
-          {!menuTeam?.isSuspended && !menuTeam?.isTerminated && !menuTeam?.isResigned && (
+          {!menuTeam?.isSuspended && !menuTeam?.isOnLeave && !menuTeam?.isTerminated && !menuTeam?.isResigned && (
             <MenuItem onClick={() => { handleSuspendClick(menuTeam._id); handleMenuClose(); }}>
               <ListItemIcon><PauseCircleOutlineIcon fontSize="small" sx={{ color: '#ed6c02' }} /></ListItemIcon>
               Suspend

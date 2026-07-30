@@ -239,6 +239,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
       textToCopy += `Sub Reason: ${task.subReason || 'N/A'}\n`;
       textToCopy += `Root Cause: ${task.rootCause || 'N/A'}\n`;
       textToCopy += `GAIA Check: ${task.gaiaCheck || 'N/A'}\n`;
+      textToCopy += `GAIA Content: ${task.gaiaContent || 'N/A'}\n`;
       textToCopy += `Latest QOps Type: ${task.latestGaia?.transactionType || 'N/A'}\n`;
       textToCopy += `Latest QOps State: ${task.latestGaia?.transactionState || 'N/A'}\n`;
       textToCopy += `Latest QOps Reason: ${task.latestGaia?.unfReasonCode || 'N/A'}\n\n`;
@@ -340,9 +341,10 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
       'Reason': task.reason,
       'Sub Reason': task.subReason || 'N/A',
       'Root Cause': task.rootCause || 'N/A',
+      'GAIA Check': task.gaiaCheck || 'N/A',
+      'GAIA Content': task.gaiaContent || 'N/A',
       'ITN Related': task.itnRelated || 'N/A',
       'Related to Current Subscription': task.relatedToSubscription || 'N/A',
-      'GAIA Check': task.gaiaCheck || 'N/A',
       'Latest QOps Type': task.latestGaia?.transactionType || 'N/A',
       'Latest QOps State': task.latestGaia?.transactionState || 'N/A',
       'Latest QOps Reason': task.latestGaia?.unfReasonCode || 'N/A',
@@ -612,6 +614,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                               valueStyle={task.gaiaCheck === 'Yes' ? { color: 'green', fontWeight: 'bold' }
                                 : {}}
                             />
+                            <DetailItem label="GAIA Content" value={task.gaiaContent || "N/A"} />
                             {task.latestGaia && (
                               <>
                                 <DetailItem label="Latest QOps Type" value={task.latestGaia.transactionType || "N/A"} />

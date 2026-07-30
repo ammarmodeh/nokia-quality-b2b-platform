@@ -29,7 +29,7 @@ import {
   Lightbulb
 } from '@mui/icons-material';
 import moment from "moment";
-import { subDays, isAfter } from 'date-fns';
+import { subDays, isAfter, format } from 'date-fns';
 
 const normalizeText = (value) => {
   if (value === undefined || value === null) return '';
@@ -3461,6 +3461,261 @@ ${data.map((a, i) => `
     XLSX.writeFile(wb, `Team_Performance_Ranking_DeepDive_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  // Helper function to build detailed task export data
+  const buildDetailedTaskRow = (task) => {
+    const formatArrayValue = (value) => {
+      if (Array.isArray(value) && value.length) return value.join(', ');
+      if (typeof value === 'string' && value.trim()) return value.trim();
+      return 'N/A';
+    };
+
+    return {
+      SLID: task.slid || 'N/A',
+      'Request Number': task.requestNumber || 'N/A',
+      'Customer Name': task.customerName || 'N/A',
+      'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
+      Priority: task.priority || 'N/A',
+      Status: task.validationStatus || 'N/A',
+      'Reason': formatArrayValue(task.reason),
+      'Sub Reason': formatArrayValue(task.subReason),
+      'Root Cause': formatArrayValue(task.rootCause),
+      'Ownership': formatArrayValue(task.responsible),
+      'Team Accountability': formatArrayValue(task.teamAccountability),
+      'Field Team': task.teamName || 'N/A',
+      'Score': task.evaluationScore !== null && task.evaluationScore !== 'N/A' ? task.evaluationScore : 'N/A',
+      'Category': task.categoryOfDissatisfaction || 'N/A',
+      'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
+      'Created Date': task.createdAt ? format(new Date(task.createdAt), 'yyyy-MM-dd') : 'N/A'
+    };
+  };
+
+  const handleExportFilteredTeamTasks = () => {
+    if (!filteredTechnicalTasks || filteredTechnicalTasks.length === 0) {
+      alert('No tasks to export');
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+
+    // Helper styling functions
+    const applyHeaderStyle = (ws, range, bg = "1F2937", color = "FFFFFF") => {
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellAddress]) continue;
+          ws[cellAddress].s = {
+            font: { bold: true, color: { rgb: color } },
+            fill: { fgColor: { rgb: bg } },
+            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            border: {
+              top: { style: "thin", color: { rgb: "000000" } },
+              bottom: { style: "thin", color: { rgb: "000000" } },
+              left: { style: "thin", color: { rgb: "000000" } },
+              right: { style: "thin", color: { rgb: "000000" } }
+            }
+          };
+        }
+      }
+    };
+
+    const applyDataRowStyle = (ws, range) => {
+      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellAddress]) continue;
+          ws[cellAddress].s = {
+            alignment: { vertical: "center", wrapText: true },
+            border: { bottom: { style: "thin", color: { rgb: "E5E7EB" } } }
+          };
+        }
+      }
+    };
+
+    const addTitle = (ws, titleText, endCol) => {
+      ws['A1'] = { v: titleText, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "7B68EE" } }, alignment: { horizontal: "center", vertical: "center" } } };
+      if (!ws['!merges']) ws['!merges'] = [];
+      ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: endCol } });
+    };
+
+    const fixSheetRange = (ws) => {
+      const cells = Object.keys(ws).filter(k => k[0] !== '!');
+      if (cells.length === 0) return;
+      const range = { s: { r: 1000000, c: 1000000 }, e: { r: 0, c: 0 } };
+      cells.forEach(addr => {
+        const c = XLSX.utils.decode_cell(addr);
+        if (c.r < range.s.r) range.s.r = c.r;
+        if (c.r > range.e.r) range.e.r = c.r;
+        if (c.c < range.s.c) range.s.c = c.c;
+        if (c.c > range.e.c) range.e.c = c.c;
+      });
+      ws['!ref'] = XLSX.utils.encode_range(range);
+    };
+
+    // 1. Summary Sheet
+    const auditedTasks = filteredTechnicalTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== 'N/A');
+    const detractors = auditedTasks.filter(t => Number(t.evaluationScore) <= 6).length;
+    const neutrals = auditedTasks.filter(t => Number(t.evaluationScore) >= 7 && Number(t.evaluationScore) <= 8).length;
+    const promoters = Math.max(0, auditedTasks.length - (detractors + neutrals));
+
+    const summaryData = [
+      ["FIELD TEAM TASKS AUDIT SUMMARY", "", ""],
+      ["Team Name:", selectedTeam?.teamName || "N/A", ""],
+      ["Export Date:", format(new Date(), 'dd/MM/yyyy HH:mm'), ""],
+      ["Reported Period:", "Selected Period", ""],
+      ["", "", ""],
+      ["TASK SUMMARY METRICS", "VALUE", "PERCENTAGE"],
+      ["Total Tasks", filteredTechnicalTasks.length, "-"],
+      ["Audited Tasks", auditedTasks.length, filteredTechnicalTasks.length > 0 ? `${((auditedTasks.length / filteredTechnicalTasks.length) * 100).toFixed(1)}%` : "0%"],
+      ["Detractors (Score ≤ 6)", detractors, auditedTasks.length > 0 ? `${((detractors / auditedTasks.length) * 100).toFixed(1)}%` : "0%"],
+      ["Neutrals (Score 7-8)", neutrals, auditedTasks.length > 0 ? `${((neutrals / auditedTasks.length) * 100).toFixed(1)}%` : "0%"],
+      ["Promoters (Score ≥ 9)", promoters, auditedTasks.length > 0 ? `${((promoters / auditedTasks.length) * 100).toFixed(1)}%` : "0%"],
+    ];
+
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    addTitle(wsSummary, `Field Team Tasks - ${selectedTeam?.teamName || "Team"}`, 2);
+    wsSummary['A2'].s = { font: { bold: true } };
+    wsSummary['A3'].s = { font: { bold: true } };
+    applyHeaderStyle(wsSummary, { s: { r: 5, c: 0 }, e: { r: 5, c: 2 } }, "374151");
+    applyDataRowStyle(wsSummary, { s: { r: 5, c: 0 }, e: { r: 10, c: 2 } });
+    wsSummary['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 15 }];
+    fixSheetRange(wsSummary);
+
+    XLSX.utils.book_append_sheet(workbook, wsSummary, 'Summary');
+
+    // 2. Detailed Tasks Sheet
+    const detailedData = filteredTechnicalTasks.map(buildDetailedTaskRow);
+    const wsDetailed = XLSX.utils.json_to_sheet(detailedData);
+
+    // Apply styling to detailed sheet
+    if (detailedData.length > 0) {
+      const headerRange = { s: { r: 0, c: 0 }, e: { r: 0, c: Object.keys(detailedData[0]).length - 1 } };
+      applyHeaderStyle(wsDetailed, headerRange, "3B5998");
+      applyDataRowStyle(wsDetailed, { s: { r: 0, c: 0 }, e: { r: detailedData.length, c: Object.keys(detailedData[0]).length - 1 } });
+    }
+
+    // Auto-size columns
+    const range = XLSX.utils.decode_range(wsDetailed['!ref'] || 'A1');
+    const cols = [];
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      let maxLen = 12;
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        const cell = wsDetailed[XLSX.utils.encode_cell({ r: R, c: C })];
+        if (cell && cell.v) {
+          const len = cell.v.toString().length;
+          if (len > maxLen) maxLen = len;
+        }
+      }
+      cols.push({ wch: Math.min(maxLen + 2, 40) }); // Cap at 40 for readability
+    }
+    wsDetailed['!cols'] = cols;
+    fixSheetRange(wsDetailed);
+
+    XLSX.utils.book_append_sheet(workbook, wsDetailed, 'Tasks');
+
+    // 3. RCA Analysis Sheet
+    const getHierarchicalRCA = (tasks, ownerFilter = null) => {
+      const tree = {};
+      const normalize = (val) => {
+        if (!val) return [];
+        if (Array.isArray(val)) {
+          return val.flatMap(v => (typeof v === 'string' ? v.split(',').map(s => s.trim()) : [v])).filter(Boolean);
+        }
+        if (typeof val === 'string' && val.trim()) {
+          return val.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        return [String(val).trim()];
+      };
+
+      tasks.forEach(t => {
+        const reasons = normalize(t.reason);
+        const subReasons = normalize(t.subReason);
+        const rootCauses = normalize(t.rootCause);
+        const resps = normalize(t.responsible);
+        
+        const max = Math.max(reasons.length, subReasons.length, rootCauses.length, resps.length);
+        for (let i = 0; i < max; i++) {
+          const resp = (resps[i] || resps[0] || 'Unknown').trim();
+          if (ownerFilter && resp !== ownerFilter) continue;
+
+          const r = (reasons[i] || reasons[0] || 'Unknown').trim() || 'Unknown';
+          const sr = (subReasons[i] || subReasons[0] || 'Unknown').trim() || 'Unknown';
+          const rc = (rootCauses[i] || 'Unknown').trim() || 'Unknown';
+          
+          if (!tree[r]) tree[r] = { total: 0, subs: {} };
+          tree[r].total++;
+          if (!tree[r].subs[sr]) tree[r].subs[sr] = { total: 0, rcs: {} };
+          tree[r].subs[sr].total++;
+          tree[r].subs[sr].rcs[rc] = (tree[r].subs[sr].rcs[rc] || 0) + 1;
+        }
+      });
+      return tree;
+    };
+
+    const wsRCA = XLSX.utils.aoa_to_sheet([[]]);
+    wsRCA['A1'] = { v: `ROOT CAUSE ANALYSIS - ${selectedTeam?.teamName || "Team"}`, t: 's', s: { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E3A8A" } }, alignment: { horizontal: "center", vertical: "center" } } };
+    if (!wsRCA['!merges']) wsRCA['!merges'] = [];
+    wsRCA['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } });
+
+    const tree = getHierarchicalRCA(filteredTechnicalTasks);
+    const headers = ["Reason", "Total", "Sub Reason", "Cases", "Root Cause", "Cases"];
+    headers.forEach((h, i) => {
+      const cell = XLSX.utils.encode_cell({ r: 2, c: i });
+      wsRCA[cell] = { v: h, t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "374151" } }, alignment: { horizontal: "center" }, border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } } } };
+    });
+
+    let currentR = 3;
+    Object.entries(tree).sort((a, b) => b[1].total - a[1].total).forEach(([reason, reasonData]) => {
+      const reasonStartR = currentR;
+      Object.entries(reasonData.subs).sort((a, b) => b[1].total - a[1].total).forEach(([sub, subData]) => {
+        const subStartR = currentR;
+        Object.entries(subData.rcs).sort((a, b) => b[1] - a[1]).forEach(([rc, rcCount]) => {
+          XLSX.utils.sheet_add_aoa(wsRCA, [[rc]], { origin: { r: currentR, c: 4 } });
+          XLSX.utils.sheet_add_aoa(wsRCA, [[rcCount]], { origin: { r: currentR, c: 5 } });
+          currentR++;
+        });
+        const subEndR = currentR - 1;
+        XLSX.utils.sheet_add_aoa(wsRCA, [[sub]], { origin: { r: subStartR, c: 2 } });
+        wsRCA[XLSX.utils.encode_cell({ r: subStartR, c: 2 })].s = { alignment: { vertical: 'center', horizontal: 'center', wrapText: true } };
+        XLSX.utils.sheet_add_aoa(wsRCA, [[subData.total]], { origin: { r: subStartR, c: 3 } });
+        wsRCA[XLSX.utils.encode_cell({ r: subStartR, c: 3 })].s = { alignment: { vertical: 'center', horizontal: 'center' } };
+        
+        if (subEndR > subStartR) {
+          wsRCA['!merges'].push({ s: { r: subStartR, c: 2 }, e: { r: subEndR, c: 2 } });
+          wsRCA['!merges'].push({ s: { r: subStartR, c: 3 }, e: { r: subEndR, c: 3 } });
+        }
+      });
+      const reasonEndR = currentR - 1;
+      XLSX.utils.sheet_add_aoa(wsRCA, [[reason]], { origin: { r: reasonStartR, c: 0 } });
+      wsRCA[XLSX.utils.encode_cell({ r: reasonStartR, c: 0 })].s = { font: { bold: true }, alignment: { vertical: 'center', horizontal: 'center', wrapText: true } };
+      XLSX.utils.sheet_add_aoa(wsRCA, [[reasonData.total]], { origin: { r: reasonStartR, c: 1 } });
+      wsRCA[XLSX.utils.encode_cell({ r: reasonStartR, c: 1 })].s = { font: { bold: true }, alignment: { vertical: 'center', horizontal: 'center' } };
+      
+      if (reasonEndR > reasonStartR) {
+        wsRCA['!merges'].push({ s: { r: reasonStartR, c: 0 }, e: { r: reasonEndR, c: 0 } });
+        wsRCA['!merges'].push({ s: { r: reasonStartR, c: 1 }, e: { r: reasonEndR, c: 1 } });
+      }
+    });
+
+    // Add borders
+    for (let r = 2; r < currentR; r++) {
+      for (let c = 0; c < 6; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!wsRCA[addr]) wsRCA[addr] = { v: '', t: 's' };
+        if (!wsRCA[addr].s) wsRCA[addr].s = {};
+        wsRCA[addr].s.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+        if (!wsRCA[addr].s.alignment) wsRCA[addr].s.alignment = { vertical: 'center' };
+      }
+    }
+
+    wsRCA['!cols'] = [{ wch: 25 }, { wch: 8 }, { wch: 25 }, { wch: 8 }, { wch: 30 }, { wch: 8 }];
+    fixSheetRange(wsRCA);
+
+    XLSX.utils.book_append_sheet(workbook, wsRCA, 'RCA Analysis');
+
+    // Write the file
+    XLSX.writeFile(workbook, `${selectedTeam?.teamName || "Team"}_Filtered_Tasks_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  };
+
   const renderLineChart = (data, dataKey, color = colors.primary) => (
     <ResponsiveContainer width="100%" height={300}>
       <AreaChart data={data} style={{ backgroundColor: colors.surfaceElevated, borderRadius: '12px', padding: '10px' }}>
@@ -6399,21 +6654,7 @@ ${data.map((a, i) => `
                       <Button
                         variant="contained"
                         startIcon={<FaFileExcel />}
-                        onClick={() => {
-                          const data = filteredTechnicalTasks.map(t => ({
-                            SLID: t.slid,
-                            'Request Number': t.requestNumber,
-                            'Customer Name': t.customerName,
-                            'PIS Date': t.pisDate ? new Date(t.pisDate).toLocaleDateString() : 'N/A',
-                            Priority: t.priority,
-                            Status: t.validationStatus,
-                            Score: t.evaluationScore || 'N/A'
-                          }));
-                          const ws = XLSX.utils.json_to_sheet(data);
-                          const wb = XLSX.utils.book_new();
-                          XLSX.utils.book_append_sheet(wb, ws, "Tasks");
-                          XLSX.writeFile(wb, `${selectedTeam.teamName}_Filtered_Tasks.xlsx`);
-                        }}
+                        onClick={handleExportFilteredTeamTasks}
                         sx={{
                           background: colors.primaryGradient,
                           borderRadius: '12px',
