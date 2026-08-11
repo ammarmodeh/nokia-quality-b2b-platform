@@ -43,7 +43,10 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
   }, []);
 
   const onSubmit = async (data) => {
-    const success = await onAddTeam(data);
+    const success = await onAddTeam({
+      ...data,
+      replaceExisting: Boolean(data.replaceExisting),
+    });
     if (success) {
       reset();
     }
@@ -185,6 +188,14 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
               InputLabelProps={{ shrink: true }}
             />
           </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <input type="checkbox" {...register('replaceExisting')} id="replace-existing" style={{ accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
+            <label htmlFor="replace-existing" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer' }}>
+              Replace existing active team with this code
+            </label>
+          </Box>
+
           <Typography variant="caption" sx={{ color: '#555', fontStyle: 'italic' }}>
             * If not checked, team is considered a Rich Expert.
           </Typography>

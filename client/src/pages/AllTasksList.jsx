@@ -834,9 +834,14 @@ const AllTasksList = () => {
   const exportToExcel = async () => {
     // 1. Determine Reported Period
     let periodStr = "All Time";
+    let periodStart = '';
+    let periodEnd = '';
+
     if (dateFilter.type !== 'all' && dateFilter.start && dateFilter.end) {
       try {
         periodStr = `${format(dateFilter.start, 'dd/MM/yyyy')} - ${format(dateFilter.end, 'dd/MM/yyyy')}`;
+        periodStart = format(dateFilter.start, 'ddMMyyyy');
+        periodEnd = format(dateFilter.end, 'ddMMyyyy');
       } catch (e) {
         periodStr = "Custom Period";
       }
@@ -847,8 +852,21 @@ const AllTasksList = () => {
         .sort((a, b) => a - b);
       if (dates.length > 0) {
         periodStr = `${format(dates[0], 'dd/MM/yyyy')} - ${format(dates[dates.length - 1], 'dd/MM/yyyy')}`;
+        periodStart = format(dates[0], 'ddMMyyyy');
+        periodEnd = format(dates[dates.length - 1], 'ddMMyyyy');
       }
     }
+
+    const getExportFileName = () => {
+      const now = new Date();
+      const exportDate = format(now, 'ddMMyyyy');
+
+      if (!periodStart || !periodEnd) {
+        return `NPS Analysis and Feedback - ${exportDate}.xlsx`;
+      }
+
+      return `NPS Analysis and Feedback - ${exportDate}-${periodStart}to${periodEnd}.xlsx`;
+    };
 
     const workbook = XLSX.utils.book_new();
 
@@ -1175,8 +1193,9 @@ const AllTasksList = () => {
       const ownerCounts = {};
       const uniqueOwners = new Set();
       const catStats = {};
+      const rowTotalByCategory = {};
 
-      tasks.forEach(t => {
+      tasks.forEach((t) => {
         const resp = t.responsible;
         let owners = [];
         if (Array.isArray(resp)) {
@@ -1205,36 +1224,37 @@ const AllTasksList = () => {
         let isDetractor = false;
         let isNeutral = false;
         if (score !== null && score !== 'N/A' && score !== undefined && score !== '') {
-           const numScore = Number(score);
-           if (!isNaN(numScore)) {
-              if (numScore <= 6) isDetractor = true;
-              else if (numScore >= 7 && numScore <= 8) isNeutral = true;
-           }
+          const numScore = Number(score);
+          if (!isNaN(numScore)) {
+            if (numScore <= 6) isDetractor = true;
+            else if (numScore >= 7 && numScore <= 8) isNeutral = true;
+          }
         }
 
         values.forEach(v => {
+          rowTotalByCategory[v] = (rowTotalByCategory[v] || 0) + 1;
+
           if (!ownerCounts[v]) ownerCounts[v] = {};
           if (!catStats[v]) catStats[v] = { detractors: 0, neutrals: 0 };
 
           owners.forEach(owner => {
             ownerCounts[v][owner] = (ownerCounts[v][owner] || 0) + 1;
-            if (isDetractor) catStats[v].detractors++;
-            if (isNeutral) catStats[v].neutrals++;
           });
+
+          if (isDetractor) catStats[v].detractors = (catStats[v].detractors || 0) + 1;
+          if (isNeutral) catStats[v].neutrals = (catStats[v].neutrals || 0) + 1;
         });
       });
 
+      const totalFieldOccurrences = Object.values(rowTotalByCategory).reduce((sum, count) => sum + count, 0);
       const sortedOwners = Array.from(uniqueOwners).sort();
 
       const matrix = Object.entries(ownerCounts).map(([rowName, oCounts]) => {
         const row = { 'Category': rowName };
-        let rowTotal = 0;
-        sortedOwners.forEach(owner => {
-          rowTotal += (oCounts[owner] || 0);
-        });
+        const rowTotal = rowTotalByCategory[rowName] || 0;
 
         row['Total'] = rowTotal;
-        row['%'] = tasks.length > 0 ? `${((rowTotal / tasks.length) * 100).toFixed(1)}%` : '0%';
+        row['%'] = totalFieldOccurrences > 0 ? `${((rowTotal / totalFieldOccurrences) * 100).toFixed(1)}%` : '0%';
 
         sortedOwners.forEach(owner => {
           const count = oCounts[owner] || 0;
@@ -3105,7 +3125,73 @@ const AllTasksList = () => {
       if (!wsTeamPerf['!merges']) wsTeamPerf['!merges'] = [];
       wsTeamPerf['!merges'].push({ s: { r: sectionTitleR, c: 0 }, e: { r: sectionTitleR, c: 24 } });
 
-      let teamSubsetsStartR = sectionTitleR + 2;
+      // --- NEW: Overall team summary (Accountable + Non-accountable) ---
+      const computeIssuesCount = (tasks) => {
+        return tasks.reduce((acc, t) => {
+          const val = t.reason;
+          if (!val) return acc;
+          let values = [];
+          if (Array.isArray(val)) values = val.flatMap(v => (typeof v === 'string' ? v.split(',').map(s => s.trim()) : [v])).filter(Boolean);
+          else if (typeof val === 'string' && val.trim()) values = val.split(',').map(s => s.trim()).filter(Boolean);
+          else if (val) values = [String(val).trim()];
+          return acc + values.length;
+        }, 0);
+      };
+
+      const overallTotalTasks = teamTasks.length;
+      const overallTotalIssues = computeIssuesCount(teamTasks);
+      const overallDetractors = teamTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) <= 6).length;
+      const overallNeutrals = teamTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) >= 7 && Number(t.evaluationScore) <= 8).length;
+      const overallDetPlusNeu = overallDetractors + overallNeutrals;
+
+      const overallSummaryStartR = sectionTitleR + 2;
+      XLSX.utils.sheet_add_aoa(wsTeamPerf, [[`${teamName.toUpperCase()} - OVERALL SUMMARY`]], { origin: XLSX.utils.encode_cell({ r: overallSummaryStartR, c: 0 }) });
+      wsTeamPerf[XLSX.utils.encode_cell({ r: overallSummaryStartR, c: 0 })] = { v: `${teamName.toUpperCase()} - OVERALL SUMMARY`, t: 's', s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F2937' } }, alignment: { horizontal: 'center' } } };
+      if (!wsTeamPerf['!merges']) wsTeamPerf['!merges'] = [];
+      wsTeamPerf['!merges'].push({ s: { r: overallSummaryStartR, c: 0 }, e: { r: overallSummaryStartR, c: 3 } });
+
+      const overallSummaryRows = [
+        { Metric: 'Total Tasks', Count: overallTotalTasks },
+        { Metric: 'Total Issues', Count: overallTotalIssues },
+        { Metric: 'Detractors', Count: overallDetractors },
+        { Metric: 'Neutrals', Count: overallNeutrals },
+        { Metric: 'Detractors + Neutrals', Count: overallDetPlusNeu }
+      ];
+      XLSX.utils.sheet_add_json(wsTeamPerf, overallSummaryRows, { origin: XLSX.utils.encode_cell({ r: overallSummaryStartR + 1, c: 0 }), skipHeader: false });
+      applyHeaderStyle(wsTeamPerf, { s: { r: overallSummaryStartR + 1, c: 0 }, e: { r: overallSummaryStartR + 1, c: 1 } }, '374151');
+      applyDataRowStyle(wsTeamPerf, { s: { r: overallSummaryStartR + 1, c: 0 }, e: { r: overallSummaryStartR + 1 + overallSummaryRows.length, c: 1 } });
+
+      // --- NEW: Detractors+Neutrals mini-tables for Accountable and Non-Accountable ---
+
+      const detNeuFor = (tasks) => ({
+        'Det+Neu Count': tasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) <= 8).length,
+        'Det Count': tasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) <= 6).length,
+        'Neu Count': tasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) >= 7 && Number(t.evaluationScore) <= 8).length,
+        'Total Issues': computeIssuesCount(tasks)
+      });
+
+      const detNeuAcc = detNeuFor(teamAccTasks);
+      const detNeuNonAcc = detNeuFor(teamNonAccTasks);
+
+      const detNeuStartR = overallSummaryStartR + 1 + overallSummaryRows.length + 2;
+      XLSX.utils.sheet_add_aoa(wsTeamPerf, [[`DETRACTOR+NEUTRAL SUMMARY (ACCOUNTABLE)`]], { origin: XLSX.utils.encode_cell({ r: detNeuStartR, c: 0 }) });
+      wsTeamPerf[XLSX.utils.encode_cell({ r: detNeuStartR, c: 0 })] = { v: `DETRACTOR+NEUTRAL SUMMARY (ACCOUNTABLE)`, t: 's', s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'B91C1C' } }, alignment: { horizontal: 'center' } } };
+      wsTeamPerf['!merges'].push({ s: { r: detNeuStartR, c: 0 }, e: { r: detNeuStartR, c: 3 } });
+      XLSX.utils.sheet_add_json(wsTeamPerf, [detNeuAcc], { origin: XLSX.utils.encode_cell({ r: detNeuStartR + 1, c: 0 }), skipHeader: false });
+      applyHeaderStyle(wsTeamPerf, { s: { r: detNeuStartR + 1, c: 0 }, e: { r: detNeuStartR + 1, c: 3 } }, '7F1D1D');
+      applyDataRowStyle(wsTeamPerf, { s: { r: detNeuStartR + 1, c: 0 }, e: { r: detNeuStartR + 1 + 1, c: 3 } });
+
+      const detNeuNonStartR = detNeuStartR + 4;
+      XLSX.utils.sheet_add_aoa(wsTeamPerf, [[`DETRACTOR+NEUTRAL SUMMARY (NON-ACCOUNTABLE)`]], { origin: XLSX.utils.encode_cell({ r: detNeuNonStartR, c: 0 }) });
+      wsTeamPerf[XLSX.utils.encode_cell({ r: detNeuNonStartR, c: 0 })] = { v: `DETRACTOR+NEUTRAL SUMMARY (NON-ACCOUNTABLE)`, t: 's', s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '059669' } }, alignment: { horizontal: 'center' } } };
+      wsTeamPerf['!merges'].push({ s: { r: detNeuNonStartR, c: 0 }, e: { r: detNeuNonStartR, c: 3 } });
+      XLSX.utils.sheet_add_json(wsTeamPerf, [detNeuNonAcc], { origin: XLSX.utils.encode_cell({ r: detNeuNonStartR + 1, c: 0 }), skipHeader: false });
+      applyHeaderStyle(wsTeamPerf, { s: { r: detNeuNonStartR + 1, c: 0 }, e: { r: detNeuNonStartR + 1, c: 3 } }, '047857');
+      applyDataRowStyle(wsTeamPerf, { s: { r: detNeuNonStartR + 1, c: 0 }, e: { r: detNeuNonStartR + 1 + 1, c: 3 } });
+
+      // move downstream start pointer after inserted summaries
+      let teamSubsetsStartR = detNeuNonStartR + 4;
+
       if (teamAccTasks.length > 0) {
         teamSubsetsStartR = addSubsetSummary(wsTeamPerf, teamAccTasks, teamSubsetsStartR, "7F1D1D", "B91C1C");
       }
@@ -3158,9 +3244,595 @@ const AllTasksList = () => {
       teamRawCurrentR = nonAccEndR + 5;
     });
 
-    XLSX.utils.book_append_sheet(workbook, wsTeamPerf, 'Team Performance');
+    const cumulativeEndDate = (() => {
+      if (dateFilter && dateFilter.end) {
+        const endDate = new Date(dateFilter.end);
+        if (!Number.isNaN(endDate.getTime())) return endDate;
+      }
+      const latestDate = allTasks
+        .map(task => task.createdAt ? new Date(task.createdAt) : null)
+        .concat(allTasks.map(task => task.interviewDate ? new Date(task.interviewDate) : null))
+        .concat(allTasks.map(task => task.pisDate ? new Date(task.pisDate) : null))
+        .filter(date => date && !Number.isNaN(date.getTime()))
+        .sort((a, b) => a - b);
+      return latestDate.length > 0 ? latestDate[latestDate.length - 1] : new Date();
+    })();
 
-    // 6. Deep Raw Data Sheet
+    const cumulativeStartDate = (() => {
+      const referenceDate = (dateFilter && dateFilter.start) ? new Date(dateFilter.start) : cumulativeEndDate;
+      if (Number.isNaN(referenceDate.getTime())) return new Date(new Date().getFullYear(), 5, 1);
+      return new Date(referenceDate.getFullYear(), 5, 1);
+    })();
+
+    const cumulativeTasks = allTasks.filter(task => {
+      const rawDate = task.interviewDate || task.pisDate || task.createdAt || task.closeDate || task.contractDate;
+      if (!rawDate) return false;
+      const taskDate = new Date(rawDate);
+      if (Number.isNaN(taskDate.getTime())) return false;
+      return taskDate >= cumulativeStartDate && taskDate <= cumulativeEndDate;
+    });
+
+    const cumulativeTeamStatsMap = {};
+    cumulativeTasks.forEach(t => {
+      const teamName = t.teamName || 'Unknown Team';
+      if (!cumulativeTeamStatsMap[teamName]) {
+        cumulativeTeamStatsMap[teamName] = { teamName, tasks: [] };
+      }
+      cumulativeTeamStatsMap[teamName].tasks.push(t);
+    });
+
+    const cumulativeTeamPerfData = Object.values(cumulativeTeamStatsMap)
+      .map(ts => {
+        const totalTasks = ts.tasks.length;
+        const reachCount = ts.tasks.filter(t => t.teamAccountability?.includes('Yes')).length;
+        const teamDetractors = ts.tasks.filter(t => {
+          const score = t.evaluationScore;
+          if (score === null || score === 'N/A') return false;
+          const normalized = score <= 10 ? score * 10 : score;
+          return normalized >= 0 && normalized <= 60;
+        }).length;
+        const teamNeutrals = ts.tasks.filter(t => {
+          const score = t.evaluationScore;
+          if (score === null || score === 'N/A') return false;
+          const normalized = score <= 10 ? score * 10 : score;
+          return normalized > 60 && normalized <= 80;
+        }).length;
+        const reachDetractors = ts.tasks.filter(t => {
+          const score = t.evaluationScore;
+          if (score === null || score === 'N/A') return false;
+          const normalized = score <= 10 ? score * 10 : score;
+          return normalized >= 0 && normalized <= 60 && t.teamAccountability?.includes('Yes');
+        }).length;
+        const reachNeutrals = ts.tasks.filter(t => {
+          const score = t.evaluationScore;
+          if (score === null || score === 'N/A') return false;
+          const normalized = score <= 10 ? score * 10 : score;
+          return normalized > 60 && normalized <= 80 && t.teamAccountability?.includes('Yes');
+        }).length;
+        return {
+          'Team Name': ts.teamName,
+          'Total Tasks': totalTasks,
+          'Total Acc.': reachCount,
+          'Acc. %': totalTasks > 0 ? `${Math.round((reachCount / totalTasks) * 100)}%` : '0%',
+          'Detractors': teamDetractors,
+          'Neutrals': teamNeutrals,
+          'Acc. Det.': reachDetractors,
+          'Acc. Neu.': reachNeutrals
+        };
+      })
+      .sort((a, b) => b['Total Acc.'] - a['Total Acc.']);
+
+    const cumulativeGlobalTotalAcc = cumulativeTasks.filter(t => t.teamAccountability?.includes('Yes')).length;
+    const cumulativeGlobalDetAcc = cumulativeTasks.filter(t => {
+      const score = t.evaluationScore || 0;
+      const normalized = score <= 10 ? score * 10 : score;
+      return normalized > 0 && normalized <= 60 && t.teamAccountability?.includes('Yes');
+    }).length;
+
+    const wsTeamPerfCumulative = XLSX.utils.aoa_to_sheet([[`TEAM ACCOUNTABILITY & PERFORMANCE ANALYTICS - CUMULATIVE: ${periodStr}`]]);
+    wsTeamPerfCumulative['A1'] = {
+      v: `TEAM ACCOUNTABILITY & PERFORMANCE ANALYTICS - CUMULATIVE: ${periodStr}`,
+      t: 's',
+      s: { font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4F46E5' } }, alignment: { horizontal: 'center', vertical: 'center' } }
+    };
+    if (!wsTeamPerfCumulative['!merges']) wsTeamPerfCumulative['!merges'] = [];
+    wsTeamPerfCumulative['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } });
+
+    XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, [['Cumulative date range included', `${periodStr}`]], { origin: 'A3' });
+    XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, [['Total Tasks Included', cumulativeTasks.length]], { origin: 'A5' });
+    XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, [['Total Acc. Included', cumulativeGlobalTotalAcc]], { origin: 'D5' });
+    XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, [['Acc. Detractors', cumulativeGlobalDetAcc]], { origin: 'G5' });
+
+    XLSX.utils.sheet_add_json(wsTeamPerfCumulative, cumulativeTeamPerfData, { origin: 'A8', skipHeader: false });
+    applyHeaderStyle(wsTeamPerfCumulative, { s: { r: 7, c: 0 }, e: { r: 7, c: 8 } }, '4B5563');
+    applyDataRowStyle(wsTeamPerfCumulative, { s: { r: 7, c: 0 }, e: { r: 7 + cumulativeTeamPerfData.length, c: 8 } });
+
+    wsTeamPerfCumulative['!cols'] = [
+      { wch: 28 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 12 }
+    ];
+
+    XLSX.utils.book_append_sheet(workbook, wsTeamPerf, 'Team Performance');
+    XLSX.utils.book_append_sheet(workbook, wsTeamPerfCumulative, 'Team Performance - Accumulated');
+
+    // 6. Text Analysis Sheet
+    const getScoreBucketCounts = (tasks, totalSampleCount = tasks.length) => {
+      const counts = { promoters: 0, detractors: 0, neutrals: 0 };
+      tasks.forEach(task => {
+        const score = task.evaluationScore;
+        if (score === null || score === 'N/A' || score === undefined || score === '') return;
+        const numScore = Number(score);
+        if (isNaN(numScore)) return;
+        if (numScore <= 6) counts.detractors += 1;
+        else if (numScore >= 7 && numScore <= 8) counts.neutrals += 1;
+        else if (numScore >= 9) counts.promoters += 1;
+      });
+
+      const nonPromoters = counts.detractors + counts.neutrals;
+      counts.promoters = Math.max(0, totalSampleCount - nonPromoters);
+      return counts;
+    };
+
+    const getNormalizedFieldValues = (val) => {
+      if (!val) return [];
+      if (Array.isArray(val)) {
+        return val.flatMap(v => (typeof v === 'string' ? v.split(',').map(s => s.trim()) : [String(v).trim()])).filter(Boolean);
+      }
+      if (typeof val === 'string') {
+        return val.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      return [String(val).trim()].filter(Boolean);
+    };
+
+    const getFieldFrequency = (tasks, field) => {
+      const counts = {};
+      tasks.forEach(task => {
+        getNormalizedFieldValues(task[field]).forEach(value => {
+          counts[value] = (counts[value] || 0) + 1;
+        });
+      });
+      return Object.entries(counts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+    };
+
+    const getFieldValueScoreBreakdown = (tasks, field, targetValue) => {
+      const breakdown = { promoters: 0, detractors: 0, neutrals: 0 };
+      tasks.forEach(task => {
+        const values = getNormalizedFieldValues(task[field]);
+        if (!values.includes(targetValue)) return;
+
+        const score = Number(task.evaluationScore);
+        if (score <= 6) breakdown.detractors += 1;
+        else if (score >= 7 && score <= 8) breakdown.neutrals += 1;
+        else if (score >= 9) breakdown.promoters += 1;
+      });
+      return breakdown;
+    };
+
+    const getScenarioImpact = (baseCounts, convertedCount, categoryBreakdown = null) => {
+      const maxConvertible = (baseCounts.detractors + baseCounts.neutrals);
+      const targetConversion = Math.min(Math.max(0, Number(convertedCount) || 0), maxConvertible);
+
+      let detractorsToConvert = 0;
+      let neutralsToConvert = 0;
+
+      if (categoryBreakdown) {
+        const categoryAvailable = (categoryBreakdown.detractors || 0) + (categoryBreakdown.neutrals || 0);
+        const allowedConversion = Math.min(targetConversion, categoryAvailable);
+        detractorsToConvert = Math.min(allowedConversion, categoryBreakdown.detractors || 0);
+        neutralsToConvert = Math.min(allowedConversion - detractorsToConvert, categoryBreakdown.neutrals || 0);
+      } else {
+        detractorsToConvert = Math.min(targetConversion, baseCounts.detractors);
+        neutralsToConvert = Math.min(targetConversion - detractorsToConvert, baseCounts.neutrals);
+      }
+
+      const promoters = baseCounts.promoters + detractorsToConvert + neutralsToConvert;
+      const detractors = baseCounts.detractors - detractorsToConvert;
+      const neutrals = baseCounts.neutrals - neutralsToConvert;
+      const total = baseCounts.promoters + baseCounts.detractors + baseCounts.neutrals || 1;
+      const promoterPct = total > 0 ? Math.round((promoters / total) * 100) : 0;
+      const detractorPct = total > 0 ? Math.round((detractors / total) * 100) : 0;
+      const nps = promoterPct - detractorPct;
+
+      return {
+        promoters,
+        detractors,
+        neutrals,
+        total,
+        nps,
+        converted: detractorsToConvert + neutralsToConvert,
+        detractorsConverted: detractorsToConvert,
+        neutralsConverted: neutralsToConvert,
+        conversionLimit: targetConversion
+      };
+    };
+
+    const totalSampleCount = totalSamplesToken > 0 ? totalSamplesToken : filteredTasks.length;
+    const currentCounts = getScoreBucketCounts(filteredTasks, totalSampleCount);
+    const beforePromoterPct = totalSampleCount > 0 ? Math.round((currentCounts.promoters / totalSampleCount) * 100) : 0;
+    const beforeDetractorPct = totalSampleCount > 0 ? Math.round((currentCounts.detractors / totalSampleCount) * 100) : 0;
+    const baseNPS = beforePromoterPct - beforeDetractorPct;
+    const formatPercent = (value) => totalSampleCount > 0 ? `${((value / totalSampleCount) * 100).toFixed(1)}%` : '0.0%';
+
+    const reasonFrequency = getFieldFrequency(filteredTasks, 'reason');
+    const rootCauseFrequency = getFieldFrequency(filteredTasks, 'rootCause');
+    const ownerFrequency = getFieldFrequency(filteredTasks, 'responsible');
+
+    const teamTopAccounts = Object.entries(
+      filteredTasks.reduce((acc, task) => {
+        const teamName = task.teamName || 'Unknown';
+        const accountable = String(task.teamAccountability || '').toLowerCase().includes('yes');
+        if (!acc[teamName]) {
+          acc[teamName] = { team: teamName, tasks: 0, accountableTasks: 0, totalAcc: 0, promoters: 0, detractors: 0, neutrals: 0 };
+        }
+        acc[teamName].tasks += 1;
+        if (accountable) {
+          acc[teamName].accountableTasks += 1;
+          acc[teamName].totalAcc += 1;
+        }
+
+        const score = Number(task.evaluationScore);
+        if (!isNaN(score) && accountable) {
+          if (score <= 6) acc[teamName].detractors += 1;
+          else if (score >= 7 && score <= 8) acc[teamName].neutrals += 1;
+          else if (score >= 9) acc[teamName].promoters += 1;
+        }
+        return acc;
+      }, {})
+    )
+      .map(([_, data]) => ({
+        team: data.team,
+        accountableTasks: data.accountableTasks,
+        totalAcc: data.totalAcc,
+        totalTasks: data.tasks,
+        promoters: data.promoters,
+        detractors: data.detractors,
+        neutrals: data.neutrals
+      }))
+      .filter(item => item.totalAcc > 0)
+      .sort((a, b) => b.totalAcc - a.totalAcc);
+
+    const textAnalysisRows = [];
+
+    textAnalysisRows.push({
+      Scenario: 'Current Base',
+      'Category / Team': 'Overall',
+      'Converted Count': 0,
+      'Before Promoters': currentCounts.promoters,
+      'Before Promoters %': formatPercent(currentCounts.promoters),
+      'Before Detractors': currentCounts.detractors,
+      'Before Detractors %': formatPercent(currentCounts.detractors),
+      'Before Neutrals': currentCounts.neutrals,
+      'Before Neutrals %': formatPercent(currentCounts.neutrals),
+      'Before NPS': baseNPS,
+      'After Promoters': currentCounts.promoters,
+      'After Promoters %': formatPercent(currentCounts.promoters),
+      'After Detractors': currentCounts.detractors,
+      'After Detractors %': formatPercent(currentCounts.detractors),
+      'After Neutrals': currentCounts.neutrals,
+      'After Neutrals %': formatPercent(currentCounts.neutrals),
+      'After NPS': baseNPS,
+      'Notes': 'Baseline using current filtered tasks'
+    });
+
+    const addScenarioRow = (label, category, count, note, fieldName) => {
+      const breakdown = fieldName ? getFieldValueScoreBreakdown(filteredTasks, fieldName, category) : null;
+      const impact = getScenarioImpact(currentCounts, count, breakdown);
+      textAnalysisRows.push({
+        Scenario: label,
+        'Category / Team': category,
+        'Converted Count': impact.converted,
+        'Before Promoters': currentCounts.promoters,
+        'Before Promoters %': formatPercent(currentCounts.promoters),
+        'Before Detractors': currentCounts.detractors,
+        'Before Detractors %': formatPercent(currentCounts.detractors),
+        'Before Neutrals': currentCounts.neutrals,
+        'Before Neutrals %': formatPercent(currentCounts.neutrals),
+        'Before NPS': baseNPS,
+        'After Promoters': impact.promoters,
+        'After Promoters %': formatPercent(impact.promoters),
+        'After Detractors': impact.detractors,
+        'After Detractors %': formatPercent(impact.detractors),
+        'After Neutrals': impact.neutrals,
+        'After Neutrals %': formatPercent(impact.neutrals),
+        'After NPS': impact.nps,
+        'Notes': note
+      });
+    };
+
+    const topReasonNames = reasonFrequency.slice(0, 5).map(item => item.name);
+    const getReasonScenarioBreakdown = (reasonNames) => {
+      return reasonNames.reduce((acc, reasonName) => {
+        const breakdown = getFieldValueScoreBreakdown(filteredTasks, 'reason', reasonName);
+        acc.promoters += breakdown.promoters;
+        acc.detractors += breakdown.detractors;
+        acc.neutrals += breakdown.neutrals;
+        return acc;
+      }, { promoters: 0, detractors: 0, neutrals: 0 });
+    };
+
+    topReasonNames.forEach((reasonName, index) => {
+      addScenarioRow(
+        `Top ${index + 1} Reason Alone`,
+        reasonName,
+        reasonFrequency.find(item => item.name === reasonName)?.count || 0,
+        `Convert ${Math.min(reasonFrequency.find(item => item.name === reasonName)?.count || 0, ((getFieldValueScoreBreakdown(filteredTasks, 'reason', reasonName).detractors + getFieldValueScoreBreakdown(filteredTasks, 'reason', reasonName).neutrals)))} non-promoter tasks under ${reasonName} to promoters`,
+        'reason'
+      );
+    });
+
+    for (let i = 1; i <= topReasonNames.length; i++) {
+      const selectedReasons = topReasonNames.slice(0, i);
+      const comboCount = selectedReasons.reduce((sum, reasonName) => {
+        const item = reasonFrequency.find(entry => entry.name === reasonName);
+        return sum + (item ? item.count : 0);
+      }, 0);
+      const comboBreakdown = getReasonScenarioBreakdown(selectedReasons);
+      const impact = getScenarioImpact(currentCounts, comboCount, comboBreakdown);
+      textAnalysisRows.push({
+        Scenario: `Top ${i} Reasons Combined`,
+        'Category / Team': selectedReasons.join(' + '),
+        'Converted Count': impact.converted,
+        'Before Promoters': currentCounts.promoters,
+        'Before Promoters %': formatPercent(currentCounts.promoters),
+        'Before Detractors': currentCounts.detractors,
+        'Before Detractors %': formatPercent(currentCounts.detractors),
+        'Before Neutrals': currentCounts.neutrals,
+        'Before Neutrals %': formatPercent(currentCounts.neutrals),
+        'Before NPS': baseNPS,
+        'After Promoters': impact.promoters,
+        'After Promoters %': formatPercent(impact.promoters),
+        'After Detractors': impact.detractors,
+        'After Detractors %': formatPercent(impact.detractors),
+        'After Neutrals': impact.neutrals,
+        'After Neutrals %': formatPercent(impact.neutrals),
+        'After NPS': impact.nps,
+        'Notes': `Convert ${Math.min(comboCount, (comboBreakdown.detractors + comboBreakdown.neutrals))} non-promoter tasks across ${selectedReasons.join(' + ')} to promoters`
+      });
+    }
+
+    const topRootCauseNames = rootCauseFrequency.slice(0, 5).map(item => item.name);
+    const getRootCauseScenarioBreakdown = (rootCauseNames) => {
+      return rootCauseNames.reduce((acc, rootCauseName) => {
+        const breakdown = getFieldValueScoreBreakdown(filteredTasks, 'rootCause', rootCauseName);
+        acc.promoters += breakdown.promoters;
+        acc.detractors += breakdown.detractors;
+        acc.neutrals += breakdown.neutrals;
+        return acc;
+      }, { promoters: 0, detractors: 0, neutrals: 0 });
+    };
+
+    topRootCauseNames.forEach((rootCauseName, index) => {
+      addScenarioRow(
+        `Top ${index + 1} Root Cause Alone`,
+        rootCauseName,
+        rootCauseFrequency.find(item => item.name === rootCauseName)?.count || 0,
+        `Convert ${Math.min(rootCauseFrequency.find(item => item.name === rootCauseName)?.count || 0, ((getFieldValueScoreBreakdown(filteredTasks, 'rootCause', rootCauseName).detractors + getFieldValueScoreBreakdown(filteredTasks, 'rootCause', rootCauseName).neutrals)))} non-promoter tasks under ${rootCauseName} to promoters`,
+        'rootCause'
+      );
+    });
+
+    for (let i = 1; i <= topRootCauseNames.length; i++) {
+      const selectedRootCauses = topRootCauseNames.slice(0, i);
+      const comboCount = selectedRootCauses.reduce((sum, rootCauseName) => {
+        const item = rootCauseFrequency.find(entry => entry.name === rootCauseName);
+        return sum + (item ? item.count : 0);
+      }, 0);
+      const comboBreakdown = getRootCauseScenarioBreakdown(selectedRootCauses);
+      const impact = getScenarioImpact(currentCounts, comboCount, comboBreakdown);
+      textAnalysisRows.push({
+        Scenario: `Top ${i} Root Causes Combined`,
+        'Category / Team': selectedRootCauses.join(' + '),
+        'Converted Count': impact.converted,
+        'Before Promoters': currentCounts.promoters,
+        'Before Promoters %': formatPercent(currentCounts.promoters),
+        'Before Detractors': currentCounts.detractors,
+        'Before Detractors %': formatPercent(currentCounts.detractors),
+        'Before Neutrals': currentCounts.neutrals,
+        'Before Neutrals %': formatPercent(currentCounts.neutrals),
+        'Before NPS': baseNPS,
+        'After Promoters': impact.promoters,
+        'After Promoters %': formatPercent(impact.promoters),
+        'After Detractors': impact.detractors,
+        'After Detractors %': formatPercent(impact.detractors),
+        'After Neutrals': impact.neutrals,
+        'After Neutrals %': formatPercent(impact.neutrals),
+        'After NPS': impact.nps,
+        'Notes': `Convert ${Math.min(comboCount, (comboBreakdown.detractors + comboBreakdown.neutrals))} non-promoter tasks across ${selectedRootCauses.join(' + ')} to promoters`
+      });
+    }
+
+    const topOwnerNames = ownerFrequency.slice(0, 5).map(item => item.name);
+    const getOwnerScenarioBreakdown = (ownerNames) => {
+      return ownerNames.reduce((acc, ownerName) => {
+        const breakdown = getFieldValueScoreBreakdown(filteredTasks, 'responsible', ownerName);
+        acc.promoters += breakdown.promoters;
+        acc.detractors += breakdown.detractors;
+        acc.neutrals += breakdown.neutrals;
+        return acc;
+      }, { promoters: 0, detractors: 0, neutrals: 0 });
+    };
+
+    topOwnerNames.forEach((ownerName, index) => {
+      addScenarioRow(
+        `Top ${index + 1} Owner Alone`,
+        ownerName,
+        ownerFrequency.find(item => item.name === ownerName)?.count || 0,
+        `Convert ${Math.min(ownerFrequency.find(item => item.name === ownerName)?.count || 0, ((getFieldValueScoreBreakdown(filteredTasks, 'responsible', ownerName).detractors + getFieldValueScoreBreakdown(filteredTasks, 'responsible', ownerName).neutrals)))} non-promoter tasks for ${ownerName} to promoters`,
+        'responsible'
+      );
+    });
+
+    for (let i = 1; i <= topOwnerNames.length; i++) {
+      const selectedOwners = topOwnerNames.slice(0, i);
+      const comboCount = selectedOwners.reduce((sum, ownerName) => {
+        const item = ownerFrequency.find(entry => entry.name === ownerName);
+        return sum + (item ? item.count : 0);
+      }, 0);
+      const comboBreakdown = getOwnerScenarioBreakdown(selectedOwners);
+      const impact = getScenarioImpact(currentCounts, comboCount, comboBreakdown);
+      textAnalysisRows.push({
+        Scenario: `Top ${i} Owners Combined`,
+        'Category / Team': selectedOwners.join(' + '),
+        'Converted Count': impact.converted,
+        'Before Promoters': currentCounts.promoters,
+        'Before Promoters %': formatPercent(currentCounts.promoters),
+        'Before Detractors': currentCounts.detractors,
+        'Before Detractors %': formatPercent(currentCounts.detractors),
+        'Before Neutrals': currentCounts.neutrals,
+        'Before Neutrals %': formatPercent(currentCounts.neutrals),
+        'Before NPS': baseNPS,
+        'After Promoters': impact.promoters,
+        'After Promoters %': formatPercent(impact.promoters),
+        'After Detractors': impact.detractors,
+        'After Detractors %': formatPercent(impact.detractors),
+        'After Neutrals': impact.neutrals,
+        'After Neutrals %': formatPercent(impact.neutrals),
+        'After NPS': impact.nps,
+        'Notes': `Convert ${Math.min(comboCount, (comboBreakdown.detractors + comboBreakdown.neutrals))} non-promoter tasks across ${selectedOwners.join(' + ')} to promoters`
+      });
+    }
+
+    const topAccountableTeamNames = teamTopAccounts.slice(0, 5).map(item => item.team);
+    const getTeamScenarioBreakdown = (teamNames) => {
+      return teamNames.reduce((acc, teamName) => {
+        const teamEntry = teamTopAccounts.find(team => team.team === teamName);
+        if (!teamEntry) return acc;
+        acc.promoters += teamEntry.promoters;
+        acc.detractors += teamEntry.detractors;
+        acc.neutrals += teamEntry.neutrals;
+        return acc;
+      }, { promoters: 0, detractors: 0, neutrals: 0 });
+    };
+
+    topAccountableTeamNames.forEach((teamName, index) => {
+      const teamItem = teamTopAccounts.find(team => team.team === teamName);
+      if (!teamItem) return;
+      const teamBreakdown = { detractors: teamItem.detractors, neutrals: teamItem.neutrals, promoters: teamItem.promoters };
+      const totalAccImpactCount = teamItem.detractors + teamItem.neutrals;
+      const impact = getScenarioImpact(currentCounts, totalAccImpactCount, teamBreakdown);
+      textAnalysisRows.push({
+        Scenario: `Top ${index + 1} Accountable Team Alone`,
+        'Category / Team': teamItem.team,
+        'Converted Count': impact.converted,
+        'Before Promoters': currentCounts.promoters,
+        'Before Promoters %': formatPercent(currentCounts.promoters),
+        'Before Detractors': currentCounts.detractors,
+        'Before Detractors %': formatPercent(currentCounts.detractors),
+        'Before Neutrals': currentCounts.neutrals,
+        'Before Neutrals %': formatPercent(currentCounts.neutrals),
+        'Before NPS': baseNPS,
+        'After Promoters': impact.promoters,
+        'After Promoters %': formatPercent(impact.promoters),
+        'After Detractors': impact.detractors,
+        'After Detractors %': formatPercent(impact.detractors),
+        'After Neutrals': impact.neutrals,
+        'After Neutrals %': formatPercent(impact.neutrals),
+        'After NPS': impact.nps,
+        'Notes': `${teamItem.team} converts ${impact.converted} accountable non-promoter items (${teamItem.detractors} detractors + ${teamItem.neutrals} neutrals) to promoters based on Total Acc.`
+      });
+    });
+
+    for (let i = 1; i <= topAccountableTeamNames.length; i++) {
+      const selectedTeams = topAccountableTeamNames.slice(0, i);
+      const comboCount = selectedTeams.reduce((sum, teamName) => {
+        const teamItem = teamTopAccounts.find(team => team.team === teamName);
+        return sum + (teamItem ? (teamItem.detractors + teamItem.neutrals) : 0);
+      }, 0);
+      const comboBreakdown = getTeamScenarioBreakdown(selectedTeams);
+      const impact = getScenarioImpact(currentCounts, comboCount, comboBreakdown);
+      textAnalysisRows.push({
+        Scenario: `Top ${i} Accountable Teams Combined`,
+        'Category / Team': selectedTeams.join(' + '),
+        'Converted Count': impact.converted,
+        'Before Promoters': currentCounts.promoters,
+        'Before Promoters %': formatPercent(currentCounts.promoters),
+        'Before Detractors': currentCounts.detractors,
+        'Before Detractors %': formatPercent(currentCounts.detractors),
+        'Before Neutrals': currentCounts.neutrals,
+        'Before Neutrals %': formatPercent(currentCounts.neutrals),
+        'Before NPS': baseNPS,
+        'After Promoters': impact.promoters,
+        'After Promoters %': formatPercent(impact.promoters),
+        'After Detractors': impact.detractors,
+        'After Detractors %': formatPercent(impact.detractors),
+        'After Neutrals': impact.neutrals,
+        'After Neutrals %': formatPercent(impact.neutrals),
+        'After NPS': impact.nps,
+        'Notes': `Convert ${Math.min(comboCount, (comboBreakdown.detractors + comboBreakdown.neutrals))} accountable non-promoter items across ${selectedTeams.join(' + ')} to promoters based on Total Acc.`
+      });
+    }
+
+    const wsTextAnalysis = XLSX.utils.aoa_to_sheet([['TEXT ANALYSIS']]);
+    wsTextAnalysis['A1'] = {
+      v: 'TEXT ANALYSIS',
+      t: 's',
+      s: {
+        font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '7C3AED' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    };
+    if (!wsTextAnalysis['!merges']) wsTextAnalysis['!merges'] = [];
+    wsTextAnalysis['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 17 } });
+
+    const textAnalysisHeader = [
+      'Scenario',
+      'Category / Team',
+      'Converted Count',
+      'Before Promoters',
+      'Before Promoters %',
+      'Before Detractors',
+      'Before Detractors %',
+      'Before Neutrals',
+      'Before Neutrals %',
+      'Before NPS',
+      'After Promoters',
+      'After Promoters %',
+      'After Detractors',
+      'After Detractors %',
+      'After Neutrals',
+      'After Neutrals %',
+      'After NPS',
+      'Notes'
+    ];
+
+    XLSX.utils.sheet_add_aoa(wsTextAnalysis, [textAnalysisHeader], { origin: 'A3' });
+    XLSX.utils.sheet_add_json(wsTextAnalysis, textAnalysisRows, { origin: 'A4', skipHeader: true });
+    applyHeaderStyle(wsTextAnalysis, { s: { r: 2, c: 0 }, e: { r: 2, c: 17 } }, '4B5563');
+    applyDataRowStyle(wsTextAnalysis, { s: { r: 2, c: 0 }, e: { r: 2 + textAnalysisRows.length + 1, c: 17 } });
+    wsTextAnalysis['!cols'] = [
+      { wch: 22 },
+      { wch: 24 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 46 }
+    ];
+    fixSheetRange(wsTextAnalysis);
+    XLSX.utils.book_append_sheet(workbook, wsTextAnalysis, 'Text Analysis');
+
+    // 7. Deep Raw Data Sheet
     const maxTickets = filteredTasks.reduce((max, t) => Math.max(max, (t.tickets || []).length), 0);
 
     const multiValueFieldsMapping = [
@@ -3264,8 +3936,8 @@ const AllTasksList = () => {
         'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
         'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
         'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
-        'Interview to PIS (Days)': interviewToPis,
-        'PIS to Close (Days)': pisToClose,
+        'PIS to Interview (Days)': interviewToPis,
+        'Close to PIS (Days)': pisToClose,
         'Request to Close (Days)': requestToClose,
         'Interview Week': getWeekDisplay(task.interviewDate)
       };
@@ -3610,7 +4282,7 @@ const AllTasksList = () => {
     XLSX.utils.book_append_sheet(workbook, wsCharts, 'Monthly Performance Summary');
 
     // 8. Save Workbook
-    XLSX.writeFile(workbook, `Executive_Audit_Report_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    XLSX.writeFile(workbook, getExportFileName());
   };
 
   const handleTableContainerClick = (e) => {

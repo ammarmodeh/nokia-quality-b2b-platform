@@ -180,7 +180,9 @@ export const addFieldTeam = async (req, res) => {
     const {
       teamName, firstName, secondName, thirdName, surname, teamCompany, contactNumber,
       fsmSerialNumber, laptopSerialNumber, teamCode,
-      isNewToInstallation, isNewToActivation, installationStartDate, activationStartDate
+      isNewToInstallation, isNewToActivation, installationStartDate, activationStartDate,
+      replaceExisting = false,
+      forceReplace = false
     } = req.body;
 
     if (!teamCode) return res.status(400).json({ error: "Team ID/Code is required" });
@@ -188,23 +190,75 @@ export const addFieldTeam = async (req, res) => {
     if (!teamCompany) return res.status(400).json({ error: "Team Company is required" });
     if (!contactNumber) return res.status(400).json({ error: "Contact Number is required" });
 
-    // Uniqueness check for teamCode (exclude terminated teams)
+    const cleanTeamCode = teamCode.trim();
+    const allowReplacement = Boolean(replaceExisting || forceReplace);
+
     const existingCode = await FieldTeamsSchema.findOne({
-      teamCode: teamCode.trim(),
+      teamCode: cleanTeamCode,
       isTerminated: false
     });
-    if (existingCode) {
-      return res.status(400).json({ error: `An active team with Code '${teamCode}' already exists.` });
+
+    if (existingCode && !allowReplacement) {
+      return res.status(400).json({ error: `An active team with Code '${cleanTeamCode}' already exists.` });
+    }
+
+    if (existingCode && allowReplacement) {
+      const replacementTeam = await FieldTeamsSchema.findByIdAndUpdate(
+        existingCode._id,
+        {
+          teamName: String(teamName).trim(),
+          firstName: (firstName || "").trim(),
+          secondName: (secondName || "").trim(),
+          thirdName: (thirdName || "").trim(),
+          surname: (surname || "").trim(),
+          teamCompany: String(teamCompany).trim(),
+          contactNumber: String(contactNumber).trim(),
+          fsmSerialNumber: fsmSerialNumber || 'N/A',
+          laptopSerialNumber: laptopSerialNumber || 'N/A',
+          isNewToInstallation: Boolean(isNewToInstallation),
+          isNewToActivation: Boolean(isNewToActivation),
+          installationStartDate: installationStartDate || null,
+          activationStartDate: activationStartDate || null,
+          isActive: true,
+          isSuspended: false,
+          isTerminated: false,
+          isOnLeave: false,
+          isResigned: false,
+          canTakeQuiz: false,
+          terminationReason: null,
+          suspensionReason: null,
+          suspensionStartDate: null,
+          suspensionEndDate: null,
+          leaveReason: null,
+          leaveStartDate: null,
+          leaveEndDate: null,
+          resignationReason: null,
+          stateLogs: [
+            ...(existingCode.stateLogs || []),
+            {
+              state: 'Active',
+              reason: 'Replaced via duplicate team code',
+              changedAt: new Date(),
+            }
+          ]
+        },
+        { new: true, runValidators: true }
+      );
+
+      if (!replacementTeam) {
+        return res.status(404).json({ error: 'Existing team could not be replaced.' });
+      }
+
+      return res.status(201).json(replacementTeam);
     }
 
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const randomLetters = Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
-    const quizCode = `${randomLetters}${teamCode.trim()}`;
+    const quizCode = `${randomLetters}${cleanTeamCode}`;
 
-    // Generate Password: FirstName + Surname + TeamCode (Safe handling)
     const fName = (firstName || "").trim();
     const sName = (surname || "").trim();
-    const tCode = teamCode.trim();
+    const tCode = cleanTeamCode;
 
     if (!fName || !sName) {
       return res.status(400).json({ error: "First Name and Surname are required to generate the security profile." });

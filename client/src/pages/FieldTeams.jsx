@@ -105,6 +105,7 @@ const FieldTeamForm = () => {
         isNewToActivation: data.isNewToActivation,
         installationStartDate: data.installationStartDate,
         activationStartDate: data.activationStartDate,
+        replaceExisting: Boolean(data.replaceExisting),
       };
 
       const response = await api.post('/field-teams/add-field-team', formData, {
