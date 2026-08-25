@@ -185,6 +185,62 @@ const fieldTeamsSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    escalationAction: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    escalationStatus: {
+      type: String,
+      default: "Pending",
+      trim: true,
+    },
+    escalationNotes: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    escalationDate: {
+      type: Date,
+      default: null,
+    },
+    escalationHistory: [
+      {
+        offenseScale: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        action: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        status: {
+          type: String,
+          default: "Action Taken",
+          trim: true,
+        },
+        actionDate: {
+          type: Date,
+          default: Date.now,
+        },
+        period: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        notes: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      }
+    ],
   },
   { timestamps: true }
 );

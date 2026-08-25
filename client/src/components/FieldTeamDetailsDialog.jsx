@@ -368,6 +368,27 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                   </Grid>
                 </Grid>
               </SectionCard>
+
+              <SectionCard title="Escalation Policy & Management Action" icon={<Warning sx={{ color: '#ec4899' }} />}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <DetailItem icon={<Warning />} label="Escalation Action" value={team.escalationAction || 'None Assigned'} fullWidth />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <DetailItem icon={<VerifiedUser />} label="Escalation Status" value={team.escalationStatus || 'Pending'} fullWidth />
+                  </Grid>
+                  {team.escalationDate && (
+                    <Grid item xs={12} sm={6}>
+                      <DetailItem icon={<History />} label="Action Date" value={new Date(team.escalationDate).toLocaleDateString()} fullWidth />
+                    </Grid>
+                  )}
+                  {team.escalationNotes && (
+                    <Grid item xs={12}>
+                      <DetailItem icon={<Info />} label="Escalation Notes" value={team.escalationNotes} fullWidth />
+                    </Grid>
+                  )}
+                </Grid>
+              </SectionCard>
             </Stack>
           </Grid>
         </Grid>

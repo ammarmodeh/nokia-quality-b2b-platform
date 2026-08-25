@@ -63,6 +63,10 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
         isNewToActivation: team.isNewToActivation || false,
         installationStartDate: team.installationStartDate ? new Date(team.installationStartDate).toISOString().split('T')[0] : '',
         activationStartDate: team.activationStartDate ? new Date(team.activationStartDate).toISOString().split('T')[0] : '',
+        escalationAction: team.escalationAction || '',
+        escalationStatus: team.escalationStatus || 'Pending',
+        escalationNotes: team.escalationNotes || '',
+        escalationDate: team.escalationDate ? new Date(team.escalationDate).toISOString().split('T')[0] : '',
       });
     }
   }, [team, reset]);
@@ -412,6 +416,96 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               * If not checked, team is considered a Rich Expert for that role.
             </Typography>
           </Box>
+
+          {/* Section: Escalation Policy & Action */}
+          <Typography variant="overline" sx={{ color: '#ec4899', fontWeight: 'bold', mt: 4, mb: 2, display: 'block' }}>
+            Escalation Policy & Management Action
+          </Typography>
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: 3,
+            mb: 2
+          }}>
+            <TextField
+              label="Escalation Action Taken"
+              variant="outlined"
+              placeholder="e.g. 1st Offense: Verbal Warning, Mandatory Training, Suspension"
+              {...register('escalationAction')}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: '#1a1a1a',
+                  '& fieldset': { borderColor: '#333' },
+                  '&:hover fieldset': { borderColor: '#ec4899' },
+                  '&.Mui-focused fieldset': { borderColor: '#ec4899' },
+                },
+              }}
+              InputProps={{ style: { color: '#ffffff' } }}
+              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+            />
+            <FormControl fullWidth variant="outlined">
+              <InputLabel shrink style={{ color: '#888' }}>Escalation Status</InputLabel>
+              <NativeSelect
+                {...register('escalationStatus')}
+                sx={{
+                  bgcolor: '#1a1a1a',
+                  color: '#fff',
+                  border: '1px solid #333',
+                  borderRadius: '4px',
+                  pl: 2,
+                  py: 0.5,
+                  '&:hover': { border: '1px solid #ec4899' },
+                  '&:before': { display: 'none' },
+                  '&:after': { display: 'none' },
+                  '& .MuiNativeSelect-icon': { color: '#ec4899' },
+                }}
+              >
+                {['Pending', 'Under Review', 'Action Taken', 'Warning Issued', 'Training Assigned', '1 Week Suspension', '1 Month Suspension', 'Termination', 'Completed', 'Closed', 'Waived', 'Compliant'].map((st, idx) => (
+                  <option key={idx} value={st} style={{ backgroundColor: '#111', color: '#fff' }}>
+                    {st}
+                  </option>
+                ))}
+              </NativeSelect>
+            </FormControl>
+          </Box>
+          <TextField
+            label="Escalation Action Date"
+            type="date"
+            variant="outlined"
+            fullWidth
+            {...register('escalationDate')}
+            sx={{
+              mb: 2,
+              '& .MuiOutlinedInput-root': {
+                bgcolor: '#1a1a1a',
+                '& fieldset': { borderColor: '#333' },
+                '&:hover fieldset': { borderColor: '#ec4899' },
+                '&.Mui-focused fieldset': { borderColor: '#ec4899' },
+              },
+            }}
+            InputProps={{ style: { color: '#ffffff' } }}
+            InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+          />
+          <TextField
+            label="Escalation & Policy Notes"
+            variant="outlined"
+            fullWidth
+            multiline
+            rows={2}
+            placeholder="Add relevant notes regarding the policy violation, deduction, training or consequence..."
+            {...register('escalationNotes')}
+            sx={{
+              mb: 3,
+              '& .MuiOutlinedInput-root': {
+                bgcolor: '#1a1a1a',
+                '& fieldset': { borderColor: '#333' },
+                '&:hover fieldset': { borderColor: '#ec4899' },
+                '&.Mui-focused fieldset': { borderColor: '#ec4899' },
+              },
+            }}
+            InputProps={{ style: { color: '#ffffff' } }}
+            InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+          />
 
           {errorMessage && (
             <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(244, 67, 54, 0.1)', border: '1px solid #f44336', borderRadius: '8px', color: '#f44336' }}>

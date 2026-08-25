@@ -39,7 +39,10 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  LinearProgress
+  LinearProgress,
+  Radio,
+  RadioGroup,
+  FormControlLabel
 } from '@mui/material';
 import { MoonLoader } from 'react-spinners';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -73,7 +76,7 @@ import {
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, format, subWeeks, subMonths, eachWeekOfInterval } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, format, subWeeks, subMonths, eachWeekOfInterval, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
 import { IoMdAdd } from "react-icons/io";
 import api from '../api/api';
 import EditTaskDialog from '../components/task/EditTaskDialog';
@@ -88,7 +91,7 @@ import XLSX from 'xlsx-js-style';
 import AddTask from '../components/task/AddTask';
 import AdvancedSearch from '../components/common/AdvancedSearch';
 import moment from 'moment';
-
+import { buildOwnerIssueRows, normalizeArrayField } from '../utils/ownerIssueGrouping';
 
 const DEFAULT_SETTINGS_STATE = { settings: {} };
 
@@ -155,6 +158,7 @@ const AllTasksList = () => {
 
   // --- Samples Token Integration State ---
   const [samplesTokenData, setSamplesTokenData] = useState([]);
+  const [dailyOnlineSamplesData, setDailyOnlineSamplesData] = useState([]);
   const [loadingSamples, setLoadingSamples] = useState(false);
 
   // Sync initial date filter with settings
@@ -175,37 +179,58 @@ const AllTasksList = () => {
     }
   }, [settings]);
 
-  // --- Samples Token Fetching ---
+  // --- Samples Token & Daily Online Fetching ---
+  const fetchAllSamplesData = async () => {
+    if (!dateFilter.start || !dateFilter.end) return;
+
+    setLoadingSamples(true);
+    try {
+      const startYear = new Date(dateFilter.start).getFullYear();
+      const endYear = new Date(dateFilter.end).getFullYear();
+      const yearsToFetch = Array.from(
+        { length: endYear - startYear + 1 },
+        (_, i) => startYear + i
+      );
+
+      const promises = yearsToFetch.map(year =>
+        api.get(`/samples-token/${year}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+        }).catch(err => ({ data: [] }))
+      );
+
+      const dailyPromises = yearsToFetch.map(year =>
+        api.get(`/samples-token/daily-online/${year}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+        }).catch(err => ({ data: [] }))
+      );
+
+      const [responses, dailyResponses] = await Promise.all([
+        Promise.all(promises),
+        Promise.all(dailyPromises)
+      ]);
+
+      const allSamples = responses.flatMap(res => res.data || []);
+      const allDailyOnline = dailyResponses.flatMap(res => res.data || []);
+      setSamplesTokenData(allSamples);
+      setDailyOnlineSamplesData(allDailyOnline);
+    } catch (err) {
+      console.error("Error fetching samples token / daily online data:", err);
+    } finally {
+      setLoadingSamples(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchSamplesToken = async () => {
-      if (!dateFilter.start || !dateFilter.end) return;
+    fetchAllSamplesData();
+  }, [dateFilter.start, dateFilter.end]);
 
-      setLoadingSamples(true);
-      try {
-        const startYear = new Date(dateFilter.start).getFullYear();
-        const endYear = new Date(dateFilter.end).getFullYear();
-        const yearsToFetch = Array.from(
-          { length: endYear - startYear + 1 },
-          (_, i) => startYear + i
-        );
-
-        const promises = yearsToFetch.map(year =>
-          api.get(`/samples-token/${year}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-          }).catch(err => ({ data: [] }))
-        );
-
-        const responses = await Promise.all(promises);
-        const allSamples = responses.flatMap(res => res.data || []);
-        setSamplesTokenData(allSamples);
-      } catch (err) {
-        console.error("Error fetching samples token:", err);
-      } finally {
-        setLoadingSamples(false);
-      }
+  // Listen to dashboard refresh events (e.g. from SamplesTokenDialog save)
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchAllSamplesData();
     };
-
-    fetchSamplesToken();
+    window.addEventListener('dashboard-refresh', handleRefresh);
+    return () => window.removeEventListener('dashboard-refresh', handleRefresh);
   }, [dateFilter.start, dateFilter.end]);
 
   // 1. Helper for weeks interval (for range fallback looking)
@@ -289,6 +314,28 @@ const AllTasksList = () => {
   const [ticketTask, setTicketTask] = useState(null);
   const [gaiaStepsDialogOpen, setGaiaStepsDialogOpen] = useState(false);
   const [gaiaStepsTask, setGaiaStepsTask] = useState(null);
+
+  // Cumulative & Escalation Table Date Filter State
+  const [CumulativeDateFilter, setCumulativeDateFilter] = useState({
+    start: new Date(2026, 5, 1),
+    end: new Date(),
+    type: 'default'
+  });
+  const [tempAccStartDate, setTempAccStartDate] = useState(new Date(2026, 5, 1));
+  const [tempAccEndDate, setTempAccEndDate] = useState(new Date());
+
+  // Keep datepickers synchronized with active filter changes
+  useEffect(() => {
+    if (CumulativeDateFilter.start) setTempAccStartDate(CumulativeDateFilter.start);
+    if (CumulativeDateFilter.end) setTempAccEndDate(CumulativeDateFilter.end);
+  }, [CumulativeDateFilter]);
+
+  useEffect(() => {
+    if (dateFilter.start) setTempStartDate(dateFilter.start);
+    else if (dateFilter.type === 'all') setTempStartDate(null);
+    if (dateFilter.end) setTempEndDate(dateFilter.end);
+    else if (dateFilter.type === 'all') setTempEndDate(null);
+  }, [dateFilter]);
 
   // Advanced Search State
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
@@ -832,7 +879,7 @@ const AllTasksList = () => {
   };
 
   const exportToExcel = async () => {
-    // 1. Determine Reported Period
+    // 1. Determine Reported Period (Filtered Dashboard Data)
     let periodStr = "All Time";
     let periodStart = '';
     let periodEnd = '';
@@ -869,6 +916,7 @@ const AllTasksList = () => {
     };
 
     const workbook = XLSX.utils.book_new();
+    const monthColorPalette = ["1E40AF", "0D9488", "7C3AED", "C026D3", "EA580C", "4B5563", "0284C7", "B45309", "059669", "4338CA", "BE123C", "374151"];
 
     // Helper functions for styling
     const applyHeaderStyle = (ws, range, bg = "1F2937", color = "FFFFFF") => {
@@ -904,13 +952,34 @@ const AllTasksList = () => {
       }
     };
 
+    const formatCommentColumnInTable = (ws, startDataR, endDataR, colIdx, colWidth = 60) => {
+      if (colIdx === -1 || colIdx === undefined || !ws) return;
+      if (!ws['!cols']) ws['!cols'] = [];
+      if (!ws['!cols'][colIdx] || (ws['!cols'][colIdx].wch || 0) < colWidth) {
+        ws['!cols'][colIdx] = { wch: colWidth };
+      }
+
+      for (let r = startDataR; r <= endDataR; r++) {
+        const cellAddr = XLSX.utils.encode_cell({ r, c: colIdx });
+        if (!ws[cellAddr]) continue;
+        ws[cellAddr].s = ws[cellAddr].s || {};
+        ws[cellAddr].s.alignment = {
+          ...(ws[cellAddr].s.alignment || {}),
+          horizontal: 'right',
+          vertical: 'center',
+          wrapText: true,
+          readingOrder: 2
+        };
+      }
+    };
+
     const addTitle = (ws, titleText, endCol) => {
       ws['A1'] = { v: titleText, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "7B68EE" } }, alignment: { horizontal: "center", vertical: "center" } } };
       if (!ws['!merges']) ws['!merges'] = [];
       ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: endCol } });
     };
 
-    const getHierarchicalRCA = (tasks, ownerFilter = null) => {
+    const getHierarchicalRCA = (tasks, ownerFilter = null, accFilter = null) => {
       const tree = {};
       const normalize = (val) => {
         if (!val) return [];
@@ -928,16 +997,24 @@ const AllTasksList = () => {
         const subReasons = normalize(t.subReason);
         const rootCauses = normalize(t.rootCause);
         const resps = normalize(t.responsible);
+        const accs = normalize(t.teamAccountability);
 
-        const max = Math.max(reasons.length, subReasons.length, rootCauses.length, resps.length);
+        const max = Math.max(reasons.length, subReasons.length, rootCauses.length, resps.length, accs.length);
         for (let i = 0; i < max; i++) {
           let resp = 'Unknown';
           if (resps.length > 0) {
             resp = resps[i] || resps[0];
           }
           resp = resp.trim();
-          
-          if (ownerFilter && resp !== ownerFilter) continue;
+
+          if (ownerFilter && resp.toUpperCase() !== ownerFilter.toUpperCase()) continue;
+
+          let acc = accs[i] || (accs.length > 0 ? accs[0] : 'Unknown');
+          acc = String(acc).trim().toLowerCase();
+          const isAccYes = acc.startsWith('yes') || acc === 'y';
+
+          if (accFilter === 'yes' && !isAccYes) continue;
+          if (accFilter === 'no' && isAccYes) continue;
 
           const r = reasons[i] ? reasons[i].trim() : 'Unknown';
           const sr = subReasons[i] ? subReasons[i].trim() : 'Unknown';
@@ -1078,48 +1155,201 @@ const AllTasksList = () => {
     }, 0);
 
     const avgIssuesPerTask = totalAudited > 0 ? (totalIssues / totalAudited).toFixed(2) : "0.00";
+    const detractorRate = totalSamples > 0 ? `${((detractors / totalSamples) * 100).toFixed(1)}%` : "0.0%";
+    const neutralRate = totalSamples > 0 ? `${((neutrals / totalSamples) * 100).toFixed(1)}%` : "0.0%";
+    const promoterRate = totalSamples > 0 ? `${((promoters / totalSamples) * 100).toFixed(1)}%` : "0.0%";
+    const auditedRate = totalSamples > 0 ? `${((totalAudited / totalSamples) * 100).toFixed(1)}%` : "0.0%";
+
+    const todoShare = totalAudited > 0 ? `${((todoCount / totalAudited) * 100).toFixed(1)}%` : "0.0%";
+    const inProgressShare = totalAudited > 0 ? `${((inProgressCount / totalAudited) * 100).toFixed(1)}%` : "0.0%";
+    const closedShare = totalAudited > 0 ? `${((closedCount / totalAudited) * 100).toFixed(1)}%` : "0.0%";
 
     const summaryData = [
-      ["EXECUTIVE AUDIT SUMMARY", "", ""],
-      ["Reported Period:", periodStr, ""],
-      ["Export Date:", format(new Date(), 'dd/MM/yyyy HH:mm'), ""],
-      ["", "", ""],
-      ["CORE KEY PERFORMANCE INDICATORS", "VALUE", "PERCENTAGE"],
-      ["Total Samples Token", totalSamples, "-"],
-      ["Non-Promoter Customers", totalAudited, totalSamples > 0 ? `${((totalAudited / totalSamples) * 100).toFixed(1)}%` : "0%"],
-      ["Total Issues Identified", totalIssues, "-"],
-      ["Avg. Issues per Task", avgIssuesPerTask, "-"],
-      ["Detractors", detractors, totalSamples > 0 ? `${((detractors / totalSamples) * 100).toFixed(1)}%` : "0%"],
-      ["Neutrals", neutrals, totalSamples > 0 ? `${((neutrals / totalSamples) * 100).toFixed(1)}%` : "0%"],
-      ["Promoters", promoters, totalSamples > 0 ? `${((promoters / totalSamples) * 100).toFixed(1)}%` : "0%"],
-      ["NPS", nps, "-"],
-      ["", "", ""],
-      ["TASK STATUS SUMMARY", "COUNT", "SHARE"],
-      ["Todo Tasks", todoCount, totalAudited > 0 ? `${((todoCount / totalAudited) * 100).toFixed(1)}%` : "0%"],
-      ["In Progress Tasks", inProgressCount, totalAudited > 0 ? `${((inProgressCount / totalAudited) * 100).toFixed(1)}%` : "0%"],
-      ["Closed Tasks", closedCount, totalAudited > 0 ? `${((closedCount / totalAudited) * 100).toFixed(1)}%` : "0%"],
-      ["", "", ""],
-      ["COMPLIANCE & QUALITY DETAILED BREAKDOWN", "COUNT", "RATE"],
-      ["Overall Compliance (Total Samples)", validatedCount, totalSamples > 0 ? `${((validatedCount / totalSamples) * 100).toFixed(1)}%` : "0%"],
-      ["Audit Compliance (Validated Tasks)", validatedCount, totalAudited > 0 ? `${((validatedCount / totalAudited) * 100).toFixed(1)}%` : "0%"],
-      ["Detractor Compliance Rate", validatedDetractors, detractors > 0 ? `${((validatedDetractors / detractors) * 100).toFixed(1)}%` : "0%"],
+      ["NPS, QUALITY ISSUES & WORKFLOW STATUS", "", "", ""],
+      [`Reported Period: ${periodStr}  |  Export Date: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, "", "", ""],
+      ["", "", "", ""],
+      ["CORE KEY PERFORMANCE INDICATORS & NPS ANALYSIS", "", "", ""],
+      ["Performance Indicator", "Value", "Rate / Share", "Benchmark & Status"],
+      ["Total Samples Token", totalSamples],
+      ["Non-Promoter Customers", totalAudited, auditedRate, "Requires Quality Investigation"],
+      ["Total Quality Issues Identified", totalIssues, "-", "Root Causes & Defects Logged"],
+      ["Avg. Issues per Audited Task", avgIssuesPerTask, "-", "Issue Density Index"],
+      ["Detractors (Score: 0 - 6)", detractors, detractorRate, "Critical Attention (Target ≤ 8%)"],
+      ["Neutrals (Score: 7 - 8)", neutrals, neutralRate],
+      ["Promoters (Score: 9 - 10)", promoters, promoterRate, "Customer Loyalty (Target ≥ 75%)"],
+      ["Net Promoter Score (NPS)", nps, "-", `${nps >= 67 ? "Met Target" : "Below Target"} (Target: ≥ 67)`],
+      ["", "", "", ""],
+      ["TASK EXECUTION & WORKFLOW LIFECYCLE", "", "", ""],
+      ["Workflow Status", "Task Count", "Distribution Share", "Operational State"],
+      ["Todo (Pending Action)", todoCount, todoShare, "Awaiting Team Assignment"],
+      ["In Progress", inProgressCount, inProgressShare, "Active RCA & Customer Contact"],
+      ["Closed (Resolved)", closedCount, closedShare, "Resolved & Verified"],
+      ["TOTAL", totalAudited, "100.0%"],
+      // ["", "", "", ""],
+      // ["EXECUTIVE QUALITY OBSERVATIONS & BENCHMARKS", "", "", ""],
+      // ["Quality Observation", "Value / Score", "Status Indicator", "Operational Guidance"],
+      // ["Audit Defect Ratio", `${avgIssuesPerTask} issues/task`, totalIssues > 0 ? "Action Recommended" : "Optimal", "Monitor repeat reasons and team execution"],
+      // ["NPS Health Classification", nps >= 50 ? "Tier 1 - Excellent" : nps >= 0 ? "Tier 2 - Fair" : "Tier 3 - Critical", nps >= 50 ? "🟢 Green Zone" : nps >= 0 ? "🟡 Warning Zone" : "🔴 Alert Zone", nps >= 50 ? "Maintain operational excellence" : "Initiate immediate corrective actions"],
+      // ["Promoter to Detractor Ratio", detractors > 0 ? `${(promoters / detractors).toFixed(2)} : 1` : promoters > 0 ? "100% Promoters" : "N/A", detractors === 0 ? "Outstanding" : (promoters / detractors) >= 4 ? "Healthy" : "Unfavorable", "Target ratio: > 4.0 Promoters per Detractor"]
     ];
 
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
 
-    // Style Executive Summary
-    addTitle(wsSummary, "EXECUTIVE AUDIT SUMMARY", 2);
-    wsSummary['A2'].s = { font: { bold: true } };
-    wsSummary['A3'].s = { font: { bold: true } };
-    applyHeaderStyle(wsSummary, { s: { r: 4, c: 0 }, e: { r: 4, c: 2 } }, "374151");
-    applyDataRowStyle(wsSummary, { s: { r: 4, c: 0 }, e: { r: 12, c: 2 } });
+    // Setup Merges
+    if (!wsSummary['!merges']) wsSummary['!merges'] = [];
+    wsSummary['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }); // Title
+    wsSummary['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 3 } }); // Subtitle
+    wsSummary['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 3 } }); // KPI Header
+    wsSummary['!merges'].push({ s: { r: 14, c: 0 }, e: { r: 14, c: 3 } }); // Workflow Header
+    wsSummary['!merges'].push({ s: { r: 21, c: 0 }, e: { r: 21, c: 3 } }); // Observations Header
 
-    applyHeaderStyle(wsSummary, { s: { r: 14, c: 0 }, e: { r: 14, c: 2 } }, "374151");
-    applyDataRowStyle(wsSummary, { s: { r: 14, c: 0 }, e: { r: 17, c: 2 } });
+    // Cell Styling Helper for wsSummary
+    const thinBorder = {
+      top: { style: 'thin', color: { rgb: "D1D5DB" } },
+      bottom: { style: 'thin', color: { rgb: "D1D5DB" } },
+      left: { style: 'thin', color: { rgb: "D1D5DB" } },
+      right: { style: 'thin', color: { rgb: "D1D5DB" } }
+    };
+    const doubleBottomBorder = {
+      top: { style: 'thin', color: { rgb: "9CA3AF" } },
+      bottom: { style: 'double', color: { rgb: "111827" } },
+      left: { style: 'thin', color: { rgb: "9CA3AF" } },
+      right: { style: 'thin', color: { rgb: "9CA3AF" } }
+    };
 
-    applyHeaderStyle(wsSummary, { s: { r: 19, c: 0 }, e: { r: 19, c: 2 } }, "374151");
-    applyDataRowStyle(wsSummary, { s: { r: 19, c: 0 }, e: { r: 22, c: 2 } });
-    wsSummary['!cols'] = [{ wch: 35 }, { wch: 15 }, { wch: 15 }];
+    // Title Row 0
+    if (wsSummary['A1']) {
+      wsSummary['A1'].s = {
+        font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "1E3A8A" } },
+        alignment: { horizontal: "left", vertical: "center", indent: 1 }
+      };
+    }
+
+    // Subtitle Row 1
+    if (wsSummary['A2']) {
+      wsSummary['A2'].s = {
+        font: { bold: true, sz: 10, color: { rgb: "1E40AF" } },
+        fill: { fgColor: { rgb: "EFF6FF" } },
+        alignment: { horizontal: "left", vertical: "center", indent: 1 }
+      };
+    }
+
+    // Section 1 Header Row 3
+    if (wsSummary['A4']) {
+      wsSummary['A4'].s = {
+        font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "1E40AF" } },
+        alignment: { horizontal: "left", vertical: "center", indent: 1 }
+      };
+    }
+    // Table 1 Column Headers (Row 4)
+    applyHeaderStyle(wsSummary, { s: { r: 4, c: 0 }, e: { r: 4, c: 3 } }, "374151");
+
+    // Table 1 Data Rows (Rows 5 to 12)
+    const kpiRowBg = [
+      "F0F9FF", // Total Samples
+      "F5F3FF", // Non-promoters
+      "FAF5FF", // Total Issues
+      "F8FAFC", // Avg issues
+      "FEF2F2", // Detractors (Soft Red)
+      "FFFBEB", // Neutrals (Soft Amber)
+      "F0FDF4", // Promoters (Soft Green)
+      nps >= 50 ? "DCFCE7" : nps >= 0 ? "FEF3C7" : "FEE2E2" // NPS
+    ];
+
+    for (let r = 5; r <= 12; r++) {
+      const bg = kpiRowBg[r - 5] || "FFFFFF";
+      for (let c = 0; c <= 3; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!wsSummary[addr]) wsSummary[addr] = { v: '', t: 's' };
+        const isNpsRow = (r === 12);
+        const isDetractor = (r === 9);
+        const isNeutral = (r === 10);
+        const isPromoter = (r === 11);
+
+        let fontColor = "111827";
+        if (isDetractor && (c === 0 || c === 1 || c === 2)) fontColor = "991B1B";
+        if (isNeutral && (c === 0 || c === 1 || c === 2)) fontColor = "92400E";
+        if (isPromoter && (c === 0 || c === 1 || c === 2)) fontColor = "166534";
+        if (isNpsRow) fontColor = nps >= 50 ? "166534" : nps >= 0 ? "92400E" : "991B1B";
+
+        wsSummary[addr].s = {
+          font: {
+            bold: (c === 0 || c === 1 || isNpsRow),
+            sz: isNpsRow ? 11 : 10,
+            color: { rgb: fontColor }
+          },
+          fill: { fgColor: { rgb: bg } },
+          alignment: {
+            horizontal: c === 0 ? "left" : c === 3 ? "left" : "center",
+            vertical: "center"
+          },
+          border: thinBorder
+        };
+      }
+    }
+
+    // Section 2 Header Row 14
+    if (wsSummary['A15']) {
+      wsSummary['A15'].s = {
+        font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "4F46E5" } },
+        alignment: { horizontal: "left", vertical: "center", indent: 1 }
+      };
+    }
+    // Table 2 Column Headers (Row 15)
+    applyHeaderStyle(wsSummary, { s: { r: 15, c: 0 }, e: { r: 15, c: 3 } }, "374151");
+
+    // Table 2 Data Rows (Rows 16 to 19)
+    const workflowBg = ["F8FAFC", "FFFBEB", "F0FDF4", "E2E8F0"];
+    for (let r = 16; r <= 19; r++) {
+      const bg = workflowBg[r - 16] || "FFFFFF";
+      const isTotal = (r === 19);
+      for (let c = 0; c <= 3; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!wsSummary[addr]) wsSummary[addr] = { v: '', t: 's' };
+        wsSummary[addr].s = {
+          font: { bold: (c === 0 || c === 1 || isTotal), sz: 10, color: { rgb: isTotal ? "0F172A" : "334155" } },
+          fill: { fgColor: { rgb: bg } },
+          alignment: {
+            horizontal: c === 0 ? "left" : c === 3 ? "left" : "center",
+            vertical: "center"
+          },
+          border: isTotal ? doubleBottomBorder : thinBorder
+        };
+      }
+    }
+
+    // Section 3 Header Row 21
+    if (wsSummary['A22']) {
+      wsSummary['A22'].s = {
+        font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "0F766E" } },
+        alignment: { horizontal: "left", vertical: "center", indent: 1 }
+      };
+    }
+    // Table 3 Column Headers (Row 22)
+    applyHeaderStyle(wsSummary, { s: { r: 22, c: 0 }, e: { r: 22, c: 3 } }, "374151");
+
+    // Table 3 Data Rows (Rows 23 to 25)
+    for (let r = 23; r <= 25; r++) {
+      for (let c = 0; c <= 3; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!wsSummary[addr]) wsSummary[addr] = { v: '', t: 's' };
+        wsSummary[addr].s = {
+          font: { bold: (c === 0 || c === 1), sz: 10, color: { rgb: "1E293B" } },
+          fill: { fgColor: { rgb: r % 2 === 1 ? "F8FAFC" : "FFFFFF" } },
+          alignment: {
+            horizontal: c === 0 ? "left" : c === 3 ? "left" : "center",
+            vertical: "center"
+          },
+          border: thinBorder
+        };
+      }
+    }
+
+    wsSummary['!cols'] = [{ wch: 42 }, { wch: 18 }, { wch: 18 }, { wch: 38 }];
     fixSheetRange(wsSummary);
 
     XLSX.utils.book_append_sheet(workbook, wsSummary, 'Executive Summary');
@@ -1155,8 +1385,8 @@ const AllTasksList = () => {
     const itnRelated = getCountsWithPercent('itnRelated');
     const subRelated = getCountsWithPercent('relatedToSubscription');
     const globalRootCauses = getCountsWithPercent('rootCause');
-    const reasonStats = getFieldStats(filteredTasks, 'reason');
-    const subReasonStats = getFieldStats(filteredTasks, 'subReason');
+    const reasonStats = getCountsWithPercent('reason');
+    const subReasonStats = getCountsWithPercent('subReason');
 
     const wsReasons = XLSX.utils.aoa_to_sheet([[`Reported Period: ${periodStr}`]]);
     wsReasons['A1'].s = { font: { bold: true, sz: 14 } };
@@ -1279,7 +1509,7 @@ const AllTasksList = () => {
     const rootCauseMatrix = getMatrixData(filteredTasks, 'rootCause');
 
     const wsMatrix = XLSX.utils.aoa_to_sheet([[`CATEGORY MATRIX ANALYSIS - Period: ${periodStr}`]]);
-    wsMatrix['A1'] = { v: `CATEGORY MATRIX ANALYSIS - Period: ${periodStr}`, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "111827" } }, alignment: { horizontal: "center", vertical: "center" } } };
+    wsMatrix['A1'] = { v: `CATEGORY MATRIX ANALYSIS - Period: ${periodStr}`, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "111827" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } } };
     if (!wsMatrix['!merges']) wsMatrix['!merges'] = [];
     wsMatrix['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 15 } });
 
@@ -1288,18 +1518,212 @@ const AllTasksList = () => {
       const { data, owners } = matrixResult;
       if (data.length === 0) return startR;
 
-      const maxColIdx = owners.length * 2 + 6;
+      const totalCols = 1 + 2 + owners.length * 2 + 2 + 2; // Category + Overall(2) + Owners(2*N) + Det(2) + Neu(2)
+      const maxColIdx = totalCols - 1;
 
-      XLSX.utils.sheet_add_aoa(ws, [[title]], { origin: XLSX.utils.encode_cell({ r: startR, c: 0 }) });
-      ws[XLSX.utils.encode_cell({ r: startR, c: 0 })] = { v: title, t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: colorHex } }, alignment: { horizontal: "center" } } };
+      // Title Banner
+      const titleCell = XLSX.utils.encode_cell({ r: startR, c: 0 });
+      ws[titleCell] = {
+        v: title,
+        t: 's',
+        s: { font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: colorHex } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } }
+      };
+      if (!ws['!merges']) ws['!merges'] = [];
       ws['!merges'].push({ s: { r: startR, c: 0 }, e: { r: startR, c: maxColIdx } });
 
-      XLSX.utils.sheet_add_json(ws, data, { origin: XLSX.utils.encode_cell({ r: startR + 1, c: 0 }), skipHeader: false });
+      const headerR1 = startR + 1;
+      const headerR2 = startR + 2;
+      const dataStartR = startR + 3;
 
-      applyHeaderStyle(ws, { s: { r: startR + 1, c: 0 }, e: { r: startR + 1, c: maxColIdx } }, "374151");
-      applyDataRowStyle(ws, { s: { r: startR + 1, c: 0 }, e: { r: startR + 1 + data.length, c: maxColIdx } });
+      // Level 1 Header
+      const lvl1 = ["Category / Item", "OVERALL VOLUME", ""];
+      owners.forEach(o => {
+        lvl1.push(o.toUpperCase(), "");
+      });
+      lvl1.push("DETRACTORS", "", "NEUTRALS", "");
 
-      return startR + 1 + data.length + 3;
+      // Level 2 Sub-Headers
+      const lvl2 = ["Category / Item", "Total", "% Total"];
+      owners.forEach(o => {
+        lvl2.push("Count", "% Share");
+      });
+      lvl2.push("Detractors", "Detractor %", "Neutrals", "Neutral %");
+
+      // Add Headers
+      XLSX.utils.sheet_add_aoa(ws, [lvl1, lvl2], { origin: XLSX.utils.encode_cell({ r: headerR1, c: 0 }) });
+
+      // Convert data to AOA
+      const dataAoa = data.map(r => {
+        const rowArr = [r['Category'], r['Total'], r['%']];
+        owners.forEach(o => {
+          rowArr.push(r[o] || 0, r[`${o} %`] || '0%');
+        });
+        rowArr.push(r['Detractors'] || 0, r['Detractors %'] || '0%', r['Neutrals'] || 0, r['Neutrals %'] || '0%');
+        return rowArr;
+      });
+      XLSX.utils.sheet_add_aoa(ws, dataAoa, { origin: XLSX.utils.encode_cell({ r: dataStartR, c: 0 }) });
+
+      // Merge Category vertically
+      ws['!merges'].push({ s: { r: headerR1, c: 0 }, e: { r: headerR2, c: 0 } });
+      ws[XLSX.utils.encode_cell({ r: headerR1, c: 0 })] = {
+        v: "Category / Item",
+        t: 's',
+        s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E293B" } }, alignment: { horizontal: "center", vertical: "center" } }
+      };
+
+      // Overall Volume Merge & Style (Cols 1-2)
+      ws['!merges'].push({ s: { r: headerR1, c: 1 }, e: { r: headerR1, c: 2 } });
+      for (let c = 1; c <= 2; c++) {
+        const cell = XLSX.utils.encode_cell({ r: headerR1, c });
+        ws[cell] = {
+          v: c === 1 ? "OVERALL VOLUME" : "",
+          t: 's',
+          s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E40AF" } }, alignment: { horizontal: "center", vertical: "center" } }
+        };
+      }
+
+      // Owners Merges & Styles
+      const ownerPalette = ["4338CA", "0D9488", "7C3AED", "C026D3", "EA580C", "4B5563", "0284C7", "B45309", "059669", "374151", "BE123C", "1E3A8A"];
+      owners.forEach((o, oIdx) => {
+        const colStart = 3 + oIdx * 2;
+        const colEnd = colStart + 1;
+        const oColor = ownerPalette[oIdx % ownerPalette.length];
+        ws['!merges'].push({ s: { r: headerR1, c: colStart }, e: { r: headerR1, c: colEnd } });
+        for (let c = colStart; c <= colEnd; c++) {
+          const cell = XLSX.utils.encode_cell({ r: headerR1, c });
+          ws[cell] = {
+            v: c === colStart ? o.toUpperCase() : "",
+            t: 's',
+            s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: oColor } }, alignment: { horizontal: "center", vertical: "center" } }
+          };
+        }
+      });
+
+      // Detractors Merge & Style
+      const detColStart = 3 + owners.length * 2;
+      const detColEnd = detColStart + 1;
+      ws['!merges'].push({ s: { r: headerR1, c: detColStart }, e: { r: headerR1, c: detColEnd } });
+      for (let c = detColStart; c <= detColEnd; c++) {
+        const cell = XLSX.utils.encode_cell({ r: headerR1, c });
+        ws[cell] = {
+          v: c === detColStart ? "DETRACTORS" : "",
+          t: 's',
+          s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "B91C1C" } }, alignment: { horizontal: "center", vertical: "center" } }
+        };
+      }
+
+      // Neutrals Merge & Style
+      const neuColStart = detColStart + 2;
+      const neuColEnd = neuColStart + 1;
+      ws['!merges'].push({ s: { r: headerR1, c: neuColStart }, e: { r: headerR1, c: neuColEnd } });
+      for (let c = neuColStart; c <= neuColEnd; c++) {
+        const cell = XLSX.utils.encode_cell({ r: headerR1, c });
+        ws[cell] = {
+          v: c === neuColStart ? "NEUTRALS" : "",
+          t: 's',
+          s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "D97706" } }, alignment: { horizontal: "center", vertical: "center" } }
+        };
+      }
+
+      // Level 2 Sub-Headers Styles
+      // Overall (Cols 1-2)
+      [1, 2].forEach(c => {
+        const cell = XLSX.utils.encode_cell({ r: headerR2, c });
+        if (ws[cell]) {
+          ws[cell].s = {
+            font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "2563EB" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: { top: { style: 'thin', color: { rgb: '93C5FD' } }, bottom: { style: 'medium', color: { rgb: '1E3A8A' } }, left: { style: 'thin', color: { rgb: '60A5FA' } }, right: { style: 'thin', color: { rgb: '60A5FA' } } }
+          };
+        }
+      });
+
+      // Owners (Count, %)
+      for (let oIdx = 0; oIdx < owners.length; oIdx++) {
+        const c1 = 3 + oIdx * 2;
+        const c2 = c1 + 1;
+
+        const cell1 = XLSX.utils.encode_cell({ r: headerR2, c: c1 });
+        if (ws[cell1]) {
+          ws[cell1].s = {
+            font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "334155" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '94A3B8' } }, right: { style: 'thin', color: { rgb: '94A3B8' } } }
+          };
+        }
+
+        const cell2 = XLSX.utils.encode_cell({ r: headerR2, c: c2 });
+        if (ws[cell2]) {
+          ws[cell2].s = {
+            font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "475569" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '94A3B8' } }, right: { style: 'thin', color: { rgb: '94A3B8' } } }
+          };
+        }
+      }
+
+      // Detractors Sub-Headers
+      [detColStart, detColEnd].forEach(c => {
+        const cell = XLSX.utils.encode_cell({ r: headerR2, c });
+        if (ws[cell]) {
+          ws[cell].s = {
+            font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "DC2626" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: { top: { style: 'thin', color: { rgb: 'FCA5A5' } }, bottom: { style: 'medium', color: { rgb: '7F1D1D' } }, left: { style: 'thin', color: { rgb: 'F87171' } }, right: { style: 'thin', color: { rgb: 'F87171' } } }
+          };
+        }
+      });
+
+      // Neutrals Sub-Headers
+      [neuColStart, neuColEnd].forEach(c => {
+        const cell = XLSX.utils.encode_cell({ r: headerR2, c });
+        if (ws[cell]) {
+          ws[cell].s = {
+            font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "F59E0B" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: { top: { style: 'thin', color: { rgb: 'FDE68A' } }, bottom: { style: 'medium', color: { rgb: '92400E' } }, left: { style: 'thin', color: { rgb: 'FBBF24' } }, right: { style: 'thin', color: { rgb: 'FBBF24' } } }
+          };
+        }
+      });
+
+      // Data Rows Formatting
+      for (let r = 0; r < dataAoa.length; r++) {
+        const rowIdx = dataStartR + r;
+        for (let c = 0; c <= maxColIdx; c++) {
+          const cell = XLSX.utils.encode_cell({ r: rowIdx, c });
+          if (!ws[cell]) continue;
+
+          let fontColor = "1E293B";
+          let bgColor = "FFFFFF";
+
+          if (c === 0) {
+            fontColor = "1E293B";
+          } else if (c === 1 || c === 2) {
+            fontColor = "1E40AF";
+            bgColor = "F8FAFC";
+          } else if (c === detColStart || c === detColEnd) {
+            fontColor = "B91C1C";
+            if (c === detColStart && dataAoa[r][c] > 0) bgColor = "FEF2F2";
+          } else if (c === neuColStart || c === neuColEnd) {
+            fontColor = "D97706";
+            if (c === neuColStart && dataAoa[r][c] > 0) bgColor = "FFFBEB";
+          }
+
+          ws[cell].s = {
+            font: { bold: c === 0 || c === 1 || c === detColStart || c === neuColStart, color: { rgb: fontColor } },
+            fill: { fgColor: { rgb: bgColor } },
+            alignment: { horizontal: c === 0 ? "left" : "center", vertical: "center" },
+            border: { top: { style: 'thin', color: { rgb: 'E2E8F0' } }, bottom: { style: 'thin', color: { rgb: 'E2E8F0' } }, left: { style: 'thin', color: { rgb: 'E2E8F0' } }, right: { style: 'thin', color: { rgb: 'CBD5E1' } } }
+          };
+        }
+      }
+
+      return dataStartR + dataAoa.length + 4;
     };
 
     currentMatrixR = addMatrixTable(wsMatrix, reasonMatrix, "REASON DISTRIBUTION BY OWNERSHIP", "1E3A8A", currentMatrixR);
@@ -1332,48 +1756,52 @@ const AllTasksList = () => {
     const topOwners = sortedOwners; // Take all owners
 
     const wsSpecial = XLSX.utils.aoa_to_sheet([[`OWNERSHIP DISTRIBUTION - Period: ${periodStr}`]]);
-    wsSpecial['A1'] = { v: `OWNERSHIP DISTRIBUTION - Period: ${periodStr}`, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "4B5563" } }, alignment: { horizontal: "center", vertical: "center" } } };
+    wsSpecial['A1'] = { v: `OWNERSHIP DISTRIBUTION - Period: ${periodStr}`, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "4B5563" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } } };
     if (!wsSpecial['!merges']) wsSpecial['!merges'] = [];
     wsSpecial['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 20 } });
 
     // Build team accountability breakdown per owner for the summary table
     const ownerAccBreakdown = {};
     filteredTasks.forEach(t => {
-      let resps = Array.isArray(t.responsible)
-        ? t.responsible.flatMap(v => typeof v === 'string' ? v.split(',').map(s => s.trim()) : [v])
-        : (typeof t.responsible === 'string' ? t.responsible.split(',').map(s => s.trim()) : []);
-      resps = resps.filter(Boolean);
+      let resps = normalizeArrayField(t.responsible);
       if (resps.length === 0) resps = ['Unknown'];
 
       const accRaw = t.teamAccountability;
-      let accVals = [];
-      if (Array.isArray(accRaw)) accVals = accRaw.flatMap(v => typeof v === 'string' ? v.split(',').map(s => s.trim()) : [v]).filter(Boolean);
-      else if (typeof accRaw === 'string' && accRaw.trim()) accVals = accRaw.split(',').map(s => s.trim()).filter(Boolean);
-      else accVals = ['Unknown'];
-      const acc = accVals[0] || 'Unknown'; // first entry is representative
+      let accVals = normalizeArrayField(accRaw);
+      if (accVals.length === 0) accVals = ['Unknown'];
 
       const score = t.evaluationScore;
       let isDetractor = false;
       let isNeutral = false;
       if (score !== null && score !== 'N/A' && score !== undefined && score !== '') {
-         const numScore = Number(score);
-         if (!isNaN(numScore)) {
-            if (numScore <= 6) isDetractor = true;
-            else if (numScore >= 7 && numScore <= 8) isNeutral = true;
-         }
+        const numScore = Number(score);
+        if (!isNaN(numScore)) {
+          if (numScore <= 6) isDetractor = true;
+          else if (numScore >= 7 && numScore <= 8) isNeutral = true;
+        }
       }
 
-      resps.forEach(r => {
-        const key = (r || 'Unknown').trim();
+      const maxIssues = Math.max(resps.length, accVals.length);
+      for (let i = 0; i < maxIssues; i++) {
+        const resp = resps[i] || (resps.length === 1 ? resps[0] : 'Unknown');
+        const acc = accVals[i] || (accVals.length === 1 ? accVals[0] : 'Unknown');
+        const key = (resp || 'Unknown').trim();
+        const isReach = key.toUpperCase() === 'REACH';
+
         if (!ownerAccBreakdown[key]) ownerAccBreakdown[key] = { yes: 0, no: 0, total: 0, detractors: 0, neutrals: 0 };
         ownerAccBreakdown[key].total++;
+
         const lower = acc.toLowerCase();
-        if (lower.startsWith('yes') || lower === 'y') ownerAccBreakdown[key].yes++;
-        else if (lower.startsWith('no') || lower === 'n') ownerAccBreakdown[key].no++;
+        // Team accountability Yes is strictly an evaluation metric for Reach field teams
+        if (isReach && (lower.startsWith('yes') || lower === 'y')) {
+          ownerAccBreakdown[key].yes++;
+        } else {
+          ownerAccBreakdown[key].no++;
+        }
 
         if (isDetractor) ownerAccBreakdown[key].detractors++;
         if (isNeutral) ownerAccBreakdown[key].neutrals++;
-      });
+      }
     });
 
     const totalOwnerOccurrences = Object.values(ownerCounts).reduce((sum, count) => sum + count, 0);
@@ -1402,83 +1830,292 @@ const AllTasksList = () => {
         };
       });
 
-    wsSpecial['A2'] = { v: 'OWNER DISTRIBUTION SUMMARY', t: 's', s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F2937' } }, alignment: { horizontal: 'center' } } };
+    // Add 2-level grouped headers for OWNER DISTRIBUTION SUMMARY
+    const ownerDistLvl1 = [
+      "Owner / Entity",
+      "TOTAL OCCURRENCES", "",
+      "ACCOUNTABLE (YES)", "",
+      "NON-ACCOUNTABLE (NO)", "",
+      "DETRACTORS", "",
+      "NEUTRALS", ""
+    ];
+
+    const ownerDistLvl2 = [
+      'Owner',
+      'Count',
+      'Percentage',
+      'Team Acc. Yes',
+      'Yes %',
+      'Team Acc. No',
+      'No %',
+      'Detractors',
+      'Detractors %',
+      'Neutrals',
+      'Neutrals %'
+    ];
+
+    wsSpecial['A2'] = { v: 'OWNER DISTRIBUTION SUMMARY', t: 's', s: { font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F2937' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } } };
     wsSpecial['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 10 } });
-    XLSX.utils.sheet_add_json(wsSpecial, ownerDistributionData, { origin: 'A3', skipHeader: false });
-    applyHeaderStyle(wsSpecial, { s: { r: 2, c: 0 }, e: { r: 2, c: 10 } }, '4B5563');
-    applyDataRowStyle(wsSpecial, { s: { r: 2, c: 0 }, e: { r: 2 + ownerDistributionData.length, c: 10 } });
 
-    let currentR = 3 + ownerDistributionData.length + 2;
+    XLSX.utils.sheet_add_aoa(wsSpecial, [ownerDistLvl1, ownerDistLvl2], { origin: 'A3' });
 
-    topOwners.forEach((owner) => {
-      // Owner Title
-      const ownerCell = XLSX.utils.encode_cell({ r: currentR, c: 0 });
-      wsSpecial[ownerCell] = { v: `OWNER: ${owner.toUpperCase()}`, t: 's', s: { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1F2937" } }, alignment: { horizontal: "center" } } };
-      wsSpecial['!merges'].push({ s: { r: currentR, c: 0 }, e: { r: currentR, c: 20 } });
+    const ownerDataAoa = ownerDistributionData.map(r => ownerDistLvl2.map(k => r[k] !== undefined ? r[k] : ""));
+    XLSX.utils.sheet_add_aoa(wsSpecial, ownerDataAoa, { origin: 'A5' });
 
-      // Issue-level statistics for this owner
+    // Merge Owner vertically
+    wsSpecial['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 3, c: 0 } });
+    wsSpecial['A3'] = { v: "Owner / Entity", t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E293B" } }, alignment: { horizontal: "center", vertical: "center" } } };
 
-      const getOwnerStats = (field) => {
-        const counts = {};
-        let ownerIssuesCount = 0;
+    // Level 1 Merges & Styles
+    const ownerDistGroups = [
+      { start: 1, end: 2, label: "TOTAL OCCURRENCES", color: "1E40AF" },
+      { start: 3, end: 4, label: "ACCOUNTABLE (YES)", color: "3730A3" },
+      { start: 5, end: 6, label: "NON-ACCOUNTABLE (NO)", color: "9F1239" },
+      { start: 7, end: 8, label: "DETRACTORS", color: "B91C1C" },
+      { start: 9, end: 10, label: "NEUTRALS", color: "D97706" }
+    ];
 
-        filteredTasks.forEach(t => {
-          const resps = Array.isArray(t.responsible) ? t.responsible : (typeof t.responsible === 'string' ? t.responsible.split(',').map(s => s.trim()) : []);
-          const vals = Array.isArray(t[field]) ? t[field] : (typeof t[field] === 'string' ? t[field].split(',').map(s => s.trim()) : []);
-
-          const max = Math.max(resps.length, vals.length);
-          for (let i = 0; i < max; i++) {
-            let resp = 'Unknown';
-            if (resps.length > 0) {
-              resp = resps[i] || resps[0];
-            }
-            resp = resp.trim();
-
-            if (resp !== owner) continue;
-
-            const val = vals[i] ? vals[i].trim() : 'Unknown';
-            counts[val] = (counts[val] || 0) + 1;
-            ownerIssuesCount++;
-          }
-        });
-
-        return Object.entries(counts).map(([name, count]) => ({
-          Name: name,
-          Count: count,
-          Percentage: ownerIssuesCount > 0 ? `${((count / ownerIssuesCount) * 100).toFixed(1)}%` : "0%"
-        })).sort((a, b) => b.Count - a.Count);
-      };
-
-      const hierarchicalTree = getHierarchicalRCA(filteredTasks, owner);
-      const reasonSummary = getOwnerStats('reason');
-      const subReasonSummary = getOwnerStats('subReason');
-      const rcSummary = getOwnerStats('rootCause');
-      const itns = getOwnerStats('itnRelated');
-      const subs = getOwnerStats('relatedToSubscription');
-
-      const tableStartR = currentR + 2;
-      const nextR = addHierarchicalRCA(wsSpecial, hierarchicalTree, XLSX.utils.encode_cell({ r: tableStartR, c: 0 }), "ROOT CAUSE BREAKDOWN", "1E3A8A");
-      addTableToSheet(wsSpecial, reasonSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 7 }), "REASON SUMMARY", "1E3A8A");
-      addTableToSheet(wsSpecial, subReasonSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 11 }), "SUB-REASON SUMMARY", "B45309");
-      addTableToSheet(wsSpecial, rcSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 15 }), "ROOT CAUSE SUMMARY", "4C1D95");
-      addTableToSheet(wsSpecial, itns, XLSX.utils.encode_cell({ r: tableStartR, c: 19 }), "ITN RELATED", "FF5722");
-      addTableToSheet(wsSpecial, subs, XLSX.utils.encode_cell({ r: tableStartR, c: 23 }), "SUBSCRIPTION", "8BC34A");
-
-      currentR = Math.max(nextR, tableStartR + Math.max(reasonSummary.length, subReasonSummary.length, rcSummary.length, itns.length, subs.length) + 2) + 5;
+    ownerDistGroups.forEach(g => {
+      wsSpecial['!merges'].push({ s: { r: 2, c: g.start }, e: { r: 2, c: g.end } });
+      for (let c = g.start; c <= g.end; c++) {
+        const cell = XLSX.utils.encode_cell({ r: 2, c });
+        wsSpecial[cell] = {
+          v: c === g.start ? g.label : "",
+          t: 's',
+          s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: g.color } }, alignment: { horizontal: "center", vertical: "center" } }
+        };
+      }
     });
 
-    wsSpecial['!cols'] = Array(28).fill({ wch: 15 });
-    wsSpecial['!cols'][0] = { wch: 25 };
-    wsSpecial['!cols'][1] = { wch: 8 };
-    wsSpecial['!cols'][2] = { wch: 25 };
-    wsSpecial['!cols'][3] = { wch: 8 };
-    wsSpecial['!cols'][4] = { wch: 30 };
-    wsSpecial['!cols'][5] = { wch: 8 };
-    wsSpecial['!cols'][7] = { wch: 25 };
-    wsSpecial['!cols'][11] = { wch: 25 };
-    wsSpecial['!cols'][15] = { wch: 30 };
-    wsSpecial['!cols'][19] = { wch: 20 };
-    wsSpecial['!cols'][23] = { wch: 20 };
+    // Level 2 Sub-Headers
+    const ownerLvl2Colors = ["1E293B", "2563EB", "1D4ED8", "4F46E5", "4338CA", "E11D48", "BE123C", "DC2626", "B91C1C", "F59E0B", "D97706"];
+    for (let c = 1; c <= 10; c++) {
+      const cell = XLSX.utils.encode_cell({ r: 3, c });
+      if (wsSpecial[cell]) {
+        wsSpecial[cell].s = {
+          font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: ownerLvl2Colors[c] || "374151" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '94A3B8' } }, right: { style: 'thin', color: { rgb: '94A3B8' } } }
+        };
+      }
+    }
+
+    // Style Data Rows
+    for (let r = 0; r < ownerDataAoa.length; r++) {
+      const rowIdx = 4 + r;
+      for (let c = 0; c <= 10; c++) {
+        const cell = XLSX.utils.encode_cell({ r: rowIdx, c });
+        if (!wsSpecial[cell]) continue;
+
+        let fontColor = "1E293B";
+        let bgColor = "FFFFFF";
+
+        if (c === 1 || c === 2) {
+          fontColor = "1E40AF";
+          bgColor = "F8FAFC";
+        } else if (c === 3 || c === 4) {
+          fontColor = "3730A3";
+        } else if (c === 5 || c === 6) {
+          fontColor = "9F1239";
+        } else if (c === 7 || c === 8) {
+          fontColor = "B91C1C";
+          if (c === 7 && ownerDataAoa[r][c] > 0) bgColor = "FEF2F2";
+        } else if (c === 9 || c === 10) {
+          fontColor = "D97706";
+          if (c === 9 && ownerDataAoa[r][c] > 0) bgColor = "FFFBEB";
+        }
+
+        wsSpecial[cell].s = {
+          font: { bold: c === 0 || c === 1 || c === 3 || c === 7 || c === 9, color: { rgb: fontColor } },
+          fill: { fgColor: { rgb: bgColor } },
+          alignment: { horizontal: c === 0 ? "left" : "center", vertical: "center" },
+          border: { top: { style: 'thin', color: { rgb: 'E2E8F0' } }, bottom: { style: 'thin', color: { rgb: 'E2E8F0' } }, left: { style: 'thin', color: { rgb: 'E2E8F0' } }, right: { style: 'thin', color: { rgb: 'CBD5E1' } } }
+        };
+      }
+    }
+
+    let currentR = 4 + ownerDataAoa.length + 3;
+
+    topOwners.forEach((owner, ownerIdx) => {
+      const isReach = owner.toUpperCase() === 'REACH';
+
+      const renderOwnerSuite = (title, headerBgColor, ownerFilter, accFilter, tag = "") => {
+        // Owner Title
+        const ownerCell = XLSX.utils.encode_cell({ r: currentR, c: 0 });
+        wsSpecial[ownerCell] = {
+          v: title,
+          t: 's',
+          s: { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: headerBgColor } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } }
+        };
+        if (!wsSpecial['!merges']) wsSpecial['!merges'] = [];
+        wsSpecial['!merges'].push({ s: { r: currentR, c: 0 }, e: { r: currentR, c: 29 } });
+
+        const getOwnerStats = (field) => {
+          const counts = {};
+          let ownerIssuesCount = 0;
+
+          filteredTasks.forEach(t => {
+            const resps = Array.isArray(t.responsible) ? t.responsible : (typeof t.responsible === 'string' ? t.responsible.split(',').map(s => s.trim()) : []);
+            const vals = Array.isArray(t[field]) ? t[field] : (typeof t[field] === 'string' ? t[field].split(',').map(s => s.trim()) : []);
+            const accs = Array.isArray(t.teamAccountability) ? t.teamAccountability : (typeof t.teamAccountability === 'string' ? t.teamAccountability.split(',').map(s => s.trim()) : []);
+
+            const max = Math.max(resps.length, vals.length, accs.length);
+            for (let i = 0; i < max; i++) {
+              let resp = 'Unknown';
+              if (resps.length > 0) {
+                resp = resps[i] || resps[0];
+              }
+              resp = resp.trim();
+
+              if (resp.toUpperCase() !== ownerFilter.toUpperCase()) continue;
+
+              let acc = accs[i] || (accs.length > 0 ? accs[0] : 'Unknown');
+              acc = String(acc).trim().toLowerCase();
+              const isAccYes = acc.startsWith('yes') || acc === 'y';
+
+              if (accFilter === 'yes' && !isAccYes) continue;
+              if (accFilter === 'no' && isAccYes) continue;
+
+              let val = vals[i] ? vals[i].trim() : 'Unknown';
+              if (field === 'teamAccountability') {
+                if (ownerFilter.toUpperCase() !== 'REACH') {
+                  val = 'No';
+                } else {
+                  val = isAccYes ? 'Yes' : 'No';
+                }
+              }
+              counts[val] = (counts[val] || 0) + 1;
+              ownerIssuesCount++;
+            }
+          });
+
+          return Object.entries(counts).map(([name, count]) => ({
+            Name: name,
+            Count: count,
+            Percentage: ownerIssuesCount > 0 ? `${((count / ownerIssuesCount) * 100).toFixed(1)}%` : "0%"
+          })).sort((a, b) => b.Count - a.Count);
+        };
+
+        const hierarchicalTree = getHierarchicalRCA(filteredTasks, ownerFilter, accFilter);
+        const reasonSummary = getOwnerStats('reason');
+        const subReasonSummary = getOwnerStats('subReason');
+        const rcSummary = getOwnerStats('rootCause');
+        const itns = getOwnerStats('itnRelated');
+        const subs = getOwnerStats('relatedToSubscription');
+        const accStats = (!accFilter || ownerFilter.toUpperCase() === 'REACH') ? getOwnerStats('teamAccountability') : [];
+
+        const tableStartR = currentR + 2;
+        const rcaColor = accFilter === 'yes' ? "B91C1C" : (accFilter === 'no' ? "047857" : "1E3A8A");
+        const rcSumColor = accFilter === 'yes' ? "991B1B" : (accFilter === 'no' ? "065F46" : "4C1D95");
+        const reasonColor = accFilter === 'yes' ? "B91C1C" : (accFilter === 'no' ? "047857" : "1E3A8A");
+
+        const rcaTitle = tag ? `ROOT CAUSE BREAKDOWN (${tag})` : "ROOT CAUSE BREAKDOWN";
+        const rcSumTitle = tag ? `ROOT CAUSE SUMMARY (${tag})` : "ROOT CAUSE SUMMARY";
+        const reasonTitle = tag ? `REASON SUMMARY (${tag})` : "REASON SUMMARY";
+        const subReasonTitle = tag ? `SUB-REASON SUMMARY (${tag})` : "SUB-REASON SUMMARY";
+        const itnTitle = tag ? `ITN RELATED (${tag})` : "ITN RELATED";
+        const subTitle = tag ? `SUBSCRIPTION (${tag})` : "SUBSCRIPTION";
+        const accTitle = tag ? `TEAM ACCOUNTABILITY (${tag})` : "TEAM ACCOUNTABILITY";
+
+        const nextR = addHierarchicalRCA(wsSpecial, hierarchicalTree, XLSX.utils.encode_cell({ r: tableStartR, c: 0 }), rcaTitle, rcaColor);
+        addTableToSheet(wsSpecial, rcSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 7 }), rcSumTitle, rcSumColor);
+        addTableToSheet(wsSpecial, reasonSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 11 }), reasonTitle, reasonColor);
+        addTableToSheet(wsSpecial, subReasonSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 15 }), subReasonTitle, "B45309");
+        addTableToSheet(wsSpecial, itns, XLSX.utils.encode_cell({ r: tableStartR, c: 19 }), itnTitle, "FF5722");
+        addTableToSheet(wsSpecial, subs, XLSX.utils.encode_cell({ r: tableStartR, c: 23 }), subTitle, "8BC34A");
+
+        if (accStats && accStats.length > 0 && !accFilter) {
+          addTableToSheet(wsSpecial, accStats, XLSX.utils.encode_cell({ r: tableStartR, c: 27 }), accTitle, "7F1D1D");
+        }
+
+        const maxSummaryLen = Math.max(
+          reasonSummary.length,
+          subReasonSummary.length,
+          rcSummary.length,
+          itns.length,
+          subs.length,
+          (!accFilter && accStats) ? accStats.length : 0,
+          1
+        );
+        currentR = Math.max(nextR, tableStartR + maxSummaryLen + 2) + 2;
+      };
+
+      if (isReach) {
+        // Part 1: Reach All Cases
+        renderOwnerSuite(`OWNER: REACH (ALL CASES - COMBINED)`, "1F2937", owner, null, "ALL");
+
+        // Divider
+        let sepR = currentR;
+        let sepCell = XLSX.utils.encode_cell({ r: sepR, c: 0 });
+        wsSpecial[sepCell] = {
+          v: "------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------",
+          t: 's',
+          s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "374151" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } }
+        };
+        wsSpecial['!merges'].push({ s: { r: sepR, c: 0 }, e: { r: sepR, c: 29 } });
+        currentR += 2;
+
+        // Part 2: Reach Accountable (Yes)
+        renderOwnerSuite(`OWNER: REACH — ACCOUNTABLE (FIELD TEAMS / TEAM ACCOUNTABILITY: YES)`, "7F1D1D", owner, 'yes', "ACCOUNTABLE");
+
+        // Divider
+        sepR = currentR;
+        sepCell = XLSX.utils.encode_cell({ r: sepR, c: 0 });
+        wsSpecial[sepCell] = {
+          v: "------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------",
+          t: 's',
+          s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "374151" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } }
+        };
+        wsSpecial['!merges'].push({ s: { r: sepR, c: 0 }, e: { r: sepR, c: 29 } });
+        currentR += 2;
+
+        // Part 3: Reach Non-Accountable (No)
+        renderOwnerSuite(`OWNER: REACH — NON-ACCOUNTABLE (DISPATCHING, CIVIL & SUPPORT / TEAM ACCOUNTABILITY: NO)`, "065F46", owner, 'no', "NON-ACCOUNTABLE");
+      } else {
+        // Standard Owner
+        renderOwnerSuite(`OWNER: ${owner.toUpperCase()}`, "1F2937", owner, null);
+      }
+
+      // Interceptor / Divider between Owner sections
+      if (ownerIdx < topOwners.length - 1) {
+        const sepR = currentR;
+        const sepCell = XLSX.utils.encode_cell({ r: sepR, c: 0 });
+        wsSpecial[sepCell] = {
+          v: "========================================================================================================================================================================================================================",
+          t: 's',
+          s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "000000" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } }
+        };
+        wsSpecial['!merges'].push({ s: { r: sepR, c: 0 }, e: { r: sepR, c: 29 } });
+        currentR += 2;
+      }
+    });
+
+    wsSpecial['!cols'] = Array(32).fill({ wch: 15 });
+    wsSpecial['!cols'][0] = { wch: 25 }; // Reason / Col 0
+    wsSpecial['!cols'][1] = { wch: 8 };  // Total
+    wsSpecial['!cols'][2] = { wch: 25 }; // Sub-reason
+    wsSpecial['!cols'][3] = { wch: 8 };  // Cases
+    wsSpecial['!cols'][4] = { wch: 30 }; // RC
+    wsSpecial['!cols'][5] = { wch: 8 };  // Cases
+    wsSpecial['!cols'][7] = { wch: 28 }; // RC Summary Name
+    wsSpecial['!cols'][8] = { wch: 8 };  // Total
+    wsSpecial['!cols'][9] = { wch: 10 }; // %
+    wsSpecial['!cols'][11] = { wch: 28 }; // Reason Summary Name
+    wsSpecial['!cols'][12] = { wch: 8 };  // Total
+    wsSpecial['!cols'][13] = { wch: 10 }; // %
+    wsSpecial['!cols'][15] = { wch: 30 }; // Sub-Reason Summary Name
+    wsSpecial['!cols'][16] = { wch: 8 };  // Total
+    wsSpecial['!cols'][17] = { wch: 10 }; // %
+    wsSpecial['!cols'][19] = { wch: 22 }; // ITN Related
+    wsSpecial['!cols'][20] = { wch: 8 };  // Total
+    wsSpecial['!cols'][21] = { wch: 10 }; // %
+    wsSpecial['!cols'][23] = { wch: 22 }; // Subscription
+    wsSpecial['!cols'][24] = { wch: 8 };  // Total
+    wsSpecial['!cols'][25] = { wch: 10 }; // %
+    wsSpecial['!cols'][27] = { wch: 24 }; // Team Accountability Name
+    wsSpecial['!cols'][28] = { wch: 8 };  // Total
+    wsSpecial['!cols'][29] = { wch: 10 }; // %
     fixSheetRange(wsSpecial);
 
     XLSX.utils.book_append_sheet(workbook, wsSpecial, 'Ownership Distribution');
@@ -1534,17 +2171,62 @@ const AllTasksList = () => {
       return cols;
     };
 
-    function getFieldStats(tasks, field) {
+    const hasOwnerAccountabilityIssue = (task, targetOwner, targetAcc = null) => {
+      if (!task) return false;
+      const normOwner = String(targetOwner || '').trim().toUpperCase();
+      const resps = normalizeArrayField(task.responsible);
+      const accs = normalizeArrayField(task.teamAccountability);
+      const max = Math.max(resps.length, accs.length);
+
+      for (let i = 0; i < max; i++) {
+        let resp = resps[i] || resps[0] || 'Unknown';
+        resp = String(resp).trim().toUpperCase();
+        if (resp !== normOwner) continue;
+
+        let acc = accs[i] || (accs.length > 0 ? accs[0] : 'Unknown');
+        acc = String(acc).trim().toLowerCase();
+        const isAccYes = acc.startsWith('yes') || acc === 'y';
+
+        if (targetAcc === 'yes' && isAccYes) return true;
+        if (targetAcc === 'no' && !isAccYes) return true;
+        if (!targetAcc) return true;
+      }
+      return false;
+    };
+
+    function getScopedFieldStats(tasks, field, ownerFilter = null, accFilter = null) {
       const counts = {};
       let total = 0;
+      const normOwner = ownerFilter ? String(ownerFilter).trim().toUpperCase() : null;
+
       tasks.forEach(t => {
-        const val = t[field];
-        const values = normalizeArrayField(val);
-        values.forEach(v => {
-          counts[v] = (counts[v] || 0) + 1;
+        const resps = normalizeArrayField(t.responsible);
+        const accs = normalizeArrayField(t.teamAccountability);
+        const vals = normalizeArrayField(t[field]);
+        const max = Math.max(resps.length, vals.length, accs.length);
+
+        for (let i = 0; i < max; i++) {
+          let resp = resps[i] || resps[0] || 'Unknown';
+          resp = String(resp).trim().toUpperCase();
+
+          if (normOwner && resp !== normOwner) continue;
+
+          let acc = accs[i] || (accs.length > 0 ? accs[0] : 'Unknown');
+          acc = String(acc).trim().toLowerCase();
+          const isAccYes = acc.startsWith('yes') || acc === 'y';
+
+          if (accFilter === 'yes' && !isAccYes) continue;
+          if (accFilter === 'no' && isAccYes) continue;
+
+          let val = vals[i] || vals[0] || 'Unknown';
+          val = String(val).trim();
+          if (!val) continue;
+
+          counts[val] = (counts[val] || 0) + 1;
           total++;
-        });
+        }
       });
+
       return Object.entries(counts).map(([name, count]) => ({
         Name: name,
         Count: count,
@@ -1552,12 +2234,14 @@ const AllTasksList = () => {
       })).sort((a, b) => b.Count - a.Count);
     }
 
-    const addSubsetSummary = (ws, tasks, startR, titleColorHex, headerColorHex) => {
+    const getFieldStats = (tasks, field) => getScopedFieldStats(tasks, field);
+
+    const addSubsetSummary = (ws, tasks, startR, titleColorHex, headerColorHex, ownerFilter = null, accFilter = null) => {
       if (tasks.length === 0) return startR;
       const sevStats = getSeverityStats(tasks);
-      const reasonStats = getFieldStats(tasks, 'reason');
-      const subReasonStats = getFieldStats(tasks, 'subReason');
-      const rcStats = getFieldStats(tasks, 'rootCause');
+      const reasonStats = getScopedFieldStats(tasks, 'reason', ownerFilter, accFilter);
+      const subReasonStats = getScopedFieldStats(tasks, 'subReason', ownerFilter, accFilter);
+      const rcStats = getScopedFieldStats(tasks, 'rootCause', ownerFilter, accFilter);
 
       addTableToSheet(ws, sevStats, XLSX.utils.encode_cell({ r: startR, c: 0 }), "SEVERITY BREAKDOWN", titleColorHex);
       addTableToSheet(ws, reasonStats, XLSX.utils.encode_cell({ r: startR, c: 4 }), "REASONS", titleColorHex);
@@ -1864,7 +2548,7 @@ const AllTasksList = () => {
       wsDvocCcOverlap['!cols'][29] = { wch: 20 };
     }
     fixSheetRange(wsDvocCcOverlap);
-    XLSX.utils.book_append_sheet(workbook, wsDvocCcOverlap, 'DVOC-CC Overlap');
+    // XLSX.utils.book_append_sheet(workbook, wsDvocCcOverlap, 'DVOC-CC Overlap'); // Disabled for now
 
     // 3.6 Detractor Special Analytics Window
     const detTasks = filteredTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== 'N/A' && t.evaluationScore <= 6);
@@ -1887,9 +2571,9 @@ const AllTasksList = () => {
     const topDetOwners = sortedDetOwners; // Take all owners (normalized keys)
 
     const wsDetSpecial = XLSX.utils.aoa_to_sheet([[`INDIVIDUAL DETRACTOR ANALYTICS - Period: ${periodStr}`]]);
-    wsDetSpecial['A1'] = { v: `INDIVIDUAL DETRACTOR ANALYTICS - Period: ${periodStr}`, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "B91C1C" } }, alignment: { horizontal: "center", vertical: "center" } } };
+    wsDetSpecial['A1'] = { v: `INDIVIDUAL DETRACTOR ANALYTICS - Period: ${periodStr}`, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "B91C1C" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } } };
     if (!wsDetSpecial['!merges']) wsDetSpecial['!merges'] = [];
-    wsDetSpecial['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 20 } });
+    wsDetSpecial['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 24 } });
 
     // 1. Overall Detractor Owner Distribution Table
     const totalDetOwnerOccurrences = Object.values(detOwnerCounts).reduce((sum, count) => sum + count, 0);
@@ -1956,11 +2640,11 @@ const AllTasksList = () => {
 
     let detCurrentR = Math.max(detAccStartR + detTeamAccData.length + 6, 8);
 
-    topDetOwners.forEach((owner) => {
+    topDetOwners.forEach((owner, ownerIdx) => {
       const ownerDisplay = detOwnerDisplay[owner] || owner;
       const ownerCell = XLSX.utils.encode_cell({ r: detCurrentR, c: 0 });
-      wsDetSpecial[ownerCell] = { v: `OWNER: ${ownerDisplay.toString().toUpperCase()}`, t: 's', s: { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "7F1D1D" } }, alignment: { horizontal: "center" } } };
-      wsDetSpecial['!merges'].push({ s: { r: detCurrentR, c: 0 }, e: { r: detCurrentR, c: 20 } });
+      wsDetSpecial[ownerCell] = { v: `OWNER: ${ownerDisplay.toString().toUpperCase()}`, t: 's', s: { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "7F1D1D" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } } };
+      wsDetSpecial['!merges'].push({ s: { r: detCurrentR, c: 0 }, e: { r: detCurrentR, c: 24 } });
 
       // Issue-level statistics for this owner (Detractors)
 
@@ -1978,7 +2662,10 @@ const AllTasksList = () => {
             const resp = respRaw.toUpperCase();
             if (resp !== ownerKey) continue;
 
-            const val = vals[i] ? vals[i].toString().trim() : 'Unknown';
+            let val = vals[i] ? vals[i].toString().trim() : 'Unknown';
+            if (field === 'teamAccountability' && ownerKey !== 'REACH') {
+              val = 'No';
+            }
             counts[val] = (counts[val] || 0) + 1;
             ownerIssuesCount++;
           }
@@ -2004,156 +2691,236 @@ const AllTasksList = () => {
       addTableToSheet(wsDetSpecial, itns, XLSX.utils.encode_cell({ r: tableStartR, c: 15 }), "ITN RELATED (DET)", "B91C1C");
       addTableToSheet(wsDetSpecial, subs, XLSX.utils.encode_cell({ r: tableStartR, c: 19 }), "SUBSCRIPTION (DET)", "DC2626");
 
-      detCurrentR = Math.max(nextR, tableStartR + Math.max(rcSummary.length, accStats.length, itns.length, subs.length) + 2) + 5;
+      const maxSummaryCount = Math.max(rcSummary.length, accStats.length, itns.length, subs.length, 1);
+      const rcaEndR = Math.max(nextR, tableStartR + maxSummaryCount + 2);
 
-      // ── Raw data breakdown tables — ALL OWNERS ───────────────────────
-      {
-        const ownerDetTasks = detTasks.filter(t => {
-          const resps = Array.isArray(t.responsible)
-            ? t.responsible
-            : (typeof t.responsible === 'string' ? t.responsible.split(',').map(s => s.trim()) : []);
-          return resps.some(r => r.trim().toUpperCase() === owner);
-        });
+      // ── Raw data breakdown tables ───────────────────────
+      const isReach = (ownerDisplay || '').toString().trim().toUpperCase() === 'REACH';
+      const ownerDetTasks = detTasks.filter((task) => {
+        const resps = normalizeArrayField(task.responsible);
+        if (resps.length === 0 && task.responsible) {
+          return String(task.responsible).trim().toUpperCase() === owner.toUpperCase();
+        }
+        return resps.some(r => String(r).trim().toUpperCase() === owner.toUpperCase());
+      });
 
-        const reachNoAccTasks = ownerDetTasks.filter(t => t.teamAccountability?.includes('No'));
-        const reachYesAccTasks = ownerDetTasks.filter(t => t.teamAccountability?.includes('Yes'));
+      const buildReachRawRows = (tasks) => {
+        const maxReasonCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.reason).length));
+        const maxSubReasonCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.subReason).length));
+        const maxRootCauseCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.rootCause).length));
+        const maxOwnershipCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.responsible).length));
+        const maxItnCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.itnRelated).length));
+        const maxSubRelCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.relatedToSubscription).length));
+        const maxTeamAccCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.teamAccountability).length));
+        const maxGroupCount = Math.max(maxReasonCount, maxSubReasonCount, maxRootCauseCount, maxOwnershipCount, maxItnCount, maxSubRelCount, maxTeamAccCount);
+        const fieldGroups = [
+          { field: 'reason', baseName: 'Reason' },
+          { field: 'subReason', baseName: 'Sub-Reason' },
+          { field: 'rootCause', baseName: 'Root Cause' },
+          { field: 'responsible', baseName: 'Owner' },
+          { field: 'itnRelated', baseName: 'ITN Related' },
+          { field: 'relatedToSubscription', baseName: 'Related to Subscription' },
+          { field: 'teamAccountability', baseName: 'Team Accountability' }
+        ];
 
-        const buildReachRawRows = (tasks) => {
-          const maxReasonCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.reason).length));
-          const maxSubReasonCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.subReason).length));
-          const maxRootCauseCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.rootCause).length));
-          const maxOwnershipCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.responsible).length));
-          const maxItnCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.itnRelated).length));
-          const maxSubRelCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.relatedToSubscription).length));
-          const maxGroupCount = Math.max(maxReasonCount, maxSubReasonCount, maxRootCauseCount, maxOwnershipCount, maxItnCount, maxSubRelCount);
-          const fieldGroups = [
-            { field: 'reason', baseName: 'Reason' },
-            { field: 'subReason', baseName: 'Sub-Reason' },
-            { field: 'rootCause', baseName: 'Root Cause' },
-            { field: 'responsible', baseName: 'Ownership' },
-            { field: 'itnRelated', baseName: 'ITN Related' },
-            { field: 'relatedToSubscription', baseName: 'Subscription Related' }
-          ];
+        const maxTaskTickets = Math.max(1, ...tasks.map(t => (t.tickets || []).length));
 
-          return tasks.map(task => ({
+        return tasks.map(task => {
+          const baseData = {
             'SLID': task.slid || 'N/A',
             'Request Number': task.requestNumber || 'N/A',
             'Status': task.status || 'N/A',
-            'Team Accountability': task.teamAccountability || 'N/A',
-            'Q1-Score': task.evaluationScore !== null ? task.evaluationScore : 'N/A',
-            'Q1 - Scale Comment': task.customerFeedback || 'N/A',
             'Severity': task.priority || 'Normal',
+            'Operation': task.operation || 'N/A',
+            'Tariff Name': task.tarrifName || 'N/A',
+            'Validation Status': task.validationStatus || 'Not validated',
+            'Customer Name': task.customerName || 'N/A',
+            'Customer Type': task.customerType || 'N/A',
+            'Contact Number': task.contactNumber || 'N/A',
+            'Governorate': task.governorate || 'N/A',
+            'District': task.district || 'N/A',
+            'Q1-Score': task.evaluationScore !== null && task.evaluationScore !== undefined ? task.evaluationScore : 'N/A',
             'Satisfaction Category': (() => {
-              if (task.evaluationScore === null || task.evaluationScore === 'N/A') return 'N/A';
+              if (task.evaluationScore === null || task.evaluationScore === 'N/A' || task.evaluationScore === undefined) return 'N/A';
               const score = Number(task.evaluationScore);
               if (score <= 6) return 'Detractor';
               if (score >= 7 && score <= 8) return 'Neutral';
               if (score >= 9) return 'Promoter';
               return 'N/A';
             })(),
-            'Customer Name': task.customerName || 'N/A',
-            'Contact Number': task.contactNumber || 'N/A',
-            'Governorate': task.governorate || 'N/A',
-            'District': task.district || 'N/A',
-            'Operation': task.operation || 'N/A',
-            'Tariff Name': task.tarrifName || 'N/A',
-            'Validation Status': task.validationStatus || 'Not validated',
+            'Q1 - Scale Comment': task.customerFeedback || 'N/A',
+            'ONT Type': task.ontType || 'N/A',
+            'Free Extender': task.freeExtender || 'N/A',
+            'Extender Type': task.extenderType || 'N/A',
+            'Extender Count': task.extenderNumber || 0,
+            'GAIA Check': task.gaiaCheck || 'N/A',
+            'GAIA Content': task.gaiaContent || 'N/A',
             ...buildInterleavedFieldColumns(task, fieldGroups, maxGroupCount),
             'Field Team Name': task.teamName || 'N/A',
+          };
+
+          const sortedTickets = [...(task.tickets || [])].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+          for (let i = 0; i < maxTaskTickets; i++) {
+            baseData[`Note ${i + 1}`] = sortedTickets[i]?.note || '';
+          }
+
+          const ivDate = task.interviewDate ? new Date(task.interviewDate) : null;
+          const pisDate = task.pisDate ? new Date(task.pisDate) : null;
+          const closeDate = task.closeDate ? new Date(task.closeDate) : null;
+          const requestDate = task.contractDate ? new Date(task.contractDate) : null;
+
+          const interviewToPis = ivDate && pisDate ? Math.max(0, Math.round((ivDate - pisDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+          const pisToClose = pisDate && closeDate ? Math.max(0, Math.round((pisDate - closeDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+          const requestToClose = requestDate && closeDate ? Math.max(0, Math.round((closeDate - requestDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+
+          const timelineData = {
             'Request Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
+            'FE Date': task.feDate ? format(new Date(task.feDate), 'yyyy-MM-dd') : (task.appDate ? format(new Date(task.appDate), 'yyyy-MM-dd') : 'N/A'),
+            'In Date (Dispatched to Cont.)': task.inDate ? format(new Date(task.inDate), 'yyyy-MM-dd') : 'N/A',
+            'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
             'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
             'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
-            'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
-          }));
-        };
+            'PIS to Interview (Days)': interviewToPis,
+            'Close to PIS (Days)': pisToClose,
+            'Request to Close (Days)': requestToClose,
+            'Interview Week': getWeekDisplay(task.interviewDate)
+          };
 
-        const rawNoAccData = buildReachRawRows(reachNoAccTasks);
-        const rawYesAccData = buildReachRawRows(reachYesAccTasks);
+          return { ...baseData, ...timelineData };
+        });
+      };
 
-        // Section separator header
-        const rawSectionTitleR = detCurrentR;
-        const rawSectionTitleCell = XLSX.utils.encode_cell({ r: rawSectionTitleR, c: 0 });
-        wsDetSpecial[rawSectionTitleCell] = {
-          v: `${ownerDisplay.toString().toUpperCase()} RAW DATA BREAKDOWN — BY TEAM ACCOUNTABILITY`,
-          t: 's',
-          s: { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '450a0a' } }, alignment: { horizontal: 'center', vertical: 'center' } }
-        };
-        if (!wsDetSpecial['!merges']) wsDetSpecial['!merges'] = [];
-        wsDetSpecial['!merges'].push({ s: { r: rawSectionTitleR, c: 0 }, e: { r: rawSectionTitleR, c: 24 } });
+      if (ownerDetTasks.length > 0) {
+        if (isReach) {
+          // ── REACH ONLY: BY TEAM ACCOUNTABILITY (NO and YES tables) ──
+          const reachNoAccTasks = ownerDetTasks.filter((task) => hasOwnerAccountabilityIssue(task, 'REACH', 'no'));
+          const reachYesAccTasks = ownerDetTasks.filter((task) => hasOwnerAccountabilityIssue(task, 'REACH', 'yes'));
 
-        // Table 1: Team Accountability = No
-        const noAccTitleR = rawSectionTitleR + 2;
-        const noAccTitleCell = XLSX.utils.encode_cell({ r: noAccTitleR, c: 0 });
-        wsDetSpecial[noAccTitleCell] = {
-          v: `${ownerDisplay.toString().toUpperCase()} DETRACTOR RAW DATA — TEAM ACCOUNTABILITY: NO  (${rawNoAccData.length} record${rawNoAccData.length !== 1 ? 's' : ''})`,
-          t: 's',
-          s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '14532D' } }, alignment: { horizontal: 'center', vertical: 'center' } }
-        };
-        wsDetSpecial['!merges'].push({ s: { r: noAccTitleR, c: 0 }, e: { r: noAccTitleR, c: 24 } });
+          const rawNoAccData = buildReachRawRows(reachNoAccTasks);
+          const rawYesAccData = buildReachRawRows(reachYesAccTasks);
+          const maxRawCols = Math.max(24, Object.keys(rawNoAccData[0] || rawYesAccData[0] || {}).length - 1);
 
-        let noAccEndR = noAccTitleR + 1;
-        if (rawNoAccData.length > 0) {
-          const rawStartR = addSubsetSummary(wsDetSpecial, reachNoAccTasks, noAccTitleR + 2, "14532D", "166534");
-          XLSX.utils.sheet_add_json(wsDetSpecial, rawNoAccData, { origin: XLSX.utils.encode_cell({ r: rawStartR, c: 0 }), skipHeader: false });
-          const noAccKeys = Object.keys(rawNoAccData[0]);
-          applyHeaderStyle(wsDetSpecial, { s: { r: rawStartR, c: 0 }, e: { r: rawStartR, c: noAccKeys.length - 1 } }, '166534');
-          applyDataRowStyle(wsDetSpecial, { s: { r: rawStartR, c: 0 }, e: { r: rawStartR + rawNoAccData.length, c: noAccKeys.length - 1 } });
-          noAccEndR = rawStartR + rawNoAccData.length;
+          // Section separator header
+          const rawSectionTitleR = rcaEndR + 2;
+          const rawSectionTitleCell = XLSX.utils.encode_cell({ r: rawSectionTitleR, c: 0 });
+          wsDetSpecial[rawSectionTitleCell] = {
+            v: `REACH RAW DATA BREAKDOWN — BY TEAM ACCOUNTABILITY`,
+            t: 's',
+            s: { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '450a0a' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+          };
+          if (!wsDetSpecial['!merges']) wsDetSpecial['!merges'] = [];
+          wsDetSpecial['!merges'].push({ s: { r: rawSectionTitleR, c: 0 }, e: { r: rawSectionTitleR, c: maxRawCols } });
+
+          let currentSectionR = rawSectionTitleR + 2;
+
+          // Table 1: Team Accountability = No
+          const noAccTitleCell = XLSX.utils.encode_cell({ r: currentSectionR, c: 0 });
+          wsDetSpecial[noAccTitleCell] = {
+            v: `REACH DETRACTOR RAW DATA — TEAM ACCOUNTABILITY: NO  (${rawNoAccData.length} record${rawNoAccData.length !== 1 ? 's' : ''})`,
+            t: 's',
+            s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '14532D' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+          };
+          wsDetSpecial['!merges'].push({ s: { r: currentSectionR, c: 0 }, e: { r: currentSectionR, c: maxRawCols } });
+
+          if (rawNoAccData.length > 0) {
+            const subsetEndR = addSubsetSummary(wsDetSpecial, reachNoAccTasks, currentSectionR + 2, "14532D", "166534", "REACH", "no");
+            XLSX.utils.sheet_add_json(wsDetSpecial, rawNoAccData, { origin: XLSX.utils.encode_cell({ r: subsetEndR, c: 0 }), skipHeader: false });
+            const noAccKeys = Object.keys(rawNoAccData[0]);
+            applyHeaderStyle(wsDetSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR, c: noAccKeys.length - 1 } }, '166534');
+            applyDataRowStyle(wsDetSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR + rawNoAccData.length, c: noAccKeys.length - 1 } });
+            formatCommentColumnInTable(wsDetSpecial, subsetEndR + 1, subsetEndR + rawNoAccData.length, noAccKeys.indexOf('Q1 - Scale Comment') !== -1 ? noAccKeys.indexOf('Q1 - Scale Comment') : noAccKeys.indexOf('Q1-Verbatim'));
+            currentSectionR = subsetEndR + rawNoAccData.length + 2;
+          } else {
+            currentSectionR += 2;
+          }
+
+          // Table 2: Team Accountability = Yes
+          const yesAccTitleCell = XLSX.utils.encode_cell({ r: currentSectionR, c: 0 });
+          wsDetSpecial[yesAccTitleCell] = {
+            v: `REACH DETRACTOR RAW DATA — TEAM ACCOUNTABILITY: YES  (${rawYesAccData.length} record${rawYesAccData.length !== 1 ? 's' : ''})`,
+            t: 's',
+            s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '7F1D1D' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+          };
+          wsDetSpecial['!merges'].push({ s: { r: currentSectionR, c: 0 }, e: { r: currentSectionR, c: maxRawCols } });
+
+          if (rawYesAccData.length > 0) {
+            const subsetEndR = addSubsetSummary(wsDetSpecial, reachYesAccTasks, currentSectionR + 2, "7F1D1D", "B91C1C", "REACH", "yes");
+            XLSX.utils.sheet_add_json(wsDetSpecial, rawYesAccData, { origin: XLSX.utils.encode_cell({ r: subsetEndR, c: 0 }), skipHeader: false });
+            const yesAccKeys = Object.keys(rawYesAccData[0]);
+            applyHeaderStyle(wsDetSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR, c: yesAccKeys.length - 1 } }, 'B91C1C');
+            applyDataRowStyle(wsDetSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR + rawYesAccData.length, c: yesAccKeys.length - 1 } });
+            formatCommentColumnInTable(wsDetSpecial, subsetEndR + 1, subsetEndR + rawYesAccData.length, yesAccKeys.indexOf('Q1 - Scale Comment') !== -1 ? yesAccKeys.indexOf('Q1 - Scale Comment') : yesAccKeys.indexOf('Q1-Verbatim'));
+            detCurrentR = subsetEndR + rawYesAccData.length + 3;
+          } else {
+            detCurrentR = currentSectionR + 2;
+          }
+        } else {
+          // ── OTHER OWNERS (e.g. OJO): STANDARD RAW DATA BREAKDOWN (NO "By Team Accountability") ──
+          const rawOwnerData = buildReachRawRows(ownerDetTasks);
+          const maxRawCols = Math.max(24, Object.keys(rawOwnerData[0] || {}).length - 1);
+          const rawSectionTitleR = rcaEndR + 2;
+          const rawSectionTitleCell = XLSX.utils.encode_cell({ r: rawSectionTitleR, c: 0 });
+          wsDetSpecial[rawSectionTitleCell] = {
+            v: `${ownerDisplay.toString().toUpperCase()} DETRACTOR RAW DATA BREAKDOWN  (${rawOwnerData.length} record${rawOwnerData.length !== 1 ? 's' : ''})`,
+            t: 's',
+            s: { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '450a0a' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+          };
+          if (!wsDetSpecial['!merges']) wsDetSpecial['!merges'] = [];
+          wsDetSpecial['!merges'].push({ s: { r: rawSectionTitleR, c: 0 }, e: { r: rawSectionTitleR, c: maxRawCols } });
+
+          const subsetEndR = addSubsetSummary(wsDetSpecial, ownerDetTasks, rawSectionTitleR + 2, "7F1D1D", "B91C1C", owner, null);
+          XLSX.utils.sheet_add_json(wsDetSpecial, rawOwnerData, { origin: XLSX.utils.encode_cell({ r: subsetEndR, c: 0 }), skipHeader: false });
+          const rawKeys = Object.keys(rawOwnerData[0]);
+          applyHeaderStyle(wsDetSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR, c: rawKeys.length - 1 } }, 'B91C1C');
+          applyDataRowStyle(wsDetSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR + rawOwnerData.length, c: rawKeys.length - 1 } });
+          formatCommentColumnInTable(wsDetSpecial, subsetEndR + 1, subsetEndR + rawOwnerData.length, rawKeys.indexOf('Q1 - Scale Comment') !== -1 ? rawKeys.indexOf('Q1 - Scale Comment') : rawKeys.indexOf('Q1-Verbatim'));
+          detCurrentR = subsetEndR + rawOwnerData.length + 3;
         }
+      } else {
+        detCurrentR = rcaEndR + 3;
+      }
 
-        // Table 2: Team Accountability = Yes
-        const yesAccTitleR = noAccEndR + 3;
-        const yesAccTitleCell = XLSX.utils.encode_cell({ r: yesAccTitleR, c: 0 });
-        wsDetSpecial[yesAccTitleCell] = {
-          v: `${ownerDisplay.toString().toUpperCase()} DETRACTOR RAW DATA — TEAM ACCOUNTABILITY: YES  (${rawYesAccData.length} record${rawYesAccData.length !== 1 ? 's' : ''})`,
+      // Interceptor / Divider between Owner sections
+      if (ownerIdx < topDetOwners.length - 1) {
+        const sepR = detCurrentR;
+        const sepCell = XLSX.utils.encode_cell({ r: sepR, c: 0 });
+        wsDetSpecial[sepCell] = {
+          v: "------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------",
           t: 's',
-          s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '7F1D1D' } }, alignment: { horizontal: 'center', vertical: 'center' } }
+          s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "000000" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } }
         };
-        wsDetSpecial['!merges'].push({ s: { r: yesAccTitleR, c: 0 }, e: { r: yesAccTitleR, c: 24 } });
-
-        let yesAccEndR = yesAccTitleR + 1;
-        if (rawYesAccData.length > 0) {
-          const rawStartR = addSubsetSummary(wsDetSpecial, reachYesAccTasks, yesAccTitleR + 2, "7F1D1D", "B91C1C");
-          XLSX.utils.sheet_add_json(wsDetSpecial, rawYesAccData, { origin: XLSX.utils.encode_cell({ r: rawStartR, c: 0 }), skipHeader: false });
-          const yesAccKeys = Object.keys(rawYesAccData[0]);
-          applyHeaderStyle(wsDetSpecial, { s: { r: rawStartR, c: 0 }, e: { r: rawStartR, c: yesAccKeys.length - 1 } }, 'B91C1C');
-          applyDataRowStyle(wsDetSpecial, { s: { r: rawStartR, c: 0 }, e: { r: rawStartR + rawYesAccData.length, c: yesAccKeys.length - 1 } });
-          yesAccEndR = rawStartR + rawYesAccData.length;
-        }
-
-        detCurrentR = yesAccEndR + 5;
+        wsDetSpecial['!merges'].push({ s: { r: sepR, c: 0 }, e: { r: sepR, c: 24 } });
+        detCurrentR += 2;
       }
     });
 
-    wsDetSpecial['!cols'] = Array(25).fill({ wch: 15 });
+    wsDetSpecial['!cols'] = Array(80).fill({ wch: 18 });
     wsDetSpecial['!cols'][0] = { wch: 20 };  // SLID / Reason
-    wsDetSpecial['!cols'][1] = { wch: 8 };   // Total / Request Number
-    wsDetSpecial['!cols'][2] = { wch: 22 };  // Sub-Reason / Status
-    wsDetSpecial['!cols'][3] = { wch: 8 };   // Cases / Team Accountability
-    wsDetSpecial['!cols'][4] = { wch: 28 };  // RC / Q1-Score
-    wsDetSpecial['!cols'][5] = { wch: 55 };  // Cases / Q1 - Scale Comment
-    wsDetSpecial['!cols'][6] = { wch: 12 };  // Severity
-    wsDetSpecial['!cols'][7] = { wch: 20 };  // RC Summary / Satisfaction Category
-    wsDetSpecial['!cols'][8] = { wch: 22 };  // Customer Name
-    wsDetSpecial['!cols'][9] = { wch: 15 };  // Contact Number
+    wsDetSpecial['!cols'][1] = { wch: 15 };  // Request Number / Total
+    wsDetSpecial['!cols'][2] = { wch: 22 };  // Status / Sub-Reason
+    wsDetSpecial['!cols'][3] = { wch: 12 };  // Severity / Cases
+    wsDetSpecial['!cols'][4] = { wch: 25 };  // Operation / RC
+    wsDetSpecial['!cols'][5] = { wch: 20 };  // Tariff Name / Cases
+    wsDetSpecial['!cols'][6] = { wch: 16 };  // Validation Status
+    wsDetSpecial['!cols'][7] = { wch: 25 };  // Customer Name / RC Summary
+    wsDetSpecial['!cols'][8] = { wch: 16 };  // Customer Type / Total
+    wsDetSpecial['!cols'][9] = { wch: 16 };  // Contact Number / %
     wsDetSpecial['!cols'][10] = { wch: 18 }; // Governorate
-    wsDetSpecial['!cols'][11] = { wch: 18 }; // District
-    wsDetSpecial['!cols'][12] = { wch: 18 }; // Operation
-    wsDetSpecial['!cols'][13] = { wch: 18 }; // Tariff Name
-    wsDetSpecial['!cols'][14] = { wch: 16 }; // Validation Status
-    wsDetSpecial['!cols'][15] = { wch: 25 }; // Reason (raw)
-    wsDetSpecial['!cols'][16] = { wch: 25 }; // Sub-Reason (raw)
-    wsDetSpecial['!cols'][17] = { wch: 28 }; // Root Cause (raw)
-    wsDetSpecial['!cols'][18] = { wch: 18 }; // ITN Related
-    wsDetSpecial['!cols'][19] = { wch: 22 }; // Subscription Related
-    wsDetSpecial['!cols'][20] = { wch: 22 }; // Field Team Name
-    wsDetSpecial['!cols'][21] = { wch: 14 }; // Request Date
-    wsDetSpecial['!cols'][22] = { wch: 14 }; // PIS Date
-    wsDetSpecial['!cols'][23] = { wch: 14 }; // Interview Date
-    wsDetSpecial['!cols'][24] = { wch: 14 }; // Close Date
+    wsDetSpecial['!cols'][11] = { wch: 25 }; // District / Reason Summary Name
+    wsDetSpecial['!cols'][12] = { wch: 10 }; // Q1-Score / Total
+    wsDetSpecial['!cols'][13] = { wch: 20 }; // Satisfaction Category / %
+    wsDetSpecial['!cols'][14] = { wch: 60 }; // Q1 - Scale Comment
+    wsDetSpecial['!cols'][15] = { wch: 25 }; // ONT Type / Sub-Reason Summary Name
+    wsDetSpecial['!cols'][16] = { wch: 14 }; // Free Extender / Total
+    wsDetSpecial['!cols'][17] = { wch: 16 }; // Extender Type / %
+    wsDetSpecial['!cols'][18] = { wch: 14 }; // Extender Count
+    wsDetSpecial['!cols'][19] = { wch: 22 }; // GAIA Check / ITN Related Name
+    wsDetSpecial['!cols'][20] = { wch: 25 }; // GAIA Content / Total
+    wsDetSpecial['!cols'][21] = { wch: 10 }; // %
+    wsDetSpecial['!cols'][23] = { wch: 22 }; // Subscription Name
+    wsDetSpecial['!cols'][24] = { wch: 10 }; // Total
+    wsDetSpecial['!cols'][25] = { wch: 10 }; // %
     fixSheetRange(wsDetSpecial);
-
-    XLSX.utils.book_append_sheet(workbook, wsDetSpecial, 'Detractor Special Analytics');
 
     // 3.7 Neutral Special Analytics Window
     const neuTasks = filteredTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== 'N/A' && t.evaluationScore >= 7 && t.evaluationScore <= 8);
@@ -2176,9 +2943,9 @@ const AllTasksList = () => {
     const topNeuOwners = sortedNeuOwners; // Take all owners (normalized keys)
 
     const wsNeuSpecial = XLSX.utils.aoa_to_sheet([[`INDIVIDUAL NEUTRAL ANALYTICS - Period: ${periodStr}`]]);
-    wsNeuSpecial['A1'] = { v: `INDIVIDUAL NEUTRAL ANALYTICS - Period: ${periodStr}`, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "D97706" } }, alignment: { horizontal: "center", vertical: "center" } } };
+    wsNeuSpecial['A1'] = { v: `INDIVIDUAL NEUTRAL ANALYTICS - Period: ${periodStr}`, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "D97706" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } } };
     if (!wsNeuSpecial['!merges']) wsNeuSpecial['!merges'] = [];
-    wsNeuSpecial['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 20 } });
+    wsNeuSpecial['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 24 } });
 
     // 1. Overall Neutral Owner Distribution Table
     const totalNeuOwnerOccurrences = Object.values(neuOwnerCounts).reduce((sum, count) => sum + count, 0);
@@ -2245,11 +3012,11 @@ const AllTasksList = () => {
 
     let neuCurrentR = Math.max(neuAccStartR + neuTeamAccData.length + 6, 8);
 
-    topNeuOwners.forEach((owner) => {
+    topNeuOwners.forEach((owner, ownerIdx) => {
       const ownerDisplay = neuOwnerDisplay[owner] || owner;
       const ownerCell = XLSX.utils.encode_cell({ r: neuCurrentR, c: 0 });
-      wsNeuSpecial[ownerCell] = { v: `OWNER: ${ownerDisplay.toString().toUpperCase()}`, t: 's', s: { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "B45309" } }, alignment: { horizontal: "center" } } };
-      wsNeuSpecial['!merges'].push({ s: { r: neuCurrentR, c: 0 }, e: { r: neuCurrentR, c: 20 } });
+      wsNeuSpecial[ownerCell] = { v: `OWNER: ${ownerDisplay.toString().toUpperCase()}`, t: 's', s: { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "B45309" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } } };
+      wsNeuSpecial['!merges'].push({ s: { r: neuCurrentR, c: 0 }, e: { r: neuCurrentR, c: 24 } });
 
       // Issue-level statistics for this owner (Neutrals)
 
@@ -2267,7 +3034,10 @@ const AllTasksList = () => {
             const resp = respRaw.toUpperCase();
             if (resp !== ownerKey) continue;
 
-            const val = vals[i] ? vals[i].toString().trim() : 'Unknown';
+            let val = vals[i] ? vals[i].toString().trim() : 'Unknown';
+            if (field === 'teamAccountability' && ownerKey !== 'REACH') {
+              val = 'No';
+            }
             counts[val] = (counts[val] || 0) + 1;
             ownerIssuesCount++;
           }
@@ -2293,167 +3063,308 @@ const AllTasksList = () => {
       addTableToSheet(wsNeuSpecial, itns, XLSX.utils.encode_cell({ r: tableStartR, c: 15 }), "ITN RELATED (NEU)", "B45309");
       addTableToSheet(wsNeuSpecial, subs, XLSX.utils.encode_cell({ r: tableStartR, c: 19 }), "SUBSCRIPTION (NEU)", "92400E");
 
-      neuCurrentR = Math.max(nextR, tableStartR + Math.max(rcSummary.length, accStats.length, itns.length, subs.length) + 2) + 5;
+      const maxSummaryCount = Math.max(rcSummary.length, accStats.length, itns.length, subs.length, 1);
+      const rcaEndR = Math.max(nextR, tableStartR + maxSummaryCount + 2);
 
-      // ── Raw data breakdown tables — ALL OWNERS ───────────────────────
-      {
-        const ownerNeuTasks = neuTasks.filter(t => {
-          const resps = Array.isArray(t.responsible)
-            ? t.responsible
-            : (typeof t.responsible === 'string' ? t.responsible.split(',').map(s => s.trim()) : []);
-          return resps.some(r => r.trim().toUpperCase() === owner);
-        });
+      // ── Raw data breakdown tables ───────────────────────
+      const isReach = (ownerDisplay || '').toString().trim().toUpperCase() === 'REACH';
+      const ownerNeuTasks = neuTasks.filter((task) => {
+        const resps = normalizeArrayField(task.responsible);
+        if (resps.length === 0 && task.responsible) {
+          return String(task.responsible).trim().toUpperCase() === owner.toUpperCase();
+        }
+        return resps.some(r => String(r).trim().toUpperCase() === owner.toUpperCase());
+      });
 
-        const reachNoAccTasks = ownerNeuTasks.filter(t => t.teamAccountability?.includes('No'));
-        const reachYesAccTasks = ownerNeuTasks.filter(t => t.teamAccountability?.includes('Yes'));
+      const buildReachRawRows = (tasks) => {
+        const maxReasonCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.reason).length));
+        const maxSubReasonCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.subReason).length));
+        const maxRootCauseCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.rootCause).length));
+        const maxOwnershipCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.responsible).length));
+        const maxItnCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.itnRelated).length));
+        const maxSubRelCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.relatedToSubscription).length));
+        const maxTeamAccCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.teamAccountability).length));
+        const maxGroupCount = Math.max(maxReasonCount, maxSubReasonCount, maxRootCauseCount, maxOwnershipCount, maxItnCount, maxSubRelCount, maxTeamAccCount);
+        const fieldGroups = [
+          { field: 'reason', baseName: 'Reason' },
+          { field: 'subReason', baseName: 'Sub-Reason' },
+          { field: 'rootCause', baseName: 'Root Cause' },
+          { field: 'responsible', baseName: 'Owner' },
+          { field: 'itnRelated', baseName: 'ITN Related' },
+          { field: 'relatedToSubscription', baseName: 'Related to Subscription' },
+          { field: 'teamAccountability', baseName: 'Team Accountability' }
+        ];
 
-        const buildReachRawRows = (tasks) => {
-          const maxReasonCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.reason).length));
-          const maxSubReasonCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.subReason).length));
-          const maxRootCauseCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.rootCause).length));
-          const maxItnCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.itnRelated).length));
-          const maxSubRelCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.relatedToSubscription).length));
-          const maxOwnershipCount = Math.max(1, ...tasks.map(task => normalizeArrayField(task.responsible).length));
-          const maxGroupCount = Math.max(maxReasonCount, maxSubReasonCount, maxRootCauseCount, maxOwnershipCount, maxItnCount, maxSubRelCount);
-          const fieldGroups = [
-            { field: 'reason', baseName: 'Reason' },
-            { field: 'subReason', baseName: 'Sub-Reason' },
-            { field: 'rootCause', baseName: 'Root Cause' },
-            { field: 'responsible', baseName: 'Ownership' },
-            { field: 'itnRelated', baseName: 'ITN Related' },
-            { field: 'relatedToSubscription', baseName: 'Subscription Related' }
-          ];
+        const maxTaskTickets = Math.max(1, ...tasks.map(t => (t.tickets || []).length));
 
-          return tasks.map(task => ({
+        return tasks.map(task => {
+          const baseData = {
             'SLID': task.slid || 'N/A',
             'Request Number': task.requestNumber || 'N/A',
             'Status': task.status || 'N/A',
-            'Team Accountability': task.teamAccountability || 'N/A',
-            'Q1-Score': task.evaluationScore !== null ? task.evaluationScore : 'N/A',
-            'Q1 - Scale Comment': task.customerFeedback || 'N/A',
             'Severity': task.priority || 'Normal',
+            'Operation': task.operation || 'N/A',
+            'Tariff Name': task.tarrifName || 'N/A',
+            'Validation Status': task.validationStatus || 'Not validated',
+            'Customer Name': task.customerName || 'N/A',
+            'Customer Type': task.customerType || 'N/A',
+            'Contact Number': task.contactNumber || 'N/A',
+            'Governorate': task.governorate || 'N/A',
+            'District': task.district || 'N/A',
+            'Q1-Score': task.evaluationScore !== null && task.evaluationScore !== undefined ? task.evaluationScore : 'N/A',
             'Satisfaction Category': (() => {
-              if (task.evaluationScore === null || task.evaluationScore === 'N/A') return 'N/A';
+              if (task.evaluationScore === null || task.evaluationScore === 'N/A' || task.evaluationScore === undefined) return 'N/A';
               const score = Number(task.evaluationScore);
               if (score <= 6) return 'Detractor';
               if (score >= 7 && score <= 8) return 'Neutral';
               if (score >= 9) return 'Promoter';
               return 'N/A';
             })(),
-            'Customer Name': task.customerName || 'N/A',
-            'Contact Number': task.contactNumber || 'N/A',
-            'Governorate': task.governorate || 'N/A',
-            'District': task.district || 'N/A',
-            'Operation': task.operation || 'N/A',
-            'Tariff Name': task.tarrifName || 'N/A',
-            'Validation Status': task.validationStatus || 'Not validated',
+            'Q1 - Scale Comment': task.customerFeedback || 'N/A',
+            'ONT Type': task.ontType || 'N/A',
+            'Free Extender': task.freeExtender || 'N/A',
+            'Extender Type': task.extenderType || 'N/A',
+            'Extender Count': task.extenderNumber || 0,
+            'GAIA Check': task.gaiaCheck || 'N/A',
+            'GAIA Content': task.gaiaContent || 'N/A',
             ...buildInterleavedFieldColumns(task, fieldGroups, maxGroupCount),
             'Field Team Name': task.teamName || 'N/A',
+          };
+
+          const sortedTickets = [...(task.tickets || [])].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+          for (let i = 0; i < maxTaskTickets; i++) {
+            baseData[`Note ${i + 1}`] = sortedTickets[i]?.note || '';
+          }
+
+          const ivDate = task.interviewDate ? new Date(task.interviewDate) : null;
+          const pisDate = task.pisDate ? new Date(task.pisDate) : null;
+          const closeDate = task.closeDate ? new Date(task.closeDate) : null;
+          const requestDate = task.contractDate ? new Date(task.contractDate) : null;
+
+          const interviewToPis = ivDate && pisDate ? Math.max(0, Math.round((ivDate - pisDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+          const pisToClose = pisDate && closeDate ? Math.max(0, Math.round((pisDate - closeDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+          const requestToClose = requestDate && closeDate ? Math.max(0, Math.round((closeDate - requestDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+
+          const timelineData = {
             'Request Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
+            'FE Date': task.feDate ? format(new Date(task.feDate), 'yyyy-MM-dd') : (task.appDate ? format(new Date(task.appDate), 'yyyy-MM-dd') : 'N/A'),
+            'In Date (Dispatched to Cont.)': task.inDate ? format(new Date(task.inDate), 'yyyy-MM-dd') : 'N/A',
+            'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
             'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
             'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
-            'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
-          }));
-        };
+            'PIS to Interview (Days)': interviewToPis,
+            'Close to PIS (Days)': pisToClose,
+            'Request to Close (Days)': requestToClose,
+            'Interview Week': getWeekDisplay(task.interviewDate)
+          };
 
-        const rawNoAccData = buildReachRawRows(reachNoAccTasks);
-        const rawYesAccData = buildReachRawRows(reachYesAccTasks);
+          return { ...baseData, ...timelineData };
+        });
+      };
 
-        // Section separator header
-        const rawSectionTitleR = neuCurrentR;
-        const rawSectionTitleCell = XLSX.utils.encode_cell({ r: rawSectionTitleR, c: 0 });
-        wsNeuSpecial[rawSectionTitleCell] = {
-          v: `${ownerDisplay.toString().toUpperCase()} RAW DATA BREAKDOWN — BY TEAM ACCOUNTABILITY`,
-          t: 's',
-          s: { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '78350f' } }, alignment: { horizontal: 'center', vertical: 'center' } }
-        };
-        if (!wsNeuSpecial['!merges']) wsNeuSpecial['!merges'] = [];
-        wsNeuSpecial['!merges'].push({ s: { r: rawSectionTitleR, c: 0 }, e: { r: rawSectionTitleR, c: 24 } });
+      if (ownerNeuTasks.length > 0) {
+        if (isReach) {
+          // ── REACH ONLY: BY TEAM ACCOUNTABILITY (NO and YES tables) ──
+          const reachNoAccTasks = ownerNeuTasks.filter((task) => hasOwnerAccountabilityIssue(task, 'REACH', 'no'));
+          const reachYesAccTasks = ownerNeuTasks.filter((task) => hasOwnerAccountabilityIssue(task, 'REACH', 'yes'));
 
-        // Table 1: Team Accountability = No
-        const noAccTitleR = rawSectionTitleR + 2;
-        const noAccTitleCell = XLSX.utils.encode_cell({ r: noAccTitleR, c: 0 });
-        wsNeuSpecial[noAccTitleCell] = {
-          v: `${ownerDisplay.toString().toUpperCase()} NEUTRAL RAW DATA — TEAM ACCOUNTABILITY: NO  (${rawNoAccData.length} record${rawNoAccData.length !== 1 ? 's' : ''})`,
-          t: 's',
-          s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '14532D' } }, alignment: { horizontal: 'center', vertical: 'center' } }
-        };
-        wsNeuSpecial['!merges'].push({ s: { r: noAccTitleR, c: 0 }, e: { r: noAccTitleR, c: 24 } });
+          const rawNoAccData = buildReachRawRows(reachNoAccTasks);
+          const rawYesAccData = buildReachRawRows(reachYesAccTasks);
+          const maxRawCols = Math.max(24, Object.keys(rawNoAccData[0] || rawYesAccData[0] || {}).length - 1);
 
-        let noAccEndR = noAccTitleR + 1;
-        if (rawNoAccData.length > 0) {
-          const rawStartR = addSubsetSummary(wsNeuSpecial, reachNoAccTasks, noAccTitleR + 2, "14532D", "166534");
-          XLSX.utils.sheet_add_json(wsNeuSpecial, rawNoAccData, { origin: XLSX.utils.encode_cell({ r: rawStartR, c: 0 }), skipHeader: false });
-          const noAccKeys = Object.keys(rawNoAccData[0]);
-          applyHeaderStyle(wsNeuSpecial, { s: { r: rawStartR, c: 0 }, e: { r: rawStartR, c: noAccKeys.length - 1 } }, '166534');
-          applyDataRowStyle(wsNeuSpecial, { s: { r: rawStartR, c: 0 }, e: { r: rawStartR + rawNoAccData.length, c: noAccKeys.length - 1 } });
-          noAccEndR = rawStartR + rawNoAccData.length;
+          // Section separator header
+          const rawSectionTitleR = rcaEndR + 2;
+          const rawSectionTitleCell = XLSX.utils.encode_cell({ r: rawSectionTitleR, c: 0 });
+          wsNeuSpecial[rawSectionTitleCell] = {
+            v: `REACH RAW DATA BREAKDOWN — BY TEAM ACCOUNTABILITY`,
+            t: 's',
+            s: { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '78350f' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+          };
+          if (!wsNeuSpecial['!merges']) wsNeuSpecial['!merges'] = [];
+          wsNeuSpecial['!merges'].push({ s: { r: rawSectionTitleR, c: 0 }, e: { r: rawSectionTitleR, c: maxRawCols } });
+
+          let currentSectionR = rawSectionTitleR + 2;
+
+          // Table 1: Team Accountability = No
+          const noAccTitleCell = XLSX.utils.encode_cell({ r: currentSectionR, c: 0 });
+          wsNeuSpecial[noAccTitleCell] = {
+            v: `REACH NEUTRAL RAW DATA — TEAM ACCOUNTABILITY: NO  (${rawNoAccData.length} record${rawNoAccData.length !== 1 ? 's' : ''})`,
+            t: 's',
+            s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '14532D' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+          };
+          wsNeuSpecial['!merges'].push({ s: { r: currentSectionR, c: 0 }, e: { r: currentSectionR, c: maxRawCols } });
+
+          if (rawNoAccData.length > 0) {
+            const subsetEndR = addSubsetSummary(wsNeuSpecial, reachNoAccTasks, currentSectionR + 2, "14532D", "166534", "REACH", "no");
+            XLSX.utils.sheet_add_json(wsNeuSpecial, rawNoAccData, { origin: XLSX.utils.encode_cell({ r: subsetEndR, c: 0 }), skipHeader: false });
+            const noAccKeys = Object.keys(rawNoAccData[0]);
+            applyHeaderStyle(wsNeuSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR, c: noAccKeys.length - 1 } }, '166534');
+            applyDataRowStyle(wsNeuSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR + rawNoAccData.length, c: noAccKeys.length - 1 } });
+            formatCommentColumnInTable(wsNeuSpecial, subsetEndR + 1, subsetEndR + rawNoAccData.length, noAccKeys.indexOf('Q1 - Scale Comment') !== -1 ? noAccKeys.indexOf('Q1 - Scale Comment') : noAccKeys.indexOf('Q1-Verbatim'));
+            currentSectionR = subsetEndR + rawNoAccData.length + 2;
+          } else {
+            currentSectionR += 2;
+          }
+
+          // Table 2: Team Accountability = Yes
+          const yesAccTitleCell = XLSX.utils.encode_cell({ r: currentSectionR, c: 0 });
+          wsNeuSpecial[yesAccTitleCell] = {
+            v: `REACH NEUTRAL RAW DATA — TEAM ACCOUNTABILITY: YES  (${rawYesAccData.length} record${rawYesAccData.length !== 1 ? 's' : ''})`,
+            t: 's',
+            s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '92400E' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+          };
+          wsNeuSpecial['!merges'].push({ s: { r: currentSectionR, c: 0 }, e: { r: currentSectionR, c: maxRawCols } });
+
+          if (rawYesAccData.length > 0) {
+            const subsetEndR = addSubsetSummary(wsNeuSpecial, reachYesAccTasks, currentSectionR + 2, "92400E", "B45309", "REACH", "yes");
+            XLSX.utils.sheet_add_json(wsNeuSpecial, rawYesAccData, { origin: XLSX.utils.encode_cell({ r: subsetEndR, c: 0 }), skipHeader: false });
+            const yesAccKeys = Object.keys(rawYesAccData[0]);
+            applyHeaderStyle(wsNeuSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR, c: yesAccKeys.length - 1 } }, 'B45309');
+            applyDataRowStyle(wsNeuSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR + rawYesAccData.length, c: yesAccKeys.length - 1 } });
+            formatCommentColumnInTable(wsNeuSpecial, subsetEndR + 1, subsetEndR + rawYesAccData.length, yesAccKeys.indexOf('Q1 - Scale Comment') !== -1 ? yesAccKeys.indexOf('Q1 - Scale Comment') : yesAccKeys.indexOf('Q1-Verbatim'));
+            neuCurrentR = subsetEndR + rawYesAccData.length + 3;
+          } else {
+            neuCurrentR = currentSectionR + 2;
+          }
+        } else {
+          // ── OTHER OWNERS (e.g. OJO): STANDARD RAW DATA BREAKDOWN (NO "By Team Accountability") ──
+          const rawOwnerData = buildReachRawRows(ownerNeuTasks);
+          const maxRawCols = Math.max(24, Object.keys(rawOwnerData[0] || {}).length - 1);
+          const rawSectionTitleR = rcaEndR + 2;
+          const rawSectionTitleCell = XLSX.utils.encode_cell({ r: rawSectionTitleR, c: 0 });
+          wsNeuSpecial[rawSectionTitleCell] = {
+            v: `${ownerDisplay.toString().toUpperCase()} NEUTRAL RAW DATA BREAKDOWN  (${rawOwnerData.length} record${rawOwnerData.length !== 1 ? 's' : ''})`,
+            t: 's',
+            s: { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '78350f' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+          };
+          if (!wsNeuSpecial['!merges']) wsNeuSpecial['!merges'] = [];
+          wsNeuSpecial['!merges'].push({ s: { r: rawSectionTitleR, c: 0 }, e: { r: rawSectionTitleR, c: maxRawCols } });
+
+          const subsetEndR = addSubsetSummary(wsNeuSpecial, ownerNeuTasks, rawSectionTitleR + 2, "78350F", "92400E", owner, null);
+          XLSX.utils.sheet_add_json(wsNeuSpecial, rawOwnerData, { origin: XLSX.utils.encode_cell({ r: subsetEndR, c: 0 }), skipHeader: false });
+          const rawKeys = Object.keys(rawOwnerData[0]);
+          applyHeaderStyle(wsNeuSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR, c: rawKeys.length - 1 } }, '92400E');
+          applyDataRowStyle(wsNeuSpecial, { s: { r: subsetEndR, c: 0 }, e: { r: subsetEndR + rawOwnerData.length, c: rawKeys.length - 1 } });
+          formatCommentColumnInTable(wsNeuSpecial, subsetEndR + 1, subsetEndR + rawOwnerData.length, rawKeys.indexOf('Q1 - Scale Comment') !== -1 ? rawKeys.indexOf('Q1 - Scale Comment') : rawKeys.indexOf('Q1-Verbatim'));
+          neuCurrentR = subsetEndR + rawOwnerData.length + 3;
         }
+      } else {
+        neuCurrentR = rcaEndR + 3;
+      }
 
-        // Table 2: Team Accountability = Yes
-        const yesAccTitleR = noAccEndR + 3;
-        const yesAccTitleCell = XLSX.utils.encode_cell({ r: yesAccTitleR, c: 0 });
-        wsNeuSpecial[yesAccTitleCell] = {
-          v: `${ownerDisplay.toString().toUpperCase()} NEUTRAL RAW DATA — TEAM ACCOUNTABILITY: YES  (${rawYesAccData.length} record${rawYesAccData.length !== 1 ? 's' : ''})`,
+      // Interceptor / Divider between Owner sections
+      if (ownerIdx < topNeuOwners.length - 1) {
+        const sepR = neuCurrentR;
+        const sepCell = XLSX.utils.encode_cell({ r: sepR, c: 0 });
+        wsNeuSpecial[sepCell] = {
+          v: "------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------",
           t: 's',
-          s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '92400E' } }, alignment: { horizontal: 'center', vertical: 'center' } }
+          s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "000000" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } }
         };
-        wsNeuSpecial['!merges'].push({ s: { r: yesAccTitleR, c: 0 }, e: { r: yesAccTitleR, c: 24 } });
-
-        let yesAccEndR = yesAccTitleR + 1;
-        if (rawYesAccData.length > 0) {
-          const rawStartR = addSubsetSummary(wsNeuSpecial, reachYesAccTasks, yesAccTitleR + 2, "92400E", "B45309");
-          XLSX.utils.sheet_add_json(wsNeuSpecial, rawYesAccData, { origin: XLSX.utils.encode_cell({ r: rawStartR, c: 0 }), skipHeader: false });
-          const yesAccKeys = Object.keys(rawYesAccData[0]);
-          applyHeaderStyle(wsNeuSpecial, { s: { r: rawStartR, c: 0 }, e: { r: rawStartR, c: yesAccKeys.length - 1 } }, 'B45309');
-          applyDataRowStyle(wsNeuSpecial, { s: { r: rawStartR, c: 0 }, e: { r: rawStartR + rawYesAccData.length, c: yesAccKeys.length - 1 } });
-          yesAccEndR = rawStartR + rawYesAccData.length;
-        }
-
-        neuCurrentR = yesAccEndR + 5;
+        wsNeuSpecial['!merges'].push({ s: { r: sepR, c: 0 }, e: { r: sepR, c: 24 } });
+        neuCurrentR += 2;
       }
     });
 
-    wsNeuSpecial['!cols'] = Array(25).fill({ wch: 15 });
+    wsNeuSpecial['!cols'] = Array(80).fill({ wch: 18 });
     wsNeuSpecial['!cols'][0] = { wch: 20 };  // SLID / Reason
-    wsNeuSpecial['!cols'][1] = { wch: 8 };   // Total / Request Number
-    wsNeuSpecial['!cols'][2] = { wch: 22 };  // Sub-Reason / Status
-    wsNeuSpecial['!cols'][3] = { wch: 8 };   // Cases / Team Accountability
-    wsNeuSpecial['!cols'][4] = { wch: 28 };  // RC / Q1-Score
-    wsNeuSpecial['!cols'][5] = { wch: 55 };  // Cases / Q1 - Scale Comment
-    wsNeuSpecial['!cols'][6] = { wch: 12 };  // Severity
-    wsNeuSpecial['!cols'][7] = { wch: 20 };  // RC Summary / Satisfaction Category
-    wsNeuSpecial['!cols'][8] = { wch: 22 };  // Customer Name
-    wsNeuSpecial['!cols'][9] = { wch: 15 };  // Contact Number
+    wsNeuSpecial['!cols'][1] = { wch: 15 };  // Request Number / Total
+    wsNeuSpecial['!cols'][2] = { wch: 22 };  // Status / Sub-Reason
+    wsNeuSpecial['!cols'][3] = { wch: 12 };  // Severity / Cases
+    wsNeuSpecial['!cols'][4] = { wch: 25 };  // Operation / RC
+    wsNeuSpecial['!cols'][5] = { wch: 20 };  // Tariff Name / Cases
+    wsNeuSpecial['!cols'][6] = { wch: 16 };  // Validation Status
+    wsNeuSpecial['!cols'][7] = { wch: 25 };  // Customer Name / RC Summary
+    wsNeuSpecial['!cols'][8] = { wch: 16 };  // Customer Type / Total
+    wsNeuSpecial['!cols'][9] = { wch: 16 };  // Contact Number / %
     wsNeuSpecial['!cols'][10] = { wch: 18 }; // Governorate
-    wsNeuSpecial['!cols'][11] = { wch: 18 }; // District
-    wsNeuSpecial['!cols'][12] = { wch: 18 }; // Operation
-    wsNeuSpecial['!cols'][13] = { wch: 18 }; // Tariff Name
-    wsNeuSpecial['!cols'][14] = { wch: 16 }; // Validation Status
-    wsNeuSpecial['!cols'][15] = { wch: 25 }; // Reason (raw)
-    wsNeuSpecial['!cols'][16] = { wch: 25 }; // Sub-Reason (raw)
-    wsNeuSpecial['!cols'][17] = { wch: 28 }; // Root Cause (raw)
-    wsNeuSpecial['!cols'][18] = { wch: 18 }; // ITN Related
-    wsNeuSpecial['!cols'][19] = { wch: 22 }; // Subscription Related
-    wsNeuSpecial['!cols'][20] = { wch: 22 }; // Field Team Name
-    wsNeuSpecial['!cols'][21] = { wch: 14 }; // Request Date
-    wsNeuSpecial['!cols'][22] = { wch: 14 }; // PIS Date
-    wsNeuSpecial['!cols'][23] = { wch: 14 }; // Interview Date
-    wsNeuSpecial['!cols'][24] = { wch: 14 }; // Close Date
+    wsNeuSpecial['!cols'][11] = { wch: 25 }; // District / Reason Summary Name
+    wsNeuSpecial['!cols'][12] = { wch: 10 }; // Q1-Score / Total
+    wsNeuSpecial['!cols'][13] = { wch: 20 }; // Satisfaction Category / %
+    wsNeuSpecial['!cols'][14] = { wch: 60 }; // Q1 - Scale Comment
+    wsNeuSpecial['!cols'][15] = { wch: 25 }; // ONT Type / Sub-Reason Summary Name
+    wsNeuSpecial['!cols'][16] = { wch: 14 }; // Free Extender / Total
+    wsNeuSpecial['!cols'][17] = { wch: 16 }; // Extender Type / %
+    wsNeuSpecial['!cols'][18] = { wch: 14 }; // Extender Count
+    wsNeuSpecial['!cols'][19] = { wch: 22 }; // GAIA Check / ITN Related Name
+    wsNeuSpecial['!cols'][20] = { wch: 25 }; // GAIA Content / Total
+    wsNeuSpecial['!cols'][21] = { wch: 10 }; // %
+    wsNeuSpecial['!cols'][23] = { wch: 22 }; // Subscription Name
+    wsNeuSpecial['!cols'][24] = { wch: 10 }; // Total
+    wsNeuSpecial['!cols'][25] = { wch: 10 }; // %
     fixSheetRange(wsNeuSpecial);
 
-    XLSX.utils.book_append_sheet(workbook, wsNeuSpecial, 'Neutral Special Analytics');
 
-
-    // 4. Team Performance Sheet
+    // 4. Team Performance Sheet & Team Monthly Samples Token
     let fieldTeams = [];
+    let allTeamSamples = [];
+    let allQuizResults = [];
+    let allOtjAssessments = [];
+    let allLabAssessments = [];
+    let allTrainingSessions = [];
+
     try {
-      // Inline fetch for field teams to compute Team Performance logic
-      const { data } = await api.get('/field-teams/get-field-teams');
-      fieldTeams = data || [];
+      // Determine relevant export year(s)
+      let exportYears = [new Date().getFullYear()];
+      if (dateFilter.type !== 'all' && dateFilter.start) {
+        const startYr = new Date(dateFilter.start).getFullYear();
+        const endYr = dateFilter.end ? new Date(dateFilter.end).getFullYear() : startYr;
+        exportYears = Array.from(new Set([startYr, endYr]));
+      } else if (filteredTasks.length > 0) {
+        const taskYears = filteredTasks.map(t => {
+          const raw = t.interviewDate || t.pisDate || t.createdAt;
+          return raw ? new Date(raw).getFullYear() : null;
+        }).filter(Boolean);
+        if (taskYears.length > 0) {
+          exportYears = Array.from(new Set(taskYears));
+        }
+      }
+
+      // Inline fetch for field teams, team samples, assessments, and training sessions
+      const [
+        { data: ftData },
+        quizResponse,
+        otjResponse,
+        labResponse,
+        trainingResponse,
+        ...tsResponses
+      ] = await Promise.all([
+        api.get('/field-teams/get-field-teams').catch(() => ({ data: [] })),
+        api.get('/quiz-results').catch(() => ({ data: [] })),
+        api.get('/on-the-job-assessments').catch(() => ({ data: [] })),
+        api.get('/lab-assessments').catch(() => ({ data: [] })),
+        api.get('/training-sessions').catch(() => ({ data: [] })),
+        ...exportYears.map(yr => api.get(`/samples-token/team-samples/${yr}`).catch(() => ({ data: [] })))
+      ]);
+
+      const rawFieldTeams = ftData || [];
+      const isTeamActive = (t) => t && !t.isTerminated && !t.isResigned && !t.isSuspended && !t.isOnLeave && t.isActive !== false;
+      fieldTeams = rawFieldTeams.filter(isTeamActive);
+
+      allTeamSamples = tsResponses.flatMap(r => r.data || []);
+      allQuizResults = Array.isArray(quizResponse?.data)
+        ? quizResponse.data
+        : (Array.isArray(quizResponse?.data?.data) ? quizResponse.data.data : []);
+      allOtjAssessments = Array.isArray(otjResponse?.data)
+        ? otjResponse.data
+        : (Array.isArray(otjResponse?.data?.data) ? otjResponse.data.data : []);
+      allLabAssessments = Array.isArray(labResponse?.data)
+        ? labResponse.data
+        : (Array.isArray(labResponse?.data?.data) ? labResponse.data.data : []);
+      allTrainingSessions = Array.isArray(trainingResponse?.data)
+        ? trainingResponse.data
+        : (Array.isArray(trainingResponse?.data?.data) ? trainingResponse.data.data : []);
     } catch (e) {
-      console.error("Failed to fetch field teams for export", e);
+      console.error("Failed to fetch field teams, assessments, or training sessions for export", e);
     }
+
+    const activeTeamNamesSet = new Set(fieldTeams.map(ft => (ft.teamName || '').trim().replace(/\s+/g, ' ').toLowerCase()));
+    const activeTeamIdsSet = new Set(fieldTeams.map(ft => ft._id?.toString()).filter(Boolean));
+    const isTeamNameOrIdActive = (tName, tId) => {
+      const normName = (tName || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      const idStr = tId ? tId.toString() : '';
+      return (normName && activeTeamNamesSet.has(normName)) || (idStr && activeTeamIdsSet.has(idStr));
+    };
 
     const teamPerfData = [];
     const cohortAggregates = {};
@@ -2488,44 +3399,34 @@ const AllTasksList = () => {
       }
     };
 
-    try {
-      const { data: otjData } = await api.get('/on-the-job-assessments');
-      if (Array.isArray(otjData)) {
-        otjData.forEach(assessment => {
-          if (!assessment || assessment.isDeleted || assessment.status !== 'Completed') return;
-          const assessmentDate = assessment.assessmentDate ? new Date(assessment.assessmentDate) : null;
-          if (!assessmentDate || Number.isNaN(assessmentDate.getTime())) return;
+    if (Array.isArray(allOtjAssessments)) {
+      allOtjAssessments.forEach(assessment => {
+        if (!assessment || assessment.isDeleted || assessment.status !== 'Completed') return;
+        const assessmentDate = assessment.assessmentDate ? new Date(assessment.assessmentDate) : null;
+        if (!assessmentDate || Number.isNaN(assessmentDate.getTime())) return;
 
-          const score = assessment.overallScore !== undefined && assessment.overallScore !== null
-            ? Number(assessment.overallScore)
-            : null;
-          if (score === null || Number.isNaN(score)) return;
+        const score = assessment.overallScore !== undefined && assessment.overallScore !== null
+          ? Number(assessment.overallScore)
+          : null;
+        if (score === null || Number.isNaN(score)) return;
 
-          const idKey = assessment.fieldTeamId?._id?.toString();
-          const nameKey = normalizeTeamName(assessment.fieldTeamName || assessment.fieldTeamId?.teamName);
-          const trySetLatest = (key) => {
-            if (!key) return;
-            const existing = otjLatestAssessments[key];
-            if (!existing || assessmentDate > existing.date) {
-              otjLatestAssessments[key] = { score, date: assessmentDate };
-            }
-          };
+        const idKey = assessment.fieldTeamId?._id?.toString();
+        const nameKey = normalizeTeamName(assessment.fieldTeamName || assessment.fieldTeamId?.teamName);
+        const trySetLatest = (key) => {
+          if (!key) return;
+          const existing = otjLatestAssessments[key];
+          if (!existing || assessmentDate > existing.date) {
+            otjLatestAssessments[key] = { score, date: assessmentDate };
+          }
+        };
 
-          trySetLatest(idKey);
-          trySetLatest(nameKey);
-        });
-      }
-    } catch (e) {
-      console.error("Failed to fetch OTJ assessments for export", e);
+        trySetLatest(idKey);
+        trySetLatest(nameKey);
+      });
     }
 
-    try {
-      const response = await api.get('/quiz-results');
-      const allResults = Array.isArray(response.data)
-        ? response.data
-        : (Array.isArray(response.data?.data) ? response.data.data : []);
-
-      allResults.forEach(result => {
+    if (Array.isArray(allQuizResults)) {
+      allQuizResults.forEach(result => {
         if (!result) return;
         const scoreValue = result.percentage ?? result.score ?? null;
         const parsedScore = parseScoreValue(scoreValue);
@@ -2541,8 +3442,6 @@ const AllTasksList = () => {
         setTheoreticalScore(theoreticalLatestById, idKey, scoreData);
         setTheoreticalScore(theoreticalLatestByName, nameKey, scoreData);
       });
-    } catch (e) {
-      console.error("Failed to fetch quiz result data for export", e);
     }
 
     // Helper function to apply proportional rounding (ensures percentages sum to 100%)
@@ -2567,14 +3466,54 @@ const AllTasksList = () => {
       return integers;
     };
 
-    const globalTotalAcc = filteredTasks.filter(t => t.teamAccountability?.includes("Yes")).length;
+    const isTaskAccountable = (t) => {
+      if (!t) return false;
+      const acc = t.teamAccountability;
+      if (Array.isArray(acc)) {
+        return acc.some(v => v && (String(v).trim().toLowerCase().startsWith('yes') || String(v).trim().toLowerCase() === 'y'));
+      }
+      if (typeof acc === 'string') {
+        return acc.trim().toLowerCase().startsWith('yes') || acc.trim().toLowerCase() === 'y';
+      }
+      return false;
+    };
+
+    const getTaskInterviewDate = (task) => {
+      if (!task) return null;
+      const raw = task.interviewDate || task.pisDate || task.createdAt || task.closeDate || task.contractDate;
+      if (!raw) return null;
+      if (raw instanceof Date && !Number.isNaN(raw.getTime())) return raw;
+      if (typeof raw === 'string') {
+        const trimmed = raw.trim();
+        const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        if (dmyMatch) {
+          const day = parseInt(dmyMatch[1], 10);
+          const month = parseInt(dmyMatch[2], 10) - 1;
+          const year = parseInt(dmyMatch[3], 10);
+          const d = new Date(year, month, day);
+          if (!Number.isNaN(d.getTime())) return d;
+        }
+        const ymdMatch = trimmed.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+        if (ymdMatch) {
+          const year = parseInt(ymdMatch[1], 10);
+          const month = parseInt(ymdMatch[2], 10) - 1;
+          const day = parseInt(ymdMatch[3], 10);
+          const d = new Date(year, month, day);
+          if (!Number.isNaN(d.getTime())) return d;
+        }
+      }
+      const d = new Date(raw);
+      return !Number.isNaN(d.getTime()) ? d : null;
+    };
+
+    const globalTotalAcc = filteredTasks.filter(t => isTaskAccountable(t)).length;
     const globalDetAcc = filteredTasks.filter(t => {
       const score = t.evaluationScore || 0;
       const normalized = score <= 10 ? score * 10 : score;
-      return normalized > 0 && normalized <= 60 && t.teamAccountability?.includes("Yes");
+      return normalized > 0 && normalized <= 60 && isTaskAccountable(t);
     }).length;
 
-    // Helpers for Team Performance
+    // Helpers for Team Performance & Samples Token
     const fieldContainsReach = (value) => {
       if (!value) return false;
       const normalizeText = (v) => Array.isArray(v) ? v.join(' ') : String(v);
@@ -2594,22 +3533,95 @@ const AllTasksList = () => {
       return 'Unknown';
     };
 
-    // Group tasks by teamName and capture the first observed teamId for each team group.
+    // Helper to get initial team token samples for the export period
+    const getTeamTokenForPeriod = (teamName) => {
+      const normT = (teamName || '').trim().toLowerCase();
+      const matches = allTeamSamples.filter(s => (s.teamName || '').trim().toLowerCase() === normT);
+      if (matches.length === 0) return 0;
+
+      // 1. If explicit month & year filter
+      if (dateFilter?.type === 'month' && dateFilter.month && dateFilter.year) {
+        const targetM = Number(dateFilter.month);
+        const targetY = Number(dateFilter.year);
+        const m = matches.find(s => Number(s.month) === targetM && Number(s.year) === targetY);
+        return m ? (parseFloat(m.sampleSize) || 0) : 0;
+      }
+
+      // 2. If date range (e.g. 01/06/2026 - 30/06/2026)
+      if (dateFilter?.type !== 'all' && dateFilter?.start && dateFilter?.end) {
+        const startD = new Date(dateFilter.start);
+        const endD = new Date(dateFilter.end);
+        const startM = startD.getMonth() + 1;
+        const startY = startD.getFullYear();
+        const endM = endD.getMonth() + 1;
+        const endY = endD.getFullYear();
+
+        const filteredMatches = matches.filter(s => {
+          const sDate = new Date(s.year, s.month - 1, 15);
+          return sDate >= new Date(startY, startM - 1, 1) && sDate <= new Date(endY, endM, 0);
+        });
+        return filteredMatches.reduce((sum, s) => sum + (parseFloat(s.sampleSize) || 0), 0);
+      }
+
+      // 3. Check months present in filteredTasks
+      const taskMonths = new Set();
+      filteredTasks.forEach(t => {
+        const rawDate = t.interviewDate || t.pisDate || t.createdAt;
+        if (rawDate) {
+          const d = new Date(rawDate);
+          if (!isNaN(d.getTime())) {
+            taskMonths.add(`${d.getFullYear()}-${d.getMonth() + 1}`);
+          }
+        }
+      });
+
+      if (taskMonths.size > 0) {
+        const periodMatches = matches.filter(s => taskMonths.has(`${s.year}-${s.month}`));
+        if (periodMatches.length > 0) {
+          return periodMatches.reduce((sum, s) => sum + (parseFloat(s.sampleSize) || 0), 0);
+        }
+      }
+
+      return matches.reduce((sum, s) => sum + (parseFloat(s.sampleSize) || 0), 0);
+    };
+
+    // Group tasks by teamName and initialize all active field teams & configured sample teams
     const teamStatsMap = {};
+
+    // 1. Initialize registered active field teams
+    fieldTeams.forEach(ft => {
+      const tName = ft.teamName?.trim();
+      if (tName && !teamStatsMap[tName]) {
+        teamStatsMap[tName] = { teamName: tName, tasks: [], teamId: ft._id?.toString() || null };
+      }
+    });
+
+    // 2. Initialize teams present in sample tokens (active only)
+    allTeamSamples.forEach(st => {
+      const tName = st.teamName?.trim();
+      const tId = st.teamId?.toString() || null;
+      if (tName && isTeamNameOrIdActive(tName, tId) && !teamStatsMap[tName]) {
+        teamStatsMap[tName] = { teamName: tName, tasks: [], teamId: tId };
+      }
+    });
+
+    // 3. Map filteredTasks to their corresponding team (active only)
     filteredTasks.forEach(t => {
-      const teamName = t.teamName || 'Unknown Team';
+      const teamName = t.teamName?.trim();
       const teamId = t.teamId?._id?.toString() || t.teamId?.toString() || null;
-      if (!teamStatsMap[teamName]) {
-        teamStatsMap[teamName] = { teamName, tasks: [], teamId };
+      if (teamName && isTeamNameOrIdActive(teamName, teamId)) {
+        if (!teamStatsMap[teamName]) {
+          teamStatsMap[teamName] = { teamName, tasks: [], teamId };
+        }
+        if (!teamStatsMap[teamName].teamId && teamId) {
+          teamStatsMap[teamName].teamId = teamId;
+        }
+        teamStatsMap[teamName].tasks.push(t);
       }
-      if (!teamStatsMap[teamName].teamId && teamId) {
-        teamStatsMap[teamName].teamId = teamId;
-      }
-      teamStatsMap[teamName].tasks.push(t);
     });
 
     const teamTotalAccByTeamName = Object.values(teamStatsMap).reduce((sum, ts) => {
-      return sum + ts.tasks.filter(t => t.teamAccountability?.includes("Yes")).length;
+      return sum + ts.tasks.filter(t => isTaskAccountable(t)).length;
     }, 0);
     const denomTotalAcc = teamTotalAccByTeamName > 0 ? teamTotalAccByTeamName : globalTotalAcc;
 
@@ -2640,7 +3652,7 @@ const AllTasksList = () => {
       const theoreticalAssessmentScore = theoreticalScoreEntry ? formatScoreValue(theoreticalScoreEntry.score) : 'N/A';
 
       const totalTasks = ts.tasks.length;
-      const reachCount = ts.tasks.filter(t => t.teamAccountability?.includes("Yes")).length;
+      const reachCount = ts.tasks.filter(t => isTaskAccountable(t)).length;
 
       const teamDetractors = ts.tasks.filter(t => {
         const score = t.evaluationScore;
@@ -2659,14 +3671,25 @@ const AllTasksList = () => {
         const score = t.evaluationScore;
         if (score === null || score === 'N/A') return false;
         const normalized = score <= 10 ? score * 10 : score;
-        return normalized >= 0 && normalized <= 60 && t.teamAccountability?.includes("Yes");
+        return normalized >= 0 && normalized <= 60 && isTaskAccountable(t);
       }).length;
       const reachNeutrals = ts.tasks.filter(t => {
         const score = t.evaluationScore;
         if (score === null || score === 'N/A') return false;
         const normalized = score <= 10 ? score * 10 : score;
-        return normalized > 60 && normalized <= 80 && t.teamAccountability?.includes("Yes");
+        return normalized > 60 && normalized <= 80 && isTaskAccountable(t);
       }).length;
+
+      // Sample tokens and non-accountable deduction calculations
+      const nonAccDetractors = teamDetractors - reachDetractors;
+      const nonAccNeutrals = teamNeutrals - reachNeutrals;
+      const totalNonAccRemoved = nonAccDetractors + nonAccNeutrals;
+
+      const rawTokenSamples = getTeamTokenForPeriod(ts.teamName);
+      const initialSamples = rawTokenSamples > 0 ? rawTokenSamples : totalTasks;
+      const finalTotalSamples = Math.max(0, initialSamples - totalNonAccRemoved);
+      const finalPromoters = Math.max(0, finalTotalSamples - reachDetractors - reachNeutrals);
+      const finalNps = finalTotalSamples > 0 ? Math.round(((finalPromoters - reachDetractors) / finalTotalSamples) * 100) : 0;
 
       // Aggregate Cohort Stats
       const cohort = getCohortLabel(teamDoc);
@@ -2725,18 +3748,18 @@ const AllTasksList = () => {
           return normalized > 60 && normalized <= 80;
         }).length;
 
-        postSessionReach = postTasks.filter(t => t.teamAccountability?.includes("Yes")).length;
+        postSessionReach = postTasks.filter(t => isTaskAccountable(t)).length;
         postSessionReachDetractors = postTasks.filter(t => {
           const score = t.evaluationScore;
           if (score === null || score === 'N/A') return false;
           const normalized = score <= 10 ? score * 10 : score;
-          return normalized >= 0 && normalized <= 60 && t.teamAccountability?.includes("Yes");
+          return normalized >= 0 && normalized <= 60 && isTaskAccountable(t);
         }).length;
         postSessionReachNeutrals = postTasks.filter(t => {
           const score = t.evaluationScore;
           if (score === null || score === 'N/A') return false;
           const normalized = score <= 10 ? score * 10 : score;
-          return normalized > 60 && normalized <= 80 && t.teamAccountability?.includes("Yes");
+          return normalized > 60 && normalized <= 80 && isTaskAccountable(t);
         }).length;
 
         postSessionOwnerReachDetractors = postTasks.filter(t => {
@@ -2774,9 +3797,15 @@ const AllTasksList = () => {
         ? ts.tasks.filter(t => t.pisDate).map(t => new Date(t.pisDate)).filter(d => !isNaN(d.getTime())).sort((a, b) => b - a)[0]
         : null;
 
+      const historyCount = (teamDoc?.escalationHistory || []).length;
+      const notesVal = teamDoc?.escalationNotes || (historyCount > 0 ? teamDoc.escalationHistory[0]?.notes : '') || '-';
+
       teamPerfData.push({
         'Team Name': ts.teamName,
         'Cohort': getCohortLabel(teamDoc),
+        'Initial Samples': initialSamples,
+        'Non-Acc. Deducted': totalNonAccRemoved,
+        'Final Total Samples': finalTotalSamples,
         'Total Tasks': totalTasks,
         'Acc. %': totalTasks > 0 ? `${Math.round((reachCount / totalTasks) * 100)}%` : '0%',
         'Acc. Share %': denomTotalAcc > 0 ? `${Math.round((reachCount / denomTotalAcc) * 100)}%` : '0%',
@@ -2785,6 +3814,8 @@ const AllTasksList = () => {
         'Total Acc.': reachCount,
         'Acc. Det.': reachDetractors,
         'Acc. Neu.': reachNeutrals,
+        'Final Promoters': finalPromoters,
+        'Final Promoters %': finalTotalSamples > 0 ? `${((finalPromoters / finalTotalSamples) * 100).toFixed(1)}%` : '0%',
         'Latest Session': latestSessionDate ? format(latestSessionDate, 'dd/MM/yyyy') : 'No session',
         'On-The-Job Assessment': otjAssessmentScore,
         'Theoretical Assessment': theoreticalAssessmentScore,
@@ -2799,11 +3830,12 @@ const AllTasksList = () => {
         'Post Acc. %': postSessionTotal > 0 ? `${Math.round((postSessionReach / postSessionTotal) * 100)}%` : '0%',
         'Improve %': trained ? (improvementRate >= 0 ? `+${improvementRate}%` : `${improvementRate}%`) : 'N/A',
         'After Latest': postSessionTotal,
-        'Latest PIS': latestPisDate ? format(latestPisDate, 'dd/MM/yyyy') : '-'
+        'Latest PIS': latestPisDate ? format(latestPisDate, 'dd/MM/yyyy') : '-',
+        'Disciplinary & Policy Notes': notesVal
       });
     });
 
-    teamPerfData.sort((a, b) => b['Total Tasks'] - a['Total Tasks']);
+    teamPerfData.sort((a, b) => b['Final Total Samples'] - a['Final Total Samples']);
 
     // Fix share percentages using proportional rounding
     if (globalTotalAcc > 0) {
@@ -2822,8 +3854,9 @@ const AllTasksList = () => {
       });
     }
 
+
     const wsTeamPerf = XLSX.utils.aoa_to_sheet([[`TEAM ACCOUNTABILITY & PERFORMANCE ANALYTICS - Period: ${periodStr}`]]);
-    wsTeamPerf['A1'] = { v: `TEAM ACCOUNTABILITY & PERFORMANCE ANALYTICS - Period: ${periodStr}`, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "4F46E5" } }, alignment: { horizontal: "center", vertical: "center" } } };
+    wsTeamPerf['A1'] = { v: `TEAM ACCOUNTABILITY & PERFORMANCE ANALYTICS - Period: ${periodStr}`, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "4F46E5" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } } };
     if (!wsTeamPerf['!merges']) wsTeamPerf['!merges'] = [];
     wsTeamPerf['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 23 } });
 
@@ -3066,7 +4099,8 @@ const AllTasksList = () => {
       { wch: 12 }, // Post Acc. %
       { wch: 12 }, // Improve %
       { wch: 12 }, // After Latest
-      { wch: 15 }  // Latest PIS
+      { wch: 15 }, // Latest PIS
+      { wch: 45 }  // Disciplinary & Policy Notes
     ];
 
     // Add raw data breakdown for each team by Team Accountability
@@ -3106,6 +4140,18 @@ const AllTasksList = () => {
       'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
     }));
 
+    const computeIssuesCount = (tasks) => {
+      return tasks.reduce((acc, t) => {
+        const val = t.reason;
+        if (!val) return acc;
+        let values = [];
+        if (Array.isArray(val)) values = val.flatMap(v => (typeof v === 'string' ? v.split(',').map(s => s.trim()) : [v])).filter(Boolean);
+        else if (typeof val === 'string' && val.trim()) values = val.split(',').map(s => s.trim()).filter(Boolean);
+        else if (val) values = [String(val).trim()];
+        return acc + values.length;
+      }, 0);
+    };
+
     teamPerfData.forEach(teamData => {
       const teamName = teamData['Team Name'];
       const teamTasks = filteredTasks.filter(t => t.teamName === teamName);
@@ -3120,24 +4166,12 @@ const AllTasksList = () => {
       wsTeamPerf[sectionTitleCell] = {
         v: `${teamName.toUpperCase()} — RAW DATA BREAKDOWN BY TEAM ACCOUNTABILITY`,
         t: 's',
-        s: { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4F46E5' } }, alignment: { horizontal: 'center', vertical: 'center' } }
+        s: { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4F46E5' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
       };
       if (!wsTeamPerf['!merges']) wsTeamPerf['!merges'] = [];
       wsTeamPerf['!merges'].push({ s: { r: sectionTitleR, c: 0 }, e: { r: sectionTitleR, c: 24 } });
 
       // --- NEW: Overall team summary (Accountable + Non-accountable) ---
-      const computeIssuesCount = (tasks) => {
-        return tasks.reduce((acc, t) => {
-          const val = t.reason;
-          if (!val) return acc;
-          let values = [];
-          if (Array.isArray(val)) values = val.flatMap(v => (typeof v === 'string' ? v.split(',').map(s => s.trim()) : [v])).filter(Boolean);
-          else if (typeof val === 'string' && val.trim()) values = val.split(',').map(s => s.trim()).filter(Boolean);
-          else if (val) values = [String(val).trim()];
-          return acc + values.length;
-        }, 0);
-      };
-
       const overallTotalTasks = teamTasks.length;
       const overallTotalIssues = computeIssuesCount(teamTasks);
       const overallDetractors = teamTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) <= 6).length;
@@ -3213,6 +4247,7 @@ const AllTasksList = () => {
         const accKeys = Object.keys(rawAccData[0]);
         applyHeaderStyle(wsTeamPerf, { s: { r: accTitleR + 1, c: 0 }, e: { r: accTitleR + 1, c: accKeys.length - 1 } }, 'B91C1C');
         applyDataRowStyle(wsTeamPerf, { s: { r: accTitleR + 1, c: 0 }, e: { r: accTitleR + 1 + rawAccData.length, c: accKeys.length - 1 } });
+        formatCommentColumnInTable(wsTeamPerf, accTitleR + 2, accTitleR + 1 + rawAccData.length, accKeys.indexOf('Q1 - Scale Comment') !== -1 ? accKeys.indexOf('Q1 - Scale Comment') : accKeys.indexOf('Q1-Verbatim'));
         accEndR = accTitleR + 1 + rawAccData.length;
       }
 
@@ -3238,131 +4273,2387 @@ const AllTasksList = () => {
         const nonAccKeys = Object.keys(rawNonAccData[0]);
         applyHeaderStyle(wsTeamPerf, { s: { r: nonAccTitleR + 1, c: 0 }, e: { r: nonAccTitleR + 1, c: nonAccKeys.length - 1 } }, '047857');
         applyDataRowStyle(wsTeamPerf, { s: { r: nonAccTitleR + 1, c: 0 }, e: { r: nonAccTitleR + 1 + rawNonAccData.length, c: nonAccKeys.length - 1 } });
+        formatCommentColumnInTable(wsTeamPerf, nonAccTitleR + 2, nonAccTitleR + 1 + rawNonAccData.length, nonAccKeys.indexOf('Q1 - Scale Comment') !== -1 ? nonAccKeys.indexOf('Q1 - Scale Comment') : nonAccKeys.indexOf('Q1-Verbatim'));
         nonAccEndR = nonAccTitleR + 1 + rawNonAccData.length;
       }
 
       teamRawCurrentR = nonAccEndR + 5;
     });
 
-    const cumulativeEndDate = (() => {
-      if (dateFilter && dateFilter.end) {
-        const endDate = new Date(dateFilter.end);
-        if (!Number.isNaN(endDate.getTime())) return endDate;
-      }
-      const latestDate = allTasks
-        .map(task => task.createdAt ? new Date(task.createdAt) : null)
-        .concat(allTasks.map(task => task.interviewDate ? new Date(task.interviewDate) : null))
-        .concat(allTasks.map(task => task.pisDate ? new Date(task.pisDate) : null))
-        .filter(date => date && !Number.isNaN(date.getTime()))
-        .sort((a, b) => a - b);
-      return latestDate.length > 0 ? latestDate[latestDate.length - 1] : new Date();
-    })();
+    const DEFAULT_CUMULATIVE_START_DATE = new Date(2026, 5, 1, 0, 0, 0, 0); // 01/06/2026 00:00:00 default
 
     const cumulativeStartDate = (() => {
-      const referenceDate = (dateFilter && dateFilter.start) ? new Date(dateFilter.start) : cumulativeEndDate;
-      if (Number.isNaN(referenceDate.getTime())) return new Date(new Date().getFullYear(), 5, 1);
-      return new Date(referenceDate.getFullYear(), 5, 1);
+      if (CumulativeDateFilter?.start) {
+        const d = new Date(CumulativeDateFilter.start);
+        if (!Number.isNaN(d.getTime())) {
+          return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+        }
+      }
+      return DEFAULT_CUMULATIVE_START_DATE;
+    })();
+
+    const cumulativeEndDate = (() => {
+      if (CumulativeDateFilter?.end) {
+        const d = new Date(CumulativeDateFilter.end);
+        if (!Number.isNaN(d.getTime())) {
+          return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+        }
+      }
+      const latestDate = allTasks
+        .map(task => getTaskInterviewDate(task))
+        .filter(date => date && !Number.isNaN(date.getTime()))
+        .sort((a, b) => a - b);
+      if (latestDate.length > 0) {
+        const last = latestDate[latestDate.length - 1];
+        return new Date(last.getFullYear(), last.getMonth(), last.getDate(), 23, 59, 59, 999);
+      }
+      const now = new Date();
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     })();
 
     const cumulativeTasks = allTasks.filter(task => {
-      const rawDate = task.interviewDate || task.pisDate || task.createdAt || task.closeDate || task.contractDate;
-      if (!rawDate) return false;
-      const taskDate = new Date(rawDate);
-      if (Number.isNaN(taskDate.getTime())) return false;
+      const taskDate = getTaskInterviewDate(task);
+      if (!taskDate) return false;
       return taskDate >= cumulativeStartDate && taskDate <= cumulativeEndDate;
     });
 
+    // Escalation Matrix consequence calculation helper
+    const getEscalationConsequence = (accDet, accNeu) => {
+      const points = accDet + Math.floor(accNeu / 2);
+      if (points === 0) {
+        if (accNeu === 1) return 'No Consequence (1 Neutral)';
+        return 'No Violation (Compliant)';
+      }
+      if (points === 1) return '1st Offense: Verbal Warning';
+      if (points === 2) return '1st Offense (Repeated): Mandatory Intensive Training (3 Hours)';
+      if (points === 3) return '2nd Offense: First Formal Warning';
+      if (points === 4) return '3rd Offense: Second Formal Warning + Deduction';
+      if (points === 5) return '4th Offense: Third Formal Warning + Deduction 1 Week Suspension';
+      return '5th Offense & Beyond: 1 Month Suspension (Next = Termination)';
+    };
+
+    const escalationMatrixRef = [
+      ["2. ESCALATION MATRIX POLICY (REFERENCE)", "", ""],
+      ["Offense Level", "Trigger", "Consequences"],
+      ["1st Offense", "1 Detractor OR 2 Neutrals", "Verbal Warning"],
+      ["1st Offense (Repeated) or Intermediate Step", "As defined by policy", "Mandatory Intensive Training (3 Hours)"],
+      ["2nd Offense", "Next Detractor OR next 2 Neutrals", "First Formal Warning"],
+      ["3rd Offense", "Next Detractor OR next 2 Neutrals", "Second Formal Warning + Deduction"],
+      ["4th Offense", "Next Detractor OR next 2 Neutrals", "Third Formal Warning + Deduction 1 Week Suspension"],
+      ["5th Offense & Beyond", "Any further Detractor OR equivalent Neutrals", "1 Month Suspension Any violation after completing the 1-month suspension = Termination"]
+    ];
+
+    // Helper to compute standard breakdown rows
+    const computeBreakdownRows = (statsMap, tokenGetter) => {
+      return Object.values(statsMap).map(ts => {
+        const totalTasks = ts.tasks.length;
+        const rawToken = tokenGetter(ts.teamName);
+        const initialSamples = rawToken > 0 ? rawToken : totalTasks;
+
+        if (initialSamples === 0 && totalTasks === 0) return null;
+
+        const totalDet = ts.tasks.filter(t => {
+          const score = t.evaluationScore;
+          if (score === null || score === 'N/A' || score === undefined || score === '') return false;
+          const normalized = Number(score) <= 10 ? Number(score) * 10 : Number(score);
+          return normalized >= 0 && normalized <= 60;
+        }).length;
+
+        const totalNeu = ts.tasks.filter(t => {
+          const score = t.evaluationScore;
+          if (score === null || score === 'N/A' || score === undefined || score === '') return false;
+          const normalized = Number(score) <= 10 ? Number(score) * 10 : Number(score);
+          return normalized > 60 && normalized <= 80;
+        }).length;
+
+        const accDet = ts.tasks.filter(t => {
+          const score = t.evaluationScore;
+          if (score === null || score === 'N/A' || score === undefined || score === '') return false;
+          const normalized = Number(score) <= 10 ? Number(score) * 10 : Number(score);
+          return normalized >= 0 && normalized <= 60 && isTaskAccountable(t);
+        }).length;
+
+        const accNeu = ts.tasks.filter(t => {
+          const score = t.evaluationScore;
+          if (score === null || score === 'N/A' || score === undefined || score === '') return false;
+          const normalized = Number(score) <= 10 ? Number(score) * 10 : Number(score);
+          return normalized > 60 && normalized <= 80 && isTaskAccountable(t);
+        }).length;
+
+        const nonAccDet = totalDet - accDet;
+        const nonAccNeu = totalNeu - accNeu;
+        const totalNonAccRemoved = nonAccDet + nonAccNeu;
+
+        const finalTotalSamples = Math.max(0, initialSamples - totalNonAccRemoved);
+        const finalPromoters = Math.max(0, finalTotalSamples - accDet - accNeu);
+
+        const promoterPct = finalTotalSamples > 0 ? `${((finalPromoters / finalTotalSamples) * 100).toFixed(1)}%` : '0%';
+        const detractorPct = finalTotalSamples > 0 ? `${((accDet / finalTotalSamples) * 100).toFixed(1)}%` : '0%';
+        const neutralPct = finalTotalSamples > 0 ? `${((accNeu / finalTotalSamples) * 100).toFixed(1)}%` : '0%';
+
+        const consequence = getEscalationConsequence(accDet, accNeu);
+        const normT = (ts.teamName || '').trim().toLowerCase();
+        const ftMatch = (fieldTeams || []).find(ft => (ft.teamName || '').trim().toLowerCase() === normT);
+        const actionVal = ftMatch?.escalationAction || ftMatch?.action || '-';
+        const actionDateVal = ftMatch?.escalationDate ? format(new Date(ftMatch.escalationDate), 'dd/MM/yyyy') : '-';
+        const statusVal = ftMatch?.escalationStatus || ftMatch?.status || (accDet + Math.floor(accNeu / 2) > 0 ? 'Pending' : 'Compliant');
+        const historyCount = (ftMatch?.escalationHistory || []).length;
+        const notesVal = ftMatch?.escalationNotes || (historyCount > 0 ? ftMatch.escalationHistory[0]?.notes : '') || '-';
+
+        return {
+          'Team Name': ts.teamName,
+          'Initial Samples (Token)': initialSamples,
+          'Total Detractors': totalDet,
+          'Total Neutrals': totalNeu,
+          'Non-Acc. Detractors (Removed)': nonAccDet,
+          'Non-Acc. Neutrals (Removed)': nonAccNeu,
+          'Total Non-Acc. Deducted': totalNonAccRemoved,
+          'Final Total Samples': finalTotalSamples,
+          'Final Detractors (Accountable)': accDet,
+          'Final Neutrals (Accountable)': accNeu,
+          'Final Promoters': finalPromoters,
+          'Promoter %': promoterPct,
+          'Detractor %': detractorPct,
+          'Neutral %': neutralPct,
+          'Correct Consequence (Escalation Matrix)': consequence,
+          'Action': actionVal,
+          'Action Date': actionDateVal,
+          'Status': statusVal,
+          'Disciplinary & Policy Notes': notesVal
+        };
+      }).filter(Boolean).sort((a, b) => {
+        const aAccDet = Number(a['Final Detractors (Accountable)']) || 0;
+        const bAccDet = Number(b['Final Detractors (Accountable)']) || 0;
+        if (bAccDet !== aAccDet) return bAccDet - aAccDet; // highest detractors first
+
+        const aDetPct = parseFloat(a['Detractor %']) || 0;
+        const bDetPct = parseFloat(b['Detractor %']) || 0;
+        if (bDetPct !== aDetPct) return bDetPct - aDetPct; // highest detractor % first
+
+        const aPromPct = parseFloat(a['Promoter %']) || 0;
+        const bPromPct = parseFloat(b['Promoter %']) || 0;
+        if (aPromPct !== bPromPct) return aPromPct - bPromPct; // lowest promoter % first
+
+        const aAccNeu = Number(a['Final Neutrals (Accountable)']) || 0;
+        const bAccNeu = Number(b['Final Neutrals (Accountable)']) || 0;
+        if (bAccNeu !== aAccNeu) return bAccNeu - aAccNeu; // highest neutrals first
+
+        return (a['Team Name'] || '').localeCompare(b['Team Name'] || '');
+      });
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 5. Cumulative & Monthly Breakdown: Team Performance - Cumulative (From 01/06/2026)
+    // ═════════════════════════════════════════════════════════════════════════
+    const wsTeamPerfCumulative = XLSX.utils.aoa_to_sheet([[]]);
+    const cumulativeRangeLabel = `${format(cumulativeStartDate, 'dd/MM/yyyy')} - ${format(cumulativeEndDate, 'dd/MM/yyyy')}`;
+
+    wsTeamPerfCumulative['A1'] = {
+      v: `TEAM SAMPLES & ESCALATION MATRIX ANALYSIS - Cumulative: ${cumulativeRangeLabel}`,
+      t: 's',
+      s: { font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4F46E5' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+    };
+    if (!wsTeamPerfCumulative['!merges']) wsTeamPerfCumulative['!merges'] = [];
+    wsTeamPerfCumulative['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 17 } });
+
+    // Determine monthly periods from 01/06/2026 up to cumulativeEndDate
+    const startYear = cumulativeStartDate.getFullYear(); // 2026
+    const startMonth = cumulativeStartDate.getMonth() + 1; // 6 (June)
+    const endYear = cumulativeEndDate.getFullYear();
+    const endMonth = cumulativeEndDate.getMonth() + 1;
+
+    const monthlyPeriods = [];
+    let curY = startYear;
+    let curM = startMonth;
+    while (curY < endYear || (curY === endYear && curM <= endMonth)) {
+      monthlyPeriods.push({ year: curY, month: curM });
+      curM++;
+      if (curM > 12) {
+        curM = 1;
+        curY++;
+      }
+    }
+
+    // Helper to get cumulative team sample token across all months in the range
+    const getCumulativeTeamToken = (teamName) => {
+      const normT = (teamName || '').trim().toLowerCase();
+      const matches = allTeamSamples.filter(s => (s.teamName || '').trim().toLowerCase() === normT);
+      const filtered = matches.filter(s => {
+        const sM = Number(s.month);
+        const sY = Number(s.year);
+        return monthlyPeriods.some(p => p.year === sY && p.month === sM);
+      });
+      return filtered.reduce((sum, s) => sum + (parseFloat(s.sampleSize) || 0), 0);
+    };
+
+    // Helper to get team sample token for a specific month
+    const getMonthlyTeamToken = (teamName, year, month) => {
+      const normT = (teamName || '').trim().toLowerCase();
+      const match = allTeamSamples.find(s => (s.teamName || '').trim().toLowerCase() === normT && Number(s.month) === month && Number(s.year) === year);
+      return match ? (parseFloat(match.sampleSize) || 0) : 0;
+    };
+
+    // Build cumulative stats map for all teams
     const cumulativeTeamStatsMap = {};
+    fieldTeams.forEach(ft => {
+      const tName = ft.teamName?.trim();
+      if (tName && !cumulativeTeamStatsMap[tName]) {
+        cumulativeTeamStatsMap[tName] = { teamName: tName, tasks: [], teamId: ft._id?.toString() || null };
+      }
+    });
+    allTeamSamples.forEach(st => {
+      const tName = st.teamName?.trim();
+      if (tName && !cumulativeTeamStatsMap[tName]) {
+        cumulativeTeamStatsMap[tName] = { teamName: tName, tasks: [], teamId: st.teamId?.toString() || null };
+      }
+    });
     cumulativeTasks.forEach(t => {
-      const teamName = t.teamName || 'Unknown Team';
+      const teamName = t.teamName?.trim() || 'Unknown Team';
+      const teamId = t.teamId?._id?.toString() || t.teamId?.toString() || null;
       if (!cumulativeTeamStatsMap[teamName]) {
-        cumulativeTeamStatsMap[teamName] = { teamName, tasks: [] };
+        cumulativeTeamStatsMap[teamName] = { teamName, tasks: [], teamId };
       }
       cumulativeTeamStatsMap[teamName].tasks.push(t);
     });
 
-    const cumulativeTeamPerfData = Object.values(cumulativeTeamStatsMap)
-      .map(ts => {
-        const totalTasks = ts.tasks.length;
-        const reachCount = ts.tasks.filter(t => t.teamAccountability?.includes('Yes')).length;
-        const teamDetractors = ts.tasks.filter(t => {
-          const score = t.evaluationScore;
-          if (score === null || score === 'N/A') return false;
-          const normalized = score <= 10 ? score * 10 : score;
-          return normalized >= 0 && normalized <= 60;
-        }).length;
-        const teamNeutrals = ts.tasks.filter(t => {
-          const score = t.evaluationScore;
-          if (score === null || score === 'N/A') return false;
-          const normalized = score <= 10 ? score * 10 : score;
-          return normalized > 60 && normalized <= 80;
-        }).length;
-        const reachDetractors = ts.tasks.filter(t => {
-          const score = t.evaluationScore;
-          if (score === null || score === 'N/A') return false;
-          const normalized = score <= 10 ? score * 10 : score;
-          return normalized >= 0 && normalized <= 60 && t.teamAccountability?.includes('Yes');
-        }).length;
-        const reachNeutrals = ts.tasks.filter(t => {
-          const score = t.evaluationScore;
-          if (score === null || score === 'N/A') return false;
-          const normalized = score <= 10 ? score * 10 : score;
-          return normalized > 60 && normalized <= 80 && t.teamAccountability?.includes('Yes');
-        }).length;
-        return {
-          'Team Name': ts.teamName,
-          'Total Tasks': totalTasks,
-          'Total Acc.': reachCount,
-          'Acc. %': totalTasks > 0 ? `${Math.round((reachCount / totalTasks) * 100)}%` : '0%',
-          'Detractors': teamDetractors,
-          'Neutrals': teamNeutrals,
-          'Acc. Det.': reachDetractors,
-          'Acc. Neu.': reachNeutrals
-        };
-      })
-      .sort((a, b) => b['Total Acc.'] - a['Total Acc.']);
+    const cumulativeBreakdownRows = computeBreakdownRows(cumulativeTeamStatsMap, getCumulativeTeamToken);
 
-    const cumulativeGlobalTotalAcc = cumulativeTasks.filter(t => t.teamAccountability?.includes('Yes')).length;
-    const cumulativeGlobalDetAcc = cumulativeTasks.filter(t => {
-      const score = t.evaluationScore || 0;
-      const normalized = score <= 10 ? score * 10 : score;
-      return normalized > 0 && normalized <= 60 && t.teamAccountability?.includes('Yes');
-    }).length;
-
-    const wsTeamPerfCumulative = XLSX.utils.aoa_to_sheet([[`TEAM ACCOUNTABILITY & PERFORMANCE ANALYTICS - CUMULATIVE: ${periodStr}`]]);
-    wsTeamPerfCumulative['A1'] = {
-      v: `TEAM ACCOUNTABILITY & PERFORMANCE ANALYTICS - CUMULATIVE: ${periodStr}`,
+    // Cumulative Summary Totals
+    const cumSumInitial = cumulativeBreakdownRows.reduce((sum, r) => sum + r['Initial Samples (Token)'], 0);
+    const cumSumDet = cumulativeBreakdownRows.reduce((sum, r) => sum + r['Total Detractors'], 0);
+    // Add Escalation Matrix Policy Reference Table (Columns A-C)
+    XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, escalationMatrixRef, { origin: "A3" });
+    wsTeamPerfCumulative['A3'] = {
+      v: "ESCALATION MATRIX POLICY (REFERENCE)",
       t: 's',
-      s: { font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4F46E5' } }, alignment: { horizontal: 'center', vertical: 'center' } }
+      s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E40AF" } }, alignment: { horizontal: "center" } }
     };
-    if (!wsTeamPerfCumulative['!merges']) wsTeamPerfCumulative['!merges'] = [];
-    wsTeamPerfCumulative['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } });
+    wsTeamPerfCumulative['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 2 } });
+    applyHeaderStyle(wsTeamPerfCumulative, { s: { r: 3, c: 0 }, e: { r: 3, c: 2 } }, "2563EB");
+    applyDataRowStyle(wsTeamPerfCumulative, { s: { r: 4, c: 0 }, e: { r: 3 + escalationMatrixRef.length - 1, c: 2 } });
 
-    XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, [['Cumulative date range included', `${periodStr}`]], { origin: 'A3' });
-    XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, [['Total Tasks Included', cumulativeTasks.length]], { origin: 'A5' });
-    XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, [['Total Acc. Included', cumulativeGlobalTotalAcc]], { origin: 'D5' });
-    XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, [['Acc. Detractors', cumulativeGlobalDetAcc]], { origin: 'G5' });
+    const addGroupedTeamBreakdownTable = (ws, rows, startR, title, titleColorHex = "4F46E5", firstColHeader = "Team Name") => {
+      const titleR = startR + 1;
+      const headerR1 = startR + 2;
+      const headerR2 = startR + 3;
+      const dataStartR = startR + 4;
 
-    XLSX.utils.sheet_add_json(wsTeamPerfCumulative, cumulativeTeamPerfData, { origin: 'A8', skipHeader: false });
-    applyHeaderStyle(wsTeamPerfCumulative, { s: { r: 7, c: 0 }, e: { r: 7, c: 8 } }, '4B5563');
-    applyDataRowStyle(wsTeamPerfCumulative, { s: { r: 7, c: 0 }, e: { r: 7 + cumulativeTeamPerfData.length, c: 8 } });
+      const hasPolicy = rows.some(r => r['Correct Consequence (Escalation Matrix)'] !== undefined);
+      const totalCols = hasPolicy ? 19 : 14;
 
-    wsTeamPerfCumulative['!cols'] = [
-      { wch: 28 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 12 }
+      // 1. Table Title (A1/TitleR)
+      const titleCell = XLSX.utils.encode_cell({ r: titleR, c: 0 });
+      ws[titleCell] = {
+        v: title,
+        t: 's',
+        s: {
+          font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: titleColorHex } },
+          alignment: { horizontal: "left", vertical: "center", indent: 1 }
+        }
+      };
+      if (!ws['!merges']) ws['!merges'] = [];
+      ws['!merges'].push({ s: { r: titleR, c: 0 }, e: { r: titleR, c: totalCols - 1 } });
+
+      const lvl1Headers = hasPolicy
+        ? [
+          firstColHeader,
+          "INITIAL SAMPLES & RAW ISSUES", "", "",
+          "NON-ACCOUNTABLE DEDUCTIONS", "", "",
+          "FINAL ACCOUNTABLE BREAKDOWN", "", "", "",
+          "PERFORMANCE METRICS", "", "",
+          "POLICY & ESCALATION", "", "", "", ""
+        ]
+        : [
+          firstColHeader,
+          "INITIAL SAMPLES & RAW ISSUES", "", "",
+          "NON-ACCOUNTABLE DEDUCTIONS", "", "",
+          "FINAL ACCOUNTABLE BREAKDOWN", "", "", "",
+          "PERFORMANCE METRICS", "", ""
+        ];
+
+      const lvl2Headers = [
+        firstColHeader,
+        "Initial Samples (Token)",
+        "Total Detractors",
+        "Total Neutrals",
+        "Non-Acc. Detractors (Removed)",
+        "Non-Acc. Neutrals (Removed)",
+        "Total Non-Acc. Deducted",
+        "Final Total Samples",
+        "Final Detractors (Accountable)",
+        "Final Neutrals (Accountable)",
+        "Final Promoters",
+        "Promoter %",
+        "Detractor %",
+        "Neutral %",
+        ...(hasPolicy ? [
+          "Correct Consequence (Escalation Matrix)",
+          "Action",
+          "Action Date",
+          "Status",
+          "Disciplinary & Policy Notes"
+        ] : [])
+      ];
+
+      // Add Headers
+      XLSX.utils.sheet_add_aoa(ws, [lvl1Headers, lvl2Headers], { origin: XLSX.utils.encode_cell({ r: headerR1, c: 0 }) });
+
+      // Add Data (convert objects to AOA according to keys)
+      const dataAoa = rows.map(r => lvl2Headers.map(h => {
+        if (h === firstColHeader) return r[firstColHeader] || r['Team Name'] || r['Month / Period'] || r['Month'] || '';
+        return r[h] !== undefined ? r[h] : '';
+      }));
+      XLSX.utils.sheet_add_aoa(ws, dataAoa, { origin: XLSX.utils.encode_cell({ r: dataStartR, c: 0 }) });
+
+      // Merge first column header vertically
+      ws['!merges'].push({ s: { r: headerR1, c: 0 }, e: { r: headerR2, c: 0 } });
+      ws[XLSX.utils.encode_cell({ r: headerR1, c: 0 })] = {
+        v: firstColHeader,
+        t: 's',
+        s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E293B" } }, alignment: { horizontal: "center", vertical: "center" } }
+      };
+
+      // Level 1 Merges & Styles
+      const lvl1Groups = [
+        { start: 1, end: 3, label: "INITIAL SAMPLES & RAW ISSUES", color: "1E40AF" },
+        { start: 4, end: 6, label: "NON-ACCOUNTABLE DEDUCTIONS", color: "9F1239" },
+        { start: 7, end: 10, label: "FINAL ACCOUNTABLE BREAKDOWN", color: "3730A3" },
+        { start: 11, end: 13, label: "PERFORMANCE METRICS", color: "065F46" },
+        ...(hasPolicy ? [{ start: 14, end: 18, label: "POLICY & ESCALATION", color: "581C87" }] : [])
+      ];
+
+      lvl1Groups.forEach(g => {
+        if (g.start < g.end) {
+          ws['!merges'].push({ s: { r: headerR1, c: g.start }, e: { r: headerR1, c: g.end } });
+        }
+        for (let c = g.start; c <= g.end; c++) {
+          const cell = XLSX.utils.encode_cell({ r: headerR1, c });
+          ws[cell] = {
+            v: c === g.start ? g.label : "",
+            t: 's',
+            s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: g.color } }, alignment: { horizontal: "center", vertical: "center" } }
+          };
+        }
+      });
+
+      // Level 2 Sub-Headers Styling
+      const lvl2Styles = {
+        1: { fill: "2563EB" }, // Initial Samples
+        2: { fill: "DC2626" }, // Total Detractors
+        3: { fill: "D97706" }, // Total Neutrals
+        4: { fill: "BE123C" }, // Non-Acc Det
+        5: { fill: "BE123C" }, // Non-Acc Neu
+        6: { fill: "881337" }, // Total Non-Acc
+        7: { fill: "4338CA" }, // Final Samples
+        8: { fill: "B91C1C" }, // Final Det
+        9: { fill: "B45309" }, // Final Neu
+        10: { fill: "059669" }, // Final Prom
+        11: { fill: "047857" }, // Prom %
+        12: { fill: "991B1B" }, // Det %
+        13: { fill: "92400E" }, // Neu %
+        14: { fill: "6B21A8" }, // Consequence
+        15: { fill: "4C1D95" }, // Action
+        16: { fill: "581C87" }, // Action Date
+        17: { fill: "3B0764" }, // Status
+        18: { fill: "475569" }  // Disciplinary & Policy Notes
+      };
+
+      for (let c = 1; c < totalCols; c++) {
+        const cell = XLSX.utils.encode_cell({ r: headerR2, c });
+        const conf = lvl2Styles[c] || { fill: "374151" };
+        if (ws[cell]) {
+          ws[cell].s = {
+            font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: conf.fill } },
+            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            border: { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '94A3B8' } }, right: { style: 'thin', color: { rgb: '94A3B8' } } }
+          };
+        }
+      }
+
+      // Data Rows Styling
+      for (let r = 0; r < dataAoa.length; r++) {
+        const rowIdx = dataStartR + r;
+        const isTotalRow = r === dataAoa.length - 1;
+
+        for (let c = 0; c < totalCols; c++) {
+          const cell = XLSX.utils.encode_cell({ r: rowIdx, c });
+          if (!ws[cell]) continue;
+
+          let fontColor = "1E293B";
+          let bgColor = isTotalRow ? "F1F5F9" : (r % 2 === 1 ? "F8FAFC" : "FFFFFF");
+
+          if (c === 0) {
+            fontColor = isTotalRow ? "0F172A" : "1E293B";
+          } else if (c === 1 || c === 7) {
+            fontColor = "1E40AF";
+            if (!isTotalRow) bgColor = "F8FAFC";
+          } else if (c === 2 || c === 8 || c === 12) {
+            fontColor = "B91C1C";
+            if (!isTotalRow && c === 8) bgColor = "FEF2F2";
+          } else if (c === 3 || c === 9 || c === 13) {
+            fontColor = "D97706";
+            if (!isTotalRow && c === 9) bgColor = "FFFBEB";
+          } else if (c === 4 || c === 5 || c === 6) {
+            fontColor = "9F1239";
+          } else if (c === 10 || c === 11) {
+            fontColor = "047857";
+            if (!isTotalRow && c === 10) bgColor = "ECFDF5";
+          } else if (c === 14) {
+            fontColor = "581C87";
+            if (!isTotalRow) bgColor = "FAF5FF";
+          } else if (c === 15) {
+            fontColor = "4C1D95";
+          } else if (c === 16) {
+            fontColor = "581C87";
+          } else if (c === 17) {
+            fontColor = "3B0764";
+          } else if (c === 18) {
+            fontColor = "475569";
+          }
+
+          ws[cell].s = {
+            font: { bold: isTotalRow || c === 0 || c === 7 || c === 11 || c === 12 || c === 14 || c === 17, sz: 9.5, color: { rgb: fontColor } },
+            fill: { fgColor: { rgb: bgColor } },
+            alignment: { horizontal: c === 0 || (hasPolicy && (c === 14 || c === 18)) ? "left" : "center", vertical: "center" },
+            border: {
+              top: { style: isTotalRow ? 'medium' : 'thin', color: { rgb: isTotalRow ? '334155' : 'E2E8F0' } },
+              bottom: { style: isTotalRow ? 'medium' : 'thin', color: { rgb: isTotalRow ? '334155' : 'E2E8F0' } },
+              left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+              right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+            }
+          };
+        }
+      }
+
+      return dataStartR + dataAoa.length;
+    };
+
+    let currentSheetRow = 3 + escalationMatrixRef.length + 2;
+
+    // 1. OVERALL Cumulative TABLE
+    currentSheetRow = addGroupedTeamBreakdownTable(
+      wsTeamPerfCumulative,
+      cumulativeBreakdownRows,
+      currentSheetRow - 1,
+      `1. OVERALL Cumulative SAMPLES & ESCALATION ANALYSIS (${cumulativeRangeLabel})`,
+      "4F46E5"
+    ) + 3;
+
+    // --- 2. CUMULATIVE RAW DATA BREAKDOWN BY TEAM ACCOUNTABILITY ---
+    cumulativeBreakdownRows.forEach(teamData => {
+      const teamName = teamData['Team Name'];
+      const teamTasks = cumulativeTasks.filter(t => t.teamName === teamName);
+      if (teamTasks.length === 0) return;
+
+      const teamAccTasks = teamTasks.filter(t => isTaskAccountable(t));
+      const teamNonAccTasks = teamTasks.filter(t => !isTaskAccountable(t));
+
+      // Section separator header
+      const sectionTitleR = currentSheetRow;
+      const sectionTitleCell = XLSX.utils.encode_cell({ r: sectionTitleR, c: 0 });
+      wsTeamPerfCumulative[sectionTitleCell] = {
+        v: `${teamName.toUpperCase()} — CUMULATIVE RAW DATA BREAKDOWN BY TEAM ACCOUNTABILITY`,
+        t: 's',
+        s: { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4F46E5' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+      };
+      if (!wsTeamPerfCumulative['!merges']) wsTeamPerfCumulative['!merges'] = [];
+      wsTeamPerfCumulative['!merges'].push({ s: { r: sectionTitleR, c: 0 }, e: { r: sectionTitleR, c: 24 } });
+
+      const overallTotalTasks = teamTasks.length;
+      const overallTotalIssues = computeIssuesCount(teamTasks);
+      const overallDetractors = teamTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) <= 6).length;
+      const overallNeutrals = teamTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) >= 7 && Number(t.evaluationScore) <= 8).length;
+      const overallDetPlusNeu = overallDetractors + overallNeutrals;
+
+      const overallSummaryStartR = sectionTitleR + 2;
+      XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, [[`${teamName.toUpperCase()} - CUMULATIVE OVERALL SUMMARY`]], { origin: XLSX.utils.encode_cell({ r: overallSummaryStartR, c: 0 }) });
+      wsTeamPerfCumulative[XLSX.utils.encode_cell({ r: overallSummaryStartR, c: 0 })] = { v: `${teamName.toUpperCase()} - CUMULATIVE OVERALL SUMMARY`, t: 's', s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F2937' } }, alignment: { horizontal: 'center' } } };
+      wsTeamPerfCumulative['!merges'].push({ s: { r: overallSummaryStartR, c: 0 }, e: { r: overallSummaryStartR, c: 3 } });
+
+      const overallSummaryRows = [
+        { Metric: 'Total Tasks', Count: overallTotalTasks },
+        { Metric: 'Total Issues', Count: overallTotalIssues },
+        { Metric: 'Detractors', Count: overallDetractors },
+        { Metric: 'Neutrals', Count: overallNeutrals },
+        { Metric: 'Detractors + Neutrals', Count: overallDetPlusNeu }
+      ];
+      XLSX.utils.sheet_add_json(wsTeamPerfCumulative, overallSummaryRows, { origin: XLSX.utils.encode_cell({ r: overallSummaryStartR + 1, c: 0 }), skipHeader: false });
+      applyHeaderStyle(wsTeamPerfCumulative, { s: { r: overallSummaryStartR + 1, c: 0 }, e: { r: overallSummaryStartR + 1, c: 1 } }, '374151');
+      applyDataRowStyle(wsTeamPerfCumulative, { s: { r: overallSummaryStartR + 1, c: 0 }, e: { r: overallSummaryStartR + 1 + overallSummaryRows.length, c: 1 } });
+
+      const detNeuFor = (tasks) => ({
+        'Det+Neu Count': tasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) <= 8).length,
+        'Det Count': tasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) <= 6).length,
+        'Neu Count': tasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) >= 7 && Number(t.evaluationScore) <= 8).length,
+        'Total Issues': computeIssuesCount(tasks)
+      });
+
+      const detNeuAcc = detNeuFor(teamAccTasks);
+      const detNeuNonAcc = detNeuFor(teamNonAccTasks);
+
+      const detNeuStartR = overallSummaryStartR + 1 + overallSummaryRows.length + 2;
+      XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, [[`DETRACTOR+NEUTRAL SUMMARY (ACCOUNTABLE)`]], { origin: XLSX.utils.encode_cell({ r: detNeuStartR, c: 0 }) });
+      wsTeamPerfCumulative[XLSX.utils.encode_cell({ r: detNeuStartR, c: 0 })] = { v: `DETRACTOR+NEUTRAL SUMMARY (ACCOUNTABLE)`, t: 's', s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'B91C1C' } }, alignment: { horizontal: 'center' } } };
+      wsTeamPerfCumulative['!merges'].push({ s: { r: detNeuStartR, c: 0 }, e: { r: detNeuStartR, c: 3 } });
+      XLSX.utils.sheet_add_json(wsTeamPerfCumulative, [detNeuAcc], { origin: XLSX.utils.encode_cell({ r: detNeuStartR + 1, c: 0 }), skipHeader: false });
+      applyHeaderStyle(wsTeamPerfCumulative, { s: { r: detNeuStartR + 1, c: 0 }, e: { r: detNeuStartR + 1, c: 3 } }, '7F1D1D');
+      applyDataRowStyle(wsTeamPerfCumulative, { s: { r: detNeuStartR + 1, c: 0 }, e: { r: detNeuStartR + 1 + 1, c: 3 } });
+
+      const detNeuNonStartR = detNeuStartR + 4;
+      XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, [[`DETRACTOR+NEUTRAL SUMMARY (NON-ACCOUNTABLE)`]], { origin: XLSX.utils.encode_cell({ r: detNeuNonStartR, c: 0 }) });
+      wsTeamPerfCumulative[XLSX.utils.encode_cell({ r: detNeuNonStartR, c: 0 })] = { v: `DETRACTOR+NEUTRAL SUMMARY (NON-ACCOUNTABLE)`, t: 's', s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '059669' } }, alignment: { horizontal: 'center' } } };
+      wsTeamPerfCumulative['!merges'].push({ s: { r: detNeuNonStartR, c: 0 }, e: { r: detNeuNonStartR, c: 3 } });
+      XLSX.utils.sheet_add_json(wsTeamPerfCumulative, [detNeuNonAcc], { origin: XLSX.utils.encode_cell({ r: detNeuNonStartR + 1, c: 0 }), skipHeader: false });
+      applyHeaderStyle(wsTeamPerfCumulative, { s: { r: detNeuNonStartR + 1, c: 0 }, e: { r: detNeuNonStartR + 1, c: 3 } }, '047857');
+      applyDataRowStyle(wsTeamPerfCumulative, { s: { r: detNeuNonStartR + 1, c: 0 }, e: { r: detNeuNonStartR + 1 + 1, c: 3 } });
+
+      // --- OWNERSHIP-STYLE TABLES FOR THIS TEAM: ROOT CAUSE BREAKDOWN & SUMMARIES ---
+      const getTeamFieldStats = (field) => {
+        const counts = {};
+        let teamIssuesCount = 0;
+
+        teamTasks.forEach(t => {
+          const vals = Array.isArray(t[field]) ? t[field] : (typeof t[field] === 'string' ? t[field].split(',').map(s => s.trim()) : []);
+          vals.forEach(v => {
+            if (!v) return;
+            const normV = String(v).trim();
+            if (!normV) return;
+            counts[normV] = (counts[normV] || 0) + 1;
+            teamIssuesCount++;
+          });
+        });
+
+        return Object.entries(counts).map(([name, count]) => ({
+          Name: name,
+          Count: count,
+          Percentage: teamIssuesCount > 0 ? `${((count / teamIssuesCount) * 100).toFixed(1)}%` : "0%"
+        })).sort((a, b) => b.Count - a.Count);
+      };
+
+      const hierarchicalTree = getHierarchicalRCA(teamTasks);
+      const reasonSummary = getTeamFieldStats('reason');
+      const subReasonSummary = getTeamFieldStats('subReason');
+      const rcSummary = getTeamFieldStats('rootCause');
+      const itns = getTeamFieldStats('itnRelated');
+      const subs = getTeamFieldStats('relatedToSubscription');
+
+      const tableStartR = detNeuNonStartR + 4;
+      const nextR = addHierarchicalRCA(wsTeamPerfCumulative, hierarchicalTree, XLSX.utils.encode_cell({ r: tableStartR, c: 0 }), "ROOT CAUSE BREAKDOWN", "1E3A8A");
+      addTableToSheet(wsTeamPerfCumulative, rcSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 7 }), "ROOT CAUSE SUMMARY", "4C1D95");
+      addTableToSheet(wsTeamPerfCumulative, reasonSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 11 }), "REASON SUMMARY", "1E3A8A");
+      addTableToSheet(wsTeamPerfCumulative, subReasonSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 15 }), "SUB-REASON SUMMARY", "B45309");
+      addTableToSheet(wsTeamPerfCumulative, itns, XLSX.utils.encode_cell({ r: tableStartR, c: 19 }), "ITN RELATED", "FF5722");
+      addTableToSheet(wsTeamPerfCumulative, subs, XLSX.utils.encode_cell({ r: tableStartR, c: 23 }), "SUBSCRIPTION", "8BC34A");
+
+      const maxSummaryLen = Math.max(reasonSummary.length, subReasonSummary.length, rcSummary.length, itns.length, subs.length, 1);
+      let teamSubsetsStartR = Math.max(nextR, tableStartR + maxSummaryLen + 2) + 2;
+
+
+      // Table 1: Accountable Raw Data (Red)
+      const accTitleR = teamSubsetsStartR;
+      const accTitleCell = XLSX.utils.encode_cell({ r: accTitleR, c: 0 });
+      wsTeamPerfCumulative[accTitleCell] = {
+        v: `${teamName.toUpperCase()} ACCOUNTABLE RAW DATA (${teamAccTasks.length} record${teamAccTasks.length !== 1 ? 's' : ''})`,
+        t: 's',
+        s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'DC2626' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+      };
+      wsTeamPerfCumulative['!merges'].push({ s: { r: accTitleR, c: 0 }, e: { r: accTitleR, c: 24 } });
+
+      let accEndR = accTitleR + 1;
+      if (teamAccTasks.length > 0) {
+        const rawAccData = buildTeamRawRows(teamAccTasks);
+        XLSX.utils.sheet_add_json(wsTeamPerfCumulative, rawAccData, { origin: XLSX.utils.encode_cell({ r: accTitleR + 1, c: 0 }), skipHeader: false });
+        const accKeys = Object.keys(rawAccData[0]);
+        applyHeaderStyle(wsTeamPerfCumulative, { s: { r: accTitleR + 1, c: 0 }, e: { r: accTitleR + 1, c: accKeys.length - 1 } }, 'B91C1C');
+        applyDataRowStyle(wsTeamPerfCumulative, { s: { r: accTitleR + 1, c: 0 }, e: { r: accTitleR + 1 + rawAccData.length, c: accKeys.length - 1 } });
+        formatCommentColumnInTable(wsTeamPerfCumulative, accTitleR + 2, accTitleR + 1 + rawAccData.length, accKeys.indexOf('Q1 - Scale Comment') !== -1 ? accKeys.indexOf('Q1 - Scale Comment') : accKeys.indexOf('Q1-Verbatim'));
+        accEndR = accTitleR + 1 + rawAccData.length;
+      }
+
+      let nonAccSubsetsStartR = accEndR + 3;
+
+      // Table 2: Non-Accountable Raw Data (Green)
+      const nonAccTitleR = nonAccSubsetsStartR;
+      const nonAccTitleCell = XLSX.utils.encode_cell({ r: nonAccTitleR, c: 0 });
+      wsTeamPerfCumulative[nonAccTitleCell] = {
+        v: `${teamName.toUpperCase()} NON-ACCOUNTABLE RAW DATA (${teamNonAccTasks.length} record${teamNonAccTasks.length !== 1 ? 's' : ''})`,
+        t: 's',
+        s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '059669' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+      };
+      wsTeamPerfCumulative['!merges'].push({ s: { r: nonAccTitleR, c: 0 }, e: { r: nonAccTitleR, c: 24 } });
+
+      let nonAccEndR = nonAccTitleR + 1;
+      if (teamNonAccTasks.length > 0) {
+        const rawNonAccData = buildTeamRawRows(teamNonAccTasks);
+        XLSX.utils.sheet_add_json(wsTeamPerfCumulative, rawNonAccData, { origin: XLSX.utils.encode_cell({ r: nonAccTitleR + 1, c: 0 }), skipHeader: false });
+        const nonAccKeys = Object.keys(rawNonAccData[0]);
+        applyHeaderStyle(wsTeamPerfCumulative, { s: { r: nonAccTitleR + 1, c: 0 }, e: { r: nonAccTitleR + 1, c: nonAccKeys.length - 1 } }, '047857');
+        applyDataRowStyle(wsTeamPerfCumulative, { s: { r: nonAccTitleR + 1, c: 0 }, e: { r: nonAccTitleR + 1 + rawNonAccData.length, c: nonAccKeys.length - 1 } });
+        formatCommentColumnInTable(wsTeamPerfCumulative, nonAccTitleR + 2, nonAccTitleR + 1 + rawNonAccData.length, nonAccKeys.indexOf('Q1 - Scale Comment') !== -1 ? nonAccKeys.indexOf('Q1 - Scale Comment') : nonAccKeys.indexOf('Q1-Verbatim'));
+        nonAccEndR = nonAccTitleR + 1 + rawNonAccData.length;
+      }
+
+      currentSheetRow = nonAccEndR + 5;
+    });
+
+    wsTeamPerfCumulative['!cols'] = Array(28).fill({ wch: 15 });
+    wsTeamPerfCumulative['!cols'][0] = { wch: 25 }; // Reason / Col 0
+    wsTeamPerfCumulative['!cols'][1] = { wch: 8 };  // Total
+    wsTeamPerfCumulative['!cols'][2] = { wch: 25 }; // Sub-reason
+    wsTeamPerfCumulative['!cols'][3] = { wch: 8 };  // Cases
+    wsTeamPerfCumulative['!cols'][4] = { wch: 25 }; // RC
+    wsTeamPerfCumulative['!cols'][5] = { wch: 8 };  // Cases
+    wsTeamPerfCumulative['!cols'][7] = { wch: 28 }; // RC Summary Name
+    wsTeamPerfCumulative['!cols'][8] = { wch: 8 };  // Total
+    wsTeamPerfCumulative['!cols'][9] = { wch: 10 }; // %
+    wsTeamPerfCumulative['!cols'][11] = { wch: 28 }; // Reason Summary Name
+    wsTeamPerfCumulative['!cols'][12] = { wch: 8 };  // Total
+    wsTeamPerfCumulative['!cols'][13] = { wch: 10 }; // %
+    wsTeamPerfCumulative['!cols'][15] = { wch: 28 }; // Sub-Reason Summary Name
+    wsTeamPerfCumulative['!cols'][16] = { wch: 8 };  // Total
+    wsTeamPerfCumulative['!cols'][17] = { wch: 10 }; // %
+    wsTeamPerfCumulative['!cols'][19] = { wch: 22 }; // ITN Related
+    wsTeamPerfCumulative['!cols'][20] = { wch: 8 };  // Total
+    wsTeamPerfCumulative['!cols'][21] = { wch: 10 }; // %
+    wsTeamPerfCumulative['!cols'][23] = { wch: 22 }; // Subscription
+    wsTeamPerfCumulative['!cols'][24] = { wch: 8 };  // Total
+    wsTeamPerfCumulative['!cols'][25] = { wch: 10 }; // %
+    fixSheetRange(wsTeamPerfCumulative);
+
+    // 4.5 Dedicated Team Samples & NPS Analysis Subsheet (Filtered Period)
+    const wsTeamSamplesNPS = XLSX.utils.aoa_to_sheet([[]]);
+    wsTeamSamplesNPS['A1'] = {
+      v: `TEAM SAMPLES TOKEN & NPS DEDUCTION ANALYSIS - Period: ${periodStr}`,
+      t: 's',
+      s: {
+        font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '059669' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      }
+    };
+    if (!wsTeamSamplesNPS['!merges']) wsTeamSamplesNPS['!merges'] = [];
+    wsTeamSamplesNPS['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 14 } });
+
+    // Build data rows for filtered period
+    const teamSamplesNpsRows = computeBreakdownRows(teamStatsMap, getTeamTokenForPeriod);
+
+    // Add Escalation Matrix Policy Reference Table (Columns A-C)
+    XLSX.utils.sheet_add_aoa(wsTeamSamplesNPS, escalationMatrixRef, { origin: "A3" });
+    wsTeamSamplesNPS['A3'] = {
+      v: "ESCALATION MATRIX POLICY (REFERENCE)",
+      t: 's',
+      s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E40AF" } }, alignment: { horizontal: "center" } }
+    };
+    wsTeamSamplesNPS['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 2 } });
+    applyHeaderStyle(wsTeamSamplesNPS, { s: { r: 3, c: 0 }, e: { r: 3, c: 2 } }, "2563EB");
+    applyDataRowStyle(wsTeamSamplesNPS, { s: { r: 4, c: 0 }, e: { r: 3 + escalationMatrixRef.length - 1, c: 2 } });
+
+    const npsTableStartR = 3 + escalationMatrixRef.length + 2;
+
+    const npsTableEndR = addGroupedTeamBreakdownTable(
+      wsTeamSamplesNPS,
+      teamSamplesNpsRows,
+      npsTableStartR - 1,
+      "DETAILED TEAM SAMPLES & NPS DEDUCTION BREAKDOWN",
+      "059669"
+    );
+
+    // --- RAW DATA BREAKDOWN BY TEAM ACCOUNTABILITY IN wsTeamSamplesNPS ---
+    let npsRawCurrentR = npsTableEndR + 3;
+    teamSamplesNpsRows.forEach(teamData => {
+      const teamName = teamData['Team Name'];
+      const teamTasks = filteredTasks.filter(t => t.teamName === teamName);
+      if (teamTasks.length === 0) return;
+
+      const teamAccTasks = teamTasks.filter(t => isTaskAccountable(t));
+      const teamNonAccTasks = teamTasks.filter(t => !isTaskAccountable(t));
+
+      // Section separator header
+      const sectionTitleR = npsRawCurrentR;
+      const sectionTitleCell = XLSX.utils.encode_cell({ r: sectionTitleR, c: 0 });
+      wsTeamSamplesNPS[sectionTitleCell] = {
+        v: `${teamName.toUpperCase()} — RAW DATA BREAKDOWN BY TEAM ACCOUNTABILITY`,
+        t: 's',
+        s: { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4F46E5' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+      };
+      if (!wsTeamSamplesNPS['!merges']) wsTeamSamplesNPS['!merges'] = [];
+      wsTeamSamplesNPS['!merges'].push({ s: { r: sectionTitleR, c: 0 }, e: { r: sectionTitleR, c: 24 } });
+
+      const overallTotalTasks = teamTasks.length;
+      const overallTotalIssues = computeIssuesCount(teamTasks);
+      const overallDetractors = teamTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) <= 6).length;
+      const overallNeutrals = teamTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) >= 7 && Number(t.evaluationScore) <= 8).length;
+      const overallDetPlusNeu = overallDetractors + overallNeutrals;
+
+      const overallSummaryStartR = sectionTitleR + 2;
+      XLSX.utils.sheet_add_aoa(wsTeamSamplesNPS, [[`${teamName.toUpperCase()} - OVERALL SUMMARY`]], { origin: XLSX.utils.encode_cell({ r: overallSummaryStartR, c: 0 }) });
+      wsTeamSamplesNPS[XLSX.utils.encode_cell({ r: overallSummaryStartR, c: 0 })] = { v: `${teamName.toUpperCase()} - OVERALL SUMMARY`, t: 's', s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F2937' } }, alignment: { horizontal: 'center' } } };
+      wsTeamSamplesNPS['!merges'].push({ s: { r: overallSummaryStartR, c: 0 }, e: { r: overallSummaryStartR, c: 3 } });
+
+      const overallSummaryRows = [
+        { Metric: 'Total Tasks', Count: overallTotalTasks },
+        { Metric: 'Total Issues', Count: overallTotalIssues },
+        { Metric: 'Detractors', Count: overallDetractors },
+        { Metric: 'Neutrals', Count: overallNeutrals },
+        { Metric: 'Detractors + Neutrals', Count: overallDetPlusNeu }
+      ];
+      XLSX.utils.sheet_add_json(wsTeamSamplesNPS, overallSummaryRows, { origin: XLSX.utils.encode_cell({ r: overallSummaryStartR + 1, c: 0 }), skipHeader: false });
+      applyHeaderStyle(wsTeamSamplesNPS, { s: { r: overallSummaryStartR + 1, c: 0 }, e: { r: overallSummaryStartR + 1, c: 1 } }, '374151');
+      applyDataRowStyle(wsTeamSamplesNPS, { s: { r: overallSummaryStartR + 1, c: 0 }, e: { r: overallSummaryStartR + 1 + overallSummaryRows.length, c: 1 } });
+
+      const detNeuFor = (tasks) => ({
+        'Det+Neu Count': tasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) <= 8).length,
+        'Det Count': tasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) <= 6).length,
+        'Neu Count': tasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) >= 7 && Number(t.evaluationScore) <= 8).length,
+        'Total Issues': computeIssuesCount(tasks)
+      });
+
+      const detNeuAcc = detNeuFor(teamAccTasks);
+      const detNeuNonAcc = detNeuFor(teamNonAccTasks);
+
+      const detNeuStartR = overallSummaryStartR + 1 + overallSummaryRows.length + 2;
+      XLSX.utils.sheet_add_aoa(wsTeamSamplesNPS, [[`DETRACTOR+NEUTRAL SUMMARY (ACCOUNTABLE)`]], { origin: XLSX.utils.encode_cell({ r: detNeuStartR, c: 0 }) });
+      wsTeamSamplesNPS[XLSX.utils.encode_cell({ r: detNeuStartR, c: 0 })] = { v: `DETRACTOR+NEUTRAL SUMMARY (ACCOUNTABLE)`, t: 's', s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'B91C1C' } }, alignment: { horizontal: 'center' } } };
+      wsTeamSamplesNPS['!merges'].push({ s: { r: detNeuStartR, c: 0 }, e: { r: detNeuStartR, c: 3 } });
+      XLSX.utils.sheet_add_json(wsTeamSamplesNPS, [detNeuAcc], { origin: XLSX.utils.encode_cell({ r: detNeuStartR + 1, c: 0 }), skipHeader: false });
+      applyHeaderStyle(wsTeamSamplesNPS, { s: { r: detNeuStartR + 1, c: 0 }, e: { r: detNeuStartR + 1, c: 3 } }, '7F1D1D');
+      applyDataRowStyle(wsTeamSamplesNPS, { s: { r: detNeuStartR + 1, c: 0 }, e: { r: detNeuStartR + 1 + 1, c: 3 } });
+
+      const detNeuNonStartR = detNeuStartR + 4;
+      XLSX.utils.sheet_add_aoa(wsTeamSamplesNPS, [[`DETRACTOR+NEUTRAL SUMMARY (NON-ACCOUNTABLE)`]], { origin: XLSX.utils.encode_cell({ r: detNeuNonStartR, c: 0 }) });
+      wsTeamSamplesNPS[XLSX.utils.encode_cell({ r: detNeuNonStartR, c: 0 })] = { v: `DETRACTOR+NEUTRAL SUMMARY (NON-ACCOUNTABLE)`, t: 's', s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '059669' } }, alignment: { horizontal: 'center' } } };
+      wsTeamSamplesNPS['!merges'].push({ s: { r: detNeuNonStartR, c: 0 }, e: { r: detNeuNonStartR, c: 3 } });
+      XLSX.utils.sheet_add_json(wsTeamSamplesNPS, [detNeuNonAcc], { origin: XLSX.utils.encode_cell({ r: detNeuNonStartR + 1, c: 0 }), skipHeader: false });
+      applyHeaderStyle(wsTeamSamplesNPS, { s: { r: detNeuNonStartR + 1, c: 0 }, e: { r: detNeuNonStartR + 1, c: 3 } }, '047857');
+      applyDataRowStyle(wsTeamSamplesNPS, { s: { r: detNeuNonStartR + 1, c: 0 }, e: { r: detNeuNonStartR + 1 + 1, c: 3 } });
+
+      // --- OWNERSHIP-STYLE TABLES FOR THIS TEAM: ROOT CAUSE BREAKDOWN & SUMMARIES ---
+      const getTeamFieldStats = (field) => {
+        const counts = {};
+        let teamIssuesCount = 0;
+
+        teamTasks.forEach(t => {
+          const vals = Array.isArray(t[field]) ? t[field] : (typeof t[field] === 'string' ? t[field].split(',').map(s => s.trim()) : []);
+          vals.forEach(v => {
+            if (!v) return;
+            const normV = String(v).trim();
+            if (!normV) return;
+            counts[normV] = (counts[normV] || 0) + 1;
+            teamIssuesCount++;
+          });
+        });
+
+        return Object.entries(counts).map(([name, count]) => ({
+          Name: name,
+          Count: count,
+          Percentage: teamIssuesCount > 0 ? `${((count / teamIssuesCount) * 100).toFixed(1)}%` : "0%"
+        })).sort((a, b) => b.Count - a.Count);
+      };
+
+      const hierarchicalTree = getHierarchicalRCA(teamTasks);
+      const reasonSummary = getTeamFieldStats('reason');
+      const subReasonSummary = getTeamFieldStats('subReason');
+      const rcSummary = getTeamFieldStats('rootCause');
+      const itns = getTeamFieldStats('itnRelated');
+      const subs = getTeamFieldStats('relatedToSubscription');
+
+      const tableStartR = detNeuNonStartR + 4;
+      const nextR = addHierarchicalRCA(wsTeamSamplesNPS, hierarchicalTree, XLSX.utils.encode_cell({ r: tableStartR, c: 0 }), "ROOT CAUSE BREAKDOWN", "1E3A8A");
+      addTableToSheet(wsTeamSamplesNPS, rcSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 7 }), "ROOT CAUSE SUMMARY", "4C1D95");
+      addTableToSheet(wsTeamSamplesNPS, reasonSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 11 }), "REASON SUMMARY", "1E3A8A");
+      addTableToSheet(wsTeamSamplesNPS, subReasonSummary, XLSX.utils.encode_cell({ r: tableStartR, c: 15 }), "SUB-REASON SUMMARY", "B45309");
+      addTableToSheet(wsTeamSamplesNPS, itns, XLSX.utils.encode_cell({ r: tableStartR, c: 19 }), "ITN RELATED", "FF5722");
+      addTableToSheet(wsTeamSamplesNPS, subs, XLSX.utils.encode_cell({ r: tableStartR, c: 23 }), "SUBSCRIPTION", "8BC34A");
+
+      const maxSummaryLen = Math.max(reasonSummary.length, subReasonSummary.length, rcSummary.length, itns.length, subs.length, 1);
+      let teamSubsetsStartR = Math.max(nextR, tableStartR + maxSummaryLen + 2) + 2;
+
+      // Table 1: Accountable Raw Data (Red)
+      const accTitleR = teamSubsetsStartR;
+      const accTitleCell = XLSX.utils.encode_cell({ r: accTitleR, c: 0 });
+      wsTeamSamplesNPS[accTitleCell] = {
+        v: `${teamName.toUpperCase()} ACCOUNTABLE RAW DATA (${teamAccTasks.length} record${teamAccTasks.length !== 1 ? 's' : ''})`,
+        t: 's',
+        s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'DC2626' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+      };
+      wsTeamSamplesNPS['!merges'].push({ s: { r: accTitleR, c: 0 }, e: { r: accTitleR, c: 24 } });
+
+      let accEndR = accTitleR + 1;
+      if (teamAccTasks.length > 0) {
+        const rawAccData = buildTeamRawRows(teamAccTasks);
+        XLSX.utils.sheet_add_json(wsTeamSamplesNPS, rawAccData, { origin: XLSX.utils.encode_cell({ r: accTitleR + 1, c: 0 }), skipHeader: false });
+        const accKeys = Object.keys(rawAccData[0]);
+        applyHeaderStyle(wsTeamSamplesNPS, { s: { r: accTitleR + 1, c: 0 }, e: { r: accTitleR + 1, c: accKeys.length - 1 } }, 'B91C1C');
+        applyDataRowStyle(wsTeamSamplesNPS, { s: { r: accTitleR + 1, c: 0 }, e: { r: accTitleR + 1 + rawAccData.length, c: accKeys.length - 1 } });
+        formatCommentColumnInTable(wsTeamSamplesNPS, accTitleR + 2, accTitleR + 1 + rawAccData.length, accKeys.indexOf('Q1 - Scale Comment') !== -1 ? accKeys.indexOf('Q1 - Scale Comment') : accKeys.indexOf('Q1-Verbatim'));
+        accEndR = accTitleR + 1 + rawAccData.length;
+      }
+
+      let nonAccSubsetsStartR = accEndR + 3;
+
+      // Table 2: Non-Accountable Raw Data (Green)
+      const nonAccTitleR = nonAccSubsetsStartR;
+      const nonAccTitleCell = XLSX.utils.encode_cell({ r: nonAccTitleR, c: 0 });
+      wsTeamSamplesNPS[nonAccTitleCell] = {
+        v: `${teamName.toUpperCase()} NON-ACCOUNTABLE RAW DATA (${teamNonAccTasks.length} record${teamNonAccTasks.length !== 1 ? 's' : ''})`,
+        t: 's',
+        s: { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '059669' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } }
+      };
+      wsTeamSamplesNPS['!merges'].push({ s: { r: nonAccTitleR, c: 0 }, e: { r: nonAccTitleR, c: 24 } });
+
+      let nonAccEndR = nonAccTitleR + 1;
+      if (teamNonAccTasks.length > 0) {
+        const rawNonAccData = buildTeamRawRows(teamNonAccTasks);
+        XLSX.utils.sheet_add_json(wsTeamSamplesNPS, rawNonAccData, { origin: XLSX.utils.encode_cell({ r: nonAccTitleR + 1, c: 0 }), skipHeader: false });
+        const nonAccKeys = Object.keys(rawNonAccData[0]);
+        applyHeaderStyle(wsTeamSamplesNPS, { s: { r: nonAccTitleR + 1, c: 0 }, e: { r: nonAccTitleR + 1, c: nonAccKeys.length - 1 } }, '047857');
+        applyDataRowStyle(wsTeamSamplesNPS, { s: { r: nonAccTitleR + 1, c: 0 }, e: { r: nonAccTitleR + 1 + rawNonAccData.length, c: nonAccKeys.length - 1 } });
+        formatCommentColumnInTable(wsTeamSamplesNPS, nonAccTitleR + 2, nonAccTitleR + 1 + rawNonAccData.length, nonAccKeys.indexOf('Q1 - Scale Comment') !== -1 ? nonAccKeys.indexOf('Q1 - Scale Comment') : nonAccKeys.indexOf('Q1-Verbatim'));
+        nonAccEndR = nonAccTitleR + 1 + rawNonAccData.length;
+      }
+
+      npsRawCurrentR = nonAccEndR + 5;
+    });
+
+    wsTeamSamplesNPS['!cols'] = Array(28).fill({ wch: 15 });
+    wsTeamSamplesNPS['!cols'][0] = { wch: 25 }; // Reason / Col 0
+    wsTeamSamplesNPS['!cols'][1] = { wch: 8 };  // Total
+    wsTeamSamplesNPS['!cols'][2] = { wch: 25 }; // Sub-reason
+    wsTeamSamplesNPS['!cols'][3] = { wch: 8 };  // Cases
+    wsTeamSamplesNPS['!cols'][4] = { wch: 30 }; // RC
+    wsTeamSamplesNPS['!cols'][5] = { wch: 60 }; // Q1 - Scale Comment
+    wsTeamSamplesNPS['!cols'][7] = { wch: 30 }; // Root Cause Summary Name
+    wsTeamSamplesNPS['!cols'][11] = { wch: 28 }; // Reason Summary Name
+    wsTeamSamplesNPS['!cols'][15] = { wch: 28 }; // Sub-Reason Summary Name
+    wsTeamSamplesNPS['!cols'][19] = { wch: 22 }; // ITN Related
+    wsTeamSamplesNPS['!cols'][23] = { wch: 22 }; // Subscription
+    fixSheetRange(wsTeamSamplesNPS);
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 5.4 NEW Subsheet: Monthly Performance - Teams (All Monthly Breakdown Tables)
+    // ═════════════════════════════════════════════════════════════════════════
+    // 5.5 Monthly Breakdown Subsheet: Team Performance by Month (From 01/06/2026)
+    // ═════════════════════════════════════════════════════════════════════════
+    const wsMonthlyTeamPerf = XLSX.utils.aoa_to_sheet([[]]);
+    wsMonthlyTeamPerf['A1'] = {
+      v: `MONTHLY SAMPLES & TEAM ESCALATION ANALYSIS (FROM 01/06/2026)`,
+      t: 's',
+      s: {
+        font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '1E1B4B' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      }
+    };
+    if (!wsMonthlyTeamPerf['!merges']) wsMonthlyTeamPerf['!merges'] = [];
+    wsMonthlyTeamPerf['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 14 } });
+
+    // Escalation Matrix Reference Box
+    XLSX.utils.sheet_add_aoa(wsMonthlyTeamPerf, escalationMatrixRef, { origin: "A3" });
+    wsMonthlyTeamPerf['A3'] = {
+      v: "REFERENCE: ACCOUNTABILITY & ESCALATION CONSEQUENCE MATRIX",
+      t: 's',
+      s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E40AF" } }, alignment: { horizontal: "center", vertical: "center" } }
+    };
+    wsMonthlyTeamPerf['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 2 } });
+    applyHeaderStyle(wsMonthlyTeamPerf, { s: { r: 3, c: 0 }, e: { r: 3, c: 2 } }, "2563EB");
+    applyDataRowStyle(wsMonthlyTeamPerf, { s: { r: 4, c: 0 }, e: { r: 3 + escalationMatrixRef.length - 1, c: 2 } });
+
+    let mSheetRow = 3 + escalationMatrixRef.length + 2;
+
+    monthlyPeriods.forEach((p, pIdx) => {
+      const mDate = new Date(p.year, p.month - 1, 1, 0, 0, 0, 0);
+      const mEnd = new Date(p.year, p.month, 0, 23, 59, 59, 999);
+      const mFull = format(mDate, 'MMMM yyyy');
+      const mColor = monthColorPalette[pIdx % monthColorPalette.length];
+
+      const mTasks = cumulativeTasks.filter(task => {
+        const d = getTaskInterviewDate(task);
+        return d && d >= mDate && d <= mEnd;
+      });
+
+      const mTeamStatsMap = {};
+      fieldTeams.forEach(ft => {
+        const tName = ft.teamName?.trim();
+        if (tName && !mTeamStatsMap[tName]) mTeamStatsMap[tName] = { teamName: tName, tasks: [], teamId: ft._id?.toString() || null };
+      });
+      allTeamSamples.filter(s => Number(s.year) === p.year && Number(s.month) === p.month && isTeamNameOrIdActive(s.teamName, s.teamId)).forEach(st => {
+        const tName = st.teamName?.trim();
+        const tId = st.teamId?.toString() || null;
+        if (tName && !mTeamStatsMap[tName]) mTeamStatsMap[tName] = { teamName: tName, tasks: [], teamId: tId };
+      });
+      mTasks.forEach(t => {
+        const teamName = t.teamName?.trim();
+        const teamId = t.teamId?._id?.toString() || t.teamId?.toString() || null;
+        if (teamName && isTeamNameOrIdActive(teamName, teamId)) {
+          if (!mTeamStatsMap[teamName]) mTeamStatsMap[teamName] = { teamName, tasks: [], teamId };
+          mTeamStatsMap[teamName].tasks.push(t);
+        }
+      });
+
+      const mBreakdownRows = computeBreakdownRows(mTeamStatsMap, (tName) => getMonthlyTeamToken(tName, p.year, p.month));
+
+      // Total Row for this month
+      const sumInitial = mBreakdownRows.reduce((s, r) => s + (Number(r['Initial Samples (Token)']) || 0), 0);
+      const sumTotDet = mBreakdownRows.reduce((s, r) => s + (Number(r['Total Detractors']) || 0), 0);
+      const sumTotNeu = mBreakdownRows.reduce((s, r) => s + (Number(r['Total Neutrals']) || 0), 0);
+      const sumNonAccDet = mBreakdownRows.reduce((s, r) => s + (Number(r['Non-Acc. Detractors (Removed)']) || 0), 0);
+      const sumNonAccNeu = mBreakdownRows.reduce((s, r) => s + (Number(r['Non-Acc. Neutrals (Removed)']) || 0), 0);
+      const sumNonAccDeducted = mBreakdownRows.reduce((s, r) => s + (Number(r['Total Non-Acc. Deducted']) || 0), 0);
+      const sumFinal = mBreakdownRows.reduce((s, r) => s + (Number(r['Final Total Samples']) || 0), 0);
+      const sumAccDet = mBreakdownRows.reduce((s, r) => s + (Number(r['Final Detractors (Accountable)']) || 0), 0);
+      const sumAccNeu = mBreakdownRows.reduce((s, r) => s + (Number(r['Final Neutrals (Accountable)']) || 0), 0);
+      const sumPromoters = mBreakdownRows.reduce((s, r) => s + (Number(r['Final Promoters']) || 0), 0);
+
+      mBreakdownRows.push({
+        'Team Name': 'TOTAL',
+        'Initial Samples (Token)': sumInitial,
+        'Total Detractors': sumTotDet,
+        'Total Neutrals': sumTotNeu,
+        'Non-Acc. Detractors (Removed)': sumNonAccDet,
+        'Non-Acc. Neutrals (Removed)': sumNonAccNeu,
+        'Total Non-Acc. Deducted': sumNonAccDeducted,
+        'Final Total Samples': sumFinal,
+        'Final Detractors (Accountable)': sumAccDet,
+        'Final Neutrals (Accountable)': sumAccNeu,
+        'Final Promoters': sumPromoters,
+        'Promoter %': sumFinal > 0 ? `${((sumPromoters / sumFinal) * 100).toFixed(1)}%` : '0%',
+        'Detractor %': sumFinal > 0 ? `${((sumAccDet / sumFinal) * 100).toFixed(1)}%` : '0%',
+        'Neutral %': sumFinal > 0 ? `${((sumAccNeu / sumFinal) * 100).toFixed(1)}%` : '0%',
+        'Correct Consequence (Escalation Matrix)': '-',
+        'Action': '-',
+        'Action Date': '-',
+        'Status': '-',
+        'Disciplinary & Policy Notes': '-'
+      });
+
+      mSheetRow = addGroupedTeamBreakdownTable(
+        wsMonthlyTeamPerf,
+        mBreakdownRows,
+        mSheetRow,
+        `${pIdx + 1}. ${mFull.toUpperCase()} — MONTHLY SAMPLES & ESCALATION ANALYSIS`,
+        mColor
+      ) + 3;
+    });
+
+    wsMonthlyTeamPerf['!cols'] = [
+      { wch: 25 }, // Team Name
+      { wch: 15 }, // Initial Samples
+      { wch: 15 }, // Total Detractors
+      { wch: 15 }, // Total Neutrals
+      { wch: 16 }, // Non-Acc Detractors
+      { wch: 16 }, // Non-Acc Neutrals
+      { wch: 16 }, // Total Non-Acc
+      { wch: 15 }, // Final Samples
+      { wch: 16 }, // Final Detractors
+      { wch: 16 }, // Final Neutrals
+      { wch: 15 }, // Final Promoters
+      { wch: 14 }, // Promoter %
+      { wch: 14 }, // Detractor %
+      { wch: 14 }, // Neutral %
+      { wch: 46 }, // Consequence
+      { wch: 25 }, // Action
+      { wch: 15 }, // Action Date
+      { wch: 18 }, // Status
+      { wch: 45 }  // Disciplinary & Policy Notes
+    ];
+    fixSheetRange(wsMonthlyTeamPerf);
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 5.6 NEW Subsheet: Worst Performing Teams by Month (Ranked Accountable Impact)
+    // ═════════════════════════════════════════════════════════════════════════
+    const wsWorstTeams = XLSX.utils.aoa_to_sheet([[]]);
+    wsWorstTeams['A1'] = {
+      v: `MONTHLY WORST PERFORMING TEAMS & UNDERPERFORMANCE ANALYSIS (${format(cumulativeStartDate, 'dd/MM/yyyy')} - ${format(cumulativeEndDate, 'dd/MM/yyyy')})`,
+      t: 's',
+      s: {
+        font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '1E1B4B' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      }
+    };
+    if (!wsWorstTeams['!merges']) wsWorstTeams['!merges'] = [];
+    wsWorstTeams['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 12 } });
+
+    // 1. Criteria Reference Box (Management Targets & Team Underperformance Criteria)
+    const criteriaRefAoa = [
+      ["1. QUALITY & PERFORMANCE BENCHMARK TARGETS (MANAGEMENT STANDARDS & TEAM THRESHOLDS)", "", "", ""],
+      ["Performance Level / Dimension", "Benchmark Standard Target", "Underperformance / Breach Trigger", "Evaluation Directive & Escalation Impact"],
+      ["Management Overall Promoters Target", "≥ 75.0% Promoters", "Overall Promoter Rate < 75.0%", "Company-wide Promoter performance KPI standard"],
+      ["Management Overall Detractors Target", "≤ 8.0% Detractors", "Overall Detractor Rate > 8.0%", "Company-wide Detractor containment KPI standard"],
+      ["Management Overall NPS Target", "≥ 67 NPS Score", "Overall NPS Score < 67 NPS", "Company-wide customer satisfaction NPS standard"],
+      ["Field Team Promoter Standard", "≥ 80.0% Promoters", "Team Promoter Rate < 80.0%", "Team fails to achieve the 80% Promoter performance threshold"],
+      ["Field Team Detractor Standard", "≤ 2.0% Detractors", "Team Detractor Rate ≥ 2.0%", "Team breaches the 2.0% Detractor violation threshold"],
+      ["Worst Team Monthly Qualification", "Both Team Targets Met", "Promoters < 80%  OR  Detractors ≥ 2%", "Qualified into Monthly Worst Performing Teams Review Table"]
     ];
 
-    XLSX.utils.book_append_sheet(workbook, wsTeamPerf, 'Team Performance');
-    XLSX.utils.book_append_sheet(workbook, wsTeamPerfCumulative, 'Team Performance - Accumulated');
+    XLSX.utils.sheet_add_aoa(wsWorstTeams, criteriaRefAoa, { origin: "A3" });
+    wsWorstTeams['A3'] = {
+      v: "1. UNDERPERFORMANCE MEASUREMENT CRITERIA (HOW WORST TEAMS ARE QUALIFIED)",
+      t: 's',
+      s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E40AF" } }, alignment: { horizontal: "center", vertical: "center" } }
+    };
+    wsWorstTeams['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 3 } });
+    applyHeaderStyle(wsWorstTeams, { s: { r: 3, c: 0 }, e: { r: 3, c: 3 } }, "2563EB");
+    applyDataRowStyle(wsWorstTeams, { s: { r: 4, c: 0 }, e: { r: 3 + criteriaRefAoa.length - 1, c: 3 } });
 
-    // 6. Text Analysis Sheet
+    // Style Criteria Data Rows
+    for (let cr = 4; cr <= 3 + criteriaRefAoa.length - 1; cr++) {
+      for (let cc = 0; cc <= 3; cc++) {
+        const cell = XLSX.utils.encode_cell({ r: cr, c: cc });
+        if (!wsWorstTeams[cell]) continue;
+        wsWorstTeams[cell].s = {
+          font: { bold: cc === 0 || cc === 2, color: { rgb: cc === 2 ? "B91C1C" : "1E293B" } },
+          fill: { fgColor: { rgb: cc === 2 ? "FEF2F2" : (cr === 6 ? "EFF6FF" : "FFFFFF") } },
+          alignment: { horizontal: cc === 0 || cc === 3 ? "left" : "center", vertical: "center" },
+          border: { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'thin', color: { rgb: 'CBD5E1' } }, left: { style: 'thin', color: { rgb: 'CBD5E1' } }, right: { style: 'thin', color: { rgb: 'CBD5E1' } } }
+        };
+      }
+    }
+
+    let worstSheetRow = 3 + criteriaRefAoa.length + 2; // Row 9
+
+    // Compute monthly data for each team and rank them worst to best
+    const monthlyTeamRankings = [];
+
+    monthlyPeriods.forEach(p => {
+      const mDate = new Date(p.year, p.month - 1, 1, 0, 0, 0, 0);
+      const mEnd = new Date(p.year, p.month, 0, 23, 59, 59, 999);
+      const mFull = format(mDate, 'MMMM yyyy');
+      const mShort = format(mDate, 'MMM yyyy');
+
+      const mTasks = cumulativeTasks.filter(task => {
+        const d = getTaskInterviewDate(task);
+        return d && d >= mDate && d <= mEnd;
+      });
+
+      const mTeamStatsMap = {};
+      fieldTeams.forEach(ft => {
+        const tName = ft.teamName?.trim();
+        if (tName && !mTeamStatsMap[tName]) mTeamStatsMap[tName] = { teamName: tName, tasks: [], teamId: ft._id?.toString() || null };
+      });
+      allTeamSamples.filter(s => Number(s.year) === p.year && Number(s.month) === p.month && isTeamNameOrIdActive(s.teamName, s.teamId)).forEach(st => {
+        const tName = st.teamName?.trim();
+        const tId = st.teamId?.toString() || null;
+        if (tName && !mTeamStatsMap[tName]) mTeamStatsMap[tName] = { teamName: tName, tasks: [], teamId: tId };
+      });
+      mTasks.forEach(t => {
+        const teamName = t.teamName?.trim();
+        const teamId = t.teamId?._id?.toString() || t.teamId?.toString() || null;
+        if (teamName && isTeamNameOrIdActive(teamName, teamId)) {
+          if (!mTeamStatsMap[teamName]) mTeamStatsMap[teamName] = { teamName, tasks: [], teamId };
+          mTeamStatsMap[teamName].tasks.push(t);
+        }
+      });
+
+      const allTeamsData = computeBreakdownRows(mTeamStatsMap, (tName) => getMonthlyTeamToken(tName, p.year, p.month));
+
+      // Filter only teams that breached underperformance criteria (Promoters < 80% OR Detractors >= 2% or accDet >= 1)
+      const underperformingTeams = allTeamsData.filter(t => {
+        const promPct = parseFloat(t['Promoter %']) || 0;
+        const detPct = parseFloat(t['Detractor %']) || 0;
+        const accDet = Number(t['Final Detractors (Accountable)']) || 0;
+        const accNeu = Number(t['Final Neutrals (Accountable)']) || 0;
+        return (promPct < 80.0) || (detPct >= 2.0) || (accDet >= 1) || (accNeu >= 1);
+      });
+
+      // Sort from WORST to LEAST WORST:
+      underperformingTeams.sort((a, b) => {
+        const aAccDet = Number(a['Final Detractors (Accountable)']) || 0;
+        const bAccDet = Number(b['Final Detractors (Accountable)']) || 0;
+        if (bAccDet !== aAccDet) return bAccDet - aAccDet;
+
+        const aDetPct = parseFloat(a['Detractor %']) || 0;
+        const bDetPct = parseFloat(b['Detractor %']) || 0;
+        if (bDetPct !== aDetPct) return bDetPct - aDetPct;
+
+        const aPromPct = parseFloat(a['Promoter %']) || 0;
+        const bPromPct = parseFloat(b['Promoter %']) || 0;
+        if (aPromPct !== bPromPct) return aPromPct - bPromPct;
+
+        const aAccNeu = Number(a['Final Neutrals (Accountable)']) || 0;
+        const bAccNeu = Number(b['Final Neutrals (Accountable)']) || 0;
+        return bAccNeu - aAccNeu;
+      });
+
+      // Add Rank label
+      const rankedTeams = underperformingTeams.map((t, idx) => {
+        let rankLabel = `#${idx + 1}`;
+        if (idx === 0) rankLabel = '#1 Worst';
+        else if (idx === 1) rankLabel = '#2 Worst';
+        else if (idx === 2) rankLabel = '#3 Worst';
+
+        const accDet = Number(t['Final Detractors (Accountable)']) || 0;
+        const accNeu = Number(t['Final Neutrals (Accountable)']) || 0;
+        const detPct = parseFloat(t['Detractor %']) || 0;
+        const promPct = parseFloat(t['Promoter %']) || 0;
+
+        // Compute descriptive breached threshold text
+        const triggers = [];
+        if (accDet >= 1) triggers.push(`${accDet} Acc. Detractor${accDet > 1 ? 's' : ''}`);
+        if (detPct >= 2.0) triggers.push(`Detractor Rate (${t['Detractor %']}) ≥ 2%`);
+        if (promPct < 80.0) triggers.push(`Promoter Rate (${t['Promoter %']}) < 80%`);
+        if (accNeu >= 2) triggers.push(`${accNeu} Acc. Neutrals`);
+        const triggerReason = triggers.join(' | ') || 'Underperforming';
+
+        return {
+          rank: rankLabel,
+          teamName: t['Team Name'],
+          initial: Number(t['Initial Samples (Token)']) || 0,
+          nonAccDeducted: Number(t['Total Non-Acc. Deducted']) || 0,
+          finalSamples: Number(t['Final Total Samples']) || 0,
+          accDet: accDet,
+          detractorPct: t['Detractor %'] || '0.0%',
+          accNeu: accNeu,
+          neutralPct: t['Neutral %'] || '0.0%',
+          promoters: Number(t['Final Promoters']) || 0,
+          promoterPct: t['Promoter %'] || '0.0%',
+          triggerReason: triggerReason,
+          consequence: t['Correct Consequence (Escalation Matrix)'] || getEscalationConsequence(accDet, accNeu),
+          action: t['Action'] || '-',
+          actionDate: t['Action Date'] || '-',
+          status: t['Status'] || '-',
+          notes: t['Disciplinary & Policy Notes'] || '-'
+        };
+      });
+
+      // Compute Month Totals (For all month teams)
+      const monthSumInitial = allTeamsData.reduce((s, t) => s + (Number(t['Initial Samples (Token)']) || 0), 0);
+      const monthSumNonAcc = allTeamsData.reduce((s, t) => s + (Number(t['Total Non-Acc. Deducted']) || 0), 0);
+      const monthSumFinal = allTeamsData.reduce((s, t) => s + (Number(t['Final Total Samples']) || 0), 0);
+      const monthSumAccDet = allTeamsData.reduce((s, t) => s + (Number(t['Final Detractors (Accountable)']) || 0), 0);
+      const monthSumAccNeu = allTeamsData.reduce((s, t) => s + (Number(t['Final Neutrals (Accountable)']) || 0), 0);
+      const monthSumProm = allTeamsData.reduce((s, t) => s + (Number(t['Final Promoters']) || 0), 0);
+
+      monthlyTeamRankings.push({
+        period: p,
+        monthFull: mFull,
+        monthShort: mShort,
+        rankedTeams,
+        allTeamsCount: allTeamsData.length,
+        breachedCount: underperformingTeams.length,
+        summary: {
+          initial: monthSumInitial,
+          nonAcc: monthSumNonAcc,
+          final: monthSumFinal,
+          accDet: monthSumAccDet,
+          accNeu: monthSumAccNeu,
+          promoters: monthSumProm
+        }
+      });
+    });
+
+    // 2. TOP EXECUTIVE TIMELINE TABLE: MONTHLY UNDERPERFORMING TEAMS SUMMARY (ALL TEAMS)
+    const maxBreachedCount = Math.max(3, ...monthlyTeamRankings.map(mr => mr.rankedTeams.length));
+    const totalExecCols = 9 + maxBreachedCount; // cols 0..8 + dynamic ranks (#1..#N)
+
+    const execTitleCell = XLSX.utils.encode_cell({ r: worstSheetRow, c: 0 });
+    wsWorstTeams[execTitleCell] = {
+      v: "2. EXECUTIVE TIMELINE: MONTHLY UNDERPERFORMING TEAMS SUMMARY (ALL BREACHED TEAMS)",
+      t: 's',
+      s: { font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "0F172A" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } }
+    };
+    wsWorstTeams['!merges'].push({ s: { r: worstSheetRow, c: 0 }, e: { r: worstSheetRow, c: totalExecCols - 1 } });
+
+    const execLvl1 = [
+      "MONTH / PERIOD",
+      "OVERALL MONTHLY SAMPLES & ACC. METRICS", "", "", "", "", "", "",
+      "ALL UNDERPERFORMING TEAMS (PROMOTERS < 80% OR DETRACTORS ≥ 2%)"
+    ];
+    while (execLvl1.length < totalExecCols) {
+      execLvl1.push("");
+    }
+
+    const execLvl2 = [
+      "Month",
+      "Total Token",
+      "Final Samples",
+      "Acc. Detractors",
+      "Detractor %",
+      "Acc. Neutrals",
+      "Promoters",
+      "Promoter %",
+      "Teams Breached"
+    ];
+
+    for (let k = 1; k <= maxBreachedCount; k++) {
+      execLvl2.push(`#${k} Worst Team`);
+    }
+
+    XLSX.utils.sheet_add_aoa(wsWorstTeams, [execLvl1, execLvl2], { origin: XLSX.utils.encode_cell({ r: worstSheetRow + 1, c: 0 }) });
+
+    // Merges for Executive Level 1
+    wsWorstTeams['!merges'].push({ s: { r: worstSheetRow + 1, c: 0 }, e: { r: worstSheetRow + 2, c: 0 } });
+    wsWorstTeams[XLSX.utils.encode_cell({ r: worstSheetRow + 1, c: 0 })] = {
+      v: "Month",
+      t: 's',
+      s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E293B" } }, alignment: { horizontal: "center", vertical: "center" } }
+    };
+
+    wsWorstTeams['!merges'].push({ s: { r: worstSheetRow + 1, c: 1 }, e: { r: worstSheetRow + 1, c: 7 } });
+    for (let c = 1; c <= 7; c++) {
+      const cell = XLSX.utils.encode_cell({ r: worstSheetRow + 1, c });
+      wsWorstTeams[cell] = {
+        v: c === 1 ? "OVERALL MONTHLY SAMPLES & ACC. METRICS" : "",
+        t: 's',
+        s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E40AF" } }, alignment: { horizontal: "center", vertical: "center" } }
+      };
+    }
+
+    wsWorstTeams['!merges'].push({ s: { r: worstSheetRow + 1, c: 8 }, e: { r: worstSheetRow + 1, c: totalExecCols - 1 } });
+    for (let c = 8; c < totalExecCols; c++) {
+      const cell = XLSX.utils.encode_cell({ r: worstSheetRow + 1, c });
+      wsWorstTeams[cell] = {
+        v: c === 8 ? "ALL UNDERPERFORMING TEAMS (PROMOTERS < 80% OR DETRACTORS ≥ 2%)" : "",
+        t: 's',
+        s: { font: { bold: true, sz: 10, color: { rgb: "B91C1C" } }, fill: { fgColor: { rgb: "B91C1C" } }, alignment: { horizontal: "center", vertical: "center" } }
+      };
+    }
+
+    // Exec Level 2 Sub-Headers Styling
+    const baseLvl2Colors = ["1E293B", "2563EB", "4338CA", "DC2626", "B91C1C", "D97706", "059669", "047857", "9F1239"];
+    const rankColors = ["991B1B", "C2410C", "D97706", "B45309", "92400E", "78350F", "451A03", "374151", "1F2937", "111827"];
+
+    for (let c = 1; c < totalExecCols; c++) {
+      const cell = XLSX.utils.encode_cell({ r: worstSheetRow + 2, c });
+      const color = c < 9 ? baseLvl2Colors[c] : (rankColors[(c - 9) % rankColors.length] || "374151");
+      if (wsWorstTeams[cell]) {
+        wsWorstTeams[cell].s = {
+          font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: color } },
+          alignment: { horizontal: "center", vertical: "center", wrapText: true },
+          border: { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '94A3B8' } }, right: { style: 'thin', color: { rgb: '94A3B8' } } }
+        };
+      }
+    }
+
+    // Exec Data Rows
+    const execRowsAoa = monthlyTeamRankings.map(mr => {
+      const row = [
+        mr.monthShort,
+        mr.summary.initial,
+        mr.summary.final,
+        mr.summary.accDet,
+        mr.summary.final > 0 ? `${((mr.summary.accDet / mr.summary.final) * 100).toFixed(1)}%` : '0%',
+        mr.summary.accNeu,
+        mr.summary.promoters,
+        mr.summary.final > 0 ? `${((mr.summary.promoters / mr.summary.final) * 100).toFixed(1)}%` : '0%',
+        `${mr.breachedCount} of ${mr.allTeamsCount} Teams`
+      ];
+
+      for (let k = 0; k < maxBreachedCount; k++) {
+        if (mr.rankedTeams[k]) {
+          const t = mr.rankedTeams[k];
+          row.push(`${t.teamName} (${t.accDet} Det, ${t.promoterPct})`);
+        } else {
+          row.push('-');
+        }
+      }
+
+      return row;
+    });
+
+    XLSX.utils.sheet_add_aoa(wsWorstTeams, execRowsAoa, { origin: XLSX.utils.encode_cell({ r: worstSheetRow + 3, c: 0 }) });
+
+    for (let r = 0; r < execRowsAoa.length; r++) {
+      const rowIdx = worstSheetRow + 3 + r;
+      for (let c = 0; c < totalExecCols; c++) {
+        const cell = XLSX.utils.encode_cell({ r: rowIdx, c });
+        if (!wsWorstTeams[cell]) continue;
+
+        let fontColor = "1E293B";
+        let bgColor = "FFFFFF";
+
+        if (c === 0) {
+          fontColor = "1E293B";
+        } else if (c === 1 || c === 2) {
+          fontColor = "1E40AF";
+          bgColor = "F8FAFC";
+        } else if (c === 3 || c === 4) {
+          fontColor = "B91C1C";
+          bgColor = "FEF2F2";
+        } else if (c === 6 || c === 7) {
+          fontColor = "047857";
+          bgColor = "ECFDF5";
+        } else if (c === 8) {
+          fontColor = "9F1239";
+          bgColor = "FFF1F2";
+        } else if (c === 9) {
+          fontColor = "991B1B";
+          bgColor = "FEE2E2"; // Red tint for #1 worst
+        } else if (c === 10) {
+          fontColor = "C2410C";
+          bgColor = "FFEDD5"; // Orange tint for #2 worst
+        } else if (c === 11) {
+          fontColor = "D97706";
+          bgColor = "FEF3C7"; // Amber tint for #3 worst
+        } else if (c > 11) {
+          fontColor = "374151";
+          bgColor = "F8FAFC";
+        }
+
+        wsWorstTeams[cell].s = {
+          font: { bold: c === 0 || c >= 8, color: { rgb: fontColor } },
+          fill: { fgColor: { rgb: bgColor } },
+          alignment: { horizontal: c === 0 || c >= 9 ? "left" : "center", vertical: "center" },
+          border: { top: { style: 'thin', color: { rgb: 'E2E8F0' } }, bottom: { style: 'thin', color: { rgb: 'E2E8F0' } }, left: { style: 'thin', color: { rgb: 'E2E8F0' } }, right: { style: 'thin', color: { rgb: 'CBD5E1' } } }
+        };
+      }
+    }
+
+    worstSheetRow += 3 + execRowsAoa.length + 3;
+
+    // 3. DETAILED MONTH-BY-MONTH RANKED TABLES FOR UNDERPERFORMING TEAMS
+    monthlyTeamRankings.forEach((mr, pIdx) => {
+      const mColor = monthColorPalette[pIdx % monthColorPalette.length];
+      const startR = worstSheetRow;
+
+      // Table Title Banner
+      const titleCell = XLSX.utils.encode_cell({ r: startR, c: 0 });
+      wsWorstTeams[titleCell] = {
+        v: `${mr.monthFull.toUpperCase()} — UNDERPERFORMING TEAMS REVIEW (PROMOTERS < 80% OR DETRACTORS ≥ 2%)`,
+        t: 's',
+        s: { font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: mColor } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } }
+      };
+      wsWorstTeams['!merges'].push({ s: { r: startR, c: 0 }, e: { r: startR, c: 12 } });
+
+      const headerR1 = startR + 1;
+      const headerR2 = startR + 2;
+      const dataStartR = startR + 3;
+
+      // Level 1 Header (13 columns)
+      const tableLvl1 = [
+        "RANK & TEAM", "",
+        "INITIAL SAMPLES & DEDUCTIONS", "", "",
+        "ACCOUNTABLE DETRACTORS", "",
+        "ACCOUNTABLE NEUTRALS", "",
+        "PROMOTERS PERFORMANCE", "",
+        "CRITERIA BREACH STATUS",
+        "POLICY & ESCALATION"
+      ];
+
+      // Level 2 Sub-Headers
+      const tableLvl2 = [
+        "Rank",
+        "Team Name",
+        "Initial Token",
+        "Non-Acc. Deducted",
+        "Final Samples",
+        "Acc. Detractors",
+        "Detractor %",
+        "Acc. Neutrals",
+        "Neutral %",
+        "Promoters",
+        "Promoter %",
+        "Breached Threshold(s)",
+        "Correct Consequence (Escalation Matrix)"
+      ];
+
+      XLSX.utils.sheet_add_aoa(wsWorstTeams, [tableLvl1, tableLvl2], { origin: XLSX.utils.encode_cell({ r: headerR1, c: 0 }) });
+
+      // Level 1 Merges & Styles
+      const lvl1Groups = [
+        { start: 0, end: 1, label: "RANK & TEAM", color: "1E293B" },
+        { start: 2, end: 4, label: "INITIAL SAMPLES & DEDUCTIONS", color: "1E40AF" },
+        { start: 5, end: 6, label: "ACCOUNTABLE DETRACTORS", color: "B91C1C" },
+        { start: 7, end: 8, label: "ACCOUNTABLE NEUTRALS", color: "D97706" },
+        { start: 9, end: 10, label: "PROMOTERS PERFORMANCE", color: "047857" },
+        { start: 11, end: 11, label: "CRITERIA BREACH STATUS", color: "9F1239" },
+        { start: 12, end: 12, label: "POLICY & ESCALATION", color: "581C87" }
+      ];
+
+      lvl1Groups.forEach(g => {
+        if (g.start < g.end) {
+          wsWorstTeams['!merges'].push({ s: { r: headerR1, c: g.start }, e: { r: headerR1, c: g.end } });
+        }
+        for (let c = g.start; c <= g.end; c++) {
+          const cell = XLSX.utils.encode_cell({ r: headerR1, c });
+          wsWorstTeams[cell] = {
+            v: c === g.start ? g.label : "",
+            t: 's',
+            s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: g.color } }, alignment: { horizontal: "center", vertical: "center" } }
+          };
+        }
+      });
+
+      // Level 2 Sub-Headers Styling
+      const lvl2Colors = ["1E293B", "334155", "2563EB", "9F1239", "4338CA", "DC2626", "B91C1C", "F59E0B", "D97706", "059669", "047857", "BE123C", "6B21A8"];
+      for (let c = 0; c <= 12; c++) {
+        const cell = XLSX.utils.encode_cell({ r: headerR2, c });
+        if (wsWorstTeams[cell]) {
+          wsWorstTeams[cell].s = {
+            font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: lvl2Colors[c] || "374151" } },
+            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            border: { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '94A3B8' } }, right: { style: 'thin', color: { rgb: '94A3B8' } } }
+          };
+        }
+      }
+
+      let fullTableAoa = [];
+      if (mr.rankedTeams.length === 0) {
+        fullTableAoa = [
+          ["-", "All teams compliant (Promoters ≥ 80% and Detractors < 2%)", "-", "-", "-", "-", "-", "-", "-", "-", "-", "🟢 All Targets Met", "-"]
+        ];
+      } else {
+        const rankedAoa = mr.rankedTeams.map(t => [
+          t.rank,
+          t.teamName,
+          t.initial,
+          t.nonAccDeducted,
+          t.finalSamples,
+          t.accDet,
+          t.detractorPct,
+          t.accNeu,
+          t.neutralPct,
+          t.promoters,
+          t.promoterPct,
+          t.triggerReason,
+          t.consequence
+        ]);
+
+        const totalRow = [
+          "TOTAL",
+          `UNDERPERFORMING SUB-TOTAL (${mr.rankedTeams.length} TEAMS)`,
+          mr.rankedTeams.reduce((s, t) => s + t.initial, 0),
+          mr.rankedTeams.reduce((s, t) => s + t.nonAccDeducted, 0),
+          mr.rankedTeams.reduce((s, t) => s + t.finalSamples, 0),
+          mr.rankedTeams.reduce((s, t) => s + t.accDet, 0),
+          "-",
+          mr.rankedTeams.reduce((s, t) => s + t.accNeu, 0),
+          "-",
+          mr.rankedTeams.reduce((s, t) => s + t.promoters, 0),
+          "-",
+          `🔴 ${mr.rankedTeams.length} of ${mr.allTeamsCount} Teams Breached Benchmark`,
+          "-"
+        ];
+
+        fullTableAoa = [...rankedAoa, totalRow];
+      }
+
+      XLSX.utils.sheet_add_aoa(wsWorstTeams, fullTableAoa, { origin: XLSX.utils.encode_cell({ r: dataStartR, c: 0 }) });
+
+      // Style Data Rows
+      for (let r = 0; r < fullTableAoa.length; r++) {
+        const rowIdx = dataStartR + r;
+        const isTotal = mr.rankedTeams.length > 0 && r === fullTableAoa.length - 1;
+        const isWorst1 = !isTotal && mr.rankedTeams.length > 0 && r === 0;
+        const isWorst2 = !isTotal && mr.rankedTeams.length > 0 && r === 1;
+        const isWorst3 = !isTotal && mr.rankedTeams.length > 0 && r === 2;
+
+        for (let c = 0; c <= 12; c++) {
+          const cell = XLSX.utils.encode_cell({ r: rowIdx, c });
+          if (!wsWorstTeams[cell]) continue;
+
+          let fontColor = "1E293B";
+          let bgColor = "FFFFFF";
+
+          if (isTotal) {
+            bgColor = "F1F5F9";
+            fontColor = "0F172A";
+          } else if (isWorst1) {
+            bgColor = (c === 0 || c === 1 || c === 5 || c === 11) ? "FEE2E2" : "FFF5F5";
+            fontColor = (c === 0 || c === 5 || c === 11) ? "991B1B" : "1E293B";
+          } else if (isWorst2) {
+            bgColor = (c === 0 || c === 1 || c === 5 || c === 11) ? "FFEDD5" : "FFFAF0";
+            fontColor = (c === 0 || c === 5 || c === 11) ? "C2410C" : "1E293B";
+          } else if (isWorst3) {
+            bgColor = (c === 0 || c === 1 || c === 5 || c === 11) ? "FEF3C7" : "FFFDF0";
+            fontColor = (c === 0 || c === 5 || c === 11) ? "D97706" : "1E293B";
+          } else {
+            if (c === 2 || c === 4) {
+              fontColor = "1E40AF";
+              bgColor = "F8FAFC";
+            } else if (c === 5 || c === 6) {
+              fontColor = "B91C1C";
+              if (fullTableAoa[r][5] > 0) bgColor = "FEF2F2";
+            } else if (c === 7 || c === 8) {
+              fontColor = "D97706";
+              if (fullTableAoa[r][7] > 0) bgColor = "FFFBEB";
+            } else if (c === 9 || c === 10) {
+              fontColor = "047857";
+              bgColor = "ECFDF5";
+            } else if (c === 11) {
+              fontColor = "9F1239";
+              bgColor = "FFF1F2";
+            } else if (c === 12) {
+              fontColor = "581C87";
+              bgColor = "FAF5FF";
+            }
+          }
+
+          wsWorstTeams[cell].s = {
+            font: { bold: isTotal || isWorst1 || isWorst2 || isWorst3 || c === 0 || c === 1 || c === 4 || c === 11, color: { rgb: fontColor } },
+            fill: { fgColor: { rgb: bgColor } },
+            alignment: { horizontal: c === 1 || c === 11 || c === 12 ? "left" : "center", vertical: "center" },
+            border: {
+              top: { style: isTotal ? 'medium' : 'thin', color: { rgb: isTotal ? '334155' : 'E2E8F0' } },
+              bottom: { style: isTotal ? 'medium' : 'thin', color: { rgb: isTotal ? '334155' : 'E2E8F0' } },
+              left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+              right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+            }
+          };
+        }
+      }
+
+      worstSheetRow = dataStartR + fullTableAoa.length + 4;
+    });
+
+    const worstCols = [
+      { wch: 12 }, // Col 0: Rank / Month
+      { wch: 25 }, // Col 1: Team Name / Total Token
+      { wch: 15 }, // Col 2: Initial Token / Final Samples
+      { wch: 18 }, // Col 3: Non-Acc. Deducted / Acc. Detractors
+      { wch: 15 }, // Col 4: Final Samples / Detractor %
+      { wch: 16 }, // Col 5: Acc. Detractors / Acc. Neutrals
+      { wch: 14 }, // Col 6: Detractor % / Promoters
+      { wch: 16 }, // Col 7: Acc. Neutrals / Promoter %
+      { wch: 18 }, // Col 8: Neutral % / Teams Breached
+      { wch: 55 }, // Col 9: Promoters / All Underperforming Teams Complete Summary
+      { wch: 32 }, // Col 10: Promoter % / #1 Worst Team
+      { wch: 42 }, // Col 11: Breached Threshold(s) / #2 Worst Team
+      { wch: 46 }  // Col 12: Policy & Escalation / #3 Worst Team
+    ];
+    while (worstCols.length < totalExecCols) {
+      worstCols.push({ wch: 32 });
+    }
+    wsWorstTeams['!cols'] = worstCols;
+    fixSheetRange(wsWorstTeams);
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 5.6 Team Development, Assessments & Action Logs Subsheet
+    // ═════════════════════════════════════════════════════════════════════════
+    const wsTeamDevLogs = XLSX.utils.aoa_to_sheet([[]]);
+    wsTeamDevLogs['A1'] = {
+      v: `TEAM DEVELOPMENT, ASSESSMENTS & ACTION LOGS - Completed Evaluations, Lab Audits, OTJ & Training Logs`,
+      t: 's',
+      s: {
+        font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '0F172A' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      }
+    };
+    if (!wsTeamDevLogs['!merges']) wsTeamDevLogs['!merges'] = [];
+    wsTeamDevLogs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 17 } });
+
+    let devSheetRow = 2;
+
+    // Helper to extract and merge all training sessions for a team from both team.sessionHistory and global allTrainingSessions
+    const getMergedTeamTrainingSessions = (team) => {
+      if (!team) return [];
+      const idStr = team._id ? team._id.toString() : '';
+      const normName = normalizeTeamName(team.teamName);
+
+      // 1. Embedded sessions in team.sessionHistory
+      const embedded = (Array.isArray(team.sessionHistory) ? team.sessionHistory : [])
+        .filter(s => s && (s.sessionDate || s.createdAt))
+        .map(s => ({
+          _id: s._id?.toString() || `${team.teamName}_${s.sessionDate || s.createdAt}`,
+          sessionTitle: s.sessionTitle || 'Training Workshop',
+          sessionType: s.sessionType || 'Classroom & Practical',
+          sessionDate: s.sessionDate || s.createdAt,
+          duration: s.duration || '2 Hours',
+          conductedBy: s.conductedBy || 'Trainer',
+          location: s.location || 'Nokia Training Center',
+          outlines: s.outlines,
+          notes: s.notes || '',
+          status: s.status || 'Completed',
+          participants: [team],
+          attendedTeams: [team.teamName || 'Unknown Team']
+        }));
+
+      // 2. Global sessions from allTrainingSessions where this team is participant
+      const global = allTrainingSessions.filter(ts => {
+        const parts = Array.isArray(ts.participants) ? ts.participants : [];
+        return parts.some(p => {
+          const pId = p?._id?.toString() || p?.toString();
+          const pName = normalizeTeamName(p?.teamName || (typeof p === 'string' ? p : ''));
+          return (idStr && pId === idStr) || (normName && pName === normName);
+        });
+      }).map(ts => ({
+        _id: ts._id?.toString(),
+        sessionTitle: ts.sessionTitle || 'Training Workshop',
+        sessionType: ts.sessionType || 'Classroom & Practical',
+        sessionDate: ts.sessionDate || ts.createdAt,
+        duration: ts.duration || '2 Hours',
+        conductedBy: ts.conductedBy || 'Trainer',
+        location: ts.location || 'Nokia Training Center',
+        outlines: ts.outlines,
+        notes: ts.notes || '',
+        status: ts.status || 'Completed',
+        participants: ts.participants || [team],
+        attendedTeams: (Array.isArray(ts.participants) ? ts.participants : [])
+          .map(p => p?.teamName || (typeof p === 'string' ? p : team.teamName))
+          .filter(Boolean)
+      }));
+
+      // Combine & Deduplicate by ID or (Title + Date)
+      const sessionMap = new Map();
+      embedded.forEach(s => {
+        const dStr = s.sessionDate ? new Date(s.sessionDate).toISOString().split('T')[0] : '';
+        const key = s._id || `${s.sessionTitle}_${dStr}`;
+        sessionMap.set(key, s);
+      });
+      global.forEach(s => {
+        const dStr = s.sessionDate ? new Date(s.sessionDate).toISOString().split('T')[0] : '';
+        const key = s._id || `${s.sessionTitle}_${dStr}`;
+        if (!sessionMap.has(key)) {
+          sessionMap.set(key, s);
+        } else {
+          const existing = sessionMap.get(key);
+          const mergedTeams = Array.from(new Set([...(existing.attendedTeams || []), ...(s.attendedTeams || [])]));
+          existing.attendedTeams = mergedTeams;
+        }
+      });
+
+      return Array.from(sessionMap.values()).sort((a, b) => new Date(b.sessionDate || 0) - new Date(a.sessionDate || 0));
+    };
+
+    // Build per-team comprehensive action logs
+    const teamActionMatrix = fieldTeams.map((team, idx) => {
+      const idStr = team._id ? team._id.toString() : '';
+      const normName = normalizeTeamName(team.teamName);
+
+      // 1. Online Test
+      const teamQuizResults = allQuizResults.filter(q => {
+        const qId = q.teamId?._id?.toString() || q.teamId?.toString();
+        const qName = normalizeTeamName(q.teamName);
+        return (idStr && qId === idStr) || (normName && qName === normName);
+      }).sort((a, b) => new Date(b.submittedAt || b.createdAt || 0) - new Date(a.submittedAt || a.createdAt || 0));
+
+      const hasQuiz = teamQuizResults.length > 0;
+      const latestQuiz = hasQuiz ? teamQuizResults[0] : null;
+      const quizScore = latestQuiz ? Math.round(parseScoreValue(latestQuiz.percentage ?? latestQuiz.score) || 0) : null;
+      const quizDate = latestQuiz?.submittedAt || latestQuiz?.createdAt ? format(new Date(latestQuiz.submittedAt || latestQuiz.createdAt), 'dd/MM/yyyy') : 'N/A';
+
+      // 2. Lab Assessment
+      const teamLabAssessments = allLabAssessments.filter(l => {
+        const lId = l.fieldTeamId?._id?.toString() || l.fieldTeamId?.toString();
+        const lName = normalizeTeamName(l.fieldTeamId?.teamName || l.fieldTeamName);
+        return (idStr && lId === idStr) || (normName && lName === normName);
+      }).sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0));
+
+      const hasLab = teamLabAssessments.length > 0;
+      const latestLab = hasLab ? teamLabAssessments[0] : null;
+      const labScore = latestLab && latestLab.totalScore !== undefined ? Math.round(Number(latestLab.totalScore)) : null;
+      const labDate = latestLab?.date || latestLab?.createdAt ? format(new Date(latestLab.date || latestLab.createdAt), 'dd/MM/yyyy') : 'N/A';
+
+      // 3. OTJ Assessment
+      const teamOtjAssessments = allOtjAssessments.filter(o => {
+        if (o.isDeleted) return false;
+        const oId = o.fieldTeamId?._id?.toString() || o.fieldTeamId?.toString();
+        const oName = normalizeTeamName(o.fieldTeamName || o.fieldTeamId?.teamName);
+        return (idStr && oId === idStr) || (normName && oName === normName);
+      }).sort((a, b) => new Date(b.assessmentDate || b.createdAt || 0) - new Date(a.assessmentDate || a.createdAt || 0));
+
+      const hasOtj = teamOtjAssessments.length > 0;
+      const latestOtj = hasOtj ? teamOtjAssessments[0] : null;
+      const otjScore = latestOtj && latestOtj.overallScore !== undefined ? Math.round(Number(latestOtj.overallScore)) : null;
+      const otjDate = latestOtj?.assessmentDate || latestOtj?.createdAt ? format(new Date(latestOtj.assessmentDate || latestOtj.createdAt), 'dd/MM/yyyy') : 'N/A';
+
+      // 4. Training Sessions (Merged from team.sessionHistory and global allTrainingSessions)
+      const teamTrainingSessions = getMergedTeamTrainingSessions(team);
+      const hasTraining = teamTrainingSessions.length > 0;
+      const latestTraining = hasTraining ? teamTrainingSessions[0] : null;
+      const trainingDate = latestTraining?.sessionDate ? format(new Date(latestTraining.sessionDate), 'dd/MM/yyyy') : 'N/A';
+
+      // Count completed pillars (out of 4)
+      const completedPillars = (hasQuiz ? 1 : 0) + (hasLab ? 1 : 0) + (hasOtj ? 1 : 0) + (hasTraining ? 1 : 0);
+      let complianceStatus = 'Pending Development Actions (0/4)';
+      let complianceColor = 'B91C1C'; // Red
+      if (completedPillars === 4) {
+        complianceStatus = '🟢 Fully Qualified (4/4 Completed)';
+        complianceColor = '047857'; // Green
+      } else if (completedPillars === 3) {
+        complianceStatus = '🔵 High Compliance (3/4 Completed)';
+        complianceColor = '1E40AF'; // Blue
+      } else if (completedPillars === 2) {
+        complianceStatus = '🟡 Moderate Compliance (2/4 Completed)';
+        complianceColor = 'D97706'; // Amber
+      } else if (completedPillars === 1) {
+        complianceStatus = '🟠 Partial Compliance (1/4 Completed)';
+        complianceColor = 'EA580C'; // Orange
+      }
+
+      const getTeamStatusBadge = (t) => {
+        if (!t) return '🟢 Active';
+        if (t.isTerminated) return '🔴 Terminated';
+        if (t.isResigned) return '⚪ Resigned';
+        if (t.isSuspended) return '🟠 Suspended';
+        if (t.isOnLeave) return '🟡 On Leave';
+        return '🟢 Active';
+      };
+
+      const teamStatus = getTeamStatusBadge(team);
+
+      return {
+        teamCode: team.teamCode || `FT-${idx + 1}`,
+        teamName: team.teamName || 'Unknown Team',
+        company: team.teamCompany || 'Reach',
+        contactNumber: team.contactNumber || 'N/A',
+        teamStatus,
+        hasQuiz,
+        quizScore: quizScore !== null ? `${quizScore}%` : 'N/A',
+        quizDate,
+        hasLab,
+        labScore: labScore !== null ? `${labScore}%` : 'N/A',
+        labDate,
+        hasOtj,
+        otjScore: otjScore !== null ? `${otjScore}%` : 'N/A',
+        otjDate,
+        hasTraining,
+        trainingCount: teamTrainingSessions.length,
+        trainingDate,
+        completedPillars,
+        complianceStatus,
+        complianceColor
+      };
+    });
+
+    // 1. Executive Summary Table
+    const totalTeamsCount = teamActionMatrix.length;
+    const quizCompletedCount = teamActionMatrix.filter(t => t.hasQuiz).length;
+    const labCompletedCount = teamActionMatrix.filter(t => t.hasLab).length;
+    const otjCompletedCount = teamActionMatrix.filter(t => t.hasOtj).length;
+    const trainingAttendedCount = teamActionMatrix.filter(t => t.hasTraining).length;
+    const fullCertifiedCount = teamActionMatrix.filter(t => t.completedPillars === 4).length;
+
+    const summaryHeaders = ['Action / Assessment Dimension', 'Description & Scope', 'Completed Teams Count', 'Total Teams', 'Completion Rate (%)', 'ISP Operational Compliance Status'];
+    const summaryRows = [
+      ['Online Test (Theoretical Knowledge)', 'Theoretical QA evaluation & online assessment', quizCompletedCount, totalTeamsCount, totalTeamsCount > 0 ? `${((quizCompletedCount / totalTeamsCount) * 100).toFixed(1)}%` : '0%', quizCompletedCount >= totalTeamsCount * 0.8 ? '🟢 High Coverage (≥ 80%)' : '🟠 In Progress'],
+      ['Lab Assessment (Technical & Splicing)', 'Hands-on practical lab audit, splicing & equipment verification', labCompletedCount, totalTeamsCount, totalTeamsCount > 0 ? `${((labCompletedCount / totalTeamsCount) * 100).toFixed(1)}%` : '0%', labCompletedCount >= totalTeamsCount * 0.8 ? '🟢 High Coverage (≥ 80%)' : '🟠 In Progress'],
+      ['On-The-Job (OTJ) Practical Assessment', 'Live on-site field installation audit & quality check', otjCompletedCount, totalTeamsCount, totalTeamsCount > 0 ? `${((otjCompletedCount / totalTeamsCount) * 100).toFixed(1)}%` : '0%', otjCompletedCount >= totalTeamsCount * 0.8 ? '🟢 High Coverage (≥ 80%)' : '🟠 In Progress'],
+      ['Training Sessions & Upskilling', 'Conducted training workshops, refresher courses & corrective sessions', trainingAttendedCount, totalTeamsCount, totalTeamsCount > 0 ? `${((trainingAttendedCount / totalTeamsCount) * 100).toFixed(1)}%` : '0%', trainingAttendedCount >= totalTeamsCount * 0.8 ? '🟢 High Coverage (≥ 80%)' : '🟠 In Progress'],
+      ['Fully Qualified Teams (All 4 Completed)', 'Field teams that completed all 4 development pillars', fullCertifiedCount, totalTeamsCount, totalTeamsCount > 0 ? `${((fullCertifiedCount / totalTeamsCount) * 100).toFixed(1)}%` : '0%', fullCertifiedCount >= totalTeamsCount * 0.6 ? '🟢 Compliant' : '🟡 In Progress']
+    ];
+
+    // Add Table 1: Executive KPI Overview
+    const addActionTable = (ws, title, titleColorHex, headers, dataRows, startR) => {
+      const titleCell = XLSX.utils.encode_cell({ r: startR, c: 0 });
+      ws[titleCell] = {
+        v: title,
+        t: 's',
+        s: {
+          font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: titleColorHex } },
+          alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+        }
+      };
+      if (!ws['!merges']) ws['!merges'] = [];
+      ws['!merges'].push({ s: { r: startR, c: 0 }, e: { r: startR, c: headers.length - 1 } });
+
+      const headerRowIdx = startR + 1;
+      XLSX.utils.sheet_add_aoa(ws, [headers], { origin: XLSX.utils.encode_cell({ r: headerRowIdx, c: 0 }) });
+      for (let c = 0; c < headers.length; c++) {
+        const hCell = XLSX.utils.encode_cell({ r: headerRowIdx, c });
+        if (ws[hCell]) {
+          ws[hCell].s = {
+            font: { bold: true, sz: 9.5, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '1E293B' } },
+            alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+            border: { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '94A3B8' } }, right: { style: 'thin', color: { rgb: '94A3B8' } } }
+          };
+        }
+      }
+
+      const dataStartRowIdx = startR + 2;
+      XLSX.utils.sheet_add_aoa(ws, dataRows, { origin: XLSX.utils.encode_cell({ r: dataStartRowIdx, c: 0 }) });
+
+      for (let r = 0; r < dataRows.length; r++) {
+        const rowIdx = dataStartRowIdx + r;
+        for (let c = 0; c < headers.length; c++) {
+          const dCell = XLSX.utils.encode_cell({ r: rowIdx, c });
+          if (!ws[dCell]) continue;
+
+          let fontColor = '1E293B';
+          let bgColor = (r % 2 === 1) ? 'F8FAFC' : 'FFFFFF';
+          let isBold = c === 0 || c === 1 || c === 2 || c === headers.length - 1;
+
+          ws[dCell].s = {
+            font: { bold: isBold, sz: 9.5, color: { rgb: fontColor } },
+            fill: { fgColor: { rgb: bgColor } },
+            alignment: { horizontal: (c === 0 || c === 1 || c === headers.length - 1) ? 'left' : 'center', vertical: 'center' },
+            border: { top: { style: 'thin', color: { rgb: 'E2E8F0' } }, bottom: { style: 'thin', color: { rgb: 'E2E8F0' } }, left: { style: 'thin', color: { rgb: 'E2E8F0' } }, right: { style: 'thin', color: { rgb: 'CBD5E1' } } }
+          };
+        }
+      }
+
+      return dataStartRowIdx + dataRows.length;
+    };
+
+    // Helper for adding interceptor between tables
+    const addSheetInterceptor = (ws, rowIdx, maxCols = 19) => {
+      const sepCell = XLSX.utils.encode_cell({ r: rowIdx, c: 0 });
+      ws[sepCell] = {
+        v: "------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------",
+        t: 's',
+        s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "000000" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } }
+      };
+      ws['!merges'].push({ s: { r: rowIdx, c: 0 }, e: { r: rowIdx, c: maxCols - 1 } });
+    };
+
+    // Table 1: Executive KPI Overview
+    devSheetRow = addActionTable(
+      wsTeamDevLogs,
+      '1. EXECUTIVE SUMMARY: FIELD TEAMS DEVELOPMENT & ACTION COMPLETION RATES',
+      '1E1B4B',
+      summaryHeaders,
+      summaryRows,
+      devSheetRow
+    ) + 2;
+
+    addSheetInterceptor(wsTeamDevLogs, devSheetRow, 19);
+    devSheetRow += 2;
+
+    // Table 2: Master Field Team Action Matrix
+    const masterHeaders = [
+      '#', 'Team Code', 'Team Name', 'Subcontractor / Company', 'Contact Number', 'Operational Status',
+      'Online Test Status', 'Online Test Score', 'Online Test Date',
+      'Lab Audit Status', 'Lab Audit Score', 'Lab Audit Date',
+      'OTJ Audit Status', 'OTJ Audit Score', 'OTJ Audit Date',
+      'Training Status', 'Attended Sessions', 'Latest Training Date',
+      'Overall Action & Qualification Status'
+    ];
+
+    const masterRows = teamActionMatrix.map((t, i) => [
+      i + 1,
+      t.teamCode,
+      t.teamName,
+      t.company,
+      t.contactNumber,
+      t.teamStatus,
+      t.hasQuiz ? 'Completed' : 'Pending',
+      t.quizScore,
+      t.quizDate,
+      t.hasLab ? 'Completed' : 'Pending',
+      t.labScore,
+      t.labDate,
+      t.hasOtj ? 'Completed' : 'Pending',
+      t.otjScore,
+      t.otjDate,
+      t.hasTraining ? 'Attended' : 'Not Attended',
+      t.trainingCount,
+      t.trainingDate,
+      t.complianceStatus
+    ]);
+
+    devSheetRow = addActionTable(
+      wsTeamDevLogs,
+      '2. MASTER FIELD TEAM ACTION & QUALIFICATION MATRIX (ALL TEAMS & 4 DEVELOPMENT PILLARS)',
+      '0F172A',
+      masterHeaders,
+      masterRows,
+      devSheetRow
+    ) + 2;
+
+    addSheetInterceptor(wsTeamDevLogs, devSheetRow, 19);
+    devSheetRow += 2;
+
+    // Table 3: Detailed Online Test Results Logs (Active Teams Only)
+    const activeQuizResults = allQuizResults.filter(q => isTeamNameOrIdActive(q.teamName || q.teamId?.teamName, q.teamId?._id || q.teamId));
+    const quizLogsHeaders = ['#', 'Team Name', 'Company', 'Quiz Code / Title', 'Score (%)', 'Result / Status', 'Date Taken'];
+    const quizLogsRows = activeQuizResults.map((q, i) => [
+      i + 1,
+      q.teamName || q.teamId?.teamName || 'Unknown',
+      q.teamId?.teamCompany || 'Reach',
+      q.quizTitle || q.quizCode || 'Online Test',
+      q.percentage !== undefined ? `${Math.round(Number(q.percentage))}%` : (q.score !== undefined ? `${Math.round(Number(q.score))}%` : 'N/A'),
+      q.passed ? 'Passed' : 'Completed',
+      q.submittedAt || q.createdAt ? format(new Date(q.submittedAt || q.createdAt), 'dd/MM/yyyy') : 'N/A'
+    ]);
+
+    devSheetRow = addActionTable(
+      wsTeamDevLogs,
+      `3. ONLINE TEST (THEORETICAL) DETAILED LOGS (${quizLogsRows.length} Records)`,
+      '0D9488',
+      quizLogsHeaders,
+      quizLogsRows.length > 0 ? quizLogsRows : [[1, 'No Quiz Records Found', '-', '-', '-', '-', '-']],
+      devSheetRow
+    ) + 2;
+
+    addSheetInterceptor(wsTeamDevLogs, devSheetRow, 18);
+    devSheetRow += 2;
+
+    // Table 4: Detailed Lab Assessment Logs (Active Teams Only)
+    const activeLabAssessments = allLabAssessments.filter(l => isTeamNameOrIdActive(l.fieldTeamId?.teamName || l.fieldTeamName, l.fieldTeamId?._id || l.fieldTeamId));
+    const labLogsHeaders = ['#', 'Team Name', 'Assessment Type', 'ONT Model / Setup', 'Total Score (%)', 'Splicing Machine', 'Electrode Lifetime', 'Assessor', 'Date', 'Comments / Action Log'];
+    const labLogsRows = activeLabAssessments.map((l, i) => [
+      i + 1,
+      l.fieldTeamId?.teamName || l.fieldTeamName || 'Unknown',
+      l.assessmentType || 'Technical',
+      l.ontType?.name || 'Standard',
+      l.totalScore !== undefined ? `${Math.round(Number(l.totalScore))}%` : 'N/A',
+      l.splicingMachineStatus || 'Good',
+      l.electrodeLifetime || 0,
+      l.assessorId?.name || 'Assessor',
+      l.date || l.createdAt ? format(new Date(l.date || l.createdAt), 'dd/MM/yyyy') : 'N/A',
+      l.comments || 'Assessment completed successfully'
+    ]);
+
+    devSheetRow = addActionTable(
+      wsTeamDevLogs,
+      `4. LAB AUDIT & ASSESSMENT DETAILED LOGS (${labLogsRows.length} Records)`,
+      'B45309',
+      labLogsHeaders,
+      labLogsRows.length > 0 ? labLogsRows : [[1, 'No Lab Assessment Records Found', '-', '-', '-', '-', '-', '-', '-', '-']],
+      devSheetRow
+    ) + 2;
+
+    addSheetInterceptor(wsTeamDevLogs, devSheetRow, 18);
+    devSheetRow += 2;
+
+    // Helper functions for OTJ checkpoint analysis
+    const getOtjCheckpointLabel = (checkpointName = '', score = 0) => {
+      const name = String(checkpointName);
+      if (name === "Consumables Availability") {
+        if (score >= 5) return "Fully Available";
+        if (score >= 4) return "Mostly Available";
+        if (score >= 3) return "Partially Available";
+        if (score >= 2) return "Limited";
+        return "Not Available";
+      }
+      if (name.includes("Equipment Condition") || name.includes("Tools Condition")) {
+        if (score >= 5) return "Excellent Condition";
+        if (score >= 4) return "Good";
+        if (score >= 3) return "Fair / Functional";
+        if (score >= 2) return "Substandard";
+        return "Defective / Non-Functional";
+      }
+      if (name === "Patience and Precision") {
+        if (score >= 5) return "Meticulous / Patient";
+        if (score >= 4) return "Precise";
+        if (score >= 3) return "Adequate";
+        if (score >= 2) return "Poor Precision";
+        return "Rushed / Careless";
+      }
+      if (name === "Communication") {
+        if (score >= 5) return "Exceptional";
+        if (score >= 4) return "Professional";
+        if (score >= 3) return "Average";
+        if (score >= 2) return "Minimal";
+        return "Poor";
+      }
+      if (name === "Appearance") {
+        if (score >= 5) return "Flawless";
+        if (score >= 4) return "Neat / Professional";
+        if (score >= 3) return "Acceptable";
+        if (score >= 2) return "Incomplete Uniform";
+        return "Unprofessional / Untidy";
+      }
+
+      if (score >= 4.5) return "Excellent";
+      if (score >= 3.5) return "Good";
+      if (score >= 2.5) return "Satisfactory";
+      if (score >= 1.5) return "Needs Improvement";
+      return "Poor";
+    };
+
+    const analyzeOtjAssessment = (assessment) => {
+      const checkPoints = Array.isArray(assessment?.checkPoints) ? assessment.checkPoints : [];
+      if (checkPoints.length === 0) {
+        return {
+          strengthsSummary: 'N/A',
+          weaknessesSummary: 'N/A',
+          categoryProficiency: 'N/A',
+          topStrength: 'N/A',
+          topWeakness: 'N/A',
+          proficiencyLevel: 'No Data'
+        };
+      }
+
+      const scoreNum = Number(assessment.overallScore || 0);
+      let proficiencyLevel = 'Satisfactory';
+      if (scoreNum >= 85) proficiencyLevel = 'Mastered (≥ 85%)';
+      else if (scoreNum >= 75) proficiencyLevel = 'Competent (75-84%)';
+      else if (scoreNum >= 60) proficiencyLevel = 'Satisfactory (60-74%)';
+      else proficiencyLevel = 'Needs Improvement (< 60%)';
+
+      // Sort checkpoints
+      const sortedDesc = [...checkPoints].sort((a, b) => (b.score || 0) - (a.score || 0));
+      const sortedAsc = [...checkPoints].sort((a, b) => (a.score || 0) - (b.score || 0));
+
+      const strengthItems = sortedDesc
+        .filter(cp => (cp.score || 0) >= 4)
+        .slice(0, 3)
+        .map(cp => `🟢 ${cp.name} [${cp.score}/5: ${getOtjCheckpointLabel(cp.name, cp.score)}]`);
+
+      const finalStrengths = strengthItems.length > 0
+        ? strengthItems
+        : sortedDesc.slice(0, 2).map(cp => `🟢 ${cp.name} [${cp.score}/5]`);
+
+      const weaknessItems = sortedAsc
+        .filter(cp => (cp.score || 0) <= 2)
+        .slice(0, 3)
+        .map(cp => `🔴 ${cp.name} [${cp.score}/5: ${getOtjCheckpointLabel(cp.name, cp.score)}]`);
+
+      const finalWeaknesses = weaknessItems.length > 0
+        ? weaknessItems
+        : sortedAsc.slice(0, 2).map(cp => `🔴 ${cp.name} [${cp.score}/5]`);
+
+      // Category stats
+      const catStats = {};
+      checkPoints.forEach(cp => {
+        const cat = cp.category || 'General';
+        if (!catStats[cat]) catStats[cat] = { earned: 0, max: 0 };
+        catStats[cat].earned += (cp.score || 0);
+        catStats[cat].max += 5;
+      });
+
+      const categoryProficiency = Object.entries(catStats)
+        .map(([cat, val]) => `${cat}: ${Math.round((val.earned / val.max) * 100)}%`)
+        .join(' | ');
+
+      return {
+        strengthsSummary: finalStrengths.join('\n'),
+        weaknessesSummary: finalWeaknesses.join('\n'),
+        categoryProficiency,
+        topStrength: finalStrengths[0] || 'N/A',
+        topWeakness: finalWeaknesses[0] || 'N/A',
+        proficiencyLevel
+      };
+    };
+
+    // Table 5: Detailed OTJ Practical Assessment Logs with Cognitive Insights (Active Teams Only)
+    const otjLogsHeaders = [
+      '#', 'Team Name', 'Company', 'Overall Score (%)', 'Proficiency Level',
+      '🏆 Core Strengths (Strongest Areas)', '🛠️ Growth Opportunities (Weakest Areas)',
+      '📊 Category Proficiency Breakdown', 'Inspector', 'Assessment Date', 'Specialist Feedback & Action Notes'
+    ];
+
+    const activeOtjAssessments = allOtjAssessments.filter(o => !o.isDeleted && isTeamNameOrIdActive(o.fieldTeamName || o.fieldTeamId?.teamName, o.fieldTeamId?._id || o.fieldTeamId));
+    const otjLogsRows = activeOtjAssessments.map((o, i) => {
+      const analysis = analyzeOtjAssessment(o);
+      const teamComp = o.fieldTeamId?.teamCompany || 'Reach';
+      const teamNameStr = o.fieldTeamName || o.fieldTeamId?.teamName || 'Unknown Team';
+      const overallPct = o.overallScore !== undefined ? `${Math.round(Number(o.overallScore))}%` : 'N/A';
+      const auditDateStr = o.assessmentDate || o.createdAt ? format(new Date(o.assessmentDate || o.createdAt), 'dd/MM/yyyy') : 'N/A';
+
+      return [
+        i + 1,
+        teamNameStr,
+        teamComp,
+        overallPct,
+        analysis.proficiencyLevel,
+        analysis.strengthsSummary,
+        analysis.weaknessesSummary,
+        analysis.categoryProficiency,
+        o.conductedBy || 'Auditor',
+        auditDateStr,
+        o.feedback || 'Field quality audit completed'
+      ];
+    });
+
+    devSheetRow = addActionTable(
+      wsTeamDevLogs,
+      `5. ON-THE-JOB (OTJ) PRACTICAL AUDIT LOGS — STRENGTHS, WEAKNESSES & COGNITIVE INSIGHTS (${otjLogsRows.length} Records)`,
+      '7C3AED',
+      otjLogsHeaders,
+      otjLogsRows.length > 0 ? otjLogsRows : [[1, 'No OTJ Audit Records Found', '-', '-', '-', '-', '-', '-', '-', '-', '-']],
+      devSheetRow
+    ) + 2;
+
+    addSheetInterceptor(wsTeamDevLogs, devSheetRow, 18);
+    devSheetRow += 2;
+
+    // Table 5.1: Systemic Field Vulnerability & Strengths Aggregate Analysis
+    const checkpointAggregates = {};
+    activeOtjAssessments.forEach(o => {
+      const cps = Array.isArray(o.checkPoints) ? o.checkPoints : [];
+      cps.forEach(cp => {
+        const cpName = cp.name;
+        if (!cpName) return;
+        if (!checkpointAggregates[cpName]) {
+          checkpointAggregates[cpName] = {
+            name: cpName,
+            category: cp.category || 'General',
+            totalScore: 0,
+            count: 0,
+            strengthsCount: 0,
+            weaknessesCount: 0
+          };
+        }
+        const s = Number(cp.score || 0);
+        checkpointAggregates[cpName].totalScore += s;
+        checkpointAggregates[cpName].count += 1;
+        if (s >= 4) checkpointAggregates[cpName].strengthsCount += 1;
+        if (s <= 2) checkpointAggregates[cpName].weaknessesCount += 1;
+      });
+    });
+
+    const systemicBenchmarkRows = Object.values(checkpointAggregates)
+      .map(cp => {
+        const avgScore = cp.count > 0 ? (cp.totalScore / cp.count) : 0;
+        const profPct = Math.round((avgScore / 5) * 100);
+        let riskPriority = '🟢 Low Risk (Solid Strength)';
+        if (profPct < 50 || cp.weaknessesCount >= Math.ceil(cp.count * 0.35)) {
+          riskPriority = '🔴 Critical Vulnerability — Immediate Retraining Required';
+        } else if (profPct < 70 || cp.weaknessesCount >= Math.ceil(cp.count * 0.2)) {
+          riskPriority = '🟠 Moderate Vulnerability — Coaching Focus';
+        } else if (profPct >= 85) {
+          riskPriority = '🟢 Core Operational Strength';
+        }
+
+        return {
+          name: cp.name,
+          category: cp.category,
+          avgScore: avgScore.toFixed(2),
+          profPct: `${profPct}%`,
+          profPctNum: profPct,
+          strengthsCount: `${cp.strengthsCount} team${cp.strengthsCount !== 1 ? 's' : ''} (${cp.count > 0 ? Math.round((cp.strengthsCount / cp.count) * 100) : 0}%)`,
+          weaknessesCount: `${cp.weaknessesCount} team${cp.weaknessesCount !== 1 ? 's' : ''} (${cp.count > 0 ? Math.round((cp.weaknessesCount / cp.count) * 100) : 0}%)`,
+          riskPriority
+        };
+      })
+      .sort((a, b) => a.profPctNum - b.profPctNum) // Ascending: worst weaknesses at top
+      .map((row, idx) => [
+        idx + 1,
+        row.name,
+        row.category,
+        `${row.avgScore} / 5.00`,
+        row.profPct,
+        row.strengthsCount,
+        row.weaknessesCount,
+        row.riskPriority
+      ]);
+
+    const systemicHeaders = [
+      '# Rank', 'Operational Checkpoint / Area', 'Skill Category', 'Average Score (/5)',
+      'Proficiency Rate (%)', 'Teams Showing Strength (≥ 4/5)', 'Teams Requiring Improvement (≤ 2/5)', 'Systemic Risk & Priority Recommendation'
+    ];
+
+    devSheetRow = addActionTable(
+      wsTeamDevLogs,
+      `5.1 SYSTEMIC FIELD VULNERABILITY & STRENGTHS BENCHMARK (AGGREGATE AUDIT ANALYSIS)`,
+      '5B21B6',
+      systemicHeaders,
+      systemicBenchmarkRows.length > 0 ? systemicBenchmarkRows : [[1, 'No Audit Checkpoints Data', '-', '-', '-', '-', '-', '-']],
+      devSheetRow
+    ) + 2;
+
+    addSheetInterceptor(wsTeamDevLogs, devSheetRow, 18);
+    devSheetRow += 2;
+
+    // Table 6: Detailed Training Sessions Logs (Aggregated from both global and team-embedded sessions)
+    const allUnifiedTrainingSessionsMap = new Map();
+
+    // 1. Add all global training sessions
+    allTrainingSessions.forEach(ts => {
+      const parts = Array.isArray(ts.participants) ? ts.participants : [];
+      const teamNames = parts.map(p => p?.teamName || (typeof p === 'string' ? p : '')).filter(Boolean);
+      const dStr = ts.sessionDate ? new Date(ts.sessionDate).toISOString().split('T')[0] : '';
+      const key = ts._id?.toString() || `${ts.sessionTitle || 'Training'}_${dStr}`;
+
+      allUnifiedTrainingSessionsMap.set(key, {
+        _id: ts._id?.toString(),
+        sessionTitle: ts.sessionTitle || 'Training Workshop',
+        sessionType: ts.sessionType || 'Classroom & Practical',
+        sessionDate: ts.sessionDate,
+        duration: ts.duration || '2 Hours',
+        conductedBy: ts.conductedBy || 'Trainer',
+        location: ts.location || 'Nokia Training Center',
+        outlines: ts.outlines,
+        notes: ts.notes || '',
+        attendedTeams: teamNames
+      });
+    });
+
+    // 2. Add all embedded sessions from each field team
+    fieldTeams.forEach(ft => {
+      const embedded = Array.isArray(ft.sessionHistory) ? ft.sessionHistory : [];
+      embedded.forEach(s => {
+        if (!s || (!s.sessionDate && !s.createdAt)) return;
+        const dStr = (s.sessionDate || s.createdAt) ? new Date(s.sessionDate || s.createdAt).toISOString().split('T')[0] : '';
+        const key = s._id?.toString() || `${s.sessionTitle || 'Training'}_${dStr}`;
+        const tName = ft.teamName || 'Unknown Team';
+
+        if (allUnifiedTrainingSessionsMap.has(key)) {
+          const existing = allUnifiedTrainingSessionsMap.get(key);
+          if (!existing.attendedTeams.includes(tName)) {
+            existing.attendedTeams.push(tName);
+          }
+        } else {
+          allUnifiedTrainingSessionsMap.set(key, {
+            _id: s._id?.toString(),
+            sessionTitle: s.sessionTitle || 'Training Workshop',
+            sessionType: s.sessionType || 'Classroom & Practical',
+            sessionDate: s.sessionDate || s.createdAt,
+            duration: s.duration || '2 Hours',
+            conductedBy: s.conductedBy || 'Trainer',
+            location: s.location || 'Nokia Training Center',
+            outlines: s.outlines,
+            notes: s.notes || '',
+            attendedTeams: [tName]
+          });
+        }
+      });
+    });
+
+    const allUnifiedTrainingSessions = Array.from(allUnifiedTrainingSessionsMap.values())
+      .sort((a, b) => new Date(b.sessionDate || 0) - new Date(a.sessionDate || 0));
+
+    const trainingLogsHeaders = ['#', 'Session Title', 'Session Type', 'Session Date', 'Duration', 'Conducted By / Trainer', 'Location / Mode', 'Attended Teams Count', 'Attended Teams List', 'Topics & Outlines'];
+    const trainingLogsRows = allUnifiedTrainingSessions.map((ts, i) => {
+      const teamNamesList = ts.attendedTeams.join(', ');
+      const topicsList = Array.isArray(ts.outlines) ? ts.outlines.map(o => o.mainTopic || (typeof o === 'string' ? o : '')).filter(Boolean).join('; ') : (ts.notes || 'General Training');
+
+      return [
+        i + 1,
+        ts.sessionTitle || 'Training Workshop',
+        ts.sessionType || 'Classroom & Practical',
+        ts.sessionDate ? format(new Date(ts.sessionDate), 'dd/MM/yyyy') : 'N/A',
+        ts.duration || '2 Hours',
+        Array.isArray(ts.conductedBy) ? ts.conductedBy.join(', ') : (ts.conductedBy || 'Trainer'),
+        ts.location || 'Nokia Training Center',
+        ts.attendedTeams.length,
+        teamNamesList || 'N/A',
+        topicsList || 'N/A'
+      ];
+    });
+
+    devSheetRow = addActionTable(
+      wsTeamDevLogs,
+      `6. TRAINING SESSIONS & ATTENDANCE LOGS (${trainingLogsRows.length} Sessions Conducted)`,
+      '059669',
+      trainingLogsHeaders,
+      trainingLogsRows.length > 0 ? trainingLogsRows : [[1, 'No Training Session Records Found', '-', '-', '-', '-', '-', '-', '-', '-']],
+      devSheetRow
+    ) + 2;
+
+    addSheetInterceptor(wsTeamDevLogs, devSheetRow, 18);
+    devSheetRow += 2;
+
+    // Table 6.1: Individual Field Teams Training Attendance Roster & Participation Logs
+    const individualTrainingRows = fieldTeams.map((team, idx) => {
+      const teamSessions = getMergedTeamTrainingSessions(team);
+      const sessionsCount = teamSessions.length;
+      const isTrained = sessionsCount > 0;
+      const latestSession = isTrained ? teamSessions[0] : null;
+      const latestDateStr = latestSession?.sessionDate ? format(new Date(latestSession.sessionDate), 'dd/MM/yyyy') : 'N/A';
+      const latestTrainer = latestSession ? (Array.isArray(latestSession.conductedBy) ? latestSession.conductedBy.join(', ') : (latestSession.conductedBy || 'Trainer')) : 'N/A';
+
+      const sessionsHistoryStr = isTrained
+        ? teamSessions.map((s, sIdx) => {
+          const sDate = s.sessionDate ? format(new Date(s.sessionDate), 'dd/MM/yyyy') : 'Date N/A';
+          return `${sIdx + 1}. [${sDate}] ${s.sessionTitle || 'Training'}`;
+        }).join('; ')
+        : 'No training sessions attended yet';
+
+      let complianceBadge = '🔴 Untrained (Pending Session Allocation)';
+      if (sessionsCount >= 2) {
+        complianceBadge = '🟢 Fully Trained (≥ 2 Sessions Completed)';
+      } else if (sessionsCount === 1) {
+        complianceBadge = '🔵 Trained (1 Session Completed)';
+      }
+
+      const getTeamStatusBadge = (t) => {
+        if (!t) return '🟢 Active';
+        if (t.isTerminated) return '🔴 Terminated';
+        if (t.isResigned) return '⚪ Resigned';
+        if (t.isSuspended) return '🟠 Suspended';
+        if (t.isOnLeave) return '🟡 On Leave';
+        return '🟢 Active';
+      };
+
+      return {
+        teamCode: team.teamCode || `FT-${idx + 1}`,
+        teamName: team.teamName || 'Unknown Team',
+        company: team.teamCompany || 'Reach',
+        contact: team.contactNumber || 'N/A',
+        teamStatus: getTeamStatusBadge(team),
+        isTrained,
+        sessionsCount,
+        sessionsCountStr: `${sessionsCount} session${sessionsCount !== 1 ? 's' : ''}`,
+        latestDateStr,
+        latestTrainer,
+        sessionsHistoryStr,
+        complianceBadge
+      };
+    });
+
+    // Count totals
+    const totalRosterCount = fieldTeams.length;
+    const trainedTeamsList = individualTrainingRows.filter(t => t.isTrained);
+    const trainedTeamsCount = trainedTeamsList.length;
+    const untrainedTeamsCount = totalRosterCount - trainedTeamsCount;
+    const totalAttendanceInstances = trainedTeamsList.reduce((sum, t) => sum + t.sessionsCount, 0);
+
+    const individualTrainingHeaders = [
+      '#', 'Team Code', 'Team Name', 'Company', 'Contact Number', 'Operational Status',
+      'Training Attendance Status', 'Total Sessions Attended', 'Latest Training Date',
+      'Latest Trainer / Specialist', 'Attended Training Sessions History & Topics', 'Training Compliance Status'
+    ];
+
+    const individualTrainingDataRows = trainedTeamsList.map((t, idx) => [
+      idx + 1,
+      t.teamCode,
+      t.teamName,
+      t.company,
+      t.contact,
+      t.teamStatus,
+      '🟢 Trained / Attended',
+      t.sessionsCountStr,
+      t.latestDateStr,
+      t.latestTrainer,
+      t.sessionsHistoryStr,
+      t.complianceBadge
+    ]);
+
+    // Add Summary Row at bottom
+    if (individualTrainingDataRows.length > 0) {
+      individualTrainingDataRows.push([
+        'TOTAL TRAINED TEAMS',
+        `${trainedTeamsCount} Teams`,
+        `Trained Coverage: ${totalRosterCount > 0 ? ((trainedTeamsCount / totalRosterCount) * 100).toFixed(1) : 0}% (${trainedTeamsCount}/${totalRosterCount})`,
+        `Untrained: ${untrainedTeamsCount} Teams`,
+        '-',
+        '🟢 Active Roster',
+        '🟢 Certified Training Attendance',
+        `${totalAttendanceInstances} Total Participations`,
+        '-',
+        '-',
+        `All ${allTrainingSessions.length} Conducted Workshops Distributed Across ${trainedTeamsCount} Trained Field Teams`,
+        `Roster Coverage: ${totalRosterCount > 0 ? ((trainedTeamsCount / totalRosterCount) * 100).toFixed(1) : 0}%`
+      ]);
+    }
+
+    devSheetRow = addActionTable(
+      wsTeamDevLogs,
+      `6.1 TRAINED FIELD TEAMS ROSTER & PARTICIPATION LOGS (TOTAL TRAINED: ${trainedTeamsCount} / ${totalRosterCount} TEAMS)`,
+      '047857',
+      individualTrainingHeaders,
+      individualTrainingDataRows.length > 0 ? individualTrainingDataRows : [[1, '-', 'No Trained Teams Recorded', '-', '-', '-', '-', '-', '-', '-', '-', '-']],
+      devSheetRow
+    ) + 2;
+
+    addSheetInterceptor(wsTeamDevLogs, devSheetRow, 18);
+    devSheetRow += 2;
+
+    wsTeamDevLogs['!cols'] = [
+      { wch: 6 },  // Col 0: # / Rank
+      { wch: 22 }, // Col 1: Team Code / Checkpoint
+      { wch: 28 }, // Col 2: Team Name / Category
+      { wch: 20 }, // Col 3: Company / Overall Score
+      { wch: 20 }, // Col 4: Contact / Proficiency Level
+      { wch: 18 }, // Col 5: Operational Status
+      { wch: 20 }, // Col 6: Online Test Status / Core Strengths
+      { wch: 18 }, // Col 7: Online Test Score / Growth Opportunities
+      { wch: 18 }, // Col 8: Online Test Date / Category Breakdown
+      { wch: 20 }, // Col 9: Lab Audit Status / Auditor
+      { wch: 18 }, // Col 10: Lab Audit Score / Audit Date
+      { wch: 18 }, // Col 11: Lab Audit Date / Feedback & Action Notes
+      { wch: 18 }, // Col 12: OTJ Status
+      { wch: 16 }, // Col 13: OTJ Score
+      { wch: 16 }, // Col 14: OTJ Date
+      { wch: 18 }, // Col 15: Training Status
+      { wch: 20 }, // Col 16: Attended Sessions
+      { wch: 20 }, // Col 17: Latest Training Date
+      { wch: 45 }  // Col 18: Overall Action & Compliance Status
+    ];
+
+    fixSheetRange(wsTeamDevLogs);
+
+    // 6. R.C & Team Impact Analysis Sheet
     const getScoreBucketCounts = (tasks, totalSampleCount = tasks.length) => {
       const counts = { promoters: 0, detractors: 0, neutrals: 0 };
       tasks.forEach(task => {
@@ -3370,9 +6661,10 @@ const AllTasksList = () => {
         if (score === null || score === 'N/A' || score === undefined || score === '') return;
         const numScore = Number(score);
         if (isNaN(numScore)) return;
-        if (numScore <= 6) counts.detractors += 1;
-        else if (numScore >= 7 && numScore <= 8) counts.neutrals += 1;
-        else if (numScore >= 9) counts.promoters += 1;
+        const norm = numScore <= 10 ? numScore * 10 : numScore;
+        if (norm >= 0 && norm <= 60) counts.detractors += 1;
+        else if (norm > 60 && norm <= 80) counts.neutrals += 1;
+        else if (norm > 80) counts.promoters += 1;
       });
 
       const nonPromoters = counts.detractors + counts.neutrals;
@@ -3391,446 +6683,1523 @@ const AllTasksList = () => {
       return [String(val).trim()].filter(Boolean);
     };
 
-    const getFieldFrequency = (tasks, field) => {
-      const counts = {};
+    const getFieldCountsByScore = (tasks, field) => {
+      const map = {};
       tasks.forEach(task => {
-        getNormalizedFieldValues(task[field]).forEach(value => {
-          counts[value] = (counts[value] || 0) + 1;
+        const score = task.evaluationScore;
+        if (score === null || score === 'N/A' || score === undefined || score === '') return;
+        const numScore = Number(score);
+        if (isNaN(numScore)) return;
+        const norm = numScore <= 10 ? numScore * 10 : numScore;
+        const values = getNormalizedFieldValues(task[field]);
+
+        values.forEach(val => {
+          if (!map[val]) map[val] = { name: val, detractors: 0, neutrals: 0, promoters: 0, total: 0 };
+          if (norm >= 0 && norm <= 60) {
+            map[val].detractors += 1;
+            map[val].total += 1;
+          } else if (norm > 60 && norm <= 80) {
+            map[val].neutrals += 1;
+            map[val].total += 1;
+          } else if (norm > 80) {
+            map[val].promoters += 1;
+          }
         });
       });
-      return Object.entries(counts)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count);
-    };
-
-    const getFieldValueScoreBreakdown = (tasks, field, targetValue) => {
-      const breakdown = { promoters: 0, detractors: 0, neutrals: 0 };
-      tasks.forEach(task => {
-        const values = getNormalizedFieldValues(task[field]);
-        if (!values.includes(targetValue)) return;
-
-        const score = Number(task.evaluationScore);
-        if (score <= 6) breakdown.detractors += 1;
-        else if (score >= 7 && score <= 8) breakdown.neutrals += 1;
-        else if (score >= 9) breakdown.promoters += 1;
-      });
-      return breakdown;
-    };
-
-    const getScenarioImpact = (baseCounts, convertedCount, categoryBreakdown = null) => {
-      const maxConvertible = (baseCounts.detractors + baseCounts.neutrals);
-      const targetConversion = Math.min(Math.max(0, Number(convertedCount) || 0), maxConvertible);
-
-      let detractorsToConvert = 0;
-      let neutralsToConvert = 0;
-
-      if (categoryBreakdown) {
-        const categoryAvailable = (categoryBreakdown.detractors || 0) + (categoryBreakdown.neutrals || 0);
-        const allowedConversion = Math.min(targetConversion, categoryAvailable);
-        detractorsToConvert = Math.min(allowedConversion, categoryBreakdown.detractors || 0);
-        neutralsToConvert = Math.min(allowedConversion - detractorsToConvert, categoryBreakdown.neutrals || 0);
-      } else {
-        detractorsToConvert = Math.min(targetConversion, baseCounts.detractors);
-        neutralsToConvert = Math.min(targetConversion - detractorsToConvert, baseCounts.neutrals);
-      }
-
-      const promoters = baseCounts.promoters + detractorsToConvert + neutralsToConvert;
-      const detractors = baseCounts.detractors - detractorsToConvert;
-      const neutrals = baseCounts.neutrals - neutralsToConvert;
-      const total = baseCounts.promoters + baseCounts.detractors + baseCounts.neutrals || 1;
-      const promoterPct = total > 0 ? Math.round((promoters / total) * 100) : 0;
-      const detractorPct = total > 0 ? Math.round((detractors / total) * 100) : 0;
-      const nps = promoterPct - detractorPct;
-
-      return {
-        promoters,
-        detractors,
-        neutrals,
-        total,
-        nps,
-        converted: detractorsToConvert + neutralsToConvert,
-        detractorsConverted: detractorsToConvert,
-        neutralsConverted: neutralsToConvert,
-        conversionLimit: targetConversion
-      };
+      return Object.values(map);
     };
 
     const totalSampleCount = totalSamplesToken > 0 ? totalSamplesToken : filteredTasks.length;
     const currentCounts = getScoreBucketCounts(filteredTasks, totalSampleCount);
-    const beforePromoterPct = totalSampleCount > 0 ? Math.round((currentCounts.promoters / totalSampleCount) * 100) : 0;
-    const beforeDetractorPct = totalSampleCount > 0 ? Math.round((currentCounts.detractors / totalSampleCount) * 100) : 0;
-    const baseNPS = beforePromoterPct - beforeDetractorPct;
-    const formatPercent = (value) => totalSampleCount > 0 ? `${((value / totalSampleCount) * 100).toFixed(1)}%` : '0.0%';
+    const beforePromoterPctNum = totalSampleCount > 0 ? (currentCounts.promoters / totalSampleCount) * 100 : 0;
+    const beforeDetractorPctNum = totalSampleCount > 0 ? (currentCounts.detractors / totalSampleCount) * 100 : 0;
+    const beforeNeutralPctNum = totalSampleCount > 0 ? (currentCounts.neutrals / totalSampleCount) * 100 : 0;
+    const baseNPS = Math.round(beforePromoterPctNum) - Math.round(beforeDetractorPctNum);
+    const formatPercent = (val) => totalSampleCount > 0 ? `${((val / totalSampleCount) * 100).toFixed(1)}%` : '0.0%';
 
-    const reasonFrequency = getFieldFrequency(filteredTasks, 'reason');
-    const rootCauseFrequency = getFieldFrequency(filteredTasks, 'rootCause');
-    const ownerFrequency = getFieldFrequency(filteredTasks, 'responsible');
+    const simulateScenario = (detractorsToConvert, neutralsToConvert) => {
+      const detConverted = Math.min(Math.max(0, detractorsToConvert || 0), currentCounts.detractors);
+      const neuConverted = Math.min(Math.max(0, neutralsToConvert || 0), currentCounts.neutrals);
+      const totalConverted = detConverted + neuConverted;
 
-    const teamTopAccounts = Object.entries(
-      filteredTasks.reduce((acc, task) => {
-        const teamName = task.teamName || 'Unknown';
-        const accountable = String(task.teamAccountability || '').toLowerCase().includes('yes');
-        if (!acc[teamName]) {
-          acc[teamName] = { team: teamName, tasks: 0, accountableTasks: 0, totalAcc: 0, promoters: 0, detractors: 0, neutrals: 0 };
-        }
-        acc[teamName].tasks += 1;
-        if (accountable) {
-          acc[teamName].accountableTasks += 1;
-          acc[teamName].totalAcc += 1;
-        }
+      const afterPromoters = currentCounts.promoters + totalConverted;
+      const afterDetractors = currentCounts.detractors - detConverted;
+      const afterNeutrals = currentCounts.neutrals - neuConverted;
+      const total = totalSampleCount || 1;
 
-        const score = Number(task.evaluationScore);
-        if (!isNaN(score) && accountable) {
-          if (score <= 6) acc[teamName].detractors += 1;
-          else if (score >= 7 && score <= 8) acc[teamName].neutrals += 1;
-          else if (score >= 9) acc[teamName].promoters += 1;
-        }
-        return acc;
-      }, {})
-    )
-      .map(([_, data]) => ({
-        team: data.team,
-        accountableTasks: data.accountableTasks,
-        totalAcc: data.totalAcc,
-        totalTasks: data.tasks,
-        promoters: data.promoters,
-        detractors: data.detractors,
-        neutrals: data.neutrals
-      }))
-      .filter(item => item.totalAcc > 0)
-      .sort((a, b) => b.totalAcc - a.totalAcc);
+      const afterPromoterPctNum = (afterPromoters / total) * 100;
+      const afterDetractorPctNum = (afterDetractors / total) * 100;
+      const afterNeutralPctNum = (afterNeutrals / total) * 100;
+      const afterNPS = Math.round(afterPromoterPctNum) - Math.round(afterDetractorPctNum);
 
-    const textAnalysisRows = [];
+      const npsGain = afterNPS - baseNPS;
 
-    textAnalysisRows.push({
-      Scenario: 'Current Base',
-      'Category / Team': 'Overall',
-      'Converted Count': 0,
-      'Before Promoters': currentCounts.promoters,
-      'Before Promoters %': formatPercent(currentCounts.promoters),
-      'Before Detractors': currentCounts.detractors,
-      'Before Detractors %': formatPercent(currentCounts.detractors),
-      'Before Neutrals': currentCounts.neutrals,
-      'Before Neutrals %': formatPercent(currentCounts.neutrals),
-      'Before NPS': baseNPS,
-      'After Promoters': currentCounts.promoters,
-      'After Promoters %': formatPercent(currentCounts.promoters),
-      'After Detractors': currentCounts.detractors,
-      'After Detractors %': formatPercent(currentCounts.detractors),
-      'After Neutrals': currentCounts.neutrals,
-      'After Neutrals %': formatPercent(currentCounts.neutrals),
-      'After NPS': baseNPS,
-      'Notes': 'Baseline using current filtered tasks'
-    });
+      // Base visual numbers (1 decimal place)
+      const beforePromStr = beforePromoterPctNum.toFixed(1);
+      const beforeDetStr = beforeDetractorPctNum.toFixed(1);
+      const afterPromStr = afterPromoterPctNum.toFixed(1);
+      const afterDetStr = afterDetractorPctNum.toFixed(1);
 
-    const addScenarioRow = (label, category, count, note, fieldName) => {
-      const breakdown = fieldName ? getFieldValueScoreBreakdown(filteredTasks, fieldName, category) : null;
-      const impact = getScenarioImpact(currentCounts, count, breakdown);
-      textAnalysisRows.push({
-        Scenario: label,
-        'Category / Team': category,
-        'Converted Count': impact.converted,
-        'Before Promoters': currentCounts.promoters,
-        'Before Promoters %': formatPercent(currentCounts.promoters),
-        'Before Detractors': currentCounts.detractors,
-        'Before Detractors %': formatPercent(currentCounts.detractors),
-        'Before Neutrals': currentCounts.neutrals,
-        'Before Neutrals %': formatPercent(currentCounts.neutrals),
-        'Before NPS': baseNPS,
-        'After Promoters': impact.promoters,
-        'After Promoters %': formatPercent(impact.promoters),
-        'After Detractors': impact.detractors,
-        'After Detractors %': formatPercent(impact.detractors),
-        'After Neutrals': impact.neutrals,
-        'After Neutrals %': formatPercent(impact.neutrals),
-        'After NPS': impact.nps,
-        'Notes': note
-      });
+      // Compute display deltas directly from displayed 1-decimal values for visual consistency
+      const promGain = +(parseFloat(afterPromStr) - parseFloat(beforePromStr)).toFixed(1);
+      const detRed = +(parseFloat(beforeDetStr) - parseFloat(afterDetStr)).toFixed(1);
+
+      return {
+        detConverted,
+        neuConverted,
+        totalConverted,
+        afterPromoters,
+        afterPromotersPct: `${afterPromStr}%`,
+        afterDetractors,
+        afterDetractorsPct: `${afterDetStr}%`,
+        afterNeutrals,
+        afterNeutralsPct: `${afterNeutralPctNum.toFixed(1)}%`,
+        afterNPS,
+        npsImpact: npsGain >= 0 ? `+${npsGain}` : `${npsGain}`,
+        promoterGain: promGain > 0 ? `+${promGain.toFixed(1)}%` : (promGain < 0 ? `-${Math.abs(promGain).toFixed(1)}%` : '0.0%'),
+        detractorRed: detRed > 0 ? `-${detRed.toFixed(1)}%` : (detRed < 0 ? `+${Math.abs(detRed).toFixed(1)}%` : '0.0%')
+      };
     };
 
-    const topReasonNames = reasonFrequency.slice(0, 5).map(item => item.name);
-    const getReasonScenarioBreakdown = (reasonNames) => {
-      return reasonNames.reduce((acc, reasonName) => {
-        const breakdown = getFieldValueScoreBreakdown(filteredTasks, 'reason', reasonName);
-        acc.promoters += breakdown.promoters;
-        acc.detractors += breakdown.detractors;
-        acc.neutrals += breakdown.neutrals;
-        return acc;
-      }, { promoters: 0, detractors: 0, neutrals: 0 });
-    };
-
-    topReasonNames.forEach((reasonName, index) => {
-      addScenarioRow(
-        `Top ${index + 1} Reason Alone`,
-        reasonName,
-        reasonFrequency.find(item => item.name === reasonName)?.count || 0,
-        `Convert ${Math.min(reasonFrequency.find(item => item.name === reasonName)?.count || 0, ((getFieldValueScoreBreakdown(filteredTasks, 'reason', reasonName).detractors + getFieldValueScoreBreakdown(filteredTasks, 'reason', reasonName).neutrals)))} non-promoter tasks under ${reasonName} to promoters`,
-        'reason'
-      );
-    });
-
-    for (let i = 1; i <= topReasonNames.length; i++) {
-      const selectedReasons = topReasonNames.slice(0, i);
-      const comboCount = selectedReasons.reduce((sum, reasonName) => {
-        const item = reasonFrequency.find(entry => entry.name === reasonName);
-        return sum + (item ? item.count : 0);
-      }, 0);
-      const comboBreakdown = getReasonScenarioBreakdown(selectedReasons);
-      const impact = getScenarioImpact(currentCounts, comboCount, comboBreakdown);
-      textAnalysisRows.push({
-        Scenario: `Top ${i} Reasons Combined`,
-        'Category / Team': selectedReasons.join(' + '),
-        'Converted Count': impact.converted,
-        'Before Promoters': currentCounts.promoters,
-        'Before Promoters %': formatPercent(currentCounts.promoters),
-        'Before Detractors': currentCounts.detractors,
-        'Before Detractors %': formatPercent(currentCounts.detractors),
-        'Before Neutrals': currentCounts.neutrals,
-        'Before Neutrals %': formatPercent(currentCounts.neutrals),
-        'Before NPS': baseNPS,
-        'After Promoters': impact.promoters,
-        'After Promoters %': formatPercent(impact.promoters),
-        'After Detractors': impact.detractors,
-        'After Detractors %': formatPercent(impact.detractors),
-        'After Neutrals': impact.neutrals,
-        'After Neutrals %': formatPercent(impact.neutrals),
-        'After NPS': impact.nps,
-        'Notes': `Convert ${Math.min(comboCount, (comboBreakdown.detractors + comboBreakdown.neutrals))} non-promoter tasks across ${selectedReasons.join(' + ')} to promoters`
-      });
-    }
-
-    const topRootCauseNames = rootCauseFrequency.slice(0, 5).map(item => item.name);
-    const getRootCauseScenarioBreakdown = (rootCauseNames) => {
-      return rootCauseNames.reduce((acc, rootCauseName) => {
-        const breakdown = getFieldValueScoreBreakdown(filteredTasks, 'rootCause', rootCauseName);
-        acc.promoters += breakdown.promoters;
-        acc.detractors += breakdown.detractors;
-        acc.neutrals += breakdown.neutrals;
-        return acc;
-      }, { promoters: 0, detractors: 0, neutrals: 0 });
-    };
-
-    topRootCauseNames.forEach((rootCauseName, index) => {
-      addScenarioRow(
-        `Top ${index + 1} Root Cause Alone`,
-        rootCauseName,
-        rootCauseFrequency.find(item => item.name === rootCauseName)?.count || 0,
-        `Convert ${Math.min(rootCauseFrequency.find(item => item.name === rootCauseName)?.count || 0, ((getFieldValueScoreBreakdown(filteredTasks, 'rootCause', rootCauseName).detractors + getFieldValueScoreBreakdown(filteredTasks, 'rootCause', rootCauseName).neutrals)))} non-promoter tasks under ${rootCauseName} to promoters`,
-        'rootCause'
-      );
-    });
-
-    for (let i = 1; i <= topRootCauseNames.length; i++) {
-      const selectedRootCauses = topRootCauseNames.slice(0, i);
-      const comboCount = selectedRootCauses.reduce((sum, rootCauseName) => {
-        const item = rootCauseFrequency.find(entry => entry.name === rootCauseName);
-        return sum + (item ? item.count : 0);
-      }, 0);
-      const comboBreakdown = getRootCauseScenarioBreakdown(selectedRootCauses);
-      const impact = getScenarioImpact(currentCounts, comboCount, comboBreakdown);
-      textAnalysisRows.push({
-        Scenario: `Top ${i} Root Causes Combined`,
-        'Category / Team': selectedRootCauses.join(' + '),
-        'Converted Count': impact.converted,
-        'Before Promoters': currentCounts.promoters,
-        'Before Promoters %': formatPercent(currentCounts.promoters),
-        'Before Detractors': currentCounts.detractors,
-        'Before Detractors %': formatPercent(currentCounts.detractors),
-        'Before Neutrals': currentCounts.neutrals,
-        'Before Neutrals %': formatPercent(currentCounts.neutrals),
-        'Before NPS': baseNPS,
-        'After Promoters': impact.promoters,
-        'After Promoters %': formatPercent(impact.promoters),
-        'After Detractors': impact.detractors,
-        'After Detractors %': formatPercent(impact.detractors),
-        'After Neutrals': impact.neutrals,
-        'After Neutrals %': formatPercent(impact.neutrals),
-        'After NPS': impact.nps,
-        'Notes': `Convert ${Math.min(comboCount, (comboBreakdown.detractors + comboBreakdown.neutrals))} non-promoter tasks across ${selectedRootCauses.join(' + ')} to promoters`
-      });
-    }
-
-    const topOwnerNames = ownerFrequency.slice(0, 5).map(item => item.name);
-    const getOwnerScenarioBreakdown = (ownerNames) => {
-      return ownerNames.reduce((acc, ownerName) => {
-        const breakdown = getFieldValueScoreBreakdown(filteredTasks, 'responsible', ownerName);
-        acc.promoters += breakdown.promoters;
-        acc.detractors += breakdown.detractors;
-        acc.neutrals += breakdown.neutrals;
-        return acc;
-      }, { promoters: 0, detractors: 0, neutrals: 0 });
-    };
-
-    topOwnerNames.forEach((ownerName, index) => {
-      addScenarioRow(
-        `Top ${index + 1} Owner Alone`,
-        ownerName,
-        ownerFrequency.find(item => item.name === ownerName)?.count || 0,
-        `Convert ${Math.min(ownerFrequency.find(item => item.name === ownerName)?.count || 0, ((getFieldValueScoreBreakdown(filteredTasks, 'responsible', ownerName).detractors + getFieldValueScoreBreakdown(filteredTasks, 'responsible', ownerName).neutrals)))} non-promoter tasks for ${ownerName} to promoters`,
-        'responsible'
-      );
-    });
-
-    for (let i = 1; i <= topOwnerNames.length; i++) {
-      const selectedOwners = topOwnerNames.slice(0, i);
-      const comboCount = selectedOwners.reduce((sum, ownerName) => {
-        const item = ownerFrequency.find(entry => entry.name === ownerName);
-        return sum + (item ? item.count : 0);
-      }, 0);
-      const comboBreakdown = getOwnerScenarioBreakdown(selectedOwners);
-      const impact = getScenarioImpact(currentCounts, comboCount, comboBreakdown);
-      textAnalysisRows.push({
-        Scenario: `Top ${i} Owners Combined`,
-        'Category / Team': selectedOwners.join(' + '),
-        'Converted Count': impact.converted,
-        'Before Promoters': currentCounts.promoters,
-        'Before Promoters %': formatPercent(currentCounts.promoters),
-        'Before Detractors': currentCounts.detractors,
-        'Before Detractors %': formatPercent(currentCounts.detractors),
-        'Before Neutrals': currentCounts.neutrals,
-        'Before Neutrals %': formatPercent(currentCounts.neutrals),
-        'Before NPS': baseNPS,
-        'After Promoters': impact.promoters,
-        'After Promoters %': formatPercent(impact.promoters),
-        'After Detractors': impact.detractors,
-        'After Detractors %': formatPercent(impact.detractors),
-        'After Neutrals': impact.neutrals,
-        'After Neutrals %': formatPercent(impact.neutrals),
-        'After NPS': impact.nps,
-        'Notes': `Convert ${Math.min(comboCount, (comboBreakdown.detractors + comboBreakdown.neutrals))} non-promoter tasks across ${selectedOwners.join(' + ')} to promoters`
-      });
-    }
-
-    const topAccountableTeamNames = teamTopAccounts.slice(0, 5).map(item => item.team);
-    const getTeamScenarioBreakdown = (teamNames) => {
-      return teamNames.reduce((acc, teamName) => {
-        const teamEntry = teamTopAccounts.find(team => team.team === teamName);
-        if (!teamEntry) return acc;
-        acc.promoters += teamEntry.promoters;
-        acc.detractors += teamEntry.detractors;
-        acc.neutrals += teamEntry.neutrals;
-        return acc;
-      }, { promoters: 0, detractors: 0, neutrals: 0 });
-    };
-
-    topAccountableTeamNames.forEach((teamName, index) => {
-      const teamItem = teamTopAccounts.find(team => team.team === teamName);
-      if (!teamItem) return;
-      const teamBreakdown = { detractors: teamItem.detractors, neutrals: teamItem.neutrals, promoters: teamItem.promoters };
-      const totalAccImpactCount = teamItem.detractors + teamItem.neutrals;
-      const impact = getScenarioImpact(currentCounts, totalAccImpactCount, teamBreakdown);
-      textAnalysisRows.push({
-        Scenario: `Top ${index + 1} Accountable Team Alone`,
-        'Category / Team': teamItem.team,
-        'Converted Count': impact.converted,
-        'Before Promoters': currentCounts.promoters,
-        'Before Promoters %': formatPercent(currentCounts.promoters),
-        'Before Detractors': currentCounts.detractors,
-        'Before Detractors %': formatPercent(currentCounts.detractors),
-        'Before Neutrals': currentCounts.neutrals,
-        'Before Neutrals %': formatPercent(currentCounts.neutrals),
-        'Before NPS': baseNPS,
-        'After Promoters': impact.promoters,
-        'After Promoters %': formatPercent(impact.promoters),
-        'After Detractors': impact.detractors,
-        'After Detractors %': formatPercent(impact.detractors),
-        'After Neutrals': impact.neutrals,
-        'After Neutrals %': formatPercent(impact.neutrals),
-        'After NPS': impact.nps,
-        'Notes': `${teamItem.team} converts ${impact.converted} accountable non-promoter items (${teamItem.detractors} detractors + ${teamItem.neutrals} neutrals) to promoters based on Total Acc.`
-      });
-    });
-
-    for (let i = 1; i <= topAccountableTeamNames.length; i++) {
-      const selectedTeams = topAccountableTeamNames.slice(0, i);
-      const comboCount = selectedTeams.reduce((sum, teamName) => {
-        const teamItem = teamTopAccounts.find(team => team.team === teamName);
-        return sum + (teamItem ? (teamItem.detractors + teamItem.neutrals) : 0);
-      }, 0);
-      const comboBreakdown = getTeamScenarioBreakdown(selectedTeams);
-      const impact = getScenarioImpact(currentCounts, comboCount, comboBreakdown);
-      textAnalysisRows.push({
-        Scenario: `Top ${i} Accountable Teams Combined`,
-        'Category / Team': selectedTeams.join(' + '),
-        'Converted Count': impact.converted,
-        'Before Promoters': currentCounts.promoters,
-        'Before Promoters %': formatPercent(currentCounts.promoters),
-        'Before Detractors': currentCounts.detractors,
-        'Before Detractors %': formatPercent(currentCounts.detractors),
-        'Before Neutrals': currentCounts.neutrals,
-        'Before Neutrals %': formatPercent(currentCounts.neutrals),
-        'Before NPS': baseNPS,
-        'After Promoters': impact.promoters,
-        'After Promoters %': formatPercent(impact.promoters),
-        'After Detractors': impact.detractors,
-        'After Detractors %': formatPercent(impact.detractors),
-        'After Neutrals': impact.neutrals,
-        'After Neutrals %': formatPercent(impact.neutrals),
-        'After NPS': impact.nps,
-        'Notes': `Convert ${Math.min(comboCount, (comboBreakdown.detractors + comboBreakdown.neutrals))} accountable non-promoter items across ${selectedTeams.join(' + ')} to promoters based on Total Acc.`
-      });
-    }
-
-    const wsTextAnalysis = XLSX.utils.aoa_to_sheet([['TEXT ANALYSIS']]);
+    // 6. R.C & Team Impact Analysis Sheet (Modular Indicator-Focused Tables)
+    const wsTextAnalysis = XLSX.utils.aoa_to_sheet([['R.C & Team Impact Analysis']]);
     wsTextAnalysis['A1'] = {
-      v: 'TEXT ANALYSIS',
+      v: 'R.C & TEAM IMPACT & KPI SIMULATION SUITE (MODULAR INDICATOR TABLES)',
       t: 's',
       s: {
         font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
-        fill: { fgColor: { rgb: '7C3AED' } },
-        alignment: { horizontal: 'center', vertical: 'center' }
+        fill: { fgColor: { rgb: '0F172A' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
       }
     };
     if (!wsTextAnalysis['!merges']) wsTextAnalysis['!merges'] = [];
-    wsTextAnalysis['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 17 } });
+    wsTextAnalysis['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 12 } });
 
-    const textAnalysisHeader = [
-      'Scenario',
-      'Category / Team',
-      'Converted Count',
-      'Before Promoters',
-      'Before Promoters %',
-      'Before Detractors',
-      'Before Detractors %',
-      'Before Neutrals',
-      'Before Neutrals %',
-      'Before NPS',
-      'After Promoters',
-      'After Promoters %',
-      'After Detractors',
-      'After Detractors %',
-      'After Neutrals',
-      'After Neutrals %',
-      'After NPS',
-      'Notes'
+    let impactSheetRow = 2; // Row 3 (0-indexed: 2)
+
+    // Data Extraction for Indicator Tables (Gathering all affecting cases)
+    const allRootCausesList = getFieldCountsByScore(filteredTasks, 'rootCause');
+
+    // Top 5 root causes by Detractors (only causes with detractors > 0)
+    const impactTopRootCausesDetractors = allRootCausesList
+      .filter(rc => rc.detractors > 0)
+      .sort((a, b) => b.detractors - a.detractors)
+      .slice(0, 5);
+
+    // Top 5 root causes by Neutrals (only causes with neutrals > 0)
+    const impactTopRootCausesNeutrals = allRootCausesList
+      .filter(rc => rc.neutrals > 0)
+      .sort((a, b) => b.neutrals - a.neutrals)
+      .slice(0, 5);
+
+    // Top 5 root causes by Total (Detractors + Neutrals)
+    const impactTopRootCausesCombined = allRootCausesList
+      .filter(rc => rc.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+
+    // Top 5 Owners by Total
+    const impactTopOwners = getFieldCountsByScore(filteredTasks, 'responsible')
+      .filter(o => o.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+
+    const periodBreakdownRows = computeBreakdownRows(teamStatsMap, getTeamTokenForPeriod);
+    const underperformingTeamsInPeriod = periodBreakdownRows.filter(t => {
+      const promPct = parseFloat(t['Promoter %']) || 0;
+      const detPct = parseFloat(t['Detractor %']) || 0;
+      const accDet = Number(t['Final Detractors (Accountable)']) || 0;
+      const accNeu = Number(t['Final Neutrals (Accountable)']) || 0;
+      return (promPct < 80.0) || (detPct >= 2.0) || (accDet >= 1) || (accNeu >= 1);
+    });
+
+    const targetWorstTeams = underperformingTeamsInPeriod.length > 0
+      ? underperformingTeamsInPeriod
+      : periodBreakdownRows.filter(t => (Number(t['Final Detractors (Accountable)']) || 0) > 0 || (Number(t['Final Neutrals (Accountable)']) || 0) > 0);
+
+    // Helper to add a styled indicator table
+    const addIndicatorTable = (titleText, titleColorHex, headers, dataRows, colStylesConfig) => {
+      // 1. Title Banner
+      const titleCell = XLSX.utils.encode_cell({ r: impactSheetRow, c: 0 });
+      wsTextAnalysis[titleCell] = {
+        v: titleText,
+        t: 's',
+        s: {
+          font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: titleColorHex } },
+          alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+        }
+      };
+      wsTextAnalysis['!merges'].push({ s: { r: impactSheetRow, c: 0 }, e: { r: impactSheetRow, c: headers.length - 1 } });
+      for (let c = 1; c < headers.length; c++) {
+        const cCell = XLSX.utils.encode_cell({ r: impactSheetRow, c });
+        wsTextAnalysis[cCell] = { v: '', t: 's', s: { fill: { fgColor: { rgb: titleColorHex } } } };
+      }
+
+      // 2. Column Headers
+      const headerRowIdx = impactSheetRow + 1;
+      XLSX.utils.sheet_add_aoa(wsTextAnalysis, [headers], { origin: XLSX.utils.encode_cell({ r: headerRowIdx, c: 0 }) });
+      for (let c = 0; c < headers.length; c++) {
+        const hCell = XLSX.utils.encode_cell({ r: headerRowIdx, c });
+        if (wsTextAnalysis[hCell]) {
+          wsTextAnalysis[hCell].s = {
+            font: { bold: true, sz: 9, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '334155' } },
+            alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+            border: { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '94A3B8' } }, right: { style: 'thin', color: { rgb: '94A3B8' } } }
+          };
+        }
+      }
+
+      // 3. Data Rows
+      const dataStartRowIdx = impactSheetRow + 2;
+      XLSX.utils.sheet_add_aoa(wsTextAnalysis, dataRows, { origin: XLSX.utils.encode_cell({ r: dataStartRowIdx, c: 0 }) });
+
+      for (let r = 0; r < dataRows.length; r++) {
+        const rowIdx = dataStartRowIdx + r;
+        for (let c = 0; c < headers.length; c++) {
+          const dCell = XLSX.utils.encode_cell({ r: rowIdx, c });
+          if (!wsTextAnalysis[dCell]) continue;
+
+          let fontColor = '1E293B';
+          let bgColor = (r % 2 === 1) ? 'F8FAFC' : 'FFFFFF';
+          let isBold = false;
+          let align = (c === 0 || c === 1 || c === headers.length - 1) ? 'left' : 'center';
+
+          if (colStylesConfig && colStylesConfig[c]) {
+            const cfg = colStylesConfig[c](dataRows[r][c], dataRows[r], r);
+            if (cfg.fontColor) fontColor = cfg.fontColor;
+            if (cfg.bgColor) bgColor = cfg.bgColor;
+            if (cfg.isBold !== undefined) isBold = cfg.isBold;
+            if (cfg.align) align = cfg.align;
+          }
+
+          wsTextAnalysis[dCell].s = {
+            font: { bold: isBold, sz: 9.5, color: { rgb: fontColor } },
+            fill: { fgColor: { rgb: bgColor } },
+            alignment: { horizontal: align, vertical: 'center' },
+            border: { top: { style: 'thin', color: { rgb: 'E2E8F0' } }, bottom: { style: 'thin', color: { rgb: 'E2E8F0' } }, left: { style: 'thin', color: { rgb: 'E2E8F0' } }, right: { style: 'thin', color: { rgb: 'CBD5E1' } } }
+          };
+        }
+      }
+
+      impactSheetRow = dataStartRowIdx + dataRows.length + 2; // Advance with spacing
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TABLE 1: BASELINE OVERALL PERFORMANCE (STARTING KPI STATUS)
+    // ─────────────────────────────────────────────────────────────────────────
+    const baseHeaders = [
+      'Performance Dimension',
+      'Evaluation Category / Score Range',
+      'Sample Count',
+      'Current Baseline Rate (%)',
+      'Management KPI Target',
+      'Status vs. Management Target'
+    ];
+    const baseDataRows = [
+      [
+        'Total Evaluated Feedback Pool',
+        'Evaluated customer sample pool in filtered period',
+        totalSampleCount
+      ],
+      [
+        'Promoters (Positive Customer Feedback)',
+        'Score 9-10 (Extremely Satisfied Customers)',
+        currentCounts.promoters,
+        `${beforePromoterPctNum.toFixed(1)}%`,
+        '≥ 75.0% Standard Target',
+        beforePromoterPctNum >= 75.0 ? 'Achieved (Compliant)' : `Under Target (Gap: -${(75.0 - beforePromoterPctNum).toFixed(1)}%)`
+      ],
+      [
+        'Detractors (Customer Dissatisfaction)',
+        'Score 0-6 (Complaints & Negative Feedback)',
+        currentCounts.detractors,
+        `${beforeDetractorPctNum.toFixed(1)}%`,
+        '≤ 8.0% Containment Target',
+        beforeDetractorPctNum <= 8.0 ? 'Within Limit (Compliant)' : `Exceeded Target (Gap: +${(beforeDetractorPctNum - 8.0).toFixed(1)}%)`
+      ],
+      [
+        'Neutrals (Passive Experience)',
+        'Score 7-8 (Passive / Potential Promoters)',
+        currentCounts.neutrals,
+        `${beforeNeutralPctNum.toFixed(1)}%`
+      ],
+      [
+        'Net Promoter Score (NPS)',
+        'Overall Starting NPS = Promoter % - Detractor %',
+        '-',
+        `${baseNPS}`,
+        '≥ 67 NPS Standard Target',
+        baseNPS >= 67 ? 'Target Met (Compliant)' : `Below Target (Gap: -${67 - baseNPS} pts)`
+      ]
     ];
 
-    XLSX.utils.sheet_add_aoa(wsTextAnalysis, [textAnalysisHeader], { origin: 'A3' });
-    XLSX.utils.sheet_add_json(wsTextAnalysis, textAnalysisRows, { origin: 'A4', skipHeader: true });
-    applyHeaderStyle(wsTextAnalysis, { s: { r: 2, c: 0 }, e: { r: 2, c: 17 } }, '4B5563');
-    applyDataRowStyle(wsTextAnalysis, { s: { r: 2, c: 0 }, e: { r: 2 + textAnalysisRows.length + 1, c: 17 } });
+    addIndicatorTable(
+      '1. BASELINE OVERALL PERFORMANCE (STARTING KPI STATUS)',
+      '1E293B',
+      baseHeaders,
+      baseDataRows,
+      {
+        0: () => ({ isBold: true, fontColor: '0F172A' }),
+        2: () => ({ isBold: true }),
+        3: (_, row, r) => ({ isBold: true, fontColor: r === 1 ? '047857' : (r === 2 ? 'B91C1C' : (r === 3 ? 'D97706' : (r === 4 ? '1E40AF' : '1E293B'))), bgColor: r === 4 ? 'EFF6FF' : (r === 1 ? 'ECFDF5' : (r === 2 ? 'FEF2F2' : 'FFFFFF')) }),
+        4: () => ({ isBold: true, fontColor: '475569' }),
+        5: (_, row, r) => ({ isBold: true, fontColor: r === 1 ? (beforePromoterPctNum >= 75.0 ? '047857' : 'B91C1C') : (r === 2 ? (beforeDetractorPctNum <= 8.0 ? '047857' : 'B91C1C') : (r === 4 ? (baseNPS >= 67 ? '047857' : 'B91C1C') : '64748B')) })
+      }
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TABLE 2: ROOT CAUSE IMPACT ON DETRACTORS (DETRACTOR KPI REDUCTION)
+    // ─────────────────────────────────────────────────────────────────────────
+    const rcDetHeaders = [
+      'Rank & Root Cause',
+      'Focus Category',
+      'Detractors Affected',
+      'Before Detractor %',
+      'After Detractor %',
+      'Detractor Reduction (-%)',
+      'Before NPS',
+      'After NPS',
+      'NPS Gain (+pts)',
+      'Strategic Detractor Action Plan'
+    ];
+
+    const rcDetRows = impactTopRootCausesDetractors.map((rc, idx) => {
+      const sim = simulateScenario(rc.detractors, 0);
+      return [
+        `#${idx + 1} Root Cause: ${rc.name}`,
+        'Root Cause Detractors Elimination',
+        rc.detractors,
+        `${beforeDetractorPctNum.toFixed(1)}%`,
+        sim.afterDetractorsPct,
+        sim.detractorRed,
+        baseNPS,
+        sim.afterNPS,
+        sim.npsImpact,
+        `Eliminate all ${rc.detractors} detractors caused by ${rc.name} → Cuts detractor rate by ${sim.detractorRed} and boosts NPS from ${baseNPS} to ${sim.afterNPS}`
+      ];
+    });
+
+    addIndicatorTable(
+      '2. ROOT CAUSE IMPACT ON DETRACTORS (DETRACTOR KPI REDUCTION & NPS RECOVERY)',
+      '991B1B',
+      rcDetHeaders,
+      rcDetRows,
+      {
+        0: () => ({ isBold: true, fontColor: '991B1B' }),
+        2: (val) => ({ isBold: true, fontColor: 'B91C1C', bgColor: Number(val) > 0 ? 'FEF2F2' : 'FFFFFF' }),
+        3: () => ({ fontColor: '64748B' }),
+        4: () => ({ fontColor: 'B91C1C' }),
+        5: () => ({ isBold: true, fontColor: 'B91C1C', bgColor: 'FEF2F2' }),
+        6: () => ({ fontColor: '64748B' }),
+        7: () => ({ isBold: true, fontColor: '1E40AF', bgColor: 'EFF6FF' }),
+        8: () => ({ isBold: true, fontColor: '7C3AED', bgColor: 'F5F3FF' }),
+        9: () => ({ fontColor: '475569' })
+      }
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TABLE 3: ROOT CAUSE IMPACT ON PROMOTERS (PROMOTER KPI GAIN)
+    // ─────────────────────────────────────────────────────────────────────────
+    const rcNeuHeaders = [
+      'Rank & Root Cause',
+      'Focus Category',
+      'Neutrals Affected',
+      'Before Promoter %',
+      'After Promoter %',
+      'Promoters Deduction',
+      'Before NPS',
+      'After NPS',
+      'NPS Gain (+pts)',
+      'Strategic Promoter Action Plan'
+    ];
+
+    const rcNeuRows = impactTopRootCausesNeutrals.map((rc, idx) => {
+      const sim = simulateScenario(0, rc.neutrals);
+      return [
+        `#${idx + 1} Root Cause: ${rc.name}`,
+        'Neutral into Promoter Conversion',
+        rc.neutrals,
+        `${beforePromoterPctNum.toFixed(1)}%`,
+        sim.afterPromotersPct,
+        sim.promoterGain,
+        baseNPS,
+        sim.afterNPS,
+        sim.npsImpact,
+        `Elevate all ${rc.neutrals} passive neutrals under ${rc.name} to promoters → Increases promoter rate by ${sim.promoterGain} and boosts NPS from ${baseNPS} to ${sim.afterNPS}`
+      ];
+    });
+
+    addIndicatorTable(
+      '3. ROOT CAUSE IMPACT ON PROMOTERS (CONVERTING NEUTRALS TO PROMOTERS)',
+      '047857',
+      rcNeuHeaders,
+      rcNeuRows,
+      {
+        0: () => ({ isBold: true, fontColor: '047857' }),
+        2: (val) => ({ isBold: true, fontColor: 'D97706', bgColor: Number(val) > 0 ? 'FFFBEB' : 'FFFFFF' }),
+        3: () => ({ fontColor: '64748B' }),
+        4: () => ({ fontColor: '047857' }),
+        5: () => ({ isBold: true, fontColor: '047857', bgColor: 'ECFDF5' }),
+        6: () => ({ fontColor: '64748B' }),
+        7: () => ({ isBold: true, fontColor: '1E40AF', bgColor: 'EFF6FF' }),
+        8: () => ({ isBold: true, fontColor: '7C3AED', bgColor: 'F5F3FF' }),
+        9: () => ({ fontColor: '475569' })
+      }
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TABLE 4: ROOT CAUSE FULL RESOLUTION SCENARIOS (COMBINED IMPACT)
+    // ─────────────────────────────────────────────────────────────────────────
+    const rcFullHeaders = [
+      'Simulation Scenario',
+      'Root Cause(s) Addressed',
+      'Detractors Resolved',
+      'Neutrals Elevated',
+      'Total Issues Fixed',
+      'Before NPS',
+      'After NPS',
+      'Total NPS Gain (+pts)',
+      'Before Promoter %',
+      'After Promoter %',
+      'Before Detractor %',
+      'After Detractor %',
+      'Comprehensive Strategic Impact'
+    ];
+
+    const rcFullRows = [];
+    // Individual Top 5
+    impactTopRootCausesCombined.forEach((rc, idx) => {
+      const sim = simulateScenario(rc.detractors, rc.neutrals);
+      rcFullRows.push([
+        `#${idx + 1} RC Full Resolution Alone`,
+        rc.name,
+        rc.detractors,
+        rc.neutrals,
+        rc.total,
+        baseNPS,
+        sim.afterNPS,
+        sim.npsImpact,
+        `${beforePromoterPctNum.toFixed(1)}%`,
+        sim.afterPromotersPct,
+        `${beforeDetractorPctNum.toFixed(1)}%`,
+        sim.afterDetractorsPct,
+        `Full resolution of ${rc.total} items under ${rc.name} (${rc.detractors} det + ${rc.neutrals} neu) → NPS increases from ${baseNPS} to ${sim.afterNPS}`
+      ]);
+    });
+
+    // Combined Top 2..5
+    for (let i = 2; i <= impactTopRootCausesCombined.length; i++) {
+      const selectedRCs = impactTopRootCausesCombined.slice(0, i);
+      const comboDet = selectedRCs.reduce((sum, rc) => sum + rc.detractors, 0);
+      const comboNeu = selectedRCs.reduce((sum, rc) => sum + rc.neutrals, 0);
+      const comboTot = comboDet + comboNeu;
+      const names = selectedRCs.map(rc => rc.name).join(' + ');
+      const sim = simulateScenario(comboDet, comboNeu);
+
+      rcFullRows.push([
+        `Top ${i} Root Causes Combined (Full Resolution)`,
+        names,
+        comboDet,
+        comboNeu,
+        comboTot,
+        baseNPS,
+        sim.afterNPS,
+        sim.npsImpact,
+        `${beforePromoterPctNum.toFixed(1)}%`,
+        sim.afterPromotersPct,
+        `${beforeDetractorPctNum.toFixed(1)}%`,
+        sim.afterDetractorsPct,
+        `Multi-cause resolution across Top ${i} Causes (${comboTot} issues fixed) → NPS surges by ${sim.npsImpact} pts from ${baseNPS} to ${sim.afterNPS}`
+      ]);
+    }
+
+    addIndicatorTable(
+      '4. ROOT CAUSE FULL RESOLUTION SCENARIOS (COMBINED DETRACTORS + NEUTRALS & TOP CAUSE BUNDLES)',
+      '4338CA',
+      rcFullHeaders,
+      rcFullRows,
+      {
+        0: (_, row) => ({ isBold: true, fontColor: String(row[0]).includes('Combined') ? '4338CA' : '1E293B', bgColor: String(row[0]).includes('Combined') ? 'EEF2FF' : 'FFFFFF' }),
+        2: () => ({ fontColor: 'B91C1C' }),
+        3: () => ({ fontColor: 'D97706' }),
+        4: () => ({ isBold: true, fontColor: '581C87', bgColor: 'FAF5FF' }),
+        5: () => ({ fontColor: '64748B' }),
+        6: () => ({ isBold: true, fontColor: '1E40AF', bgColor: 'EFF6FF' }),
+        7: () => ({ isBold: true, fontColor: '7C3AED', bgColor: 'F5F3FF' }),
+        8: () => ({ fontColor: '64748B' }),
+        9: () => ({ fontColor: '047857' }),
+        10: () => ({ fontColor: '64748B' }),
+        11: () => ({ fontColor: 'B91C1C' }),
+        12: () => ({ fontColor: '475569' })
+      }
+    );
+
+    // Helper to format numbers cleanly (integer if whole, 1 decimal if fraction)
+    const fmtNum = (n) => {
+      if (typeof n !== 'number') return n;
+      return Number.isInteger(n) ? String(n) : n.toFixed(1);
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TABLE 5: RESPONSIBLE OWNERSHIP & DEPARTMENTAL IMPACT (SHARED-OWNER WEIGHTED)
+    // ─────────────────────────────────────────────────────────────────────────
+    const ownerHeaders = [
+      'Responsible Owner / Dept',
+      'Resolution Scope',
+      '# of Issues (Weighted)',
+      'Before Detractor %',
+      'After Detractor %',
+      'Detractor Reduction (-%)',
+      'Before Promoter %',
+      'After Promoter %',
+      'Promoter Gain (+%)',
+      'Before NPS',
+      'After NPS',
+      'NPS Impact (+pts)',
+      'Ownership Accountability Directive'
+    ];
+
+    // Calculate Owner Impact metrics using shared-owner weighted allocation
+    const ownerImpactMap = {};
+    let reachYesImpact = { rawDet: 0, weightedDet: 0, rawNeu: 0, weightedNeu: 0, totalWeighted: 0 };
+    let reachNoImpact = { rawDet: 0, weightedDet: 0, rawNeu: 0, weightedNeu: 0, totalWeighted: 0 };
+
+    filteredTasks.forEach((task) => {
+      const score = task.evaluationScore;
+      if (score === null || score === 'N/A' || score === undefined || score === '') return;
+      const numScore = Number(score);
+      if (isNaN(numScore)) return;
+      const norm = numScore <= 10 ? numScore * 10 : numScore;
+      const isDetractor = norm >= 0 && norm <= 60;
+      const isNeutral = norm > 60 && norm <= 80;
+      if (!isDetractor && !isNeutral) return;
+
+      const owners = normalizeArrayField(task.responsible);
+      const accs = normalizeArrayField(task.teamAccountability);
+      const ownerCount = Math.max(1, owners.length);
+      const weight = 1 / ownerCount;
+
+      owners.forEach((ownerName, i) => {
+        const normOwner = ownerName.trim().toUpperCase();
+        if (!ownerImpactMap[normOwner]) {
+          ownerImpactMap[normOwner] = {
+            name: ownerName.trim(),
+            rawDet: 0,
+            weightedDet: 0,
+            rawNeu: 0,
+            weightedNeu: 0,
+            totalWeighted: 0
+          };
+        }
+
+        const acc = accs[i] || (accs.length > 0 ? accs[0] : 'Unknown');
+        const isAccYes = String(acc).trim().toLowerCase().startsWith('yes') || String(acc).trim().toLowerCase() === 'y';
+
+        if (isDetractor) {
+          ownerImpactMap[normOwner].rawDet += 1;
+          ownerImpactMap[normOwner].weightedDet += weight;
+          ownerImpactMap[normOwner].totalWeighted += weight;
+
+          if (normOwner === 'REACH') {
+            if (isAccYes) {
+              reachYesImpact.rawDet += 1;
+              reachYesImpact.weightedDet += weight;
+              reachYesImpact.totalWeighted += weight;
+            } else {
+              reachNoImpact.rawDet += 1;
+              reachNoImpact.weightedDet += weight;
+              reachNoImpact.totalWeighted += weight;
+            }
+          }
+        } else if (isNeutral) {
+          ownerImpactMap[normOwner].rawNeu += 1;
+          ownerImpactMap[normOwner].weightedNeu += weight;
+          ownerImpactMap[normOwner].totalWeighted += weight;
+
+          if (normOwner === 'REACH') {
+            if (isAccYes) {
+              reachYesImpact.rawNeu += 1;
+              reachYesImpact.weightedNeu += weight;
+              reachYesImpact.totalWeighted += weight;
+            } else {
+              reachNoImpact.rawNeu += 1;
+              reachNoImpact.weightedNeu += weight;
+              reachNoImpact.totalWeighted += weight;
+            }
+          }
+        }
+      });
+    });
+
+    const impactTopOwnersList = Object.values(ownerImpactMap)
+      .filter(o => o.totalWeighted > 0)
+      .sort((a, b) => b.totalWeighted - a.totalWeighted)
+      .slice(0, 5);
+
+    const ownerRows = [];
+    const beforeDetPctStr = `${beforeDetractorPctNum.toFixed(1)}%`;
+    const beforePromPctStr = `${beforePromoterPctNum.toFixed(1)}%`;
+
+    impactTopOwnersList.forEach((owner, idx) => {
+      const simTot = simulateScenario(owner.weightedDet, owner.weightedNeu);
+      const sharedDiff = (owner.rawDet + owner.rawNeu) - owner.totalWeighted;
+      const sharedNote = sharedDiff > 0.01 ? ` (${sharedDiff.toFixed(1)} shared pts allocated)` : '';
+
+      // Full Combined (Both Detractor and Neutral Conversion to Promoters)
+      ownerRows.push([
+        `#${idx + 1} Owner: ${owner.name}`,
+        'Full Combined Resolution (Det + Neu)',
+        fmtNum(owner.totalWeighted),
+        beforeDetPctStr,
+        owner.weightedDet > 0 ? simTot.afterDetractorsPct : '-',
+        owner.weightedDet > 0 ? simTot.detractorRed : '-',
+        beforePromPctStr,
+        owner.weightedNeu > 0 ? simTot.afterPromotersPct : '-',
+        owner.weightedNeu > 0 ? simTot.promoterGain : '-',
+        baseNPS,
+        simTot.afterNPS,
+        simTot.npsImpact,
+        `Full departmental resolution of ${fmtNum(owner.totalWeighted)} weighted issues${sharedNote} (${fmtNum(owner.weightedDet)} det + ${fmtNum(owner.weightedNeu)} neu) under ${owner.name} → NPS surges to ${simTot.afterNPS} (${simTot.npsImpact} pts)`
+      ]);
+
+      // ── SPECIAL BREAKDOWN FOR OWNER: REACH ONLY ───────────────────────────
+      const isReachOwner = (owner.name || '').toString().trim().toUpperCase() === 'REACH';
+      if (isReachOwner) {
+        // 1. Reach Field Teams (Accountable / Took Responsibility)
+        if (reachYesImpact.totalWeighted > 0) {
+          const simYesTot = simulateScenario(reachYesImpact.weightedDet, reachYesImpact.weightedNeu);
+
+          ownerRows.push([
+            `  ↳ Reach: Field Teams (Accountable / Took Responsibility)`,
+            'Full Combined Resolution (Det + Neu)',
+            fmtNum(reachYesImpact.totalWeighted),
+            beforeDetPctStr,
+            reachYesImpact.weightedDet > 0 ? simYesTot.afterDetractorsPct : '-',
+            reachYesImpact.weightedDet > 0 ? simYesTot.detractorRed : '-',
+            beforePromPctStr,
+            reachYesImpact.weightedNeu > 0 ? simYesTot.afterPromotersPct : '-',
+            reachYesImpact.weightedNeu > 0 ? simYesTot.promoterGain : '-',
+            baseNPS,
+            simYesTot.afterNPS,
+            simYesTot.npsImpact,
+            `Full field-accountable resolution of ${fmtNum(reachYesImpact.totalWeighted)} weighted issues (${fmtNum(reachYesImpact.weightedDet)} det + ${fmtNum(reachYesImpact.weightedNeu)} neu) under Reach Field Teams → NPS surges to ${simYesTot.afterNPS} (${simYesTot.npsImpact} pts)`
+          ]);
+        }
+
+        // 2. Reach Non-Accountable (Dispatching, Civil & Support Teams)
+        if (reachNoImpact.totalWeighted > 0) {
+          const simNoTot = simulateScenario(reachNoImpact.weightedDet, reachNoImpact.weightedNeu);
+
+          ownerRows.push([
+            `  ↳ Reach: Non-Accountable (Dispatching, Civil & Support Teams)`,
+            'Full Combined Resolution (Det + Neu)',
+            fmtNum(reachNoImpact.totalWeighted),
+            beforeDetPctStr,
+            reachNoImpact.weightedDet > 0 ? simNoTot.afterDetractorsPct : '-',
+            reachNoImpact.weightedDet > 0 ? simNoTot.detractorRed : '-',
+            beforePromPctStr,
+            reachNoImpact.weightedNeu > 0 ? simNoTot.afterPromotersPct : '-',
+            reachNoImpact.weightedNeu > 0 ? simNoTot.promoterGain : '-',
+            baseNPS,
+            simNoTot.afterNPS,
+            simNoTot.npsImpact,
+            `Full non-accountable resolution of ${fmtNum(reachNoImpact.totalWeighted)} weighted issues (${fmtNum(reachNoImpact.weightedDet)} det + ${fmtNum(reachNoImpact.weightedNeu)} neu) under Reach (dispatching/civil) → NPS surges to ${simNoTot.afterNPS} (${simNoTot.npsImpact} pts)`
+          ]);
+        }
+      }
+    });
+
+    // Combined Top 2..5 Owners Full Resolution Bundles
+    for (let i = 2; i <= impactTopOwnersList.length; i++) {
+      const selectedOwners = impactTopOwnersList.slice(0, i);
+      const comboWeightedDet = selectedOwners.reduce((sum, o) => sum + o.weightedDet, 0);
+      const comboWeightedNeu = selectedOwners.reduce((sum, o) => sum + o.weightedNeu, 0);
+      const comboTotWeighted = comboWeightedDet + comboWeightedNeu;
+      const names = selectedOwners.map(o => o.name).join(' + ');
+      const sim = simulateScenario(comboWeightedDet, comboWeightedNeu);
+
+      ownerRows.push([
+        `Top ${i} Owners Combined`,
+        'Full Cross-Departmental Resolution',
+        fmtNum(comboTotWeighted),
+        beforeDetPctStr,
+        comboWeightedDet > 0 ? sim.afterDetractorsPct : '-',
+        comboWeightedDet > 0 ? sim.detractorRed : '-',
+        beforePromPctStr,
+        comboWeightedNeu > 0 ? sim.afterPromotersPct : '-',
+        comboWeightedNeu > 0 ? sim.promoterGain : '-',
+        baseNPS,
+        sim.afterNPS,
+        sim.npsImpact,
+        `Combined cross-departmental resolution across Top ${i} Owners (${fmtNum(comboTotWeighted)} weighted issues) pushes overall NPS from ${baseNPS} to ${sim.afterNPS} (${sim.npsImpact} pts)`
+      ]);
+    }
+
+    addIndicatorTable(
+      '5. RESPONSIBLE OWNERSHIP & DEPARTMENTAL IMPACT (SHARED-OWNER WEIGHTED ALLOCATION)',
+      '6B21A8',
+      ownerHeaders,
+      ownerRows,
+      {
+        0: (_, row) => ({
+          isBold: true,
+          fontColor: String(row[0]).includes('Combined') ? '6B21A8' : (String(row[0]).includes('↳') ? '0369A1' : '1E293B'),
+          bgColor: String(row[0]).includes('Combined') ? 'FAF5FF' : (String(row[0]).includes('↳') ? 'F0F9FF' : 'FFFFFF')
+        }),
+        1: (_, row) => ({ isBold: true, fontColor: String(row[1]).includes('Detractors') ? 'B91C1C' : (String(row[1]).includes('Neutrals') ? '047857' : '4338CA') }),
+        2: () => ({ isBold: true }),
+        3: (val) => ({ fontColor: val === '-' ? '94A3B8' : '64748B' }),
+        4: (val) => ({ fontColor: val === '-' ? '94A3B8' : 'B91C1C' }),
+        5: (val) => ({ isBold: val !== '-', fontColor: val === '-' ? '94A3B8' : 'B91C1C', bgColor: val === '-' ? 'FFFFFF' : 'FEF2F2' }),
+        6: (val) => ({ fontColor: val === '-' ? '94A3B8' : '64748B' }),
+        7: (val) => ({ fontColor: val === '-' ? '94A3B8' : '047857' }),
+        8: (val) => ({ isBold: val !== '-', fontColor: val === '-' ? '94A3B8' : '047857', bgColor: val === '-' ? 'FFFFFF' : 'ECFDF5' }),
+        9: () => ({ fontColor: '64748B' }),
+        10: () => ({ isBold: true, fontColor: '1E40AF', bgColor: 'EFF6FF' }),
+        11: () => ({ isBold: true, fontColor: '7C3AED', bgColor: 'F5F3FF' }),
+        12: () => ({ fontColor: '475569' })
+      }
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TABLE 6, 7 & 8: WORST PERFORMING TEAMS IMPACT SIMULATIONS (SHARED-OWNER WEIGHTED)
+    // ─────────────────────────────────────────────────────────────────────────
+    const getTaskOwnerWeight = (task) => {
+      const owners = normalizeArrayField(task.responsible);
+      if (owners.length === 0) return 1;
+      return 1 / owners.length;
+    };
+
+    // 1. Gather all unique team names from periodBreakdownRows and filteredTasks
+    const allUniqueTeamNames = Array.from(new Set([
+      ...periodBreakdownRows.map(r => r['Team Name']).filter(Boolean),
+      ...filteredTasks.map(t => t.teamName).filter(Boolean)
+    ]));
+
+    // 2. Compute allocation and simulation metrics for each team
+    const teamAllocationsList = allUniqueTeamNames.map(teamName => {
+      const normName = teamName.trim().replace(/\s+/g, ' ').toLowerCase();
+      const teamTasks = filteredTasks.filter(t => (t.teamName || '').trim().replace(/\s+/g, ' ').toLowerCase() === normName);
+
+      const teamAccDetTasks = teamTasks.filter(t => isTaskAccountable(t) && (() => {
+        const score = t.evaluationScore;
+        if (score === null || score === 'N/A' || score === undefined || score === '') return false;
+        const norm = Number(score) <= 10 ? Number(score) * 10 : Number(score);
+        return norm >= 0 && norm <= 60;
+      })());
+
+      const teamAccNeuTasks = teamTasks.filter(t => isTaskAccountable(t) && (() => {
+        const score = t.evaluationScore;
+        if (score === null || score === 'N/A' || score === undefined || score === '') return false;
+        const norm = Number(score) <= 10 ? Number(score) * 10 : Number(score);
+        return norm > 60 && norm <= 80;
+      })());
+
+      const rawDet = teamAccDetTasks.length;
+      const weightedDet = teamAccDetTasks.reduce((sum, t) => sum + getTaskOwnerWeight(t), 0);
+
+      const rawNeu = teamAccNeuTasks.length;
+      const weightedNeu = teamAccNeuTasks.reduce((sum, t) => sum + getTaskOwnerWeight(t), 0);
+
+      const totalWeighted = weightedDet + weightedNeu;
+
+      // Individual simulations
+      const simDet = simulateScenario(weightedDet, 0);
+      const simNeu = simulateScenario(0, weightedNeu);
+      const simComb = simulateScenario(weightedDet, weightedNeu);
+
+      const periodRow = periodBreakdownRows.find(r => (r['Team Name'] || '').trim().replace(/\s+/g, ' ').toLowerCase() === normName) || {};
+
+      return {
+        teamName,
+        normName,
+        rawDet,
+        weightedDet,
+        rawNeu,
+        weightedNeu,
+        totalWeighted,
+        simDet,
+        simNeu,
+        simComb,
+        detNpsGain: parseFloat(simDet.npsImpact) || 0,
+        neuNpsGain: parseFloat(simNeu.npsImpact) || 0,
+        combNpsGain: parseFloat(simComb.npsImpact) || 0,
+        promoterPct: periodRow['Promoter %'] || 'N/A',
+        detractorPct: periodRow['Detractor %'] || 'N/A'
+      };
+    });
+
+    // ── Table 6: Worst Performing Teams Detractor Impact Simulation (Highest to Lowest) ──
+    const detSortedTeams = teamAllocationsList
+      .filter(t => t.weightedDet > 0 || t.rawDet > 0)
+      .sort((a, b) => b.weightedDet - a.weightedDet || b.rawDet - a.rawDet || b.detNpsGain - a.detNpsGain);
+
+    const worstTeamDetHeaders = [
+      'Worst Team Rank',
+      'Team Name',
+      'Accountable Detractors (Raw)',
+      'Weighted Detractors (Shared)',
+      'Before Detractor %',
+      'After Detractor %',
+      'Detractor Reduction (-%)',
+      'Baseline NPS',
+      'Simulated NPS',
+      'Team NPS Gain (+pts)',
+      'Strategic Detractor Directive'
+    ];
+
+    const worstTeamDetRows = [];
+    if (detSortedTeams.length > 0) {
+      detSortedTeams.forEach((team, idx) => {
+        const sharedDiff = team.rawDet - team.weightedDet;
+        const sharedNote = sharedDiff > 0.01 ? ` (${sharedDiff.toFixed(1)} shared points allocated)` : '';
+
+        worstTeamDetRows.push([
+          `#${idx + 1} Detractor Team`,
+          team.teamName,
+          team.rawDet,
+          fmtNum(team.weightedDet),
+          `${beforeDetractorPctNum.toFixed(1)}%`,
+          team.weightedDet > 0 ? team.simDet.afterDetractorsPct : '-',
+          team.weightedDet > 0 ? team.simDet.detractorRed : '-',
+          baseNPS,
+          team.simDet.afterNPS,
+          team.simDet.npsImpact,
+          team.weightedDet > 0
+            ? `Remediating ${fmtNum(team.weightedDet)} weighted detractors${sharedNote} from ${team.teamName} cuts overall detractor rate by ${team.simDet.detractorRed} and yields +${team.simDet.npsImpact} pts NPS recovery`
+            : `Compliant (No accountable detractors)`
+        ]);
+      });
+
+      if (detSortedTeams.length >= 2) {
+        for (let i = 2; i <= detSortedTeams.length; i++) {
+          const selectedTeams = detSortedTeams.slice(0, i);
+          const comboRawDet = selectedTeams.reduce((sum, t) => sum + t.rawDet, 0);
+          const comboWeightedDet = selectedTeams.reduce((sum, t) => sum + t.weightedDet, 0);
+          const names = selectedTeams.map(t => t.teamName).join(' + ');
+          const sim = simulateScenario(comboWeightedDet, 0);
+
+          worstTeamDetRows.push([
+            i === detSortedTeams.length ? `All ${detSortedTeams.length} Detractor Teams Combined` : `Top ${i} Detractor Teams Combined`,
+            names,
+            comboRawDet,
+            fmtNum(comboWeightedDet),
+            `${beforeDetractorPctNum.toFixed(1)}%`,
+            comboWeightedDet > 0 ? sim.afterDetractorsPct : '-',
+            comboWeightedDet > 0 ? sim.detractorRed : '-',
+            baseNPS,
+            sim.afterNPS,
+            sim.npsImpact,
+            `Collective detractor remediation across Top ${i} teams (${fmtNum(comboWeightedDet)} weighted det) raises overall NPS to ${sim.afterNPS} (${sim.npsImpact} pts gain)`
+          ]);
+        }
+      }
+
+      // Final Row: All Detractor Teams — Full Combined Remediation (Detractors + Related Neutrals)
+      const allDetTeamsTotalWeightedDet = detSortedTeams.reduce((sum, t) => sum + t.weightedDet, 0);
+      const allDetTeamsTotalWeightedNeu = detSortedTeams.reduce((sum, t) => sum + t.weightedNeu, 0);
+      const allDetTeamsTotalRawDet = detSortedTeams.reduce((sum, t) => sum + t.rawDet, 0);
+      const allDetTeamsTotalRawNeu = detSortedTeams.reduce((sum, t) => sum + t.rawNeu, 0);
+      const allDetTeamsTotalRawIssues = allDetTeamsTotalRawDet + allDetTeamsTotalRawNeu;
+      const allDetTeamsTotalWeighted = allDetTeamsTotalWeightedDet + allDetTeamsTotalWeightedNeu;
+      const simDetFull = simulateScenario(allDetTeamsTotalWeightedDet, allDetTeamsTotalWeightedNeu);
+
+      worstTeamDetRows.push([
+        `All ${detSortedTeams.length} Detractor Teams — Full Combined (${fmtNum(allDetTeamsTotalWeightedDet)} Acc Detractors + ${fmtNum(allDetTeamsTotalWeightedNeu)} Neutrals = ${fmtNum(allDetTeamsTotalWeighted)} All Issues)`,
+        detSortedTeams.map(t => t.teamName).join(' + '),
+        `${allDetTeamsTotalRawDet} Det (${allDetTeamsTotalRawIssues} All Issues)`,
+        `${fmtNum(allDetTeamsTotalWeightedDet)} Det (${fmtNum(allDetTeamsTotalWeighted)} All Issues)`,
+        `${beforeDetractorPctNum.toFixed(1)}%`,
+        allDetTeamsTotalWeightedDet > 0 ? simDetFull.afterDetractorsPct : '-',
+        allDetTeamsTotalWeightedDet > 0 ? simDetFull.detractorRed : '-',
+        baseNPS,
+        simDetFull.afterNPS,
+        simDetFull.npsImpact,
+        `Full remediation across all ${detSortedTeams.length} detractor teams: resolving ${allDetTeamsTotalRawDet} raw (${fmtNum(allDetTeamsTotalWeightedDet)} weighted) accountable detractors + converting ${allDetTeamsTotalRawNeu} raw (${fmtNum(allDetTeamsTotalWeightedNeu)} weighted) related neutrals (${allDetTeamsTotalRawIssues} raw / ${fmtNum(allDetTeamsTotalWeighted)} weighted all issues) pushes NPS from ${baseNPS} to ${simDetFull.afterNPS} (${simDetFull.npsImpact} pts gain)`
+      ]);
+    } else {
+      worstTeamDetRows.push([
+        'All Teams Compliant',
+        'No Accountable Detractors',
+        0,
+        0,
+        `${beforeDetractorPctNum.toFixed(1)}%`,
+        '-',
+        '-',
+        baseNPS,
+        baseNPS,
+        '+0.0',
+        'No field teams with accountable detractors in this period.'
+      ]);
+    }
+
+    addIndicatorTable(
+      `6. WORST PERFORMING TEAMS DETRACTOR IMPACT SIMULATION (ALL ${detSortedTeams.length} DETRACTOR TEAMS & CUMULATIVE RECOVERY)`,
+      '991B1B',
+      worstTeamDetHeaders,
+      worstTeamDetRows,
+      {
+        0: (_, row) => ({
+          isBold: true,
+          fontColor: String(row[0]).includes('Full Combined') ? '4C1D95' : (String(row[0]).includes('Combined') ? '7F1D1D' : '991B1B'),
+          bgColor: String(row[0]).includes('Full Combined') ? 'F5F3FF' : (String(row[0]).includes('Combined') ? 'FEF2F2' : 'FFFFFF')
+        }),
+        2: () => ({ isBold: true, fontColor: '991B1B' }),
+        3: () => ({ isBold: true, fontColor: 'B91C1C', bgColor: 'FEF2F2' }),
+        4: () => ({ fontColor: '64748B' }),
+        5: () => ({ fontColor: 'B91C1C' }),
+        6: (val) => ({ isBold: val !== '-', fontColor: val === '-' ? '94A3B8' : 'B91C1C', bgColor: val === '-' ? 'FFFFFF' : 'FEF2F2' }),
+        7: () => ({ fontColor: '64748B' }),
+        8: () => ({ isBold: true, fontColor: '1E40AF', bgColor: 'EFF6FF' }),
+        9: () => ({ isBold: true, fontColor: '7C3AED', bgColor: 'F5F3FF' }),
+        10: () => ({ fontColor: '475569' })
+      }
+    );
+
+    // ── Table 7: Worst Performing Teams Neutral Impact Simulation (Highest to Lowest) ──
+    const neuSortedTeams = teamAllocationsList
+      .filter(t => t.weightedNeu > 0 || t.rawNeu > 0)
+      .sort((a, b) => b.weightedNeu - a.weightedNeu || b.rawNeu - a.rawNeu || b.neuNpsGain - a.neuNpsGain);
+
+    const worstTeamNeuHeaders = [
+      'Worst Team Rank',
+      'Team Name',
+      'Accountable Neutrals (Raw)',
+      'Weighted Neutrals (Shared)',
+      'Before Neutral %',
+      'After Neutral %',
+      'Promoter Gain (+%)',
+      'Baseline NPS',
+      'Simulated NPS',
+      'Team NPS Gain (+pts)',
+      'Strategic Neutral Directive'
+    ];
+
+    const worstTeamNeuRows = [];
+    if (neuSortedTeams.length > 0) {
+      neuSortedTeams.forEach((team, idx) => {
+        const sharedDiff = team.rawNeu - team.weightedNeu;
+        const sharedNote = sharedDiff > 0.01 ? ` (${sharedDiff.toFixed(1)} shared points allocated)` : '';
+
+        worstTeamNeuRows.push([
+          `#${idx + 1} Neutral Team`,
+          team.teamName,
+          team.rawNeu,
+          fmtNum(team.weightedNeu),
+          `${beforeNeutralPctNum.toFixed(1)}%`,
+          team.weightedNeu > 0 ? team.simNeu.afterNeutralsPct : '-',
+          team.weightedNeu > 0 ? team.simNeu.promoterGain : '-',
+          baseNPS,
+          team.simNeu.afterNPS,
+          team.simNeu.npsImpact,
+          team.weightedNeu > 0
+            ? `Converting ${fmtNum(team.weightedNeu)} weighted neutrals${sharedNote} from ${team.teamName} to promoters adds +${team.simNeu.promoterGain} promoter share and yields +${team.simNeu.npsImpact} pts NPS recovery`
+            : `Compliant (No accountable neutrals)`
+        ]);
+      });
+
+      if (neuSortedTeams.length >= 2) {
+        for (let i = 2; i <= neuSortedTeams.length; i++) {
+          const selectedTeams = neuSortedTeams.slice(0, i);
+          const comboRawNeu = selectedTeams.reduce((sum, t) => sum + t.rawNeu, 0);
+          const comboWeightedNeu = selectedTeams.reduce((sum, t) => sum + t.weightedNeu, 0);
+          const names = selectedTeams.map(t => t.teamName).join(' + ');
+          const sim = simulateScenario(0, comboWeightedNeu);
+
+          worstTeamNeuRows.push([
+            i === neuSortedTeams.length ? `All ${neuSortedTeams.length} Neutral Teams Combined` : `Top ${i} Neutral Teams Combined`,
+            names,
+            comboRawNeu,
+            fmtNum(comboWeightedNeu),
+            `${beforeNeutralPctNum.toFixed(1)}%`,
+            comboWeightedNeu > 0 ? sim.afterNeutralsPct : '-',
+            comboWeightedNeu > 0 ? sim.promoterGain : '-',
+            baseNPS,
+            sim.afterNPS,
+            sim.npsImpact,
+            `Collective neutral conversion across Top ${i} teams (${fmtNum(comboWeightedNeu)} weighted neu) elevates overall NPS to ${sim.afterNPS} (${sim.npsImpact} pts gain)`
+          ]);
+        }
+      }
+
+      // Final Row: All Neutral Teams — Full Combined Remediation (Neutrals + Related Detractors)
+      const allNeuTeamsTotalWeightedNeu = neuSortedTeams.reduce((sum, t) => sum + t.weightedNeu, 0);
+      const allNeuTeamsTotalWeightedDet = neuSortedTeams.reduce((sum, t) => sum + t.weightedDet, 0);
+      const allNeuTeamsTotalRawNeu = neuSortedTeams.reduce((sum, t) => sum + t.rawNeu, 0);
+      const allNeuTeamsTotalRawDet = neuSortedTeams.reduce((sum, t) => sum + t.rawDet, 0);
+      const allNeuTeamsTotalRawIssues = allNeuTeamsTotalRawNeu + allNeuTeamsTotalRawDet;
+      const allNeuTeamsTotalWeighted = allNeuTeamsTotalWeightedNeu + allNeuTeamsTotalWeightedDet;
+      const simNeuFull = simulateScenario(allNeuTeamsTotalWeightedDet, allNeuTeamsTotalWeightedNeu);
+
+      worstTeamNeuRows.push([
+        `All ${neuSortedTeams.length} Neutral Teams — Full Combined (${fmtNum(allNeuTeamsTotalWeightedNeu)} Acc Neutrals + ${fmtNum(allNeuTeamsTotalWeightedDet)} Detractors = ${fmtNum(allNeuTeamsTotalWeighted)} All Issues)`,
+        neuSortedTeams.map(t => t.teamName).join(' + '),
+        `${allNeuTeamsTotalRawNeu} Neu (${allNeuTeamsTotalRawIssues} All Issues)`,
+        `${fmtNum(allNeuTeamsTotalWeightedNeu)} Neu (${fmtNum(allNeuTeamsTotalWeighted)} All Issues)`,
+        `${beforeNeutralPctNum.toFixed(1)}%`,
+        allNeuTeamsTotalWeightedNeu > 0 ? simNeuFull.afterNeutralsPct : '-',
+        allNeuTeamsTotalWeightedNeu > 0 ? simNeuFull.promoterGain : '-',
+        baseNPS,
+        simNeuFull.afterNPS,
+        simNeuFull.npsImpact,
+        `Full remediation across all ${neuSortedTeams.length} neutral teams: converting ${allNeuTeamsTotalRawNeu} raw (${fmtNum(allNeuTeamsTotalWeightedNeu)} weighted) accountable neutrals + resolving ${allNeuTeamsTotalRawDet} raw (${fmtNum(allNeuTeamsTotalWeightedDet)} weighted) related detractors (${allNeuTeamsTotalRawIssues} raw / ${fmtNum(allNeuTeamsTotalWeighted)} weighted all issues) elevates NPS from ${baseNPS} to ${simNeuFull.afterNPS} (${simNeuFull.npsImpact} pts gain)`
+      ]);
+    } else {
+      worstTeamNeuRows.push([
+        'All Teams Compliant',
+        'No Accountable Neutrals',
+        0,
+        0,
+        `${beforeNeutralPctNum.toFixed(1)}%`,
+        '-',
+        '-',
+        baseNPS,
+        baseNPS,
+        '+0.0',
+        'No field teams with accountable neutrals in this period.'
+      ]);
+    }
+
+    addIndicatorTable(
+      `7. WORST PERFORMING TEAMS NEUTRAL IMPACT SIMULATION (ALL ${neuSortedTeams.length} NEUTRAL TEAMS & CUMULATIVE RECOVERY)`,
+      'B45309',
+      worstTeamNeuHeaders,
+      worstTeamNeuRows,
+      {
+        0: (_, row) => ({
+          isBold: true,
+          fontColor: String(row[0]).includes('Full Combined') ? '4C1D95' : (String(row[0]).includes('Combined') ? '065F46' : '047857'),
+          bgColor: String(row[0]).includes('Full Combined') ? 'F5F3FF' : (String(row[0]).includes('Combined') ? 'ECFDF5' : 'FFFFFF')
+        }),
+        2: () => ({ isBold: true, fontColor: 'B45309' }),
+        3: () => ({ isBold: true, fontColor: 'D97706', bgColor: 'FFFBEB' }),
+        4: () => ({ fontColor: '64748B' }),
+        5: () => ({ fontColor: '047857' }),
+        6: (val) => ({ isBold: val !== '-', fontColor: val === '-' ? '94A3B8' : '047857', bgColor: val === '-' ? 'FFFFFF' : 'ECFDF5' }),
+        7: () => ({ fontColor: '64748B' }),
+        8: () => ({ isBold: true, fontColor: '1E40AF', bgColor: 'EFF6FF' }),
+        9: () => ({ isBold: true, fontColor: '7C3AED', bgColor: 'F5F3FF' }),
+        10: () => ({ fontColor: '475569' })
+      }
+    );
+
+    // ── Table 8: Worst Performing Teams Full Combined Impact Simulation (Ranked by NPS Recovery Impact) ──
+    const combSortedTeams = teamAllocationsList
+      .filter(t => t.totalWeighted > 0)
+      .sort((a, b) => b.combNpsGain - a.combNpsGain || b.totalWeighted - a.totalWeighted || b.weightedDet - a.weightedDet);
+
+    const worstTeamCombHeaders = [
+      'Worst Team Rank',
+      'Team Name',
+      'Weighted Detractors',
+      'Detractor Impact (-%)',
+      'Weighted Neutrals',
+      'Promoter Gain (+%)',
+      'Total Weighted Issues',
+      'Baseline NPS',
+      'Simulated NPS',
+      'Team NPS Gain (+pts)',
+      'Escalation Status & Team Improvement Directive'
+    ];
+
+    const worstTeamCombRows = [];
+    if (combSortedTeams.length > 0) {
+      combSortedTeams.forEach((team, idx) => {
+        worstTeamCombRows.push([
+          `#${idx + 1} Impact Team`,
+          team.teamName,
+          fmtNum(team.weightedDet),
+          team.weightedDet > 0 ? team.simComb.detractorRed : '-',
+          fmtNum(team.weightedNeu),
+          team.weightedNeu > 0 ? team.simComb.promoterGain : '-',
+          fmtNum(team.totalWeighted),
+          baseNPS,
+          team.simComb.afterNPS,
+          team.simComb.npsImpact,
+          `Current Status: ${team.detractorPct} Detractors, ${team.promoterPct} Promoters. Resolving ${fmtNum(team.totalWeighted)} weighted issues (${fmtNum(team.weightedDet)} det + ${fmtNum(team.weightedNeu)} neu) provides +${team.simComb.npsImpact} pts overall NPS lift`
+        ]);
+      });
+
+      if (combSortedTeams.length >= 2) {
+        for (let i = 2; i <= combSortedTeams.length; i++) {
+          const selectedTeams = combSortedTeams.slice(0, i);
+          const comboWeightedDet = selectedTeams.reduce((sum, t) => sum + t.weightedDet, 0);
+          const comboWeightedNeu = selectedTeams.reduce((sum, t) => sum + t.weightedNeu, 0);
+          const comboTotalWeighted = comboWeightedDet + comboWeightedNeu;
+          const names = selectedTeams.map(t => t.teamName).join(' + ');
+          const sim = simulateScenario(comboWeightedDet, comboWeightedNeu);
+
+          worstTeamCombRows.push([
+            i === combSortedTeams.length ? `All ${combSortedTeams.length} Accountable Teams Combined` : `Top ${i} Impact Teams Combined`,
+            names,
+            fmtNum(comboWeightedDet),
+            comboWeightedDet > 0 ? sim.detractorRed : '-',
+            fmtNum(comboWeightedNeu),
+            comboWeightedNeu > 0 ? sim.promoterGain : '-',
+            fmtNum(comboTotalWeighted),
+            baseNPS,
+            sim.afterNPS,
+            sim.npsImpact,
+            `Collective remediation across Top ${i} underperforming field teams (${fmtNum(comboTotalWeighted)} weighted items) raises overall NPS to ${sim.afterNPS} (${sim.npsImpact} pts gain)`
+          ]);
+        }
+      }
+    } else {
+      worstTeamCombRows.push([
+        'All Teams Compliant',
+        'No Accountable Issues',
+        0,
+        '-',
+        0,
+        '-',
+        0,
+        baseNPS,
+        baseNPS,
+        '+0.0',
+        'No field teams with accountable issues in this period.'
+      ]);
+    }
+
+    addIndicatorTable(
+      `8. WORST PERFORMING TEAMS FULL COMBINED IMPACT SIMULATION (ALL ${combSortedTeams.length} ACCOUNTABLE TEAMS & CUMULATIVE RECOVERY)`,
+      '7F1D1D',
+      worstTeamCombHeaders,
+      worstTeamCombRows,
+      {
+        0: (_, row) => ({ isBold: true, fontColor: String(row[0]).includes('Combined') ? '7F1D1D' : '991B1B', bgColor: String(row[0]).includes('Combined') ? 'FEF2F2' : 'FFFFFF' }),
+        2: () => ({ fontColor: 'B91C1C' }),
+        3: (val) => ({ isBold: val !== '-', fontColor: val === '-' ? '94A3B8' : 'B91C1C', bgColor: val === '-' ? 'FFFFFF' : 'FEF2F2' }),
+        4: () => ({ fontColor: 'D97706' }),
+        5: (val) => ({ isBold: val !== '-', fontColor: val === '-' ? '94A3B8' : '047857', bgColor: val === '-' ? 'FFFFFF' : 'ECFDF5' }),
+        6: () => ({ isBold: true, fontColor: '581C87', bgColor: 'FAF5FF' }),
+        8: () => ({ isBold: true, fontColor: '1E40AF', bgColor: 'EFF6FF' }),
+        9: () => ({ isBold: true, fontColor: '7C3AED', bgColor: 'F5F3FF' }),
+        10: () => ({ fontColor: '475569' })
+      }
+    );
+
     wsTextAnalysis['!cols'] = [
-      { wch: 22 },
-      { wch: 24 },
-      { wch: 18 },
-      { wch: 14 },
-      { wch: 14 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 14 },
-      { wch: 14 },
-      { wch: 12 },
-      { wch: 14 },
-      { wch: 14 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 14 },
-      { wch: 14 },
-      { wch: 12 },
-      { wch: 46 }
+      { wch: 34 }, // Col 0: Scenario / Rank / Focus
+      { wch: 30 }, // Col 1: Category / Name / Definition
+      { wch: 22 }, // Col 2: Detractors (Raw)
+      { wch: 22 }, // Col 3: Weighted Detractors (Shared) / Detractor Reduction %
+      { wch: 20 }, // Col 4: Neutrals (Raw) / Before Neutral %
+      { wch: 20 }, // Col 5: Weighted Neutrals / After Neutral %
+      { wch: 20 }, // Col 6: Total Issues / Promoter Gain %
+      { wch: 14 }, // Col 7: Before NPS
+      { wch: 14 }, // Col 8: Simulated NPS
+      { wch: 16 }, // Col 9: NPS Gain
+      { wch: 60 }  // Col 10: Strategic Notes
     ];
     fixSheetRange(wsTextAnalysis);
-    XLSX.utils.book_append_sheet(workbook, wsTextAnalysis, 'Text Analysis');
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // SUBSHEET: DAILY ONLINE & DVOC ANALYSIS
+    // ══════════════════════════════════════════════════════════════════════════
+    const startDateFormatted = dateFilter.start ? format(new Date(dateFilter.start), 'dd/MM/yyyy') : 'All Time';
+    const endDateFormatted = dateFilter.end ? format(new Date(dateFilter.end), 'dd/MM/yyyy') : 'All Time';
+
+    const wsDailyOnline = XLSX.utils.aoa_to_sheet([
+      [`DAILY ONLINE TRANSACTIONS, SAMPLES TOKEN & DVOC INCIDENT ANALYSIS (PIS DATE BASIS) (${startDateFormatted} - ${endDateFormatted})`]
+    ]);
+
+    wsDailyOnline['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 22 } }
+    ];
+
+    wsDailyOnline['A1'].s = {
+      font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "0E7490" } }, // Deep Cyan
+      alignment: { horizontal: "left", vertical: "center", indent: 1 }
+    };
+
+    // Index daily online & samples token into map: { 'YYYY-MM-DD': { onlineSamples, samplesToken, note } }
+    const dailyOnlineMap = {};
+    (dailyOnlineSamplesData || []).forEach(item => {
+      if (item.date) {
+        dailyOnlineMap[item.date] = {
+          onlineSamples: parseFloat(item.onlineSamples) || 0,
+          samplesToken: parseFloat(item.samplesToken) || 0,
+          note: item.note || ''
+        };
+      }
+    });
+
+    // Determine interval days for analysis
+    const intervalStartDate = dateFilter.start ? startOfDay(new Date(dateFilter.start)) : startOfDay(new Date());
+    const intervalEndDate = dateFilter.end ? endOfDay(new Date(dateFilter.end)) : endOfDay(new Date());
+
+    let dailyInterval = [];
+    try {
+      dailyInterval = eachDayOfInterval({ start: intervalStartDate, end: intervalEndDate });
+    } catch (e) {
+      dailyInterval = [intervalStartDate];
+    }
+
+    // Process daily breakdown records
+    let totalOnlineVol = 0;
+    let totalDailySamplesToken = 0;
+    let totalDvocTasks = 0;
+    let totalDvocIssues = 0;
+    let totalReachIssues = 0;
+    let totalReachAccYes = 0;
+    let totalReachAccNo = 0;
+    let totalOtherIssues = 0;
+    let totalDetractors = 0;
+    let totalNeutrals = 0;
+    let totalPromoters = 0;
+
+    const dailyBreakdownRows = [];
+    const monthlyAggMap = {}; // { [monthKey 'Jan 2026']: { monthKey, monthName, monthNum, year, online, samplesToken, tasks, issues, reachIssues, reachAccYes, reachAccNo, otherIssues } }
+
+    dailyInterval.forEach(dayDate => {
+      const dateStr = format(dayDate, 'yyyy-MM-dd');
+      const dateDisplay = format(dayDate, 'dd/MM/yyyy');
+      const dayOfWeek = format(dayDate, 'EEEE');
+      const monthKey = format(dayDate, 'MMMM yyyy');
+      const monthNum = dayDate.getMonth() + 1;
+
+      const onlineEntry = dailyOnlineMap[dateStr] || { onlineSamples: 0, samplesToken: 0, note: '' };
+      const onlineSamples = onlineEntry.onlineSamples || 0;
+      const samplesToken = onlineEntry.samplesToken || 0;
+      const note = onlineEntry.note || '';
+
+      // Tasks for this date mapped strictly to task.pisDate
+      const dayTasks = (allTasks || []).filter(t => {
+        if (!t.pisDate) return false;
+        try {
+          return format(new Date(t.pisDate), 'yyyy-MM-dd') === dateStr;
+        } catch (e) {
+          return false;
+        }
+      });
+
+      const dayTasksCount = dayTasks.length;
+      let dayIssuesCount = 0;
+      let dayReachCount = 0;
+      let dayReachAccYesCount = 0;
+      let dayReachAccNoCount = 0;
+      let dayOtherCount = 0;
+      let dayDetCount = 0;
+      let dayNeuCount = 0;
+      let dayProCount = 0;
+
+      dayTasks.forEach(t => {
+        const score = Number(t.evaluationScore);
+        if (!isNaN(score)) {
+          if (score <= 6) dayDetCount++;
+          else if (score >= 7 && score <= 8) dayNeuCount++;
+          else if (score >= 9) dayProCount++;
+        }
+
+        const owners = normalizeArrayField(t.responsible);
+        const accs = normalizeArrayField(t.teamAccountability);
+
+        owners.forEach((owner, i) => {
+          dayIssuesCount++;
+          const normOwner = String(owner).trim().toUpperCase();
+          const acc = accs[i] || (accs.length > 0 ? accs[0] : 'Unknown');
+          const isAccYes = String(acc).trim().toLowerCase().startsWith('yes') || String(acc).trim().toLowerCase() === 'y';
+          const isAccNo = String(acc).trim().toLowerCase().startsWith('no') || String(acc).trim().toLowerCase() === 'n';
+
+          if (normOwner === 'REACH') {
+            dayReachCount++;
+            if (isAccYes) dayReachAccYesCount++;
+            else if (isAccNo) dayReachAccNoCount++;
+            else dayReachAccNoCount++;
+          } else {
+            dayOtherCount++;
+          }
+        });
+      });
+
+      // Accumulate totals
+      totalOnlineVol += onlineSamples;
+      totalDailySamplesToken += samplesToken;
+      totalDvocTasks += dayTasksCount;
+      totalDvocIssues += dayIssuesCount;
+      totalReachIssues += dayReachCount;
+      totalReachAccYes += dayReachAccYesCount;
+      totalReachAccNo += dayReachAccNoCount;
+      totalOtherIssues += dayOtherCount;
+      totalDetractors += dayDetCount;
+      totalNeutrals += dayNeuCount;
+      totalPromoters += dayProCount;
+
+      // Accumulate monthly
+      if (!monthlyAggMap[monthKey]) {
+        monthlyAggMap[monthKey] = {
+          monthKey,
+          monthName: format(dayDate, 'MMMM'),
+          monthNum,
+          year: dayDate.getFullYear(),
+          online: 0,
+          samplesToken: 0,
+          tasks: 0,
+          issues: 0,
+          reachIssues: 0,
+          reachAccYes: 0,
+          reachAccNo: 0,
+          otherIssues: 0
+        };
+      }
+      monthlyAggMap[monthKey].online += onlineSamples;
+      monthlyAggMap[monthKey].samplesToken += samplesToken;
+      monthlyAggMap[monthKey].tasks += dayTasksCount;
+      monthlyAggMap[monthKey].issues += dayIssuesCount;
+      monthlyAggMap[monthKey].reachIssues += dayReachCount;
+      monthlyAggMap[monthKey].reachAccYes += dayReachAccYesCount;
+      monthlyAggMap[monthKey].reachAccNo += dayReachAccNoCount;
+      monthlyAggMap[monthKey].otherIssues += dayOtherCount;
+
+      // Calculate comparative ratios
+      const tokenVsOnline = onlineSamples > 0 ? ((samplesToken / onlineSamples) * 100).toFixed(2) + '%' : '-';
+      const tasksVsToken = samplesToken > 0 ? ((dayTasksCount / samplesToken) * 100).toFixed(2) + '%' : '-';
+      const tasksVsOnline = onlineSamples > 0 ? ((dayTasksCount / onlineSamples) * 100).toFixed(2) + '%' : '-';
+      const issuesVsToken = samplesToken > 0 ? ((dayIssuesCount / samplesToken) * 100).toFixed(2) + '%' : '-';
+      const issuesVsOnline = onlineSamples > 0 ? ((dayIssuesCount / onlineSamples) * 100).toFixed(2) + '%' : '-';
+      const reachVsToken = samplesToken > 0 ? ((dayReachCount / samplesToken) * 100).toFixed(2) + '%' : '-';
+      const reachVsOnline = onlineSamples > 0 ? ((dayReachCount / onlineSamples) * 100).toFixed(2) + '%' : '-';
+      const reachAccYesVsOnline = onlineSamples > 0 ? ((dayReachAccYesCount / onlineSamples) * 100).toFixed(2) + '%' : '-';
+      const reachShareOfIssues = dayIssuesCount > 0 ? ((dayReachCount / dayIssuesCount) * 100).toFixed(1) + '%' : '-';
+
+      dailyBreakdownRows.push([
+        dateDisplay,
+        dayOfWeek,
+        onlineSamples > 0 ? onlineSamples : 0,
+        samplesToken > 0 ? samplesToken : 0,
+        dayTasksCount,
+        dayIssuesCount,
+        dayReachCount,
+        dayReachAccYesCount,
+        dayReachAccNoCount,
+        dayOtherCount,
+        dayDetCount,
+        dayNeuCount,
+        dayProCount,
+        tokenVsOnline,
+        tasksVsToken,
+        tasksVsOnline,
+        issuesVsToken,
+        issuesVsOnline,
+        reachVsToken,
+        reachVsOnline,
+        reachAccYesVsOnline,
+        reachShareOfIssues,
+        note
+      ]);
+    });
+
+    // Executive KPI Block (Row 3 to 7)
+    const kpiHeaders = [
+      ['EXECUTIVE KPI SUMMARY — ONLINE TRANSACTIONS, SAMPLES TOKEN & DVOC INCIDENT METRICS (PIS BASIS)', '', '', '', '', ''],
+      ['Total Daily Online Volume', 'Total Daily Samples Token (Taken)', 'Total Actual DVOC Tasks (PIS)', 'Total Discrete Issues', 'Total REACH Issues', 'REACH Acc (Yes) Issues'],
+      [
+        totalOnlineVol.toLocaleString(),
+        totalDailySamplesToken.toLocaleString(),
+        totalDvocTasks.toLocaleString(),
+        totalDvocIssues.toLocaleString(),
+        totalReachIssues.toLocaleString(),
+        totalReachAccYes.toLocaleString()
+      ],
+      ['Samples Token % of Online', 'Sampling Fulfillment % (Tasks/Token)', 'Actual Tasks % of Online', 'Total Issues / Token (%)', 'Total Issues / Online (%)', 'REACH Acc (Yes) / Online (%)'],
+      [
+        totalOnlineVol > 0 ? `${((totalDailySamplesToken / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+        totalDailySamplesToken > 0 ? `${((totalDvocTasks / totalDailySamplesToken) * 100).toFixed(2)}%` : '0.00%',
+        totalOnlineVol > 0 ? `${((totalDvocTasks / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+        totalDailySamplesToken > 0 ? `${((totalDvocIssues / totalDailySamplesToken) * 100).toFixed(2)}%` : '0.00%',
+        totalOnlineVol > 0 ? `${((totalDvocIssues / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+        totalOnlineVol > 0 ? `${((totalReachAccYes / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%'
+      ]
+    ];
+
+    XLSX.utils.sheet_add_aoa(wsDailyOnline, kpiHeaders, { origin: "A3" });
+    wsDailyOnline['!merges'].push(
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } }
+    );
+    wsDailyOnline['A3'].s = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E293B" } }, alignment: { horizontal: "center" } };
+    applyHeaderStyle(wsDailyOnline, { s: { r: 3, c: 0 }, e: { r: 3, c: 5 } }, "334155");
+    applyHeaderStyle(wsDailyOnline, { s: { r: 5, c: 0 }, e: { r: 5, c: 5 } }, "334155");
+    applyDataRowStyle(wsDailyOnline, { s: { r: 4, c: 0 }, e: { r: 4, c: 5 } });
+    applyDataRowStyle(wsDailyOnline, { s: { r: 6, c: 0 }, e: { r: 6, c: 5 } });
+
+    // Table 1: Daily Breakdown Table
+    const dailyTableHeaders = [
+      'Date (DD/MM/YYYY)',
+      'Day of Week',
+      'Daily Online Volume',
+      'Daily Samples Token (Taken)',
+      'Actual Tasks (PIS Date)',
+      'Total Issues Counted',
+      'REACH Total Issues',
+      'REACH Accountable (Yes)',
+      'REACH Non-Accountable (No)',
+      'Other Owners Issues',
+      'Detractors (≤6)',
+      'Neutrals (7-8)',
+      'Promoters (≥9)',
+      'Samples Token % of Online',
+      'Sampling Fulfillment % (Tasks/Token)',
+      'Actual Tasks % of Online',
+      'Total Issues / Token (%)',
+      'Total Issues / Online (%)',
+      'REACH Issues / Token (%)',
+      'REACH Issues / Online (%)',
+      'REACH Acc (Yes) / Online (%)',
+      'REACH Share of Issues (%)',
+      'Operational Notes'
+    ];
+
+    let onlineSheetR = 9;
+    XLSX.utils.sheet_add_aoa(wsDailyOnline, [['DAILY CHRONOLOGICAL ONLINE, SAMPLES TOKEN & DVOC BREAKDOWN (BY PIS DATE)']], { origin: `A${onlineSheetR}` });
+    wsDailyOnline[`A${onlineSheetR}`].s = { font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "0E7490" } }, alignment: { horizontal: "center" } };
+    wsDailyOnline['!merges'].push({ s: { r: onlineSheetR - 1, c: 0 }, e: { r: onlineSheetR - 1, c: 22 } });
+
+    XLSX.utils.sheet_add_aoa(wsDailyOnline, [dailyTableHeaders], { origin: `A${onlineSheetR + 1}` });
+    applyHeaderStyle(wsDailyOnline, { s: { r: onlineSheetR, c: 0 }, e: { r: onlineSheetR, c: 22 } }, "1E293B");
+
+    XLSX.utils.sheet_add_aoa(wsDailyOnline, dailyBreakdownRows, { origin: `A${onlineSheetR + 2}` });
+    applyDataRowStyle(wsDailyOnline, { s: { r: onlineSheetR + 1, c: 0 }, e: { r: onlineSheetR + 1 + dailyBreakdownRows.length, c: 22 } });
+
+    const dailyTotalRow = [
+      'TOTAL / OVERALL PERIOD',
+      `${dailyInterval.length} Days`,
+      totalOnlineVol,
+      totalDailySamplesToken,
+      totalDvocTasks,
+      totalDvocIssues,
+      totalReachIssues,
+      totalReachAccYes,
+      totalReachAccNo,
+      totalOtherIssues,
+      totalDetractors,
+      totalNeutrals,
+      totalPromoters,
+      totalOnlineVol > 0 ? `${((totalDailySamplesToken / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+      totalDailySamplesToken > 0 ? `${((totalDvocTasks / totalDailySamplesToken) * 100).toFixed(2)}%` : '0.00%',
+      totalOnlineVol > 0 ? `${((totalDvocTasks / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+      totalDailySamplesToken > 0 ? `${((totalDvocIssues / totalDailySamplesToken) * 100).toFixed(2)}%` : '0.00%',
+      totalOnlineVol > 0 ? `${((totalDvocIssues / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+      totalDailySamplesToken > 0 ? `${((totalReachIssues / totalDailySamplesToken) * 100).toFixed(2)}%` : '0.00%',
+      totalOnlineVol > 0 ? `${((totalReachIssues / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+      totalOnlineVol > 0 ? `${((totalReachAccYes / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+      totalDvocIssues > 0 ? `${((totalReachIssues / totalDvocIssues) * 100).toFixed(1)}%` : '0.0%',
+      `Full period summary over ${dailyInterval.length} days (Tasks matched by PIS Date)`
+    ];
+
+    const totalRowR = onlineSheetR + 2 + dailyBreakdownRows.length;
+    XLSX.utils.sheet_add_aoa(wsDailyOnline, [dailyTotalRow], { origin: `A${totalRowR}` });
+    for (let c = 0; c < 23; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r: totalRowR - 1, c });
+      if (wsDailyOnline[cellRef]) {
+        wsDailyOnline[cellRef].s = {
+          font: { bold: true, color: { rgb: "000000" } },
+          fill: { fgColor: { rgb: "E0F2FE" } }, // Light cyan highlight
+          border: {
+            top: { style: 'thin', color: { rgb: "0284C7" } },
+            bottom: { style: 'double', color: { rgb: "0284C7" } }
+          },
+          alignment: { horizontal: c === 0 || c === 1 || c === 22 ? "left" : "center" }
+        };
+      }
+    }
+
+    // Table 2: Monthly Aggregated Online, Samples Token & DVOC Summary
+    let monthlySummaryR = totalRowR + 3;
+    const monthlyAggRows = Object.values(monthlyAggMap).map(mObj => {
+      const mTokenVsOnline = mObj.online > 0 ? `${((mObj.samplesToken / mObj.online) * 100).toFixed(2)}%` : '-';
+      const mSamplingFulfillment = mObj.samplesToken > 0 ? `${((mObj.tasks / mObj.samplesToken) * 100).toFixed(2)}%` : '-';
+      const mTasksVsOnline = mObj.online > 0 ? `${((mObj.tasks / mObj.online) * 100).toFixed(2)}%` : '-';
+      const mIssuesVsToken = mObj.samplesToken > 0 ? `${((mObj.issues / mObj.samplesToken) * 100).toFixed(2)}%` : '-';
+      const mIssuesVsOnline = mObj.online > 0 ? `${((mObj.issues / mObj.online) * 100).toFixed(2)}%` : '-';
+      const mReachVsToken = mObj.samplesToken > 0 ? `${((mObj.reachIssues / mObj.samplesToken) * 100).toFixed(2)}%` : '-';
+      const mReachVsOnline = mObj.online > 0 ? `${((mObj.reachIssues / mObj.online) * 100).toFixed(2)}%` : '-';
+      const mReachAccYesRate = mObj.online > 0 ? `${((mObj.reachAccYes / mObj.online) * 100).toFixed(2)}%` : '-';
+      const mReachShare = mObj.issues > 0 ? `${((mObj.reachIssues / mObj.issues) * 100).toFixed(1)}%` : '-';
+
+      return [
+        mObj.monthKey,
+        mObj.online,
+        mObj.samplesToken,
+        mObj.tasks,
+        mObj.issues,
+        mObj.reachIssues,
+        mObj.reachAccYes,
+        mObj.reachAccNo,
+        mObj.otherIssues,
+        mTokenVsOnline,
+        mSamplingFulfillment,
+        mTasksVsOnline,
+        mIssuesVsToken,
+        mIssuesVsOnline,
+        mReachVsToken,
+        mReachVsOnline,
+        mReachAccYesRate,
+        mReachShare
+      ];
+    });
+
+    const monthlyHeaders = [
+      'Month',
+      'Monthly Online Volume',
+      'Monthly Samples Token (Taken)',
+      'Actual DVOC Tasks (PIS Date)',
+      'Total Issues Counted',
+      'REACH Total Issues',
+      'REACH Accountable (Yes)',
+      'REACH Non-Accountable (No)',
+      'Other Owners Issues',
+      'Samples Token % of Online',
+      'Sampling Fulfillment % (Tasks/Token)',
+      'Tasks % of Online',
+      'Total Issues / Token (%)',
+      'Total Issues / Online (%)',
+      'REACH Issues / Token (%)',
+      'REACH Issues / Online (%)',
+      'REACH Acc (Yes) / Online (%)',
+      'REACH Share of Issues (%)'
+    ];
+
+    XLSX.utils.sheet_add_aoa(wsDailyOnline, [['MONTHLY AGGREGATED ONLINE, SAMPLES TOKEN & DVOC SUMMARY (BY PIS DATE)']], { origin: `A${monthlySummaryR}` });
+    wsDailyOnline[`A${monthlySummaryR}`].s = { font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "0369A1" } }, alignment: { horizontal: "center" } };
+    wsDailyOnline['!merges'].push({ s: { r: monthlySummaryR - 1, c: 0 }, e: { r: monthlySummaryR - 1, c: 17 } });
+
+    XLSX.utils.sheet_add_aoa(wsDailyOnline, [monthlyHeaders], { origin: `A${monthlySummaryR + 1}` });
+    applyHeaderStyle(wsDailyOnline, { s: { r: monthlySummaryR, c: 0 }, e: { r: monthlySummaryR, c: 17 } }, "1E293B");
+
+    XLSX.utils.sheet_add_aoa(wsDailyOnline, monthlyAggRows, { origin: `A${monthlySummaryR + 2}` });
+    applyDataRowStyle(wsDailyOnline, { s: { r: monthlySummaryR + 1, c: 0 }, e: { r: monthlySummaryR + 1 + monthlyAggRows.length, c: 17 } });
+
+    // Set Column Widths for wsDailyOnline
+    wsDailyOnline['!cols'] = [
+      { wch: 18 }, // Date
+      { wch: 15 }, // Day of Week
+      { wch: 22 }, // Daily Online Volume
+      { wch: 26 }, // Daily Samples Token (Taken)
+      { wch: 22 }, // Actual Tasks (PIS Date)
+      { wch: 20 }, // Total Issues Counted
+      { wch: 18 }, // REACH Total Issues
+      { wch: 22 }, // REACH Accountable (Yes)
+      { wch: 24 }, // REACH Non-Accountable (No)
+      { wch: 20 }, // Other Owners Issues
+      { wch: 16 }, // Detractors
+      { wch: 16 }, // Neutrals
+      { wch: 16 }, // Promoters
+      { wch: 26 }, // Samples Token % of Online
+      { wch: 28 }, // Sampling Fulfillment % (Tasks/Token)
+      { wch: 24 }, // Actual Tasks % of Online
+      { wch: 24 }, // Total Issues / Token (%)
+      { wch: 24 }, // Total Issues / Online (%)
+      { wch: 24 }, // REACH Issues / Token (%)
+      { wch: 24 }, // REACH Issues / Online (%)
+      { wch: 26 }, // REACH Acc (Yes) / Online (%)
+      { wch: 24 }, // REACH Share of Issues (%)
+      { wch: 35 }  // Operational Notes
+    ];
+
+    fixSheetRange(wsDailyOnline);
 
     // 7. Deep Raw Data Sheet
     const maxTickets = filteredTasks.reduce((max, t) => Math.max(max, (t.tickets || []).length), 0);
@@ -3841,7 +8210,8 @@ const AllTasksList = () => {
       { field: 'rootCause', label: 'Root Cause' },
       { field: 'responsible', label: 'Owner' },
       { field: 'itnRelated', label: 'ITN Related' },
-      { field: 'relatedToSubscription', label: 'Related to Subscription' }
+      { field: 'relatedToSubscription', label: 'Related to Subscription' },
+      { field: 'teamAccountability', label: 'Team Accountability' }
     ];
 
     const fieldMaxCounts = {};
@@ -3892,7 +8262,8 @@ const AllTasksList = () => {
         { field: 'rootCause', label: 'Root Cause' },
         { field: 'responsible', label: 'Owner' },
         { field: 'itnRelated', label: 'ITN Related' },
-        { field: 'relatedToSubscription', label: 'Related to Subscription' }
+        { field: 'relatedToSubscription', label: 'Related to Subscription' },
+        { field: 'teamAccountability', label: 'Team Accountability' }
       ];
 
       const maxInterleaved = interleavedFields.reduce((max, { field }) => Math.max(max, fieldMaxCounts[field]), 0);
@@ -3947,37 +8318,193 @@ const AllTasksList = () => {
 
     const wsRaw = XLSX.utils.json_to_sheet(rawData, { origin: "A2" });
     const rawKeys = Object.keys(rawData[0] || {});
-    addTitle(wsRaw, `DEEP RAW AUDIT DATA - ${periodStr}`, Math.max(0, rawKeys.length - 1));
-    applyHeaderStyle(wsRaw, { s: { r: 1, c: 0 }, e: { r: 1, c: Math.max(0, rawKeys.length - 1) } });
-    applyDataRowStyle(wsRaw, { s: { r: 1, c: 0 }, e: { r: 1 + rawData.length, c: Math.max(0, rawKeys.length - 1) } });
+    const maxColIdx = Math.max(0, rawKeys.length - 1);
+    addTitle(wsRaw, `DEEP RAW AUDIT DATA - ${periodStr}`, maxColIdx);
+    applyHeaderStyle(wsRaw, { s: { r: 1, c: 0 }, e: { r: 1, c: maxColIdx } });
 
-    wsRaw['!cols'] = Array(rawKeys.length).fill({ wch: 15 });
+    if (!wsRaw['!rows']) wsRaw['!rows'] = [];
+    wsRaw['!rows'][0] = { hpt: 24 }; // Title
+    wsRaw['!rows'][1] = { hpt: 20 }; // Master Header
+
+    // Fast-path Arabic RTL Alignment for Master Table (only non-empty feedback cells)
+    const q1MasterCol = rawKeys.indexOf('Q1-Verbatim');
+    if (q1MasterCol !== -1) {
+      for (let row = 2; row <= 1 + rawData.length; row += 1) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: q1MasterCol });
+        if (wsRaw[cellAddress] && wsRaw[cellAddress].v && wsRaw[cellAddress].v !== 'N/A') {
+          wsRaw[cellAddress].s = {
+            alignment: {
+              horizontal: 'right',
+              vertical: 'center',
+              readingOrder: 2
+            }
+          };
+        }
+      }
+    }
+
+    // ── Build Per-Owner Deep Raw Data Tables (Duplicating Tasks with Multiple Owner Issues) ──
+    const allUniqueOwners = [];
+    const ownerCountsMap = {};
+    filteredTasks.forEach(task => {
+      const respVals = normalizeArrayField(task.responsible);
+      if (respVals.length === 0 && task.responsible) {
+        respVals.push(String(task.responsible).trim());
+      }
+      respVals.forEach(r => {
+        const norm = (r || 'Unknown').toString().trim().toUpperCase();
+        if (!ownerCountsMap[norm]) {
+          ownerCountsMap[norm] = 0;
+          allUniqueOwners.push(norm);
+        }
+        ownerCountsMap[norm]++;
+      });
+    });
+    allUniqueOwners.sort((a, b) => (ownerCountsMap[b] || 0) - (ownerCountsMap[a] || 0));
+
+    const ownerColorPalette = [
+      { banner: "1E3A8A", header: "2563EB" }, // Navy / Blue (e.g. REACH)
+      { banner: "4C1D95", header: "6D28D9" }, // Purple (e.g. OJO)
+      { banner: "065F46", header: "059669" }, // Emerald (e.g. NOKIA)
+      { banner: "9F1239", header: "E11D48" }, // Rose
+      { banner: "92400E", header: "D97706" }, // Amber
+      { banner: "1F2937", header: "374151" }, // Slate
+    ];
+
+    let currentRawR = 1 + rawData.length + 3;
+
+    allUniqueOwners.forEach((ownerKey, ownerIdx) => {
+      const ownerTasks = filteredTasks.flatMap(task =>
+        buildOwnerIssueRows(task, ownerKey).map(row => ({ ...task, ...row }))
+      );
+
+      if (ownerTasks.length === 0) return;
+
+      const ownerRows = ownerTasks.map(task => {
+        const baseData = {
+          'SLID': task.slid || 'N/A',
+          'Request Number': task.requestNumber || 'N/A',
+          'Status': task.status || 'N/A',
+          'Severity': task.priority || 'Normal',
+          'Operation': task.operation || 'N/A',
+          'Tariff Name': task.tarrifName || 'N/A',
+          'Validation Status': task.validationStatus || 'Not validated',
+          'Customer Name': task.customerName || 'N/A',
+          'Customer Type': task.customerType || 'N/A',
+          'Contact Number': task.contactNumber || 'N/A',
+          'Governorate': task.governorate || 'N/A',
+          'District': task.district || 'N/A',
+          'Q1-Score': task.evaluationScore !== null ? task.evaluationScore : 'N/A',
+          'Satisfaction Category': (() => {
+            if (task.evaluationScore === null || task.evaluationScore === 'N/A') return 'N/A';
+            const score = Number(task.evaluationScore);
+            if (score <= 6) return 'Detractor';
+            if (score >= 7 && score <= 8) return 'Neutral';
+            if (score >= 9) return 'Promoter';
+            return 'N/A';
+          })(),
+          'Q1-Verbatim': task.customerFeedback || 'N/A',
+          'ONT Type': task.ontType || 'N/A',
+          'Free Extender': task.freeExtender || 'N/A',
+          'Extender Type': task.extenderType || 'N/A',
+          'Extender Count': task.extenderNumber || 0,
+          'GAIA Check': task.gaiaCheck || 'N/A',
+          'GAIA Content': task.gaiaContent || 'N/A',
+          'Reason': task.reason || 'N/A',
+          'Sub-Reason': task.subReason || 'N/A',
+          'Root Cause': task.rootCause || 'N/A',
+          'Owner': task.responsible || ownerKey,
+          'ITN Related': task.itnRelated || 'N/A',
+          'Related to Subscription': task.relatedToSubscription || 'N/A',
+          'Team Accountability': task.teamAccountability || (ownerKey === 'REACH' ? 'N/A' : 'No'),
+          'Field Team Name': task.teamName || 'N/A',
+        };
+
+        const sortedTickets = [...(task.tickets || [])].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        for (let i = 0; i < maxTickets; i++) {
+          baseData[`Note ${i + 1}`] = sortedTickets[i]?.note || '';
+        }
+
+        const ivDate = task.interviewDate ? new Date(task.interviewDate) : null;
+        const pisDate = task.pisDate ? new Date(task.pisDate) : null;
+        const closeDate = task.closeDate ? new Date(task.closeDate) : null;
+        const requestDate = task.contractDate ? new Date(task.contractDate) : null;
+
+        const interviewToPis = ivDate && pisDate ? Math.max(0, Math.round((ivDate - pisDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+        const pisToClose = pisDate && closeDate ? Math.max(0, Math.round((pisDate - closeDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+        const requestToClose = requestDate && closeDate ? Math.max(0, Math.round((closeDate - requestDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+
+        const timelineData = {
+          'Request Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
+          'FE Date': task.feDate ? format(new Date(task.feDate), 'yyyy-MM-dd') : (task.appDate ? format(new Date(task.appDate), 'yyyy-MM-dd') : 'N/A'),
+          'In Date (Dispatched to Cont.)': task.inDate ? format(new Date(task.inDate), 'yyyy-MM-dd') : 'N/A',
+          'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
+          'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
+          'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
+          'PIS to Interview (Days)': interviewToPis,
+          'Close to PIS (Days)': pisToClose,
+          'Request to Close (Days)': requestToClose,
+          'Interview Week': getWeekDisplay(task.interviewDate)
+        };
+
+        return { ...baseData, ...timelineData };
+      });
+
+      const colorPair = ownerColorPalette[ownerIdx % ownerColorPalette.length];
+      const ownerKeys = Object.keys(ownerRows[0] || {});
+      const ownerMaxColIdx = Math.max(0, ownerKeys.length - 1);
+
+      // 1. Owner Title Banner
+      const titleCell = XLSX.utils.encode_cell({ r: currentRawR, c: 0 });
+      wsRaw[titleCell] = {
+        v: `OWNER: ${ownerKey} RAW AUDIT DATA (${ownerRows.length} record${ownerRows.length !== 1 ? 's' : ''}) - ${periodStr}`,
+        t: 's',
+        s: {
+          font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: colorPair.banner } },
+          alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+        }
+      };
+      if (!wsRaw['!merges']) wsRaw['!merges'] = [];
+      wsRaw['!merges'].push({ s: { r: currentRawR, c: 0 }, e: { r: currentRawR, c: ownerMaxColIdx } });
+
+      // 2. Add Header & Data Rows (Lightweight, No Individual Cell Border Overhead)
+      XLSX.utils.sheet_add_json(wsRaw, ownerRows, { origin: XLSX.utils.encode_cell({ r: currentRawR + 1, c: 0 }), skipHeader: false });
+      applyHeaderStyle(wsRaw, { s: { r: currentRawR + 1, c: 0 }, e: { r: currentRawR + 1, c: ownerMaxColIdx } }, colorPair.header);
+
+      // Set Banner and Header Row Heights
+      wsRaw['!rows'][currentRawR] = { hpt: 22 };
+      wsRaw['!rows'][currentRawR + 1] = { hpt: 18 };
+
+      // 3. Fast-path Arabic RTL Alignment for Owner Table
+      const q1ColIdx = ownerKeys.indexOf('Q1-Verbatim');
+      if (q1ColIdx !== -1) {
+        for (let r = currentRawR + 2; r <= currentRawR + 1 + ownerRows.length; r++) {
+          const cellAddr = XLSX.utils.encode_cell({ r, c: q1ColIdx });
+          if (wsRaw[cellAddr] && wsRaw[cellAddr].v && wsRaw[cellAddr].v !== 'N/A') {
+            wsRaw[cellAddr].s = {
+              alignment: {
+                horizontal: 'right',
+                vertical: 'center',
+                readingOrder: 2
+              }
+            };
+          }
+        }
+      }
+
+      currentRawR = currentRawR + 1 + ownerRows.length + 3;
+    });
+
+    wsRaw['!cols'] = Array(Math.max(rawKeys.length, 50)).fill({ wch: 15 });
     const getColIndex = (name) => rawKeys.indexOf(name);
     if (getColIndex('SLID') !== -1) wsRaw['!cols'][getColIndex('SLID')] = { wch: 15 };
     if (getColIndex('Customer Name') !== -1) wsRaw['!cols'][getColIndex('Customer Name')] = { wch: 25 };
-    if (getColIndex('Q1-Verbatim') !== -1) {
-      const q1Column = getColIndex('Q1-Verbatim');
-      wsRaw['!cols'][q1Column] = { wch: 60 };
-
-      const firstDataRow = 2;
-      const lastDataRow = 1 + rawData.length;
-      for (let row = firstDataRow; row <= lastDataRow; row += 1) {
-        const cellAddress = XLSX.utils.encode_cell({ r: row, c: q1Column });
-        if (!wsRaw[cellAddress]) continue;
-        wsRaw[cellAddress].s = wsRaw[cellAddress].s || {};
-        wsRaw[cellAddress].s.alignment = {
-          ...(wsRaw[cellAddress].s.alignment || {}),
-          horizontal: 'right',
-          vertical: 'center',
-          wrapText: true,
-          readingOrder: 2
-        };
-      }
-    }
+    if (getColIndex('Q1-Verbatim') !== -1) wsRaw['!cols'][getColIndex('Q1-Verbatim')] = { wch: 60 };
     if (getColIndex('Customer Type') !== -1) wsRaw['!cols'][getColIndex('Customer Type')] = { wch: 10 };
     if (getColIndex('ONT Type') !== -1) wsRaw['!cols'][getColIndex('ONT Type')] = { wch: 10 };
-
-    XLSX.utils.book_append_sheet(workbook, wsRaw, 'Deep Raw Data');
+    if (getColIndex('Field Team Name') !== -1) wsRaw['!cols'][getColIndex('Field Team Name')] = { wch: 22 };
+    fixSheetRange(wsRaw);
 
     // 7. YTD Analysis Sheet
     const allWeeksYTD = generateWeekRanges(allTasks, settings);
@@ -4013,7 +8540,7 @@ const AllTasksList = () => {
     });
 
     const wsYTD = XLSX.utils.aoa_to_sheet([["YTD Performance Breakdown (Full Year)"]]);
-    wsYTD['A1'].s = { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "3b82f6" } }, alignment: { horizontal: "center", vertical: "center" } };
+    wsYTD['A1'].s = { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "3b82f6" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } };
     wsYTD['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } }];
     XLSX.utils.sheet_add_json(wsYTD, ytdTableData, { origin: "A2", skipHeader: false });
 
@@ -4075,20 +8602,57 @@ const AllTasksList = () => {
     }
 
     wsYTD['!cols'] = [{ wch: 15 }, { wch: 12 }, { wch: 8 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
-    XLSX.utils.book_append_sheet(workbook, wsYTD, 'YTD Analysis');
+    fixSheetRange(wsYTD);
 
     // 8. Monthly Performance Summary Sheet
     const monthlyData = groupDataByMonth(allTasks, null, settings, samplesTokenData);
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
+    const monthSamplesMap = {};
+    let totalAllMonthsSampleSize = 0;
+    for (let i = 1; i <= 12; i++) {
+      const stats = monthlyData[`Month-${i}`];
+      let sampleSize = (stats && stats.sampleSize) ? Number(stats.sampleSize) : 0;
+      if (sampleSize <= 0) {
+        const tokenSum = allTeamSamples
+          .filter(s => Number(s.month) === i)
+          .reduce((sum, s) => sum + (parseFloat(s.sampleSize) || 0), 0);
+        if (tokenSum > 0) {
+          sampleSize = tokenSum;
+        } else {
+          sampleSize = allTasks.filter(t => {
+            if (!t.interviewDate) return false;
+            const info = getMonthNumber(t.interviewDate, settings);
+            return info && info.key === `Month-${i}`;
+          }).length;
+        }
+      }
+      monthSamplesMap[i] = sampleSize;
+      totalAllMonthsSampleSize += sampleSize;
+    }
+
+    const monthsHeader = ["Item Name"];
+    for (let i = 0; i < monthNames.length; i++) {
+      const shortName = monthNames[i].slice(0, 3);
+      monthsHeader.push(shortName);
+      monthsHeader.push(`${shortName} %`);
+    }
+    monthsHeader.push("Total Count");
+    monthsHeader.push("Total %");
+
     // Detailed monthly performance helper
-    const getMonthlyCounts = (field) => {
+    const getMonthlyCounts = (field, useTotalFieldIssues = false) => {
       const fieldData = {};
+      const monthlyTotalIssuesMap = {};
+      for (let i = 1; i <= 12; i++) monthlyTotalIssuesMap[i] = 0;
+      let totalAllMonthsFieldIssues = 0;
+
       allTasks.forEach(t => {
         if (!t.interviewDate) return;
         const monthInfo = getMonthNumber(t.interviewDate, settings);
         if (!monthInfo) return;
         const monthKey = monthInfo.key;
+        const monthNum = monthInfo.number || parseInt(monthKey.replace('Month-', ''), 10);
         const val = t[field];
         let values = [];
         if (Array.isArray(val)) {
@@ -4101,26 +8665,47 @@ const AllTasksList = () => {
         values.forEach(v => {
           if (!fieldData[v]) fieldData[v] = {};
           fieldData[v][monthKey] = (fieldData[v][monthKey] || 0) + 1;
+          if (monthNum >= 1 && monthNum <= 12) {
+            monthlyTotalIssuesMap[monthNum] = (monthlyTotalIssuesMap[monthNum] || 0) + 1;
+          }
+          totalAllMonthsFieldIssues += 1;
         });
       });
-      return Object.entries(fieldData).map(([name, months]) => {
+
+      const rows = Object.entries(fieldData).map(([name, months]) => {
         const row = [name];
-        let total = 0;
+        let totalCount = 0;
         for (let i = 1; i <= 12; i++) {
           const count = months[`Month-${i}`] || 0;
+          const denom = useTotalFieldIssues ? (monthlyTotalIssuesMap[i] || 0) : (monthSamplesMap[i] || 0);
+          const pct = denom > 0 ? `${((count / denom) * 100).toFixed(1)}%` : "0.0%";
           row.push(count);
-          total += count;
+          row.push(pct);
+          totalCount += count;
         }
-        row.push(total);
+        const totalDenom = useTotalFieldIssues ? totalAllMonthsFieldIssues : totalAllMonthsSampleSize;
+        const totalPct = totalDenom > 0 ? `${((totalCount / totalDenom) * 100).toFixed(1)}%` : "0.0%";
+        row.push(totalCount);
+        row.push(totalPct);
         return row;
-      }).sort((a, b) => b[13] - a[13]);
+      }).sort((a, b) => b[25] - a[25]);
+
+      return {
+        rows,
+        monthlyTotalIssuesMap,
+        totalAllMonthsFieldIssues
+      };
     };
 
-    const reasonPerformance = getMonthlyCounts('reason');
-    const subReasonPerformance = getMonthlyCounts('subReason');
-    const ownerPerformance = getMonthlyCounts('responsible');
-    const rootCausePerformance = getMonthlyCounts('rootCause');
-    const monthsHeader = ["Item Name", ...monthNames.map(m => m.slice(0, 3)), "Total"];
+    const reasonPerfResult = getMonthlyCounts('reason', false);
+    const subReasonPerfResult = getMonthlyCounts('subReason', false);
+    const ownerPerfResult = getMonthlyCounts('responsible', true);
+    const rootCausePerfResult = getMonthlyCounts('rootCause', false);
+
+    const reasonPerformance = reasonPerfResult.rows;
+    const subReasonPerformance = subReasonPerfResult.rows;
+    const ownerPerformance = ownerPerfResult.rows;
+    const rootCausePerformance = rootCausePerfResult.rows;
 
     const monthlyTableRows = monthNames.map((name, i) => {
       const stats = monthlyData[`Month-${i + 1}`] || { Promoters: 0, Detractors: 0, Neutrals: 0, sampleSize: 0 };
@@ -4150,7 +8735,7 @@ const AllTasksList = () => {
     ]);
 
     wsCharts['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 11 } }];
-    wsCharts['A1'].s = { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "4f46e5" } }, alignment: { horizontal: "center" } };
+    wsCharts['A1'].s = { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "4f46e5" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } };
 
     XLSX.utils.sheet_add_aoa(wsCharts, monthlyTableRows, { origin: "A3" });
     applyHeaderStyle(wsCharts, { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } }, "1f2937");
@@ -4177,33 +8762,192 @@ const AllTasksList = () => {
       });
     }
 
-    wsCharts['!cols'] = [
-      { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
-      { wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 15 },
-      { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 12 },
-      { wch: 12 }, { wch: 12 }
-    ];
-
     let currentSheetR = 17; // 2 (header) + 12 (months) + 3 (padding)
 
-    const addDetailedMonthlyTable = (ws, data, title, startRow, colorHex) => {
-      XLSX.utils.sheet_add_aoa(ws, [[title]], { origin: `A${startRow}` });
-      ws[`A${startRow}`].s = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: colorHex } }, alignment: { horizontal: "center" } };
+    const addDetailedMonthlyTable = (ws, data, title, startRow, colorHex, baselineRowTitle = "TOTAL SAMPLES (TOKEN)", baselineDenominatorMap = null, baselineTotalAllMonths = null) => {
+      const maxColIdx = 26; // 1 + 12*2 + 2 - 1 = 26
+
+      // 1. Table Title Banner
+      const titleCell = XLSX.utils.encode_cell({ r: startRow - 1, c: 0 });
+      ws[titleCell] = {
+        v: title,
+        t: 's',
+        s: { font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: colorHex } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } }
+      };
       if (!ws['!merges']) ws['!merges'] = [];
-      ws['!merges'].push({ s: { r: startRow - 1, c: 0 }, e: { r: startRow - 1, c: 13 } });
+      ws['!merges'].push({ s: { r: startRow - 1, c: 0 }, e: { r: startRow - 1, c: maxColIdx } });
 
-      XLSX.utils.sheet_add_aoa(ws, [monthsHeader], { origin: `A${startRow + 1}` });
-      applyHeaderStyle(ws, { s: { r: startRow, c: 0 }, e: { r: startRow, c: 13 } }, "374151");
+      const headerR1 = startRow;
+      const headerR2 = startRow + 1;
+      const dataStartR = startRow + 2;
 
-      XLSX.utils.sheet_add_aoa(ws, data, { origin: `A${startRow + 2}` });
-      applyDataRowStyle(ws, { s: { r: startRow + 1, c: 0 }, e: { r: startRow + 1 + data.length, c: 13 } });
+      // 2. Level 1 Header (Month Super-Headers)
+      const lvl1 = ["Item Name"];
+      monthNames.forEach(m => {
+        lvl1.push(m.toUpperCase(), "");
+      });
+      lvl1.push("TOTAL FULL YEAR", "");
 
-      return startRow + data.length + 4;
+      // 3. Level 2 Header (Sub-headers: Count, % Share)
+      const lvl2 = ["Item Name"];
+      monthNames.forEach(m => {
+        const short = m.slice(0, 3);
+        lvl2.push(`${short} Count`, `${short} %`);
+      });
+      lvl2.push("Total Count", "Total %");
+
+      // Add Headers
+      XLSX.utils.sheet_add_aoa(ws, [lvl1, lvl2], { origin: XLSX.utils.encode_cell({ r: headerR1, c: 0 }) });
+
+      // Merge Item Name vertically
+      ws['!merges'].push({ s: { r: headerR1, c: 0 }, e: { r: headerR2, c: 0 } });
+      ws[XLSX.utils.encode_cell({ r: headerR1, c: 0 })] = {
+        v: "Item Name",
+        t: 's',
+        s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E293B" } }, alignment: { horizontal: "center", vertical: "center" } }
+      };
+
+      // Merge & Style Level 1 Month Headers
+      for (let i = 0; i < 12; i++) {
+        const colStart = 1 + i * 2;
+        const colEnd = colStart + 1;
+        const mColor = monthColorPalette[i % monthColorPalette.length];
+        ws['!merges'].push({ s: { r: headerR1, c: colStart }, e: { r: headerR1, c: colEnd } });
+        for (let c = colStart; c <= colEnd; c++) {
+          const cell = XLSX.utils.encode_cell({ r: headerR1, c });
+          ws[cell] = {
+            v: c === colStart ? monthNames[i].toUpperCase() : "",
+            t: 's',
+            s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: mColor } }, alignment: { horizontal: "center", vertical: "center" } }
+          };
+        }
+      }
+
+      // Summary Level 1
+      ws['!merges'].push({ s: { r: headerR1, c: 25 }, e: { r: headerR1, c: 26 } });
+      for (let c = 25; c <= 26; c++) {
+        const cell = XLSX.utils.encode_cell({ r: headerR1, c });
+        ws[cell] = {
+          v: c === 25 ? "TOTAL FULL YEAR" : "",
+          t: 's',
+          s: { font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "111827" } }, alignment: { horizontal: "center", vertical: "center" } }
+        };
+      }
+
+      // Level 2 Sub-Headers Styling
+      for (let i = 0; i < 12; i++) {
+        const colCount = 1 + i * 2;
+        const colPct = colCount + 1;
+
+        const cellCount = XLSX.utils.encode_cell({ r: headerR2, c: colCount });
+        if (ws[cellCount]) {
+          ws[cellCount].s = {
+            font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "334155" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: { top: { style: 'thin', color: { rgb: '94A3B8' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '64748B' } }, right: { style: 'thin', color: { rgb: '64748B' } } }
+          };
+        }
+
+        const cellPct = XLSX.utils.encode_cell({ r: headerR2, c: colPct });
+        if (ws[cellPct]) {
+          ws[cellPct].s = {
+            font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "0D9488" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: { top: { style: 'thin', color: { rgb: '94A3B8' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '64748B' } }, right: { style: 'thin', color: { rgb: '64748B' } } }
+          };
+        }
+      }
+
+      // Summary Level 2 Styling
+      const cellTotCount = XLSX.utils.encode_cell({ r: headerR2, c: 25 });
+      if (ws[cellTotCount]) {
+        ws[cellTotCount].s = {
+          font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "1F2937" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: { top: { style: 'thin', color: { rgb: '94A3B8' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '64748B' } }, right: { style: 'thin', color: { rgb: '64748B' } } }
+        };
+      }
+      const cellTotPct = XLSX.utils.encode_cell({ r: headerR2, c: 26 });
+      if (ws[cellTotPct]) {
+        ws[cellTotPct].s = {
+          font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "047857" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: { top: { style: 'thin', color: { rgb: '94A3B8' } }, bottom: { style: 'medium', color: { rgb: '0F172A' } }, left: { style: 'thin', color: { rgb: '64748B' } }, right: { style: 'thin', color: { rgb: '64748B' } } }
+        };
+      }
+
+      // Prepend Baseline (TOTAL SAMPLES / TOTAL ISSUES) row
+      const totalMonthlySamplesRow = [baselineRowTitle];
+      for (let i = 1; i <= 12; i++) {
+        const sSize = baselineDenominatorMap ? (baselineDenominatorMap[i] || 0) : (monthSamplesMap[i] || 0);
+        totalMonthlySamplesRow.push(sSize);
+        totalMonthlySamplesRow.push(sSize > 0 ? "100.0%" : "0.0%");
+      }
+      const totalDenom = baselineTotalAllMonths !== null && baselineTotalAllMonths !== undefined ? baselineTotalAllMonths : totalAllMonthsSampleSize;
+      totalMonthlySamplesRow.push(totalDenom);
+      totalMonthlySamplesRow.push(totalDenom > 0 ? "100.0%" : "0.0%");
+
+      const tableDataWithTotals = [totalMonthlySamplesRow, ...data];
+      XLSX.utils.sheet_add_aoa(ws, tableDataWithTotals, { origin: XLSX.utils.encode_cell({ r: dataStartR, c: 0 }) });
+
+      // Highlight the TOTAL SAMPLES (TOKEN) baseline row
+      for (let c = 0; c <= maxColIdx; c++) {
+        const cell = XLSX.utils.encode_cell({ r: dataStartR, c });
+        if (ws[cell]) {
+          ws[cell].s = {
+            font: { bold: true, color: { rgb: "1E3A8A" } },
+            fill: { fgColor: { rgb: "EEF2FF" } },
+            alignment: { horizontal: c === 0 ? "left" : "center", vertical: "center" },
+            border: {
+              top: { style: 'thin', color: { rgb: '93C5FD' } },
+              bottom: { style: 'medium', color: { rgb: '3B82F6' } },
+              left: { style: 'thin', color: { rgb: 'E5E7EB' } },
+              right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+            }
+          };
+        }
+      }
+
+      // Style remaining data rows
+      for (let r = 1; r < tableDataWithTotals.length; r++) {
+        const rowIdx = dataStartR + r;
+        for (let c = 0; c <= maxColIdx; c++) {
+          const cell = XLSX.utils.encode_cell({ r: rowIdx, c });
+          if (!ws[cell]) continue;
+
+          ws[cell].s = {
+            font: { bold: c === 0 || c >= 25, color: { rgb: c === 0 ? "1E293B" : (c >= 25 ? "0F172A" : "334155") } },
+            fill: { fgColor: { rgb: c >= 25 ? "F8FAFC" : "FFFFFF" } },
+            alignment: { horizontal: c === 0 ? "left" : "center", vertical: "center" },
+            border: {
+              top: { style: 'thin', color: { rgb: 'E2E8F0' } },
+              bottom: { style: 'thin', color: { rgb: 'E2E8F0' } },
+              left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+              right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+            }
+          };
+        }
+      }
+
+      return dataStartR + tableDataWithTotals.length + 4;
     };
 
     currentSheetR = addDetailedMonthlyTable(wsCharts, reasonPerformance, "DETAILED REASON PERFORMANCE BY MONTH", currentSheetR, "1E3A8A");
     currentSheetR = addDetailedMonthlyTable(wsCharts, subReasonPerformance, "DETAILED SUB-REASON PERFORMANCE BY MONTH", currentSheetR, "1F2937");
-    currentSheetR = addDetailedMonthlyTable(wsCharts, ownerPerformance, "DETAILED OWNER PERFORMANCE BY MONTH", currentSheetR, "0891B2");
+    currentSheetR = addDetailedMonthlyTable(
+      wsCharts,
+      ownerPerformance,
+      "DETAILED OWNER PERFORMANCE BY MONTH",
+      currentSheetR,
+      "0891B2",
+      "TOTAL ISSUES (ALL OWNERS)",
+      ownerPerfResult.monthlyTotalIssuesMap,
+      ownerPerfResult.totalAllMonthsFieldIssues
+    );
     currentSheetR = addDetailedMonthlyTable(wsCharts, rootCausePerformance, "DETAILED ROOT CAUSE PERFORMANCE BY MONTH", currentSheetR, "4F46E5");
 
     // NEW: Monthly Top Categories Summary
@@ -4275,13 +9019,32 @@ const AllTasksList = () => {
 
     XLSX.utils.sheet_add_aoa(wsCharts, [["Week", "Top Reason", "Top Root Cause", "Top Owner"]], { origin: `A${currentSheetR + 1}` });
     applyHeaderStyle(wsCharts, { s: { r: currentSheetR, c: 0 }, e: { r: currentSheetR, c: 3 } }, "4B5563");
-
     XLSX.utils.sheet_add_aoa(wsCharts, weeklyTopSummary, { origin: `A${currentSheetR + 2}` });
     applyDataRowStyle(wsCharts, { s: { r: currentSheetR + 1, c: 0 }, e: { r: currentSheetR + 1 + weeklyTopSummary.length, c: 3 } });
 
+    wsCharts['!cols'] = [
+      { wch: 32 }, // Item Name / Month
+      ...Array.from({ length: 12 }, () => [{ wch: 10 }, { wch: 10 }]).flat(),
+      { wch: 14 }, // Total Count
+      { wch: 14 }  // Total %
+    ];
+    fixSheetRange(wsCharts);
+
+    // 8. Append All Subsheets in Strict Natural Sequence
+    XLSX.utils.book_append_sheet(workbook, wsDetSpecial, 'Detractor Special Analytics');
+    XLSX.utils.book_append_sheet(workbook, wsNeuSpecial, 'Neutral Special Analytics');
+    XLSX.utils.book_append_sheet(workbook, wsTextAnalysis, 'R.C & Team Impact Analysis');
+    XLSX.utils.book_append_sheet(workbook, wsDailyOnline, 'Daily Online & DVOC Analysis');
+    XLSX.utils.book_append_sheet(workbook, wsTeamSamplesNPS, 'Team Samples & NPS Analysis');
+    XLSX.utils.book_append_sheet(workbook, wsTeamPerfCumulative, 'Team Performance - Cumulative');
+    XLSX.utils.book_append_sheet(workbook, wsMonthlyTeamPerf, 'Monthly Performance - Teams');
+    XLSX.utils.book_append_sheet(workbook, wsWorstTeams, 'Worst Performing Teams');
+    XLSX.utils.book_append_sheet(workbook, wsTeamDevLogs, 'Team Development & Actions');
+    XLSX.utils.book_append_sheet(workbook, wsRaw, 'Deep Raw Data');
+    XLSX.utils.book_append_sheet(workbook, wsYTD, 'YTD Analysis');
     XLSX.utils.book_append_sheet(workbook, wsCharts, 'Monthly Performance Summary');
 
-    // 8. Save Workbook
+    // 9. Save Workbook
     XLSX.writeFile(workbook, getExportFileName());
   };
 
@@ -4553,11 +9316,7 @@ const AllTasksList = () => {
             </AccordionDetails>
           </Accordion>
         </Box>
-
-
-
       </Paper>
-
 
       {/* Search and Export Bar */}
       <Box sx={{
@@ -4593,7 +9352,7 @@ const AllTasksList = () => {
               py: 0.5,
               borderRadius: '12px',
               textTransform: 'none',
-              fontSize: '0.75rem',
+              fontSize: '0.72rem',
               fontWeight: 600,
               backgroundColor: '#1e1e1e',
               borderColor: '#3d3d3d',
@@ -4606,11 +9365,37 @@ const AllTasksList = () => {
               }
             }
           }}>
-            <Button onClick={() => setDateFilter({ ...getCustomWeekRange(new Date(), settings), type: 'thisWeek' })} variant={dateFilter.type === 'thisWeek' ? 'contained' : 'outlined'} size="small">This Week</Button>
-            <Button onClick={() => setDateFilter({ ...getCustomWeekRange(subWeeks(new Date(), 1), settings), type: 'lastWeek' })} variant={dateFilter.type === 'lastWeek' ? 'contained' : 'outlined'} size="small">Last Week</Button>
-            <Button onClick={() => setDateFilter({ start: startOfMonth(subMonths(new Date(), 1)), end: endOfMonth(subMonths(new Date(), 1)), type: 'lastMonth' })} variant={dateFilter.type === 'lastMonth' ? 'contained' : 'outlined'} size="small">Last Month</Button>
-            <Button onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()), type: 'thisMonth' })} variant={dateFilter.type === 'thisMonth' ? 'contained' : 'outlined'} size="small">This Month</Button>
-            <Button onClick={() => setDateFilter({ start: null, end: null, type: 'all' })} variant={dateFilter.type === 'all' ? 'contained' : 'outlined'} size="small">All Time</Button>
+            <Button onClick={() => {
+              const range = getCustomWeekRange(new Date(), settings);
+              setDateFilter({ ...range, type: 'thisWeek' });
+              setTempStartDate(range.start);
+              setTempEndDate(range.end);
+            }} variant={dateFilter.type === 'thisWeek' ? 'contained' : 'outlined'} size="small">This Week</Button>
+            <Button onClick={() => {
+              const range = getCustomWeekRange(subWeeks(new Date(), 1), settings);
+              setDateFilter({ ...range, type: 'lastWeek' });
+              setTempStartDate(range.start);
+              setTempEndDate(range.end);
+            }} variant={dateFilter.type === 'lastWeek' ? 'contained' : 'outlined'} size="small">Last Week</Button>
+            <Button onClick={() => {
+              const start = startOfMonth(subMonths(new Date(), 1));
+              const end = endOfMonth(subMonths(new Date(), 1));
+              setDateFilter({ start, end, type: 'lastMonth' });
+              setTempStartDate(start);
+              setTempEndDate(end);
+            }} variant={dateFilter.type === 'lastMonth' ? 'contained' : 'outlined'} size="small">Last Month</Button>
+            <Button onClick={() => {
+              const start = startOfMonth(new Date());
+              const end = endOfMonth(new Date());
+              setDateFilter({ start, end, type: 'thisMonth' });
+              setTempStartDate(start);
+              setTempEndDate(end);
+            }} variant={dateFilter.type === 'thisMonth' ? 'contained' : 'outlined'} size="small">This Month</Button>
+            <Button onClick={() => {
+              setDateFilter({ start: null, end: null, type: 'all' });
+              setTempStartDate(null);
+              setTempEndDate(null);
+            }} variant={dateFilter.type === 'all' ? 'contained' : 'outlined'} size="small">All Time</Button>
           </Box>
 
           <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -4673,6 +9458,150 @@ const AllTasksList = () => {
                 }}
               >
                 Apply
+              </Button>
+            </Box>
+          </LocalizationProvider>
+        </Box>
+
+        <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#3d3d3d' }} />
+
+        {/* Dedicated Cumulative & Escalation Analysis Date Filter Bar */}
+        <Box sx={{
+          display: 'flex',
+          gap: 1,
+          alignItems: 'center',
+          flexShrink: 0,
+          p: 0.5,
+          px: 1.2,
+          borderRadius: '14px',
+          backgroundColor: '#141226',
+          border: '1px solid #2e2857'
+        }}>
+          <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#c084fc', display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
+            <MdHistory /> Cumulative Benchmark:
+          </Typography>
+          <Box sx={{
+            display: 'flex',
+            gap: 0.5,
+            flexShrink: 0,
+            '& .MuiButton-root': {
+              whiteSpace: 'nowrap',
+              minWidth: 'auto',
+              px: 1,
+              py: 0.5,
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              backgroundColor: '#1e1e1e',
+              borderColor: '#3d3d3d',
+              color: '#b3b3b3',
+              '&:hover': { borderColor: '#c084fc', backgroundColor: 'rgba(192, 132, 252, 0.08)' },
+              '&.MuiButton-contained': {
+                backgroundColor: '#7c3aed',
+                color: '#fff',
+                '&:hover': { backgroundColor: '#6d28d9' }
+              }
+            }
+          }}>
+            <Button onClick={() => {
+              const start = new Date(2026, 5, 1);
+              const end = new Date();
+              setCumulativeDateFilter({ start, end, type: 'default' });
+              setTempAccStartDate(start);
+              setTempAccEndDate(end);
+            }} variant={CumulativeDateFilter.type === 'default' ? 'contained' : 'outlined'} size="small">
+              From 01/06/2026 (Default)
+            </Button>
+            <Button onClick={() => {
+              const start = new Date(2026, 5, 1);
+              const end = new Date(2026, 5, 30, 23, 59, 59);
+              setCumulativeDateFilter({ start, end, type: 'jun2026' });
+              setTempAccStartDate(start);
+              setTempAccEndDate(end);
+            }} variant={CumulativeDateFilter.type === 'jun2026' ? 'contained' : 'outlined'} size="small">
+              Jun 2026
+            </Button>
+            <Button onClick={() => {
+              const start = new Date(2026, 6, 1);
+              const end = new Date(2026, 6, 31, 23, 59, 59);
+              setCumulativeDateFilter({ start, end, type: 'jul2026' });
+              setTempAccStartDate(start);
+              setTempAccEndDate(end);
+            }} variant={CumulativeDateFilter.type === 'jul2026' ? 'contained' : 'outlined'} size="small">
+              Jul 2026
+            </Button>
+            <Button onClick={() => {
+              const start = new Date(2026, 7, 1);
+              const end = new Date(2026, 7, 31, 23, 59, 59);
+              setCumulativeDateFilter({ start, end, type: 'aug2026' });
+              setTempAccStartDate(start);
+              setTempAccEndDate(end);
+            }} variant={CumulativeDateFilter.type === 'aug2026' ? 'contained' : 'outlined'} size="small">
+              Aug 2026
+            </Button>
+          </Box>
+
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
+              <DatePicker
+                label="Acc. Start"
+                value={tempAccStartDate}
+                onChange={(v) => setTempAccStartDate(v)}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    sx: {
+                      width: 110,
+                      '& .MuiInputBase-root': {
+                        fontSize: '0.75rem',
+                        backgroundColor: '#1e1e1e',
+                        borderRadius: '10px',
+                        color: '#fff'
+                      },
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: '#c084fc' },
+                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #4c1d95' }
+                    }
+                  }
+                }}
+              />
+              <DatePicker
+                label="Acc. End"
+                value={tempAccEndDate}
+                onChange={(v) => setTempAccEndDate(v)}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    sx: {
+                      width: 110,
+                      '& .MuiInputBase-root': {
+                        fontSize: '0.75rem',
+                        backgroundColor: '#1e1e1e',
+                        borderRadius: '10px',
+                        color: '#fff'
+                      },
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: '#c084fc' },
+                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #4c1d95' }
+                    }
+                  }
+                }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => {
+                  setCumulativeDateFilter({ start: tempAccStartDate, end: tempAccEndDate, type: 'custom' });
+                }}
+                sx={{
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  flexShrink: 0,
+                  fontSize: '0.75rem',
+                  backgroundColor: '#7c3aed',
+                  '&:hover': { backgroundColor: '#6d28d9' }
+                }}
+              >
+                Apply Acc.
               </Button>
             </Box>
           </LocalizationProvider>

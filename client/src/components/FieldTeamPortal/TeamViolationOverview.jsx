@@ -150,13 +150,13 @@ const getMonthlyTeamData = (team, tasks) => {
   });
 
   const sorted = Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month));
-  
+
   // Add improvement indicators
   return sorted.map((month, idx) => ({
     ...month,
     improvementStatus: idx === 0 ? 'baseline' : (
-      sorted[idx - 1].detractors > month.detractors ? 'improved' : 
-      sorted[idx - 1].detractors < month.detractors ? 'declined' : 'stable'
+      sorted[idx - 1].detractors > month.detractors ? 'improved' :
+        sorted[idx - 1].detractors < month.detractors ? 'declined' : 'stable'
     )
   }));
 };
@@ -164,7 +164,7 @@ const getMonthlyTeamData = (team, tasks) => {
 const getSessionBreakdown = (team, tasks) => {
   const sessions = Array.isArray(team?.sessionHistory) ? team.sessionHistory : [];
   const teamTasks = getTeamTasks(team, tasks);
-  
+
   return sessions
     .filter(s => s?.sessionDate)
     .map(session => {
@@ -174,17 +174,17 @@ const getSessionBreakdown = (team, tasks) => {
         const taskDate = task.taskDateIso ? new Date(task.taskDateIso) : task.taskDate ? new Date(task.taskDate) : null;
         return taskDate && taskDate > sessionDate;
       });
-      
+
       const detractorsCount = tasksAfterSession.filter(t => {
         const score = t.evaluationScore || 0;
         return score <= 6;
       }).length;
-      
+
       const neutralsCount = tasksAfterSession.filter(t => {
         const score = t.evaluationScore || 0;
         return score >= 7 && score <= 8;
       }).length;
-      
+
       const promotersCount = tasksAfterSession.filter(t => {
         const score = t.evaluationScore || 0;
         return score >= 9;
@@ -213,7 +213,7 @@ const getDetailedTeamAnalysis = (team, tasks) => {
     if (score <= 6) sentiment = 'Detractor';
     else if (score >= 7 && score <= 8) sentiment = 'Neutral';
     else if (score >= 9) sentiment = 'Promoter';
-    
+
     return {
       ...task,
       date: task.taskDate ? new Date(task.taskDate) : null,
@@ -318,19 +318,19 @@ const TeamViolationOverview = ({
         if (!isNaN(dateObj.getTime())) {
           const mInfo = getMonthNumber(d, settings);
           if (mInfo && mInfo.key) mSet.add(mInfo.key);
-          
+
           const wInfo = getWeekNumber(d, settings.weekStartDay, settings.week1StartDate, settings.week1EndDate, settings.startWeekNumber);
           if (wInfo && wInfo.key) wSet.add(wInfo.key);
         }
       }
     });
     return {
-      availableMonths: Array.from(mSet).sort((a,b) => {
+      availableMonths: Array.from(mSet).sort((a, b) => {
         const m1 = parseInt(a.replace('Month-', ''), 10) || 0;
         const m2 = parseInt(b.replace('Month-', ''), 10) || 0;
         return m1 - m2;
       }),
-      availableWeeks: Array.from(wSet).sort((a,b) => {
+      availableWeeks: Array.from(wSet).sort((a, b) => {
         const matchA = a.match(/Wk-(\d+)\s*\((\d+)\)/);
         const matchB = b.match(/Wk-(\d+)\s*\((\d+)\)/);
         if (matchA && matchB) {
@@ -400,7 +400,7 @@ const TeamViolationOverview = ({
         const normalized = score <= 10 ? score * 10 : score;
         return normalized > 60 && normalized <= 80;
       }).length;
-      
+
       const reachDetractors = teamTasks.filter(item => {
         const isReach = item.teamAccountability?.includes("Yes");
         const score = item.evaluationScore || 0;
@@ -417,17 +417,17 @@ const TeamViolationOverview = ({
 
       // Snapshot logic for UI table
       let snapshotMetrics = {
-        weekly: { 
-          total: 0, detractors: 0, neutrals: 0, 
+        weekly: {
+          total: 0, detractors: 0, neutrals: 0,
           reach: 0, reachDetractors: 0, reachNeutrals: 0,
           ownerReachDetractors: 0, ownerReachNeutrals: 0,
-          label: '-' 
+          label: '-'
         },
-        monthly: { 
-          total: 0, detractors: 0, neutrals: 0, 
+        monthly: {
+          total: 0, detractors: 0, neutrals: 0,
           reach: 0, reachDetractors: 0, reachNeutrals: 0,
           ownerReachDetractors: 0, ownerReachNeutrals: 0,
-          label: '-' 
+          label: '-'
         }
       };
 
@@ -450,7 +450,7 @@ const TeamViolationOverview = ({
 
         const uniqueWeeks = [...new Set(taskDetails.map(t => t.weekKey))].sort().reverse();
         const uniqueMonths = [...new Set(taskDetails.map(t => t.monthKey))].sort().reverse();
-        
+
         const latestWkKey = uniqueWeeks[0];
         const latestMoKey = uniqueMonths[0];
 
@@ -487,10 +487,10 @@ const TeamViolationOverview = ({
       }
       const tasksAfterLatestSession = latestSessionDate
         ? teamTasks.filter(item => {
-            const dateValue = item.taskDateIso;
-            const date = dateValue ? new Date(dateValue) : null;
-            return date && date > latestSessionDate;
-          }).length
+          const dateValue = item.taskDateIso;
+          const date = dateValue ? new Date(dateValue) : null;
+          return date && date > latestSessionDate;
+        }).length
         : 0;
 
       const daysSinceSession = latestSessionDate
@@ -504,18 +504,18 @@ const TeamViolationOverview = ({
         : 0;
       const tasksBeforeLatestSessionSamePeriod = latestSessionDate && yearStart
         ? teamTasks.filter(item => {
-            const dateValue = item.taskDateIso;
-            const date = dateValue ? new Date(dateValue) : null;
-            return date && date >= yearStart && date < latestSessionDate;
-          }).length
+          const dateValue = item.taskDateIso;
+          const date = dateValue ? new Date(dateValue) : null;
+          return date && date >= yearStart && date < latestSessionDate;
+        }).length
         : 0;
       const violationsBeforeLatestSessionSamePeriod = latestSessionDate && yearStart
         ? teamTasks.filter(item => {
-            const dateValue = item.taskDateIso;
-            const date = dateValue ? new Date(dateValue) : null;
-            const score = item.evaluationScore || 0;
-            return date && date >= yearStart && date < latestSessionDate && score <= 8;
-          }).length
+          const dateValue = item.taskDateIso;
+          const date = dateValue ? new Date(dateValue) : null;
+          const score = item.evaluationScore || 0;
+          return date && date >= yearStart && date < latestSessionDate && score <= 8;
+        }).length
         : 0;
       const avgTasksBeforeSession = tasksBeforeLatestSessionSamePeriod / (daysBeforeSession || 1);
       const avgTasksAfterSession = tasksAfterLatestSession / (daysSinceSession || 1);
@@ -527,91 +527,91 @@ const TeamViolationOverview = ({
         : 0;
       const postSessionViolationsCount = latestSessionDate
         ? teamTasks.filter(item => {
-            const dateValue = item.taskDateIso;
-            const date = dateValue ? new Date(dateValue) : null;
-            const score = item.evaluationScore || 0;
-            const normalized = score <= 10 ? score * 10 : score;
-            return date && date > latestSessionDate && normalized > 0 && normalized <= 80;
-          }).length
+          const dateValue = item.taskDateIso;
+          const date = dateValue ? new Date(dateValue) : null;
+          const score = item.evaluationScore || 0;
+          const normalized = score <= 10 ? score * 10 : score;
+          return date && date > latestSessionDate && normalized > 0 && normalized <= 80;
+        }).length
         : 0;
 
       const postSessionDetractorsCount = latestSessionDate
         ? teamTasks.filter(item => {
-            const dateValue = item.taskDateIso;
-            const date = dateValue ? new Date(dateValue) : null;
-            const score = item.evaluationScore || 0;
-            const normalized = score <= 10 ? score * 10 : score;
-            return date && date > latestSessionDate && normalized > 0 && normalized <= 60;
-          }).length
+          const dateValue = item.taskDateIso;
+          const date = dateValue ? new Date(dateValue) : null;
+          const score = item.evaluationScore || 0;
+          const normalized = score <= 10 ? score * 10 : score;
+          return date && date > latestSessionDate && normalized > 0 && normalized <= 60;
+        }).length
         : 0;
 
       const postSessionNeutralsCount = latestSessionDate
         ? teamTasks.filter(item => {
-            const dateValue = item.taskDateIso;
-            const date = dateValue ? new Date(dateValue) : null;
-            const score = item.evaluationScore || 0;
-            const normalized = score <= 10 ? score * 10 : score;
-            return date && date > latestSessionDate && normalized > 60 && normalized <= 80;
-          }).length
+          const dateValue = item.taskDateIso;
+          const date = dateValue ? new Date(dateValue) : null;
+          const score = item.evaluationScore || 0;
+          const normalized = score <= 10 ? score * 10 : score;
+          return date && date > latestSessionDate && normalized > 60 && normalized <= 80;
+        }).length
         : 0;
 
       const postSessionReachCount = latestSessionDate
         ? teamTasks.filter(item => {
-            const dateValue = item.taskDateIso;
-            const date = dateValue ? new Date(dateValue) : null;
-            const isReach = item.teamAccountability?.includes("Yes");
-            return date && date > latestSessionDate && isReach;
-          }).length
+          const dateValue = item.taskDateIso;
+          const date = dateValue ? new Date(dateValue) : null;
+          const isReach = item.teamAccountability?.includes("Yes");
+          return date && date > latestSessionDate && isReach;
+        }).length
         : 0;
 
       const postSessionReachDetractorsCount = latestSessionDate
         ? teamTasks.filter(item => {
-            const dateValue = item.taskDateIso;
-            const date = dateValue ? new Date(dateValue) : null;
-            const score = item.evaluationScore || 0;
-            const normalized = score <= 10 ? score * 10 : score;
-            const isReach = item.teamAccountability?.includes("Yes");
-            return date && date > latestSessionDate && isReach && normalized > 0 && normalized <= 60;
-          }).length
+          const dateValue = item.taskDateIso;
+          const date = dateValue ? new Date(dateValue) : null;
+          const score = item.evaluationScore || 0;
+          const normalized = score <= 10 ? score * 10 : score;
+          const isReach = item.teamAccountability?.includes("Yes");
+          return date && date > latestSessionDate && isReach && normalized > 0 && normalized <= 60;
+        }).length
         : 0;
 
       const postSessionReachNeutralsCount = latestSessionDate
         ? teamTasks.filter(item => {
-            const dateValue = item.taskDateIso;
-            const date = dateValue ? new Date(dateValue) : null;
-            const score = item.evaluationScore || 0;
-            const normalized = score <= 10 ? score * 10 : score;
-            const isReach = item.teamAccountability?.includes("Yes");
-            return date && date > latestSessionDate && isReach && normalized > 60 && normalized <= 80;
-          }).length
+          const dateValue = item.taskDateIso;
+          const date = dateValue ? new Date(dateValue) : null;
+          const score = item.evaluationScore || 0;
+          const normalized = score <= 10 ? score * 10 : score;
+          const isReach = item.teamAccountability?.includes("Yes");
+          return date && date > latestSessionDate && isReach && normalized > 60 && normalized <= 80;
+        }).length
         : 0;
 
       // Owner "Reach" company-based post-session breakdown (responsible field contains "Reach")
       const postSessionOwnerReachDetractorsCount = latestSessionDate
         ? teamTasks.filter(item => {
-            const dateValue = item.taskDateIso;
-            const date = dateValue ? new Date(dateValue) : null;
-            const score = item.evaluationScore || 0;
-            const normalized = score <= 10 ? score * 10 : score;
-            const isOwnerReach = fieldContainsReach(item.responsible);
-            return date && date > latestSessionDate && isOwnerReach && normalized > 0 && normalized <= 60;
-          }).length
+          const dateValue = item.taskDateIso;
+          const date = dateValue ? new Date(dateValue) : null;
+          const score = item.evaluationScore || 0;
+          const normalized = score <= 10 ? score * 10 : score;
+          const isOwnerReach = fieldContainsReach(item.responsible);
+          return date && date > latestSessionDate && isOwnerReach && normalized > 0 && normalized <= 60;
+        }).length
         : 0;
 
       const postSessionOwnerReachNeutralsCount = latestSessionDate
         ? teamTasks.filter(item => {
-            const dateValue = item.taskDateIso;
-            const date = dateValue ? new Date(dateValue) : null;
-            const score = item.evaluationScore || 0;
-            const normalized = score <= 10 ? score * 10 : score;
-            const isOwnerReach = fieldContainsReach(item.responsible);
-            return date && date > latestSessionDate && isOwnerReach && normalized > 60 && normalized <= 80;
-          }).length
+          const dateValue = item.taskDateIso;
+          const date = dateValue ? new Date(dateValue) : null;
+          const score = item.evaluationScore || 0;
+          const normalized = score <= 10 ? score * 10 : score;
+          const isOwnerReach = fieldContainsReach(item.responsible);
+          return date && date > latestSessionDate && isOwnerReach && normalized > 60 && normalized <= 80;
+        }).length
         : 0;
 
-      
+
       const postSessionTotal = tasksAfterLatestSession;
-      
+
       const postSessionViolationRate = postSessionTotal > 0
         ? Math.round((postSessionViolationsCount / postSessionTotal) * 100)
         : 0;
@@ -619,24 +619,24 @@ const TeamViolationOverview = ({
         ? Math.round((violationsBeforeLatestSessionSamePeriod / tasksBeforeLatestSessionSamePeriod) * 100)
         : 0;
       const violationRateDelta = postSessionViolationRate - preSessionViolationRate;
-      
+
       const cohort = getCohortLabel(team);
 
       // Calculate latest PIS date
-      const latestPisDate = teamTasks.length > 0 
+      const latestPisDate = teamTasks.length > 0
         ? teamTasks
-            .filter(t => t.pisDate)
-            .map(t => new Date(t.pisDate))
-            .filter(d => !isNaN(d.getTime()))
-            .sort((a, b) => b - a)[0]
+          .filter(t => t.pisDate)
+          .map(t => new Date(t.pisDate))
+          .filter(d => !isNaN(d.getTime()))
+          .sort((a, b) => b - a)[0]
         : null;
 
       // Calculate trend (comparing last month to previous month)
       const monthlyData = getMonthlyTeamData(team, allTechnicalTasksGlobal);
       const sortedMonths = monthlyData.sort((a, b) => a.month.localeCompare(b.month));
-      const trendDirection = sortedMonths.length >= 2 
-        ? sortedMonths[sortedMonths.length - 1].totalTasks >= sortedMonths[sortedMonths.length - 2].totalTasks 
-          ? '↑' 
+      const trendDirection = sortedMonths.length >= 2
+        ? sortedMonths[sortedMonths.length - 1].totalTasks >= sortedMonths[sortedMonths.length - 2].totalTasks
+          ? '↑'
           : '↓'
         : '-';
 
@@ -771,7 +771,7 @@ const TeamViolationOverview = ({
   // Filtered and sorted detailed tasks
   const filteredDetailedTasks = useMemo(() => {
     if (!selectedTeamDetail?.detailedTasks) return [];
-    
+
     let filtered = selectedTeamDetail.detailedTasks.filter(task => {
       const scoreMatch = task.evaluation >= filterScore[0] && task.evaluation <= filterScore[1];
       const monthMatch = filterMonth === 'all' || task.month === filterMonth;
@@ -826,7 +826,7 @@ const TeamViolationOverview = ({
   const reachAnalytics = useMemo(() => {
     const allTeamTasks = selectedTeamDetail?.detailedTasks || [];
     const filteredTasks = filteredDetailedTasks;
-    
+
     const allReachCount = allTeamTasks.filter(t => t.teamAccountability?.includes("Yes")).length;
 
     const totalFilteredTasks = filteredTasks.length;
@@ -837,7 +837,7 @@ const TeamViolationOverview = ({
 
     const detractorsFiltered = filteredTasks.filter(t => t.evaluation <= 6);
     const neutralsFiltered = filteredTasks.filter(t => t.evaluation >= 7 && t.evaluation <= 8);
-    
+
     const reachDetractors = detractorsFiltered.filter(t => t.teamAccountability?.includes("Yes")).length;
 
     const reachNeutrals = neutralsFiltered.filter(t => t.teamAccountability?.includes("Yes")).length;
@@ -873,7 +873,7 @@ const TeamViolationOverview = ({
       };
     });
     return sessionReach;
-  }, [sessionBreakdown]);  const summaryStats = useMemo(() => {
+  }, [sessionBreakdown]); const summaryStats = useMemo(() => {
     const calcStats = (rows) => {
       const total = rows.length;
       if (total === 0) return { newToActivation: { count: 0, pct: '0.0' }, newToInstAct: { count: 0, pct: '0.0' } };
@@ -924,45 +924,45 @@ const TeamViolationOverview = ({
 
   const teamTasksColumns = useMemo(() => [
     { field: 'teamName', headerName: 'Team', minWidth: 180, flex: 1, renderCell: (params) => <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{params.value}</span> },
-    { 
-      field: 'cohort', 
-      headerName: 'Cohort', 
+    {
+      field: 'cohort',
+      headerName: 'Cohort',
       width: 130,
       renderCell: (params) => (
         <Chip
           label={params.value}
           size="small"
-          sx={{ 
-            bgcolor: params.row.trained ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.12)', 
-            color: params.row.trained ? '#10b981' : '#ef4444', 
-            border: `1px solid ${params.row.trained ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` 
+          sx={{
+            bgcolor: params.row.trained ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+            color: params.row.trained ? '#10b981' : '#ef4444',
+            border: `1px solid ${params.row.trained ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
           }}
         />
       )
     },
-    { 
-      field: 'isActive', 
-      headerName: 'Active', 
+    {
+      field: 'isActive',
+      headerName: 'Active',
       width: 100,
       align: 'center', headerAlign: 'center',
       renderCell: (params) => (
         <Chip
           label={params.value ? 'Active' : 'Inactive'}
           size="small"
-          sx={{ 
-            bgcolor: params.value ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.12)', 
-            color: params.value ? '#10b981' : '#ef4444', 
-            border: `1px solid ${params.value ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` 
+          sx={{
+            bgcolor: params.value ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+            color: params.value ? '#10b981' : '#ef4444',
+            border: `1px solid ${params.value ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
           }}
         />
       )
     },
     { field: 'totalTasks', headerName: 'Total Tasks', type: 'number', width: 120, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ fontWeight: 700, color: '#fff' }}>{params.value}</span> },
-    { 
-      field: 'reachOwnershipPct', 
-      headerName: 'Acc. %', 
-      type: 'number', 
-      width: 100, 
+    {
+      field: 'reachOwnershipPct',
+      headerName: 'Acc. %',
+      type: 'number',
+      width: 100,
       align: 'center', headerAlign: 'center',
       renderCell: (params) => (
         <Tooltip title={`${params.row.reachCount} of ${params.row.totalTasks} tasks`}>
@@ -975,33 +975,33 @@ const TeamViolationOverview = ({
     { field: 'teamNeutrals', headerName: 'Neutrals', type: 'number', width: 90, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#f59e0b', fontWeight: 600 }}>{params.value}</span> },
     { field: 'reachDetractors', headerName: 'Acc. Det.', type: 'number', width: 100, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.value}</span> },
     { field: 'reachNeutrals', headerName: 'Acc. Neu.', type: 'number', width: 100, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#f59e0b' }}>{params.value}</span> },
-    { 
-      field: 'reachDetractorsPct', 
-      headerName: 'Acc. Det. %', 
-      type: 'number', 
-      width: 110, 
-      align: 'center', headerAlign: 'center', 
+    {
+      field: 'reachDetractorsPct',
+      headerName: 'Acc. Det. %',
+      type: 'number',
+      width: 110,
+      align: 'center', headerAlign: 'center',
       renderCell: (params) => (
         <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{params.value}%</span>
       )
     },
-    { 
-      field: 'reachNeutralsPct', 
-      headerName: 'Acc. Neu. %', 
-      type: 'number', 
-      width: 110, 
-      align: 'center', headerAlign: 'center', 
+    {
+      field: 'reachNeutralsPct',
+      headerName: 'Acc. Neu. %',
+      type: 'number',
+      width: 110,
+      align: 'center', headerAlign: 'center',
       renderCell: (params) => (
         <span style={{ color: '#f59e0b', fontSize: '0.8rem' }}>{params.value}%</span>
       )
     },
 
     // Snapshot - Weekly
-    { 
-      field: 'latestWeekLabel', 
-      headerName: 'Wk Snapshot', 
-      width: 130, 
-      headerClassName: 'weekly-group-header', 
+    {
+      field: 'latestWeekLabel',
+      headerName: 'Wk Snapshot',
+      width: 130,
+      headerClassName: 'weekly-group-header',
       cellClassName: 'weekly-group-cell',
       renderCell: (params) => <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{params.value}</span>
     },
@@ -1015,11 +1015,11 @@ const TeamViolationOverview = ({
     { field: 'weeklyReachNeutrals', headerName: 'Wk Acc. Neu.', type: 'number', width: 100, headerClassName: 'weekly-group-header', cellClassName: 'weekly-group-cell', renderCell: (params) => <span style={{ color: '#f59e0b' }}>{params.value}</span> },
 
     // Snapshot - Monthly
-    { 
-      field: 'latestMonthLabel', 
-      headerName: 'Mo Snapshot', 
-      width: 120, 
-      headerClassName: 'monthly-group-header', 
+    {
+      field: 'latestMonthLabel',
+      headerName: 'Mo Snapshot',
+      width: 120,
+      headerClassName: 'monthly-group-header',
       cellClassName: 'monthly-group-cell',
       renderCell: (params) => <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{params.value}</span>
     },
@@ -1032,10 +1032,10 @@ const TeamViolationOverview = ({
     { field: 'monthlyReachDetractors', headerName: 'Mo Acc. Det.', type: 'number', width: 100, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell', renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.value}</span> },
     { field: 'monthlyReachNeutrals', headerName: 'Mo Acc. Neu.', type: 'number', width: 100, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell', renderCell: (params) => <span style={{ color: '#f59e0b' }}>{params.value}</span> },
 
-    { 
-      field: 'detractorsCount', 
-      headerName: 'Global Det.', 
-      type: 'number', 
+    {
+      field: 'detractorsCount',
+      headerName: 'Global Det.',
+      type: 'number',
       width: 120,
       align: 'center', headerAlign: 'center',
       renderCell: (params) => (
@@ -1044,10 +1044,10 @@ const TeamViolationOverview = ({
         </Tooltip>
       )
     },
-    { 
-      field: 'neutralsCount', 
-      headerName: 'Global Neu.', 
-      type: 'number', 
+    {
+      field: 'neutralsCount',
+      headerName: 'Global Neu.',
+      type: 'number',
       width: 120,
       align: 'center', headerAlign: 'center',
       renderCell: (params) => (
@@ -1057,7 +1057,7 @@ const TeamViolationOverview = ({
       )
     },
     { field: 'latestSession', headerName: 'Latest Session', width: 140, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.value}</span> },
-    
+
     // Snapshot - Post Session Group (Purple)
     { field: 'postSessionTotal', headerName: 'Post Total', type: 'number', width: 95, headerClassName: 'post-group-header', cellClassName: 'post-group-cell' },
     { field: 'postSessionDetractors', headerName: 'Post Det.', type: 'number', width: 85, headerClassName: 'post-group-header', cellClassName: 'post-group-cell' },
@@ -1116,12 +1116,12 @@ const TeamViolationOverview = ({
       )
     },
     { field: 'postSessionReachPct', headerName: 'Post Acc. %', type: 'number', width: 110, headerClassName: 'post-group-header', cellClassName: 'post-group-cell', renderCell: (params) => <span style={{ color: '#8b5cf6', fontWeight: 600 }}>{params.value}%</span> },
-    { 
-      field: 'improvementRate', 
-      headerName: 'Improve %', 
-      type: 'number', 
-      width: 125, 
-      headerClassName: 'post-group-header', 
+    {
+      field: 'improvementRate',
+      headerName: 'Improve %',
+      type: 'number',
+      width: 125,
+      headerClassName: 'post-group-header',
       cellClassName: 'post-group-cell',
       renderHeader: (params) => (
         <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -1137,10 +1137,10 @@ const TeamViolationOverview = ({
       }
     },
 
-    { 
-      field: 'tasksAfterLatestSession', 
-      headerName: 'After Latest', 
-      type: 'number', 
+    {
+      field: 'tasksAfterLatestSession',
+      headerName: 'After Latest',
+      type: 'number',
       width: 120,
       align: 'center', headerAlign: 'center',
       renderCell: (params) => (
@@ -1149,9 +1149,9 @@ const TeamViolationOverview = ({
         </span>
       )
     },
-    { 
-      field: 'latestPisDate', 
-      headerName: 'Latest PIS Date', 
+    {
+      field: 'latestPisDate',
+      headerName: 'Latest PIS Date',
       width: 150,
       align: 'center', headerAlign: 'center',
       renderCell: (params) => (
@@ -1162,12 +1162,12 @@ const TeamViolationOverview = ({
         </Tooltip>
       )
     },
-    { 
-      field: 'actions', 
-      headerName: 'Actions', 
-      width: 150, 
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 150,
       align: 'center', headerAlign: 'center',
-      sortable: false, 
+      sortable: false,
       filterable: false,
       renderCell: (params) => (
         <Stack direction="row" justifyContent="center" spacing={1} sx={{ mt: 0.5 }}>
@@ -1208,10 +1208,12 @@ const TeamViolationOverview = ({
     { field: 'tasksBeforeLatestSessionSamePeriod', headerName: 'Before Tasks', type: 'number', width: 120, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.row.trained ? (params.value ?? 'N/A') : 'N/A'}</span> },
     { field: 'tasksAfterLatestSession', headerName: 'After Tasks', type: 'number', width: 120, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.row.trained ? (params.value ?? 'N/A') : 'N/A'}</span> },
     { field: 'daysBeforeAfter', headerName: 'Days Before/After', width: 140, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.row.trained ? `${params.row.daysBeforeSession} / ${params.row.daysSinceSession}` : 'N/A'}</span> },
-    { field: 'improvementRate', headerName: 'Improve %', type: 'number', width: 110, renderCell: (params) => {
-      if (!params.row.trained) return <span style={{ color: '#94a3b8' }}>N/A</span>;
-      return <span style={{ color: params.value >= 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>{(params.value >= 0 ? '+' : '') + (params.value?.toFixed(1) || 0) + '%'}</span>;
-    } },
+    {
+      field: 'improvementRate', headerName: 'Improve %', type: 'number', width: 110, renderCell: (params) => {
+        if (!params.row.trained) return <span style={{ color: '#94a3b8' }}>N/A</span>;
+        return <span style={{ color: params.value >= 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>{(params.value >= 0 ? '+' : '') + (params.value?.toFixed(1) || 0) + '%'}</span>;
+      }
+    },
     { field: 'postSessionViolationsCount', headerName: 'Post Viols', type: 'number', width: 100, renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.row.trained ? (params.value ?? 'N/A') : 'N/A'}</span> },
     { field: 'latestSession', headerName: 'Latest Session', width: 140, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.row.trained ? (params.value || 'No session') : 'No sessions'}</span> },
   ], []);
@@ -1293,7 +1295,7 @@ const TeamViolationOverview = ({
           <Box>
             <Typography variant="h6" fontWeight={700} color="#fff">Team Tasks Table</Typography>
             <Typography variant="body2" color="#94a3b8" sx={{ mb: 1.5 }}>Detailed task profile for each field team, including Team Accountability and session-aware counts.</Typography>
-            
+
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
               <Chip size="small" label={`Total: ${teamStatusStats.total}`} sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 600 }} />
               <Chip size="small" label={`Active: ${teamStatusStats.active}`} sx={{ bgcolor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 600 }} />
@@ -1342,7 +1344,7 @@ const TeamViolationOverview = ({
                 </Button>
               )}
             </Box>
-            
+
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel sx={{ color: '#94a3b8' }}>Month</InputLabel>
               <Select
@@ -1420,11 +1422,11 @@ const TeamViolationOverview = ({
               '& .MuiDataGrid-footerContainer': { borderTop: '1px solid rgba(255,255,255,0.08)', color: '#94a3b8' },
               '& .MuiTablePagination-root': { color: '#94a3b8' },
               '& .MuiDataGrid-toolbarContainer': { p: 1 },
-              
+
               // Custom Weekly Snapshot Styles
               '& .weekly-group-header': { backgroundColor: 'rgba(30, 58, 138, 0.4) !important', color: '#60a5fa !important', fontWeight: 'bold !important' },
               '& .weekly-group-cell': { backgroundColor: 'rgba(30, 58, 138, 0.1)' },
-              
+
               // Custom Monthly Snapshot Styles
               '& .monthly-group-header': { backgroundColor: 'rgba(20, 83, 45, 0.4) !important', color: '#4ade80 !important', fontWeight: 'bold !important' },
               '& .monthly-group-cell': { backgroundColor: 'rgba(20, 83, 45, 0.1)' },
@@ -1675,8 +1677,8 @@ const TeamViolationOverview = ({
             <Stack spacing={2}>
               {/* Tabs */}
               <Box sx={{ borderBottom: 1, borderColor: 'rgba(59,130,246,0.15)' }}>
-                <Tabs 
-                  value={detailTab} 
+                <Tabs
+                  value={detailTab}
                   onChange={(e, v) => setDetailTab(v)}
                   sx={{
                     '& .MuiTab-root': { color: '#94a3b8', textTransform: 'none', fontWeight: 600 },
@@ -1703,9 +1705,9 @@ const TeamViolationOverview = ({
                     <ResponsiveContainer width="100%" height={350}>
                       <LineChart data={monthlyChartData} margin={{ top: 5, right: 30, left: 0, bottom: 50 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
-                        <XAxis 
-                          dataKey="month" 
-                          tick={{ fill: '#94a3b8', fontSize: 11 }} 
+                        <XAxis
+                          dataKey="month"
+                          tick={{ fill: '#94a3b8', fontSize: 11 }}
                           angle={-45}
                           textAnchor="end"
                           height={80}
@@ -1713,8 +1715,8 @@ const TeamViolationOverview = ({
                           tickLine={false}
                         />
                         <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
-                        <RechartsTooltip 
-                          wrapperStyle={{ backgroundColor: '#111827', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 10 }} 
+                        <RechartsTooltip
+                          wrapperStyle={{ backgroundColor: '#111827', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 10 }}
                           contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, color: '#fff', padding: '8px 12px' }}
                           cursor={{ fill: 'rgba(59,130,246,0.1)' }}
                           formatter={(value) => <span style={{ color: '#e2e8f0' }}>{value}</span>}
@@ -1781,7 +1783,7 @@ const TeamViolationOverview = ({
                               <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Detractors</TableCell>
                               <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Acc. Detractors</TableCell>
                               <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Neutrals</TableCell>
-                                  </TableRow>
+                            </TableRow>
                           </TableHead>
                           <TableBody>
                             {sessionReachAnalytics.map((session, index) => (

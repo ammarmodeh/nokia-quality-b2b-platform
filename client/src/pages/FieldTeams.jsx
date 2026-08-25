@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Box, TextField, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Divider, Tooltip, Typography, IconButton,
   useMediaQuery, List, ListItem, ListItemText, Chip,
-  Avatar, Menu, MenuItem, ListItemIcon, Checkbox, FormControlLabel
+  Avatar, Menu, MenuItem, ListItemIcon, Checkbox, FormControlLabel,
+  Tabs, Tab, Paper, Badge
 } from '@mui/material';
 import {
   Edit as EditIcon, Delete as DeleteIcon, PauseCircleOutline as PauseCircleOutlineIcon, Block as BlockIcon,
@@ -10,7 +11,7 @@ import {
   Cancel as CancelIcon, CancelOutlined as CancelOutlinedIcon, History as HistoryIcon, Phone as PhoneIcon,
   DeviceHub as DeviceHubIcon, Laptop as LaptopIcon, CheckCircle as CheckCircleIcon, TaskAlt as TaskAltIcon,
   Pending as PendingIcon, Refresh as RefreshIcon, Visibility,
-  MoreVert,
+  MoreVert, Gavel as GavelIcon, AddCircleOutline as AddCircleOutlineIcon
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import XLSX from 'xlsx-js-style';
@@ -35,6 +36,7 @@ const FieldTeamForm = () => {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [teams, setTeams] = useState([]);
+  const [allTasks, setAllTasks] = useState([]);
   const [stateUpdate, setUpdateState] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [editTeam, setEditTeam] = useState(null);
@@ -66,6 +68,200 @@ const FieldTeamForm = () => {
   const [openDeleteConfirmDialog, setOpenDeleteConfirmDialog] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState(null);
   const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
+
+  // Dynamic Analysis Period State
+  const [escalationPeriod, setEscalationPeriod] = useState('Cumulative');
+  const [customStartDate, setCustomStartDate] = useState('2026-06-01');
+  const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Escalation Management Dialog State
+  const [openEscalationDialog, setOpenEscalationDialog] = useState(false);
+  const [escDialogTab, setEscDialogTab] = useState(0);
+  const [escalationTeam, setEscalationTeam] = useState(null);
+  const [escOffenseScale, setEscOffenseScale] = useState('1st Offense');
+  const [escAction, setEscAction] = useState('');
+  const [escStatus, setEscStatus] = useState('Pending');
+  const [escNotes, setEscNotes] = useState('');
+  const [escDate, setEscDate] = useState('');
+  const [escPeriodTag, setEscPeriodTag] = useState('');
+
+  const activeDateRange = useMemo(() => {
+    if (escalationPeriod === 'jun_2026') {
+      return { start: new Date('2026-06-01T00:00:00'), end: new Date('2026-06-30T23:59:59'), label: 'June 2026' };
+    }
+    if (escalationPeriod === 'jul_2026') {
+      return { start: new Date('2026-07-01T00:00:00'), end: new Date('2026-07-31T23:59:59'), label: 'July 2026' };
+    }
+    if (escalationPeriod === 'aug_2026') {
+      return { start: new Date('2026-08-01T00:00:00'), end: new Date('2026-08-31T23:59:59'), label: 'August 2026' };
+    }
+    if (escalationPeriod === 'custom') {
+      const s = customStartDate ? new Date(`${customStartDate}T00:00:00`) : new Date('2026-06-01T00:00:00');
+      const e = customEndDate ? new Date(`${customEndDate}T23:59:59`) : new Date();
+      return { start: s, end: e, label: `${customStartDate} to ${customEndDate}` };
+    }
+    return { start: new Date('2026-06-01T00:00:00'), end: new Date(), label: 'Cumulative (From 01/06/2026)' };
+  }, [escalationPeriod, customStartDate, customEndDate]);
+
+  const getEscalationConsequence = (accDet, accNeu) => {
+    const points = accDet + Math.floor(accNeu / 2);
+    if (points === 0) {
+      if (accNeu === 1) return { level: 0, text: 'No Consequence (1 Neutral)', color: '#10b981', points };
+      return { level: 0, text: 'Compliant (0 Violation)', color: '#10b981', points };
+    }
+    if (points === 1) return { level: 1, text: '1st Offense: Verbal Warning', color: '#f59e0b', points };
+    if (points === 2) return { level: 2, text: '1st Offense (Repeated): Mandatory Training (3 Hours)', color: '#ea580c', points };
+    if (points === 3) return { level: 3, text: '2nd Offense: First Formal Warning', color: '#ef4444', points };
+    if (points === 4) return { level: 4, text: '3rd Offense: Second Formal Warning + Deduction', color: '#dc2626', points };
+    if (points === 5) return { level: 5, text: '4th Offense: Third Formal Warning + Deduction 1 Week Suspension', color: '#991b1b', points };
+    return { level: 6, text: '5th Offense & Beyond: 1 Month Suspension (Next = Termination)', color: '#7f1d1d', points };
+  };
+
+  const teamMetricsMap = useMemo(() => {
+    const map = {};
+    const { start, end } = activeDateRange;
+
+    const filteredTasks = (allTasks || []).filter(task => {
+      const rawDate = task.interviewDate || task.pisDate || task.createdAt || task.closeDate || task.contractDate;
+      if (!rawDate) return false;
+      const tDate = new Date(rawDate);
+      if (Number.isNaN(tDate.getTime())) return false;
+      return tDate >= start && tDate <= end;
+    });
+
+    teams.forEach(team => {
+      const normT = (team.teamName || '').trim().toLowerCase();
+      const teamIdStr = team._id ? team._id.toString() : '';
+
+      const matchedTasks = filteredTasks.filter(task => {
+        const taskT = (task.teamName || '').trim().toLowerCase();
+        const taskTeamId = task.teamId?._id?.toString() || task.teamId?.toString() || '';
+        return (taskT && taskT === normT) || (taskTeamId && taskTeamId === teamIdStr);
+      });
+
+      const accDet = matchedTasks.filter(t => {
+        const score = t.evaluationScore;
+        if (score === null || score === 'N/A' || score === undefined || score === '') return false;
+        const normalized = Number(score) <= 10 ? Number(score) * 10 : Number(score);
+        return normalized >= 0 && normalized <= 60 && t.teamAccountability?.includes('Yes');
+      }).length;
+
+      const accNeu = matchedTasks.filter(t => {
+        const score = t.evaluationScore;
+        if (score === null || score === 'N/A' || score === undefined || score === '') return false;
+        const normalized = Number(score) <= 10 ? Number(score) * 10 : Number(score);
+        return normalized > 60 && normalized <= 80 && t.teamAccountability?.includes('Yes');
+      }).length;
+
+      const consequenceObj = getEscalationConsequence(accDet, accNeu);
+
+      map[team._id] = {
+        accDet,
+        accNeu,
+        points: consequenceObj.points,
+        requiredConsequence: consequenceObj.text,
+        consequenceLevel: consequenceObj.level,
+        consequenceColor: consequenceObj.color,
+        totalTasks: matchedTasks.length
+      };
+    });
+
+    return map;
+  }, [teams, allTasks, activeDateRange]);
+
+  const handleOpenEscalationDialog = (team, defaultTab = 0) => {
+    setEscalationTeam(team);
+    setEscDialogTab(defaultTab);
+    setEscAction(team?.escalationAction || '');
+    setEscStatus(team?.escalationStatus || 'Pending');
+    setEscNotes(team?.escalationNotes || '');
+    setEscDate(team?.escalationDate ? new Date(team.escalationDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+    setEscPeriodTag(activeDateRange.label);
+
+    const metrics = teamMetricsMap[team?._id];
+    if (metrics && metrics.consequenceLevel > 0) {
+      if (metrics.consequenceLevel === 1) setEscOffenseScale('1st Offense');
+      else if (metrics.consequenceLevel === 2) setEscOffenseScale('1st Offense (Repeated)');
+      else if (metrics.consequenceLevel === 3) setEscOffenseScale('2nd Offense');
+      else if (metrics.consequenceLevel === 4) setEscOffenseScale('3rd Offense');
+      else if (metrics.consequenceLevel === 5) setEscOffenseScale('4th Offense');
+      else if (metrics.consequenceLevel >= 6) setEscOffenseScale('5th Offense & Beyond');
+    } else {
+      setEscOffenseScale('1st Offense');
+    }
+
+    setOpenEscalationDialog(true);
+  };
+
+  const handleSaveEscalation = async () => {
+    if (!escalationTeam) return;
+    try {
+      setLoading(true);
+      const newEntry = {
+        offenseScale: escOffenseScale || 'Warning',
+        action: escAction || 'Action Taken',
+        status: escStatus || 'Pending',
+        actionDate: escDate ? new Date(escDate) : new Date(),
+        period: escPeriodTag || activeDateRange.label,
+        notes: escNotes || '',
+        createdAt: new Date(),
+      };
+
+      const existingHistory = Array.isArray(escalationTeam.escalationHistory) ? [...escalationTeam.escalationHistory] : [];
+      const updatedHistory = [newEntry, ...existingHistory];
+
+      const response = await api.put(`/field-teams/update-field-team/${escalationTeam._id}`, {
+        escalationAction: escAction,
+        escalationStatus: escStatus,
+        escalationNotes: escNotes,
+        escalationDate: escDate || null,
+        escalationHistory: updatedHistory,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+
+      if (response.status === 200) {
+        alert('Escalation Warning recorded and added to history successfully!');
+        setUpdateState(prev => !prev);
+        setOpenEscalationDialog(false);
+      } else {
+        alert(response.data?.error || 'Failed to update escalation.');
+      }
+    } catch (err) {
+      alert('Error updating escalation: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteEscalationHistoryItem = async (indexToDelete) => {
+    if (!escalationTeam) return;
+    if (!window.confirm('Are you sure you want to delete this warning record from history?')) return;
+    try {
+      setLoading(true);
+      const updatedHistory = (escalationTeam.escalationHistory || []).filter((_, idx) => idx !== indexToDelete);
+      const latest = updatedHistory[0] || null;
+
+      const response = await api.put(`/field-teams/update-field-team/${escalationTeam._id}`, {
+        escalationAction: latest ? latest.action : '',
+        escalationStatus: latest ? latest.status : 'Pending',
+        escalationDate: latest ? latest.actionDate : null,
+        escalationNotes: latest ? latest.notes : '',
+        escalationHistory: updatedHistory,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+
+      if (response.status === 200) {
+        setEscalationTeam(prev => ({ ...prev, escalationHistory: updatedHistory }));
+        setUpdateState(prev => !prev);
+      }
+    } catch (err) {
+      alert('Error deleting history record: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Menu State
   const [anchorEl, setAnchorEl] = useState(null);
@@ -131,7 +327,7 @@ const FieldTeamForm = () => {
     }
   };
 
-  // Fetch teams and evaluation data
+  // Fetch teams, evaluations, and tasks
   useEffect(() => {
     const fetchTeamsAndEvaluations = async () => {
       setLoading(true);
@@ -149,6 +345,20 @@ const FieldTeamForm = () => {
             Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
           },
         });
+
+        // Fetch Tasks for dynamic escalation calculation
+        try {
+          const tasksResponse = await api.get('/tasks/get-all-tasks', {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+            },
+          });
+          if (tasksResponse.status === 200) {
+            setAllTasks(tasksResponse.data.tasks || tasksResponse.data || []);
+          }
+        } catch (taskErr) {
+          console.warn('Could not load all tasks for escalation matrix:', taskErr);
+        }
 
         if (teamsResponse.status === 200 && evalResponse.status === 200) {
           const evalData = evalResponse.data.data;
@@ -277,6 +487,10 @@ const FieldTeamForm = () => {
       installationStartDate: data.installationStartDate,
       activationStartDate: data.activationStartDate,
       forceRegenerateQuizCode: data.forceRegenerateQuizCode,
+      escalationAction: data.escalationAction,
+      escalationStatus: data.escalationStatus,
+      escalationNotes: data.escalationNotes,
+      escalationDate: data.escalationDate || null,
     };
 
     console.log("Submitting team update:", updatedData);
@@ -323,6 +537,7 @@ const FieldTeamForm = () => {
   }, [editTeam]);
 
   // Handle export to Excel
+  // Handle export to Excel
   const handleExportToExcel = useCallback(() => {
     // 1. Calculate Stats
     const total = teams.length;
@@ -337,23 +552,75 @@ const FieldTeamForm = () => {
     });
     const inactive = terminated + resigned + suspended + onLeave + otherInactive;
 
+    // Helper functions for styling
+    const applyHeaderStyle = (ws, range, bg = "1F2937", color = "FFFFFF") => {
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellAddress]) continue;
+          ws[cellAddress].s = {
+            font: { bold: true, color: { rgb: color } },
+            fill: { fgColor: { rgb: bg } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: {
+              top: { style: "thin", color: { rgb: "000000" } },
+              bottom: { style: "thin", color: { rgb: "000000" } },
+              left: { style: "thin", color: { rgb: "000000" } },
+              right: { style: "thin", color: { rgb: "000000" } }
+            }
+          };
+        }
+      }
+    };
+
+    const applyDataRowStyle = (ws, range) => {
+      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellAddress]) continue;
+          ws[cellAddress].s = {
+            alignment: { vertical: "center" },
+            border: { bottom: { style: "thin", color: { rgb: "E5E7EB" } } }
+          };
+        }
+      }
+    };
+
+    const fixSheetRange = (ws) => {
+      let maxR = 0;
+      let maxC = 0;
+      Object.keys(ws).forEach(key => {
+        if (key.startsWith('!')) return;
+        try {
+          const cell = XLSX.utils.decode_cell(key);
+          if (cell.r > maxR) maxR = cell.r;
+          if (cell.c > maxC) maxC = cell.c;
+        } catch (e) {
+          // ignore
+        }
+      });
+      ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxR, c: maxC } });
+    };
+
     const sheetData = [];
 
     // Title Row
-    sheetData.push(["Field Teams Report"]);
-    sheetData.push([]); 
-    
+    sheetData.push([`Field Teams Report & Escalation Analysis (${activeDateRange.label})`]);
+    sheetData.push([]);
+
     // Stats Rows
     sheetData.push(["Total Teams", total, "", "Terminated", terminated]);
     sheetData.push(["Active", active, "", "Resigned", resigned]);
     sheetData.push(["Inactive", inactive, "", "Suspended", suspended]);
     sheetData.push(["", "", "", "On Leave", onLeave]);
-    sheetData.push([]); 
+    sheetData.push([]);
 
-    // Table Headers
+    // Table Headers (Including Escalation Matrix Columns)
     const headers = [
-      "Team Name", "Team ID (4-digit)", "Quiz Code", "Status", "Quiz Access", 
-      "Company", "Contact Number", "Performance (%)", 
+      "Team Name", "Team ID (4-digit)", "Quiz Code", "Status", "Quiz Access",
+      "Company", "Contact Number", "Performance (%)",
+      "Required Escalation (Matrix)", "Acc. Detractors", "Acc. Neutrals", "Total Acc. Issues", "Matrix Units (Pts)",
+      "Latest Action Taken", "Action Date", "Escalation Status", "Warnings in History",
       "New To Installation", "Installation Start",
       "New To Activation", "Activation Start",
       "FSM Serial", "Laptop Serial",
@@ -365,7 +632,8 @@ const FieldTeamForm = () => {
     teams.forEach(team => {
       const latestEval = team.evaluationHistory?.[0];
       const performance = latestEval ? `${latestEval.percentage}%` : 'No Data';
-      
+      const metrics = teamMetricsMap[team._id] || {};
+
       let status = 'Inactive';
       if (team.isTerminated) status = 'Terminated';
       else if (team.isResigned) status = 'Resigned';
@@ -384,6 +652,15 @@ const FieldTeamForm = () => {
         team.teamCompany || 'N/A',
         team.contactNumber || 'N/A',
         performance,
+        metrics.requiredConsequence || 'Compliant (0 Violation)',
+        metrics.accDet || 0,
+        metrics.accNeu || 0,
+        (metrics.accDet || 0) + (metrics.accNeu || 0),
+        metrics.points || 0,
+        team.escalationAction || 'None Assigned',
+        team.escalationDate ? new Date(team.escalationDate).toLocaleDateString() : '-',
+        team.escalationStatus || (metrics.points > 0 ? 'Pending' : 'Compliant'),
+        (team.escalationHistory || []).length,
         team.isNewToInstallation ? 'Yes' : 'No',
         team.installationStartDate ? new Date(team.installationStartDate).toLocaleDateString() : 'N/A',
         team.isNewToActivation ? 'Yes' : 'No',
@@ -396,12 +673,10 @@ const FieldTeamForm = () => {
 
     const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
 
-    // --- Styling ---
-    
-    // Title style
+    // --- Styling Sheet 1 ---
     worksheet['A1'].s = {
       font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "7B68EE" } }, // Match app primary color
+      fill: { fgColor: { rgb: "4F46E5" } },
       alignment: { horizontal: "center", vertical: "center" }
     };
     if (!worksheet['!merges']) worksheet['!merges'] = [];
@@ -410,19 +685,19 @@ const FieldTeamForm = () => {
     // Stats styling
     const statHeaderStyle = { font: { bold: true, color: { rgb: "333333" } }, fill: { fgColor: { rgb: "E5E7EB" } } };
     const statValueStyle = { font: { bold: true, color: { rgb: "1F2937" } }, alignment: { horizontal: "center" } };
-    
+
     [2, 3, 4, 5].forEach(r => {
-      if (worksheet[XLSX.utils.encode_cell({r, c:0})]) worksheet[XLSX.utils.encode_cell({r, c:0})].s = statHeaderStyle;
-      if (worksheet[XLSX.utils.encode_cell({r, c:1})]) worksheet[XLSX.utils.encode_cell({r, c:1})].s = statValueStyle;
-      if (worksheet[XLSX.utils.encode_cell({r, c:3})]) worksheet[XLSX.utils.encode_cell({r, c:3})].s = statHeaderStyle;
-      if (worksheet[XLSX.utils.encode_cell({r, c:4})]) worksheet[XLSX.utils.encode_cell({r, c:4})].s = statValueStyle;
+      if (worksheet[XLSX.utils.encode_cell({ r, c: 0 })]) worksheet[XLSX.utils.encode_cell({ r, c: 0 })].s = statHeaderStyle;
+      if (worksheet[XLSX.utils.encode_cell({ r, c: 1 })]) worksheet[XLSX.utils.encode_cell({ r, c: 1 })].s = statValueStyle;
+      if (worksheet[XLSX.utils.encode_cell({ r, c: 3 })]) worksheet[XLSX.utils.encode_cell({ r, c: 3 })].s = statHeaderStyle;
+      if (worksheet[XLSX.utils.encode_cell({ r, c: 4 })]) worksheet[XLSX.utils.encode_cell({ r, c: 4 })].s = statValueStyle;
     });
 
     // Table Header Styling
     const tableHeaderStyle = {
       font: { bold: true, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "1F2937" } }, // Dark Gray
-      alignment: { horizontal: "center", vertical: "center" },
+      fill: { fgColor: { rgb: "1F2937" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
       border: {
         top: { style: "thin", color: { rgb: "000000" } },
         bottom: { style: "thin", color: { rgb: "000000" } },
@@ -433,7 +708,7 @@ const FieldTeamForm = () => {
 
     const headerRow = 7;
     for (let c = 0; c < headers.length; c++) {
-      const cellRef = XLSX.utils.encode_cell({r: headerRow, c});
+      const cellRef = XLSX.utils.encode_cell({ r: headerRow, c });
       if (worksheet[cellRef]) worksheet[cellRef].s = tableHeaderStyle;
     }
 
@@ -442,20 +717,19 @@ const FieldTeamForm = () => {
       alignment: { vertical: "center" },
       border: { bottom: { style: "thin", color: { rgb: "E5E7EB" } } }
     };
-    
-    // Status specific styling
-    const activeStyle = { ...dataRowStyle, font: { color: { rgb: "059669" }, bold: true } }; // Green
-    const inactiveStyle = { ...dataRowStyle, font: { color: { rgb: "DC2626" }, bold: true } }; // Red
-    const suspendedStyle = { ...dataRowStyle, font: { color: { rgb: "D97706" }, bold: true } }; // Orange
-    const onLeaveStyle = { ...dataRowStyle, font: { color: { rgb: "7C3AED" }, bold: true } }; // Purple
-    const resignedStyle = { ...dataRowStyle, font: { color: { rgb: "DC2626" }, bold: true } }; // Red
+
+    const activeStyle = { ...dataRowStyle, font: { color: { rgb: "059669" }, bold: true } };
+    const inactiveStyle = { ...dataRowStyle, font: { color: { rgb: "DC2626" }, bold: true } };
+    const suspendedStyle = { ...dataRowStyle, font: { color: { rgb: "D97706" }, bold: true } };
+    const onLeaveStyle = { ...dataRowStyle, font: { color: { rgb: "7C3AED" }, bold: true } };
+    const resignedStyle = { ...dataRowStyle, font: { color: { rgb: "DC2626" }, bold: true } };
 
     for (let r = headerRow + 1; r < sheetData.length; r++) {
-      const statusCellRef = XLSX.utils.encode_cell({r, c: 3});
+      const statusCellRef = XLSX.utils.encode_cell({ r, c: 3 });
       const statusValue = worksheet[statusCellRef]?.v;
-      
+
       for (let c = 0; c < headers.length; c++) {
-        const cellRef = XLSX.utils.encode_cell({r, c});
+        const cellRef = XLSX.utils.encode_cell({ r, c });
         if (worksheet[cellRef]) {
           if (c === 3) {
             if (statusValue === 'Active') worksheet[cellRef].s = activeStyle;
@@ -463,6 +737,42 @@ const FieldTeamForm = () => {
             else if (statusValue === 'On Leave') worksheet[cellRef].s = onLeaveStyle;
             else if (statusValue === 'Resigned' || statusValue === 'Terminated') worksheet[cellRef].s = resignedStyle;
             else worksheet[cellRef].s = inactiveStyle;
+          } else if (c === 8) {
+            // Required Escalation
+            const val = String(worksheet[cellRef]?.v || '');
+            const isCompliant = val.includes('Compliant') || val.includes('No Violation');
+            worksheet[cellRef].s = {
+              ...dataRowStyle,
+              font: { bold: true, color: { rgb: isCompliant ? "047857" : "581C87" } },
+              fill: { fgColor: { rgb: isCompliant ? "ECFDF5" : "FAF5FF" } }
+            };
+          } else if (c === 9 || c === 11 || c === 12) {
+            // Detractors & points
+            const num = Number(worksheet[cellRef]?.v) || 0;
+            worksheet[cellRef].s = {
+              ...dataRowStyle,
+              alignment: { horizontal: "center", vertical: "center" },
+              font: { bold: num > 0, color: { rgb: num > 0 ? "B91C1C" : "1E293B" } },
+              fill: { fgColor: { rgb: num > 0 ? "FEF2F2" : "FFFFFF" } }
+            };
+          } else if (c === 10) {
+            // Neutrals
+            const num = Number(worksheet[cellRef]?.v) || 0;
+            worksheet[cellRef].s = {
+              ...dataRowStyle,
+              alignment: { horizontal: "center", vertical: "center" },
+              font: { bold: num > 0, color: { rgb: num > 0 ? "D97706" : "1E293B" } },
+              fill: { fgColor: { rgb: num > 0 ? "FFFBEB" : "FFFFFF" } }
+            };
+          } else if (c === 16) {
+            // Warnings count
+            const num = Number(worksheet[cellRef]?.v) || 0;
+            worksheet[cellRef].s = {
+              ...dataRowStyle,
+              alignment: { horizontal: "center", vertical: "center" },
+              font: { bold: num > 0, color: { rgb: num > 0 ? "BE123C" : "64748B" } },
+              fill: { fgColor: { rgb: num > 0 ? "FFF1F2" : "FFFFFF" } }
+            };
           } else {
             worksheet[cellRef].s = dataRowStyle;
           }
@@ -470,7 +780,7 @@ const FieldTeamForm = () => {
       }
     }
 
-    // Set Column Widths
+    // Set Column Widths for Sheet 1
     worksheet['!cols'] = [
       { wch: 30 }, // Team Name
       { wch: 18 }, // Team ID
@@ -480,6 +790,15 @@ const FieldTeamForm = () => {
       { wch: 20 }, // Company
       { wch: 18 }, // Contact Number
       { wch: 18 }, // Performance
+      { wch: 46 }, // Required Escalation (Matrix)
+      { wch: 16 }, // Acc. Detractors
+      { wch: 16 }, // Acc. Neutrals
+      { wch: 18 }, // Total Acc. Issues
+      { wch: 18 }, // Matrix Units (Pts)
+      { wch: 28 }, // Latest Action Taken
+      { wch: 15 }, // Action Date
+      { wch: 18 }, // Escalation Status
+      { wch: 18 }, // Warnings in History
       { wch: 20 }, // New To Installation
       { wch: 20 }, // Installation Start
       { wch: 20 }, // New To Activation
@@ -488,11 +807,12 @@ const FieldTeamForm = () => {
       { wch: 20 }, // Laptop Serial
       { wch: 40 }, // State Logs
     ];
+    fixSheetRange(worksheet);
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Teams Overview');
-    XLSX.writeFile(workbook, 'Field_Teams_Report.xlsx');
-  }, [teams]);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Field Teams Overview');
+    XLSX.writeFile(workbook, `Field_Teams_Report_${activeDateRange.label.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`);
+  }, [teams, allTasks, activeDateRange, teamMetricsMap]);
 
   // Handle view history click
   const handleViewHistoryClick = useCallback((teamId) => {
@@ -799,7 +1119,7 @@ const FieldTeamForm = () => {
     {
       field: 'lastEvaluation',
       headerName: 'Performance',
-      minWidth: 160,
+      minWidth: 140,
       flex: 1,
       headerClassName: 'dark-header',
       renderCell: (params) => {
@@ -815,6 +1135,150 @@ const FieldTeamForm = () => {
               {new Date(latestEval.submittedAt).toLocaleDateString()}
             </Typography>
           </Stack>
+        );
+      },
+    },
+    {
+      field: 'requiredEscalation',
+      headerName: 'Required Escalation (Matrix)',
+      minWidth: 260,
+      flex: 1.6,
+      headerClassName: 'dark-header',
+      renderCell: (params) => {
+        const metrics = teamMetricsMap[params.row._id];
+        const label = metrics?.requiredConsequence || 'Compliant (0 Violation)';
+        const color = metrics?.consequenceColor || '#10b981';
+        return (
+          <Tooltip title={`Period: ${activeDateRange.label} | ${metrics?.accDet || 0} Accountable Detractors, ${metrics?.accNeu || 0} Accountable Neutrals (${metrics?.points || 0} Matrix Units)`}>
+            <Chip
+              label={label}
+              size="small"
+              sx={{
+                bgcolor: `${color}22`,
+                color: color,
+                border: `1px solid ${color}66`,
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                height: 26,
+              }}
+            />
+          </Tooltip>
+        );
+      },
+    },
+    {
+      field: 'accIssues',
+      headerName: 'Acc. Issues',
+      width: 130,
+      headerClassName: 'dark-header',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const metrics = teamMetricsMap[params.row._id];
+        const det = metrics?.accDet || 0;
+        const neu = metrics?.accNeu || 0;
+        const hasIssues = det > 0 || neu > 0;
+        return (
+          <Tooltip title={`${det} Acc. Detractors, ${neu} Acc. Neutrals in ${activeDateRange.label}`}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: hasIssues ? '#f87171' : '#4ade80', fontSize: '0.8rem' }}>
+              {hasIssues ? `${det} Det | ${neu} Neu` : '0 Issues'}
+            </Typography>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      field: 'escalationAction',
+      headerName: 'Latest Action Taken',
+      minWidth: 180,
+      flex: 1.3,
+      headerClassName: 'dark-header',
+      renderCell: (params) => {
+        const val = params.value;
+        if (!val || val === '-') return <Typography variant="caption" sx={{ color: '#666' }}>None Assigned</Typography>;
+        return (
+          <Typography variant="body2" sx={{ fontWeight: 600, color: '#f43f5e' }}>
+            {val}
+          </Typography>
+        );
+      },
+    },
+    {
+      field: 'escalationStatus',
+      headerName: 'Escalation Status',
+      width: 145,
+      headerClassName: 'dark-header',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const val = params.value || 'Pending';
+        let color = '#757575';
+        if (val === 'Completed' || val === 'Closed' || val === 'Compliant') color = '#10b981';
+        else if (val === 'Action Taken' || val === 'Warning Issued' || val === 'Training Assigned') color = '#f59e0b';
+        else if (val === '1 Week Suspension' || val === '1 Month Suspension' || val === 'Termination') color = '#ef4444';
+        else if (val === 'Under Review' || val === 'In Progress') color = '#3b82f6';
+        else color = '#a855f7';
+
+        return (
+          <Chip
+            label={val}
+            size="small"
+            sx={{
+              bgcolor: `${color}22`,
+              color: color,
+              border: `1px solid ${color}55`,
+              fontWeight: 600,
+              fontSize: '0.72rem',
+              height: 24,
+              cursor: 'pointer'
+            }}
+            onClick={() => handleOpenEscalationDialog(params.row, 0)}
+          />
+        );
+      },
+    },
+    {
+      field: 'escalationDate',
+      headerName: 'Action Date',
+      width: 125,
+      headerClassName: 'dark-header',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        if (!params.value) return <Typography variant="caption" sx={{ color: '#666' }}>-</Typography>;
+        return (
+          <Typography variant="caption" sx={{ color: '#cbd5e1', fontWeight: 500 }}>
+            {new Date(params.value).toLocaleDateString()}
+          </Typography>
+        );
+      },
+    },
+    {
+      field: 'escalationHistory',
+      headerName: 'Warning History',
+      width: 140,
+      headerClassName: 'dark-header',
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const count = (params.value || []).length;
+        return (
+          <Chip
+            icon={<HistoryIcon style={{ fontSize: 14 }} />}
+            label={`${count} ${count === 1 ? 'Warning' : 'Warnings'}`}
+            size="small"
+            clickable
+            onClick={() => handleOpenEscalationDialog(params.row, 1)}
+            sx={{
+              bgcolor: count > 0 ? 'rgba(236, 72, 153, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+              color: count > 0 ? '#f472b6' : '#94a3b8',
+              border: count > 0 ? '1px solid rgba(236, 72, 153, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+              fontWeight: 600,
+              fontSize: '0.72rem',
+              height: 24,
+              '& .MuiChip-icon': { color: 'inherit' }
+            }}
+          />
         );
       },
     },
@@ -972,7 +1436,105 @@ const FieldTeamForm = () => {
               </IconButton>
             </Tooltip>
           </Stack>
-          
+
+          {/* Dynamic Escalation Calculation Period Bar */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              mb: 2.5,
+              bgcolor: '#121124',
+              border: '1px solid #3730a3',
+              borderRadius: 2.5,
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              justifyContent: 'space-between',
+              alignItems: isMobile ? 'flex-start' : 'center',
+              gap: 2
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+              <GavelIcon sx={{ color: '#818cf8', fontSize: 24 }} />
+              <Box>
+                <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 700 }}>
+                  Dynamic Escalation Matrix Analysis
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                  Calculating required consequence from accountable issues for: <strong style={{ color: '#a5b4fc' }}>{activeDateRange.label}</strong>
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+              <TextField
+                select
+                size="small"
+                label="Analysis Period"
+                value={escalationPeriod}
+                onChange={(e) => setEscalationPeriod(e.target.value)}
+                SelectProps={{ native: true }}
+                sx={{
+                  minWidth: 200,
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: '#1e1b4b',
+                    color: '#fff',
+                    '& fieldset': { borderColor: '#4338ca' },
+                    '&:hover fieldset': { borderColor: '#818cf8' },
+                    '&.Mui-focused fieldset': { borderColor: '#818cf8' },
+                  },
+                  '& .MuiInputLabel-root': { color: '#a5b4fc' },
+                }}
+              >
+                <option value="Cumulative" style={{ backgroundColor: '#111', color: '#fff' }}>Cumulative (From 01/06/2026)</option>
+                <option value="jun_2026" style={{ backgroundColor: '#111', color: '#fff' }}>June 2026</option>
+                <option value="jul_2026" style={{ backgroundColor: '#111', color: '#fff' }}>July 2026</option>
+                <option value="aug_2026" style={{ backgroundColor: '#111', color: '#fff' }}>August 2026</option>
+                <option value="custom" style={{ backgroundColor: '#111', color: '#fff' }}>Custom Date Range...</option>
+              </TextField>
+
+              {escalationPeriod === 'custom' && (
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <TextField
+                    size="small"
+                    type="date"
+                    label="From"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      width: 140,
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: '#1e1b4b',
+                        color: '#fff',
+                        '& fieldset': { borderColor: '#4338ca' },
+                        '& input': { color: '#fff', fontSize: '0.8rem', py: 1 }
+                      },
+                      '& .MuiInputLabel-root': { color: '#a5b4fc' },
+                    }}
+                  />
+                  <TextField
+                    size="small"
+                    type="date"
+                    label="To"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      width: 140,
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: '#1e1b4b',
+                        color: '#fff',
+                        '& fieldset': { borderColor: '#4338ca' },
+                        '& input': { color: '#fff', fontSize: '0.8rem', py: 1 }
+                      },
+                      '& .MuiInputLabel-root': { color: '#a5b4fc' },
+                    }}
+                  />
+                </Stack>
+              )}
+            </Box>
+          </Paper>
+
           <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
             <Chip size="small" label={`Total: ${teamStatusStats.total}`} sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 600 }} />
             <Chip size="small" label={`Active: ${teamStatusStats.active}`} sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)', color: '#4caf50', border: '1px solid #4caf5040', fontWeight: 600 }} />
@@ -1540,6 +2102,11 @@ const FieldTeamForm = () => {
 
           <Divider sx={{ borderColor: '#333', my: 0.5 }} />
 
+          <MenuItem onClick={() => { handleOpenEscalationDialog(menuTeam); handleMenuClose(); }}>
+            <ListItemIcon><GavelIcon fontSize="small" sx={{ color: '#ec4899' }} /></ListItemIcon>
+            Manage Escalation Action & Status
+          </MenuItem>
+
           <MenuItem onClick={() => { handleViewDetailsClick(menuTeam); handleMenuClose(); }}>
             <ListItemIcon><Visibility fontSize="small" sx={{ color: '#7b68ee' }} /></ListItemIcon>
             View Full Details
@@ -1619,6 +2186,352 @@ const FieldTeamForm = () => {
             >
               Confirm Permanent Deletion
             </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Manage Escalation Action & History Dialog */}
+        <Dialog
+          open={openEscalationDialog}
+          onClose={() => setOpenEscalationDialog(false)}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              bgcolor: '#0a0a0a',
+              color: '#fff',
+              border: '1px solid #333',
+              borderRadius: 3,
+              boxShadow: '0 20px 40px rgba(0,0,0,0.8)'
+            }
+          }}
+        >
+          <DialogTitle sx={{ borderBottom: '1px solid #222', p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <GavelIcon sx={{ color: '#ec4899', fontSize: 28 }} />
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#fff', fontSize: '1.1rem' }}>
+                  Manage Escalation Action & Warning History
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                  Field Team: <strong style={{ color: '#ec4899' }}>{escalationTeam?.teamName}</strong> ({escalationTeam?.teamCode})
+                </Typography>
+              </Box>
+            </Box>
+            {teamMetricsMap[escalationTeam?._id] && (
+              <Chip
+                label={`Calculated Matrix: ${teamMetricsMap[escalationTeam._id].requiredConsequence}`}
+                size="small"
+                sx={{
+                  bgcolor: `${teamMetricsMap[escalationTeam._id].consequenceColor}22`,
+                  color: teamMetricsMap[escalationTeam._id].consequenceColor,
+                  border: `1px solid ${teamMetricsMap[escalationTeam._id].consequenceColor}55`,
+                  fontWeight: 700,
+                  fontSize: '0.75rem'
+                }}
+              />
+            )}
+          </DialogTitle>
+
+          <Tabs
+            value={escDialogTab}
+            onChange={(e, newTab) => setEscDialogTab(newTab)}
+            sx={{
+              borderBottom: '1px solid #222',
+              px: 2.5,
+              '& .MuiTab-root': { color: '#94a3b8', fontWeight: 600, textTransform: 'none', minHeight: 48 },
+              '& .Mui-selected': { color: '#ec4899' },
+              '& .MuiTabs-indicator': { bgcolor: '#ec4899' }
+            }}
+          >
+            <Tab label="Record New Escalation Warning" icon={<AddCircleOutlineIcon />} iconPosition="start" />
+            <Tab
+              label={`Warning History Log (${(escalationTeam?.escalationHistory || []).length})`}
+              icon={<HistoryIcon />}
+              iconPosition="start"
+            />
+          </Tabs>
+
+          <DialogContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            {escDialogTab === 0 ? (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="caption" sx={{ color: '#94a3b8', mb: 1, display: 'block', fontWeight: 600 }}>
+                  Quick Escalation Presets (Click to apply):
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2.5 }}>
+                  {[
+                    { scale: "1st Offense", label: "1st: Verbal Warning", act: "1st Offense: Verbal Warning", st: "Warning Issued" },
+                    { scale: "1st Offense (Repeated)", label: "1st (Rep): 3h Training", act: "1st Offense (Repeated): Mandatory Intensive Training (3 Hours)", st: "Training Assigned" },
+                    { scale: "2nd Offense", label: "2nd: 1st Formal Warning", act: "2nd Offense: First Formal Warning", st: "Warning Issued" },
+                    { scale: "3rd Offense", label: "3rd: 2nd Warning + Deduction", act: "3rd Offense: Second Formal Warning + Deduction", st: "Action Taken" },
+                    { scale: "4th Offense", label: "4th: 3rd Warning + 1 Wk Susp.", act: "4th Offense: Third Formal Warning + Deduction 1 Week Suspension", st: "1 Week Suspension" },
+                    { scale: "5th Offense & Beyond", label: "5th: 1 Mo. Suspension", act: "5th Offense & Beyond: 1 Month Suspension", st: "1 Month Suspension" },
+                    { scale: "5th Offense & Beyond", label: "Termination", act: "Termination - Policy Breach", st: "Termination" },
+                    { scale: "Compliant", label: "Compliant / Closed", act: "Compliant - No Violation", st: "Closed" }
+                  ].map((preset, idx) => (
+                    <Chip
+                      key={idx}
+                      label={preset.label}
+                      size="small"
+                      clickable
+                      onClick={() => {
+                        setEscOffenseScale(preset.scale);
+                        setEscAction(preset.act);
+                        setEscStatus(preset.st);
+                        if (!escDate) setEscDate(new Date().toISOString().split('T')[0]);
+                      }}
+                      sx={{
+                        bgcolor: escAction === preset.act ? '#ec4899' : '#1e293b',
+                        color: '#fff',
+                        border: '1px solid #334155',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        '&:hover': { bgcolor: '#ec489988' }
+                      }}
+                    />
+                  ))}
+                </Box>
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2 }}>
+                  <TextField
+                    select
+                    label="Offense Scale"
+                    fullWidth
+                    value={escOffenseScale}
+                    onChange={(e) => setEscOffenseScale(e.target.value)}
+                    SelectProps={{ native: true }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: '#141414',
+                        '& fieldset': { borderColor: '#333' },
+                        '&:hover fieldset': { borderColor: '#ec4899' },
+                        '&.Mui-focused fieldset': { borderColor: '#ec4899' },
+                        '& select': { color: '#fff' }
+                      },
+                      '& .MuiInputLabel-root': { color: '#888' },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
+                    }}
+                  >
+                    {[
+                      '1st Offense',
+                      '1st Offense (Repeated)',
+                      '2nd Offense',
+                      '3rd Offense',
+                      '4th Offense',
+                      '5th Offense & Beyond',
+                      'Custom Violation / Disciplinary'
+                    ].map((scale, idx) => (
+                      <option key={idx} value={scale} style={{ backgroundColor: '#111', color: '#fff' }}>
+                        {scale}
+                      </option>
+                    ))}
+                  </TextField>
+
+                  <TextField
+                    label="Period / Month Assigned"
+                    fullWidth
+                    value={escPeriodTag}
+                    onChange={(e) => setEscPeriodTag(e.target.value)}
+                    placeholder="e.g. Cumulative (From 01/06/2026) or Aug 2026"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: '#141414',
+                        '& fieldset': { borderColor: '#333' },
+                        '&:hover fieldset': { borderColor: '#ec4899' },
+                        '&.Mui-focused fieldset': { borderColor: '#ec4899' },
+                        '& input': { color: '#fff' }
+                      },
+                      '& .MuiInputLabel-root': { color: '#888' },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
+                    }}
+                  />
+                </Box>
+
+                <TextField
+                  label="Escalation Action Taken"
+                  fullWidth
+                  variant="outlined"
+                  value={escAction}
+                  onChange={(e) => setEscAction(e.target.value)}
+                  placeholder="e.g. 1st Offense: Verbal Warning, 3rd Offense: Second Formal Warning + 10% Deduction"
+                  sx={{
+                    mb: 2,
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: '#141414',
+                      '& fieldset': { borderColor: '#333' },
+                      '&:hover fieldset': { borderColor: '#ec4899' },
+                      '&.Mui-focused fieldset': { borderColor: '#ec4899' },
+                      '& input': { color: '#fff' }
+                    },
+                    '& .MuiInputLabel-root': { color: '#888' },
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
+                  }}
+                />
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2 }}>
+                  <TextField
+                    select
+                    label="Escalation Status"
+                    fullWidth
+                    value={escStatus}
+                    onChange={(e) => setEscStatus(e.target.value)}
+                    SelectProps={{ native: true }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: '#141414',
+                        '& fieldset': { borderColor: '#333' },
+                        '&:hover fieldset': { borderColor: '#ec4899' },
+                        '&.Mui-focused fieldset': { borderColor: '#ec4899' },
+                        '& select': { color: '#fff' }
+                      },
+                      '& .MuiInputLabel-root': { color: '#888' },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
+                    }}
+                  >
+                    {['Pending', 'Under Review', 'Action Taken', 'Warning Issued', 'Training Assigned', '1 Week Suspension', '1 Month Suspension', 'Termination', 'Completed', 'Closed', 'Waived', 'Compliant'].map((st, idx) => (
+                      <option key={idx} value={st} style={{ backgroundColor: '#111', color: '#fff' }}>
+                        {st}
+                      </option>
+                    ))}
+                  </TextField>
+
+                  <TextField
+                    label="Action Date"
+                    type="date"
+                    fullWidth
+                    value={escDate}
+                    onChange={(e) => setEscDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: '#141414',
+                        '& fieldset': { borderColor: '#333' },
+                        '&:hover fieldset': { borderColor: '#ec4899' },
+                        '&.Mui-focused fieldset': { borderColor: '#ec4899' },
+                        '& input': { color: '#fff' }
+                      },
+                      '& .MuiInputLabel-root': { color: '#888' },
+                      '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
+                    }}
+                  />
+                </Box>
+
+                <TextField
+                  label="Escalation Notes & Action Details"
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={escNotes}
+                  onChange={(e) => setEscNotes(e.target.value)}
+                  placeholder="Add details regarding date of warning, deduction percentage, trainer details or next review date..."
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: '#141414',
+                      '& fieldset': { borderColor: '#333' },
+                      '&:hover fieldset': { borderColor: '#ec4899' },
+                      '&.Mui-focused fieldset': { borderColor: '#ec4899' },
+                      '& textarea': { color: '#fff' }
+                    },
+                    '& .MuiInputLabel-root': { color: '#888' },
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
+                  }}
+                />
+              </Box>
+            ) : (
+              <Box sx={{ mt: 1 }}>
+                {(!escalationTeam?.escalationHistory || escalationTeam.escalationHistory.length === 0) ? (
+                  <Box sx={{ textAlign: 'center', py: 4, color: '#64748b' }}>
+                    <HistoryIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>No Escalation Warnings Recorded</Typography>
+                    <Typography variant="caption">Use the "Record New Escalation Warning" tab to add warnings and disciplinary actions.</Typography>
+                  </Box>
+                ) : (
+                  <Stack spacing={2}>
+                    {escalationTeam.escalationHistory.map((item, idx) => (
+                      <Paper
+                        key={idx}
+                        sx={{
+                          p: 2,
+                          bgcolor: '#141414',
+                          border: '1px solid #2d2d2d',
+                          borderRadius: 2,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          gap: 2
+                        }}
+                      >
+                        <Box sx={{ flex: 1 }}>
+                          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
+                            <Chip
+                              label={item.offenseScale || 'Warning'}
+                              size="small"
+                              sx={{ bgcolor: '#ec489922', color: '#ec4899', border: '1px solid #ec489955', fontWeight: 700, fontSize: '0.75rem' }}
+                            />
+                            <Chip
+                              label={item.status || 'Action Taken'}
+                              size="small"
+                              sx={{ bgcolor: '#3b82f622', color: '#60a5fa', border: '1px solid #3b82f655', fontWeight: 600, fontSize: '0.72rem' }}
+                            />
+                            {item.period && (
+                              <Chip
+                                label={`Period: ${item.period}`}
+                                size="small"
+                                sx={{ bgcolor: '#ffffff11', color: '#cbd5e1', fontSize: '0.7rem' }}
+                              />
+                            )}
+                            <Typography variant="caption" sx={{ color: '#94a3b8', ml: 'auto' }}>
+                              Date: <strong style={{ color: '#fff' }}>{item.actionDate ? new Date(item.actionDate).toLocaleDateString() : 'N/A'}</strong>
+                            </Typography>
+                          </Stack>
+
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
+                            {item.action || 'No Action Specified'}
+                          </Typography>
+
+                          {item.notes && (
+                            <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', bgcolor: '#0a0a0a', p: 1, borderRadius: 1, border: '1px solid #222' }}>
+                              {item.notes}
+                            </Typography>
+                          )}
+                        </Box>
+
+                        <Tooltip title="Delete Warning Record">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteEscalationHistoryItem(idx)}
+                            sx={{ color: '#ef4444', '&:hover': { bgcolor: '#ef444422' } }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Paper>
+                    ))}
+                  </Stack>
+                )}
+              </Box>
+            )}
+          </DialogContent>
+
+          <DialogActions sx={{ p: 2.5, borderTop: '1px solid #222', gap: 1.5 }}>
+            <Button onClick={() => setOpenEscalationDialog(false)} sx={{ color: '#94a3b8' }}>
+              Close
+            </Button>
+            {escDialogTab === 0 && (
+              <Button
+                variant="contained"
+                onClick={handleSaveEscalation}
+                disabled={loading}
+                sx={{
+                  bgcolor: '#ec4899',
+                  color: '#fff',
+                  fontWeight: 700,
+                  px: 3,
+                  '&:hover': { bgcolor: '#db2777' }
+                }}
+              >
+                Save & Record Warning to History
+              </Button>
+            )}
           </DialogActions>
         </Dialog>
 

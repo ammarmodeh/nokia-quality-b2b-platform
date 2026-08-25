@@ -3,8 +3,11 @@ import {
   Paper,
   Autocomplete,
   TextField,
+  Button,
+  Tooltip,
   useMediaQuery,
 } from "@mui/material";
+import { Add } from "@mui/icons-material";
 
 const TeamSelector = ({
   fieldTeams,
@@ -12,6 +15,8 @@ const TeamSelector = ({
   setSelectedTeam,
   loading,
   colors,
+  onNewAssessment,
+  canAssess = true,
 }) => {
   const isMobile = useMediaQuery('(max-width:503px)');
 
@@ -138,6 +143,44 @@ const TeamSelector = ({
             },
           }}
         />
+
+        {onNewAssessment && canAssess && (
+          <Tooltip title={selectedTeam ? `Start OTJ Assessment for ${selectedTeam.teamName}` : "Select an operational team first to start assessment"}>
+            <span>
+              <Button
+                variant="contained"
+                onClick={onNewAssessment}
+                disabled={loading || !selectedTeam}
+                startIcon={<Add sx={{ fontSize: '1.2rem !important' }} />}
+                sx={{
+                  backgroundColor: colors.primary,
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  whiteSpace: 'nowrap',
+                  height: '36px',
+                  px: 2.5,
+                  minWidth: isMobile ? '100%' : '160px',
+                  borderRadius: '6px',
+                  textTransform: 'none',
+                  boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    backgroundColor: colors.primaryHover,
+                    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.45)',
+                    transform: 'translateY(-1px)',
+                  },
+                  '&.Mui-disabled': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    color: 'rgba(255, 255, 255, 0.3)',
+                  }
+                }}
+              >
+                Assess Team
+              </Button>
+            </span>
+          </Tooltip>
+        )}
       </Box>
     </Paper>
   );
