@@ -492,7 +492,7 @@ export const IndividualTeamView = ({
                       </Typography>
                     </Box>
                     <Chip
-                      label={`${filteredIssuesByDate.length} Records`}
+                      label={`${(customerIssues || []).length} Records`}
                       size="small"
                       sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)', fontWeight: 600 }}
                     />
@@ -509,42 +509,50 @@ export const IndividualTeamView = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredIssuesByDate
-                          .slice(issuesPage * issuesRowsPerPage, issuesPage * issuesRowsPerPage + issuesRowsPerPage)
-                          .map((issue) => (
-                            <tr
-                              key={issue._id}
-                              style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background-color 0.2s ease' }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                            >
-                              <td style={{ padding: '16px 24px', color: '#f8fafc', fontSize: '0.85rem' }}>{formatDate(issue.date || issue.createdAt)}</td>
-                              <td style={{ padding: '16px', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.85rem' }}>{issue.slid}</td>
-                              <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{issue.reporter || 'N/A'}</td>
-                              <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>
-                                {issue.issues?.[0]?.category || issue.issueCategory || 'Uncategorized'}
-                                <Typography variant="caption" sx={{ display: 'block', color: '#64748b' }}>{issue.issues?.[0]?.subCategory || '-'}</Typography>
-                              </td>
-                              <td style={{ padding: '16px', textAlign: 'center' }}>
-                                <Chip
-                                  label={issue.solved === 'yes' ? 'Closed' : 'Open'}
-                                  size="small"
-                                  sx={{
-                                    bgcolor: issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                    color: issue.solved === 'yes' ? '#4ade80' : '#f87171',
-                                    border: `1px solid ${issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
-                                    fontWeight: 600
-                                  }}
-                                />
-                              </td>
-                            </tr>
-                          ))}
+                        {(!customerIssues || customerIssues.length === 0) ? (
+                          <tr>
+                            <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                              No customer issues or snags registered for this team.
+                            </td>
+                          </tr>
+                        ) : (
+                          customerIssues
+                            .slice(issuesPage * issuesRowsPerPage, issuesPage * issuesRowsPerPage + issuesRowsPerPage)
+                            .map((issue) => (
+                              <tr
+                                key={issue._id}
+                                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background-color 0.2s ease' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                              >
+                                <td style={{ padding: '16px 24px', color: '#f8fafc', fontSize: '0.85rem' }}>{formatDate(issue.date || issue.createdAt)}</td>
+                                <td style={{ padding: '16px', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.85rem' }}>{issue.slid}</td>
+                                <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{issue.reporter || 'N/A'}</td>
+                                <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                  {issue.issues?.[0]?.category || issue.issueCategory || 'Uncategorized'}
+                                  <Typography variant="caption" sx={{ display: 'block', color: '#64748b' }}>{issue.issues?.[0]?.subCategory || '-'}</Typography>
+                                </td>
+                                <td style={{ padding: '16px', textAlign: 'center' }}>
+                                  <Chip
+                                    label={issue.solved === 'yes' ? 'Closed' : 'Open'}
+                                    size="small"
+                                    sx={{
+                                      bgcolor: issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                      color: issue.solved === 'yes' ? '#4ade80' : '#f87171',
+                                      border: `1px solid ${issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                                      fontWeight: 600
+                                    }}
+                                  />
+                                </td>
+                              </tr>
+                            ))
+                        )}
                       </tbody>
                     </table>
                     <TablePagination
                       rowsPerPageOptions={[10, 25, 50]}
                       component="div"
-                      count={filteredIssuesByDate.length}
+                      count={(customerIssues || []).length}
                       rowsPerPage={issuesRowsPerPage}
                       page={issuesPage}
                       onPageChange={(e, p) => setIssuesPage(p)}

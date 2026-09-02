@@ -76,7 +76,7 @@ import {
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, format, subWeeks, subMonths, eachWeekOfInterval, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, format, subWeeks, subMonths, eachWeekOfInterval, eachMonthOfInterval, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
 import { IoMdAdd } from "react-icons/io";
 import api from '../api/api';
 import EditTaskDialog from '../components/task/EditTaskDialog';
@@ -1738,6 +1738,9 @@ const AllTasksList = () => {
 
     // 3.5 Special Analytics Window
     const ownerCounts = {};
+    const ownerCustomerCounts = {};
+    const totalNonPromoterCustomers = filteredTasks.length;
+
     filteredTasks.forEach(t => {
       const resp = t.responsible;
       let values = [];
@@ -1749,7 +1752,15 @@ const AllTasksList = () => {
         values = [resp];
       }
       if (values.length === 0) values = ['Unknown'];
+      
+      // Total occurrences / issues count
       values.forEach(v => { ownerCounts[v] = (ownerCounts[v] || 0) + 1; });
+
+      // Unique non-promoter customers per owner
+      const uniqueOwnersInTask = new Set(values);
+      uniqueOwnersInTask.forEach(v => {
+        ownerCustomerCounts[v] = (ownerCustomerCounts[v] || 0) + 1;
+      });
     });
 
     const sortedOwners = Object.entries(ownerCounts).sort((a, b) => b[1] - a[1]).map(e => e[0]);
@@ -1758,7 +1769,7 @@ const AllTasksList = () => {
     const wsSpecial = XLSX.utils.aoa_to_sheet([[`OWNERSHIP DISTRIBUTION - Period: ${periodStr}`]]);
     wsSpecial['A1'] = { v: `OWNERSHIP DISTRIBUTION - Period: ${periodStr}`, t: 's', s: { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "4B5563" } }, alignment: { horizontal: "left", vertical: "center", indent: 1 } } };
     if (!wsSpecial['!merges']) wsSpecial['!merges'] = [];
-    wsSpecial['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 20 } });
+    wsSpecial['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 29 } });
 
     // Build team accountability breakdown per owner for the summary table
     const ownerAccBreakdown = {};
@@ -1810,6 +1821,8 @@ const AllTasksList = () => {
       .sort((a, b) => b[1] - a[1])
       .map(([owner, count]) => {
         const acc = ownerAccBreakdown[owner] || { yes: 0, no: 0, total: count, detractors: 0, neutrals: 0 };
+        const custCount = ownerCustomerCounts[owner] || 0;
+        const custPercentage = totalNonPromoterCustomers > 0 ? `${((custCount / totalNonPromoterCustomers) * 100).toFixed(1)}%` : '0%';
         const yesCount = acc.yes;
         const noCount = acc.no;
         const detCount = acc.detractors;
@@ -1817,6 +1830,8 @@ const AllTasksList = () => {
         const base = acc.total || count;
         return {
           Owner: owner,
+          'Non-Promoter Cust Count': custCount,
+          'Non-Promoter Cust %': custPercentage,
           Count: count,
           Percentage: totalOwnerOccurrences > 0 ? `${((count / totalOwnerOccurrences) * 100).toFixed(1)}%` : '0%',
           'Team Acc. Yes': yesCount,
@@ -1833,15 +1848,34 @@ const AllTasksList = () => {
     // Add 2-level grouped headers for OWNER DISTRIBUTION SUMMARY
     const ownerDistLvl1 = [
       "Owner / Entity",
-      "TOTAL OCCURRENCES", "",
+      "NON-PROMOTERS CUSTOMERS", "",
+      "TOTAL ISSUES IDENTIFIED", "",
       "ACCOUNTABLE (YES)", "",
       "NON-ACCOUNTABLE (NO)", "",
       "DETRACTORS", "",
       "NEUTRALS", ""
     ];
 
-    const ownerDistLvl2 = [
+    const ownerDistLvl2Keys = [
       'Owner',
+      'Non-Promoter Cust Count',
+      'Non-Promoter Cust %',
+      'Count',
+      'Percentage',
+      'Team Acc. Yes',
+      'Yes %',
+      'Team Acc. No',
+      'No %',
+      'Detractors',
+      'Detractors %',
+      'Neutrals',
+      'Neutrals %'
+    ];
+
+    const ownerDistLvl2Labels = [
+      'Owner',
+      'Count',
+      'Percentage',
       'Count',
       'Percentage',
       'Team Acc. Yes',
@@ -1855,11 +1889,11 @@ const AllTasksList = () => {
     ];
 
     wsSpecial['A2'] = { v: 'OWNER DISTRIBUTION SUMMARY', t: 's', s: { font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F2937' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } } };
-    wsSpecial['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 10 } });
+    wsSpecial['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 12 } });
 
-    XLSX.utils.sheet_add_aoa(wsSpecial, [ownerDistLvl1, ownerDistLvl2], { origin: 'A3' });
+    XLSX.utils.sheet_add_aoa(wsSpecial, [ownerDistLvl1, ownerDistLvl2Labels], { origin: 'A3' });
 
-    const ownerDataAoa = ownerDistributionData.map(r => ownerDistLvl2.map(k => r[k] !== undefined ? r[k] : ""));
+    const ownerDataAoa = ownerDistributionData.map(r => ownerDistLvl2Keys.map(k => r[k] !== undefined ? r[k] : ""));
     XLSX.utils.sheet_add_aoa(wsSpecial, ownerDataAoa, { origin: 'A5' });
 
     // Merge Owner vertically
@@ -1868,11 +1902,12 @@ const AllTasksList = () => {
 
     // Level 1 Merges & Styles
     const ownerDistGroups = [
-      { start: 1, end: 2, label: "TOTAL OCCURRENCES", color: "1E40AF" },
-      { start: 3, end: 4, label: "ACCOUNTABLE (YES)", color: "3730A3" },
-      { start: 5, end: 6, label: "NON-ACCOUNTABLE (NO)", color: "9F1239" },
-      { start: 7, end: 8, label: "DETRACTORS", color: "B91C1C" },
-      { start: 9, end: 10, label: "NEUTRALS", color: "D97706" }
+      { start: 1, end: 2, label: "NON-PROMOTERS CUSTOMERS", color: "065F46" },
+      { start: 3, end: 4, label: "TOTAL ISSUES IDENTIFIED", color: "1E40AF" },
+      { start: 5, end: 6, label: "ACCOUNTABLE (YES)", color: "3730A3" },
+      { start: 7, end: 8, label: "NON-ACCOUNTABLE (NO)", color: "9F1239" },
+      { start: 9, end: 10, label: "DETRACTORS", color: "B91C1C" },
+      { start: 11, end: 12, label: "NEUTRALS", color: "D97706" }
     ];
 
     ownerDistGroups.forEach(g => {
@@ -1888,8 +1923,16 @@ const AllTasksList = () => {
     });
 
     // Level 2 Sub-Headers
-    const ownerLvl2Colors = ["1E293B", "2563EB", "1D4ED8", "4F46E5", "4338CA", "E11D48", "BE123C", "DC2626", "B91C1C", "F59E0B", "D97706"];
-    for (let c = 1; c <= 10; c++) {
+    const ownerLvl2Colors = [
+      "1E293B",
+      "047857", "065F46",
+      "2563EB", "1D4ED8",
+      "4F46E5", "4338CA",
+      "E11D48", "BE123C",
+      "DC2626", "B91C1C",
+      "F59E0B", "D97706"
+    ];
+    for (let c = 1; c <= 12; c++) {
       const cell = XLSX.utils.encode_cell({ r: 3, c });
       if (wsSpecial[cell]) {
         wsSpecial[cell].s = {
@@ -1904,7 +1947,7 @@ const AllTasksList = () => {
     // Style Data Rows
     for (let r = 0; r < ownerDataAoa.length; r++) {
       const rowIdx = 4 + r;
-      for (let c = 0; c <= 10; c++) {
+      for (let c = 0; c <= 12; c++) {
         const cell = XLSX.utils.encode_cell({ r: rowIdx, c });
         if (!wsSpecial[cell]) continue;
 
@@ -1912,22 +1955,25 @@ const AllTasksList = () => {
         let bgColor = "FFFFFF";
 
         if (c === 1 || c === 2) {
+          fontColor = "065F46";
+          bgColor = "F0FDF4";
+        } else if (c === 3 || c === 4) {
           fontColor = "1E40AF";
           bgColor = "F8FAFC";
-        } else if (c === 3 || c === 4) {
-          fontColor = "3730A3";
         } else if (c === 5 || c === 6) {
-          fontColor = "9F1239";
+          fontColor = "3730A3";
         } else if (c === 7 || c === 8) {
-          fontColor = "B91C1C";
-          if (c === 7 && ownerDataAoa[r][c] > 0) bgColor = "FEF2F2";
+          fontColor = "9F1239";
         } else if (c === 9 || c === 10) {
+          fontColor = "B91C1C";
+          if (c === 9 && ownerDataAoa[r][c] > 0) bgColor = "FEF2F2";
+        } else if (c === 11 || c === 12) {
           fontColor = "D97706";
-          if (c === 9 && ownerDataAoa[r][c] > 0) bgColor = "FFFBEB";
+          if (c === 11 && ownerDataAoa[r][c] > 0) bgColor = "FFFBEB";
         }
 
         wsSpecial[cell].s = {
-          font: { bold: c === 0 || c === 1 || c === 3 || c === 7 || c === 9, color: { rgb: fontColor } },
+          font: { bold: c === 0 || c === 1 || c === 3 || c === 5 || c === 9 || c === 11, color: { rgb: fontColor } },
           fill: { fgColor: { rgb: bgColor } },
           alignment: { horizontal: c === 0 ? "left" : "center", vertical: "center" },
           border: { top: { style: 'thin', color: { rgb: 'E2E8F0' } }, bottom: { style: 'thin', color: { rgb: 'E2E8F0' } }, left: { style: 'thin', color: { rgb: 'E2E8F0' } }, right: { style: 'thin', color: { rgb: 'CBD5E1' } } }
@@ -3446,24 +3492,38 @@ const AllTasksList = () => {
 
     // Helper function to apply proportional rounding (ensures percentages sum to 100%)
     const getProportionalRounding = (values, total) => {
-      if (total === 0) return values.map(() => 0);
+      if (!values || values.length === 0 || !total || total <= 0) {
+        return (values || []).map(() => 0);
+      }
 
-      const percentages = values.map(v => (v / total) * 100);
+      const valSum = values.reduce((a, b) => a + (Number(b) || 0), 0);
+      if (valSum === 0) {
+        return values.map(() => 0);
+      }
+
+      const percentages = values.map(v => ((Number(v) || 0) / total) * 100);
       const integers = percentages.map(p => Math.floor(p));
       const remainders = percentages.map((p, i) => ({
         index: i,
         remainder: p - integers[i]
       }));
 
-      const intSum = integers.reduce((a, b) => a + b, 0);
-      const diff = 100 - intSum;
+      // Only perform largest-remainder rounding adjustment if values actually represent the complete partition of total
+      if (Math.round(valSum) === Math.round(total)) {
+        const intSum = integers.reduce((a, b) => a + b, 0);
+        const diff = 100 - intSum;
 
-      remainders.sort((a, b) => b.remainder - a.remainder);
-      for (let i = 0; i < diff; i++) {
-        integers[remainders[i].index]++;
+        remainders.sort((a, b) => b.remainder - a.remainder);
+        for (let i = 0; i < diff && i < remainders.length; i++) {
+          if (remainders[i] && integers[remainders[i].index] !== undefined) {
+            integers[remainders[i].index]++;
+          }
+        }
+        return integers;
       }
 
-      return integers;
+      // If values do not sum to total (e.g. subset/cohorts), use standard rounding
+      return percentages.map(p => Math.round(p));
     };
 
     const isTaskAccountable = (t) => {
@@ -6780,23 +6840,20 @@ const AllTasksList = () => {
     // Data Extraction for Indicator Tables (Gathering all affecting cases)
     const allRootCausesList = getFieldCountsByScore(filteredTasks, 'rootCause');
 
-    // Top 5 root causes by Detractors (only causes with detractors > 0)
-    const impactTopRootCausesDetractors = allRootCausesList
+    // All root causes by Detractors (all causes with detractors > 0)
+    const impactAllRootCausesDetractors = allRootCausesList
       .filter(rc => rc.detractors > 0)
-      .sort((a, b) => b.detractors - a.detractors)
-      .slice(0, 5);
+      .sort((a, b) => b.detractors - a.detractors);
 
-    // Top 5 root causes by Neutrals (only causes with neutrals > 0)
-    const impactTopRootCausesNeutrals = allRootCausesList
+    // All root causes by Neutrals (all causes with neutrals > 0)
+    const impactAllRootCausesNeutrals = allRootCausesList
       .filter(rc => rc.neutrals > 0)
-      .sort((a, b) => b.neutrals - a.neutrals)
-      .slice(0, 5);
+      .sort((a, b) => b.neutrals - a.neutrals);
 
-    // Top 5 root causes by Total (Detractors + Neutrals)
-    const impactTopRootCausesCombined = allRootCausesList
+    // All root causes by Total (Detractors + Neutrals)
+    const impactAllRootCausesCombined = allRootCausesList
       .filter(rc => rc.total > 0)
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 5);
+      .sort((a, b) => b.total - a.total);
 
     // Top 5 Owners by Total
     const impactTopOwners = getFieldCountsByScore(filteredTasks, 'responsible')
@@ -6965,7 +7022,7 @@ const AllTasksList = () => {
       'Strategic Detractor Action Plan'
     ];
 
-    const rcDetRows = impactTopRootCausesDetractors.map((rc, idx) => {
+    const rcDetRows = impactAllRootCausesDetractors.map((rc, idx) => {
       const sim = simulateScenario(rc.detractors, 0);
       return [
         `#${idx + 1} Root Cause: ${rc.name}`,
@@ -7008,14 +7065,14 @@ const AllTasksList = () => {
       'Neutrals Affected',
       'Before Promoter %',
       'After Promoter %',
-      'Promoters Deduction',
+      'Promoter Gain (+%)',
       'Before NPS',
       'After NPS',
       'NPS Gain (+pts)',
       'Strategic Promoter Action Plan'
     ];
 
-    const rcNeuRows = impactTopRootCausesNeutrals.map((rc, idx) => {
+    const rcNeuRows = impactAllRootCausesNeutrals.map((rc, idx) => {
       const sim = simulateScenario(0, rc.neutrals);
       return [
         `#${idx + 1} Root Cause: ${rc.name}`,
@@ -7063,14 +7120,16 @@ const AllTasksList = () => {
       'Total NPS Gain (+pts)',
       'Before Promoter %',
       'After Promoter %',
+      'Promoter Gain (+%)',
       'Before Detractor %',
       'After Detractor %',
+      'Detractor Reduction (-%)',
       'Comprehensive Strategic Impact'
     ];
 
     const rcFullRows = [];
-    // Individual Top 5
-    impactTopRootCausesCombined.forEach((rc, idx) => {
+    // All Individual Root Causes (ranked #1..#N)
+    impactAllRootCausesCombined.forEach((rc, idx) => {
       const sim = simulateScenario(rc.detractors, rc.neutrals);
       rcFullRows.push([
         `#${idx + 1} RC Full Resolution Alone`,
@@ -7083,15 +7142,18 @@ const AllTasksList = () => {
         sim.npsImpact,
         `${beforePromoterPctNum.toFixed(1)}%`,
         sim.afterPromotersPct,
+        sim.promoterGain,
         `${beforeDetractorPctNum.toFixed(1)}%`,
         sim.afterDetractorsPct,
+        sim.detractorRed,
         `Full resolution of ${rc.total} items under ${rc.name} (${rc.detractors} det + ${rc.neutrals} neu) → NPS increases from ${baseNPS} to ${sim.afterNPS}`
       ]);
     });
 
-    // Combined Top 2..5
-    for (let i = 2; i <= impactTopRootCausesCombined.length; i++) {
-      const selectedRCs = impactTopRootCausesCombined.slice(0, i);
+    // Combined Bundles (Top 2..5)
+    const maxComboBundles = Math.min(5, impactAllRootCausesCombined.length);
+    for (let i = 2; i <= maxComboBundles; i++) {
+      const selectedRCs = impactAllRootCausesCombined.slice(0, i);
       const comboDet = selectedRCs.reduce((sum, rc) => sum + rc.detractors, 0);
       const comboNeu = selectedRCs.reduce((sum, rc) => sum + rc.neutrals, 0);
       const comboTot = comboDet + comboNeu;
@@ -7109,8 +7171,10 @@ const AllTasksList = () => {
         sim.npsImpact,
         `${beforePromoterPctNum.toFixed(1)}%`,
         sim.afterPromotersPct,
+        sim.promoterGain,
         `${beforeDetractorPctNum.toFixed(1)}%`,
         sim.afterDetractorsPct,
+        sim.detractorRed,
         `Multi-cause resolution across Top ${i} Causes (${comboTot} issues fixed) → NPS surges by ${sim.npsImpact} pts from ${baseNPS} to ${sim.afterNPS}`
       ]);
     }
@@ -7130,9 +7194,11 @@ const AllTasksList = () => {
         7: () => ({ isBold: true, fontColor: '7C3AED', bgColor: 'F5F3FF' }),
         8: () => ({ fontColor: '64748B' }),
         9: () => ({ fontColor: '047857' }),
-        10: () => ({ fontColor: '64748B' }),
-        11: () => ({ fontColor: 'B91C1C' }),
-        12: () => ({ fontColor: '475569' })
+        10: () => ({ isBold: true, fontColor: '047857', bgColor: 'ECFDF5' }),
+        11: () => ({ fontColor: '64748B' }),
+        12: () => ({ fontColor: 'B91C1C' }),
+        13: () => ({ isBold: true, fontColor: 'B91C1C', bgColor: 'FEF2F2' }),
+        14: () => ({ fontColor: '475569' })
       }
     );
 
@@ -7781,17 +7847,21 @@ const AllTasksList = () => {
     );
 
     wsTextAnalysis['!cols'] = [
-      { wch: 34 }, // Col 0: Scenario / Rank / Focus
-      { wch: 30 }, // Col 1: Category / Name / Definition
-      { wch: 22 }, // Col 2: Detractors (Raw)
-      { wch: 22 }, // Col 3: Weighted Detractors (Shared) / Detractor Reduction %
-      { wch: 20 }, // Col 4: Neutrals (Raw) / Before Neutral %
-      { wch: 20 }, // Col 5: Weighted Neutrals / After Neutral %
-      { wch: 20 }, // Col 6: Total Issues / Promoter Gain %
-      { wch: 14 }, // Col 7: Before NPS
-      { wch: 14 }, // Col 8: Simulated NPS
-      { wch: 16 }, // Col 9: NPS Gain
-      { wch: 60 }  // Col 10: Strategic Notes
+      { wch: 36 }, // Col 0: Scenario / Rank / Focus
+      { wch: 32 }, // Col 1: Category / Name / Definition
+      { wch: 20 }, // Col 2: Detractors (Raw / Resolved)
+      { wch: 20 }, // Col 3: Weighted Detractors / Neutrals Elevated / Before Det %
+      { wch: 20 }, // Col 4: Neutrals / Total Issues Fixed / After Det %
+      { wch: 18 }, // Col 5: Before NPS / Weighted Neutrals
+      { wch: 18 }, // Col 6: After NPS / Total Issues
+      { wch: 18 }, // Col 7: Total NPS Gain (+pts)
+      { wch: 18 }, // Col 8: Before Promoter %
+      { wch: 18 }, // Col 9: After Promoter %
+      { wch: 20 }, // Col 10: Promoter Gain (+%)
+      { wch: 18 }, // Col 11: Before Detractor %
+      { wch: 18 }, // Col 12: After Detractor %
+      { wch: 22 }, // Col 13: Detractor Reduction (-%)
+      { wch: 65 }  // Col 14: Strategic Directive / Notes
     ];
     fixSheetRange(wsTextAnalysis);
 
@@ -7852,14 +7922,11 @@ const AllTasksList = () => {
     let totalPromoters = 0;
 
     const dailyBreakdownRows = [];
-    const monthlyAggMap = {}; // { [monthKey 'Jan 2026']: { monthKey, monthName, monthNum, year, online, samplesToken, tasks, issues, reachIssues, reachAccYes, reachAccNo, otherIssues } }
 
     dailyInterval.forEach(dayDate => {
       const dateStr = format(dayDate, 'yyyy-MM-dd');
       const dateDisplay = format(dayDate, 'dd/MM/yyyy');
       const dayOfWeek = format(dayDate, 'EEEE');
-      const monthKey = format(dayDate, 'MMMM yyyy');
-      const monthNum = dayDate.getMonth() + 1;
 
       const onlineEntry = dailyOnlineMap[dateStr] || { onlineSamples: 0, samplesToken: 0, note: '' };
       const onlineSamples = onlineEntry.onlineSamples || 0;
@@ -7928,32 +7995,6 @@ const AllTasksList = () => {
       totalNeutrals += dayNeuCount;
       totalPromoters += dayProCount;
 
-      // Accumulate monthly
-      if (!monthlyAggMap[monthKey]) {
-        monthlyAggMap[monthKey] = {
-          monthKey,
-          monthName: format(dayDate, 'MMMM'),
-          monthNum,
-          year: dayDate.getFullYear(),
-          online: 0,
-          samplesToken: 0,
-          tasks: 0,
-          issues: 0,
-          reachIssues: 0,
-          reachAccYes: 0,
-          reachAccNo: 0,
-          otherIssues: 0
-        };
-      }
-      monthlyAggMap[monthKey].online += onlineSamples;
-      monthlyAggMap[monthKey].samplesToken += samplesToken;
-      monthlyAggMap[monthKey].tasks += dayTasksCount;
-      monthlyAggMap[monthKey].issues += dayIssuesCount;
-      monthlyAggMap[monthKey].reachIssues += dayReachCount;
-      monthlyAggMap[monthKey].reachAccYes += dayReachAccYesCount;
-      monthlyAggMap[monthKey].reachAccNo += dayReachAccNoCount;
-      monthlyAggMap[monthKey].otherIssues += dayOtherCount;
-
       // Calculate comparative ratios
       const tokenVsOnline = onlineSamples > 0 ? ((samplesToken / onlineSamples) * 100).toFixed(2) + '%' : '-';
       const tasksVsToken = samplesToken > 0 ? ((dayTasksCount / samplesToken) * 100).toFixed(2) + '%' : '-';
@@ -7963,6 +8004,7 @@ const AllTasksList = () => {
       const reachVsToken = samplesToken > 0 ? ((dayReachCount / samplesToken) * 100).toFixed(2) + '%' : '-';
       const reachVsOnline = onlineSamples > 0 ? ((dayReachCount / onlineSamples) * 100).toFixed(2) + '%' : '-';
       const reachAccYesVsOnline = onlineSamples > 0 ? ((dayReachAccYesCount / onlineSamples) * 100).toFixed(2) + '%' : '-';
+      const reachAccNoVsOnline = onlineSamples > 0 ? ((dayReachAccNoCount / onlineSamples) * 100).toFixed(2) + '%' : '-';
       const reachShareOfIssues = dayIssuesCount > 0 ? ((dayReachCount / dayIssuesCount) * 100).toFixed(1) + '%' : '-';
 
       dailyBreakdownRows.push([
@@ -7987,43 +8029,100 @@ const AllTasksList = () => {
         reachVsToken,
         reachVsOnline,
         reachAccYesVsOnline,
+        reachAccNoVsOnline,
         reachShareOfIssues,
         note
       ]);
     });
 
-    // Executive KPI Block (Row 3 to 7)
+    // Executive KPI Block (Row 3 to 9)
+    const kpiReachShare = totalDvocIssues > 0 ? `${((totalReachIssues / totalDvocIssues) * 100).toFixed(1)}%` : '0.0%';
+    const kpiReachAccYesShare = totalDvocIssues > 0 ? `${((totalReachAccYes / totalDvocIssues) * 100).toFixed(1)}%` : '0.0%';
+    const kpiReachAccNoShare = totalDvocIssues > 0 ? `${((totalReachAccNo / totalDvocIssues) * 100).toFixed(1)}%` : '0.0%';
+
     const kpiHeaders = [
-      ['EXECUTIVE KPI SUMMARY — ONLINE TRANSACTIONS, SAMPLES TOKEN & DVOC INCIDENT METRICS (PIS BASIS)', '', '', '', '', ''],
-      ['Total Daily Online Volume', 'Total Daily Samples Token (Taken)', 'Total Actual DVOC Tasks (PIS)', 'Total Discrete Issues', 'Total REACH Issues', 'REACH Acc (Yes) Issues'],
+      ['EXECUTIVE KPI SUMMARY — ONLINE TRANSACTIONS, SAMPLES TOKEN & DVOC INCIDENT METRICS (PIS BASIS)', '', '', '', '', '', '', ''],
+      [
+        'Total Daily Online Volume',
+        'Total Daily Samples Token (Taken)',
+        'Total non-promoters customers (PIS)',
+        'Total issues identified',
+        'Total REACH Issues',
+        'REACH Share of Issues (%)',
+        'REACH Acc (Yes) Issues',
+        'REACH Acc (Yes) Share of Issues (%)'
+      ],
       [
         totalOnlineVol.toLocaleString(),
         totalDailySamplesToken.toLocaleString(),
         totalDvocTasks.toLocaleString(),
         totalDvocIssues.toLocaleString(),
         totalReachIssues.toLocaleString(),
-        totalReachAccYes.toLocaleString()
+        kpiReachShare,
+        totalReachAccYes.toLocaleString(),
+        kpiReachAccYesShare
       ],
-      ['Samples Token % of Online', 'Sampling Fulfillment % (Tasks/Token)', 'Actual Tasks % of Online', 'Total Issues / Token (%)', 'Total Issues / Online (%)', 'REACH Acc (Yes) / Online (%)'],
+      [
+        'Samples Token % of Online',
+        'Sampling Fulfillment % (non-promoters / total samples token)',
+        'Actual non-promoters % of Online',
+        'Total Issues / Total Samples Token (%)',
+        'REACH Issues / Total Samples Token (%)',
+        'REACH Acc (Yes) / Total Samples Token (%)',
+        'REACH Acc (No) / Total Samples Token (%)',
+        'REACH Non-Acc Share of Issues (%)'
+      ],
       [
         totalOnlineVol > 0 ? `${((totalDailySamplesToken / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
         totalDailySamplesToken > 0 ? `${((totalDvocTasks / totalDailySamplesToken) * 100).toFixed(2)}%` : '0.00%',
         totalOnlineVol > 0 ? `${((totalDvocTasks / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
         totalDailySamplesToken > 0 ? `${((totalDvocIssues / totalDailySamplesToken) * 100).toFixed(2)}%` : '0.00%',
+        totalDailySamplesToken > 0 ? `${((totalReachIssues / totalDailySamplesToken) * 100).toFixed(2)}%` : '0.00%',
+        totalDailySamplesToken > 0 ? `${((totalReachAccYes / totalDailySamplesToken) * 100).toFixed(2)}%` : '0.00%',
+        totalDailySamplesToken > 0 ? `${((totalReachAccNo / totalDailySamplesToken) * 100).toFixed(2)}%` : '0.00%',
+        kpiReachAccNoShare
+      ],
+      [
+        'Total Issues / Online (%)',
+        'REACH Issues / Online (%)',
+        'REACH Acc (Yes) / Online (%)',
+        'REACH Acc (No) / Online (%)',
+        '* Statistical Reference Note on Online-Based Incident Ratios',
+        '', '', ''
+      ],
+      [
         totalOnlineVol > 0 ? `${((totalDvocIssues / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
-        totalOnlineVol > 0 ? `${((totalReachAccYes / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%'
+        totalOnlineVol > 0 ? `${((totalReachIssues / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+        totalOnlineVol > 0 ? `${((totalReachAccYes / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+        totalOnlineVol > 0 ? `${((totalReachAccNo / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+        '* Note: Online-based incident ratios (Issues / Online) are indicative only and not direct failure rates, because DVOC sampling is conducted exclusively on token samples, not all online transactions.',
+        '', '', ''
       ]
     ];
 
     XLSX.utils.sheet_add_aoa(wsDailyOnline, kpiHeaders, { origin: "A3" });
     wsDailyOnline['!merges'].push(
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } }
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 7 } },
+      { s: { r: 7, c: 4 }, e: { r: 7, c: 7 } },
+      { s: { r: 8, c: 4 }, e: { r: 8, c: 7 } }
     );
-    wsDailyOnline['A3'].s = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E293B" } }, alignment: { horizontal: "center" } };
-    applyHeaderStyle(wsDailyOnline, { s: { r: 3, c: 0 }, e: { r: 3, c: 5 } }, "334155");
-    applyHeaderStyle(wsDailyOnline, { s: { r: 5, c: 0 }, e: { r: 5, c: 5 } }, "334155");
-    applyDataRowStyle(wsDailyOnline, { s: { r: 4, c: 0 }, e: { r: 4, c: 5 } });
-    applyDataRowStyle(wsDailyOnline, { s: { r: 6, c: 0 }, e: { r: 6, c: 5 } });
+    wsDailyOnline['A3'].s = { font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E293B" } }, alignment: { horizontal: "center" } };
+    applyHeaderStyle(wsDailyOnline, { s: { r: 3, c: 0 }, e: { r: 3, c: 7 } }, "334155");
+    applyDataRowStyle(wsDailyOnline, { s: { r: 4, c: 0 }, e: { r: 4, c: 7 } });
+    applyHeaderStyle(wsDailyOnline, { s: { r: 5, c: 0 }, e: { r: 5, c: 7 } }, "334155");
+    applyDataRowStyle(wsDailyOnline, { s: { r: 6, c: 0 }, e: { r: 6, c: 7 } });
+    applyHeaderStyle(wsDailyOnline, { s: { r: 7, c: 0 }, e: { r: 7, c: 3 } }, "475569");
+    applyHeaderStyle(wsDailyOnline, { s: { r: 7, c: 4 }, e: { r: 7, c: 7 } }, "475569");
+    applyDataRowStyle(wsDailyOnline, { s: { r: 8, c: 0 }, e: { r: 8, c: 3 } });
+    
+    // Format the note cell
+    if (wsDailyOnline['E9']) {
+      wsDailyOnline['E9'].s = {
+        font: { italic: true, sz: 9, color: { rgb: "475569" } },
+        fill: { fgColor: { rgb: "F8FAFC" } },
+        alignment: { horizontal: "left", vertical: "center", wrapText: true }
+      };
+    }
 
     // Table 1: Daily Breakdown Table
     const dailyTableHeaders = [
@@ -8031,8 +8130,8 @@ const AllTasksList = () => {
       'Day of Week',
       'Daily Online Volume',
       'Daily Samples Token (Taken)',
-      'Actual Tasks (PIS Date)',
-      'Total Issues Counted',
+      'Total non-promoters customers (PIS Date)',
+      'Total issues identified',
       'REACH Total Issues',
       'REACH Accountable (Yes)',
       'REACH Non-Accountable (No)',
@@ -8041,27 +8140,28 @@ const AllTasksList = () => {
       'Neutrals (7-8)',
       'Promoters (≥9)',
       'Samples Token % of Online',
-      'Sampling Fulfillment % (Tasks/Token)',
-      'Actual Tasks % of Online',
-      'Total Issues / Token (%)',
+      'Sampling Fulfillment % (non-promoters / total samples token)',
+      'Actual non-promoters % of Online',
+      'Total Issues / Total Samples Token (%)',
       'Total Issues / Online (%)',
-      'REACH Issues / Token (%)',
+      'REACH Issues / Total Samples Token (%)',
       'REACH Issues / Online (%)',
       'REACH Acc (Yes) / Online (%)',
+      'REACH Acc (No) / Online (%)',
       'REACH Share of Issues (%)',
       'Operational Notes'
     ];
 
-    let onlineSheetR = 9;
+    let onlineSheetR = 11;
     XLSX.utils.sheet_add_aoa(wsDailyOnline, [['DAILY CHRONOLOGICAL ONLINE, SAMPLES TOKEN & DVOC BREAKDOWN (BY PIS DATE)']], { origin: `A${onlineSheetR}` });
     wsDailyOnline[`A${onlineSheetR}`].s = { font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "0E7490" } }, alignment: { horizontal: "center" } };
-    wsDailyOnline['!merges'].push({ s: { r: onlineSheetR - 1, c: 0 }, e: { r: onlineSheetR - 1, c: 22 } });
+    wsDailyOnline['!merges'].push({ s: { r: onlineSheetR - 1, c: 0 }, e: { r: onlineSheetR - 1, c: 23 } });
 
     XLSX.utils.sheet_add_aoa(wsDailyOnline, [dailyTableHeaders], { origin: `A${onlineSheetR + 1}` });
-    applyHeaderStyle(wsDailyOnline, { s: { r: onlineSheetR, c: 0 }, e: { r: onlineSheetR, c: 22 } }, "1E293B");
+    applyHeaderStyle(wsDailyOnline, { s: { r: onlineSheetR, c: 0 }, e: { r: onlineSheetR, c: 23 } }, "1E293B");
 
     XLSX.utils.sheet_add_aoa(wsDailyOnline, dailyBreakdownRows, { origin: `A${onlineSheetR + 2}` });
-    applyDataRowStyle(wsDailyOnline, { s: { r: onlineSheetR + 1, c: 0 }, e: { r: onlineSheetR + 1 + dailyBreakdownRows.length, c: 22 } });
+    applyDataRowStyle(wsDailyOnline, { s: { r: onlineSheetR + 1, c: 0 }, e: { r: onlineSheetR + 1 + dailyBreakdownRows.length, c: 23 } });
 
     const dailyTotalRow = [
       'TOTAL / OVERALL PERIOD',
@@ -8085,13 +8185,14 @@ const AllTasksList = () => {
       totalDailySamplesToken > 0 ? `${((totalReachIssues / totalDailySamplesToken) * 100).toFixed(2)}%` : '0.00%',
       totalOnlineVol > 0 ? `${((totalReachIssues / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
       totalOnlineVol > 0 ? `${((totalReachAccYes / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
+      totalOnlineVol > 0 ? `${((totalReachAccNo / totalOnlineVol) * 100).toFixed(2)}%` : '0.00%',
       totalDvocIssues > 0 ? `${((totalReachIssues / totalDvocIssues) * 100).toFixed(1)}%` : '0.0%',
       `Full period summary over ${dailyInterval.length} days (Tasks matched by PIS Date)`
     ];
 
     const totalRowR = onlineSheetR + 2 + dailyBreakdownRows.length;
     XLSX.utils.sheet_add_aoa(wsDailyOnline, [dailyTotalRow], { origin: `A${totalRowR}` });
-    for (let c = 0; c < 23; c++) {
+    for (let c = 0; c < 24; c++) {
       const cellRef = XLSX.utils.encode_cell({ r: totalRowR - 1, c });
       if (wsDailyOnline[cellRef]) {
         wsDailyOnline[cellRef].s = {
@@ -8101,102 +8202,253 @@ const AllTasksList = () => {
             top: { style: 'thin', color: { rgb: "0284C7" } },
             bottom: { style: 'double', color: { rgb: "0284C7" } }
           },
-          alignment: { horizontal: c === 0 || c === 1 || c === 22 ? "left" : "center" }
+          alignment: { horizontal: c === 0 || c === 1 || c === 23 ? "left" : "center" }
         };
       }
     }
 
-    // Table 2: Monthly Aggregated Online, Samples Token & DVOC Summary
-    let monthlySummaryR = totalRowR + 3;
-    const monthlyAggRows = Object.values(monthlyAggMap).map(mObj => {
-      const mTokenVsOnline = mObj.online > 0 ? `${((mObj.samplesToken / mObj.online) * 100).toFixed(2)}%` : '-';
-      const mSamplingFulfillment = mObj.samplesToken > 0 ? `${((mObj.tasks / mObj.samplesToken) * 100).toFixed(2)}%` : '-';
-      const mTasksVsOnline = mObj.online > 0 ? `${((mObj.tasks / mObj.online) * 100).toFixed(2)}%` : '-';
-      const mIssuesVsToken = mObj.samplesToken > 0 ? `${((mObj.issues / mObj.samplesToken) * 100).toFixed(2)}%` : '-';
-      const mIssuesVsOnline = mObj.online > 0 ? `${((mObj.issues / mObj.online) * 100).toFixed(2)}%` : '-';
-      const mReachVsToken = mObj.samplesToken > 0 ? `${((mObj.reachIssues / mObj.samplesToken) * 100).toFixed(2)}%` : '-';
-      const mReachVsOnline = mObj.online > 0 ? `${((mObj.reachIssues / mObj.online) * 100).toFixed(2)}%` : '-';
-      const mReachAccYesRate = mObj.online > 0 ? `${((mObj.reachAccYes / mObj.online) * 100).toFixed(2)}%` : '-';
-      const mReachShare = mObj.issues > 0 ? `${((mObj.reachIssues / mObj.issues) * 100).toFixed(1)}%` : '-';
+    // Table 2: Monthly Aggregated Online, Samples Token & DVOC Summary (By PIS Date)
+    // Dynamic month interval covering all months from Cumulative Benchmark start (01/06/2026) to present/filter end
+    const benchmarkStartDate = new Date(2026, 5, 1); // 01/06/2026 (June 2026)
+    let benchmarkEndDate = new Date(2026, 7, 31); // Default to at least August 2026
+    if (intervalEndDate && intervalEndDate > benchmarkEndDate) {
+      benchmarkEndDate = intervalEndDate;
+    }
+    if (CumulativeDateFilter?.end && new Date(CumulativeDateFilter.end) > benchmarkEndDate) {
+      benchmarkEndDate = new Date(CumulativeDateFilter.end);
+    }
+    (dailyOnlineSamplesData || []).forEach(d => {
+      if (d.date) {
+        const dd = new Date(d.date);
+        if (!isNaN(dd) && dd > benchmarkEndDate) benchmarkEndDate = dd;
+      }
+    });
+    (allTasks || []).forEach(t => {
+      if (t.pisDate) {
+        const td = new Date(t.pisDate);
+        if (!isNaN(td) && td > benchmarkEndDate) benchmarkEndDate = td;
+      }
+    });
 
-      return [
-        mObj.monthKey,
-        mObj.online,
-        mObj.samplesToken,
-        mObj.tasks,
-        mObj.issues,
-        mObj.reachIssues,
-        mObj.reachAccYes,
-        mObj.reachAccNo,
-        mObj.otherIssues,
-        mTokenVsOnline,
-        mSamplingFulfillment,
-        mTasksVsOnline,
-        mIssuesVsToken,
-        mIssuesVsOnline,
-        mReachVsToken,
-        mReachVsOnline,
-        mReachAccYesRate,
-        mReachShare
-      ];
+    const monthlyInterval = [];
+    let curMonthCursor = startOfMonth(benchmarkStartDate);
+    const lastMonthLimit = endOfMonth(benchmarkEndDate);
+    while (curMonthCursor <= lastMonthLimit) {
+      monthlyInterval.push(new Date(curMonthCursor));
+      curMonthCursor = new Date(curMonthCursor.getFullYear(), curMonthCursor.getMonth() + 1, 1);
+    }
+
+    let cumBenchmarkOnline = 0;
+    let cumBenchmarkTasks = 0;
+    let cumBenchmarkIssues = 0;
+    let cumBenchmarkReach = 0;
+    let cumBenchmarkReachAccYes = 0;
+    let cumBenchmarkReachAccNo = 0;
+    const cumBenchmarkOwnersMap = {};
+
+    const monthlyAggRows = [];
+    monthlyInterval.forEach(mDate => {
+      const monthKey = format(mDate, 'MMMM yyyy');
+      const monthPrefix = format(mDate, 'yyyy-MM');
+
+      // 1. Sum online for this month
+      let mOnline = 0;
+      Object.keys(dailyOnlineMap).forEach(dStr => {
+        if (dStr.startsWith(monthPrefix)) {
+          mOnline += dailyOnlineMap[dStr].onlineSamples || 0;
+        }
+      });
+
+      // 2. Tasks strictly matching pisDate in this month
+      const mTasks = (allTasks || []).filter(t => {
+        if (!t.pisDate) return false;
+        try {
+          return format(new Date(t.pisDate), 'yyyy-MM') === monthPrefix;
+        } catch (e) {
+          return false;
+        }
+      });
+
+      const mTasksCount = mTasks.length;
+      let mIssuesCount = 0;
+      let mReachCount = 0;
+      let mReachAccYes = 0;
+      let mReachAccNo = 0;
+      const mOwnerCounts = {};
+
+      mTasks.forEach(t => {
+        const owners = normalizeArrayField(t.responsible);
+        const accs = normalizeArrayField(t.teamAccountability);
+
+        owners.forEach((owner, i) => {
+          mIssuesCount++;
+          const normOwner = String(owner).trim().toUpperCase();
+          const acc = accs[i] || (accs.length > 0 ? accs[0] : 'Unknown');
+          const isAccYes = String(acc).trim().toLowerCase().startsWith('yes') || String(acc).trim().toLowerCase() === 'y';
+          const isAccNo = String(acc).trim().toLowerCase().startsWith('no') || String(acc).trim().toLowerCase() === 'n';
+
+          if (normOwner === 'REACH') {
+            mReachCount++;
+            if (isAccYes) mReachAccYes++;
+            else mReachAccNo++;
+          } else {
+            const displayOwner = String(owner).trim() || 'Other';
+            mOwnerCounts[displayOwner] = (mOwnerCounts[displayOwner] || 0) + 1;
+            cumBenchmarkOwnersMap[displayOwner] = (cumBenchmarkOwnersMap[displayOwner] || 0) + 1;
+          }
+        });
+      });
+
+      // Accumulate for cumulative total row
+      cumBenchmarkOnline += mOnline;
+      cumBenchmarkTasks += mTasksCount;
+      cumBenchmarkIssues += mIssuesCount;
+      cumBenchmarkReach += mReachCount;
+      cumBenchmarkReachAccYes += mReachAccYes;
+      cumBenchmarkReachAccNo += mReachAccNo;
+
+      // Identify 2nd Most Responsible Owner with issues (1st non-REACH owner)
+      const sortedNonReachOwners = Object.entries(mOwnerCounts).sort((a, b) => b[1] - a[1]);
+      let top2OwnerName = '-';
+      let top2OwnerIssues = 0;
+      let top2OwnerShare = '0.0%';
+
+      if (sortedNonReachOwners.length > 0) {
+        top2OwnerName = sortedNonReachOwners[0][0];
+        top2OwnerIssues = sortedNonReachOwners[0][1];
+        top2OwnerShare = mIssuesCount > 0 ? `${((top2OwnerIssues / mIssuesCount) * 100).toFixed(1)}%` : '0.0%';
+      }
+
+      // Other owners issues (remaining non-REACH owners after 2nd top owner)
+      const otherOwnersIssues = Math.max(0, mIssuesCount - mReachCount - top2OwnerIssues);
+      const otherOwnersShare = mIssuesCount > 0 ? `${((otherOwnersIssues / mIssuesCount) * 100).toFixed(1)}%` : '0.0%';
+
+      // Monthly KPI calculations
+      const mActualNonPromotersVsOnline = mOnline > 0 ? `${((mTasksCount / mOnline) * 100).toFixed(2)}%` : '-';
+      const mReachAccShare = mIssuesCount > 0 ? `${((mReachAccYes / mIssuesCount) * 100).toFixed(1)}%` : '-';
+      const mReachNonAccShare = mIssuesCount > 0 ? `${((mReachAccNo / mIssuesCount) * 100).toFixed(1)}%` : '-';
+      const mReachTotalShare = mIssuesCount > 0 ? `${((mReachCount / mIssuesCount) * 100).toFixed(1)}%` : '-';
+
+      monthlyAggRows.push([
+        monthKey,
+        mOnline > 0 ? mOnline : 0,
+        mTasksCount,
+        mActualNonPromotersVsOnline,
+        mIssuesCount,
+        mReachCount,
+        mReachTotalShare,
+        mReachAccYes,
+        mReachAccShare,
+        mReachAccNo,
+        mReachNonAccShare,
+        top2OwnerName,
+        top2OwnerIssues,
+        top2OwnerShare,
+        otherOwnersIssues,
+        otherOwnersShare
+      ]);
     });
 
     const monthlyHeaders = [
       'Month',
       'Monthly Online Volume',
-      'Monthly Samples Token (Taken)',
-      'Actual DVOC Tasks (PIS Date)',
-      'Total Issues Counted',
+      'Total non-promoters customers (PIS Date)',
+      'Actual non-promoters % of Online',
+      'Total issues identified',
       'REACH Total Issues',
+      'REACH Share of Issues (%)',
       'REACH Accountable (Yes)',
+      'REACH Acc Share of Issues (%)',
       'REACH Non-Accountable (No)',
+      'REACH Non-Acc Share of Issues (%)',
+      '2nd Top Responsible Owner',
+      '2nd Owner Issues',
+      '2nd Owner Share of Issues (%)',
       'Other Owners Issues',
-      'Samples Token % of Online',
-      'Sampling Fulfillment % (Tasks/Token)',
-      'Tasks % of Online',
-      'Total Issues / Token (%)',
-      'Total Issues / Online (%)',
-      'REACH Issues / Token (%)',
-      'REACH Issues / Online (%)',
-      'REACH Acc (Yes) / Online (%)',
-      'REACH Share of Issues (%)'
+      'Other Owners Share of Issues (%)'
     ];
 
-    XLSX.utils.sheet_add_aoa(wsDailyOnline, [['MONTHLY AGGREGATED ONLINE, SAMPLES TOKEN & DVOC SUMMARY (BY PIS DATE)']], { origin: `A${monthlySummaryR}` });
+    let monthlySummaryR = totalRowR + 3;
+    XLSX.utils.sheet_add_aoa(wsDailyOnline, [['MONTHLY AGGREGATED ONLINE & DVOC SUMMARY (BY PIS DATE)']], { origin: `A${monthlySummaryR}` });
     wsDailyOnline[`A${monthlySummaryR}`].s = { font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "0369A1" } }, alignment: { horizontal: "center" } };
-    wsDailyOnline['!merges'].push({ s: { r: monthlySummaryR - 1, c: 0 }, e: { r: monthlySummaryR - 1, c: 17 } });
+    wsDailyOnline['!merges'].push({ s: { r: monthlySummaryR - 1, c: 0 }, e: { r: monthlySummaryR - 1, c: 15 } });
 
     XLSX.utils.sheet_add_aoa(wsDailyOnline, [monthlyHeaders], { origin: `A${monthlySummaryR + 1}` });
-    applyHeaderStyle(wsDailyOnline, { s: { r: monthlySummaryR, c: 0 }, e: { r: monthlySummaryR, c: 17 } }, "1E293B");
+    applyHeaderStyle(wsDailyOnline, { s: { r: monthlySummaryR, c: 0 }, e: { r: monthlySummaryR, c: 15 } }, "1E293B");
 
     XLSX.utils.sheet_add_aoa(wsDailyOnline, monthlyAggRows, { origin: `A${monthlySummaryR + 2}` });
-    applyDataRowStyle(wsDailyOnline, { s: { r: monthlySummaryR + 1, c: 0 }, e: { r: monthlySummaryR + 1 + monthlyAggRows.length, c: 17 } });
+    applyDataRowStyle(wsDailyOnline, { s: { r: monthlySummaryR + 1, c: 0 }, e: { r: monthlySummaryR + 1 + monthlyAggRows.length, c: 15 } });
+
+    // Total row for Monthly Aggregated Table (Cumulative Benchmark Summary)
+    const sortedCumNonReach = Object.entries(cumBenchmarkOwnersMap).sort((a, b) => b[1] - a[1]);
+    const cumTop2Name = sortedCumNonReach.length > 0 ? sortedCumNonReach[0][0] : '-';
+    const cumTop2Issues = sortedCumNonReach.length > 0 ? sortedCumNonReach[0][1] : 0;
+    const cumTop2Share = cumBenchmarkIssues > 0 ? `${((cumTop2Issues / cumBenchmarkIssues) * 100).toFixed(1)}%` : '0.0%';
+    const cumOtherIssues = Math.max(0, cumBenchmarkIssues - cumBenchmarkReach - cumTop2Issues);
+    const cumOtherShare = cumBenchmarkIssues > 0 ? `${((cumOtherIssues / cumBenchmarkIssues) * 100).toFixed(1)}%` : '0.0%';
+
+    const monthlyTotalRow = [
+      'TOTAL CUMULATIVE BENCHMARK',
+      cumBenchmarkOnline,
+      cumBenchmarkTasks,
+      cumBenchmarkOnline > 0 ? `${((cumBenchmarkTasks / cumBenchmarkOnline) * 100).toFixed(2)}%` : '0.00%',
+      cumBenchmarkIssues,
+      cumBenchmarkReach,
+      cumBenchmarkIssues > 0 ? `${((cumBenchmarkReach / cumBenchmarkIssues) * 100).toFixed(1)}%` : '0.0%',
+      cumBenchmarkReachAccYes,
+      cumBenchmarkIssues > 0 ? `${((cumBenchmarkReachAccYes / cumBenchmarkIssues) * 100).toFixed(1)}%` : '0.0%',
+      cumBenchmarkReachAccNo,
+      cumBenchmarkIssues > 0 ? `${((cumBenchmarkReachAccNo / cumBenchmarkIssues) * 100).toFixed(1)}%` : '0.0%',
+      cumTop2Name,
+      cumTop2Issues,
+      cumTop2Share,
+      cumOtherIssues,
+      cumOtherShare
+    ];
+
+    const monthlyTotalRowR = monthlySummaryR + 2 + monthlyAggRows.length;
+    XLSX.utils.sheet_add_aoa(wsDailyOnline, [monthlyTotalRow], { origin: `A${monthlyTotalRowR}` });
+    for (let c = 0; c < 16; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r: monthlyTotalRowR - 1, c });
+      if (wsDailyOnline[cellRef]) {
+        wsDailyOnline[cellRef].s = {
+          font: { bold: true, color: { rgb: "000000" } },
+          fill: { fgColor: { rgb: "E0F2FE" } },
+          border: {
+            top: { style: 'thin', color: { rgb: "0284C7" } },
+            bottom: { style: 'double', color: { rgb: "0284C7" } }
+          },
+          alignment: { horizontal: c === 0 || c === 11 ? "left" : "center" }
+        };
+      }
+    }
 
     // Set Column Widths for wsDailyOnline
     wsDailyOnline['!cols'] = [
-      { wch: 18 }, // Date
-      { wch: 15 }, // Day of Week
-      { wch: 22 }, // Daily Online Volume
-      { wch: 26 }, // Daily Samples Token (Taken)
-      { wch: 22 }, // Actual Tasks (PIS Date)
-      { wch: 20 }, // Total Issues Counted
-      { wch: 18 }, // REACH Total Issues
-      { wch: 22 }, // REACH Accountable (Yes)
-      { wch: 24 }, // REACH Non-Accountable (No)
-      { wch: 20 }, // Other Owners Issues
-      { wch: 16 }, // Detractors
-      { wch: 16 }, // Neutrals
-      { wch: 16 }, // Promoters
-      { wch: 26 }, // Samples Token % of Online
-      { wch: 28 }, // Sampling Fulfillment % (Tasks/Token)
-      { wch: 24 }, // Actual Tasks % of Online
-      { wch: 24 }, // Total Issues / Token (%)
-      { wch: 24 }, // Total Issues / Online (%)
-      { wch: 24 }, // REACH Issues / Token (%)
-      { wch: 24 }, // REACH Issues / Online (%)
-      { wch: 26 }, // REACH Acc (Yes) / Online (%)
-      { wch: 24 }, // REACH Share of Issues (%)
-      { wch: 35 }  // Operational Notes
+      { wch: 18 }, // Col 0: Date / Month
+      { wch: 22 }, // Col 1: Day of Week / Monthly Online Volume
+      { wch: 26 }, // Col 2: Daily Online Volume / Total non-promoters customers
+      { wch: 28 }, // Col 3: Daily Samples Token (Taken) / Actual non-promoters % of Online
+      { wch: 28 }, // Col 4: Total non-promoters customers (PIS Date) / Total issues identified
+      { wch: 22 }, // Col 5: Total issues identified / REACH Total Issues
+      { wch: 20 }, // Col 6: REACH Total Issues / REACH Share of Issues (%)
+      { wch: 22 }, // Col 7: REACH Accountable (Yes) / REACH Accountable (Yes)
+      { wch: 24 }, // Col 8: REACH Non-Accountable (No) / REACH Acc Share of Issues (%)
+      { wch: 24 }, // Col 9: 2nd Top Responsible Owner / REACH Non-Accountable (No)
+      { wch: 24 }, // Col 10: 2nd Owner Issues / REACH Non-Acc Share of Issues (%)
+      { wch: 24 }, // Col 11: 2nd Owner Share % / 2nd Top Responsible Owner
+      { wch: 20 }, // Col 12: Other Owners Issues / 2nd Owner Issues
+      { wch: 24 }, // Col 13: Other Owners Share % / 2nd Owner Share of Issues (%)
+      { wch: 22 }, // Col 14: Other Owners Issues
+      { wch: 24 }, // Col 15: Other Owners Share of Issues (%)
+      { wch: 28 }, // Col 16: Total Issues / Total Samples Token (%)
+      { wch: 28 }, // Col 17: REACH Issues / Total Samples Token (%)
+      { wch: 26 }, // Col 18: REACH Acc Share of Issues (%)
+      { wch: 26 }, // Col 19: REACH Non-Acc Share of Issues (%)
+      { wch: 24 }, // Col 20: REACH Share of Issues (%)
+      { wch: 24 }, // Col 21: REACH Acc (Yes) / Online (%)
+      { wch: 24 }, // Col 22: REACH Acc (No) / Online (%)
+      { wch: 35 }  // Col 23: Operational Notes
     ];
 
     fixSheetRange(wsDailyOnline);
@@ -9012,7 +9264,7 @@ const AllTasksList = () => {
       return [weekKey, getTop(weekTasks, 'reason'), getTop(weekTasks, 'rootCause'), getTop(weekTasks, 'responsible')];
     });
 
-    currentSheetR += monthlyTopSummary.length + 5;
+    currentSheetR += weeklyTopSummary.length + 5;
     XLSX.utils.sheet_add_aoa(wsCharts, [["WEEKLY TOP CATEGORIES SUMMARY"]], { origin: `A${currentSheetR}` });
     wsCharts[`A${currentSheetR}`].s = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "111827" } }, alignment: { horizontal: "center" } };
     wsCharts['!merges'].push({ s: { r: currentSheetR - 1, c: 0 }, e: { r: currentSheetR - 1, c: 3 } });
@@ -9022,11 +9274,422 @@ const AllTasksList = () => {
     XLSX.utils.sheet_add_aoa(wsCharts, weeklyTopSummary, { origin: `A${currentSheetR + 2}` });
     applyDataRowStyle(wsCharts, { s: { r: currentSheetR + 1, c: 0 }, e: { r: currentSheetR + 1 + weeklyTopSummary.length, c: 3 } });
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // NEW: Monthly Responsible Ownership Satisfaction & NPS Breakdown (By PIS Date)
+    // ─────────────────────────────────────────────────────────────────────────
+    currentSheetR += weeklyTopSummary.length + 5;
+    const ownerNpsHeaders = [
+      'Month',
+      'Responsible Owner / Department',
+      'Total Issues Identified',
+      'Share of Month Issues (%)',
+      'Detractors (≤6)',
+      'Detractor % of Owner',
+      'Share of Month Detractors (%)',
+      'Neutrals (7-8)',
+      'Neutral % of Owner',
+      'Share of Month Neutrals (%)',
+      'Promoters (≥9)',
+      'Promoter % of Owner',
+      'Share of Month Promoters (%)',
+      'Total Evaluated Tasks',
+      'Owner Net Promoter Score (NPS)',
+      'Remediation & Strategic Directive'
+    ];
+
+    // Build monthly interval starting from beginning of year (01/01/2026) up to current period
+    const yearStartDate = new Date(2026, 0, 1); // January 1, 2026
+    let yearEndDate = new Date(2026, 7, 31); // Default to at least August 2026
+    if (intervalEndDate && intervalEndDate > yearEndDate) yearEndDate = intervalEndDate;
+    if (CumulativeDateFilter?.end && new Date(CumulativeDateFilter.end) > yearEndDate) yearEndDate = new Date(CumulativeDateFilter.end);
+    (allTasks || []).forEach(t => {
+      if (t.pisDate) {
+        const td = new Date(t.pisDate);
+        if (!isNaN(td) && td > yearEndDate) yearEndDate = td;
+      }
+    });
+
+    const fullYearMonthlyInterval = [];
+    let curFullYearCursor = startOfMonth(yearStartDate);
+    const lastFullYearLimit = endOfMonth(yearEndDate);
+    while (curFullYearCursor <= lastFullYearLimit) {
+      fullYearMonthlyInterval.push(new Date(curFullYearCursor));
+      curFullYearCursor = new Date(curFullYearCursor.getFullYear(), curFullYearCursor.getMonth() + 1, 1);
+    }
+
+    const ownerNpsRows = [];
+    const cumOwnerStats = {};
+
+    fullYearMonthlyInterval.forEach(mDate => {
+      const monthKey = format(mDate, 'MMMM yyyy');
+      const monthPrefix = format(mDate, 'yyyy-MM');
+
+      const mTasks = (allTasks || []).filter(t => {
+        if (!t.pisDate) return false;
+        try {
+          return format(new Date(t.pisDate), 'yyyy-MM') === monthPrefix;
+        } catch (e) {
+          return false;
+        }
+      });
+
+      let mMonthTotalIssues = 0;
+      let mMonthTotalDet = 0;
+      let mMonthTotalNeu = 0;
+      let mMonthTotalPro = 0;
+
+      const mOwnerStats = {};
+      const ensureOwner = (key, name) => {
+        if (!mOwnerStats[key]) {
+          mOwnerStats[key] = { key, name, issues: 0, det: 0, neu: 0, pro: 0, tasks: 0 };
+        }
+        if (!cumOwnerStats[key]) {
+          cumOwnerStats[key] = { key, name, issues: 0, det: 0, neu: 0, pro: 0, tasks: 0 };
+        }
+      };
+
+      ensureOwner('REACH_TOTAL', 'REACH (Total)');
+      ensureOwner('REACH_ACC_YES', '↳ REACH - Accountable (Yes)');
+      ensureOwner('REACH_ACC_NO', '↳ REACH - Non-Accountable (No)');
+
+      mTasks.forEach(t => {
+        let isDet = false;
+        let isNeu = false;
+        let isPro = false;
+        const score = Number(t.evaluationScore);
+        if (!isNaN(score)) {
+          if (score <= 6) { isDet = true; mMonthTotalDet++; }
+          else if (score >= 7 && score <= 8) { isNeu = true; mMonthTotalNeu++; }
+          else if (score >= 9) { isPro = true; mMonthTotalPro++; }
+        }
+
+        const owners = normalizeArrayField(t.responsible);
+        const accs = normalizeArrayField(t.teamAccountability);
+
+        owners.forEach((owner, i) => {
+          mMonthTotalIssues++;
+          const normOwner = String(owner).trim().toUpperCase();
+          const acc = accs[i] || (accs.length > 0 ? accs[0] : 'Unknown');
+          const isAccYes = String(acc).trim().toLowerCase().startsWith('yes') || String(acc).trim().toLowerCase() === 'y';
+          const isAccNo = String(acc).trim().toLowerCase().startsWith('no') || String(acc).trim().toLowerCase() === 'n';
+
+          if (normOwner === 'REACH') {
+            mOwnerStats['REACH_TOTAL'].issues++;
+            cumOwnerStats['REACH_TOTAL'].issues++;
+            if (isDet) { mOwnerStats['REACH_TOTAL'].det++; cumOwnerStats['REACH_TOTAL'].det++; }
+            if (isNeu) { mOwnerStats['REACH_TOTAL'].neu++; cumOwnerStats['REACH_TOTAL'].neu++; }
+            if (isPro) { mOwnerStats['REACH_TOTAL'].pro++; cumOwnerStats['REACH_TOTAL'].pro++; }
+            mOwnerStats['REACH_TOTAL'].tasks++;
+            cumOwnerStats['REACH_TOTAL'].tasks++;
+
+            if (isAccYes) {
+              mOwnerStats['REACH_ACC_YES'].issues++;
+              cumOwnerStats['REACH_ACC_YES'].issues++;
+              if (isDet) { mOwnerStats['REACH_ACC_YES'].det++; cumOwnerStats['REACH_ACC_YES'].det++; }
+              if (isNeu) { mOwnerStats['REACH_ACC_YES'].neu++; cumOwnerStats['REACH_ACC_YES'].neu++; }
+              if (isPro) { mOwnerStats['REACH_ACC_YES'].pro++; cumOwnerStats['REACH_ACC_YES'].pro++; }
+              mOwnerStats['REACH_ACC_YES'].tasks++;
+              cumOwnerStats['REACH_ACC_YES'].tasks++;
+            } else {
+              mOwnerStats['REACH_ACC_NO'].issues++;
+              cumOwnerStats['REACH_ACC_NO'].issues++;
+              if (isDet) { mOwnerStats['REACH_ACC_NO'].det++; cumOwnerStats['REACH_ACC_NO'].det++; }
+              if (isNeu) { mOwnerStats['REACH_ACC_NO'].neu++; cumOwnerStats['REACH_ACC_NO'].neu++; }
+              if (isPro) { mOwnerStats['REACH_ACC_NO'].pro++; cumOwnerStats['REACH_ACC_NO'].pro++; }
+              mOwnerStats['REACH_ACC_NO'].tasks++;
+              cumOwnerStats['REACH_ACC_NO'].tasks++;
+            }
+          } else {
+            const displayOwner = String(owner).trim() || 'Other';
+            const ownerKey = `OWNER_${normOwner}`;
+            ensureOwner(ownerKey, displayOwner);
+            mOwnerStats[ownerKey].issues++;
+            cumOwnerStats[ownerKey].issues++;
+            if (isDet) { mOwnerStats[ownerKey].det++; cumOwnerStats[ownerKey].det++; }
+            if (isNeu) { mOwnerStats[ownerKey].neu++; cumOwnerStats[ownerKey].neu++; }
+            if (isPro) { mOwnerStats[ownerKey].pro++; cumOwnerStats[ownerKey].pro++; }
+            mOwnerStats[ownerKey].tasks++;
+            cumOwnerStats[ownerKey].tasks++;
+          }
+        });
+      });
+
+      // Overall Month Row
+      const mTotEval = mMonthTotalDet + mMonthTotalNeu + mMonthTotalPro;
+      const mMonthNps = mTotEval > 0 ? (((mMonthTotalPro - mMonthTotalDet) / mTotEval) * 100).toFixed(1) : (mTasks.length > 0 ? '-100.0' : '-');
+      const mMonthDetRate = mTotEval > 0 ? `${((mMonthTotalDet / mTotEval) * 100).toFixed(1)}%` : '0.0%';
+      const mMonthNeuRate = mTotEval > 0 ? `${((mMonthTotalNeu / mTotEval) * 100).toFixed(1)}%` : '0.0%';
+      const mMonthProRate = mTotEval > 0 ? `${((mMonthTotalPro / mTotEval) * 100).toFixed(1)}%` : '0.0%';
+
+      ownerNpsRows.push([
+        monthKey,
+        `✦ ALL RESPONSIBLE OWNERS TOTAL (${monthKey})`,
+        mMonthTotalIssues,
+        mMonthTotalIssues > 0 ? '100.0%' : '0.0%',
+        mMonthTotalDet,
+        mMonthDetRate,
+        mMonthTotalDet > 0 ? '100.0%' : '0.0%',
+        mMonthTotalNeu,
+        mMonthNeuRate,
+        mMonthTotalNeu > 0 ? '100.0%' : '0.0%',
+        mMonthTotalPro,
+        mMonthProRate,
+        mMonthTotalPro > 0 ? '100.0%' : '0.0%',
+        mTotEval,
+        mMonthNps,
+        mTotEval > 0
+          ? `Month overall benchmark: NPS is ${mMonthNps} (${mMonthTotalDet} Detractors, ${mMonthTotalNeu} Neutrals, ${mMonthTotalPro} Promoters)`
+          : `No DVOC non-promoter incidents recorded in ${monthKey}`
+      ]);
+
+      if (mTasks.length > 0) {
+        // REACH Total & Sub-scopes
+        ['REACH_TOTAL', 'REACH_ACC_YES', 'REACH_ACC_NO'].forEach(rKey => {
+          const st = mOwnerStats[rKey];
+          if (st) {
+            const totEval = st.det + st.neu + st.pro;
+            const nps = totEval > 0 ? (((st.pro - st.det) / totEval) * 100).toFixed(1) : (st.issues > 0 ? '-100.0' : '-');
+            const issueShare = mMonthTotalIssues > 0 ? `${((st.issues / mMonthTotalIssues) * 100).toFixed(1)}%` : '0.0%';
+            const detRate = totEval > 0 ? `${((st.det / totEval) * 100).toFixed(1)}%` : '0.0%';
+            const shareOfMonthDet = mMonthTotalDet > 0 ? `${((st.det / mMonthTotalDet) * 100).toFixed(1)}%` : '0.0%';
+            const neuRate = totEval > 0 ? `${((st.neu / totEval) * 100).toFixed(1)}%` : '0.0%';
+            const shareOfMonthNeu = mMonthTotalNeu > 0 ? `${((st.neu / mMonthTotalNeu) * 100).toFixed(1)}%` : '0.0%';
+            const proRate = totEval > 0 ? `${((st.pro / totEval) * 100).toFixed(1)}%` : '0.0%';
+            const shareOfMonthPro = mMonthTotalPro > 0 ? `${((st.pro / mMonthTotalPro) * 100).toFixed(1)}%` : '0.0%';
+
+            let directive = '';
+            if (rKey === 'REACH_TOTAL') directive = `REACH caused ${shareOfMonthDet} of month detractors (${st.det}/${mMonthTotalDet}) and ${shareOfMonthNeu} of neutrals (${st.neu}/${mMonthTotalNeu})`;
+            else if (rKey === 'REACH_ACC_YES') directive = `Accountable field/installation: Direct quality intervention (${st.det} detractors, ${st.neu} neutrals)`;
+            else directive = `Non-accountable dispatch/network: Workflow and handover optimization (${st.det} detractors, ${st.neu} neutrals)`;
+
+            ownerNpsRows.push([
+              monthKey,
+              st.name,
+              st.issues,
+              issueShare,
+              st.det,
+              detRate,
+              shareOfMonthDet,
+              st.neu,
+              neuRate,
+              shareOfMonthNeu,
+              st.pro,
+              proRate,
+              shareOfMonthPro,
+              totEval,
+              nps,
+              directive
+            ]);
+          }
+        });
+
+        // Other non-REACH owners sorted by issue volume
+        const nonReachOwners = Object.keys(mOwnerStats)
+          .filter(k => !k.startsWith('REACH_') && mOwnerStats[k].issues > 0)
+          .sort((a, b) => mOwnerStats[b].issues - mOwnerStats[a].issues);
+
+        nonReachOwners.forEach(k => {
+          const st = mOwnerStats[k];
+          const totEval = st.det + st.neu + st.pro;
+          const nps = totEval > 0 ? (((st.pro - st.det) / totEval) * 100).toFixed(1) : (st.issues > 0 ? '-100.0' : '-');
+          const issueShare = mMonthTotalIssues > 0 ? `${((st.issues / mMonthTotalIssues) * 100).toFixed(1)}%` : '0.0%';
+          const detRate = totEval > 0 ? `${((st.det / totEval) * 100).toFixed(1)}%` : '0.0%';
+          const shareOfMonthDet = mMonthTotalDet > 0 ? `${((st.det / mMonthTotalDet) * 100).toFixed(1)}%` : '0.0%';
+          const neuRate = totEval > 0 ? `${((st.neu / totEval) * 100).toFixed(1)}%` : '0.0%';
+          const shareOfMonthNeu = mMonthTotalNeu > 0 ? `${((st.neu / mMonthTotalNeu) * 100).toFixed(1)}%` : '0.0%';
+          const proRate = totEval > 0 ? `${((st.pro / totEval) * 100).toFixed(1)}%` : '0.0%';
+          const shareOfMonthPro = mMonthTotalPro > 0 ? `${((st.pro / mMonthTotalPro) * 100).toFixed(1)}%` : '0.0%';
+
+          ownerNpsRows.push([
+            monthKey,
+            st.name,
+            st.issues,
+            issueShare,
+            st.det,
+            detRate,
+            shareOfMonthDet,
+            st.neu,
+            neuRate,
+            shareOfMonthNeu,
+            st.pro,
+            proRate,
+            shareOfMonthPro,
+            totEval,
+            nps,
+            `Responsible for ${shareOfMonthDet} of month detractors (${st.det}/${mMonthTotalDet}) and ${shareOfMonthNeu} of neutrals (${st.neu}/${mMonthTotalNeu}) → NPS is ${nps}`
+          ]);
+        });
+      }
+    });
+
+    // Cumulative summary by Owner across all full year periods
+    let cumAllIssues = 0;
+    let cumAllDet = 0;
+    let cumAllNeu = 0;
+    let cumAllPro = 0;
+
+    Object.keys(cumOwnerStats).forEach(k => {
+      if (!k.startsWith('REACH_ACC_') && k !== 'REACH_TOTAL') {
+        cumAllIssues += cumOwnerStats[k].issues;
+        cumAllDet += cumOwnerStats[k].det;
+        cumAllNeu += cumOwnerStats[k].neu;
+        cumAllPro += cumOwnerStats[k].pro;
+      }
+    });
+    if (cumOwnerStats['REACH_TOTAL']) {
+      cumAllIssues += cumOwnerStats['REACH_TOTAL'].issues;
+      cumAllDet += cumOwnerStats['REACH_TOTAL'].det;
+      cumAllNeu += cumOwnerStats['REACH_TOTAL'].neu;
+      cumAllPro += cumOwnerStats['REACH_TOTAL'].pro;
+    }
+
+    const cumTotEval = cumAllDet + cumAllNeu + cumAllPro;
+    const cumTotNps = cumTotEval > 0 ? (((cumAllPro - cumAllDet) / cumTotEval) * 100).toFixed(1) : '-100.0';
+    const cumTotDetRate = cumTotEval > 0 ? `${((cumAllDet / cumTotEval) * 100).toFixed(1)}%` : '0.0%';
+    const cumTotNeuRate = cumTotEval > 0 ? `${((cumAllNeu / cumTotEval) * 100).toFixed(1)}%` : '0.0%';
+    const cumTotProRate = cumTotEval > 0 ? `${((cumAllPro / cumTotEval) * 100).toFixed(1)}%` : '0.0%';
+
+    ownerNpsRows.push([
+      'TOTAL CUMULATIVE',
+      '✦ ALL RESPONSIBLE OWNERS CUMULATIVE TOTAL',
+      cumAllIssues,
+      '100.0%',
+      cumAllDet,
+      cumTotDetRate,
+      cumAllDet > 0 ? '100.0%' : '0.0%',
+      cumAllNeu,
+      cumTotNeuRate,
+      cumAllNeu > 0 ? '100.0%' : '0.0%',
+      cumAllPro,
+      cumTotProRate,
+      cumAllPro > 0 ? '100.0%' : '0.0%',
+      cumTotEval,
+      cumTotNps,
+      `Full cumulative benchmark summary: Overall NPS is ${cumTotNps} across ${cumTotEval} evaluated tasks (${cumAllDet} detractors, ${cumAllNeu} neutrals, ${cumAllPro} promoters)`
+    ]);
+
+    ['REACH_TOTAL', 'REACH_ACC_YES', 'REACH_ACC_NO'].forEach(rKey => {
+      const st = cumOwnerStats[rKey];
+      if (st) {
+        const totEval = st.det + st.neu + st.pro;
+        const nps = totEval > 0 ? (((st.pro - st.det) / totEval) * 100).toFixed(1) : (st.issues > 0 ? '-100.0' : '-');
+        const issueShare = cumAllIssues > 0 ? `${((st.issues / cumAllIssues) * 100).toFixed(1)}%` : '0.0%';
+        const detRate = totEval > 0 ? `${((st.det / totEval) * 100).toFixed(1)}%` : '0.0%';
+        const cumShareDet = cumAllDet > 0 ? `${((st.det / cumAllDet) * 100).toFixed(1)}%` : '0.0%';
+        const neuRate = totEval > 0 ? `${((st.neu / totEval) * 100).toFixed(1)}%` : '0.0%';
+        const cumShareNeu = cumAllNeu > 0 ? `${((st.neu / cumAllNeu) * 100).toFixed(1)}%` : '0.0%';
+        const proRate = totEval > 0 ? `${((st.pro / totEval) * 100).toFixed(1)}%` : '0.0%';
+        const cumSharePro = cumAllPro > 0 ? `${((st.pro / cumAllPro) * 100).toFixed(1)}%` : '0.0%';
+
+        ownerNpsRows.push([
+          'TOTAL CUMULATIVE',
+          st.name,
+          st.issues,
+          issueShare,
+          st.det,
+          detRate,
+          cumShareDet,
+          st.neu,
+          neuRate,
+          cumShareNeu,
+          st.pro,
+          proRate,
+          cumSharePro,
+          totEval,
+          nps,
+          `Cumulative ${st.name}: ${st.issues} total issues, ${cumShareDet} of all detractors (${st.det}/${cumAllDet}) → NPS is ${nps}`
+        ]);
+      }
+    });
+
+    const cumNonReach = Object.keys(cumOwnerStats)
+      .filter(k => !k.startsWith('REACH_') && cumOwnerStats[k].issues > 0)
+      .sort((a, b) => cumOwnerStats[b].issues - cumOwnerStats[a].issues);
+
+    cumNonReach.forEach(k => {
+      const st = cumOwnerStats[k];
+      const totEval = st.det + st.neu + st.pro;
+      const nps = totEval > 0 ? (((st.pro - st.det) / totEval) * 100).toFixed(1) : (st.issues > 0 ? '-100.0' : '-');
+      const issueShare = cumAllIssues > 0 ? `${((st.issues / cumAllIssues) * 100).toFixed(1)}%` : '0.0%';
+      const detRate = totEval > 0 ? `${((st.det / totEval) * 100).toFixed(1)}%` : '0.0%';
+      const cumShareDet = cumAllDet > 0 ? `${((st.det / cumAllDet) * 100).toFixed(1)}%` : '0.0%';
+      const neuRate = totEval > 0 ? `${((st.neu / totEval) * 100).toFixed(1)}%` : '0.0%';
+      const cumShareNeu = cumAllNeu > 0 ? `${((st.neu / cumAllNeu) * 100).toFixed(1)}%` : '0.0%';
+      const proRate = totEval > 0 ? `${((st.pro / totEval) * 100).toFixed(1)}%` : '0.0%';
+      const cumSharePro = cumAllPro > 0 ? `${((st.pro / cumAllPro) * 100).toFixed(1)}%` : '0.0%';
+
+      ownerNpsRows.push([
+        'TOTAL CUMULATIVE',
+        st.name,
+        st.issues,
+        issueShare,
+        st.det,
+        detRate,
+        cumShareDet,
+        st.neu,
+        neuRate,
+        cumShareNeu,
+        st.pro,
+        proRate,
+        cumSharePro,
+        totEval,
+        nps,
+        `Cumulative ${st.name}: ${st.issues} issues, ${cumShareDet} of all detractors (${st.det}/${cumAllDet}), ${cumShareNeu} of neutrals (${st.neu}/${cumAllNeu}) → NPS is ${nps}`
+      ]);
+    });
+
+    XLSX.utils.sheet_add_aoa(wsCharts, [['MONTHLY RESPONSIBLE OWNERSHIP DVOC SATISFACTION & NPS BREAKDOWN (BY PIS DATE)']], { origin: `A${currentSheetR}` });
+    wsCharts[`A${currentSheetR}`].s = { font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "581C87" } }, alignment: { horizontal: "center" } };
+    wsCharts['!merges'].push({ s: { r: currentSheetR - 1, c: 0 }, e: { r: currentSheetR - 1, c: 15 } });
+
+    XLSX.utils.sheet_add_aoa(wsCharts, [ownerNpsHeaders], { origin: `A${currentSheetR + 1}` });
+    applyHeaderStyle(wsCharts, { s: { r: currentSheetR, c: 0 }, e: { r: currentSheetR, c: 15 } }, "1E293B");
+
+    XLSX.utils.sheet_add_aoa(wsCharts, ownerNpsRows, { origin: `A${currentSheetR + 2}` });
+    applyDataRowStyle(wsCharts, { s: { r: currentSheetR + 1, c: 0 }, e: { r: currentSheetR + 1 + ownerNpsRows.length, c: 15 } });
+
+    // Format summary rows in Owner NPS table on wsCharts
+    for (let rIdx = 0; rIdx < ownerNpsRows.length; rIdx++) {
+      const rowItem = ownerNpsRows[rIdx];
+      const isTotalRow = String(rowItem[1]).includes('ALL RESPONSIBLE OWNERS') || String(rowItem[0]).includes('TOTAL CUMULATIVE');
+      const isReachMain = String(rowItem[1]) === 'REACH (Total)';
+      if (isTotalRow || isReachMain) {
+        const rowNum = currentSheetR + 2 + rIdx;
+        for (let c = 0; c < 16; c++) {
+          const cellRef = XLSX.utils.encode_cell({ r: rowNum - 1, c });
+          if (wsCharts[cellRef]) {
+            wsCharts[cellRef].s = {
+              font: { bold: true, color: { rgb: isTotalRow ? "4C1D95" : "0F172A" } },
+              fill: { fgColor: { rgb: isTotalRow ? "F3E8FF" : "F1F5F9" } },
+              border: {
+                top: { style: 'thin', color: { rgb: isTotalRow ? "7C3AED" : "CBD5E1" } },
+                bottom: { style: 'thin', color: { rgb: isTotalRow ? "7C3AED" : "CBD5E1" } }
+              },
+              alignment: { horizontal: c === 0 || c === 1 || c === 15 ? "left" : "center" }
+            };
+          }
+        }
+      }
+    }
+
     wsCharts['!cols'] = [
-      { wch: 32 }, // Item Name / Month
-      ...Array.from({ length: 12 }, () => [{ wch: 10 }, { wch: 10 }]).flat(),
-      { wch: 14 }, // Total Count
-      { wch: 14 }  // Total %
+      { wch: 32 }, // Col 0: Month / Item Name
+      { wch: 36 }, // Col 1: Responsible Owner / Department
+      { wch: 24 }, // Col 2: Total Issues Identified
+      { wch: 24 }, // Col 3: Share of Month Issues (%)
+      { wch: 18 }, // Col 4: Detractors (≤6)
+      { wch: 22 }, // Col 5: Detractor % of Owner
+      { wch: 28 }, // Col 6: Share of Month Detractors (%)
+      { wch: 18 }, // Col 7: Neutrals (7-8)
+      { wch: 22 }, // Col 8: Neutral % of Owner
+      { wch: 28 }, // Col 9: Share of Month Neutrals (%)
+      { wch: 18 }, // Col 10: Promoters (≥9)
+      { wch: 22 }, // Col 11: Promoter % of Owner
+      { wch: 28 }, // Col 12: Share of Month Promoters (%)
+      { wch: 22 }, // Col 13: Total Evaluated Tasks
+      { wch: 28 }, // Col 14: Owner Net Promoter Score (NPS)
+      { wch: 70 }, // Col 15: Remediation & Strategic Directive
+      ...Array.from({ length: 12 }, () => [{ wch: 12 }, { wch: 12 }]).flat()
     ];
     fixSheetRange(wsCharts);
 

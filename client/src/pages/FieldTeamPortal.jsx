@@ -26,7 +26,9 @@ import {
   AutoStories,
   FactCheck,
   BugReport,
-  Lightbulb
+  Lightbulb,
+  Gavel,
+  ThumbUp
 } from '@mui/icons-material';
 import moment from "moment";
 import { subDays, isAfter, format } from 'date-fns';
@@ -35,6 +37,48 @@ const normalizeText = (value) => {
   if (value === undefined || value === null) return '';
   if (Array.isArray(value)) return value.join(' ').toLowerCase().trim();
   return String(value).toLowerCase().trim();
+};
+
+const safeFormatDate = (val) => {
+  if (!val) return '-';
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return '-';
+    return format(d, 'yyyy-MM-dd');
+  } catch (e) {
+    return '-';
+  }
+};
+
+const isIssueForTeam = (issue, team) => {
+  if (!team || !issue) return false;
+  const tId = team._id ? team._id.toString() : '';
+  const tName = normalizeText(team.teamName);
+  const tCode = normalizeText(team.teamCode);
+
+  const issueFieldTeam = issue.fieldTeam ? (issue.fieldTeam._id || issue.fieldTeam).toString() : '';
+  if (tId && issueFieldTeam && issueFieldTeam === tId) return true;
+
+  const issueTeam = normalizeText(issue.teamName);
+  const installing = normalizeText(issue.installingTeam);
+  const issueCode = normalizeText(issue.teamCode);
+
+  // If explicit team name or installing team is given, it MUST match the team name
+  if (tName && (issueTeam === tName || installing === tName)) return true;
+
+  // Only fallback to teamCode if no explicit team name was specified in the issue
+  if (!issueTeam && !installing && tCode && issueCode && issueCode === tCode) return true;
+
+  return false;
+};
+
+const isTaskForTeam = (task, team) => {
+  if (!team || !task) return false;
+  const tId = team._id ? team._id.toString() : '';
+  const tName = normalizeText(team.teamName);
+  const taskTeamId = task.teamId?._id?.toString() || task.teamId?.toString() || (task.fieldTeam?._id || task.fieldTeam)?.toString();
+  const taskTeamName = normalizeText(task.teamName);
+  return (tId && taskTeamId === tId) || (tName && taskTeamName === tName);
 };
 
 const isTeamAccountable = (task) => Array.isArray(task?.teamAccountability) ? task?.teamAccountability.includes("Yes") : task?.teamAccountability === "Yes";
@@ -218,6 +262,8 @@ const applySnapshotStyles = (ws, data) => {
   const headers = Object.keys(data[0]);
   const range = XLSX.utils.decode_range(ws['!ref']);
   
+  if (!ws['!cols']) ws['!cols'] = [];
+  
   // Style definitions
   const weeklyStyle = { fill: { fgColor: { rgb: "E3F2FD" } } }; // Very Light Blue
   const monthlyStyle = { fill: { fgColor: { rgb: "F1F8E9" } } }; // Very Light Green
@@ -226,13 +272,25 @@ const applySnapshotStyles = (ws, data) => {
   const headerBaseStyle = { 
     font: { bold: true, color: { rgb: "FFFFFF" } }, 
     fill: { fgColor: { rgb: "475569" } }, // Slate-600
-    alignment: { horizontal: "center" }
+    alignment: { horizontal: "center", vertical: "center" }
   };
 
   for (let C = range.s.c; C <= range.e.c; ++C) {
     const colName = headers[C];
     let bodyStyle = null;
+    const isFeedbackCol = colName === 'Customer Feedback' || colName === 'Customer Feedback / Comment' || colName === 'Q1-Verbatim' || colName === 'reporterNote';
+    const isLongTextCol = colName === 'QOps Transaction History' || colName === 'GAIA Content' || colName === 'Latest QOps Note' || colName === 'Action taken by assigned user';
     
+    if (isFeedbackCol) {
+      if (!ws['!cols'][C] || (ws['!cols'][C].wch || 0) < 60) {
+        ws['!cols'][C] = { wch: 60 };
+      }
+    } else if (isLongTextCol) {
+      if (!ws['!cols'][C] || (ws['!cols'][C].wch || 0) < 40) {
+        ws['!cols'][C] = { wch: 40 };
+      }
+    }
+
     if (colName && colName.startsWith('Weekly:')) {
       bodyStyle = weeklyStyle;
     } else if (colName && colName.startsWith('Monthly:')) {
@@ -258,9 +316,37 @@ const applySnapshotStyles = (ws, data) => {
           ...headerBaseStyle,
           fill: { fgColor: { rgb: headerColor } }
         };
-      } else if (bodyStyle) {
-        // Body styling for snapshot columns
-        ws[cellRef].s = bodyStyle;
+      } else {
+        const existingStyle = ws[cellRef].s || {};
+
+        if (isFeedbackCol) {
+          ws[cellRef].s = {
+            ...existingStyle,
+            ...(bodyStyle || {}),
+            alignment: {
+              horizontal: 'right',
+              vertical: 'center',
+              wrapText: true,
+              readingOrder: 2
+            }
+          };
+        } else if (isLongTextCol) {
+          ws[cellRef].s = {
+            ...existingStyle,
+            ...(bodyStyle || {}),
+            alignment: {
+              horizontal: 'left',
+              vertical: 'center',
+              wrapText: true
+            }
+          };
+        } else if (bodyStyle) {
+          // Body styling for snapshot columns
+          ws[cellRef].s = {
+            ...existingStyle,
+            ...bodyStyle
+          };
+        }
       }
     }
   }
@@ -305,7 +391,7 @@ import {
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
-import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport, FaEnvelope, FaRegSmile, FaEquals } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport, FaEnvelope, FaRegSmile, FaEquals, FaGavel } from 'react-icons/fa';
 import { MdInsights } from 'react-icons/md';
 import ViewIssueDetailsDialog from "../components/ViewIssueDetailsDialog";
 import { TaskDetailsDialog } from "../components/TaskDetailsDialog";
@@ -563,9 +649,10 @@ const FieldTeamPortal = () => {
   };
 
   const calculateAverageScore = (results) => {
-    if (results.length === 0) return 0;
+    if (!results || results.length === 0) return 0;
     const totalScore = results.reduce((sum, result) => {
-      return sum + (result.overallScore || result.percentage || 0);
+      const val = result.totalScore !== undefined ? result.totalScore : (result.overallScore !== undefined ? result.overallScore : (result.percentage !== undefined ? result.percentage : 0));
+      return sum + Number(val || 0);
     }, 0);
     return totalScore / results.length;
   };
@@ -695,11 +782,27 @@ const FieldTeamPortal = () => {
   const [leaderboardDateFilter, setLeaderboardDateFilter] = useState({ start: '', end: '' });
   const [leaderboardThresholds, setLeaderboardThresholds] = useState({ minIssues: '', minSuccessRate: '' });
   const [allTrainingSessionsGlobal, setAllTrainingSessionsGlobal] = useState([]);
+  const [allQuizResultsGlobal, setAllQuizResultsGlobal] = useState([]);
+  const [allJobAssessmentsGlobal, setAllJobAssessmentsGlobal] = useState([]);
+  const [allLabAssessmentsGlobal, setAllLabAssessmentsGlobal] = useState([]);
+
+  // Teams Quality KPI Matrix Controls & Filter State
+  const [matrixDateFilterMode, setMatrixDateFilterMode] = useState('all'); // 'all', 'this_month', 'last_month', 'this_quarter', 'this_year', 'custom'
+  const [matrixCustomStartDate, setMatrixCustomStartDate] = useState('');
+  const [matrixCustomEndDate, setMatrixCustomEndDate] = useState('');
+  const [matrixSearchQuery, setMatrixSearchQuery] = useState('');
+  const [matrixCompanyFilter, setMatrixCompanyFilter] = useState('all');
+  const [matrixStatusFilter, setMatrixStatusFilter] = useState('active'); // 'active', 'all', 'terminated', 'resigned', 'suspended', 'on_leave'
+  const [matrixPage, setMatrixPage] = useState(0);
+  const [matrixRowsPerPage, setMatrixRowsPerPage] = useState(15);
+  const [matrixSort, setMatrixSort] = useState({ field: 'accountableCount', direction: 'desc' });
 
   // NEW: State for Global Analytics Tab
   const [globalTab, setGlobalTab] = useState(0);
   const [analyticsSubTab, setAnalyticsSubTab] = useState(0); // 0: All, 1: Detractors, 2: Neutrals
   const [samplesTokenData, setSamplesTokenData] = useState([]);
+  const [teamSamplesTokens, setTeamSamplesTokens] = useState([]);
+  const [activeTeamsOnly, setActiveTeamsOnly] = useState(true);
 
   // Fetch Samples Token Data for targets
   useEffect(() => {
@@ -713,7 +816,18 @@ const FieldTeamPortal = () => {
         console.error("Error fetching samples token:", err);
       }
     };
+    const fetchTeamSamples = async () => {
+      try {
+        const response = await api.get(`/samples-token/team-samples/${new Date().getFullYear()}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+        });
+        setTeamSamplesTokens(Array.isArray(response.data) ? response.data : []);
+      } catch (err) {
+        console.error("Error fetching team samples token:", err);
+      }
+    };
     fetchSamplesToken();
+    fetchTeamSamples();
   }, []);
   const [offendersPage, setOffendersPage] = useState(1);
 
@@ -841,7 +955,9 @@ const FieldTeamPortal = () => {
       detailedReasons: {},
       detailedSubReasons: {},
       detailedRootCauses: {},
-      sentiment: { Promoter: 0, Neutral: 0, Detractor: 0, NotEvaluated: 0 }
+      sentiment: { Promoter: 0, Neutral: 0, Detractor: 0, NotEvaluated: 0 },
+      accountableSentiment: { Promoter: 0, Neutral: 0, Detractor: 0, NotEvaluated: 0 },
+      nonAccountableSentiment: { Promoter: 0, Neutral: 0, Detractor: 0, NotEvaluated: 0 }
     };
 
     const scoringKeysMap = (settings?.scoringKeys || [])
@@ -937,11 +1053,24 @@ const FieldTeamPortal = () => {
       });
 
       let score = task.evaluationScore;
+      const isAcc = isTeamAccountable(task);
+
       if (score && score > 0) {
-        if (score <= 6) stats.sentiment.Detractor++;
-        else if (score >= 7 && score <= 8) stats.sentiment.Neutral++;
-        else if (score >= 9) stats.sentiment.Promoter++;
-        else stats.sentiment.NotEvaluated++;
+        if (score <= 6) {
+          stats.sentiment.Detractor++;
+          if (isAcc) stats.accountableSentiment.Detractor++;
+          else stats.nonAccountableSentiment.Detractor++;
+        } else if (score >= 7 && score <= 8) {
+          stats.sentiment.Neutral++;
+          if (isAcc) stats.accountableSentiment.Neutral++;
+          else stats.nonAccountableSentiment.Neutral++;
+        } else if (score >= 9) {
+          stats.sentiment.Promoter++;
+          if (isAcc) stats.accountableSentiment.Promoter++;
+          else stats.nonAccountableSentiment.Promoter++;
+        } else {
+          stats.sentiment.NotEvaluated++;
+        }
       } else {
         stats.sentiment.NotEvaluated++;
       }
@@ -991,8 +1120,15 @@ const FieldTeamPortal = () => {
       };
     }
 
+    const accCount = tasksToProcess.filter(t => isTeamAccountable(t)).length;
+    const nonAccCount = tasksToProcess.filter(t => !isTeamAccountable(t)).length;
+
     return {
       totalProcessed: tasksToProcess.length,
+      accountableCount: accCount,
+      nonAccountableCount: nonAccCount,
+      accountableSentiment: stats.accountableSentiment,
+      nonAccountableSentiment: stats.nonAccountableSentiment,
       ownerData: toChartData(stats.byOwner),
       reasonData: toChartData(stats.byReason),
       subReasonData: toChartData(stats.bySubReason),
@@ -1005,6 +1141,11 @@ const FieldTeamPortal = () => {
         { name: 'Promoters', value: stats.sentiment.Promoter, color: '#10b981', percentage: tasksToProcess.length > 0 ? ((stats.sentiment.Promoter / tasksToProcess.length) * 100).toFixed(1) : 0 },
         { name: 'Neutrals', value: stats.sentiment.Neutral, color: '#f59e0b', percentage: tasksToProcess.length > 0 ? ((stats.sentiment.Neutral / tasksToProcess.length) * 100).toFixed(1) : 0 },
         { name: 'Detractors', value: stats.sentiment.Detractor, color: '#ef4444', percentage: tasksToProcess.length > 0 ? ((stats.sentiment.Detractor / tasksToProcess.length) * 100).toFixed(1) : 0 },
+      ],
+      accountableSentimentData: [
+        { name: 'Detractors', value: stats.accountableSentiment.Detractor, color: '#ef4444', percentage: accCount > 0 ? ((stats.accountableSentiment.Detractor / accCount) * 100).toFixed(1) : 0 },
+        { name: 'Neutrals', value: stats.accountableSentiment.Neutral, color: '#f59e0b', percentage: accCount > 0 ? ((stats.accountableSentiment.Neutral / accCount) * 100).toFixed(1) : 0 },
+        { name: 'Promoters', value: stats.accountableSentiment.Promoter, color: '#10b981', percentage: accCount > 0 ? ((stats.accountableSentiment.Promoter / accCount) * 100).toFixed(1) : 0 }
       ],
       matrixOwners,
       sentiment: stats.sentiment,
@@ -1192,17 +1333,8 @@ const FieldTeamPortal = () => {
   }, [filteredTechnicalTasks]);
   const filteredCustomerIssues = useMemo(() => {
     return customerIssues.filter(issue => {
-      // 1. Team filter: Only include issues belonging to the selected team
-      if (selectedTeam) {
-        const teamName = selectedTeam.teamName?.toLowerCase();
-        const installingTeam = issue.installingTeam?.toLowerCase();
-        const assignedTo = issue.assignedTo?.toLowerCase();
-
-        // Check if either field matches the selected team name
-        if (installingTeam !== teamName && assignedTo !== teamName) {
-          return false;
-        }
-      }
+      // 1. Strict Team filter: Only include issues belonging to the selected team
+      if (selectedTeam && !isIssueForTeam(issue, selectedTeam)) return false;
 
       // 2. Date filter
       if (!dateFilter.start && !dateFilter.end) return true;
@@ -1917,15 +2049,19 @@ const FieldTeamPortal = () => {
   const mapItemToExcelRow = (item, type, teamSummary = null) => {
     let displayScore = 'Not Evaluated';
     let satisfaction = 'N/A';
-    let score = item.evaluationScore || 0;
-    if (score > 0) {
-      const isSmallScale = score <= 10;
-      displayScore = `${score}${isSmallScale ? '/10' : '%'}`;
-      const normalized = isSmallScale ? score * 10 : score;
+    const rawScore = item.evaluationScore !== undefined && item.evaluationScore !== null ? item.evaluationScore : (item.score !== undefined ? item.score : null);
+    let numScore = Number(rawScore || 0);
+    if (rawScore !== null && rawScore !== '' && !isNaN(numScore) && numScore > 0) {
+      displayScore = numScore; // Just show clean number: 1, 6, 8, 10
+      const normalized = numScore <= 10 ? numScore * 10 : numScore;
       if (normalized <= 60) satisfaction = 'Detractor';
       else if (normalized <= 80) satisfaction = 'Neutral';
       else satisfaction = 'Promoter';
     }
+
+    const isReachOwner = fieldContainsReach(item.responsible);
+    const isAccYes = isTeamAccountable(item);
+    const confirmedTeamAcc = (isReachOwner && isAccYes) ? 'Yes' : 'No';
 
     const baseRow = {
       'Type': type === 'task' ? 'NPS Ticket' : 'Customer Issue',
@@ -1938,6 +2074,9 @@ const FieldTeamPortal = () => {
 
       'Score': displayScore,
       'Satisfaction': satisfaction,
+      'Team Accountability': isAccYes ? 'Yes' : 'No',
+      'Owner REACH': isReachOwner ? 'Yes' : 'No',
+      'Confirmed Team Accountable (REACH + Yes)': confirmedTeamAcc,
       'Points': calculateItemPoints(item, type),
 
       'Customer Feedback': (type === 'task' ? (item.customerFeedback || '-') : (item.reporterNote || '-')),
@@ -2034,81 +2173,1066 @@ const FieldTeamPortal = () => {
     return baseRow;
   };
 
-  const handleExportIndividualTeam = (team) => {
-    // 0. Calculate Global Totals for Comparative Analysis
-    const globalTotals = leaderboardData.reduce((acc, t) => {
-      acc.totalDetractors += (t.npsDetractors || 0);
-      acc.totalNeutrals += (t.npsNeutrals || 0);
-      acc.totalIssues += (t.issueViolations || 0);
-      acc.totalViolations += (t.totalViolations || 0);
-      acc.totalPoints += (t.totalPoints || 0);
-      return acc;
-    }, { totalDetractors: 0, totalNeutrals: 0, totalIssues: 0, totalViolations: 0, totalPoints: 0 });
-
-    // 1. Team Summary Data with Comparative Metrics
-    const summaryData = [{
-      'Team Name': team.teamName,
-      // 'Company': team.teamCompany,
-      'Total NPS Tasks': team.totalNpsTickets,
-      'NPS Detractors': team.npsDetractors,
-      '% of Global Detractors': globalTotals.totalDetractors > 0 ? ((team.npsDetractors / globalTotals.totalDetractors) * 100).toFixed(1) + '%' : '0.0%',
-      'NPS Neutrals': team.npsNeutrals,
-      '% of Global Neutrals': globalTotals.totalNeutrals > 0 ? ((team.npsNeutrals / globalTotals.totalNeutrals) * 100).toFixed(1) + '%' : '0.0%',
-      'Total Issues': team.issueViolations,
-      '% of Global Issues': globalTotals.totalIssues > 0 ? ((team.issueViolations / globalTotals.totalIssues) * 100).toFixed(1) + '%' : '0.0%',
-      'Open Cases': team.openCount,
-      'Avg Resolution Time (Days)': team.avgResolutionTime,
-      'Resolution Rate (%)': team.resPercent,
-      'Total Violations': team.totalViolations,
-      '% of Global Total Violations': globalTotals.totalViolations > 0 ? ((team.totalViolations / globalTotals.totalViolations) * 100).toFixed(1) + '%' : '0.0%',
-      'Total Points': team.totalPoints,
-      '% of Global Total Points': globalTotals.totalPoints > 0 ? ((team.totalPoints / globalTotals.totalPoints) * 100).toFixed(1) + '%' : '0.0%',
-    }];
-
-    // 2. Detailed Data
-    let latestSessionDate = null;
-    if (team?.sessionHistory?.length > 0) {
-      const dates = team.sessionHistory.map(s => s.sessionDate).filter(d => d).map(d => new Date(d));
-      if (dates.length > 0) latestSessionDate = new Date(Math.max(...dates));
-    }
-    const teamSummary = calculateTeamExportSummary([...team.rawDetractors, ...team.rawNeutrals], settings, latestSessionDate);
-    const detailedData = [
-      ...team.rawDetractors.map(t => mapItemToExcelRow(t, 'task', teamSummary)),
-      ...team.rawNeutrals.map(t => mapItemToExcelRow(t, 'task', teamSummary)),
-      ...team.rawIssues.map(i => mapItemToExcelRow(i, 'issue', teamSummary))
-    ];
+  const exportPremiumTeamQualityReport = (teamToExport) => {
+    const team = teamToExport || selectedTeam;
+    if (!team) return;
 
     const wb = XLSX.utils.book_new();
 
-    // Summary Sheet
-    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-    applySnapshotStyles(wsSummary, summaryData);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Team Performance Summary");
+    const tName = normalizeText(team.teamName);
+    const tCode = normalizeText(team.teamCode);
+    const tId = team._id?.toString();
 
-    // Detailed Sheet
-    const wsDetails = XLSX.utils.json_to_sheet(detailedData);
-    applySnapshotStyles(wsDetails, detailedData);
-    XLSX.utils.book_append_sheet(wb, wsDetails, "Detailed Feedback & Actions");
+    // 1. Gather all tasks for this team
+    const teamTasks = (Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : []).filter(task => isTaskForTeam(task, team));
 
-    // Auto-size columns
-    [wsSummary, wsDetails].forEach(ws => {
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      const cols = [];
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        let maxLen = 10;
-        for (let R = range.s.r; R <= range.e.r; ++R) {
-          const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
-          if (cell && cell.v) {
-            const len = cell.v.toString().length;
-            if (len > maxLen) maxLen = len;
-          }
+    // 2. Gather all snags / customer issues for this team
+    const teamIssues = (Array.isArray(allCustomerIssuesGlobal) ? allCustomerIssuesGlobal : []).filter(issue => isIssueForTeam(issue, team));
+
+    // 3. Gather all training sessions for this team
+    const teamSessions = [];
+    if (Array.isArray(team.sessionHistory)) {
+      team.sessionHistory.forEach(s => {
+        if (s && s.sessionDate) {
+          teamSessions.push({
+            sessionDate: s.sessionDate,
+            sessionTitle: s.sessionTitle || 'Quality Coaching & Development',
+            sessionType: s.sessionType || 'Remedial / Coaching',
+            conductedBy: typeof s.conductedBy === 'object' ? (s.conductedBy.name || 'Quality Team') : (s.conductedBy || 'Quality Team'),
+            location: s.location || 'HQ / Field',
+            duration: s.duration || '-',
+            outlines: Array.isArray(s.outlines) ? s.outlines.join(', ') : (s.outlines || '-'),
+            status: s.status || 'Completed',
+            notes: s.notes || ''
+          });
         }
-        cols.push({ wch: Math.min(maxLen + 2, 50) }); // Cap at 50 for readability
+      });
+    }
+    (Array.isArray(allTrainingSessionsGlobal) ? allTrainingSessionsGlobal : []).forEach(sess => {
+      const isParticipant = (sess.participants || []).some(p => {
+        const pName = normalizeText(p.teamName || p.name || p);
+        const pId = (p._id || p.teamId)?.toString();
+        return (tId && pId === tId) || (tName && pName === tName);
+      });
+      if (isParticipant && !teamSessions.some(s => new Date(s.sessionDate).getTime() === new Date(sess.sessionDate).getTime())) {
+        teamSessions.push({
+          sessionDate: sess.sessionDate,
+          sessionTitle: sess.sessionTitle || 'Field Quality Standards',
+          sessionType: sess.sessionType || 'Workshop / Field',
+          conductedBy: sess.trainer || sess.conductedBy || 'Quality Team',
+          location: sess.location || 'Training Center',
+          duration: sess.duration || '-',
+          outlines: Array.isArray(sess.outlines) ? sess.outlines.join(', ') : (sess.outlines || '-'),
+          status: sess.status || 'Completed',
+          notes: sess.notes || ''
+        });
       }
-      ws['!cols'] = cols;
+    });
+    teamSessions.sort((a, b) => new Date(b.sessionDate) - new Date(a.sessionDate));
+
+    // 4. Monthly Samples Token for this team
+    const monthlyTokens = {};
+    for (let m = 1; m <= 12; m++) monthlyTokens[m] = 0;
+    (teamSamplesTokens || []).forEach(st => {
+      const matchName = normalizeText(st.teamName) === tName;
+      const matchId = st.teamId && st.teamId.toString() === tId;
+      if (matchName || matchId) {
+        monthlyTokens[st.month] = (monthlyTokens[st.month] || 0) + (Number(st.sampleSize) || 0);
+      }
+    });
+    const totalTeamSamplesToken = Object.values(monthlyTokens).reduce((a, b) => a + b, 0);
+
+    // Helpers
+    const PALETTE = {
+      navyDark: "0F172A",
+      slateDark: "1E293B",
+      slateMedium: "334155",
+      slateLight: "475569",
+      slateMuted: "64748B",
+      blueHeader: "1E40AF",
+      blueSub: "3B82F6",
+      blueBg: "EFF6FF",
+      emeraldHeader: "065F46",
+      emeraldBg: "ECFDF5",
+      emeraldText: "047857",
+      amberHeader: "92400E",
+      amberBg: "FFFBEB",
+      amberText: "B45309",
+      roseHeader: "9F1239",
+      roseBg: "FFF1F2",
+      roseText: "BE123C",
+      purpleHeader: "581C87",
+      purpleBg: "FAF5FF",
+      zebraBg: "F8FAFC",
+      borderLight: "CBD5E1",
+      white: "FFFFFF"
+    };
+
+    const borderThin = {
+      top: { style: "thin", color: { rgb: PALETTE.borderLight } },
+      bottom: { style: "thin", color: { rgb: PALETTE.borderLight } },
+      left: { style: "thin", color: { rgb: PALETTE.borderLight } },
+      right: { style: "thin", color: { rgb: PALETTE.borderLight } }
+    };
+
+    const borderHeader = {
+      top: { style: "medium", color: { rgb: PALETTE.slateDark } },
+      bottom: { style: "medium", color: { rgb: PALETTE.slateDark } },
+      left: { style: "thin", color: { rgb: PALETTE.slateMedium } },
+      right: { style: "thin", color: { rgb: PALETTE.slateMedium } }
+    };
+
+    const borderSummary = {
+      top: { style: "medium", color: { rgb: PALETTE.navyDark } },
+      bottom: { style: "double", color: { rgb: PALETTE.navyDark } },
+      left: { style: "thin", color: { rgb: PALETTE.slateMedium } },
+      right: { style: "thin", color: { rgb: PALETTE.slateMedium } }
+    };
+
+    const fixSheetRange = (ws) => {
+      const cells = Object.keys(ws).filter(k => k[0] !== '!');
+      if (cells.length === 0) return;
+      const range = { s: { r: 1000000, c: 1000000 }, e: { r: 0, c: 0 } };
+      cells.forEach(addr => {
+        const c = XLSX.utils.decode_cell(addr);
+        if (c.r < range.s.r) range.s.r = c.r;
+        if (c.r > range.e.r) range.e.r = c.r;
+        if (c.c < range.s.c) range.s.c = c.c;
+        if (c.c > range.e.c) range.e.c = c.c;
+      });
+      ws['!ref'] = XLSX.utils.encode_range(range);
+    };
+
+    // Calculate aggregated team metrics
+    let totalDetractors = 0;
+    let totalNeutrals = 0;
+    let totalPromoters = 0;
+    let totalIssuesIdentified = 0;
+    let totalReachTasks = 0;
+    let totalReachAccYes = 0;
+    let totalReachAccNo = 0;
+
+    teamTasks.forEach(task => {
+      const score = task.evaluationScore || 0;
+      const normalized = score <= 10 ? score * 10 : score;
+      if (normalized > 0) {
+        if (normalized <= 60) totalDetractors++;
+        else if (normalized <= 80) totalNeutrals++;
+        else totalPromoters++;
+      }
+
+      const reasons = splitValues(task.reason).filter(r => r && r !== 'Not specified');
+      const subReasons = splitValues(task.subReason).filter(r => r && r !== 'Not specified');
+      const rootCauses = splitValues(task.rootCauses || task.rootCause).filter(r => r && r !== 'Not specified');
+      const issueCount = Math.max(reasons.length, subReasons.length, rootCauses.length, 1);
+      totalIssuesIdentified += issueCount;
+
+      const isReach = fieldContainsReach(task.responsible);
+      if (isReach) {
+        totalReachTasks++;
+        if (isTeamAccountable(task)) totalReachAccYes++;
+        else totalReachAccNo++;
+      }
     });
 
-    XLSX.writeFile(wb, `${team.teamName}_Detailed_Quality_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const nonAccountableCount = teamTasks.filter(t => !isTeamAccountable(t)).length;
+    const accountableCount = teamTasks.filter(t => isTeamAccountable(t)).length;
+    const adjustedNetTokens = Math.max(0, totalTeamSamplesToken - nonAccountableCount);
+    const calculatedPromoters = Math.max(0, adjustedNetTokens - accountableCount);
+    
+    let accDetractors = 0;
+    let accNeutrals = 0;
+    teamTasks.filter(t => isTeamAccountable(t)).forEach(t => {
+      const s = t.evaluationScore || 0;
+      const n = s <= 10 ? s * 10 : s;
+      if (n > 0) {
+        if (n <= 60) accDetractors++;
+        else if (n <= 80) accNeutrals++;
+      }
+    });
+
+    const netPromoterShare = adjustedNetTokens > 0 ? `${((calculatedPromoters / adjustedNetTokens) * 100).toFixed(1)}%` : '0.0%';
+    const netAccFailureRate = adjustedNetTokens > 0 ? `${((accountableCount / adjustedNetTokens) * 100).toFixed(1)}%` : '0.0%';
+    const netDetractorRate = adjustedNetTokens > 0 ? `${((accDetractors / adjustedNetTokens) * 100).toFixed(1)}%` : '0.0%';
+    const netNeutralRate = adjustedNetTokens > 0 ? `${((accNeutrals / adjustedNetTokens) * 100).toFixed(1)}%` : '0.0%';
+    const netTeamNps = adjustedNetTokens > 0 ? (((calculatedPromoters - accDetractors) / adjustedNetTokens) * 100).toFixed(1) : '0.0';
+
+    const closedSnags = teamIssues.filter(i => i.solved === 'yes').length;
+    const snagResolutionRate = teamIssues.length > 0 ? ((closedSnags / teamIssues.length) * 100).toFixed(1) : '0.0';
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SHEET 1: Executive Summary & Profile
+    // ─────────────────────────────────────────────────────────────────────────
+    const wsProfile = XLSX.utils.aoa_to_sheet([[]]);
+    wsProfile['!merges'] = [];
+
+    // Title banner
+    wsProfile['A1'] = {
+      v: `FIELD TEAM QUALITY & PERFORMANCE INTELLIGENCE REPORT - ${team.teamName.toUpperCase()}`,
+      t: 's',
+      s: {
+        font: { bold: true, sz: 14, color: { rgb: PALETTE.white } },
+        fill: { fgColor: { rgb: PALETTE.navyDark } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    };
+    wsProfile['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } });
+
+    // Section 1: Team Profile Info
+    wsProfile['A3'] = {
+      v: 'TEAM PROFILE & OPERATIONAL METADATA',
+      t: 's',
+      s: { font: { bold: true, sz: 11, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.blueHeader } }, alignment: { horizontal: 'left' } }
+    };
+    wsProfile['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 7 } });
+
+    const profileRows = [
+      ['Team Name', team.teamName || 'N/A', 'Operational Status', getTeamStatusLabel(team)],
+      ['Team Code', team.teamCode || 'N/A', 'Contact Phone', team.contactNumber || 'N/A'],
+      ['Contractor / Company', team.teamCompany || 'N/A', 'Report Date', format(new Date(), 'yyyy-MM-dd HH:mm')],
+      ['FSM Serial Number', team.fsmSerialNumber || 'N/A', 'Total Attended Sessions', teamSessions.length],
+      ['Laptop Serial Number', team.laptopSerialNumber || 'N/A', 'Quiz / Exam Code', team.quizCode || 'N/A']
+    ];
+
+    profileRows.forEach((row, rIdx) => {
+      const rNum = 3 + rIdx;
+      wsProfile[XLSX.utils.encode_cell({ r: rNum, c: 0 })] = { v: row[0], t: 's', s: { font: { bold: true, color: { rgb: PALETTE.slateLight } }, fill: { fgColor: { rgb: PALETTE.zebraBg } }, border: borderThin } };
+      wsProfile[XLSX.utils.encode_cell({ r: rNum, c: 1 })] = { v: row[1], t: 's', s: { font: { bold: true }, border: borderThin } };
+      wsProfile['!merges'].push({ s: { r: rNum, c: 1 }, e: { r: rNum, c: 2 } });
+      wsProfile[XLSX.utils.encode_cell({ r: rNum, c: 3 })] = { v: row[2], t: 's', s: { font: { bold: true, color: { rgb: PALETTE.slateLight } }, fill: { fgColor: { rgb: PALETTE.zebraBg } }, border: borderThin } };
+      wsProfile[XLSX.utils.encode_cell({ r: rNum, c: 4 })] = { v: row[3], t: 's', s: { font: { bold: true }, border: borderThin } };
+      wsProfile['!merges'].push({ s: { r: rNum, c: 4 }, e: { r: rNum, c: 7 } });
+    });
+
+    // Section 2: Key Performance Indicators Table
+    const kpiStartR = 9;
+    wsProfile[`A${kpiStartR + 1}`] = {
+      v: 'EXECUTIVE QUALITY PERFORMANCE BENCHMARK KPIS',
+      t: 's',
+      s: { font: { bold: true, sz: 11, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.emeraldHeader } }, alignment: { horizontal: 'left' } }
+    };
+    wsProfile['!merges'].push({ s: { r: kpiStartR, c: 0 }, e: { r: kpiStartR, c: 7 } });
+
+    const kpiHeaders = ['KPI Dimension', 'Value', 'Benchmark Target', 'Performance Interpretation', 'Status'];
+    kpiHeaders.forEach((h, i) => {
+      const cIdx = i === 0 ? 0 : i === 1 ? 2 : i === 2 ? 3 : i === 3 ? 4 : 6;
+      const endC = i === 0 ? 1 : i === 3 ? 5 : i === 4 ? 7 : cIdx;
+      const cell = XLSX.utils.encode_cell({ r: kpiStartR + 1, c: cIdx });
+      wsProfile[cell] = { v: h, t: 's', s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center' }, border: borderThin } };
+      if (endC > cIdx) wsProfile['!merges'].push({ s: { r: kpiStartR + 1, c: cIdx }, e: { r: kpiStartR + 1, c: endC } });
+    });
+
+    const kpiItems = [
+      ['Original Samples Token (Quota)', totalTeamSamplesToken, '100% Target', 'Total assigned quality audit sampling quota', totalTeamSamplesToken > 0 ? 'Assigned' : 'Unassigned'],
+      ['Non-Accountable Tasks (No)', nonAccountableCount, '0 Non-Acc', 'Excluded from team base / attributed to other owners', 'Excluded'],
+      ['Adjusted Net Samples Token', adjustedNetTokens, 'Net Quota', `Original (${totalTeamSamplesToken}) - Non-Accountable (${nonAccountableCount})`, adjustedNetTokens > 0 ? 'Established' : 'N/A'],
+      ['Accountable Tasks (Yes)', accountableCount, '0 Defects', `${netAccFailureRate} failure rate on net tokens (${accDetractors} Det / ${accNeutrals} Neu)`, accountableCount === 0 ? 'Zero Defects' : 'Remediation Req.'],
+      ['Team Promoters (Calculated)', calculatedPromoters, '≥ 85.0%', `${netPromoterShare} share on net tokens (${adjustedNetTokens} - ${accountableCount})`, Number(netPromoterShare.replace('%', '')) >= 85 ? 'Target Met' : 'Developing'],
+      ['Accountable Detractors (Score ≤ 6)', accDetractors, '0 Detractors', `${netDetractorRate} of net tokens (${accountableCount > 0 ? ((accDetractors / accountableCount) * 100).toFixed(1) : 0}% of accountable)`, accDetractors === 0 ? 'Optimal' : 'Needs Focus'],
+      ['Accountable Neutrals (Score 7-8)', accNeutrals, '0 Neutrals', `${netNeutralRate} of net tokens (${accountableCount > 0 ? ((accNeutrals / accountableCount) * 100).toFixed(1) : 0}% of accountable)`, accNeutrals === 0 ? 'Optimal' : 'Moderate'],
+      ['Adjusted Team Net Promoter Score (NPS)', `${netTeamNps}`, '≥ +50.0', 'Calculated as % Promoters minus % Detractors on Net Tokens', Number(netTeamNps) >= 50 ? 'High' : Number(netTeamNps) >= 0 ? 'Average' : 'Critical'],
+      ['Total Quality Issues Identified', totalIssuesIdentified, '0 Issues', 'Distinct installation and operational snags identified', totalIssuesIdentified === 0 ? 'Zero Defects' : 'Identified'],
+      ['Customer Snags & Complaints', teamIssues.length, '0 Snags', `${closedSnags} closed (${snagResolutionRate}% resolution rate)`, teamIssues.length === 0 ? 'Clean' : 'Tracked'],
+      ['Online Exam Assessment Average', `${Math.round(calculateAverageScore(quizResults))}%`, '≥ 85.0%', 'Theoretical quiz and online exam proficiency', Math.round(calculateAverageScore(quizResults)) >= 85 ? 'Passed' : 'Training Needed'],
+      ['OTJ Assessment Average', `${Math.round(calculateAverageScore(jobAssessments))}%`, '≥ 85.0%', 'On-the-job procedural and field installation audits', Math.round(calculateAverageScore(jobAssessments)) >= 85 ? 'Excellent' : 'Coaching Needed'],
+      ['Lab Technical Assessment Average', `${Math.round(calculateAverageScore(labAssessments))}%`, '≥ 90.0%', 'ONT configuration, fiber splicing, and lab tests', Math.round(calculateAverageScore(labAssessments)) >= 90 ? 'Certified' : 'Review Needed']
+    ];
+
+    kpiItems.forEach((row, idx) => {
+      const rNum = kpiStartR + 2 + idx;
+      const isZebra = idx % 2 === 1;
+      const rowBg = isZebra ? PALETTE.zebraBg : PALETTE.white;
+
+      wsProfile[XLSX.utils.encode_cell({ r: rNum, c: 0 })] = { v: row[0], t: 's', s: { font: { bold: true, color: { rgb: PALETTE.slateMedium } }, fill: { fgColor: { rgb: rowBg } }, border: borderThin } };
+      wsProfile['!merges'].push({ s: { r: rNum, c: 0 }, e: { r: rNum, c: 1 } });
+      wsProfile[XLSX.utils.encode_cell({ r: rNum, c: 2 })] = { v: row[1], t: typeof row[1] === 'number' ? 'n' : 's', s: { font: { bold: true }, alignment: { horizontal: 'center' }, fill: { fgColor: { rgb: rowBg } }, border: borderThin } };
+      wsProfile[XLSX.utils.encode_cell({ r: rNum, c: 3 })] = { v: row[2], t: 's', s: { font: { italic: true, color: { rgb: PALETTE.slateMuted } }, alignment: { horizontal: 'center' }, fill: { fgColor: { rgb: rowBg } }, border: borderThin } };
+      wsProfile[XLSX.utils.encode_cell({ r: rNum, c: 4 })] = { v: row[3], t: 's', s: { fill: { fgColor: { rgb: rowBg } }, border: borderThin } };
+      wsProfile['!merges'].push({ s: { r: rNum, c: 4 }, e: { r: rNum, c: 5 } });
+      wsProfile[XLSX.utils.encode_cell({ r: rNum, c: 6 })] = { v: row[4], t: 's', s: { font: { bold: true, color: { rgb: PALETTE.blueHeader } }, alignment: { horizontal: 'center' }, fill: { fgColor: { rgb: rowBg } }, border: borderThin } };
+      wsProfile['!merges'].push({ s: { r: rNum, c: 6 }, e: { r: rNum, c: 7 } });
+    });
+
+    wsProfile['!cols'] = [{ wch: 28 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 32 }, { wch: 10 }, { wch: 16 }, { wch: 12 }];
+    fixSheetRange(wsProfile);
+    XLSX.utils.book_append_sheet(wb, wsProfile, "Executive Summary & KPIs");
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SHEET 2: Monthly Team Performance Breakdown
+    // ─────────────────────────────────────────────────────────────────────────
+    const wsMonthly = XLSX.utils.aoa_to_sheet([[]]);
+    wsMonthly['!merges'] = [];
+
+    wsMonthly['A1'] = {
+      v: `MONTHLY PERFORMANCE, SAMPLE FULFILLMENT & NPS TRENDS (PIS DATE) - ${team.teamName.toUpperCase()}`,
+      t: 's',
+      s: {
+        font: { bold: true, sz: 13, color: { rgb: PALETTE.white } },
+        fill: { fgColor: { rgb: PALETTE.navyDark } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    };
+    wsMonthly['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 17 } });
+
+    const monthHeaders = [
+      'Month',
+      'Original Tokens (Quota)',
+      'Non-Accountable Tasks (No)',
+      'Adjusted Net Tokens',
+      'Accountable Tasks (Yes)',
+      'Acc. Failure Rate (%)',
+      'Acc. Detractors (≤6)',
+      'Acc. Detractor % (Net)',
+      'Acc. Neutrals (7-8)',
+      'Acc. Neutral % (Net)',
+      'Team Promoters (Calc)',
+      'Promoter % (Net)',
+      'Adjusted Team NPS',
+      'Sampling Fulfillment %',
+      'Total Issues Identified',
+      'Customer Snags'
+    ];
+
+    monthHeaders.forEach((h, c) => {
+      const cell = XLSX.utils.encode_cell({ r: 2, c });
+      wsMonthly[cell] = {
+        v: h,
+        t: 's',
+        s: {
+          font: { bold: true, sz: 9, color: { rgb: PALETTE.white } },
+          fill: { fgColor: { rgb: PALETTE.slateDark } },
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+          border: borderHeader
+        }
+      };
+    });
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const currentYear = new Date().getFullYear();
+
+    let mTotalOrigToken = 0;
+    let mTotalNonAcc = 0;
+    let mTotalAdjNetToken = 0;
+    let mTotalAccTasks = 0;
+    let mTotalAccDet = 0;
+    let mTotalAccNeu = 0;
+    let mTotalPromoters = 0;
+    let mTotalAllTasks = 0;
+    let mTotalIssues = 0;
+    let mTotalSnags = 0;
+
+    for (let m = 1; m <= 12; m++) {
+      const mIdx = m - 1;
+      const mLabel = `${monthNames[mIdx]} ${currentYear}`;
+      const tokenVal = monthlyTokens[m] || 0;
+      mTotalOrigToken += tokenVal;
+
+      const mTasks = teamTasks.filter(t => {
+        const d = t.pisDate || t.interviewDate || t.createdAt;
+        if (!d) return false;
+        const dt = new Date(d);
+        return dt.getFullYear() === currentYear && dt.getMonth() === mIdx;
+      });
+
+      let mNonAcc = 0;
+      let mAcc = 0;
+      let mAccDet = 0;
+      let mAccNeu = 0;
+      let mIssues = 0;
+
+      mTasks.forEach(t => {
+        const isAcc = isTeamAccountable(t);
+        if (isAcc) {
+          mAcc++;
+          const score = t.evaluationScore || 0;
+          const norm = score <= 10 ? score * 10 : score;
+          if (norm > 0) {
+            if (norm <= 60) mAccDet++;
+            else if (norm <= 80) mAccNeu++;
+          }
+        } else {
+          mNonAcc++;
+        }
+
+        const reasons = splitValues(t.reason).filter(r => r && r !== 'Not specified');
+        const subReasons = splitValues(t.subReason).filter(r => r && r !== 'Not specified');
+        const rootCauses = splitValues(t.rootCauses || t.rootCause).filter(r => r && r !== 'Not specified');
+        mIssues += Math.max(reasons.length, subReasons.length, rootCauses.length, 1);
+      });
+
+      const mSnags = teamIssues.filter(i => {
+        const d = i.date || i.createdAt;
+        if (!d) return false;
+        const dt = new Date(d);
+        return dt.getFullYear() === currentYear && dt.getMonth() === mIdx;
+      }).length;
+
+      // Adjusted Net Tokens for this month = tokenVal - mNonAcc
+      const mAdjNet = Math.max(0, tokenVal - mNonAcc);
+      const mPro = Math.max(0, mAdjNet - mAcc);
+
+      const mAccRate = mAdjNet > 0 ? ((mAcc / mAdjNet) * 100).toFixed(1) : '0.0';
+      const mAccDetRate = mAdjNet > 0 ? ((mAccDet / mAdjNet) * 100).toFixed(1) : '0.0';
+      const mAccNeuRate = mAdjNet > 0 ? ((mAccNeu / mAdjNet) * 100).toFixed(1) : '0.0';
+      const mProRate = mAdjNet > 0 ? ((mPro / mAdjNet) * 100).toFixed(1) : '0.0';
+      const mNps = mAdjNet > 0 ? (((mPro - mAccDet) / mAdjNet) * 100).toFixed(1) : '0.0';
+      const mFulfill = tokenVal > 0 ? ((mTasks.length / tokenVal) * 100).toFixed(1) : '0.0';
+
+      mTotalNonAcc += mNonAcc;
+      mTotalAdjNetToken += mAdjNet;
+      mTotalAccTasks += mAcc;
+      mTotalAccDet += mAccDet;
+      mTotalAccNeu += mAccNeu;
+      mTotalPromoters += mPro;
+      mTotalAllTasks += mTasks.length;
+      mTotalIssues += mIssues;
+      mTotalSnags += mSnags;
+
+      const rowValues = [
+        mLabel,
+        tokenVal,
+        mNonAcc,
+        mAdjNet,
+        mAcc,
+        `${mAccRate}%`,
+        mAccDet,
+        `${mAccDetRate}%`,
+        mAccNeu,
+        `${mAccNeuRate}%`,
+        mPro,
+        `${mProRate}%`,
+        mNps,
+        `${mFulfill}%`,
+        mIssues,
+        mSnags
+      ];
+
+      const rNum = 2 + m;
+      const isZebra = m % 2 === 0;
+      const rowBg = isZebra ? PALETTE.zebraBg : PALETTE.white;
+
+      rowValues.forEach((val, c) => {
+        const cell = XLSX.utils.encode_cell({ r: rNum, c });
+        wsMonthly[cell] = {
+          v: val,
+          t: typeof val === 'number' ? 'n' : 's',
+          s: {
+            font: { bold: c === 0 || c === 3 || c === 10 || c === 12 },
+            alignment: { horizontal: c === 0 ? 'left' : 'center', vertical: 'center' },
+            fill: { fgColor: { rgb: rowBg } },
+            border: borderThin
+          }
+        };
+      });
+    }
+
+    // Benchmark Summary Row
+    const sumRNum = 15;
+    const cumAccRate = mTotalAdjNetToken > 0 ? ((mTotalAccTasks / mTotalAdjNetToken) * 100).toFixed(1) : '0.0';
+    const cumAccDetRate = mTotalAdjNetToken > 0 ? ((mTotalAccDet / mTotalAdjNetToken) * 100).toFixed(1) : '0.0';
+    const cumAccNeuRate = mTotalAdjNetToken > 0 ? ((mTotalAccNeu / mTotalAdjNetToken) * 100).toFixed(1) : '0.0';
+    const cumProRate = mTotalAdjNetToken > 0 ? ((mTotalPromoters / mTotalAdjNetToken) * 100).toFixed(1) : '0.0';
+    const cumNps = mTotalAdjNetToken > 0 ? (((mTotalPromoters - mTotalAccDet) / mTotalAdjNetToken) * 100).toFixed(1) : '0.0';
+    const cumFulfill = mTotalOrigToken > 0 ? ((mTotalAllTasks / mTotalOrigToken) * 100).toFixed(1) : '0.0';
+
+    const cumRowValues = [
+      'TOTAL FULL YEAR / CUMULATIVE BENCHMARK',
+      mTotalOrigToken,
+      mTotalNonAcc,
+      mTotalAdjNetToken,
+      mTotalAccTasks,
+      `${cumAccRate}%`,
+      mTotalAccDet,
+      `${cumAccDetRate}%`,
+      mTotalAccNeu,
+      `${cumAccNeuRate}%`,
+      mTotalPromoters,
+      `${cumProRate}%`,
+      cumNps,
+      `${cumFulfill}%`,
+      mTotalIssues,
+      mTotalSnags
+    ];
+
+    cumRowValues.forEach((val, c) => {
+      const cell = XLSX.utils.encode_cell({ r: sumRNum, c });
+      wsMonthly[cell] = {
+        v: val,
+        t: typeof val === 'number' ? 'n' : 's',
+        s: {
+          font: { bold: true, color: { rgb: PALETTE.white } },
+          alignment: { horizontal: c === 0 ? 'left' : 'center', vertical: 'center' },
+          fill: { fgColor: { rgb: PALETTE.navyDark } },
+          border: borderSummary
+        }
+      };
+    });
+
+    wsMonthly['!cols'] = [
+      { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 18 },
+      { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 },
+      { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 18 },
+      { wch: 16 }
+    ];
+    fixSheetRange(wsMonthly);
+    XLSX.utils.book_append_sheet(wb, wsMonthly, "Monthly Performance Summary");
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SHEET 3: Reason & Root Cause Deep-Dive
+    // ─────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // SHEET 3: Reason & Root Cause Deep-Dive (Strictly REACH Accountable Yes)
+    // ─────────────────────────────────────────────────────────────────────────
+    const wsRCA = XLSX.utils.aoa_to_sheet([[]]);
+    wsRCA['!merges'] = [];
+
+    // Strictly filter to REACH confirmed accountable tasks
+    const accountableTasks = teamTasks.filter(t => isTeamAccountable(t) && fieldContainsReach(t.responsible));
+
+    // Title banner
+    wsRCA['A1'] = {
+      v: `ACCOUNTABLE REASON & ROOT CAUSE DEEP-DIVE INTELLIGENCE - ${team.teamName.toUpperCase()}`,
+      t: 's',
+      s: { font: { bold: true, sz: 14, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.navyDark } }, alignment: { horizontal: 'center', vertical: 'center' } }
+    };
+    wsRCA['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } });
+
+    let curRow = 2;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SECTION 1: Cumulative Full-Year Accountable RCA Hierarchy
+    // ─────────────────────────────────────────────────────────────────────────
+    wsRCA[XLSX.utils.encode_cell({ r: curRow, c: 0 })] = {
+      v: '1. CUMULATIVE FULL-YEAR ACCOUNTABLE ROOT CAUSE & DISSATISFACTION HIERARCHY (REACH + YES)',
+      t: 's',
+      s: { font: { bold: true, sz: 11, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.emeraldHeader } }, alignment: { horizontal: 'left' } }
+    };
+    wsRCA['!merges'].push({ s: { r: curRow, c: 0 }, e: { r: curRow, c: 9 } });
+    curRow++;
+
+    const cumHeaders = [
+      'Reason Category',
+      'Reason Count',
+      'Reason Share %',
+      'Sub-Reason',
+      'Sub Count',
+      'Root Cause',
+      'Acc. Cases',
+      'Detractors (≤6)',
+      'Neutrals (7-8)',
+      '% of Total Acc.'
+    ];
+
+    cumHeaders.forEach((h, c) => {
+      const cell = XLSX.utils.encode_cell({ r: curRow, c });
+      wsRCA[cell] = {
+        v: h,
+        t: 's',
+        s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center' }, border: borderHeader }
+      };
+    });
+    curRow++;
+
+    if (accountableTasks.length === 0) {
+      wsRCA[XLSX.utils.encode_cell({ r: curRow, c: 0 })] = {
+        v: 'Zero confirmed REACH accountable issues recorded for this field team (100% Clean / Zero Defects).',
+        t: 's',
+        s: { font: { italic: true, bold: true, color: { rgb: PALETTE.emeraldHeader } }, alignment: { horizontal: 'center' } }
+      };
+      wsRCA['!merges'].push({ s: { r: curRow, c: 0 }, e: { r: curRow, c: 9 } });
+      curRow += 2;
+    } else {
+      // Build Cumulative Tree
+      const cumTree = {};
+      let totalCumAccCases = 0;
+
+      accountableTasks.forEach(t => {
+        const reasons = splitValues(t.reason).map(normalizeValue);
+        const subReasons = splitValues(t.subReason).map(normalizeValue);
+        const rootCauses = splitValues(t.rootCauses || t.rootCause).map(normalizeValue);
+        const maxLen = Math.max(reasons.length, subReasons.length, rootCauses.length, 1);
+
+        const score = t.evaluationScore || 0;
+        const norm = score <= 10 ? score * 10 : score;
+        const isDet = norm > 0 && norm <= 60;
+        const isNeu = norm > 60 && norm <= 80;
+
+        for (let i = 0; i < maxLen; i++) {
+          const r = reasons[i] || reasons[0] || 'Not specified';
+          const sr = subReasons[i] || subReasons[0] || 'Not specified';
+          const rc = rootCauses[i] || rootCauses[0] || 'Not specified';
+
+          if (!cumTree[r]) cumTree[r] = { total: 0, subs: {} };
+          cumTree[r].total++;
+          if (!cumTree[r].subs[sr]) cumTree[r].subs[sr] = { total: 0, rcs: {} };
+          cumTree[r].subs[sr].total++;
+          if (!cumTree[r].subs[sr].rcs[rc]) cumTree[r].subs[sr].rcs[rc] = { count: 0, det: 0, neu: 0 };
+          cumTree[r].subs[sr].rcs[rc].count++;
+          if (isDet) cumTree[r].subs[sr].rcs[rc].det++;
+          if (isNeu) cumTree[r].subs[sr].rcs[rc].neu++;
+          totalCumAccCases++;
+        }
+      });
+
+      Object.entries(cumTree).sort((a, b) => b[1].total - a[1].total).forEach(([reason, rData]) => {
+        const rStart = curRow;
+        const rShare = totalCumAccCases > 0 ? ((rData.total / totalCumAccCases) * 100).toFixed(1) : '0.0';
+
+        Object.entries(rData.subs).sort((a, b) => b[1].total - a[1].total).forEach(([sub, subData]) => {
+          const subStart = curRow;
+
+          Object.entries(subData.rcs).sort((a, b) => b[1].count - a[1].count).forEach(([rc, rcInfo]) => {
+            const rcPct = totalCumAccCases > 0 ? `${((rcInfo.count / totalCumAccCases) * 100).toFixed(1)}%` : '0.0%';
+            wsRCA[XLSX.utils.encode_cell({ r: curRow, c: 5 })] = { v: rc, t: 's', s: { border: borderThin } };
+            wsRCA[XLSX.utils.encode_cell({ r: curRow, c: 6 })] = { v: rcInfo.count, t: 'n', s: { font: { bold: true }, alignment: { horizontal: 'center' }, border: borderThin } };
+            wsRCA[XLSX.utils.encode_cell({ r: curRow, c: 7 })] = { v: rcInfo.det, t: 'n', s: { alignment: { horizontal: 'center' }, border: borderThin } };
+            wsRCA[XLSX.utils.encode_cell({ r: curRow, c: 8 })] = { v: rcInfo.neu, t: 'n', s: { alignment: { horizontal: 'center' }, border: borderThin } };
+            wsRCA[XLSX.utils.encode_cell({ r: curRow, c: 9 })] = { v: rcPct, t: 's', s: { alignment: { horizontal: 'center' }, border: borderThin } };
+            curRow++;
+          });
+
+          const subEnd = curRow - 1;
+          wsRCA[XLSX.utils.encode_cell({ r: subStart, c: 3 })] = { v: sub, t: 's', s: { alignment: { vertical: 'center' }, border: borderThin } };
+          wsRCA[XLSX.utils.encode_cell({ r: subStart, c: 4 })] = { v: subData.total, t: 'n', s: { font: { bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border: borderThin } };
+          if (subEnd > subStart) {
+            wsRCA['!merges'].push({ s: { r: subStart, c: 3 }, e: { r: subEnd, c: 3 } });
+            wsRCA['!merges'].push({ s: { r: subStart, c: 4 }, e: { r: subEnd, c: 4 } });
+          }
+        });
+
+        const rEnd = curRow - 1;
+        wsRCA[XLSX.utils.encode_cell({ r: rStart, c: 0 })] = { v: reason, t: 's', s: { font: { bold: true, color: { rgb: PALETTE.navyDark } }, alignment: { vertical: 'center' }, border: borderThin } };
+        wsRCA[XLSX.utils.encode_cell({ r: rStart, c: 1 })] = { v: rData.total, t: 'n', s: { font: { bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border: borderThin } };
+        wsRCA[XLSX.utils.encode_cell({ r: rStart, c: 2 })] = { v: `${rShare}%`, t: 's', s: { font: { bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border: borderThin } };
+        if (rEnd > rStart) {
+          wsRCA['!merges'].push({ s: { r: rStart, c: 0 }, e: { r: rEnd, c: 0 } });
+          wsRCA['!merges'].push({ s: { r: rStart, c: 1 }, e: { r: rEnd, c: 1 } });
+          wsRCA['!merges'].push({ s: { r: rStart, c: 2 }, e: { r: rEnd, c: 2 } });
+        }
+      });
+      curRow += 2;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SECTION 2: Monthly Root Cause Evolution & Trend Matrix
+    // ─────────────────────────────────────────────────────────────────────────
+    wsRCA[XLSX.utils.encode_cell({ r: curRow, c: 0 })] = {
+      v: '2. MONTHLY ACCOUNTABLE ROOT CAUSE EVOLUTION & TREND MATRIX',
+      t: 's',
+      s: { font: { bold: true, sz: 11, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.blueHeader } }, alignment: { horizontal: 'left' } }
+    };
+    wsRCA['!merges'].push({ s: { r: curRow, c: 0 }, e: { r: curRow, c: 15 } });
+    curRow++;
+
+    const matrixHeaders = [
+      'Root Cause Description',
+      'Reason Category',
+      'Total Cases',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Trend Status'
+    ];
+
+    matrixHeaders.forEach((h, c) => {
+      const cell = XLSX.utils.encode_cell({ r: curRow, c });
+      wsRCA[cell] = {
+        v: h,
+        t: 's',
+        s: { font: { bold: true, sz: 9, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center' }, border: borderHeader }
+      };
+    });
+    curRow++;
+
+    // Calculate monthly root cause occurrences
+    const rcMonthMap = {};
+
+    accountableTasks.forEach(t => {
+      const d = t.pisDate || t.interviewDate || t.createdAt;
+      const mIdx = d ? new Date(d).getMonth() : 0;
+      const r = normalizeValue(splitValues(t.reason)[0] || 'General');
+      const rootCauses = splitValues(t.rootCauses || t.rootCause).map(normalizeValue);
+
+      rootCauses.forEach(rc => {
+        if (!rc || rc === 'Not specified') return;
+        if (!rcMonthMap[rc]) {
+          rcMonthMap[rc] = { reason: r, total: 0, months: Array(12).fill(0) };
+        }
+        rcMonthMap[rc].total++;
+        rcMonthMap[rc].months[mIdx]++;
+      });
+    });
+
+    const rcList = Object.entries(rcMonthMap).sort((a, b) => b[1].total - a[1].total);
+
+    if (rcList.length === 0) {
+      wsRCA[XLSX.utils.encode_cell({ r: curRow, c: 0 })] = {
+        v: 'Zero accountable root causes identified.',
+        t: 's',
+        s: { font: { italic: true, color: { rgb: PALETTE.slateMuted } }, alignment: { horizontal: 'center' } }
+      };
+      wsRCA['!merges'].push({ s: { r: curRow, c: 0 }, e: { r: curRow, c: 15 } });
+      curRow += 2;
+    } else {
+      rcList.forEach(([rc, data], idx) => {
+        const isZebra = idx % 2 === 1;
+        const rowBg = isZebra ? PALETTE.zebraBg : PALETTE.white;
+
+        // Trend calculation (recent 3 months vs prior)
+        const recentMonthsSum = data.months.slice(new Date().getMonth() - 2, new Date().getMonth() + 1).reduce((a, b) => a + b, 0);
+        const priorMonthsSum = data.total - recentMonthsSum;
+        const trendStatus = data.months[new Date().getMonth()] === 0 && data.total > 0 ? 'Resolved / Inactive' :
+          recentMonthsSum > priorMonthsSum ? 'Rising Concern' :
+          recentMonthsSum < priorMonthsSum ? 'Improving / Decreasing' : 'Persistent';
+
+        const rowVals = [
+          rc,
+          data.reason,
+          data.total,
+          ...data.months,
+          trendStatus
+        ];
+
+        rowVals.forEach((val, c) => {
+          const cell = XLSX.utils.encode_cell({ r: curRow, c });
+          wsRCA[cell] = {
+            v: val,
+            t: typeof val === 'number' ? 'n' : 's',
+            s: {
+              font: { bold: c === 0 || c === 2 || c === 15 },
+              alignment: { horizontal: c <= 1 ? 'left' : 'center', vertical: 'center' },
+              fill: { fgColor: { rgb: rowBg } },
+              border: borderThin
+            }
+          };
+        });
+        curRow++;
+      });
+      curRow += 2;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SECTION 3: Monthly Deep-Dive Breakdown per Month
+    // ─────────────────────────────────────────────────────────────────────────
+    wsRCA[XLSX.utils.encode_cell({ r: curRow, c: 0 })] = {
+      v: '3. MONTHLY DISAGGREGATED ACCOUNTABLE RCA BREAKDOWN (MONTH-BY-MONTH DEEP DIVE)',
+      t: 's',
+      s: { font: { bold: true, sz: 11, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.navyDark } }, alignment: { horizontal: 'left' } }
+    };
+    wsRCA['!merges'].push({ s: { r: curRow, c: 0 }, e: { r: curRow, c: 9 } });
+    curRow++;
+
+    for (let m = 0; m < 12; m++) {
+      const mLabel = `${monthNames[m]} ${currentYear}`;
+      const mAccTasks = accountableTasks.filter(t => {
+        const d = t.pisDate || t.interviewDate || t.createdAt;
+        if (!d) return false;
+        const dt = new Date(d);
+        return dt.getFullYear() === currentYear && dt.getMonth() === m;
+      });
+
+      if (mAccTasks.length > 0) {
+        // Month Sub-Header
+        wsRCA[XLSX.utils.encode_cell({ r: curRow, c: 0 })] = {
+          v: `MONTH: ${mLabel.toUpperCase()} - (${mAccTasks.length} Accountable Issues)`,
+          t: 's',
+          s: { font: { bold: true, sz: 10, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateMedium } }, alignment: { horizontal: 'left' } }
+        };
+        wsRCA['!merges'].push({ s: { r: curRow, c: 0 }, e: { r: curRow, c: 9 } });
+        curRow++;
+
+        const mHeaders = [
+          'Month',
+          'Reason Category',
+          'Reason Count',
+          'Reason Share %',
+          'Sub-Reason',
+          'Sub Count',
+          'Root Cause',
+          'Cases',
+          'Detractors (≤6)',
+          'Neutrals (7-8)'
+        ];
+
+        mHeaders.forEach((h, c) => {
+          const cell = XLSX.utils.encode_cell({ r: curRow, c });
+          wsRCA[cell] = {
+            v: h,
+            t: 's',
+            s: { font: { bold: true, sz: 9, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center' }, border: borderHeader }
+          };
+        });
+        curRow++;
+
+        // Build monthly tree
+        const mTree = {};
+        let mTotalCases = 0;
+
+        mAccTasks.forEach(t => {
+          const reasons = splitValues(t.reason).map(normalizeValue);
+          const subReasons = splitValues(t.subReason).map(normalizeValue);
+          const rootCauses = splitValues(t.rootCauses || t.rootCause).map(normalizeValue);
+          const maxLen = Math.max(reasons.length, subReasons.length, rootCauses.length, 1);
+
+          const score = t.evaluationScore || 0;
+          const norm = score <= 10 ? score * 10 : score;
+          const isDet = norm > 0 && norm <= 60;
+          const isNeu = norm > 60 && norm <= 80;
+
+          for (let i = 0; i < maxLen; i++) {
+            const r = reasons[i] || reasons[0] || 'Not specified';
+            const sr = subReasons[i] || subReasons[0] || 'Not specified';
+            const rc = rootCauses[i] || rootCauses[0] || 'Not specified';
+
+            if (!mTree[r]) mTree[r] = { total: 0, subs: {} };
+            mTree[r].total++;
+            if (!mTree[r].subs[sr]) mTree[r].subs[sr] = { total: 0, rcs: {} };
+            mTree[r].subs[sr].total++;
+            if (!mTree[r].subs[sr].rcs[rc]) mTree[r].subs[sr].rcs[rc] = { count: 0, det: 0, neu: 0 };
+            mTree[r].subs[sr].rcs[rc].count++;
+            if (isDet) mTree[r].subs[sr].rcs[rc].det++;
+            if (isNeu) mTree[r].subs[sr].rcs[rc].neu++;
+            mTotalCases++;
+          }
+        });
+
+        Object.entries(mTree).sort((a, b) => b[1].total - a[1].total).forEach(([reason, rData]) => {
+          const rShare = mTotalCases > 0 ? `${((rData.total / mTotalCases) * 100).toFixed(1)}%` : '0.0%';
+
+          Object.entries(rData.subs).sort((a, b) => b[1].total - a[1].total).forEach(([sub, subData]) => {
+            Object.entries(subData.rcs).sort((a, b) => b[1].count - a[1].count).forEach(([rc, rcInfo]) => {
+              const rowValues = [
+                mLabel,
+                reason,
+                rData.total,
+                rShare,
+                sub,
+                subData.total,
+                rc,
+                rcInfo.count,
+                rcInfo.det,
+                rcInfo.neu
+              ];
+
+              rowValues.forEach((val, c) => {
+                const cell = XLSX.utils.encode_cell({ r: curRow, c });
+                wsRCA[cell] = {
+                  v: val,
+                  t: typeof val === 'number' ? 'n' : 's',
+                  s: {
+                    font: { bold: c === 0 || c === 1 || c === 7 },
+                    alignment: { horizontal: c === 0 || c === 1 || c === 4 || c === 6 ? 'left' : 'center', vertical: 'center' },
+                    fill: { fgColor: { rgb: PALETTE.zebraBg } },
+                    border: borderThin
+                  }
+                };
+              });
+              curRow++;
+            });
+          });
+        });
+        curRow++;
+      }
+    }
+
+    wsRCA['!cols'] = [
+      { wch: 16 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 28 },
+      { wch: 12 }, { wch: 32 }, { wch: 10 }, { wch: 14 }, { wch: 14 },
+      { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
+      { wch: 20 }
+    ];
+    fixSheetRange(wsRCA);
+    XLSX.utils.book_append_sheet(wb, wsRCA, "Reason & Root Cause Deep-Dive");
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SHEET 4: Training & Development History Logs
+    // ─────────────────────────────────────────────────────────────────────────
+    const wsTraining = XLSX.utils.aoa_to_sheet([[]]);
+    wsTraining['!merges'] = [];
+
+    wsTraining['A1'] = {
+      v: `TRAINING, QUALITY COACHING & DEVELOPMENT HISTORY - ${team.teamName.toUpperCase()}`,
+      t: 's',
+      s: { font: { bold: true, sz: 13, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.navyDark } }, alignment: { horizontal: 'center' } }
+    };
+    wsTraining['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } });
+
+    const trainingHeaders = [
+      '#',
+      'Session Date',
+      'Session Title / Program',
+      'Session Type',
+      'Conducted By / Trainer',
+      'Location / Venue',
+      'Duration',
+      'Outlines / Modules Covered',
+      'Status',
+      'Supervisor Notes & Action Plan'
+    ];
+
+    trainingHeaders.forEach((h, c) => {
+      const cell = XLSX.utils.encode_cell({ r: 2, c });
+      wsTraining[cell] = {
+        v: h,
+        t: 's',
+        s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center' }, border: borderHeader }
+      };
+    });
+
+    if (teamSessions.length === 0) {
+      wsTraining['A4'] = { v: 'No training or development sessions recorded for this field team yet.', t: 's', s: { font: { italic: true, color: { rgb: PALETTE.slateMuted } } } };
+      wsTraining['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 9 } });
+    } else {
+      teamSessions.forEach((sess, idx) => {
+        const rNum = 3 + idx;
+        const isZebra = idx % 2 === 1;
+        const rowBg = isZebra ? PALETTE.zebraBg : PALETTE.white;
+
+        const rowValues = [
+          idx + 1,
+          sess.sessionDate ? format(new Date(sess.sessionDate), 'yyyy-MM-dd') : 'N/A',
+          sess.sessionTitle,
+          sess.sessionType,
+          sess.conductedBy,
+          sess.location,
+          sess.duration,
+          sess.outlines,
+          sess.status,
+          sess.notes || 'Coaching completed successfully'
+        ];
+
+        rowValues.forEach((val, c) => {
+          const cell = XLSX.utils.encode_cell({ r: rNum, c });
+          wsTraining[cell] = {
+            v: val,
+            t: typeof val === 'number' ? 'n' : 's',
+            s: {
+              font: { bold: c === 2 },
+              alignment: { horizontal: c === 0 || c === 1 || c === 6 || c === 8 ? 'center' : 'left', vertical: 'center', wrapText: true },
+              fill: { fgColor: { rgb: rowBg } },
+              border: borderThin
+            }
+          };
+        });
+      });
+    }
+
+    wsTraining['!cols'] = [
+      { wch: 6 }, { wch: 14 }, { wch: 28 }, { wch: 20 }, { wch: 22 },
+      { wch: 18 }, { wch: 12 }, { wch: 35 }, { wch: 14 }, { wch: 40 }
+    ];
+    fixSheetRange(wsTraining);
+    XLSX.utils.book_append_sheet(wb, wsTraining, "Training & Development Logs");
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SHEET 5: Customer Issues & Snags Log
+    // ─────────────────────────────────────────────────────────────────────────
+    const wsIssues = XLSX.utils.aoa_to_sheet([[]]);
+    wsIssues['!merges'] = [];
+
+    wsIssues['A1'] = {
+      v: `CUSTOMER ISSUES, SNAGS & COMPLAINTS REGISTRY - ${team.teamName.toUpperCase()}`,
+      t: 's',
+      s: { font: { bold: true, sz: 13, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.navyDark } }, alignment: { horizontal: 'center' } }
+    };
+    wsIssues['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 11 } });
+
+    const snagHeaders = [
+      '#',
+      'SLID',
+      'Ticket ID',
+      'Report Date',
+      'PIS Date',
+      'Category',
+      'Sub-Category',
+      'Reporter',
+      'Contact Method',
+      'Status',
+      'Area / Governorate',
+      'Reporter Note'
+    ];
+
+    snagHeaders.forEach((h, c) => {
+      const cell = XLSX.utils.encode_cell({ r: 2, c });
+      wsIssues[cell] = {
+        v: h,
+        t: 's',
+        s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center' }, border: borderHeader }
+      };
+    });
+
+    if (teamIssues.length === 0) {
+      wsIssues['A4'] = { v: 'Zero customer issues or snags registered for this field team.', t: 's', s: { font: { italic: true, color: { rgb: PALETTE.slateMuted } } } };
+      wsIssues['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 11 } });
+    } else {
+      teamIssues.forEach((issue, idx) => {
+        const rNum = 3 + idx;
+        const isZebra = idx % 2 === 1;
+        const rowBg = isZebra ? PALETTE.zebraBg : PALETTE.white;
+
+        const mainCat = Array.isArray(issue.issues) && issue.issues.length > 0
+          ? issue.issues.map(i => i.category).join(', ')
+          : (issue.issueCategory || issue.fromMain || 'N/A');
+
+        const subCat = Array.isArray(issue.issues) && issue.issues.length > 0
+          ? issue.issues.map(i => i.subCategory).join(', ')
+          : (issue.fromSub || 'N/A');
+
+        const rowValues = [
+          idx + 1,
+          issue.slid || 'N/A',
+          issue.ticketId || '-',
+          safeFormatDate(issue.date || issue.createdAt),
+          safeFormatDate(issue.pisDate),
+          mainCat,
+          subCat,
+          issue.reporter || 'Customer',
+          issue.contactMethod || '-',
+          issue.solved === 'yes' ? 'Solved' : 'Open',
+          issue.area || issue.governorate || '-',
+          issue.reporterNote || '-'
+        ];
+
+        rowValues.forEach((val, c) => {
+          const cell = XLSX.utils.encode_cell({ r: rNum, c });
+          wsIssues[cell] = {
+            v: val !== undefined && val !== null ? val : '-',
+            t: typeof val === 'number' ? 'n' : 's',
+            s: {
+              font: { bold: c === 1, color: { rgb: PALETTE.slateDark } },
+              alignment: { horizontal: c === 0 || c === 3 || c === 4 || c === 9 ? 'center' : 'left', vertical: 'center', wrapText: true },
+              fill: { fgColor: { rgb: rowBg } },
+              border: borderThin
+            }
+          };
+        });
+      });
+    }
+
+    wsIssues['!cols'] = [
+      { wch: 8 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 16 },
+      { wch: 25 }, { wch: 25 }, { wch: 18 }, { wch: 16 }, { wch: 12 },
+      { wch: 22 }, { wch: 50 }
+    ];
+    fixSheetRange(wsIssues);
+    XLSX.utils.book_append_sheet(wb, wsIssues, "Customer Issues & Snags");
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SHEET 6: Deep Raw Audit Data
+    // ─────────────────────────────────────────────────────────────────────────
+    const detailedData = teamTasks.map(t => mapItemToExcelRow(t, 'task'));
+    if (detailedData.length > 0) {
+      const wsRaw = XLSX.utils.json_to_sheet(detailedData);
+      applySnapshotStyles(wsRaw, detailedData);
+      fixSheetRange(wsRaw);
+      XLSX.utils.book_append_sheet(wb, wsRaw, "Deep Raw Audit Data");
+    }
+
+    // Save File
+    const sanitizedName = (team.teamName || 'Field_Team').replace(/[^a-zA-Z0-9_-]/g, '_');
+    XLSX.writeFile(wb, `${sanitizedName}_Quality_Performance_DeepDive_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  };
+
+  const handleExportIndividualTeam = (team) => {
+    exportPremiumTeamQualityReport(team);
   };
   const handleExportTeamViolations = (team) => {
     const rawTeamTasks = (Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [])
@@ -2495,10 +3619,12 @@ const FieldTeamPortal = () => {
     });
   }, [allCustomerIssuesGlobal, dateFilter]);
 
+  const activeCustomerIssues = useMemo(() => {
+    return selectedTeam ? filteredCustomerIssues : filteredIssuesByDate;
+  }, [selectedTeam, filteredCustomerIssues, filteredIssuesByDate]);
+
   const stats = useMemo(() => {
-    // Corrected: Use team-aware filteredCustomerIssues when a team is selected, 
-    // otherwise fallback to global date-filtered issues.
-    const issuesToProcess = selectedTeam ? filteredCustomerIssues : filteredIssuesByDate;
+    const issuesToProcess = activeCustomerIssues;
     const totalTransactions = issuesToProcess.length;
     let totalIssuesHighlighted = 0;
     const closed = issuesToProcess.filter(i => i.solved === 'yes').length;
@@ -2536,62 +3662,78 @@ const FieldTeamPortal = () => {
     });
 
     // NPS Tickets evaluation
-    technicalTasks.forEach(t => {
-      let score = t.evaluationScore || 0;
-      if (score > 0) { // Only count if evaluated
-        // Evaluation score scale: 0-10
-        // Detractors: <= 6, Neutrals: 7-8, Promoters: 9-10
-        if (score <= 6) {
+    technicalTasks.forEach(task => {
+      const score = task.evaluationScore !== undefined && task.evaluationScore !== null ? Number(task.evaluationScore) : 0;
+      if (score > 0) {
+        const normalized = score <= 10 ? score * 10 : score;
+        if (normalized <= 60) {
           technicalDetractors++;
           totalDetractors++;
-        }
-        else if (score >= 7 && score <= 8) {
+        } else if (normalized <= 80) {
           technicalNeutrals++;
           totalNeutrals++;
         }
       }
     });
 
-    // Process Efficiency Calculations
-    let totalDispatchTime = 0;
-    let countDispatch = 0;
-    let totalResolutionTime = 0;
-    let countResolution = 0;
-    let totalLifecycleTime = 0;
-    let countLifecycle = 0;
-    const now = new Date();
+    const technicalTasksCount = technicalTasks.length;
 
-    issuesToProcess.forEach(issue => {
-      const reportDate = new Date(issue.date || issue.createdAt);
+    // Calculations based on requirements
+    let totalDispatchSum = 0;
+    let dispatchCount = 0;
+    let totalResSum = 0;
+    let resCount = 0;
+    let totalLifecycleSum = 0;
+    let lifecycleCount = 0;
+
+    issuesToProcess.forEach(i => {
+      const reportDate = i.date ? new Date(i.date) : (i.createdAt ? new Date(i.createdAt) : null);
+      if (!reportDate) return;
+
+      const now = new Date();
+      const dispatchedDate = i.dispatchedAt ? new Date(i.dispatchedAt) : null;
+      const isDispatched = i.dispatched === 'yes' && dispatchedDate;
+      const isResolved = i.solved === 'yes' && i.resolveDate;
+      const resolveDate = isResolved ? new Date(i.resolveDate) : null;
 
       // 1. Dispatch Speed
-      let dispatchEnd = issue.dispatchedAt ? new Date(issue.dispatchedAt) : (issue.dispatched === 'no' ? now : null);
-      if (!dispatchEnd && issue.dispatched === 'yes') dispatchEnd = reportDate;
-      if (dispatchEnd && dispatchEnd >= reportDate) {
-        const time = (dispatchEnd - reportDate) / (1000 * 60 * 60 * 24);
-        totalDispatchTime += time;
-        countDispatch++;
+      if (isDispatched) {
+        const diff = (dispatchedDate - reportDate) / (1000 * 60 * 60 * 24);
+        totalDispatchSum += Math.max(0, diff);
+        dispatchCount++;
+      } else {
+        const diff = (now - reportDate) / (1000 * 60 * 60 * 24);
+        totalDispatchSum += Math.max(0, diff);
+        dispatchCount++;
       }
 
       // 2. Resolution Speed
-      if (issue.dispatchedAt || issue.dispatched === 'yes') {
-        let resStart = issue.dispatchedAt ? new Date(issue.dispatchedAt) : reportDate;
-        let resEnd = issue.resolveDate ? new Date(issue.resolveDate) : (issue.solved === 'no' ? now : null);
-        if (resStart && resEnd && resEnd >= resStart) {
-          const resTime = (resEnd - resStart) / (1000 * 60 * 60 * 24);
-          totalResolutionTime += resTime;
-          countResolution++;
-        }
+      if (isResolved) {
+        const baseStart = isDispatched ? dispatchedDate : reportDate;
+        const diff = (resolveDate - baseStart) / (1000 * 60 * 60 * 24);
+        totalResSum += Math.max(0, diff);
+        resCount++;
+      } else {
+        const diff = (now - reportDate) / (1000 * 60 * 60 * 24);
+        totalResSum += Math.max(0, diff);
+        resCount++;
       }
 
-      // 3. Lifecycle
-      let lifecycleEnd = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? now : null);
-      if (lifecycleEnd && lifecycleEnd >= reportDate) {
-        const lifeTime = (lifecycleEnd - reportDate) / (1000 * 60 * 60 * 24);
-        totalLifecycleTime += lifeTime;
-        countLifecycle++;
+      // 3. Lifecycle Time
+      if (isResolved) {
+        const diff = (resolveDate - reportDate) / (1000 * 60 * 60 * 24);
+        totalLifecycleSum += Math.max(0, diff);
+        lifecycleCount++;
+      } else {
+        const diff = (now - reportDate) / (1000 * 60 * 60 * 24);
+        totalLifecycleSum += Math.max(0, diff);
+        lifecycleCount++;
       }
     });
+
+    const avgDispatchTime = dispatchCount > 0 ? (totalDispatchSum / dispatchCount).toFixed(1) : "0.0";
+    const avgResolutionTime = resCount > 0 ? (totalResSum / resCount).toFixed(1) : "0.0";
+    const avgLifecycleTime = lifecycleCount > 0 ? (totalLifecycleSum / lifecycleCount).toFixed(1) : "0.0";
 
     return {
       totalTransactions,
@@ -2600,18 +3742,17 @@ const FieldTeamPortal = () => {
       open,
       resolutionRate,
       issueDensity,
-      detractors: totalDetractors,
-      neutrals: totalNeutrals,
-      technicalTasksCount: technicalTasks.length,
+      avgDispatchTime,
+      avgResolutionTime,
+      avgLifecycleTime,
       technicalDetractors,
       technicalNeutrals,
+      totalDetractors,
+      totalNeutrals,
+      technicalTasksCount,
       customerIssuesCount: totalTransactions,
-      totalTasks: totalTransactions + quizResults.length + jobAssessments.length + technicalTasks.length,
-      avgDispatchTime: countDispatch > 0 ? (totalDispatchTime / countDispatch).toFixed(1) : 0,
-      avgResolutionTime: countResolution > 0 ? (totalResolutionTime / countResolution).toFixed(1) : 0,
-      avgLifecycleTime: countLifecycle > 0 ? (totalLifecycleTime / countLifecycle).toFixed(1) : 0
     };
-  }, [filteredIssuesByDate, quizResults, jobAssessments, technicalTasks]);
+  }, [activeCustomerIssues, technicalTasks, quizResults, jobAssessments]);
 
   const operationalEfficiencyData = useMemo(() => {
     const totalReported = stats.customerIssuesCount + stats.technicalTasksCount;
@@ -2637,8 +3778,8 @@ const FieldTeamPortal = () => {
 
   const deepStats = useMemo(() => {
     // Calculate critical insights
-    const agingIssues = filteredIssuesByDate.filter(i => i.solved === 'no' && (new Date() - new Date(i.date || i.createdAt)) / (1000 * 60 * 60 * 24) > 7).length;
-    const expressResolution = filteredIssuesByDate.filter(i => {
+    const agingIssues = activeCustomerIssues.filter(i => i.solved === 'no' && (new Date() - new Date(i.date || i.createdAt)) / (1000 * 60 * 60 * 24) > 7).length;
+    const expressResolution = activeCustomerIssues.filter(i => {
       if (!i.resolveDate || !i.date) return false;
       return (new Date(i.resolveDate) - new Date(i.date)) / (1000 * 60 * 60 * 24) <= 1;
     }).length;
@@ -2649,11 +3790,11 @@ const FieldTeamPortal = () => {
       avgResolutionSpeed: stats.avgResolutionTime,
       reliabilityIndex: Math.max(0, 100 - (agingIssues * 5)).toFixed(1)
     };
-  }, [filteredIssuesByDate, stats]);
+  }, [activeCustomerIssues, stats]);
 
   const allActivities = useMemo(() => {
     const activities = [
-      ...filteredIssuesByDate.map(i => ({
+      ...activeCustomerIssues.map(i => ({
         id: i._id,
         type: 'issue',
         title: 'Customer Issue',
@@ -2716,15 +3857,16 @@ const FieldTeamPortal = () => {
     ];
 
     return activities.sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [filteredIssuesByDate, technicalTasks, quizResults, jobAssessments, labAssessments]);
+  }, [activeCustomerIssues, technicalTasks, quizResults, jobAssessments, labAssessments]);
 
   const trendData = useMemo(() => {
     const countsByDate = {};
-    const sortedIssues = [...filteredIssuesByDate].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sortedIssues = [...activeCustomerIssues].sort((a, b) => new Date(a.date || a.createdAt) - new Date(b.date || b.createdAt));
 
     sortedIssues.forEach(issue => {
-      if (!issue.date) return;
-      const d = new Date(issue.date);
+      const dVal = issue.date || issue.createdAt;
+      if (!dVal) return;
+      const d = new Date(dVal);
       let key = '';
       if (trendTimeframe === 'day') key = d.toISOString().split('T')[0];
       else if (trendTimeframe === 'week') {
@@ -2768,7 +3910,7 @@ const FieldTeamPortal = () => {
     }
 
     return { labels, datasets };
-  }, [filteredIssuesByDate, trendTimeframe, trendChartType]);
+  }, [activeCustomerIssues, trendTimeframe, trendChartType]);
 
   const statusData = useMemo(() => ({
     labels: ['Closed', 'Open'],
@@ -2781,7 +3923,7 @@ const FieldTeamPortal = () => {
 
   const categoryData = useMemo(() => {
     const counts = {};
-    filteredIssuesByDate.forEach(issue => {
+    activeCustomerIssues.forEach(issue => {
       if (issue.issues && issue.issues.length > 0) {
         issue.issues.forEach(i => {
           const category = i.category || 'Uncategorized';
@@ -2814,7 +3956,7 @@ const FieldTeamPortal = () => {
       totalCount: Object.values(counts).reduce((a, b) => a + b, 0),
       allCategories: Object.keys(counts).sort()
     };
-  }, [filteredIssuesByDate]);
+  }, [activeCustomerIssues]);
 
   const doughnutOptions = {
     responsive: true,
@@ -2872,26 +4014,30 @@ const FieldTeamPortal = () => {
         teamCompany: "N/A"
       }));
 
-      // Build teamMap keyed by _id. Track ALL names to prevent name-based duplicates.
+      // Build teamMap keyed by normalizeText(teamName) to guarantee 100% UNIQUE teams!
       const teamMap = new Map();
-      const existingNames = new Set();
 
       const addToMap = (team) => {
-        const key = team._id?.toString();
-        if (!key || teamMap.has(key)) return;
-        teamMap.set(key, team);
+        if (!team) return;
+        const normName = normalizeText(team.teamName);
+        if (!normName) return;
+
+        if (teamMap.has(normName)) {
+          // If existing entry is placeholder/discovered and new one is real DB, merge & upgrade it
+          const existing = teamMap.get(normName);
+          if ((existing.isDiscovered || existing.teamCompany === 'N/A') && (!team.isDiscovered && team.teamCompany !== 'N/A')) {
+            teamMap.set(normName, { ...existing, ...team });
+          }
+          return;
+        }
+        teamMap.set(normName, team);
       };
 
       // Priority 1: Official DB records (richest data)
       dbTeams.forEach(addToMap);
 
       // Priority 2: Quiz teams
-      quizTeams.forEach(t => {
-        const key = t._id?.toString();
-        if (key && !teamMap.has(key)) {
-          teamMap.set(key, t);
-        }
-      });
+      quizTeams.forEach(addToMap);
 
       // Priority 3: Discovery from global tasks & sessions (orphan teams only)
       const techTasks = Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : [];
@@ -2900,10 +4046,9 @@ const FieldTeamPortal = () => {
       techTasks.forEach(task => {
         const name = task.teamName;
         const normName = normalizeText(name);
-        if (name && !existingNames.has(normName)) {
+        if (normName && !teamMap.has(normName)) {
           const key = `disc_${normName}`;
-          teamMap.set(key, { _id: key, teamName: name, teamCompany: 'Discovery (Task Log)', isDiscovered: true });
-          existingNames.add(normName);
+          teamMap.set(normName, { _id: key, teamName: name, teamCompany: 'Discovery (Task Log)', isDiscovered: true });
         }
       });
 
@@ -2912,10 +4057,9 @@ const FieldTeamPortal = () => {
           const name = p.teamName || p.name || (typeof p === 'string' ? p : null);
           const id = p._id || p.teamId;
           const normName = name ? normalizeText(name) : null;
-          const key = id?.toString() || (normName ? `disc_${normName}` : null);
-          if (key && !teamMap.has(key) && (!normName || !existingNames.has(normName))) {
-            teamMap.set(key, { _id: key, teamName: name || 'Unknown Team', teamCompany: 'Discovery (Session)', isDiscovered: true });
-            if (normName) existingNames.add(normName);
+          if (normName && !teamMap.has(normName)) {
+            const key = id?.toString() || `disc_${normName}`;
+            teamMap.set(normName, { _id: key, teamName: name || 'Unknown Team', teamCompany: 'Discovery (Session)', isDiscovered: true });
           }
         });
       });
@@ -2937,15 +4081,13 @@ const FieldTeamPortal = () => {
 
       setFieldTeams(prev => {
         const teamMap = new Map();
-        const existingNames = new Set();
 
-        // Keep all existing teams, but filter out internal duplicates by name
+        // Keep all existing teams keyed by normalized name
         prev.forEach(t => {
-          const key = t._id?.toString();
+          if (!t) return;
           const normName = normalizeText(t.teamName);
-          if (key && !teamMap.has(key)) {
-            teamMap.set(key, t);
-            if (normName) existingNames.add(normName);
+          if (normName && !teamMap.has(normName)) {
+            teamMap.set(normName, t);
           }
         });
 
@@ -2953,10 +4095,9 @@ const FieldTeamPortal = () => {
         techTasks.forEach(task => {
           const name = task.teamName;
           const normName = normalizeText(name);
-          if (name && !existingNames.has(normName)) {
+          if (normName && !teamMap.has(normName)) {
             const key = `disc_${normName}`;
-            teamMap.set(key, { _id: key, teamName: name, teamCompany: 'Discovery (Task Log)', isDiscovered: true });
-            existingNames.add(normName);
+            teamMap.set(normName, { _id: key, teamName: name, teamCompany: 'Discovery (Task Log)', isDiscovered: true });
           }
         });
 
@@ -2966,10 +4107,9 @@ const FieldTeamPortal = () => {
             const name = p.teamName || p.name || (typeof p === 'string' ? p : null);
             const id = p._id || p.teamId;
             const normName = name ? normalizeText(name) : null;
-            const key = id?.toString() || (normName ? `disc_${normName}` : null);
-            if (key && !teamMap.has(key) && (!normName || !existingNames.has(normName))) {
-              teamMap.set(key, { _id: key, teamName: name || 'Unknown Team', teamCompany: 'Discovery (Session)', isDiscovered: true });
-              if (normName) existingNames.add(normName);
+            if (normName && !teamMap.has(normName)) {
+              const key = id?.toString() || `disc_${normName}`;
+              teamMap.set(normName, { _id: key, teamName: name || 'Unknown Team', teamCompany: 'Discovery (Session)', isDiscovered: true });
             }
           });
         });
@@ -2982,7 +4122,7 @@ const FieldTeamPortal = () => {
   const fetchGlobalData = async () => {
     try {
       setLoadingGlobal(true);
-      const [techRes, issuesRes, sessionsRes] = await Promise.all([
+      const [techRes, issuesRes, sessionsRes, quizRes, jobRes, labRes] = await Promise.all([
         api.get("/tasks/get-all-tasks", {
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         }),
@@ -2992,7 +4132,10 @@ const FieldTeamPortal = () => {
         }),
         api.get("/training-sessions", {
           headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-        })
+        }),
+        api.get("/quiz-results").catch(() => ({ data: [] })),
+        api.get("/on-the-job-assessments").catch(() => ({ data: [] })),
+        api.get("/lab-assessments").catch(() => ({ data: [] }))
       ]);
       const techData = techRes.data?.data || techRes.data || [];
       setAllTechnicalTasksGlobal(Array.isArray(techData) ? techData : []);
@@ -3000,6 +4143,12 @@ const FieldTeamPortal = () => {
       setAllCustomerIssuesGlobal(Array.isArray(issuesData) ? issuesData : []);
       const sessionsData = sessionsRes.data?.data || sessionsRes.data || [];
       setAllTrainingSessionsGlobal(Array.isArray(sessionsData) ? sessionsData : []);
+      const qData = quizRes.data?.data || quizRes.data || [];
+      setAllQuizResultsGlobal(Array.isArray(qData) ? qData : []);
+      const jData = jobRes.data?.data || jobRes.data || [];
+      setAllJobAssessmentsGlobal(Array.isArray(jData) ? jData : []);
+      const lData = labRes.data?.data || labRes.data || [];
+      setAllLabAssessmentsGlobal(Array.isArray(lData) ? lData : []);
     } catch (err) {
       console.error("Error fetching global leaderboard data:", err);
     } finally {
@@ -3122,29 +4271,21 @@ const FieldTeamPortal = () => {
             })
           ]);
 
-          // Fetch Customer Issues if teamCompany is available
-          if (selectedTeam.teamCompany && selectedTeam.teamCompany !== 'N/A') {
-            try {
-              const issuesRes = await api.get('/customer-issues', {
-                params: {
-                  teamCompany: selectedTeam.teamCompany,
-                  limit: 1000 // Fetch a reasonable amount for analysis
-                },
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-                }
-              });
-              setCustomerIssues(issuesRes.data.data || []);
-            } catch (err) {
-              console.error("Error fetching customer issues:", err);
-              // Don't block other data if this fails
-            }
-          } else {
+          // Fetch Customer Issues strictly for selectedTeam
+          try {
+            const issuesRes = await api.get('/customer-issues', {
+              params: { limit: 10000 },
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              }
+            });
+            const allIssues = issuesRes.data?.data || issuesRes.data || [];
+            const matchedIssues = allIssues.filter(issue => isIssueForTeam(issue, selectedTeam));
+            setCustomerIssues(matchedIssues);
+          } catch (err) {
+            console.error("Error fetching customer issues:", err);
             setCustomerIssues([]);
           }
-
-          // console.log("Quiz Results:", quizRes.data);
-          // console.log("Job Assessments:", jobRes.data);
 
           // Correctly set the quizResults state
           setQuizResults(quizRes.data.data);
@@ -3158,16 +4299,15 @@ const FieldTeamPortal = () => {
           });
           setLabAssessments(labRes.data);
 
-          // Fetch NPS Tickets
+          // Fetch NPS Tickets strictly for selectedTeam
           try {
             const techRes = await api.get(`/tasks/get-all-tasks`, {
-              params: { teamId: selectedTeam._id },
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
               }
             });
-            // Filter to ensure only this team's tasks are set if not done by backend
-            setTechnicalTasks(techRes.data.filter(task => task.teamId === selectedTeam._id) || []);
+            const tData = techRes.data?.data || techRes.data || [];
+            setTechnicalTasks(tData.filter(task => isTaskForTeam(task, selectedTeam)));
           } catch (err) {
             console.error("Error fetching NPS tickets:", err);
           }
@@ -3334,69 +4474,7 @@ ${data.map((a, i) => `
 
   const handleExportFullPerformanceToExcel = () => {
     if (!selectedTeam) return;
-
-    const wb = XLSX.utils.book_new();
-
-    // 1. Overview Summary Sheet
-    const summaryData = [
-      { Metric: 'Team Name', Value: selectedTeam.teamName },
-      { Metric: 'Company', Value: selectedTeam.teamCompany },
-      { Metric: 'Export Date', Value: new Date().toLocaleString() },
-      { Metric: '', Value: '' },
-      { Metric: '--- KEY PERFORMANCE INDICATORS ---', Value: '' },
-      { Metric: 'Total NPS Tickets', Value: stats.technicalTasksCount },
-      { Metric: 'Total Detractors (Score <= 60)', Value: stats.technicalDetractors },
-      { Metric: 'Total Neutrals (Score 61-80)', Value: stats.technicalNeutrals },
-      { Metric: 'Total Customer Issues (Snags & Complaints)', Value: stats.customerIssuesCount },
-      { Metric: 'Issue Resolution Rate', Value: `${stats.resolutionRate}% ` },
-      { Metric: 'Theoretical Avg Score', Value: `${Math.round(calculateAverageScore(quizResults))}% ` },
-      {
-        Metric: 'Practical Avg Score', Value: `${Number(calculateAverageScore(jobAssessments)).toFixed(2)}/5`
-      },
-      { Metric: 'Lab Avg Score', Value: `${Math.round(calculateAverageScore(labAssessments))}%` },
-      { Metric: 'Avg Dispatch Time (Days)', Value: stats.avgDispatchTime },
-      { Metric: 'Avg Resolution Time (Days)', Value: stats.avgResolutionTime },
-    ];
-    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Overview Summary");
-
-    // 2. NPS Tickets Sheet
-    const techTasksData = technicalTasks.map(t => mapItemToExcelRow(t, 'task'));
-    const wsTech = XLSX.utils.json_to_sheet(techTasksData);
-    XLSX.utils.book_append_sheet(wb, wsTech, "NPS Tickets");
-
-    // 3. Customer Issues Sheet
-    const issuesData = filteredIssuesByDate.map(i => mapItemToExcelRow(i, 'issue'));
-    const wsIssues = XLSX.utils.json_to_sheet(issuesData);
-    XLSX.utils.book_append_sheet(wb, wsIssues, "Customer Issues");
-
-    // 4. Assessments Sheet (Theoretical/Practical/Lab Combined)
-    const quizData = quizResults.map(q => ({
-      Type: 'Theoretical',
-      Date: formatDate(q.submittedAt),
-      Identifier: q.quizCode,
-      Score: `${q.percentage}%`,
-      Result: q.percentage >= 70 ? 'Pass' : 'Fail'
-    }));
-    const practicalData = jobAssessments.map(a => ({
-      Type: 'Practical',
-      Date: formatDate(a.assessmentDate),
-      Identifier: `By ${a.conductedBy}`,
-      Score: `${Number(a.overallScore).toFixed(1)}/5`,
-      Result: getAssessmentStatus(a.overallScore, 'practical').label
-    }));
-    const labData = labAssessments.map(l => ({
-      Type: 'Lab',
-      Date: formatDate(l.createdAt),
-      Identifier: l.assessmentType || 'General',
-      Score: `${l.totalScore}%`,
-      Result: getAssessmentStatus(l.totalScore, 'lab').label
-    }));
-    const consolidatedAssessments = [...quizData, ...practicalData, ...labData];
-    const wsAssessments = XLSX.utils.json_to_sheet(consolidatedAssessments);
-    XLSX.utils.book_append_sheet(wb, wsAssessments, "Assessments History");
-
-    XLSX.writeFile(wb, `${selectedTeam.teamName.replace(/\s+/g, '_')}_Full_Performance_Report.xlsx`);
+    exportPremiumTeamQualityReport(selectedTeam);
   };
 
 
@@ -3817,8 +4895,7 @@ ${data.map((a, i) => `
     const processed = fieldTeams.map(team => {
       // 1. Technical Tasks Filter (NPS) with Date Filter
       const teamTechTasks = (Array.isArray(allTechnicalTasksGlobal) ? allTechnicalTasksGlobal : []).filter(t => {
-        const isTeam = t.teamId === team._id || t.teamName === team.teamName;
-        if (!isTeam) return false;
+        if (!isTaskForTeam(t, team)) return false;
 
         if (leaderboardDateFilter.start || leaderboardDateFilter.end) {
           const taskDate = new Date(t.executionDate || t.createdAt);
@@ -3834,8 +4911,7 @@ ${data.map((a, i) => `
 
       // 2. Customer Issues Filter with Date Filter
       const teamIssues = (Array.isArray(allCustomerIssuesGlobal) ? allCustomerIssuesGlobal : []).filter(i => {
-        const isTeam = i.installingTeam === team.teamName || i.assignedTo === team.teamName || i.teamName === team.teamName;
-        if (!isTeam) return false;
+        if (!isIssueForTeam(i, team)) return false;
 
         if (leaderboardDateFilter.start || leaderboardDateFilter.end) {
           const issueDate = new Date(i.date || i.createdAt);
@@ -4025,6 +5101,537 @@ ${data.map((a, i) => `
     },
   };
 
+  const selectableTeams = useMemo(() => {
+    if (activeTeamsOnly) {
+      return fieldTeams.filter(t => t.isActive !== false && !t.isTerminated && !t.isResigned && !t.isSuspended && !t.isOnLeave);
+    }
+    return fieldTeams;
+  }, [fieldTeams, activeTeamsOnly]);
+
+  const activeTeamsCount = useMemo(() => {
+    return fieldTeams.filter(t => t.isActive !== false && !t.isTerminated && !t.isResigned && !t.isSuspended && !t.isOnLeave).length;
+  }, [fieldTeams]);
+
+  const selectedTeamTokenStats = useMemo(() => {
+    if (!selectedTeam) return { totalToken: 0, fulfillmentPct: 0, monthlyTokens: {} };
+    const tName = normalizeText(selectedTeam.teamName);
+    const tId = selectedTeam._id?.toString();
+    const monthlyTokens = {};
+    for (let m = 1; m <= 12; m++) monthlyTokens[m] = 0;
+    (teamSamplesTokens || []).forEach(st => {
+      const matchName = normalizeText(st.teamName) === tName;
+      const matchId = st.teamId && st.teamId.toString() === tId;
+      if (matchName || matchId) {
+        monthlyTokens[st.month] = (monthlyTokens[st.month] || 0) + (Number(st.sampleSize) || 0);
+      }
+    });
+    const totalToken = Object.values(monthlyTokens).reduce((a, b) => a + b, 0);
+    const totalEval = technicalTasks.length;
+    const fulfillmentPct = totalToken > 0 ? ((totalEval / totalToken) * 100).toFixed(1) : '0.0';
+    return { totalToken, fulfillmentPct, monthlyTokens };
+  }, [selectedTeam, teamSamplesTokens, technicalTasks]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // TEAMS QUALITY KPI MATRIX CALCULATIONS & STATE MEMOS
+  // ─────────────────────────────────────────────────────────────────────────
+  const teamsQualityMatrixData = useMemo(() => {
+    if (!fieldTeams || fieldTeams.length === 0) return [];
+
+    const isDateMatch = (dateStr) => {
+      if (!dateStr || matrixDateFilterMode === 'all') return true;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return true;
+      const now = new Date();
+      const yr = d.getFullYear();
+      const mo = d.getMonth();
+
+      if (matrixDateFilterMode === 'this_month') {
+        return yr === now.getFullYear() && mo === now.getMonth();
+      }
+      if (matrixDateFilterMode === 'last_month') {
+        const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        const lastMonthYr = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        return yr === lastMonthYr && mo === lastMonth;
+      }
+      if (matrixDateFilterMode === 'this_quarter') {
+        const currentQ = Math.floor(now.getMonth() / 3);
+        const taskQ = Math.floor(mo / 3);
+        return yr === now.getFullYear() && taskQ === currentQ;
+      }
+      if (matrixDateFilterMode === 'this_year') {
+        return yr === now.getFullYear();
+      }
+      if (matrixDateFilterMode === 'custom') {
+        if (matrixCustomStartDate && d < new Date(matrixCustomStartDate)) return false;
+        if (matrixCustomEndDate && d > new Date(matrixCustomEndDate + 'T23:59:59')) return false;
+        return true;
+      }
+      return true;
+    };
+
+    const getActiveMonths = () => {
+      const now = new Date();
+      if (matrixDateFilterMode === 'this_month') return [now.getMonth() + 1];
+      if (matrixDateFilterMode === 'last_month') return [now.getMonth() === 0 ? 12 : now.getMonth()];
+      if (matrixDateFilterMode === 'this_quarter') {
+        const q = Math.floor(now.getMonth() / 3);
+        return [q * 3 + 1, q * 3 + 2, q * 3 + 3];
+      }
+      if (matrixDateFilterMode === 'this_year' || matrixDateFilterMode === 'all') {
+        return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+      }
+      if (matrixDateFilterMode === 'custom') {
+        if (!matrixCustomStartDate || !matrixCustomEndDate) return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        const s = new Date(matrixCustomStartDate);
+        const e = new Date(matrixCustomEndDate);
+        const months = new Set();
+        let cur = new Date(s.getFullYear(), s.getMonth(), 1);
+        while (cur <= e) {
+          months.add(cur.getMonth() + 1);
+          cur.setMonth(cur.getMonth() + 1);
+        }
+        return Array.from(months);
+      }
+      return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    };
+
+    const activeMonths = getActiveMonths();
+
+    // Deduplicate fieldTeams by normalized name to guarantee 100% unique rows
+    const uniqueTeamsMap = new Map();
+    fieldTeams.forEach(t => {
+      if (!t) return;
+      const norm = normalizeText(t.teamName);
+      if (!norm) return;
+      if (!uniqueTeamsMap.has(norm) || (uniqueTeamsMap.get(norm).isDiscovered && !t.isDiscovered)) {
+        uniqueTeamsMap.set(norm, t);
+      }
+    });
+    const uniqueTeams = Array.from(uniqueTeamsMap.values());
+
+    return uniqueTeams.map(team => {
+      const normName = normalizeText(team.teamName);
+      const teamIdStr = team._id?.toString();
+
+      // Original Tokens
+      let origTokens = 0;
+      (teamSamplesTokens || []).forEach(st => {
+        const matchName = normalizeText(st.teamName) === normName;
+        const matchId = st.teamId && st.teamId.toString() === teamIdStr;
+        if (matchName || matchId) {
+          if (activeMonths.includes(Number(st.month))) {
+            origTokens += Number(st.sampleSize) || 0;
+          }
+        }
+      });
+
+      // Filter tasks for this team and date range
+      const tTasks = (allTechnicalTasksGlobal || []).filter(t => {
+        const match = normalizeText(t.teamName) === normName || (t.fieldTeam && t.fieldTeam.toString() === teamIdStr);
+        if (!match) return false;
+        const d = t.pisDate || t.interviewDate || t.createdAt;
+        return isDateMatch(d);
+      });
+
+      const nonAccCount = tTasks.filter(t => !isTeamAccountable(t)).length;
+      const adjTokens = Math.max(0, origTokens - nonAccCount);
+      const accTasks = tTasks.filter(t => isTeamAccountable(t) && fieldContainsReach(t.responsible));
+      const accCount = accTasks.length;
+      const calcPromoters = Math.max(0, adjTokens - accCount);
+
+      let accDet = 0;
+      let accNeu = 0;
+      accTasks.forEach(t => {
+        const score = t.evaluationScore || 0;
+        const norm = score <= 10 ? score * 10 : score;
+        if (norm > 0) {
+          if (norm <= 60) accDet++;
+          else if (norm <= 80) accNeu++;
+        }
+      });
+
+      const failureRate = adjTokens > 0 ? ((accCount / adjTokens) * 100).toFixed(1) : '0.0';
+      const promoterShare = adjTokens > 0 ? ((calcPromoters / adjTokens) * 100).toFixed(1) : '0.0';
+      const detractorRate = adjTokens > 0 ? ((accDet / adjTokens) * 100).toFixed(1) : '0.0';
+      const neutralRate = adjTokens > 0 ? ((accNeu / adjTokens) * 100).toFixed(1) : '0.0';
+      const nps = adjTokens > 0 ? (((calcPromoters - accDet) / adjTokens) * 100).toFixed(1) : '0.0';
+
+      // Snags
+      const tSnags = (allCustomerIssuesGlobal || []).filter(i => {
+        if (!isIssueForTeam(i, team)) return false;
+        const d = i.date || i.createdAt;
+        return isDateMatch(d);
+      });
+      const closedSnags = tSnags.filter(s => s.solved === 'yes').length;
+      const snagResolutionRate = tSnags.length > 0 ? Math.round((closedSnags / tSnags.length) * 100) : 100;
+
+      // Assessments
+      const teamQuizzes = (allQuizResultsGlobal || []).filter(q => normalizeText(q.teamName) === normName || (q.teamId && q.teamId.toString() === teamIdStr));
+      const teamJobAssessments = (allJobAssessmentsGlobal || []).filter(j => normalizeText(j.teamName) === normName || (j.fieldTeam && j.fieldTeam.toString() === teamIdStr));
+      const teamLabAssessments = (allLabAssessmentsGlobal || []).filter(l => normalizeText(l.teamName) === normName || (l.fieldTeam && l.fieldTeam.toString() === teamIdStr));
+
+      const quizAvg = Math.round(calculateAverageScore(teamQuizzes));
+      const jobAvg = Math.round(calculateAverageScore(teamJobAssessments));
+      const labAvg = Math.round(calculateAverageScore(teamLabAssessments));
+
+      const isActive = team.isActive !== false && !team.isTerminated && !team.isResigned && !team.isSuspended && !team.isOnLeave;
+
+      return {
+        team,
+        teamId: team._id,
+        teamName: team.teamName,
+        teamCode: team.teamCode || 'N/A',
+        teamCompany: team.teamCompany || 'N/A',
+        isActive,
+        statusLabel: getTeamStatusLabel(team),
+        totalTasks: tTasks.length,
+        originalTokens: origTokens,
+        nonAccountableCount: nonAccCount,
+        adjustedTokens: adjTokens,
+        accountableCount: accCount,
+        failureRate: Number(failureRate),
+        calculatedPromoters: calcPromoters,
+        promoterShare: Number(promoterShare),
+        accDetractors: accDet,
+        detractorRate: Number(detractorRate),
+        accNeutrals: accNeu,
+        neutralRate: Number(neutralRate),
+        totalSnags: tSnags.length,
+        closedSnags,
+        snagResolutionRate,
+        quizAvg,
+        jobAvg,
+        labAvg,
+        teamNps: Number(nps)
+      };
+    });
+  }, [fieldTeams, teamSamplesTokens, allTechnicalTasksGlobal, allCustomerIssuesGlobal, allQuizResultsGlobal, allJobAssessmentsGlobal, allLabAssessmentsGlobal, matrixDateFilterMode, matrixCustomStartDate, matrixCustomEndDate]);
+
+  const uniqueMatrixCompanies = useMemo(() => {
+    const companies = new Set();
+    (fieldTeams || []).forEach(t => {
+      if (t.teamCompany && t.teamCompany !== 'N/A' && t.teamCompany !== 'Discovery (Task Log)' && t.teamCompany !== 'Discovery (Session)') {
+        companies.add(t.teamCompany);
+      }
+    });
+    return Array.from(companies).sort();
+  }, [fieldTeams]);
+
+  const filteredAndSortedMatrixData = useMemo(() => {
+    let list = [...teamsQualityMatrixData];
+
+    // Status filter
+    if (matrixStatusFilter === 'active') {
+      list = list.filter(t => t.isActive);
+    } else if (matrixStatusFilter === 'terminated') {
+      list = list.filter(t => t.team.isTerminated);
+    } else if (matrixStatusFilter === 'resigned') {
+      list = list.filter(t => t.team.isResigned);
+    } else if (matrixStatusFilter === 'suspended') {
+      list = list.filter(t => t.team.isSuspended);
+    } else if (matrixStatusFilter === 'on_leave') {
+      list = list.filter(t => t.team.isOnLeave);
+    }
+
+    // Company filter
+    if (matrixCompanyFilter !== 'all') {
+      list = list.filter(t => t.teamCompany === matrixCompanyFilter);
+    }
+
+    // Search query
+    if (matrixSearchQuery.trim()) {
+      const q = matrixSearchQuery.toLowerCase().trim();
+      list = list.filter(t =>
+        (t.teamName || '').toLowerCase().includes(q) ||
+        (t.teamCode || '').toLowerCase().includes(q) ||
+        (t.teamCompany || '').toLowerCase().includes(q)
+      );
+    }
+
+    // Sorting
+    list.sort((a, b) => {
+      let aVal = a[matrixSort.field];
+      let bVal = b[matrixSort.field];
+
+      if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = (bVal || '').toLowerCase();
+        return matrixSort.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+
+      aVal = Number(aVal || 0);
+      bVal = Number(bVal || 0);
+      return matrixSort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+
+    return list;
+  }, [teamsQualityMatrixData, matrixStatusFilter, matrixCompanyFilter, matrixSearchQuery, matrixSort]);
+
+  const matrixPortfolioTotals = useMemo(() => {
+    const totalOrig = filteredAndSortedMatrixData.reduce((a, b) => a + b.originalTokens, 0);
+    const totalNonAcc = filteredAndSortedMatrixData.reduce((a, b) => a + b.nonAccountableCount, 0);
+    const totalAdj = filteredAndSortedMatrixData.reduce((a, b) => a + b.adjustedTokens, 0);
+    const totalAcc = filteredAndSortedMatrixData.reduce((a, b) => a + b.accountableCount, 0);
+    const totalPromoters = filteredAndSortedMatrixData.reduce((a, b) => a + b.calculatedPromoters, 0);
+    const totalDet = filteredAndSortedMatrixData.reduce((a, b) => a + b.accDetractors, 0);
+    const totalNeu = filteredAndSortedMatrixData.reduce((a, b) => a + b.accNeutrals, 0);
+    const totalSnags = filteredAndSortedMatrixData.reduce((a, b) => a + b.totalSnags, 0);
+    const totalClosedSnags = filteredAndSortedMatrixData.reduce((a, b) => a + b.closedSnags, 0);
+
+    const validQuizTeams = filteredAndSortedMatrixData.filter(t => t.quizAvg > 0);
+    const avgQuiz = validQuizTeams.length > 0 ? Math.round(validQuizTeams.reduce((a, b) => a + b.quizAvg, 0) / validQuizTeams.length) : 0;
+
+    const validJobTeams = filteredAndSortedMatrixData.filter(t => t.jobAvg > 0);
+    const avgJob = validJobTeams.length > 0 ? Math.round(validJobTeams.reduce((a, b) => a + b.jobAvg, 0) / validJobTeams.length) : 0;
+
+    const validLabTeams = filteredAndSortedMatrixData.filter(t => t.labAvg > 0);
+    const avgLab = validLabTeams.length > 0 ? Math.round(validLabTeams.reduce((a, b) => a + b.labAvg, 0) / validLabTeams.length) : 0;
+
+    const failRate = totalAdj > 0 ? ((totalAcc / totalAdj) * 100).toFixed(1) : '0.0';
+    const proShare = totalAdj > 0 ? ((totalPromoters / totalAdj) * 100).toFixed(1) : '0.0';
+    const detRate = totalAdj > 0 ? ((totalDet / totalAdj) * 100).toFixed(1) : '0.0';
+    const neuRate = totalAdj > 0 ? ((totalNeu / totalAdj) * 100).toFixed(1) : '0.0';
+    const nps = totalAdj > 0 ? (((totalPromoters - totalDet) / totalAdj) * 100).toFixed(1) : '0.0';
+    const snagResRate = totalSnags > 0 ? Math.round((totalClosedSnags / totalSnags) * 100) : 100;
+
+    return {
+      totalOrig,
+      totalNonAcc,
+      totalAdj,
+      totalAcc,
+      failRate,
+      totalPromoters,
+      proShare,
+      totalDet,
+      detRate,
+      totalNeu,
+      neuRate,
+      totalSnags,
+      totalClosedSnags,
+      snagResRate,
+      avgQuiz,
+      avgJob,
+      avgLab,
+      nps
+    };
+  }, [filteredAndSortedMatrixData]);
+
+  const handleExportQualityMatrixToExcel = () => {
+    if (!filteredAndSortedMatrixData || filteredAndSortedMatrixData.length === 0) return;
+
+    const PALETTE = {
+      navyDark: "0F172A",
+      slateDark: "1E293B",
+      slateMedium: "334155",
+      slateLight: "475569",
+      slateMuted: "64748B",
+      blueHeader: "1E40AF",
+      blueSub: "3B82F6",
+      blueBg: "EFF6FF",
+      emeraldHeader: "065F46",
+      emeraldBg: "ECFDF5",
+      emeraldText: "047857",
+      amberHeader: "92400E",
+      amberBg: "FFFBEB",
+      amberText: "B45309",
+      roseHeader: "9F1239",
+      roseBg: "FFF1F2",
+      roseText: "BE123C",
+      purpleHeader: "581C87",
+      purpleBg: "FAF5FF",
+      zebraBg: "F8FAFC",
+      borderLight: "CBD5E1",
+      white: "FFFFFF"
+    };
+
+    const borderThin = {
+      top: { style: "thin", color: { rgb: PALETTE.borderLight } },
+      bottom: { style: "thin", color: { rgb: PALETTE.borderLight } },
+      left: { style: "thin", color: { rgb: PALETTE.borderLight } },
+      right: { style: "thin", color: { rgb: PALETTE.borderLight } }
+    };
+
+    const borderHeader = {
+      top: { style: "medium", color: { rgb: PALETTE.slateDark } },
+      bottom: { style: "medium", color: { rgb: PALETTE.slateDark } },
+      left: { style: "thin", color: { rgb: PALETTE.slateMedium } },
+      right: { style: "thin", color: { rgb: PALETTE.slateMedium } }
+    };
+
+    const borderSummary = {
+      top: { style: "medium", color: { rgb: PALETTE.navyDark } },
+      bottom: { style: "double", color: { rgb: PALETTE.navyDark } },
+      left: { style: "thin", color: { rgb: PALETTE.slateMedium } },
+      right: { style: "thin", color: { rgb: PALETTE.slateMedium } }
+    };
+
+    const fixSheetRange = (ws) => {
+      const cells = Object.keys(ws).filter(k => k[0] !== '!');
+      if (cells.length === 0) return;
+      const range = { s: { r: 1000000, c: 1000000 }, e: { r: 0, c: 0 } };
+      cells.forEach(addr => {
+        const c = XLSX.utils.decode_cell(addr);
+        if (c.r < range.s.r) range.s.r = c.r;
+        if (c.r > range.e.r) range.e.r = c.r;
+        if (c.c < range.s.c) range.s.c = c.c;
+        if (c.c > range.e.c) range.e.c = c.c;
+      });
+      ws['!ref'] = XLSX.utils.encode_range(range);
+    };
+
+    const wb = XLSX.utils.book_new();
+
+    const headers = [
+      'Rank',
+      'Team Name',
+      'Team Code',
+      'Company / Contractor',
+      'Operational Status',
+      'Original Tokens (Quota)',
+      'Non-Accountable Tasks (No)',
+      'Adjusted Net Tokens',
+      'Accountable Tasks (Yes)',
+      'Acc. Failure Rate (%)',
+      'Promoters (Calculated)',
+      'Promoter Share (%)',
+      'Acc. Detractors (≤6)',
+      'Acc. Detractor % (Net)',
+      'Acc. Neutrals (7-8)',
+      'Acc. Neutral % (Net)',
+      'Customer Snags (Total)',
+      'Customer Snags (Closed)',
+      'Snag Resolution Rate (%)',
+      'Online Exam Score (%)',
+      'OTJ Assessment (%)',
+      'Lab Assessment (%)',
+      'Team NPS'
+    ];
+
+    const aoa = [
+      [`ALL FIELD TEAMS QUALITY & SAMPLING KPI BENCHMARK MATRIX - Period: ${matrixDateFilterMode.toUpperCase()}`],
+      [],
+      headers
+    ];
+
+    filteredAndSortedMatrixData.forEach((row, idx) => {
+      aoa.push([
+        idx + 1,
+        row.teamName,
+        row.teamCode,
+        row.teamCompany,
+        row.statusLabel,
+        row.originalTokens,
+        row.nonAccountableCount,
+        row.adjustedTokens,
+        row.accountableCount,
+        `${row.failureRate}%`,
+        row.calculatedPromoters,
+        `${row.promoterShare}%`,
+        row.accDetractors,
+        `${row.detractorRate}%`,
+        row.accNeutrals,
+        `${row.neutralRate}%`,
+        row.totalSnags,
+        row.closedSnags,
+        `${row.snagResolutionRate}%`,
+        `${row.quizAvg}%`,
+        `${row.jobAvg}%`,
+        `${row.labAvg}%`,
+        row.teamNps
+      ]);
+    });
+
+    // Summary benchmark row
+    aoa.push([
+      'TOTAL',
+      'ALL FILTERED TEAMS CUMULATIVE BENCHMARK',
+      '-',
+      '-',
+      '-',
+      matrixPortfolioTotals.totalOrig,
+      matrixPortfolioTotals.totalNonAcc,
+      matrixPortfolioTotals.totalAdj,
+      matrixPortfolioTotals.totalAcc,
+      `${matrixPortfolioTotals.failRate}%`,
+      matrixPortfolioTotals.totalPromoters,
+      `${matrixPortfolioTotals.proShare}%`,
+      matrixPortfolioTotals.totalDet,
+      `${matrixPortfolioTotals.detRate}%`,
+      matrixPortfolioTotals.totalNeu,
+      `${matrixPortfolioTotals.neuRate}%`,
+      matrixPortfolioTotals.totalSnags,
+      matrixPortfolioTotals.totalClosedSnags,
+      `${matrixPortfolioTotals.snagResRate}%`,
+      `${matrixPortfolioTotals.avgQuiz}%`,
+      `${matrixPortfolioTotals.avgJob}%`,
+      `${matrixPortfolioTotals.avgLab}%`,
+      matrixPortfolioTotals.nps
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }
+    ];
+
+    ws['A1'].s = {
+      font: { bold: true, sz: 14, color: { rgb: PALETTE.white } },
+      fill: { fgColor: { rgb: PALETTE.navyDark } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    };
+
+    headers.forEach((h, c) => {
+      const cell = XLSX.utils.encode_cell({ r: 2, c });
+      if (ws[cell]) {
+        ws[cell].s = {
+          font: { bold: true, color: { rgb: PALETTE.white } },
+          fill: { fgColor: { rgb: PALETTE.slateDark } },
+          alignment: { horizontal: 'center' },
+          border: borderHeader
+        };
+      }
+    });
+
+    for (let r = 3; r < aoa.length - 1; r++) {
+      const isZebra = r % 2 === 1;
+      const rowBg = isZebra ? PALETTE.zebraBg : PALETTE.white;
+      for (let c = 0; c < headers.length; c++) {
+        const cell = XLSX.utils.encode_cell({ r, c });
+        if (ws[cell]) {
+          ws[cell].s = {
+            alignment: { horizontal: c <= 4 ? 'left' : 'center' },
+            fill: { fgColor: { rgb: rowBg } },
+            border: borderThin
+          };
+        }
+      }
+    }
+
+    const sumRowIdx = aoa.length - 1;
+    for (let c = 0; c < headers.length; c++) {
+      const cell = XLSX.utils.encode_cell({ r: sumRowIdx, c });
+      if (ws[cell]) {
+        ws[cell].s = {
+          font: { bold: true, color: { rgb: PALETTE.white } },
+          alignment: { horizontal: c <= 4 ? 'left' : 'center' },
+          fill: { fgColor: { rgb: PALETTE.navyDark } },
+          border: borderSummary
+        };
+      }
+    }
+
+    ws['!cols'] = [
+      { wch: 8 }, { wch: 26 }, { wch: 14 }, { wch: 22 }, { wch: 16 },
+      { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 16 },
+      { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 },
+      { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 },
+      { wch: 14 }, { wch: 14 }, { wch: 14 }
+    ];
+
+    fixSheetRange(ws);
+    XLSX.utils.book_append_sheet(wb, ws, "Teams Quality KPI Matrix");
+    XLSX.writeFile(wb, `Teams_Quality_KPI_Matrix_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  };
+
   return (
     <>
       <Box sx={{
@@ -4102,9 +5709,50 @@ ${data.map((a, i) => `
           ...colors.glass,
           borderRadius: '20px',
         }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Shield sx={{ color: colors.primary, fontSize: '1.3rem' }} />
+              Select Target Field Team
+            </Typography>
+            <ToggleButtonGroup
+              size="small"
+              value={activeTeamsOnly ? "active" : "all"}
+              exclusive
+              onChange={(e, val) => {
+                if (val !== null) setActiveTeamsOnly(val === "active");
+              }}
+              sx={{
+                bgcolor: 'rgba(0,0,0,0.3)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                '& .MuiToggleButton-root': {
+                  color: colors.textSecondary,
+                  px: 2,
+                  py: 0.5,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.82rem',
+                  border: 'none',
+                  '&.Mui-selected': {
+                    bgcolor: `${colors.primary}33`,
+                    color: '#fff',
+                    borderColor: colors.primary
+                  }
+                }
+              }}
+            >
+              <ToggleButton value="active">
+                Active Teams ({activeTeamsCount})
+              </ToggleButton>
+              <ToggleButton value="all">
+                All Teams ({fieldTeams.length})
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
           <Autocomplete
-            options={fieldTeams}
-            getOptionLabel={(option) => `${option.teamName} (${option.teamCompany})`}
+            options={selectableTeams}
+            getOptionLabel={(option) => `${option.teamName} (${option.teamCompany || 'N/A'})`}
             value={selectedTeam}
             onChange={(event, newValue) => {
               if (newValue) {
@@ -4117,12 +5765,41 @@ ${data.map((a, i) => `
             }}
             disabled={loading}
             fullWidth
+            renderOption={(props, option) => {
+              const status = getTeamStatusLabel(option);
+              const isAct = status === 'Active';
+              return (
+                <li {...props} key={option._id || option.teamName}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', py: 0.5 }}>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                        {option.teamName} {option.teamCode ? `[${option.teamCode}]` : ''}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                        {option.teamCompany || 'Company N/A'}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={status}
+                      size="small"
+                      sx={{
+                        bgcolor: isAct ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                        color: isAct ? '#22c55e' : '#f87171',
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        height: 22
+                      }}
+                    />
+                  </Box>
+                </li>
+              );
+            }}
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Select Field Team to Analyze"
+                label={activeTeamsOnly ? "Select Active Field Team to Analyze" : "Select Field Team to Analyze (All Statuses)"}
                 variant="outlined"
-                placeholder="Search by team name..."
+                placeholder="Search by team name or code..."
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     backgroundColor: 'rgba(0,0,0,0.2)',
@@ -4170,14 +5847,987 @@ ${data.map((a, i) => `
                     '& .MuiTabs-indicator': { bgcolor: colors.primary }
                   }}
                 >
+                  <Tab label="Teams Quality KPI Matrix" icon={<Assessment />} iconPosition="start" />
                   <Tab label="Leaderboard" icon={<LeaderboardIcon />} iconPosition="start" />
                   <Tab label="Global Analytics" icon={<BarChartIconMUI />} iconPosition="start" />
                   <Tab label="Comparison Chart" icon={<Timeline />} iconPosition="start" />
                 </Tabs>
               </Box>
 
-              {/* TAB 0: LEADERBOARD */}
+              {/* TAB 0: TEAMS QUALITY KPI MATRIX */}
               {globalTab === 0 && (
+                <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
+                  {/* Controls & Filter Toolbar */}
+                  <Paper sx={{
+                    p: 2.5,
+                    mb: 3.5,
+                    ...colors.glass,
+                    borderRadius: '20px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2
+                  }}>
+                    {/* Top Row: Search, Status Filter, Company Filter, Export Button */}
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <Box sx={{
+                        flex: 1,
+                        minWidth: '260px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        px: 2,
+                        py: 0.8,
+                        borderRadius: '12px',
+                        bgcolor: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                      }}>
+                        <SearchIcon sx={{ color: colors.primary, mr: 1.5, fontSize: '1.2rem' }} />
+                        <TextField
+                          placeholder="Search by Team Name, Code, Contractor..."
+                          variant="standard"
+                          fullWidth
+                          value={matrixSearchQuery}
+                          onChange={(e) => {
+                            setMatrixSearchQuery(e.target.value);
+                            setMatrixPage(0);
+                          }}
+                          InputProps={{
+                            disableUnderline: true,
+                            sx: { color: '#fff', fontSize: '0.95rem' }
+                          }}
+                        />
+                        {matrixSearchQuery && (
+                          <IconButton size="small" onClick={() => setMatrixSearchQuery('')} sx={{ color: colors.textSecondary }}>
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                      </Box>
+
+                      {/* Operational Status */}
+                      <FormControl size="small" sx={{ minWidth: 170, bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '12px' }}>
+                        <Select
+                          value={matrixStatusFilter}
+                          onChange={(e) => {
+                            setMatrixStatusFilter(e.target.value);
+                            setMatrixPage(0);
+                          }}
+                          sx={{
+                            color: '#fff',
+                            fontSize: '0.9rem',
+                            borderRadius: '12px',
+                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' },
+                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.primary }
+                          }}
+                        >
+                          <MenuItem value="active">Active Teams Only</MenuItem>
+                          <MenuItem value="all">All Teams (Incl. Inactive)</MenuItem>
+                          <MenuItem value="terminated">Terminated Teams</MenuItem>
+                          <MenuItem value="resigned">Resigned Teams</MenuItem>
+                          <MenuItem value="suspended">Suspended Teams</MenuItem>
+                          <MenuItem value="on_leave">On Leave Teams</MenuItem>
+                        </Select>
+                      </FormControl>
+
+                      {/* Company Filter */}
+                      <FormControl size="small" sx={{ minWidth: 170, bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '12px' }}>
+                        <Select
+                          value={matrixCompanyFilter}
+                          onChange={(e) => {
+                            setMatrixCompanyFilter(e.target.value);
+                            setMatrixPage(0);
+                          }}
+                          sx={{
+                            color: '#fff',
+                            fontSize: '0.9rem',
+                            borderRadius: '12px',
+                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' },
+                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.primary }
+                          }}
+                        >
+                          <MenuItem value="all">All Contractors</MenuItem>
+                          {uniqueMatrixCompanies.map(c => (
+                            <MenuItem key={c} value={c}>{c}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      {/* Export to Excel */}
+                      <Button
+                        variant="contained"
+                        startIcon={<TableChartIcon />}
+                        onClick={handleExportQualityMatrixToExcel}
+                        sx={{
+                          borderRadius: '12px',
+                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          color: '#fff',
+                          fontWeight: 700,
+                          textTransform: 'none',
+                          px: 2.5,
+                          py: 1,
+                          boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                            boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)'
+                          }
+                        }}
+                      >
+                        Export Matrix to Excel
+                      </Button>
+                    </Box>
+
+                    {/* Date Customization Row */}
+                    <Box sx={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 2,
+                      pt: 1.5,
+                      borderTop: '1px solid rgba(255,255,255,0.06)'
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, mr: 1, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                          Period:
+                        </Typography>
+                        {[
+                          { id: 'all', label: 'All Time' },
+                          { id: 'this_month', label: 'This Month' },
+                          { id: 'last_month', label: 'Last Month' },
+                          { id: 'this_quarter', label: 'This Quarter' },
+                          { id: 'this_year', label: 'This Year' },
+                          { id: 'custom', label: 'Custom Range' }
+                        ].map(mode => (
+                          <Chip
+                            key={mode.id}
+                            label={mode.label}
+                            clickable
+                            size="small"
+                            onClick={() => {
+                              setMatrixDateFilterMode(mode.id);
+                              setMatrixPage(0);
+                            }}
+                            sx={{
+                              bgcolor: matrixDateFilterMode === mode.id ? alpha(colors.primary, 0.25) : 'rgba(255,255,255,0.05)',
+                              color: matrixDateFilterMode === mode.id ? '#c4b5fd' : colors.textSecondary,
+                              borderColor: matrixDateFilterMode === mode.id ? colors.primary : 'transparent',
+                              borderWidth: 1,
+                              borderStyle: 'solid',
+                              fontWeight: matrixDateFilterMode === mode.id ? 700 : 500,
+                              '&:hover': { bgcolor: alpha(colors.primary, 0.18) }
+                            }}
+                          />
+                        ))}
+                      </Box>
+
+                      {/* Custom Date Pickers */}
+                      {matrixDateFilterMode === 'custom' && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <TextField
+                            size="small"
+                            type="date"
+                            label="Start Date"
+                            value={matrixCustomStartDate}
+                            onChange={(e) => {
+                              setMatrixCustomStartDate(e.target.value);
+                              setMatrixPage(0);
+                            }}
+                            InputLabelProps={{ shrink: true, sx: { color: colors.textSecondary } }}
+                            inputProps={{ sx: { color: '#fff', fontSize: '0.85rem' } }}
+                            sx={{
+                              width: 155,
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: 'rgba(255,255,255,0.04)',
+                                borderRadius: '10px',
+                                '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' }
+                              }
+                            }}
+                          />
+                          <Typography sx={{ color: colors.textSecondary, fontSize: '0.85rem' }}>to</Typography>
+                          <TextField
+                            size="small"
+                            type="date"
+                            label="End Date"
+                            value={matrixCustomEndDate}
+                            onChange={(e) => {
+                              setMatrixCustomEndDate(e.target.value);
+                              setMatrixPage(0);
+                            }}
+                            InputLabelProps={{ shrink: true, sx: { color: colors.textSecondary } }}
+                            inputProps={{ sx: { color: '#fff', fontSize: '0.85rem' } }}
+                            sx={{
+                              width: 155,
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: 'rgba(255,255,255,0.04)',
+                                borderRadius: '10px',
+                                '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' }
+                              }
+                            }}
+                          />
+                        </Box>
+                      )}
+                    </Box>
+                  </Paper>
+
+                  {/* 9 EXECUTIVE SUMMARY KPI CARDS (MATCHING ATTACHMENT 1) */}
+                  <Grid container spacing={2} sx={{ mb: 4 }}>
+                    {/* 1. Original Tokens */}
+                    <Grid item xs={12} sm={6} md={3} lg={2.66}>
+                      <Card sx={{
+                        p: 2.2,
+                        height: '100%',
+                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0.04) 100%)',
+                        border: '1px solid rgba(99, 102, 241, 0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="caption" sx={{ color: '#a5b4fc', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                            ORIGINAL SAMPLES TOKEN
+                          </Typography>
+                          <Avatar sx={{ bgcolor: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', width: 34, height: 34 }}>
+                            <Assignment fontSize="small" />
+                          </Avatar>
+                        </Box>
+                        <Box>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', mb: 0.5 }}>
+                            {matrixPortfolioTotals.totalOrig} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#a5b4fc' }}>Tokens</span>
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)' }}>
+                            Assigned Quality Sampling Quota
+                          </Typography>
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* 2. Non-Accountable Tasks */}
+                    <Grid item xs={12} sm={6} md={3} lg={2.66}>
+                      <Card sx={{
+                        p: 2.2,
+                        height: '100%',
+                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.04) 100%)',
+                        border: '1px solid rgba(245, 158, 11, 0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="caption" sx={{ color: '#fcd34d', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                            NON-ACCOUNTABLE TASKS (NO)
+                          </Typography>
+                          <Avatar sx={{ bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', width: 34, height: 34 }}>
+                            <CancelIcon fontSize="small" />
+                          </Avatar>
+                        </Box>
+                        <Box>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', mb: 0.5 }}>
+                            {matrixPortfolioTotals.totalNonAcc} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fcd34d' }}>Tasks</span>
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)' }}>
+                            Deducted from Quota / Other Owners
+                          </Typography>
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* 3. Adjusted Samples Token */}
+                    <Grid item xs={12} sm={6} md={3} lg={2.66}>
+                      <Card sx={{
+                        p: 2.2,
+                        height: '100%',
+                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0.04) 100%)',
+                        border: '1px solid rgba(14, 165, 233, 0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="caption" sx={{ color: '#7dd3fc', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                            ADJUSTED SAMPLES TOKEN
+                          </Typography>
+                          <Avatar sx={{ bgcolor: 'rgba(14, 165, 233, 0.2)', color: '#38bdf8', width: 34, height: 34 }}>
+                            <VerifiedUser fontSize="small" />
+                          </Avatar>
+                        </Box>
+                        <Box>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', mb: 0.5 }}>
+                            {matrixPortfolioTotals.totalAdj} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#7dd3fc' }}>Net Tokens</span>
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)' }}>
+                            Original ({matrixPortfolioTotals.totalOrig}) - Non-Acc ({matrixPortfolioTotals.totalNonAcc})
+                          </Typography>
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* 4. Accountable Tasks (Yes) */}
+                    <Grid item xs={12} sm={6} md={3} lg={4}>
+                      <Card sx={{
+                        p: 2.2,
+                        height: '100%',
+                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.04) 100%)',
+                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="caption" sx={{ color: '#fca5a5', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                            ACCOUNTABLE TASKS (YES)
+                          </Typography>
+                          <Avatar sx={{ bgcolor: 'rgba(239, 68, 68, 0.2)', color: '#f87171', width: 34, height: 34 }}>
+                            <Gavel fontSize="small" />
+                          </Avatar>
+                        </Box>
+                        <Box>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#f87171', mb: 0.5 }}>
+                            {matrixPortfolioTotals.totalAcc} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Tasks</span>
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                            <strong>{matrixPortfolioTotals.failRate}% Failure Rate</strong> on Net Tokens ({matrixPortfolioTotals.totalDet} Det / {matrixPortfolioTotals.totalNeu} Neu)
+                          </Typography>
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* 5. Promoters (Calculated) */}
+                    <Grid item xs={12} sm={6} md={3} lg={4}>
+                      <Card sx={{
+                        p: 2.2,
+                        height: '100%',
+                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.04) 100%)',
+                        border: '1px solid rgba(16, 185, 129, 0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="caption" sx={{ color: '#6ee7b7', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                            PROMOTERS (CALCULATED)
+                          </Typography>
+                          <Avatar sx={{ bgcolor: 'rgba(16, 185, 129, 0.2)', color: '#34d399', width: 34, height: 34 }}>
+                            <ThumbUp fontSize="small" />
+                          </Avatar>
+                        </Box>
+                        <Box>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#34d399', mb: 0.5 }}>
+                            {matrixPortfolioTotals.totalPromoters} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Promoters</span>
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                            <strong>{matrixPortfolioTotals.proShare}% Promoter Share</strong> | Net ({matrixPortfolioTotals.totalAdj}) - Acc ({matrixPortfolioTotals.totalAcc})
+                          </Typography>
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* 6. Accountable Detractors */}
+                    <Grid item xs={12} sm={6} md={3} lg={4}>
+                      <Card sx={{
+                        p: 2.2,
+                        height: '100%',
+                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, rgba(225, 29, 72, 0.12) 0%, rgba(225, 29, 72, 0.04) 100%)',
+                        border: '1px solid rgba(225, 29, 72, 0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="caption" sx={{ color: '#fda4af', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                            ACCOUNTABLE DETRACTORS
+                          </Typography>
+                          <Avatar sx={{ bgcolor: 'rgba(225, 29, 72, 0.2)', color: '#fb7185', width: 34, height: 34 }}>
+                            <TrendingDown fontSize="small" />
+                          </Avatar>
+                        </Box>
+                        <Box>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#fb7185', mb: 0.5 }}>
+                            {matrixPortfolioTotals.totalDet} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Detractors</span>
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                            Score ≤ 6/10 ({matrixPortfolioTotals.detRate}% of Net Tokens)
+                          </Typography>
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* 7. Accountable Neutrals */}
+                    <Grid item xs={12} sm={6} md={3} lg={4}>
+                      <Card sx={{
+                        p: 2.2,
+                        height: '100%',
+                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(234, 179, 8, 0.04) 100%)',
+                        border: '1px solid rgba(234, 179, 8, 0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="caption" sx={{ color: '#fde047', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                            ACCOUNTABLE NEUTRALS
+                          </Typography>
+                          <Avatar sx={{ bgcolor: 'rgba(234, 179, 8, 0.2)', color: '#facc15', width: 34, height: 34 }}>
+                            <TrendingFlat fontSize="small" />
+                          </Avatar>
+                        </Box>
+                        <Box>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#facc15', mb: 0.5 }}>
+                            {matrixPortfolioTotals.totalNeu} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Neutrals</span>
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                            Score 7-8/10 ({matrixPortfolioTotals.neuRate}% of Net Tokens)
+                          </Typography>
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* 8. Customer Snags */}
+                    <Grid item xs={12} sm={6} md={3} lg={4}>
+                      <Card sx={{
+                        p: 2.2,
+                        height: '100%',
+                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.12) 0%, rgba(249, 115, 22, 0.04) 100%)',
+                        border: '1px solid rgba(249, 115, 22, 0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="caption" sx={{ color: '#fdba74', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                            CUSTOMER SNAGS & COMPLAINTS
+                          </Typography>
+                          <Avatar sx={{ bgcolor: 'rgba(249, 115, 22, 0.2)', color: '#fb923c', width: 34, height: 34 }}>
+                            <BugReport fontSize="small" />
+                          </Avatar>
+                        </Box>
+                        <Box>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', mb: 0.5 }}>
+                            {matrixPortfolioTotals.totalSnags} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fdba74' }}>Snags</span>
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                            {matrixPortfolioTotals.snagResRate}% Solved ({matrixPortfolioTotals.totalClosedSnags} Closed Cases)
+                          </Typography>
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* 9. Online Exam Proficiency */}
+                    <Grid item xs={12} sm={6} md={3} lg={4}>
+                      <Card sx={{
+                        p: 2.2,
+                        height: '100%',
+                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0.04) 100%)',
+                        border: '1px solid rgba(168, 85, 247, 0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="caption" sx={{ color: '#d8b4fe', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                            ONLINE EXAM SCORE
+                          </Typography>
+                          <Avatar sx={{ bgcolor: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', width: 34, height: 34 }}>
+                            <Quiz fontSize="small" />
+                          </Avatar>
+                        </Box>
+                        <Box>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#c084fc', mb: 0.5 }}>
+                            {matrixPortfolioTotals.avgQuiz}%
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                            Average Portfolio Theoretical Proficiency
+                          </Typography>
+                        </Box>
+                      </Card>
+                    </Grid>
+                  </Grid>
+
+                  {/* ALL TEAMS QUALITY & SAMPLING MATRIX TABLE */}
+                  <TableContainer component={Paper} sx={{
+                    ...colors.glass,
+                    borderRadius: '20px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    overflowX: 'auto',
+                    mb: 4
+                  }}>
+                    <Table sx={{ minWidth: 1200 }}>
+                      <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.04)' }}>
+                        <TableRow>
+                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem', py: 2 }}>#</TableCell>
+                          
+                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'teamName'}
+                              direction={matrixSort.field === 'teamName' ? matrixSort.direction : 'asc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'teamName',
+                                  direction: matrixSort.field === 'teamName' && matrixSort.direction === 'asc' ? 'desc' : 'asc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Team Details
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'originalTokens'}
+                              direction={matrixSort.field === 'originalTokens' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'originalTokens',
+                                  direction: matrixSort.field === 'originalTokens' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Original Quota
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'nonAccountableCount'}
+                              direction={matrixSort.field === 'nonAccountableCount' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'nonAccountableCount',
+                                  direction: matrixSort.field === 'nonAccountableCount' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Non-Acc (No)
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'adjustedTokens'}
+                              direction={matrixSort.field === 'adjustedTokens' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'adjustedTokens',
+                                  direction: matrixSort.field === 'adjustedTokens' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Adjusted Net
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'accountableCount'}
+                              direction={matrixSort.field === 'accountableCount' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'accountableCount',
+                                  direction: matrixSort.field === 'accountableCount' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Acc. Tasks (Yes)
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'calculatedPromoters'}
+                              direction={matrixSort.field === 'calculatedPromoters' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'calculatedPromoters',
+                                  direction: matrixSort.field === 'calculatedPromoters' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Promoters (Calc)
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'accDetractors'}
+                              direction={matrixSort.field === 'accDetractors' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'accDetractors',
+                                  direction: matrixSort.field === 'accDetractors' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Acc. Detractors (≤6)
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'accNeutrals'}
+                              direction={matrixSort.field === 'accNeutrals' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'accNeutrals',
+                                  direction: matrixSort.field === 'accNeutrals' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Acc. Neutrals (7-8)
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'totalSnags'}
+                              direction={matrixSort.field === 'totalSnags' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'totalSnags',
+                                  direction: matrixSort.field === 'totalSnags' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Customer Snags
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'quizAvg'}
+                              direction={matrixSort.field === 'quizAvg' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'quizAvg',
+                                  direction: matrixSort.field === 'quizAvg' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Online Exam
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'jobAvg'}
+                              direction={matrixSort.field === 'jobAvg' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'jobAvg',
+                                  direction: matrixSort.field === 'jobAvg' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              OTJ Score
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'labAvg'}
+                              direction={matrixSort.field === 'labAvg' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'labAvg',
+                                  direction: matrixSort.field === 'labAvg' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Lab Score
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>
+                            <TableSortLabel
+                              active={matrixSort.field === 'teamNps'}
+                              direction={matrixSort.field === 'teamNps' ? matrixSort.direction : 'desc'}
+                              onClick={() => {
+                                setMatrixSort({
+                                  field: 'teamNps',
+                                  direction: matrixSort.field === 'teamNps' && matrixSort.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              sx={{ '& .MuiTableSortLabel-icon': { color: `${colors.primary} !important` } }}
+                            >
+                              Team NPS
+                            </TableSortLabel>
+                          </TableCell>
+
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem' }}>Action</TableCell>
+                        </TableRow>
+                      </TableHead>
+
+                      <TableBody>
+                        {filteredAndSortedMatrixData.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={15} align="center" sx={{ py: 6, color: colors.textSecondary }}>
+                              No field teams matched the selected filters.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredAndSortedMatrixData
+                            .slice(matrixPage * matrixRowsPerPage, matrixPage * matrixRowsPerPage + matrixRowsPerPage)
+                            .map((row, idx) => {
+                              const rank = matrixPage * matrixRowsPerPage + idx + 1;
+                              return (
+                                <TableRow
+                                  key={row.teamId || row.teamName}
+                                  hover
+                                  sx={{
+                                    transition: 'all 0.2s',
+                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
+                                    borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                  }}
+                                >
+                                  {/* Rank */}
+                                  <TableCell sx={{ color: colors.textSecondary, fontWeight: 600, fontSize: '0.85rem' }}>
+                                    {rank}
+                                  </TableCell>
+
+                                  {/* Team Details */}
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                      <Avatar sx={{ bgcolor: alpha(colors.primary, 0.15), color: colors.primary, width: 34, height: 34, fontSize: '0.85rem', fontWeight: 700 }}>
+                                        {row.teamName ? row.teamName.charAt(0).toUpperCase() : 'T'}
+                                      </Avatar>
+                                      <Box>
+                                        <Typography
+                                          onClick={() => navigate(`/fieldTeams-portal/${row.teamId}`)}
+                                          sx={{
+                                            color: '#fff',
+                                            fontWeight: 700,
+                                            fontSize: '0.92rem',
+                                            cursor: 'pointer',
+                                            '&:hover': { color: colors.primary, textDecoration: 'underline' }
+                                          }}
+                                        >
+                                          {row.teamName}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.3 }}>
+                                          <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                            {row.teamCompany} • {row.teamCode}
+                                          </Typography>
+                                          <Chip
+                                            label={row.statusLabel}
+                                            size="small"
+                                            sx={{
+                                              height: 18,
+                                              fontSize: '0.65rem',
+                                              fontWeight: 700,
+                                              bgcolor: row.isActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                              color: row.isActive ? '#34d399' : '#f87171',
+                                              border: `1px solid ${row.isActive ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                                            }}
+                                          />
+                                        </Box>
+                                      </Box>
+                                    </Box>
+                                  </TableCell>
+
+                                  {/* Original Tokens */}
+                                  <TableCell align="center">
+                                    <Typography sx={{ color: '#a5b4fc', fontWeight: 700, fontSize: '0.9rem' }}>
+                                      {row.originalTokens}
+                                    </Typography>
+                                  </TableCell>
+
+                                  {/* Non-Accountable (No) */}
+                                  <TableCell align="center">
+                                    <Chip
+                                      label={row.nonAccountableCount}
+                                      size="small"
+                                      sx={{
+                                        fontWeight: 700,
+                                        bgcolor: row.nonAccountableCount > 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255,255,255,0.05)',
+                                        color: row.nonAccountableCount > 0 ? '#fbbf24' : colors.textSecondary,
+                                        border: `1px solid ${row.nonAccountableCount > 0 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(255,255,255,0.08)'}`
+                                      }}
+                                    />
+                                  </TableCell>
+
+                                  {/* Adjusted Net Tokens */}
+                                  <TableCell align="center">
+                                    <Typography sx={{ color: '#38bdf8', fontWeight: 800, fontSize: '0.92rem' }}>
+                                      {row.adjustedTokens}
+                                    </Typography>
+                                  </TableCell>
+
+                                  {/* Accountable Tasks (Yes) */}
+                                  <TableCell align="center">
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                      <Chip
+                                        label={`${row.accountableCount} (${row.failureRate}%)`}
+                                        size="small"
+                                        sx={{
+                                          fontWeight: 700,
+                                          bgcolor: row.accountableCount > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                          color: row.accountableCount > 0 ? '#f87171' : '#34d399',
+                                          border: `1px solid ${row.accountableCount > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`
+                                        }}
+                                      />
+                                    </Box>
+                                  </TableCell>
+
+                                  {/* Promoters (Calculated) */}
+                                  <TableCell align="center">
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                      <Chip
+                                        label={`${row.calculatedPromoters} (${row.promoterShare}%)`}
+                                        size="small"
+                                        sx={{
+                                          fontWeight: 700,
+                                          bgcolor: 'rgba(16, 185, 129, 0.15)',
+                                          color: '#34d399',
+                                          border: '1px solid rgba(16, 185, 129, 0.3)'
+                                        }}
+                                      />
+                                    </Box>
+                                  </TableCell>
+
+                                  {/* Accountable Detractors */}
+                                  <TableCell align="center">
+                                    <Typography sx={{ color: row.accDetractors > 0 ? '#fb7185' : colors.textSecondary, fontWeight: 700, fontSize: '0.88rem' }}>
+                                      {row.accDetractors} <span style={{ fontSize: '0.75rem', fontWeight: 400 }}>({row.detractorRate}%)</span>
+                                    </Typography>
+                                  </TableCell>
+
+                                  {/* Accountable Neutrals */}
+                                  <TableCell align="center">
+                                    <Typography sx={{ color: row.accNeutrals > 0 ? '#facc15' : colors.textSecondary, fontWeight: 700, fontSize: '0.88rem' }}>
+                                      {row.accNeutrals} <span style={{ fontSize: '0.75rem', fontWeight: 400 }}>({row.neutralRate}%)</span>
+                                    </Typography>
+                                  </TableCell>
+
+                                  {/* Customer Snags */}
+                                  <TableCell align="center">
+                                    <Typography sx={{ color: row.totalSnags > 0 ? '#fb923c' : colors.textSecondary, fontWeight: 700, fontSize: '0.88rem' }}>
+                                      {row.totalSnags} <span style={{ fontSize: '0.75rem', fontWeight: 400 }}>({row.snagResolutionRate}% res)</span>
+                                    </Typography>
+                                  </TableCell>
+
+                                  {/* Online Exam */}
+                                  <TableCell align="center">
+                                    <Chip
+                                      label={row.quizAvg > 0 ? `${row.quizAvg}%` : 'N/A'}
+                                      size="small"
+                                      sx={{
+                                        fontWeight: 700,
+                                        bgcolor: row.quizAvg >= 85 ? 'rgba(16, 185, 129, 0.15)' : (row.quizAvg > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)'),
+                                        color: row.quizAvg >= 85 ? '#34d399' : (row.quizAvg > 0 ? '#f87171' : colors.textSecondary),
+                                        border: `1px solid ${row.quizAvg >= 85 ? 'rgba(16, 185, 129, 0.3)' : (row.quizAvg > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255,255,255,0.08)')}`
+                                      }}
+                                    />
+                                  </TableCell>
+
+                                  {/* OTJ Score */}
+                                  <TableCell align="center">
+                                    <Chip
+                                      label={row.jobAvg > 0 ? `${row.jobAvg}%` : 'N/A'}
+                                      size="small"
+                                      sx={{
+                                        fontWeight: 700,
+                                        bgcolor: row.jobAvg >= 85 ? 'rgba(16, 185, 129, 0.15)' : (row.jobAvg > 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255,255,255,0.05)'),
+                                        color: row.jobAvg >= 85 ? '#34d399' : (row.jobAvg > 0 ? '#fbbf24' : colors.textSecondary),
+                                        border: `1px solid ${row.jobAvg >= 85 ? 'rgba(16, 185, 129, 0.3)' : (row.jobAvg > 0 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(255,255,255,0.08)')}`
+                                      }}
+                                    />
+                                  </TableCell>
+
+                                  {/* Lab Score */}
+                                  <TableCell align="center">
+                                    <Chip
+                                      label={row.labAvg > 0 ? `${row.labAvg}%` : 'N/A'}
+                                      size="small"
+                                      sx={{
+                                        fontWeight: 700,
+                                        bgcolor: row.labAvg >= 85 ? 'rgba(16, 185, 129, 0.15)' : (row.labAvg > 0 ? 'rgba(139, 92, 246, 0.15)' : 'rgba(255,255,255,0.05)'),
+                                        color: row.labAvg >= 85 ? '#34d399' : (row.labAvg > 0 ? '#c084fc' : colors.textSecondary),
+                                        border: `1px solid ${row.labAvg >= 85 ? 'rgba(16, 185, 129, 0.3)' : (row.labAvg > 0 ? 'rgba(139, 92, 246, 0.3)' : 'rgba(255,255,255,0.08)')}`
+                                      }}
+                                    />
+                                  </TableCell>
+
+                                  {/* Team NPS */}
+                                  <TableCell align="center">
+                                    <Typography sx={{
+                                      fontWeight: 900,
+                                      fontSize: '0.92rem',
+                                      color: row.teamNps >= 50 ? '#34d399' : (row.teamNps >= 0 ? '#fbbf24' : '#f87171')
+                                    }}>
+                                      {row.teamNps}
+                                    </Typography>
+                                  </TableCell>
+
+                                  {/* Action */}
+                                  <TableCell align="center">
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      onClick={() => navigate(`/fieldTeams-portal/${row.teamId}`)}
+                                      sx={{
+                                        borderRadius: '8px',
+                                        fontSize: '0.75rem',
+                                        py: 0.4,
+                                        px: 1.5,
+                                        textTransform: 'none',
+                                        borderColor: 'rgba(255,255,255,0.15)',
+                                        color: '#fff',
+                                        '&:hover': { borderColor: colors.primary, bgcolor: alpha(colors.primary, 0.1) }
+                                      }}
+                                    >
+                                      View Portal
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                        )}
+                      </TableBody>
+                    </Table>
+
+                    {/* Pagination */}
+                    <TablePagination
+                      rowsPerPageOptions={[10, 15, 25, 50, 100]}
+                      component="div"
+                      count={filteredAndSortedMatrixData.length}
+                      rowsPerPage={matrixRowsPerPage}
+                      page={matrixPage}
+                      onPageChange={(e, newPage) => setMatrixPage(newPage)}
+                      onRowsPerPageChange={(e) => {
+                        setMatrixRowsPerPage(parseInt(e.target.value, 10));
+                        setMatrixPage(0);
+                      }}
+                      sx={{
+                        color: colors.textSecondary,
+                        borderTop: '1px solid rgba(255,255,255,0.08)',
+                        '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
+                        '& .MuiIconButton-root': { color: colors.primary }
+                      }}
+                    />
+                  </TableContainer>
+                </Box>
+              )}
+
+              {/* TAB 1: LEADERBOARD */}
+              {globalTab === 1 && (
                 <>
                   {/* Magic Table Controls: Advanced Search & Filter */}
                   <Box sx={{ mb: 3 }}>
@@ -4538,8 +7188,8 @@ ${data.map((a, i) => `
                 </>
               )}
 
-              {/* TAB 1: GLOBAL ANALYTICS */}
-              {globalTab === 1 && (
+              {/* TAB 2: GLOBAL ANALYTICS */}
+              {globalTab === 2 && (
                 <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
                   <Box sx={{
                     display: 'flex',
@@ -5959,8 +8609,8 @@ ${data.map((a, i) => `
               </DialogActions>
             </Dialog>
 
-            {/* TAB 2: COMPARISON CHART */}
-            {globalTab === 2 && (
+            {/* TAB 3: COMPARISON CHART */}
+            {globalTab === 3 && (
               <ComparisonAnalytics
                 technicalTasks={allTechnicalTasksGlobal}
                 settings={settings}
@@ -6011,9 +8661,9 @@ ${data.map((a, i) => `
                   <Tab label="Executive Overview" icon={<BarChartIconMUI />} iconPosition="start" />
                   <Tab label="Customer Issues" icon={<SupportAgent />} iconPosition="start" />
                   <Tab label="Tasks & Tickets" icon={<Assignment />} iconPosition="start" />
-                  <Tab label="Theoretical" icon={<Quiz />} iconPosition="start" />
-                  <Tab label="Practical" icon={<CheckCircle />} iconPosition="start" />
-                  <Tab label="Lab" icon={<Assessment />} iconPosition="start" />
+                  <Tab label="Online Exam" icon={<Quiz />} iconPosition="start" />
+                  <Tab label="OTJ Assessment" icon={<CheckCircle />} iconPosition="start" />
+                  <Tab label="Lab Assessment" icon={<Assessment />} iconPosition="start" />
                 </Tabs>
               </Paper>
 
@@ -6048,54 +8698,126 @@ ${data.map((a, i) => `
                     </Button>
                   </Box>
 
-                  <Grid container spacing={3}>
+                  <Grid container spacing={2.5}>
                     {/* High Level KPI Cards */}
-                    {[
-                      {
-                        title: 'NPS Tickets',
-                        value: stats.technicalTasksCount,
-                        unit: 'Total',
-                        desc: `Detractors: ${stats.technicalDetractors} | Neutrals: ${stats.technicalNeutrals}`,
-                        color: colors.warning,
-                        icon: <Assignment />
-                      },
-                      {
-                        title: 'Customer Issues (Snags and Complaints)',
-                        value: stats.customerIssuesCount,
-                        unit: 'Reported',
-                        desc: `${stats.resolutionRate}% Resolution Rate`,
-                        color: colors.error,
-                        icon: <SupportAgent />
-                      },
-                      {
-                        title: 'Theoretical Score',
-                        value: calculateAverageScore(quizResults),
-                        max: 100,
-                        unit: '%',
-                        desc: 'Average Quiz Performance',
-                        color: colors.primary,
-                        icon: <Quiz />
-                      },
-                      {
-                        title: 'Practical Score',
-                        value: calculateAverageScore(jobAssessments),
-                        max: 5,
-                        unit: '/ 5',
-                        desc: 'Field Assessment Proficiency',
-                        color: colors.success,
-                        icon: <CheckCircle />
-                      },
-                      {
-                        title: 'Lab Score',
-                        value: calculateAverageScore(labAssessments),
-                        max: 100,
-                        unit: '%',
-                        desc: 'Average Lab Proficiency',
-                        color: colors.info,
-                        icon: <Assessment />
-                      },
-                    ].map((kpi, i) => (
-                      <Grid item xs={12} sm={6} md={2.4} key={i}>
+                    {(() => {
+                      const totalOriginalTokens = selectedTeamTokenStats.totalToken || 0;
+                      const accTasks = technicalTasks.filter(t => isTeamAccountable(t));
+                      const nonAccTasks = technicalTasks.filter(t => !isTeamAccountable(t));
+                      const accCount = accTasks.length;
+                      const nonAccCount = nonAccTasks.length;
+
+                      // Adjusted Samples Token = Original Tokens - Non-Accountable Tasks
+                      const adjustedTokens = Math.max(0, totalOriginalTokens - nonAccCount);
+
+                      let accDetractors = 0;
+                      let accNeutrals = 0;
+                      accTasks.forEach(t => {
+                        const s = t.evaluationScore || 0;
+                        if (s > 0) {
+                          if (s <= 6) accDetractors++;
+                          else if (s >= 7 && s <= 8) accNeutrals++;
+                        }
+                      });
+
+                      const calculatedPromoters = Math.max(0, adjustedTokens - accCount);
+                      const promoterShare = adjustedTokens > 0 ? ((calculatedPromoters / adjustedTokens) * 100).toFixed(1) : '0.0';
+                      const accRate = adjustedTokens > 0 ? ((accCount / adjustedTokens) * 100).toFixed(1) : '0.0';
+                      const detractorRate = adjustedTokens > 0 ? ((accDetractors / adjustedTokens) * 100).toFixed(1) : '0.0';
+                      const neutralRate = adjustedTokens > 0 ? ((accNeutrals / adjustedTokens) * 100).toFixed(1) : '0.0';
+
+                      return [
+                        {
+                          title: 'Original Samples Token',
+                          value: totalOriginalTokens,
+                          unit: 'Tokens',
+                          desc: 'Assigned Quality Sampling Quota',
+                          color: colors.info,
+                          icon: <Assessment />
+                        },
+                        {
+                          title: 'Non-Accountable Tasks (No)',
+                          value: nonAccCount,
+                          unit: 'Tasks',
+                          desc: `Excluded / Other Owners (${technicalTasks.length > 0 ? ((nonAccCount / technicalTasks.length) * 100).toFixed(1) : 0}%)`,
+                          color: '#818cf8',
+                          icon: <VerifiedUser />
+                        },
+                        {
+                          title: 'Adjusted Samples Token',
+                          value: adjustedTokens,
+                          unit: 'Net Tokens',
+                          desc: `Original (${totalOriginalTokens}) - Non-Accountable (${nonAccCount})`,
+                          color: colors.primary,
+                          icon: <Timeline />
+                        },
+                        {
+                          title: 'Accountable Tasks (Yes)',
+                          value: accCount,
+                          unit: 'Tasks',
+                          desc: `${accRate}% Failure on Net Tokens (${accDetractors} Det / ${accNeutrals} Neu)`,
+                          color: colors.error,
+                          icon: <Gavel />
+                        },
+                        {
+                          title: 'Promoters (Calculated)',
+                          value: calculatedPromoters,
+                          unit: 'Promoters',
+                          desc: `${promoterShare}% Share | Net Tokens (${adjustedTokens}) - Accountable (${accCount})`,
+                          color: colors.success,
+                          icon: <TrendingUp />
+                        },
+                        {
+                          title: 'Accountable Detractors',
+                          value: accDetractors,
+                          unit: 'Detractors',
+                          desc: `Score ≤ 6/10 (${detractorRate}% of Net Tokens | ${accCount > 0 ? ((accDetractors / accCount) * 100).toFixed(1) : 0}% of Accountable)`,
+                          color: colors.error,
+                          icon: <Warning />
+                        },
+                        {
+                          title: 'Accountable Neutrals',
+                          value: accNeutrals,
+                          unit: 'Neutrals',
+                          desc: `Score 7-8/10 (${neutralRate}% of Net Tokens | ${accCount > 0 ? ((accNeutrals / accCount) * 100).toFixed(1) : 0}% of Accountable)`,
+                          color: colors.warning,
+                          icon: <PriorityHigh />
+                        },
+                        {
+                          title: 'Customer Snags & Complaints',
+                          value: stats.customerIssuesCount,
+                          unit: 'Reported',
+                          desc: `${stats.resolutionRate}% Resolution Rate (${stats.closed || 0} Closed)`,
+                          color: '#f97316',
+                          icon: <SupportAgent />
+                        },
+                        {
+                          title: 'Online Exam Score',
+                          value: Math.round(calculateAverageScore(quizResults)),
+                          unit: '%',
+                          desc: 'Average Online Exam Performance',
+                          color: '#38bdf8',
+                          icon: <Quiz />
+                        },
+                        {
+                          title: 'OTJ Assessment',
+                          value: Math.round(calculateAverageScore(jobAssessments)),
+                          unit: '%',
+                          desc: 'On-The-Job Field Audit Average',
+                          color: '#34d399',
+                          icon: <CheckCircle />
+                        },
+                        {
+                          title: 'Lab Assessment',
+                          value: Math.round(calculateAverageScore(labAssessments)),
+                          unit: '%',
+                          desc: 'Lab Technical Assessment Average',
+                          color: '#a855f7',
+                          icon: <FactCheck />
+                        },
+                      ];
+                    })().map((kpi, i) => (
+                      <Grid item xs={12} sm={6} md={4} key={i}>
                         <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 3, position: 'relative', height: '100%' }}>
                           <Box sx={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: kpi.color }} />
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -6107,9 +8829,7 @@ ${data.map((a, i) => `
                             </Box>
                           </Box>
                           <Typography variant="h3" sx={{ fontWeight: 800, color: '#fff', mb: 0.5 }}>
-                            {typeof kpi.value === 'number' ?
-                              (kpi.max === 5 ? kpi.value.toFixed(1) : Math.round(kpi.value))
-                              : kpi.value}
+                            {typeof kpi.value === 'number' ? kpi.value : kpi.value}
                             <Typography component="span" variant="h6" sx={{ color: colors.textSecondary, ml: 1 }}>{kpi.unit}</Typography>
                           </Typography>
                           <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block' }}>
@@ -6456,7 +9176,7 @@ ${data.map((a, i) => `
                         </Typography>
                       </Box>
                       <Chip
-                        label={`${filteredIssuesByDate.length} Records`}
+                        label={`${activeCustomerIssues.length} Records`}
                         size="small"
                         sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)', fontWeight: 600 }}
                       />
@@ -6473,42 +9193,50 @@ ${data.map((a, i) => `
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredIssuesByDate
-                            .slice(issuesPage * issuesRowsPerPage, issuesPage * issuesRowsPerPage + issuesRowsPerPage)
-                            .map((issue) => (
-                              <tr
-                                key={issue._id}
-                                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background-color 0.2s ease' }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                              >
-                                <td style={{ padding: '16px 24px', color: '#f8fafc', fontSize: '0.85rem' }}>{formatDate(issue.date || issue.createdAt)}</td>
-                                <td style={{ padding: '16px', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.85rem' }}>{issue.slid}</td>
-                                <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{issue.reporter || 'N/A'}</td>
-                                <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>
-                                  {issue.issues?.[0]?.category || issue.issueCategory || 'Uncategorized'}
-                                  <Typography variant="caption" sx={{ display: 'block', color: '#64748b' }}>{issue.issues?.[0]?.subCategory || '-'}</Typography>
-                                </td>
-                                <td style={{ padding: '16px', textAlign: 'center' }}>
-                                  <Chip
-                                    label={issue.solved === 'yes' ? 'Closed' : 'Open'}
-                                    size="small"
-                                    sx={{
-                                      bgcolor: issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                      color: issue.solved === 'yes' ? '#4ade80' : '#f87171',
-                                      border: `1px solid ${issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
-                                      fontWeight: 600
-                                    }}
-                                  />
-                                </td>
-                              </tr>
-                            ))}
+                          {activeCustomerIssues.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                                No customer issues or snags registered for this team.
+                              </td>
+                            </tr>
+                          ) : (
+                            activeCustomerIssues
+                              .slice(issuesPage * issuesRowsPerPage, issuesPage * issuesRowsPerPage + issuesRowsPerPage)
+                              .map((issue) => (
+                                <tr
+                                  key={issue._id}
+                                  style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background-color 0.2s ease' }}
+                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                  <td style={{ padding: '16px 24px', color: '#f8fafc', fontSize: '0.85rem' }}>{formatDate(issue.date || issue.createdAt)}</td>
+                                  <td style={{ padding: '16px', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.85rem' }}>{issue.slid}</td>
+                                  <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{issue.reporter || 'N/A'}</td>
+                                  <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                    {issue.issues?.[0]?.category || issue.issueCategory || 'Uncategorized'}
+                                    <Typography variant="caption" sx={{ display: 'block', color: '#64748b' }}>{issue.issues?.[0]?.subCategory || '-'}</Typography>
+                                  </td>
+                                  <td style={{ padding: '16px', textAlign: 'center' }}>
+                                    <Chip
+                                      label={issue.solved === 'yes' ? 'Closed' : 'Open'}
+                                      size="small"
+                                      sx={{
+                                        bgcolor: issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                        color: issue.solved === 'yes' ? '#4ade80' : '#f87171',
+                                        border: `1px solid ${issue.solved === 'yes' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                                        fontWeight: 600
+                                      }}
+                                    />
+                                  </td>
+                                </tr>
+                              ))
+                          )}
                         </tbody>
                       </table>
                       <TablePagination
                         rowsPerPageOptions={[10, 25, 50]}
                         component="div"
-                        count={filteredIssuesByDate.length}
+                        count={activeCustomerIssues.length}
                         rowsPerPage={issuesRowsPerPage}
                         page={issuesPage}
                         onPageChange={(e, p) => setIssuesPage(p)}
@@ -6668,36 +9396,89 @@ ${data.map((a, i) => `
                     </Box>
                   </Box>
 
-                  {/* Technical KPI Section */}
-                  <Grid container spacing={3} mb={4}>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <MiniStatCard
-                        title="Total NPS Tasks"
-                        value={filteredTechnicalTasks.length}
-                        icon={<FaClipboardList />}
-                        color={colors.primary}
-                        subtext="Scoped period tasks"
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <MiniStatCard
-                        title="NPS Detractors"
-                        value={individualTeamAnalytics.sentiment.Detractor}
-                        icon={<FaExclamationCircle />}
-                        color={colors.error}
-                        subtext={`Score below 6/10 (${individualTeamAnalytics.sentimentData.find(d => d.name === 'Detractors')?.percentage || 0}%)`}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <MiniStatCard
-                        title="NPS Neutrals"
-                        value={individualTeamAnalytics.sentiment.Neutral}
-                        icon={<FaEquals />}
-                        color={colors.warning}
-                        subtext={`Score 7-8/10 (${individualTeamAnalytics.sentimentData.find(d => d.name === 'Neutrals')?.percentage || 0}%)`}
-                      />
-                    </Grid>
-                  </Grid>
+                  {/* Technical KPI Section (Original -> Adjusted Net Base -> Accountable KPIs) */}
+                  {(() => {
+                    const originalTokens = selectedTeamTokenStats.totalToken || 0;
+                    const nonAccCount = individualTeamAnalytics.nonAccountableCount;
+                    const adjustedNetTokens = Math.max(0, originalTokens - nonAccCount);
+                    const accCount = individualTeamAnalytics.accountableCount;
+                    const calculatedPromoters = Math.max(0, adjustedNetTokens - accCount);
+                    const accDetractors = individualTeamAnalytics.accountableSentiment.Detractor;
+                    const accNeutrals = individualTeamAnalytics.accountableSentiment.Neutral;
+
+                    const promoterShare = adjustedNetTokens > 0 ? ((calculatedPromoters / adjustedNetTokens) * 100).toFixed(1) : '0.0';
+                    const accRate = adjustedNetTokens > 0 ? ((accCount / adjustedNetTokens) * 100).toFixed(1) : '0.0';
+                    const detractorRate = adjustedNetTokens > 0 ? ((accDetractors / adjustedNetTokens) * 100).toFixed(1) : '0.0';
+                    const neutralRate = adjustedNetTokens > 0 ? ((accNeutrals / adjustedNetTokens) * 100).toFixed(1) : '0.0';
+
+                    return (
+                      <Grid container spacing={2} mb={4}>
+                        <Grid item xs={12} sm={6} md={3} lg={1.71}>
+                          <MiniStatCard
+                            title="Original Tokens"
+                            value={originalTokens}
+                            icon={<FaClipboardList />}
+                            color={colors.info}
+                            subtext="Assigned sample quota"
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={3} lg={1.71}>
+                          <MiniStatCard
+                            title="Non-Accountable (No)"
+                            value={nonAccCount}
+                            icon={<FaCheckCircle />}
+                            color="#818cf8"
+                            subtext={`Excluded from base (${filteredTechnicalTasks.length > 0 ? ((nonAccCount / filteredTechnicalTasks.length) * 100).toFixed(1) : 0}%)`}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={3} lg={1.71}>
+                          <MiniStatCard
+                            title="Adjusted Net Tokens"
+                            value={adjustedNetTokens}
+                            icon={<FaFilter />}
+                            color={colors.primary}
+                            subtext={`Base: ${originalTokens} - ${nonAccCount}`}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={3} lg={1.71}>
+                          <MiniStatCard
+                            title="Accountable (Yes)"
+                            value={accCount}
+                            icon={<FaGavel />}
+                            color={colors.error}
+                            subtext={`${accRate}% of Net Tokens`}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={3} lg={1.71}>
+                          <MiniStatCard
+                            title="Promoters (Calc)"
+                            value={calculatedPromoters}
+                            icon={<FaChartLine />}
+                            color={colors.success}
+                            subtext={`${promoterShare}% Share of Net`}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={3} lg={1.71}>
+                          <MiniStatCard
+                            title="Acc. Detractors"
+                            value={accDetractors}
+                            icon={<FaExclamationCircle />}
+                            color={colors.error}
+                            subtext={`Score ≤ 6 (${detractorRate}% Net)`}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={3} lg={1.71}>
+                          <MiniStatCard
+                            title="Acc. Neutrals"
+                            value={accNeutrals}
+                            icon={<FaEquals />}
+                            color={colors.warning}
+                            subtext={`Score 7-8 (${neutralRate}% Net)`}
+                          />
+                        </Grid>
+                      </Grid>
+                    );
+                  })()}
 
                   {/* ADVANCED ANALYTICS CHARTS (Mirroring Global Dashboard) */}
                   <Grid container spacing={3} mb={4}>
@@ -7318,12 +10099,12 @@ ${data.map((a, i) => `
                 </Box>
               )}
 
-              {/* 4. THEORETICAL ASSESSMENTS (Updated Styling) */}
+              {/* 4. ONLINE EXAM ASSESSMENTS */}
               {activeTab === 3 && (
                 <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Box>
-                      <Typography variant="h5" sx={{ color: colors.primary }}>Theoretical Assessments</Typography>
+                      <Typography variant="h5" sx={{ color: colors.primary, fontWeight: 700 }}>Online Exam Assessments</Typography>
                       <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                         <Button
                           variant="outlined"
@@ -7350,7 +10131,7 @@ ${data.map((a, i) => `
                     <Chip
                       label={`Avg: ${Math.round(calculateAverageScore(quizResults))}%`}
                       variant="outlined"
-                      sx={{ borderColor: getPerformanceColor(calculateAverageScore(quizResults), 'quiz'), color: getPerformanceColor(calculateAverageScore(quizResults), 'quiz') }}
+                      sx={{ borderColor: getPerformanceColor(calculateAverageScore(quizResults), 'quiz'), color: getPerformanceColor(calculateAverageScore(quizResults), 'quiz'), fontWeight: 700 }}
                     />
                   </Box>
 
@@ -7436,19 +10217,19 @@ ${data.map((a, i) => `
                   ) : (
                     <Paper sx={{ p: 3, textAlign: 'center', ...darkThemeStyles.paper }}>
                       <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                        No theoretical assessments found for this team
+                        No online exam assessments found for this team
                       </Typography>
                     </Paper>
                   )}
                 </Box>
               )}
 
-              {/* 5. PRACTICAL ASSESSMENTS (Updated Styling) */}
+              {/* 5. OTJ ASSESSMENTS */}
               {activeTab === 4 && (
                 <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Box>
-                      <Typography variant="h5" sx={{ color: colors.primary }}>Practical Assessments</Typography>
+                      <Typography variant="h5" sx={{ color: colors.primary, fontWeight: 700 }}>OTJ (On-The-Job) Assessments</Typography>
                       <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                         <Button
                           variant="outlined"
@@ -7473,9 +10254,9 @@ ${data.map((a, i) => `
                       </Box>
                     </Box>
                     <Chip
-                      label={`Avg: ${Number(calculateAverageScore(jobAssessments)).toFixed(1)}/5`}
+                      label={`Avg: ${Math.round(calculateAverageScore(jobAssessments))}%`}
                       variant="outlined"
-                      sx={{ borderColor: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical'), color: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical') }}
+                      sx={{ borderColor: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical'), color: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical'), fontWeight: 700 }}
                     />
                   </Box>
 
@@ -7495,50 +10276,53 @@ ${data.map((a, i) => `
                             <TableRow>
                               <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
                               <TableCell sx={darkThemeStyles.tableCell}>Conducted By</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Score</TableCell>
+                              <TableCell sx={darkThemeStyles.tableCell}>Proficiency Score</TableCell>
                               <TableCell sx={darkThemeStyles.tableCell}>Status</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
                             {jobAssessments
                               .slice(jobPage * jobRowsPerPage, jobPage * jobRowsPerPage + jobRowsPerPage)
-                              .map((assessment) => (
-                                <TableRow key={assessment._id}
-                                  sx={{
-                                    "&:hover": {
-                                      backgroundColor: colors.tableRowHover
-                                    }
-                                  }}
-                                >
-                                  <TableCell sx={darkThemeStyles.tableCell}>{formatDate(assessment.assessmentDate)}</TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>{assessment.conductedBy}</TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>
-                                    <Chip
-                                      label={`${Number(assessment.overallScore).toFixed(1)}/5`}
-                                      sx={{
-                                        bgcolor: `${getAssessmentStatus(assessment.overallScore, 'practical').color}22`,
-                                        color: getAssessmentStatus(assessment.overallScore, 'practical').color,
-                                        borderColor: getAssessmentStatus(assessment.overallScore, 'practical').color,
-                                        border: '1px solid',
-                                        fontWeight: 'bold'
-                                      }}
-                                      variant="outlined"
-                                    />
-                                  </TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>
-                                    <Chip
-                                      label={getAssessmentStatus(assessment.overallScore, 'practical').label}
-                                      size="small"
-                                      sx={{
-                                        borderColor: getAssessmentStatus(assessment.overallScore, 'practical').color,
-                                        color: getAssessmentStatus(assessment.overallScore, 'practical').color,
-                                        border: '1px solid'
-                                      }}
-                                      variant="outlined"
-                                    />
-                                  </TableCell>
-                                </TableRow>
-                              ))}
+                              .map((assessment) => {
+                                const scoreVal = Math.round(Number(assessment.overallScore || assessment.percentage || 0));
+                                return (
+                                  <TableRow key={assessment._id}
+                                    sx={{
+                                      "&:hover": {
+                                        backgroundColor: colors.tableRowHover
+                                      }
+                                    }}
+                                  >
+                                    <TableCell sx={darkThemeStyles.tableCell}>{formatDate(assessment.assessmentDate)}</TableCell>
+                                    <TableCell sx={darkThemeStyles.tableCell}>{assessment.conductedBy}</TableCell>
+                                    <TableCell sx={darkThemeStyles.tableCell}>
+                                      <Chip
+                                        label={`${scoreVal}%`}
+                                        sx={{
+                                          bgcolor: `${getAssessmentStatus(scoreVal, 'practical').color}22`,
+                                          color: getAssessmentStatus(scoreVal, 'practical').color,
+                                          borderColor: getAssessmentStatus(scoreVal, 'practical').color,
+                                          border: '1px solid',
+                                          fontWeight: 'bold'
+                                        }}
+                                        variant="outlined"
+                                      />
+                                    </TableCell>
+                                    <TableCell sx={darkThemeStyles.tableCell}>
+                                      <Chip
+                                        label={getAssessmentStatus(assessment.overallScore, 'practical').label}
+                                        size="small"
+                                        sx={{
+                                          borderColor: getAssessmentStatus(assessment.overallScore, 'practical').color,
+                                          color: getAssessmentStatus(assessment.overallScore, 'practical').color,
+                                          border: '1px solid'
+                                        }}
+                                        variant="outlined"
+                                      />
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
                           </TableBody>
                         </Table>
                       </TableContainer>

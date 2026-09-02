@@ -448,8 +448,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         avgLifecycleTime: stats.lifecycleCount > 0 ? (stats.lifecycleSum / stats.lifecycleCount).toFixed(1) : 'N/A',
         relatedIssues: filteredIssuesByDate.filter(i =>
           i.teamName === name ||
-          i.installingTeam === name ||
-          i.assignedTo === name
+          i.installingTeam === name
         ),
         type: 'Team Name'
       };
