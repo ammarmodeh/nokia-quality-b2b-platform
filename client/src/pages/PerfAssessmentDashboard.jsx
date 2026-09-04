@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Box,
   Typography,
   TextField,
   Button,
+  IconButton,
   Paper,
   Table,
   TableBody,
@@ -29,7 +30,12 @@ import {
   Stack,
   Autocomplete,
   Tabs,
-  Tab
+  Tab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Grid
 } from '@mui/material';
 import {
   Search,
@@ -37,7 +43,10 @@ import {
   BarChart,
   Refresh,
   Save,
-  Download
+  Download,
+  Edit,
+  Close,
+  Visibility
 } from '@mui/icons-material';
 import { MdPictureAsPdf } from 'react-icons/md';
 import api from '../api/api';
@@ -49,6 +58,10 @@ import * as XLSX from 'xlsx';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Legend);
 
 const PerfAssessmentDashboard = () => {
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [teamId, setTeamId] = useState('');
   const [allTeams, setAllTeams] = useState([]);
   const [results, setResults] = useState([]);
@@ -62,10 +75,17 @@ const PerfAssessmentDashboard = () => {
   const [essayScores, setEssayScores] = useState({});
   const [questionFilter, setQuestionFilter] = useState('all');
   const [settings, setSettings] = useState(null);
-  const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:503px)');
   const [exporting, setExporting] = useState(false);
   const [globalStats, setGlobalStats] = useState(null);
+
+  // Edit overall result dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingScore, setEditingScore] = useState('');
+  const [editingCorrect, setEditingCorrect] = useState('');
+  const [editingTotal, setEditingTotal] = useState('');
+  const [editingRemarks, setEditingRemarks] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     const fetchAllTeams = async () => {
@@ -93,6 +113,60 @@ const PerfAssessmentDashboard = () => {
     };
     fetchSettings();
   }, []);
+
+  // Handle URL search params or location state for direct team / result view
+  useEffect(() => {
+    const paramTeamId = searchParams.get('teamId') || location.state?.teamId;
+    const paramTeamName = searchParams.get('teamName') || location.state?.teamName;
+    const paramResultId = searchParams.get('resultId') || location.state?.resultId;
+    const directResult = location.state?.selectedResult;
+    const isEditMode = searchParams.get('edit') === 'true' || location.state?.mode === 'edit';
+
+    if (directResult) {
+      setSelectedResult(directResult);
+      if (directResult.teamId) {
+        setTeamId(directResult.teamId);
+        fetchResults(directResult.teamId);
+      }
+      if (isEditMode) {
+        handleOpenEdit(directResult);
+      }
+      return;
+    }
+
+    if (paramTeamId) {
+      setTeamId(paramTeamId);
+      fetchResults(paramTeamId).then((data) => {
+        if (paramResultId && Array.isArray(data)) {
+          const match = data.find(r => r._id === paramResultId);
+          if (match) {
+            setSelectedResult(match);
+            if (isEditMode) {
+              handleOpenEdit(match);
+            }
+          }
+        }
+      });
+    } else if (paramResultId) {
+      api.get(`/quiz-results/${paramResultId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      }).then(res => {
+        if (res.data?.data) {
+          const item = res.data.data;
+          setSelectedResult(item);
+          if (item.teamId) {
+            setTeamId(item.teamId);
+            fetchResults(item.teamId);
+          }
+          if (isEditMode) {
+            handleOpenEdit(item);
+          }
+        }
+      }).catch(err => {
+        console.error('Failed to load quiz result by ID:', err);
+      });
+    }
+  }, [searchParams, location.state]);
 
   // Calculate global stats
   useEffect(() => {
@@ -170,12 +244,12 @@ const PerfAssessmentDashboard = () => {
   useEffect(() => {
     if (selectedResult) {
       console.log('Selected Result:', JSON.stringify(selectedResult, null, 2)); // Debug log
-      const initialScores = selectedResult.userAnswers.reduce((acc, answer, index) => {
+      const initialScores = selectedResult.userAnswers?.reduce((acc, answer, index) => {
         if (answer.type === 'essay') {
           acc[index] = answer.score !== undefined ? answer.score.toString() : '0';
         }
         return acc;
-      }, {});
+      }, {}) || {};
       setEssayScores(initialScores);
     }
   }, [selectedResult]);
@@ -196,30 +270,76 @@ const PerfAssessmentDashboard = () => {
     chartIncorrect: '#f44336',
   };
 
-  const fetchResults = async () => {
-    if (!teamId.trim()) {
+  const fetchResults = async (targetTeamId = teamId) => {
+    const idToUse = (typeof targetTeamId === 'string' ? targetTeamId : teamId)?.trim();
+    if (!idToUse) {
       setError('Please select a Team');
-      return;
+      return [];
     }
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await api.get(`/quiz-results?teamId=${teamId}`, {
+      const response = await api.get(`/quiz-results?teamId=${idToUse}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
       });
-      setResults(response.data.data);
-      // console.log('Quiz Results:', JSON.stringify(response.data.data, null, 2)); // Debug log
-      if (response.data.data.length === 0) {
+      const data = response.data.data || [];
+      setResults(data);
+      if (data.length === 0) {
         setError('No results found for this Team');
       }
+      return data;
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch results');
+      const msg = err.response?.data?.message || 'Failed to fetch results';
+      setError(msg);
+      return [];
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenEdit = (result) => {
+    if (!result) return;
+    setCurrentResult(result);
+    setEditingScore(result.percentage !== undefined ? result.percentage : result.score || '');
+    setEditingCorrect(result.correctAnswers !== undefined ? result.correctAnswers : '');
+    setEditingTotal(result.totalQuestions !== undefined ? result.totalQuestions : (result.userAnswers?.length || ''));
+    setEditingRemarks(result.remarks || result.feedback || '');
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!currentResult?._id) return;
+    setSavingEdit(true);
+    try {
+      const scoreNum = Number(editingScore) || 0;
+      const correctNum = Number(editingCorrect) || 0;
+      const totalNum = Number(editingTotal) || 0;
+      const payload = {
+        percentage: scoreNum,
+        score: `${scoreNum}%`,
+        correctAnswers: correctNum,
+        totalQuestions: totalNum,
+        remarks: editingRemarks
+      };
+      const response = await api.put(`/quiz-results/${currentResult._id}`, payload, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      const updated = response.data?.data || { ...currentResult, ...payload };
+      toast.success("Online exam result updated successfully");
+      setResults(prev => prev.map(q => q._id === currentResult._id ? updated : q));
+      if (selectedResult?._id === currentResult._id) {
+        setSelectedResult(prev => ({ ...prev, ...updated }));
+      }
+      setEditDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to update quiz result:", error);
+      toast.error(error.response?.data?.message || "Failed to update exam result");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -1124,7 +1244,7 @@ const PerfAssessmentDashboard = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        <Box sx={{ display: "flex", gap: 1 }}>
+                        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                           <Button
                             variant="outlined"
                             size="small"
@@ -1139,6 +1259,22 @@ const PerfAssessmentDashboard = () => {
                             }}
                           >
                             View Details
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<Edit />}
+                            onClick={() => handleOpenEdit(result)}
+                            sx={{
+                              color: '#60a5fa',
+                              borderColor: '#3b82f6',
+                              '&:hover': {
+                                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                                borderColor: '#60a5fa',
+                              }
+                            }}
+                          >
+                            Edit Result
                           </Button>
                           {/* Add Export Detail Button */}
                           <Button
@@ -1197,7 +1333,7 @@ const PerfAssessmentDashboard = () => {
       {
         selectedResult && (
           <Box sx={{ mt: 3 }}>
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
               <Button
                 startIcon={<ArrowBack />}
                 onClick={() => setSelectedResult(null)}
@@ -1209,6 +1345,38 @@ const PerfAssessmentDashboard = () => {
                 }}
               >
                 Back to Results List
+              </Button>
+
+              {(location.state?.fromPortal || searchParams.get('teamId')) && (
+                <Button
+                  variant="outlined"
+                  startIcon={<ArrowBack />}
+                  onClick={() => navigate(teamId ? `/fieldTeams-portal/${teamId}` : '/fieldTeams-portal')}
+                  sx={{
+                    color: '#60a5fa',
+                    borderColor: 'rgba(59, 130, 246, 0.4)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                      borderColor: '#60a5fa',
+                    }
+                  }}
+                >
+                  Back to Field Team Portal
+                </Button>
+              )}
+
+              <Button
+                variant="contained"
+                startIcon={<Edit />}
+                onClick={() => handleOpenEdit(selectedResult)}
+                sx={{
+                  backgroundColor: '#3b82f6',
+                  '&:hover': {
+                    backgroundColor: '#2563eb'
+                  }
+                }}
+              >
+                Edit Exam Result
               </Button>
 
               {/* Add Export Button for Detailed View */}
@@ -1928,6 +2096,159 @@ const PerfAssessmentDashboard = () => {
           <ListItemText>Delete Result</ListItemText>
         </MenuItem>
       </Menu>
+
+      {/* Edit Exam Result Dialog */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => !savingEdit && setEditDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#1e1e24',
+            color: '#fff',
+            borderRadius: '16px',
+            border: '1px solid rgba(59, 130, 246, 0.4)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            p: 1
+          }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, color: '#60a5fa', fontWeight: 800 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Edit sx={{ color: '#60a5fa', fontSize: '1.6rem' }} />
+            <span>Edit Online Exam Assessment</span>
+          </Box>
+          <IconButton onClick={() => setEditDialogOpen(false)} disabled={savingEdit} sx={{ color: '#94a3b8' }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 1 }}>
+          <Typography variant="body2" sx={{ color: '#94a3b8', mb: 2.5 }}>
+            Modify theoretical examination scores, accuracy stats, and assessor remarks for{" "}
+            <strong style={{ color: '#fff' }}>{currentResult?.candidateName || currentResult?.teamName}</strong>.
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Score Percentage (%)"
+                type="number"
+                value={editingScore}
+                onChange={(e) => setEditingScore(e.target.value)}
+                InputProps={{ inputProps: { min: 0, max: 100 } }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: '#fff',
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+                    '&:hover fieldset': { borderColor: '#60a5fa' },
+                    '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
+                  },
+                  '& .MuiInputLabel-root': { color: '#94a3b8' },
+                  '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Correct Points / Score"
+                type="number"
+                value={editingCorrect}
+                onChange={(e) => setEditingCorrect(e.target.value)}
+                InputProps={{ inputProps: { min: 0 } }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: '#fff',
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+                    '&:hover fieldset': { borderColor: '#60a5fa' },
+                    '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
+                  },
+                  '& .MuiInputLabel-root': { color: '#94a3b8' },
+                  '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Total Questions"
+                type="number"
+                value={editingTotal}
+                onChange={(e) => setEditingTotal(e.target.value)}
+                InputProps={{ inputProps: { min: 1 } }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: '#fff',
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+                    '&:hover fieldset': { borderColor: '#60a5fa' },
+                    '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
+                  },
+                  '& .MuiInputLabel-root': { color: '#94a3b8' },
+                  '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Assessor Remarks & Evaluation Notes"
+                multiline
+                rows={3}
+                value={editingRemarks}
+                onChange={(e) => setEditingRemarks(e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: '#fff',
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+                    '&:hover fieldset': { borderColor: '#60a5fa' },
+                    '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
+                  },
+                  '& .MuiInputLabel-root': { color: '#94a3b8' },
+                  '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
+                }}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1.5, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <Button
+            variant="outlined"
+            onClick={() => setEditDialogOpen(false)}
+            disabled={savingEdit}
+            sx={{
+              borderColor: 'rgba(255,255,255,0.2)',
+              color: '#e2e8f0',
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 600
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveEdit}
+            disabled={savingEdit}
+            startIcon={savingEdit ? <CircularProgress size={18} color="inherit" /> : <Edit />}
+            sx={{
+              bgcolor: '#3b82f6',
+              '&:hover': { bgcolor: '#2563eb' },
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 700,
+              px: 2.5
+            }}
+          >
+            {savingEdit ? "Saving..." : "Save Exam Changes"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box >
   );
 };

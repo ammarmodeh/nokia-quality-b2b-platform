@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllTeams, getQuizResultById, getQuizResults, saveQuizResults, updateEssayScore, getTeamsEvaluation, deleteQuizResult } from '../controllers/quizResultControllers.js';
+import { getAllTeams, getQuizResultById, getQuizResults, saveQuizResults, updateEssayScore, getTeamsEvaluation, deleteQuizResult, updateQuizResult } from '../controllers/quizResultControllers.js';
 import { protect, adminOnly } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -12,6 +12,9 @@ router.get('/', getQuizResults);
 
 // Get specific quiz result
 router.get('/:id', getQuizResultById);
+
+// Update entire quiz result
+router.put('/:id', protect, updateQuizResult);
 
 // Update essay question score
 router.patch('/:id/score', updateEssayScore);

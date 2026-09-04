@@ -196,6 +196,7 @@ const App = () => {
           <Route path="/fieldTeams-portal" element={<FieldTeamPortal />} />
           <Route path="/fieldTeams-portal/:teamId" element={<FieldTeamPortal />} />
           <Route path="/assessment-dashboard" element={<PerfAssessmentDashboard />} />
+          <Route path="/assessment" element={<Navigate to="/assessment-dashboard" replace />} />
           <Route path="/on-the-job-assessment" element={<OnTheJobAssessment />} />
           <Route path="/teams-performance-page" element={<TeamsPerformancePage />} />
           <Route path="/archived" element={<Archived />} />

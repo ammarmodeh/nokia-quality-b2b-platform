@@ -153,7 +153,100 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
 
         <Divider sx={{ borderColor: '#222' }} />
 
-        {/* Section 4: Role Expertise */}
+        {/* Section 4: Employment & Safety Certifications */}
+        <Typography variant="overline" sx={{ color: '#7b68ee', fontWeight: 'bold', display: 'block' }}>
+          Employment & Certifications
+        </Typography>
+
+        <FormControl fullWidth size="small">
+          <InputLabel sx={{ color: '#888', '&.Mui-focused': { color: '#7b68ee' } }}>Employment Type</InputLabel>
+          <NativeSelect
+            defaultValue="Subcontractor"
+            {...register('employmentType')}
+            sx={{
+              color: '#fff',
+              bgcolor: '#1a1a1a',
+              border: '1px solid #333',
+              borderRadius: 1,
+              pl: 1.5,
+              py: 0.5,
+              '&:before': { display: 'none' },
+              '&:after': { display: 'none' },
+              '& select': { paddingLeft: 1 },
+              '& .MuiNativeSelect-icon': { color: '#7b68ee' }
+            }}
+          >
+            <option value="Subcontractor" style={{ backgroundColor: '#111', color: '#fff' }}>Subcontractor (Partner)</option>
+            <option value="Employee" style={{ backgroundColor: '#111', color: '#fff' }}>Direct Employee</option>
+          </NativeSelect>
+        </FormControl>
+
+        <Box sx={{ bgcolor: '#161616', p: 1.5, borderRadius: 1.5, border: '1px solid #282828' }}>
+          <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 700, mb: 1, display: 'block' }}>
+            EXPERIENCE DURATION (YEARS / MONTHS / DAYS)
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+            <TextField
+              label="Years"
+              type="number"
+              size="small"
+              defaultValue={0}
+              inputProps={{ min: 0, max: 50 }}
+              {...register('experienceYears')}
+              sx={sharedInputSx}
+            />
+            <TextField
+              label="Months"
+              type="number"
+              size="small"
+              defaultValue={0}
+              inputProps={{ min: 0, max: 11 }}
+              {...register('experienceMonths')}
+              sx={sharedInputSx}
+            />
+            <TextField
+              label="Days"
+              type="number"
+              size="small"
+              defaultValue={0}
+              inputProps={{ min: 0, max: 30 }}
+              {...register('experienceDays')}
+              sx={sharedInputSx}
+            />
+          </Box>
+        </Box>
+
+        <Box sx={{ bgcolor: '#161616', p: 1.5, borderRadius: 1.5, border: '1px solid #282828' }}>
+          <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 700, mb: 1, display: 'block' }}>
+            SAFETY & COMPLIANCE CERTIFICATES
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
+            {[
+              { id: 'certificates.dd', label: 'DD – Defensive Driving' },
+              { id: 'certificates.es', label: 'ES – Electrical Safety' },
+              { id: 'certificates.fa', label: 'FA – First Aid' },
+              { id: 'certificates.ff', label: 'FF – Fire Fighting' },
+              { id: 'certificates.ra', label: 'RA – Risk Assessment' },
+              { id: 'certificates.wah', label: 'WAH – Work at Height' },
+            ].map((cert) => (
+              <Box key={cert.id} sx={{ display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  {...register(cert.id)}
+                  id={`add-${cert.id}`}
+                  style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.1)' }}
+                />
+                <label htmlFor={`add-${cert.id}`} style={{ color: '#ccc', fontSize: '0.8rem', cursor: 'pointer' }}>
+                  {cert.label}
+                </label>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+
+        <Divider sx={{ borderColor: '#222' }} />
+
+        {/* Section 5: Role Expertise */}
         <Typography variant="overline" sx={{ color: '#7b68ee', fontWeight: 'bold', display: 'block' }}>
           Role Expertise
         </Typography>

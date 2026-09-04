@@ -158,6 +158,43 @@ const fieldTeamsSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    experienceYears: {
+      type: Number,
+      default: 0,
+    },
+    experienceMonths: {
+      type: Number,
+      default: 0,
+    },
+    experienceDays: {
+      type: Number,
+      default: 0,
+    },
+    yearsOfExperience: {
+      type: Number,
+      default: 0,
+    },
+    employmentType: {
+      type: String,
+      enum: ["Employee", "Subcontractor"],
+      default: "Subcontractor",
+    },
+    dateOfBirth: {
+      type: Date,
+      default: null,
+    },
+    age: {
+      type: Number,
+      default: null,
+    },
+    certificates: {
+      dd: { type: Boolean, default: false }, // DD: Defensive Driving
+      es: { type: Boolean, default: false }, // ES: Electrical Safety
+      fa: { type: Boolean, default: false }, // FA: First Aid
+      ff: { type: Boolean, default: false }, // FF: Fire Fighting
+      ra: { type: Boolean, default: false }, // RA: Risk Assessment
+      wah: { type: Boolean, default: false }, // WAH: Work at Height
+    },
 
     canTakeQuiz: {
       type: Boolean,

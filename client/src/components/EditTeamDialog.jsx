@@ -59,6 +59,19 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
         laptopSerialNumber: team.laptopSerialNumber === 'N/A' ? '' : team.laptopSerialNumber,
         teamCompany: team.teamCompany || (fieldTeamsCompany.length > 0 ? fieldTeamsCompany[0] : ''),
         teamCode: team.teamCode || '',
+        employmentType: team.employmentType || 'Subcontractor',
+        experienceYears: team.experienceYears !== undefined ? team.experienceYears : (team.yearsOfExperience ? Math.floor(Number(team.yearsOfExperience)) : 0),
+        experienceMonths: team.experienceMonths !== undefined ? team.experienceMonths : (team.yearsOfExperience ? Math.round((Number(team.yearsOfExperience) % 1) * 12) : 0),
+        experienceDays: team.experienceDays !== undefined ? team.experienceDays : 0,
+        yearsOfExperience: team.yearsOfExperience !== undefined ? team.yearsOfExperience : 0,
+        certificates: {
+          dd: Boolean(team.certificates?.dd),
+          es: Boolean(team.certificates?.es),
+          fa: Boolean(team.certificates?.fa),
+          ff: Boolean(team.certificates?.ff),
+          ra: Boolean(team.certificates?.ra),
+          wah: Boolean(team.certificates?.wah),
+        },
         isNewToInstallation: team.isNewToInstallation || false,
         isNewToActivation: team.isNewToActivation || false,
         installationStartDate: team.installationStartDate ? new Date(team.installationStartDate).toISOString().split('T')[0] : '',
@@ -358,6 +371,123 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               InputProps={{ style: { color: '#ffffff' } }}
               InputLabelProps={{ style: { color: '#888' }, shrink: true }}
             />
+          </Box>
+
+          {/* Section: Employment & Safety Certifications */}
+          <Typography variant="overline" sx={{ color: '#7b68ee', fontWeight: 'bold', mt: 4, mb: 2, display: 'block' }}>
+            Employment & Safety Certifications
+          </Typography>
+          <Box sx={{ mb: 3 }}>
+            <FormControl fullWidth sx={{ mb: 2.5 }}>
+              <InputLabel shrink sx={{ color: '#888', '&.Mui-focused': { color: '#7b68ee' } }}>
+                Employment Type
+              </InputLabel>
+              <NativeSelect
+                {...register('employmentType')}
+                sx={{
+                  color: '#ffffff',
+                  bgcolor: '#1a1a1a',
+                  border: '1px solid #333',
+                  borderRadius: '4px',
+                  pl: 2,
+                  py: 0.5,
+                  '&:hover': { border: '1px solid #7b68ee' },
+                  '&:before': { display: 'none' },
+                  '&:after': { display: 'none' },
+                  '& .MuiNativeSelect-icon': { color: '#7b68ee' },
+                }}
+              >
+                <option value="Subcontractor" style={{ backgroundColor: '#111', color: '#fff' }}>Subcontractor (Partner)</option>
+                <option value="Employee" style={{ backgroundColor: '#111', color: '#fff' }}>Direct Employee</option>
+              </NativeSelect>
+            </FormControl>
+
+            <Box sx={{ bgcolor: '#161616', p: 2, borderRadius: 2, border: '1px solid #282828' }}>
+              <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 700, mb: 1.5, display: 'block' }}>
+                EXPERIENCE DURATION (YEARS / MONTHS / DAYS)
+              </Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+                <TextField
+                  label="Years"
+                  variant="outlined"
+                  type="number"
+                  inputProps={{ min: 0, max: 50 }}
+                  {...register('experienceYears')}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: '#1a1a1a',
+                      '& fieldset': { borderColor: '#333' },
+                      '&:hover fieldset': { borderColor: '#7b68ee' },
+                      '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                    },
+                  }}
+                  InputProps={{ style: { color: '#ffffff', textAlign: 'center' } }}
+                  InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+                />
+                <TextField
+                  label="Months"
+                  variant="outlined"
+                  type="number"
+                  inputProps={{ min: 0, max: 11 }}
+                  {...register('experienceMonths')}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: '#1a1a1a',
+                      '& fieldset': { borderColor: '#333' },
+                      '&:hover fieldset': { borderColor: '#7b68ee' },
+                      '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                    },
+                  }}
+                  InputProps={{ style: { color: '#ffffff', textAlign: 'center' } }}
+                  InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+                />
+                <TextField
+                  label="Days"
+                  variant="outlined"
+                  type="number"
+                  inputProps={{ min: 0, max: 30 }}
+                  {...register('experienceDays')}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: '#1a1a1a',
+                      '& fieldset': { borderColor: '#333' },
+                      '&:hover fieldset': { borderColor: '#7b68ee' },
+                      '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                    },
+                  }}
+                  InputProps={{ style: { color: '#ffffff', textAlign: 'center' } }}
+                  InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+                />
+              </Box>
+            </Box>
+          </Box>
+
+          <Box sx={{ bgcolor: '#161616', p: 2, borderRadius: 2, border: '1px solid #282828', mb: 3 }}>
+            <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 700, mb: 1.5, display: 'block' }}>
+              SAFETY & COMPLIANCE CERTIFICATES
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 1.5 }}>
+              {[
+                { id: 'certificates.dd', label: 'DD – Defensive Driving' },
+                { id: 'certificates.es', label: 'ES – Electrical Safety' },
+                { id: 'certificates.fa', label: 'FA – First Aid' },
+                { id: 'certificates.ff', label: 'FF – Fire Fighting' },
+                { id: 'certificates.ra', label: 'RA – Risk Assessment' },
+                { id: 'certificates.wah', label: 'WAH – Work at Height' },
+              ].map((cert) => (
+                <Box key={cert.id} sx={{ display: 'flex', alignItems: 'center', bgcolor: '#111', p: 1, borderRadius: 1, border: '1px solid #222' }}>
+                  <input
+                    type="checkbox"
+                    {...register(cert.id)}
+                    id={`edit-${cert.id}`}
+                    style={{ marginRight: '10px', accentColor: '#7b68ee', transform: 'scale(1.2)' }}
+                  />
+                  <label htmlFor={`edit-${cert.id}`} style={{ color: '#fff', fontSize: '0.85rem', cursor: 'pointer' }}>
+                    {cert.label}
+                  </label>
+                </Box>
+              ))}
+            </Box>
           </Box>
 
           {/* Section: Role Expertise */}

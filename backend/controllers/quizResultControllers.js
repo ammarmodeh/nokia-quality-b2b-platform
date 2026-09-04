@@ -375,3 +375,43 @@ export const deleteQuizResult = async (req, res) => {
     });
   }
 };
+
+export const updateQuizResult = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { score, percentage, correctAnswers, totalQuestions, remarks } = req.body;
+
+    const quizResult = await QuizResult.findById(id);
+    if (!quizResult) {
+      return res.status(404).json({ success: false, message: 'Quiz result not found' });
+    }
+
+    if (percentage !== undefined) {
+      quizResult.percentage = Number(percentage);
+      quizResult.score = typeof score === 'string' ? score : `${percentage}/100`;
+    } else if (score !== undefined) {
+      quizResult.score = String(score);
+      const parsed = parseFloat(score);
+      if (!isNaN(parsed)) quizResult.percentage = parsed;
+    }
+
+    if (correctAnswers !== undefined) quizResult.correctAnswers = Number(correctAnswers);
+    if (totalQuestions !== undefined) quizResult.totalQuestions = Number(totalQuestions);
+    if (remarks !== undefined) quizResult.remarks = remarks;
+
+    await quizResult.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Quiz result updated successfully',
+      data: quizResult
+    });
+  } catch (error) {
+    console.error('Error updating quiz result:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update quiz result',
+      error: error.message
+    });
+  }
+};

@@ -15,12 +15,13 @@ import {
 } from "@mui/material";
 import {
   ArrowBack, Quiz, Assignment, BarChart as BarChartIconMUI, SupportAgent,
-  Warning, CheckCircle, Schedule, Info, PriorityHigh, Assessment, Timeline,
+  Warning, Warning as WarningIcon, CheckCircle, Schedule, Info, PriorityHigh, Assessment, Assessment as AssessmentIcon, Timeline,
   Leaderboard as LeaderboardIcon, Close as CloseIcon, TrendingUp, TrendingDown,
   TrendingFlat, PieChart as PieChartIcon, CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon, PictureAsPdf as PictureAsPdfIcon, TableChart as TableChartIcon,
   Search as SearchIcon, FilterList as FilterListIcon, CalendarToday as CalendarTodayIcon,
-  Event as EventIcon, Update as UpdateIcon, Visibility as VisibilityIcon, VerifiedUser,
+  Event as EventIcon, Update as UpdateIcon, Visibility as VisibilityIcon, Delete as DeleteIcon, VerifiedUser,
+  Edit as EditIcon, School as SchoolIcon, Psychology as PsychologyIcon,
   LocationOn,
   Shield,
   AutoStories,
@@ -32,6 +33,21 @@ import {
 } from '@mui/icons-material';
 import moment from "moment";
 import { subDays, isAfter, format } from 'date-fns';
+import LabAssessmentDetailModal from "../components/LabAssessmentDetailModal";
+import {
+  exportIndividualLabAssessmentReport,
+  exportMasterLabAssessmentReport
+} from "../utils/labAssessmentExcelExport";
+import { formatExperienceDuration, CERTIFICATE_DEFINITIONS } from "./LabAssessment";
+
+const getLabTierStatus = (score) => {
+  const s = Number(score) || 0;
+  if (s >= 90) return { label: 'Excellent', status: 'Pass', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', borderColor: '#10b981', isPass: true, tier: '90-100' };
+  if (s >= 80) return { label: 'V.Good', status: 'Pass', color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.15)', borderColor: '#14b8a6', isPass: true, tier: '80-89' };
+  if (s >= 70) return { label: 'Need improvements, and close monitoring', status: 'Pass', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', borderColor: '#f59e0b', isPass: true, tier: '70-79' };
+  if (s >= 50) return { label: 'Suspension, need training, then re-evaluate the team', status: 'Fail', color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)', borderColor: '#f97316', isPass: false, tier: '50-69' };
+  return { label: 'Ineligible', status: 'Fail', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', borderColor: '#ef4444', isPass: false, tier: '0-49' };
+};
 
 const normalizeText = (value) => {
   if (value === undefined || value === null) return '';
@@ -724,16 +740,135 @@ const FieldTeamPortal = () => {
 
   const [quizPage, setQuizPage] = useState(0);
   const [quizRowsPerPage, setQuizRowsPerPage] = useState(10);
+  const [selectedQuizDetail, setSelectedQuizDetail] = useState(null);
+  const [quizDetailOpen, setQuizDetailOpen] = useState(false);
+  const [editQuizDialogOpen, setEditQuizDialogOpen] = useState(false);
+  const [quizToEdit, setQuizToEdit] = useState(null);
+  const [editingQuizScore, setEditingQuizScore] = useState('');
+  const [editingQuizCorrect, setEditingQuizCorrect] = useState('');
+  const [editingQuizTotal, setEditingQuizTotal] = useState('');
+  const [editingQuizRemarks, setEditingQuizRemarks] = useState('');
+  const [savingQuizEdit, setSavingQuizEdit] = useState(false);
+  const [deleteQuizDialogOpen, setDeleteQuizDialogOpen] = useState(false);
+  const [quizToDelete, setQuizToDelete] = useState(null);
+  const [deletingQuiz, setDeletingQuiz] = useState(false);
+
+  const handleOpenEditQuiz = (quiz) => {
+    setQuizToEdit(quiz);
+    setEditingQuizScore(quiz.percentage !== undefined ? quiz.percentage : quiz.score || '');
+    setEditingQuizCorrect(quiz.correctAnswers !== undefined ? quiz.correctAnswers : '');
+    setEditingQuizTotal(quiz.totalQuestions !== undefined ? quiz.totalQuestions : '');
+    setEditingQuizRemarks(quiz.remarks || quiz.feedback || '');
+    setEditQuizDialogOpen(true);
+  };
+
+  const handleSaveQuizEdit = async () => {
+    if (!quizToEdit?._id) return;
+    setSavingQuizEdit(true);
+    try {
+      const scoreNum = Number(editingQuizScore) || 0;
+      const correctNum = Number(editingQuizCorrect) || 0;
+      const totalNum = Number(editingQuizTotal) || 0;
+      const payload = {
+        percentage: scoreNum,
+        score: `${scoreNum}%`,
+        correctAnswers: correctNum,
+        totalQuestions: totalNum,
+        remarks: editingQuizRemarks
+      };
+      await api.put(`/quiz-results/${quizToEdit._id}`, payload, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      toast.success("Online exam result updated successfully");
+      setQuizResults(prev => prev.map(q => q._id === quizToEdit._id ? { ...q, ...payload } : q));
+      setAllQuizResultsGlobal(prev => prev.map(q => q._id === quizToEdit._id ? { ...q, ...payload } : q));
+      setEditQuizDialogOpen(false);
+      setQuizToEdit(null);
+    } catch (error) {
+      console.error("Failed to update quiz result:", error);
+      toast.error("Failed to update exam result");
+    } finally {
+      setSavingQuizEdit(false);
+    }
+  };
+
+  const confirmDeleteQuiz = async () => {
+    if (!quizToDelete?._id) return;
+    setDeletingQuiz(true);
+    try {
+      await api.delete(`/quiz-results/${quizToDelete._id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      toast.success("Online exam result permanently deleted");
+      setQuizResults(prev => prev.filter(q => q._id !== quizToDelete._id));
+      setAllQuizResultsGlobal(prev => prev.filter(q => q._id !== quizToDelete._id));
+      setDeleteQuizDialogOpen(false);
+      setQuizToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete quiz result:", error);
+      toast.error("Failed to delete exam result");
+    } finally {
+      setDeletingQuiz(false);
+    }
+  };
 
   // On-the-job assessments state
   const [jobAssessments, setJobAssessments] = useState([]);
   const [jobPage, setJobPage] = useState(0);
   const [jobRowsPerPage, setJobRowsPerPage] = useState(10);
+  const [selectedJobDetail, setSelectedJobDetail] = useState(null);
+  const [jobDetailOpen, setJobDetailOpen] = useState(false);
+  const [deleteJobDialogOpen, setDeleteJobDialogOpen] = useState(false);
+  const [jobAssessmentToDelete, setJobAssessmentToDelete] = useState(null);
+  const [deletingJob, setDeletingJob] = useState(false);
+
+  const confirmDeleteJobAssessment = async () => {
+    if (!jobAssessmentToDelete?._id) return;
+    setDeletingJob(true);
+    try {
+      await api.delete(`/on-the-job-assessments/${jobAssessmentToDelete._id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      toast.success("OTJ Assessment permanently deleted");
+      setJobAssessments((prev) => prev.filter((a) => a._id !== jobAssessmentToDelete._id));
+      setAllJobAssessmentsGlobal((prev) => prev.filter((a) => a._id !== jobAssessmentToDelete._id));
+      setDeleteJobDialogOpen(false);
+      setJobAssessmentToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete OTJ assessment:", error);
+      toast.error("Failed to delete assessment");
+    } finally {
+      setDeletingJob(false);
+    }
+  };
 
   // Lab assessments state
   const [labAssessments, setLabAssessments] = useState([]);
   const [labPage, setLabPage] = useState(0);
   const [labRowsPerPage, setLabRowsPerPage] = useState(10);
+  const [selectedLabDetail, setSelectedLabDetail] = useState(null);
+  const [labDetailOpen, setLabDetailOpen] = useState(false);
+  const [deleteLabDialogOpen, setDeleteLabDialogOpen] = useState(false);
+  const [labAssessmentToDelete, setLabAssessmentToDelete] = useState(null);
+  const [deletingLab, setDeletingLab] = useState(false);
+
+  const confirmDeleteLabAssessment = async () => {
+    if (!labAssessmentToDelete?._id) return;
+    setDeletingLab(true);
+    try {
+      await api.delete(`/lab-assessments/${labAssessmentToDelete._id}`);
+      toast.success("Practical Lab Assessment permanently deleted");
+      setLabAssessments((prev) => prev.filter((a) => a._id !== labAssessmentToDelete._id));
+      setAllLabAssessmentsGlobal((prev) => prev.filter((a) => a._id !== labAssessmentToDelete._id));
+      setDeleteLabDialogOpen(false);
+      setLabAssessmentToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete lab assessment:", error);
+      toast.error("Failed to delete assessment");
+    } finally {
+      setDeletingLab(false);
+    }
+  };
 
   // Navigation and UI state
   const [activeTab, setActiveTab] = useState(0);
@@ -3216,7 +3351,544 @@ const FieldTeamPortal = () => {
     XLSX.utils.book_append_sheet(wb, wsIssues, "Customer Issues & Snags");
 
     // ─────────────────────────────────────────────────────────────────────────
-    // SHEET 6: Deep Raw Audit Data
+    // SHEETS 6–9: E2E FTTH Practical Lab Assessments (Full Detail)
+    // ─────────────────────────────────────────────────────────────────────────
+    const teamLabAssessments = (Array.isArray(allLabAssessmentsGlobal) ? allLabAssessmentsGlobal : []).filter(a => {
+      const matchId = (a.fieldTeamId?._id || a.fieldTeamId)?.toString() === tId;
+      const matchName = normalizeText(a.fieldTeamName) === tName || normalizeText(a.fieldTeamId?.teamName) === tName;
+      return matchId || matchName;
+    });
+
+    // Helper: compute section score from checkpoint data
+    const computeSecScore = (la, secNum) => {
+      const scScores = la.sectionScores || {};
+      const secKey = `section${secNum}`;
+      if (scScores[secKey] !== undefined) {
+        return secNum === 8 || secNum === 7 ? `${scScores[secKey]} / 10 Pts` : `${scScores[secKey]}%`;
+      }
+      if (Array.isArray(la.sections)) {
+        const targetSec = la.sections.find(s => s.sectionId === `sec-${secNum}` || s.sectionTitle?.startsWith(`${secNum}.`));
+        if (targetSec && targetSec.checkpoints) {
+          let tot = 0; let max = 0; let isPts = false;
+          targetSec.checkpoints.forEach(cp => {
+            if (cp.status !== 'N/A') {
+              const cpMax = cp.maxScore || (cp.type === 'points' ? 10 : 5);
+              max += cpMax;
+              if (cp.type === 'points' || cp.maxScore === 10) {
+                isPts = true;
+                tot += Number(cp.score !== undefined ? cp.score : cpMax);
+              } else {
+                if (cp.status === 'Pass') tot += Number(cp.score !== undefined ? cp.score : cpMax);
+                else if (cp.status === 'Fail') tot += Number(cp.score > 0 && cp.score < cpMax ? cp.score : 0);
+              }
+            }
+          });
+          const p = max > 0 ? Math.round((tot / max) * 100) : 100;
+          return isPts ? `${tot} / ${max} Pts (${p}%)` : `${p}%`;
+        }
+      }
+      return '-';
+    };
+
+    const CERT_DEFS_LOCAL = [
+      { key: 'dd', code: 'DD', title: 'Defensive Driving' },
+      { key: 'es', code: 'ES', title: 'Electrical Safety' },
+      { key: 'fa', code: 'FA', title: 'First Aid' },
+      { key: 'ff', code: 'FF', title: 'Fire Fighting' },
+      { key: 'ra', code: 'RA', title: 'Risk Assessment' },
+      { key: 'wah', code: 'WAH', title: 'Work at Height' }
+    ];
+
+    // ── SHEET 6: Assessment Summary Matrix ──────────────────────────────────
+    const wsLab = XLSX.utils.aoa_to_sheet([[]]);
+    wsLab['!merges'] = [];
+
+    wsLab['A1'] = {
+      v: `E2E FTTH PRACTICAL LAB ASSESSMENTS — OVERVIEW MATRIX - ${team.teamName.toUpperCase()}`,
+      t: 's',
+      s: { font: { bold: true, sz: 13, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.navyDark } }, alignment: { horizontal: 'center' } }
+    };
+    wsLab['A2'] = {
+      v: `Total Assessments: ${teamLabAssessments.length} | Report Date: ${format(new Date(), 'dd/MM/yyyy HH:mm')} | Team: ${team.teamName}`,
+      t: 's',
+      s: { font: { italic: true, sz: 10, color: { rgb: 'E0E7FF' } }, fill: { fgColor: { rgb: PALETTE.blueHeader } }, alignment: { horizontal: 'center' } }
+    };
+    wsLab['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 19 } });
+    wsLab['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 19 } });
+
+    const labHeaders = [
+      '#', 'Assessment Date', 'Assessor / Evaluator', 'ONT Model / Spec',
+      'Date of Birth', 'Age', 'Experience',
+      'Employment Type', 'Safety Certs Held',
+      '1. Safety & PPE', '2. Tools & Readiness',
+      '3. FDB Splicing', '4. BEP Splicing',
+      '5. Assistant Tools', '6. Customer Edu',
+      '7. Awareness', '8. Self-Assessment',
+      'Overall Score (%)', '5-Tier Result', 'Pass / Fail',
+      'Assessor Notes / Recommendations'
+    ];
+
+    labHeaders.forEach((h, c) => {
+      const cell = XLSX.utils.encode_cell({ r: 2, c });
+      wsLab[cell] = {
+        v: h, t: 's',
+        s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center', wrapText: true }, border: borderHeader }
+      };
+    });
+
+    if (teamLabAssessments.length === 0) {
+      wsLab['A4'] = { v: 'No practical lab assessments recorded for this field team yet.', t: 's', s: { font: { italic: true, color: { rgb: PALETTE.slateMuted } } } };
+      wsLab['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 20 } });
+    } else {
+      teamLabAssessments.forEach((la, idx) => {
+        const rNum = 3 + idx;
+        const isZebra = idx % 2 === 1;
+        const rowBg = isZebra ? PALETTE.zebraBg : PALETTE.white;
+        const certsObj = la.certificates || {};
+        const heldCerts = CERT_DEFS_LOCAL.filter(cd => certsObj[cd.key]).map(cd => cd.code).join(', ') || 'None';
+        const expStr = formatExperienceDuration(la.experienceYears, la.experienceMonths, la.experienceDays, la.yearsOfExperience);
+        const tier = getLabTierStatus(la.totalScore !== undefined ? la.totalScore : la.overallScore);
+        const dob = la.dateOfBirth || la.fieldTeamId?.dateOfBirth;
+        const dobStr = safeFormatDate(dob);
+        let ageNum = la.age !== undefined && la.age !== null ? la.age : (la.fieldTeamId?.age !== undefined && la.fieldTeamId?.age !== null ? la.fieldTeamId.age : null);
+        if (ageNum === null && dob) {
+          const birth = new Date(dob);
+          const ref = la.assessmentDate ? new Date(la.assessmentDate) : new Date();
+          let a = ref.getFullYear() - birth.getFullYear();
+          const m = ref.getMonth() - birth.getMonth();
+          if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) a--;
+          ageNum = a >= 0 ? a : null;
+        }
+        const ageStr = ageNum !== null ? `${ageNum} Yrs` : '-';
+
+        const rowValues = [
+          idx + 1,
+          safeFormatDate(la.assessmentDate || la.createdAt),
+          la.conductedBy || la.assessorId?.name || 'Quality Team',
+          la.ontModel || la.ontType?.name || 'ZTE / Nokia',
+          dobStr, ageStr, expStr,
+          la.employmentType || 'Subcontractor',
+          heldCerts,
+          computeSecScore(la, 1),
+          computeSecScore(la, 2),
+          computeSecScore(la, 3),
+          computeSecScore(la, 4),
+          computeSecScore(la, 5),
+          computeSecScore(la, 6),
+          computeSecScore(la, 7),
+          computeSecScore(la, 8),
+          `${la.totalScore !== undefined ? la.totalScore : la.overallScore || 0}%`,
+          tier.label,
+          tier.status,
+          la.feedback || la.comments || '-'
+        ];
+
+        rowValues.forEach((val, c) => {
+          const cell = XLSX.utils.encode_cell({ r: rNum, c });
+          const isPassCol = c === 19;
+          const isScoreCol = c === 17;
+          wsLab[cell] = {
+            v: val !== undefined && val !== null ? val : '-',
+            t: typeof val === 'number' ? 'n' : 's',
+            s: {
+              font: { bold: isScoreCol || isPassCol, color: { rgb: PALETTE.slateDark } },
+              alignment: { horizontal: c === 0 || c === 1 || c === 5 || c >= 9 ? 'center' : 'left', vertical: 'center', wrapText: true },
+              fill: isPassCol && val === 'Pass' ? { fgColor: { rgb: 'DCFCE7' } } :
+                    isPassCol && val === 'Fail' ? { fgColor: { rgb: 'FEE2E2' } } :
+                    { fgColor: { rgb: rowBg } },
+              border: borderThin
+            }
+          };
+        });
+      });
+    }
+
+    wsLab['!cols'] = [
+      { wch: 5 }, { wch: 14 }, { wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 10 },
+      { wch: 22 }, { wch: 16 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 16 },
+      { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 20 }, { wch: 14 },
+      { wch: 48 }, { wch: 12 }, { wch: 50 }
+    ];
+    fixSheetRange(wsLab);
+    XLSX.utils.book_append_sheet(wb, wsLab, 'Lab - Overview Matrix');
+
+    // ── SHEET 7: Detailed Profile + Section Mastery per Assessment ──────────
+    const wsLabProfiles = XLSX.utils.aoa_to_sheet([[]]); wsLabProfiles['!merges'] = [];
+    wsLabProfiles['A1'] = {
+      v: `PRACTICAL ASSESSMENT — DETAILED PROFILES & SECTION MASTERY - ${team.teamName.toUpperCase()}`,
+      t: 's',
+      s: { font: { bold: true, sz: 13, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: '1E3A8A' } }, alignment: { horizontal: 'center' } }
+    };
+    wsLabProfiles['A2'] = {
+      v: `Full technician profile, experience, safety clearances & section-by-section mastery breakdown`,
+      t: 's',
+      s: { font: { italic: true, sz: 10, color: { rgb: 'E0E7FF' } }, fill: { fgColor: { rgb: '2563EB' } }, alignment: { horizontal: 'center' } }
+    };
+    wsLabProfiles['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } });
+    wsLabProfiles['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 5 } });
+
+    let lpRow = 3;
+
+    if (teamLabAssessments.length === 0) {
+      wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 0 })] = { v: 'No lab assessments recorded.', t: 's', s: { font: { italic: true } } };
+    } else {
+      teamLabAssessments.forEach((la, idx) => {
+        const laScore = la.totalScore !== undefined ? la.totalScore : la.overallScore || 0;
+        const laTier = getLabTierStatus(laScore);
+        const laExpStr = formatExperienceDuration(la.experienceYears, la.experienceMonths, la.experienceDays, la.yearsOfExperience);
+        const laDob = la.dateOfBirth || la.fieldTeamId?.dateOfBirth;
+        const ladobStr = safeFormatDate(laDob);
+        let laAgeNum = la.age !== undefined && la.age !== null ? la.age : (la.fieldTeamId?.age !== undefined && la.fieldTeamId?.age !== null ? la.fieldTeamId.age : null);
+        if (laAgeNum === null && laDob) {
+          const birth = new Date(laDob);
+          const ref = la.assessmentDate ? new Date(la.assessmentDate) : new Date();
+          let a = ref.getFullYear() - birth.getFullYear();
+          const m = ref.getMonth() - birth.getMonth();
+          if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) a--;
+          laAgeNum = a >= 0 ? a : null;
+        }
+        const laAgeStr = laAgeNum !== null ? `${laAgeNum} Years` : 'Not Specified';
+        const laCertsObj = la.certificates || {};
+        const laHeldCerts = CERT_DEFS_LOCAL.filter(cd => laCertsObj[cd.key]).map(cd => `${cd.code} (${cd.title})`).join(', ') || 'None';
+        const laCertCount = CERT_DEFS_LOCAL.filter(cd => laCertsObj[cd.key]).length;
+
+        // Assessment banner header
+        wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 0 })] = {
+          v: `ASSESSMENT #${idx + 1} — ${safeFormatDate(la.assessmentDate || la.createdAt).toUpperCase()} | ASSESSOR: ${(la.conductedBy || la.assessorId?.name || 'Quality Team').toUpperCase()}`,
+          t: 's',
+          s: { font: { bold: true, sz: 11, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.blueHeader } }, alignment: { horizontal: 'left' } }
+        };
+        wsLabProfiles['!merges'].push({ s: { r: lpRow, c: 0 }, e: { r: lpRow, c: 5 } });
+        lpRow++;
+
+        // Profile sub-header
+        wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 0 })] = { v: 'PROFILE FIELD', t: 's', s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, border: borderHeader } };
+        wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 1 })] = { v: 'VALUE', t: 's', s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center' }, border: borderHeader } };
+        wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 2 })] = { v: 'STANDARD / BENCHMARK', t: 's', s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center' }, border: borderHeader } };
+        wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 3 })] = { v: 'STATUS', t: 's', s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center' }, border: borderHeader } };
+        wsLabProfiles['!merges'].push({ s: { r: lpRow, c: 0 }, e: { r: lpRow, c: 0 } });
+        wsLabProfiles['!merges'].push({ s: { r: lpRow, c: 1 }, e: { r: lpRow, c: 1 } });
+        wsLabProfiles['!merges'].push({ s: { r: lpRow, c: 3 }, e: { r: lpRow, c: 5 } });
+        lpRow++;
+
+        const profileRows = [
+          ['Field Team Name', team.teamName, 'Verified Identity', 'Active'],
+          ['Team Code / ID', team.teamCode || 'N/A', 'System ID', 'Verified'],
+          ['Contractor / Company', team.teamCompany || 'N/A', 'Service Partner', 'Verified'],
+          ['Employment Type', la.employmentType || 'Subcontractor', 'Contract Classification', 'Verified'],
+          ['Date of Birth (DoB)', ladobStr, 'Official HR Record', 'Recorded'],
+          ['Technician Age', laAgeStr, 'Standard Working Age', 'Verified'],
+          ['Field Experience', laExpStr, 'Years / Months / Days', 'Recorded'],
+          ['ONT Model Evaluated', la.ontModel || la.ontType?.name || 'ZTE / Nokia', 'Certified ONT Model', 'Assessed'],
+          ['Safety Certs Held', laHeldCerts, '6 Mandatory Clearances', `${laCertCount} / 6 Held`],
+          ['Overall Practical Score', `${laScore}%`, '≥ 70.0% Min. Pass', laTier.status],
+          ['5-Tier Performance Result', laTier.label, 'Nokia Quality Benchmark', laTier.status],
+          ['Assessor Feedback', la.feedback || la.comments || 'Assessment completed.', 'Quality Supervisor Notes', 'Logged'],
+        ];
+
+        profileRows.forEach((pRow, pIdx) => {
+          const rowBg = pIdx % 2 === 1 ? PALETTE.zebraBg : PALETTE.white;
+          wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 0 })] = {
+            v: pRow[0], t: 's',
+            s: { font: { bold: true, color: { rgb: PALETTE.slateLight } }, fill: { fgColor: { rgb: rowBg } }, border: borderThin }
+          };
+          wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 1 })] = {
+            v: pRow[1], t: 's',
+            s: { font: { bold: true }, fill: { fgColor: { rgb: rowBg } }, border: borderThin }
+          };
+          wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 2 })] = {
+            v: pRow[2], t: 's',
+            s: { font: { italic: true, color: { rgb: PALETTE.slateMuted } }, alignment: { horizontal: 'center' }, fill: { fgColor: { rgb: rowBg } }, border: borderThin }
+          };
+          const isPassStatus = pRow[3] === 'Pass' || pRow[3] === 'Verified' || pRow[3] === 'Active' || pRow[3] === 'Logged' || pRow[3] === 'Recorded' || pRow[3] === 'Assessed' || pRow[3] === 'Established';
+          const isFailStatus = pRow[3] === 'Fail';
+          wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 3 })] = {
+            v: pRow[3], t: 's',
+            s: {
+              font: { bold: true, color: { rgb: PALETTE.blueHeader } },
+              alignment: { horizontal: 'center' },
+              fill: isPassStatus ? { fgColor: { rgb: 'DCFCE7' } } : isFailStatus ? { fgColor: { rgb: 'FEE2E2' } } : { fgColor: { rgb: rowBg } },
+              border: borderThin
+            }
+          };
+          wsLabProfiles['!merges'].push({ s: { r: lpRow, c: 3 }, e: { r: lpRow, c: 5 } });
+          lpRow++;
+        });
+
+        // Section mastery sub-header
+        wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 0 })] = {
+          v: 'SECTION-BY-SECTION MASTERY BREAKDOWN',
+          t: 's',
+          s: { font: { bold: true, sz: 10, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateMedium } }, alignment: { horizontal: 'left' } }
+        };
+        wsLabProfiles['!merges'].push({ s: { r: lpRow, c: 0 }, e: { r: lpRow, c: 5 } });
+        lpRow++;
+
+        const secHdrs = ['Section #', 'Assessment Domain', 'Total Checkpoints', 'Section Score', 'Pass / Fail'];
+        secHdrs.forEach((h, c) => {
+          wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c })] = {
+            v: h, t: 's',
+            s: { font: { bold: true, sz: 9, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: '374151' } }, alignment: { horizontal: 'center' }, border: borderHeader }
+          };
+        });
+        lpRow++;
+
+        if (Array.isArray(la.sections) && la.sections.length > 0) {
+          la.sections.forEach((sec, sIdx) => {
+            const cpCount = sec.checkpoints?.length || 0;
+            let totalSc = 0; let maxSc = 0; let isPtsOnly = false;
+            (sec.checkpoints || []).forEach(cp => {
+              if (cp.status !== 'N/A') {
+                const cpMax = cp.maxScore || (cp.type === 'points' ? 10 : 5);
+                maxSc += cpMax;
+                if (cp.type === 'points' || cp.maxScore === 10) {
+                  isPtsOnly = true;
+                  totalSc += Number(cp.score !== undefined ? cp.score : cpMax);
+                } else {
+                  if (cp.status === 'Pass') totalSc += Number(cp.score !== undefined ? cp.score : cpMax);
+                  else if (cp.status === 'Fail') totalSc += Number(cp.score > 0 && cp.score < cpMax ? cp.score : 0);
+                }
+              }
+            });
+            const pct = maxSc > 0 ? Math.round((totalSc / maxSc) * 100) : 100;
+            const isSec7 = sec.sectionId === 'sec-7';
+            const secScoreStr = isSec7 ? '100% (Awareness)' : isPtsOnly ? `${totalSc} / ${maxSc} Pts (${pct}%)` : `${pct}%`;
+            const secResult = isSec7 ? 'Informational' : pct >= 70 ? 'Pass' : 'Fail';
+            const secRowBg = sIdx % 2 === 1 ? PALETTE.zebraBg : PALETTE.white;
+            const secRow = [`Section ${sIdx + 1}`, sec.sectionTitle, `${cpCount} Checkpoints`, secScoreStr, secResult];
+            secRow.forEach((v, c) => {
+              const isResultCol = c === 4;
+              wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c })] = {
+                v: v, t: 's',
+                s: {
+                  font: { sz: 9, bold: c === 0 || c === 3 },
+                  alignment: { horizontal: c === 0 || c === 2 || c === 3 || c === 4 ? 'center' : 'left', vertical: 'center' },
+                  fill: isResultCol && secResult === 'Pass' ? { fgColor: { rgb: 'DCFCE7' } } :
+                        isResultCol && secResult === 'Fail' ? { fgColor: { rgb: 'FEE2E2' } } :
+                        { fgColor: { rgb: secRowBg } },
+                  border: borderThin
+                }
+              };
+            });
+            lpRow++;
+          });
+        } else {
+          wsLabProfiles[XLSX.utils.encode_cell({ r: lpRow, c: 0 })] = { v: 'No section data available.', t: 's', s: { font: { italic: true, color: { rgb: PALETTE.slateMuted } } } };
+          wsLabProfiles['!merges'].push({ s: { r: lpRow, c: 0 }, e: { r: lpRow, c: 5 } });
+          lpRow++;
+        }
+        lpRow += 2; // spacer between assessments
+      });
+    }
+
+    wsLabProfiles['!cols'] = [{ wch: 30 }, { wch: 40 }, { wch: 26 }, { wch: 26 }, { wch: 18 }, { wch: 12 }];
+    fixSheetRange(wsLabProfiles);
+    XLSX.utils.book_append_sheet(wb, wsLabProfiles, 'Lab - Profiles & Mastery');
+
+    // ── SHEET 8: Checkpoint-by-Checkpoint Full Breakdown ────────────────────
+    const wsLabCp = XLSX.utils.aoa_to_sheet([[]]); wsLabCp['!merges'] = [];
+    wsLabCp['A1'] = {
+      v: `PRACTICAL ASSESSMENT — ITEMIZED CHECKPOINTS DEEP DIVE - ${team.teamName.toUpperCase()}`,
+      t: 's',
+      s: { font: { bold: true, sz: 13, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: '0F172A' } }, alignment: { horizontal: 'center' } }
+    };
+    wsLabCp['A2'] = {
+      v: 'All evaluation criteria across FDB, BEP, ONT (ZTE & Nokia), Tools, Customer Education & Self-Assessment',
+      t: 's',
+      s: { font: { italic: true, sz: 10, color: { rgb: 'E0E7FF' } }, fill: { fgColor: { rgb: '0D9488' } }, alignment: { horizontal: 'center' } }
+    };
+    wsLabCp['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } });
+    wsLabCp['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 7 } });
+
+    let cpRow = 2;
+    const cpHeaders = ['Assessment #', 'Assessment Date', 'Section Name', 'SubSection / ONT Model', 'Checkpoint Criteria', 'Result Status', 'Score', 'Max Points', 'Assessor Notes'];
+    cpHeaders.forEach((h, c) => {
+      wsLabCp[XLSX.utils.encode_cell({ r: cpRow, c })] = {
+        v: h, t: 's',
+        s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: '0D9488' } }, alignment: { horizontal: 'center', wrapText: true }, border: borderHeader }
+      };
+    });
+    cpRow++;
+
+    if (teamLabAssessments.length === 0) {
+      wsLabCp[XLSX.utils.encode_cell({ r: cpRow, c: 0 })] = { v: 'No checkpoint data available.', t: 's', s: { font: { italic: true } } };
+      wsLabCp['!merges'].push({ s: { r: cpRow, c: 0 }, e: { r: cpRow, c: 8 } });
+    } else {
+      teamLabAssessments.forEach((la, laIdx) => {
+        const laDateStr = safeFormatDate(la.assessmentDate || la.createdAt);
+        const assessNum = `#${laIdx + 1}`;
+        if (Array.isArray(la.sections) && la.sections.length > 0) {
+          la.sections.forEach(sec => {
+            if (Array.isArray(sec.checkpoints)) {
+              sec.checkpoints.forEach((cp, cpIdx) => {
+                const cpMax = cp.maxScore || (cp.type === 'points' ? 10 : 5);
+                const cpScore = cp.score !== undefined ? cp.score : (cp.status === 'Pass' ? cpMax : 0);
+                const cpIsPass = cp.status === 'Pass' || (cp.type === 'points' && cpScore >= 7);
+                const cpIsNA = cp.status === 'N/A';
+                const isZebra = cpIdx % 2 === 1;
+                const rowBg = isZebra ? PALETTE.zebraBg : PALETTE.white;
+                const cpRowData = [
+                  assessNum,
+                  laDateStr,
+                  sec.sectionTitle,
+                  cp.subSection || '-',
+                  cp.name,
+                  cp.status || (cp.type === 'points' ? (cpScore >= 7 ? 'Pass' : 'Fail') : 'Pass'),
+                  `${cpScore}`,
+                  `${cpMax}`,
+                  cp.notes || '-'
+                ];
+                cpRowData.forEach((val, c) => {
+                  const isResultCol = c === 5;
+                  wsLabCp[XLSX.utils.encode_cell({ r: cpRow, c })] = {
+                    v: val, t: 's',
+                    s: {
+                      font: { sz: 9 },
+                      alignment: { horizontal: c === 0 || c === 1 || c === 5 || c === 6 || c === 7 ? 'center' : 'left', vertical: 'center', wrapText: true },
+                      fill: isResultCol && cpIsPass ? { fgColor: { rgb: 'DCFCE7' } } :
+                            isResultCol && !cpIsPass && !cpIsNA ? { fgColor: { rgb: 'FEE2E2' } } :
+                            isResultCol && cpIsNA ? { fgColor: { rgb: 'F3F4F6' } } :
+                            { fgColor: { rgb: rowBg } },
+                      border: borderThin
+                    }
+                  };
+                });
+                cpRow++;
+              });
+            }
+          });
+        }
+      });
+    }
+
+    wsLabCp['!cols'] = [
+      { wch: 12 }, { wch: 14 }, { wch: 32 }, { wch: 36 }, { wch: 56 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 45 }
+    ];
+    fixSheetRange(wsLabCp);
+    XLSX.utils.book_append_sheet(wb, wsLabCp, 'Lab - Checkpoints Detail');
+
+    // ── SHEET 9: Safety Clearances & Equipment Inspection ───────────────────
+    const wsLabSafe = XLSX.utils.aoa_to_sheet([[]]); wsLabSafe['!merges'] = [];
+    wsLabSafe['A1'] = {
+      v: `SAFETY CLEARANCES & EQUIPMENT INSPECTION LOG - ${team.teamName.toUpperCase()}`,
+      t: 's',
+      s: { font: { bold: true, sz: 13, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: '581C87' } }, alignment: { horizontal: 'center' } }
+    };
+    wsLabSafe['A2'] = {
+      v: '6 Mandatory Safety Certifications (DD, ES, FA, FF, RA, WAH) & Equipment Readiness per Assessment',
+      t: 's',
+      s: { font: { italic: true, sz: 10, color: { rgb: 'EDE9FE' } }, fill: { fgColor: { rgb: '7C3AED' } }, alignment: { horizontal: 'center' } }
+    };
+    wsLabSafe['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } });
+    wsLabSafe['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 8 } });
+
+    let safeRow = 3;
+
+    if (teamLabAssessments.length === 0) {
+      wsLabSafe[XLSX.utils.encode_cell({ r: safeRow, c: 0 })] = { v: 'No assessments recorded.', t: 's', s: { font: { italic: true } } };
+    } else {
+      teamLabAssessments.forEach((la, laIdx) => {
+        const laDateStr = safeFormatDate(la.assessmentDate || la.createdAt);
+        const laCertsObj = la.certificates || {};
+
+        // Assessment banner
+        wsLabSafe[XLSX.utils.encode_cell({ r: safeRow, c: 0 })] = {
+          v: `ASSESSMENT #${laIdx + 1} — DATE: ${laDateStr} | ASSESSOR: ${la.conductedBy || la.assessorId?.name || 'Quality Team'}`,
+          t: 's',
+          s: { font: { bold: true, sz: 10, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: '581C87' } }, alignment: { horizontal: 'left' } }
+        };
+        wsLabSafe['!merges'].push({ s: { r: safeRow, c: 0 }, e: { r: safeRow, c: 8 } });
+        safeRow++;
+
+        // Safety clearances header
+        wsLabSafe[XLSX.utils.encode_cell({ r: safeRow, c: 0 })] = { v: 'SAFETY CLEARANCES', t: 's', s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: '7C3AED' } }, alignment: { horizontal: 'center' }, border: borderHeader } };
+        wsLabSafe['!merges'].push({ s: { r: safeRow, c: 0 }, e: { r: safeRow, c: 8 } });
+        safeRow++;
+
+        const safeHdrs = ['Code', 'Certificate Title', 'Safety Scope & Description', 'Verification Status', 'Clearance Level'];
+        safeHdrs.forEach((h, c) => {
+          wsLabSafe[XLSX.utils.encode_cell({ r: safeRow, c })] = {
+            v: h, t: 's',
+            s: { font: { bold: true, sz: 9, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center' }, border: borderHeader }
+          };
+        });
+        safeRow++;
+
+        const certDescriptions = {
+          dd: 'Safe vehicle operation, hazard perception & driving compliance',
+          es: 'Safe handling of electrical sources, grounding & arc flash prevention',
+          fa: 'Emergency first response, CPR & basic trauma management',
+          ff: 'Fire extinguisher operation, fire risk prevention & evacuation',
+          ra: 'Job site hazard identification, risk evaluation & control measures',
+          wah: 'Ladder safety, harness usage, pole climbing & fall arrest systems'
+        };
+
+        CERT_DEFS_LOCAL.forEach((cd, cdIdx) => {
+          const isCert = Boolean(laCertsObj[cd.key]);
+          const certRowBg = cdIdx % 2 === 1 ? PALETTE.zebraBg : PALETTE.white;
+          const certRowData = [cd.code, cd.title, certDescriptions[cd.key] || '-', isCert ? 'Certified' : 'Not Certified', isCert ? 'Authorized' : 'Clearance Missing'];
+          certRowData.forEach((val, c) => {
+            const isStatusCol = c === 3;
+            wsLabSafe[XLSX.utils.encode_cell({ r: safeRow, c })] = {
+              v: val, t: 's',
+              s: {
+                font: { sz: 9, bold: c === 0 || isStatusCol },
+                alignment: { horizontal: c === 0 || c === 3 || c === 4 ? 'center' : 'left', vertical: 'center' },
+                fill: isStatusCol && isCert ? { fgColor: { rgb: 'DCFCE7' } } :
+                      isStatusCol && !isCert ? { fgColor: { rgb: 'FEE2E2' } } :
+                      { fgColor: { rgb: certRowBg } },
+                border: borderThin
+              }
+            };
+          });
+          safeRow++;
+        });
+
+        // Equipment checklist (if present)
+        const eqList = la.equipmentChecklist || [];
+        if (eqList.length > 0) {
+          safeRow++;
+          wsLabSafe[XLSX.utils.encode_cell({ r: safeRow, c: 0 })] = { v: 'EQUIPMENT & TOOLS INSPECTION CHECKLIST', t: 's', s: { font: { bold: true, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: 'EA580C' } }, alignment: { horizontal: 'center' }, border: borderHeader } };
+          wsLabSafe['!merges'].push({ s: { r: safeRow, c: 0 }, e: { r: safeRow, c: 8 } });
+          safeRow++;
+          const eqHdrs = ['#', 'Tool / Equipment Name', 'Readiness & Calibration Status', 'Inspection Result', 'Notes'];
+          eqHdrs.forEach((h, c) => {
+            wsLabSafe[XLSX.utils.encode_cell({ r: safeRow, c })] = {
+              v: h, t: 's',
+              s: { font: { bold: true, sz: 9, color: { rgb: PALETTE.white } }, fill: { fgColor: { rgb: PALETTE.slateDark } }, alignment: { horizontal: 'center' }, border: borderHeader }
+            };
+          });
+          safeRow++;
+          eqList.forEach((eq, eIdx) => {
+            const isGood = eq.status === 'Valid' || eq.status === 'Available';
+            const eqRowBg = eIdx % 2 === 1 ? PALETTE.zebraBg : PALETTE.white;
+            const eqRowData = [`#${eIdx + 1}`, eq.toolName, eq.status || 'Valid', isGood ? 'Approved for Field Use' : eq.status === 'Need Maintenance' ? 'Maintenance Required' : 'Non-Compliant / Missing', eq.notes || '-'];
+            eqRowData.forEach((val, c) => {
+              wsLabSafe[XLSX.utils.encode_cell({ r: safeRow, c })] = {
+                v: val, t: 's',
+                s: {
+                  font: { sz: 9 },
+                  alignment: { horizontal: c === 0 || c === 2 || c === 3 ? 'center' : 'left', vertical: 'center', wrapText: true },
+                  fill: c === 3 && isGood ? { fgColor: { rgb: 'DCFCE7' } } :
+                        c === 3 && !isGood ? { fgColor: { rgb: 'FEE2E2' } } :
+                        { fgColor: { rgb: eqRowBg } },
+                  border: borderThin
+                }
+              };
+            });
+            safeRow++;
+          });
+        }
+        safeRow += 2; // spacer between assessments
+      });
+    }
+
+    wsLabSafe['!cols'] = [{ wch: 10 }, { wch: 28 }, { wch: 55 }, { wch: 22 }, { wch: 22 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+    fixSheetRange(wsLabSafe);
+    XLSX.utils.book_append_sheet(wb, wsLabSafe, 'Lab - Safety & Equipment');
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SHEET 10: Deep Raw Audit Data
     // ─────────────────────────────────────────────────────────────────────────
     const detailedData = teamTasks.map(t => mapItemToExcelRow(t, 'task'));
     if (detailedData.length > 0) {
@@ -3227,7 +3899,7 @@ const FieldTeamPortal = () => {
     }
 
     // Save File
-    const sanitizedName = (team.teamName || 'Field_Team').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const sanitizedName = (team.teamName || 'Field_Team').replace(/[\\/:*?"<>|]/g, '_').trim() || 'Field_Team';
     XLSX.writeFile(wb, `${sanitizedName}_Quality_Performance_DeepDive_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   };
 
@@ -4258,53 +4930,67 @@ const FieldTeamPortal = () => {
       const fetchTeamAssessments = async () => {
         try {
           setLoading(true);
-          const [quizRes, jobRes] = await Promise.all([
-            api.get(`/quiz-results?teamId=${selectedTeam._id}`, {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-              }
-            }),
-            api.get(`/on-the-job-assessments/field-team/${selectedTeam._id}`, {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-              }
-            })
-          ]);
 
-          // Fetch Customer Issues strictly for selectedTeam
+          // 1. Quizzes
+          try {
+            const quizRes = await api.get(`/quiz-results?teamId=${selectedTeam._id}`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+            });
+            setQuizResults(quizRes.data?.data || []);
+          } catch (e) {
+            setQuizResults([]);
+          }
+
+          // 2. OTJ Assessments
+          try {
+            const jobRes = await api.get(`/on-the-job-assessments/field-team/${selectedTeam._id}`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+            });
+            setJobAssessments(jobRes.data || []);
+          } catch (e) {
+            setJobAssessments([]);
+          }
+
+          // 3. Customer Issues
           try {
             const issuesRes = await api.get('/customer-issues', {
               params: { limit: 10000 },
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-              }
+              headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
             });
             const allIssues = issuesRes.data?.data || issuesRes.data || [];
-            const matchedIssues = allIssues.filter(issue => isIssueForTeam(issue, selectedTeam));
-            setCustomerIssues(matchedIssues);
+            setCustomerIssues(allIssues.filter(issue => isIssueForTeam(issue, selectedTeam)));
           } catch (err) {
             console.error("Error fetching customer issues:", err);
             setCustomerIssues([]);
           }
 
-          // Correctly set the quizResults state
-          setQuizResults(quizRes.data.data);
-          setJobAssessments(jobRes.data);
+          // 4. Lab Assessments
+          let teamLab = [];
+          try {
+            const labRes = await api.get(`/lab-assessments/team/${selectedTeam._id}`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+            });
+            teamLab = Array.isArray(labRes.data) ? labRes.data : [];
+          } catch (err) {
+            console.error("Error fetching lab assessments:", err);
+          }
 
-          // Fetch Lab Assessments
-          const labRes = await api.get(`/lab-assessments/team/${selectedTeam._id}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            }
-          });
-          setLabAssessments(labRes.data);
+          // Fallback to allLabAssessmentsGlobal matching selectedTeam
+          if (teamLab.length === 0 && Array.isArray(allLabAssessmentsGlobal)) {
+            const sName = normalizeText(selectedTeam.teamName);
+            const sId = selectedTeam._id?.toString();
+            teamLab = allLabAssessmentsGlobal.filter(a => {
+              const aId = (a.fieldTeamId?._id || a.fieldTeamId)?.toString();
+              const aName = normalizeText(a.fieldTeamName || a.fieldTeamId?.teamName);
+              return (sId && aId === sId) || (sName && aName === sName);
+            });
+          }
+          setLabAssessments(teamLab);
 
-          // Fetch NPS Tickets strictly for selectedTeam
+          // 5. NPS Tickets
           try {
             const techRes = await api.get(`/tasks/get-all-tasks`, {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-              }
+              headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
             });
             const tData = techRes.data?.data || techRes.data || [];
             setTechnicalTasks(tData.filter(task => isTaskForTeam(task, selectedTeam)));
@@ -4314,7 +5000,6 @@ const FieldTeamPortal = () => {
 
         } catch (error) {
           console.error("Error fetching assessments:", error);
-          setError("Failed to fetch assessments");
         } finally {
           setLoading(false);
         }
@@ -4326,8 +5011,9 @@ const FieldTeamPortal = () => {
       setJobAssessments([]);
       setLabAssessments([]);
       setCustomerIssues([]);
+      setTechnicalTasks([]);
     }
-  }, [selectedTeam]);
+  }, [selectedTeam, allLabAssessmentsGlobal]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -4364,17 +5050,12 @@ const FieldTeamPortal = () => {
   };
 
   const exportLabToExcel = () => {
-    const data = labAssessments.map(a => ({
-      'Date': formatDate(a.createdAt),
-      'Type': a.assessmentType || 'Technical',
-      'ONT Type': a.ontType?.name || 'N/A',
-      'Score': `${a.totalScore}%`,
-      'Comments': a.comments || '-'
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Lab");
-    XLSX.writeFile(wb, `${selectedTeam.teamName}_Lab_Assessments.xlsx`);
+    if (!labAssessments || labAssessments.length === 0) return;
+    if (labAssessments.length === 1) {
+      exportIndividualLabAssessmentReport(labAssessments[0]);
+    } else {
+      exportMasterLabAssessmentReport(labAssessments, selectedTeam?.teamName);
+    }
   };
 
   const exportTestToPDF = async (testType, data) => {
@@ -10102,19 +10783,35 @@ ${data.map((a, i) => `
               {/* 4. ONLINE EXAM ASSESSMENTS */}
               {activeTab === 3 && (
                 <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
                     <Box>
-                      <Typography variant="h5" sx={{ color: colors.primary, fontWeight: 700 }}>Online Exam Assessments</Typography>
-                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                      <Typography variant="h5" sx={{ color: colors.primary, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <PsychologyIcon sx={{ color: colors.primary }} /> Online Theoretical Exam Assessments
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: colors.textSecondary, mt: 0.5 }}>
+                        Individual theoretical knowledge assessments, technical Q&A scoring, and quality standard compliance
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
                         <Button
-                          variant="outlined"
+                          variant="contained"
                           size="small"
                           startIcon={<TableChartIcon />}
                           onClick={exportTheoreticalToExcel}
                           disabled={quizResults.length === 0}
-                          sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
+                          sx={{
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: '#fff',
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            borderRadius: '8px',
+                            px: 2,
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                            }
+                          }}
                         >
-                          Pro Excel
+                          Export Exam Report (.xlsx)
                         </Button>
                         <Button
                           variant="outlined"
@@ -10122,69 +10819,347 @@ ${data.map((a, i) => `
                           startIcon={<PictureAsPdfIcon />}
                           onClick={() => exportTestToPDF('theoretical', quizResults)}
                           disabled={quizResults.length === 0}
-                          sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
+                          sx={{
+                            color: colors.error,
+                            borderColor: alpha(colors.error, 0.5),
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            borderRadius: '8px',
+                            px: 2,
+                            '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` }
+                          }}
                         >
-                          Pro PDF Report
+                          PDF Summary
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<AssessmentIcon />}
+                          onClick={() => {
+                            navigate(`/assessment-dashboard?teamId=${selectedTeam?._id || ''}`, {
+                              state: {
+                                teamId: selectedTeam?._id,
+                                teamName: selectedTeam?.teamName,
+                                fromPortal: true
+                              }
+                            });
+                          }}
+                          sx={{
+                            color: '#c4b5fd',
+                            borderColor: 'rgba(139, 92, 246, 0.5)',
+                            bgcolor: 'rgba(139, 92, 246, 0.12)',
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            borderRadius: '8px',
+                            px: 2,
+                            '&:hover': {
+                              borderColor: '#a78bfa',
+                              bgcolor: 'rgba(139, 92, 246, 0.25)'
+                            }
+                          }}
+                        >
+                          Assessment Dashboard
                         </Button>
                       </Box>
                     </Box>
-                    <Chip
-                      label={`Avg: ${Math.round(calculateAverageScore(quizResults))}%`}
-                      variant="outlined"
-                      sx={{ borderColor: getPerformanceColor(calculateAverageScore(quizResults), 'quiz'), color: getPerformanceColor(calculateAverageScore(quizResults), 'quiz'), fontWeight: 700 }}
-                    />
+
+                    {(() => {
+                      const avgScore = calculateAverageScore(quizResults);
+                      const passedCount = quizResults.filter(q => (q.percentage || 0) >= 80).length;
+                      const isPassing = avgScore >= 80;
+                      return (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Chip
+                            label={`Overall Average: ${Math.round(avgScore)}%`}
+                            sx={{
+                              bgcolor: isPassing ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                              color: isPassing ? '#10b981' : '#ef4444',
+                              borderColor: isPassing ? '#10b981' : '#ef4444',
+                              borderWidth: 1,
+                              borderStyle: 'solid',
+                              fontWeight: 800,
+                              fontSize: '0.95rem',
+                              py: 2.2,
+                              px: 1
+                            }}
+                          />
+                          <Chip
+                            label={`Pass Rate: ${quizResults.length > 0 ? Math.round((passedCount / quizResults.length) * 100) : 0}% (${passedCount}/${quizResults.length})`}
+                            sx={{
+                              bgcolor: 'rgba(59, 130, 246, 0.2)',
+                              color: '#60a5fa',
+                              fontWeight: 700,
+                              py: 2.2,
+                              px: 1
+                            }}
+                          />
+                        </Box>
+                      );
+                    })()}
                   </Box>
 
                   {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 6 }}>
                       <CircularProgress sx={{ color: colors.primary }} />
                     </Box>
                   ) : quizResults.length > 0 ? (
                     <>
                       <TableContainer component={Paper} sx={{
                         mb: 2,
-                        ...darkThemeStyles.paper,
-                        "& .MuiTable-root": darkThemeStyles.table
+                        borderRadius: '16px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        bgcolor: 'rgba(20, 20, 25, 0.6)',
+                        backdropFilter: 'blur(12px)',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                        overflow: 'hidden'
                       }}>
                         <Table>
-                          <TableHead sx={darkThemeStyles.tableHead}>
+                          <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.04)' }}>
                             <TableRow>
-                              <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Quiz Code</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Score</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Correct Answers</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Percentage</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Exam Date</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Exam Standard / Quiz Code</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Candidate & Team</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Accuracy & Breakdown</TableCell>
+                              <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Score %</TableCell>
+                              <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Exam Status</TableCell>
+                              <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Actions</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
                             {quizResults
                               .slice(quizPage * quizRowsPerPage, quizPage * quizRowsPerPage + quizRowsPerPage)
-                              .map((result) => (
-                                <TableRow key={result._id}
-                                  sx={{
-                                    "&:hover": {
-                                      backgroundColor: colors.tableRowHover
-                                    }
-                                  }}
-                                >
-                                  <TableCell sx={darkThemeStyles.tableCell}>{formatDate(result.submittedAt)}</TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>{result.quizCode}</TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>
-                                    <Chip
-                                      label={result.score}
-                                      sx={{
-                                        bgcolor: `${getPerformanceColor(result.percentage)}22`,
-                                        color: getPerformanceColor(result.percentage),
-                                        borderColor: getPerformanceColor(result.percentage),
-                                        fontWeight: 'bold'
-                                      }}
-                                      variant="outlined"
-                                    />
-                                  </TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>{result.correctAnswers}/{result.totalQuestions}</TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>{result.percentage}%</TableCell>
-                                </TableRow>
-                              ))}
+                              .map((result) => {
+                                const pct = Number(result.percentage !== undefined ? result.percentage : (String(result.score || '').replace('%', ''))) || 0;
+                                const isPass = pct >= 80;
+                                const scoreColor = pct >= 90 ? '#10b981' : pct >= 80 ? '#14b8a6' : pct >= 70 ? '#f59e0b' : '#ef4444';
+                                const expStr = formatExperienceDuration(
+                                  result.fieldTeamId?.experienceYears || selectedTeam?.experienceYears,
+                                  result.fieldTeamId?.experienceMonths || selectedTeam?.experienceMonths,
+                                  result.fieldTeamId?.experienceDays || selectedTeam?.experienceDays,
+                                  result.fieldTeamId?.yearsOfExperience || selectedTeam?.yearsOfExperience
+                                );
+                                const dobVal = result.fieldTeamId?.dateOfBirth || selectedTeam?.dateOfBirth;
+                                let ageNum = result.fieldTeamId?.age !== undefined && result.fieldTeamId?.age !== null ? result.fieldTeamId.age : (selectedTeam?.age !== undefined && selectedTeam?.age !== null ? selectedTeam.age : null);
+                                if (ageNum === null && dobVal) {
+                                  const birth = new Date(dobVal);
+                                  const ref = result.submittedAt ? new Date(result.submittedAt) : new Date();
+                                  let a = ref.getFullYear() - birth.getFullYear();
+                                  const m = ref.getMonth() - birth.getMonth();
+                                  if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) a--;
+                                  ageNum = a >= 0 ? a : null;
+                                }
+
+                                return (
+                                  <TableRow
+                                    key={result._id || Math.random()}
+                                    sx={{
+                                      transition: '0.2s',
+                                      '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.04)'
+                                      }
+                                    }}
+                                  >
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                        {safeFormatDate(result.submittedAt || result.createdAt)}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                        Online Theoretical Exam
+                                      </Typography>
+                                    </TableCell>
+
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#60a5fa' }}>
+                                        {result.quizCode || 'FTTH-EXAM-STD'}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                        FTTH Quality Standards Quiz
+                                      </Typography>
+                                    </TableCell>
+
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#e2e8f0' }}>
+                                          {result.candidateName || result.fieldTeamName || selectedTeam?.teamName || 'Technician'}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                                          {expStr && (
+                                            <Chip
+                                              label={`Exp: ${expStr}`}
+                                              size="small"
+                                              sx={{
+                                                bgcolor: 'rgba(59, 130, 246, 0.12)',
+                                                color: '#60a5fa',
+                                                fontWeight: 600,
+                                                fontSize: '0.72rem',
+                                                height: 20
+                                              }}
+                                            />
+                                          )}
+                                          {ageNum !== null && (
+                                            <Chip
+                                              label={`Age: ${ageNum} Yrs`}
+                                              size="small"
+                                              sx={{
+                                                bgcolor: 'rgba(233, 30, 99, 0.12)',
+                                                color: '#f472b6',
+                                                fontWeight: 700,
+                                                fontSize: '0.72rem',
+                                                height: 20
+                                              }}
+                                            />
+                                          )}
+                                        </Box>
+                                        <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                          {result.fieldTeamId?.teamCompany || selectedTeam?.teamCompany || 'Subcontractor'}
+                                        </Typography>
+                                      </Box>
+                                    </TableCell>
+
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                        <Chip
+                                          label={`${result.correctAnswers || 0} / ${result.totalQuestions || 50} Correct`}
+                                          size="small"
+                                          sx={{
+                                            bgcolor: 'rgba(139, 92, 246, 0.15)',
+                                            color: '#c4b5fd',
+                                            fontWeight: 700,
+                                            fontSize: '0.75rem',
+                                            width: 'fit-content'
+                                          }}
+                                        />
+                                        <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                          Accuracy: {result.totalQuestions ? Math.round(((result.correctAnswers || 0) / result.totalQuestions) * 100) : pct}%
+                                        </Typography>
+                                      </Box>
+                                    </TableCell>
+
+                                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Box sx={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 800, color: scoreColor }}>
+                                          {pct}%
+                                        </Typography>
+                                        <LinearProgress
+                                          variant="determinate"
+                                          value={Math.min(100, Math.max(0, pct))}
+                                          sx={{
+                                            width: 60,
+                                            height: 4,
+                                            borderRadius: 2,
+                                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                            '& .MuiLinearProgress-bar': {
+                                              bgcolor: scoreColor
+                                            }
+                                          }}
+                                        />
+                                      </Box>
+                                    </TableCell>
+
+                                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Chip
+                                        label={isPass ? (pct >= 90 ? 'Excellent (Pass)' : 'Passed') : 'Fail (Retake Required)'}
+                                        sx={{
+                                          bgcolor: isPass ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                          color: isPass ? '#10b981' : '#ef4444',
+                                          borderColor: isPass ? '#10b981' : '#ef4444',
+                                          borderWidth: 1,
+                                          borderStyle: 'solid',
+                                          fontWeight: 700,
+                                          fontSize: '0.8rem'
+                                        }}
+                                      />
+                                    </TableCell>
+
+                                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Stack direction="row" spacing={1} justifyContent="center">
+                                        <MuiTooltip title="View Detailed Exam in Assessment Dashboard" arrow>
+                                          <Button
+                                            size="small"
+                                            variant="contained"
+                                            onClick={() => {
+                                              navigate(`/assessment-dashboard?teamId=${selectedTeam?._id || result.teamId}&resultId=${result._id}`, {
+                                                state: {
+                                                  teamId: selectedTeam?._id || result.teamId,
+                                                  teamName: selectedTeam?.teamName || result.teamName,
+                                                  resultId: result._id,
+                                                  selectedResult: result,
+                                                  fromPortal: true
+                                                }
+                                              });
+                                            }}
+                                            sx={{
+                                              bgcolor: 'rgba(139, 92, 246, 0.2)',
+                                              color: '#c4b5fd',
+                                              border: '1px solid rgba(139, 92, 246, 0.4)',
+                                              textTransform: 'none',
+                                              fontSize: '0.75rem',
+                                              fontWeight: 600,
+                                              borderRadius: '6px',
+                                              minWidth: 32,
+                                              px: 1.5,
+                                              '&:hover': {
+                                                bgcolor: 'rgba(139, 92, 246, 0.4)'
+                                              }
+                                            }}
+                                            startIcon={<VisibilityIcon sx={{ fontSize: '1rem !important' }} />}
+                                          >
+                                            View
+                                          </Button>
+                                        </MuiTooltip>
+                                        <MuiTooltip title="Edit / Grade Exam in Assessment Dashboard" arrow>
+                                          <IconButton
+                                            size="small"
+                                            onClick={() => {
+                                              navigate(`/assessment-dashboard?teamId=${selectedTeam?._id || result.teamId}&resultId=${result._id}&edit=true`, {
+                                                state: {
+                                                  teamId: selectedTeam?._id || result.teamId,
+                                                  teamName: selectedTeam?.teamName || result.teamName,
+                                                  resultId: result._id,
+                                                  selectedResult: result,
+                                                  mode: 'edit',
+                                                  fromPortal: true
+                                                }
+                                              });
+                                            }}
+                                            sx={{
+                                              bgcolor: 'rgba(59, 130, 246, 0.15)',
+                                              color: '#60a5fa',
+                                              border: '1px solid rgba(59, 130, 246, 0.3)',
+                                              borderRadius: '6px',
+                                              '&:hover': {
+                                                bgcolor: 'rgba(59, 130, 246, 0.3)'
+                                              }
+                                            }}
+                                          >
+                                            <EditIcon sx={{ fontSize: '1rem' }} />
+                                          </IconButton>
+                                        </MuiTooltip>
+                                        <MuiTooltip title="Permanently Delete Exam Result" arrow>
+                                          <IconButton
+                                            size="small"
+                                            onClick={() => {
+                                              setQuizToDelete(result);
+                                              setDeleteQuizDialogOpen(true);
+                                            }}
+                                            sx={{
+                                              bgcolor: 'rgba(239, 68, 68, 0.15)',
+                                              color: '#ef4444',
+                                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                                              borderRadius: '6px',
+                                              '&:hover': {
+                                                bgcolor: 'rgba(239, 68, 68, 0.3)'
+                                              }
+                                            }}
+                                          >
+                                            <DeleteIcon sx={{ fontSize: '1rem' }} />
+                                          </IconButton>
+                                        </MuiTooltip>
+                                      </Stack>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
                           </TableBody>
                         </Table>
                       </TableContainer>
@@ -10215,9 +11190,20 @@ ${data.map((a, i) => `
                       />
                     </>
                   ) : (
-                    <Paper sx={{ p: 3, textAlign: 'center', ...darkThemeStyles.paper }}>
-                      <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                        No online exam assessments found for this team
+                    <Paper sx={{
+                      p: 5,
+                      textAlign: 'center',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      bgcolor: 'rgba(25, 25, 30, 0.5)',
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                      <PsychologyIcon sx={{ fontSize: 48, color: alpha(colors.primary, 0.4), mb: 1.5 }} />
+                      <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 0.5 }}>
+                        No Online Exam Assessments Recorded for {selectedTeam?.teamName || 'this team'}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: colors.textSecondary, maxWidth: 500, mx: 'auto' }}>
+                        When field technicians complete theoretical knowledge quizzes, their scores and response accuracy will appear here.
                       </Typography>
                     </Paper>
                   )}
@@ -10227,19 +11213,35 @@ ${data.map((a, i) => `
               {/* 5. OTJ ASSESSMENTS */}
               {activeTab === 4 && (
                 <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
                     <Box>
-                      <Typography variant="h5" sx={{ color: colors.primary, fontWeight: 700 }}>OTJ (On-The-Job) Assessments</Typography>
-                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                      <Typography variant="h5" sx={{ color: colors.primary, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CheckCircleIcon sx={{ color: '#10b981' }} /> On-The-Job (OTJ) Practical Field Assessments
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: colors.textSecondary, mt: 0.5 }}>
+                        Live customer installation audits, field fiber splicing verification, and on-site HSE compliance
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
                         <Button
-                          variant="outlined"
+                          variant="contained"
                           size="small"
                           startIcon={<TableChartIcon />}
                           onClick={exportPracticalToExcel}
                           disabled={jobAssessments.length === 0}
-                          sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
+                          sx={{
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: '#fff',
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            borderRadius: '8px',
+                            px: 2,
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                            }
+                          }}
                         >
-                          Pro Excel
+                          Export OTJ Report (.xlsx)
                         </Button>
                         <Button
                           variant="outlined"
@@ -10247,78 +11249,308 @@ ${data.map((a, i) => `
                           startIcon={<PictureAsPdfIcon />}
                           onClick={() => exportTestToPDF('practical', jobAssessments)}
                           disabled={jobAssessments.length === 0}
-                          sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
+                          sx={{
+                            color: colors.error,
+                            borderColor: alpha(colors.error, 0.5),
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            borderRadius: '8px',
+                            px: 2,
+                            '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` }
+                          }}
                         >
-                          Pro PDF Report
+                          PDF Summary
                         </Button>
                       </Box>
                     </Box>
-                    <Chip
-                      label={`Avg: ${Math.round(calculateAverageScore(jobAssessments))}%`}
-                      variant="outlined"
-                      sx={{ borderColor: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical'), color: getPerformanceColor(calculateAverageScore(jobAssessments), 'practical'), fontWeight: 700 }}
-                    />
+
+                    {(() => {
+                      const avgScore = calculateAverageScore(jobAssessments);
+                      const avgTier = getLabTierStatus(avgScore);
+                      return (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Chip
+                            label={`Overall Average: ${Math.round(avgScore)}%`}
+                            sx={{
+                              bgcolor: alpha(avgTier.color, 0.15),
+                              color: avgTier.color,
+                              borderColor: avgTier.color,
+                              borderWidth: 1,
+                              borderStyle: 'solid',
+                              fontWeight: 800,
+                              fontSize: '0.95rem',
+                              py: 2.2,
+                              px: 1
+                            }}
+                          />
+                          <Chip
+                            label={`${avgTier.label} (${avgTier.status})`}
+                            sx={{
+                              bgcolor: alpha(avgTier.color, 0.25),
+                              color: '#fff',
+                              fontWeight: 700,
+                              py: 2.2,
+                              px: 1
+                            }}
+                          />
+                        </Box>
+                      );
+                    })()}
                   </Box>
 
                   {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 6 }}>
                       <CircularProgress sx={{ color: colors.primary }} />
                     </Box>
                   ) : jobAssessments.length > 0 ? (
                     <>
                       <TableContainer component={Paper} sx={{
                         mb: 2,
-                        ...darkThemeStyles.paper,
-                        "& .MuiTable-root": darkThemeStyles.table
+                        borderRadius: '16px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        bgcolor: 'rgba(20, 20, 25, 0.6)',
+                        backdropFilter: 'blur(12px)',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                        overflow: 'hidden'
                       }}>
                         <Table>
-                          <TableHead sx={darkThemeStyles.tableHead}>
+                          <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.04)' }}>
                             <TableRow>
-                              <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Conducted By</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Proficiency Score</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Status</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Assessment Date</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Evaluator / Supervisor</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Experience & Role</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Verified Scope & Checkpoints</TableCell>
+                              <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Proficiency Score %</TableCell>
+                              <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Qualification Status</TableCell>
+                              <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Actions</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
                             {jobAssessments
                               .slice(jobPage * jobRowsPerPage, jobPage * jobRowsPerPage + jobRowsPerPage)
                               .map((assessment) => {
-                                const scoreVal = Math.round(Number(assessment.overallScore || assessment.percentage || 0));
+                                const rawScore = Number(assessment.overallScore || assessment.percentage || 0);
+                                const scoreVal = rawScore <= 5 ? Math.round((rawScore / 5) * 100) : Math.round(rawScore);
+                                const tier = getLabTierStatus(scoreVal);
+                                const expStr = formatExperienceDuration(
+                                  assessment.fieldTeamId?.experienceYears || selectedTeam?.experienceYears,
+                                  assessment.fieldTeamId?.experienceMonths || selectedTeam?.experienceMonths,
+                                  assessment.fieldTeamId?.experienceDays || selectedTeam?.experienceDays,
+                                  assessment.fieldTeamId?.yearsOfExperience || selectedTeam?.yearsOfExperience
+                                );
+                                const dobVal = assessment.fieldTeamId?.dateOfBirth || selectedTeam?.dateOfBirth;
+                                let ageNum = assessment.fieldTeamId?.age !== undefined && assessment.fieldTeamId?.age !== null ? assessment.fieldTeamId.age : (selectedTeam?.age !== undefined && selectedTeam?.age !== null ? selectedTeam.age : null);
+                                if (ageNum === null && dobVal) {
+                                  const birth = new Date(dobVal);
+                                  const ref = assessment.assessmentDate ? new Date(assessment.assessmentDate) : new Date();
+                                  let a = ref.getFullYear() - birth.getFullYear();
+                                  const m = ref.getMonth() - birth.getMonth();
+                                  if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) a--;
+                                  ageNum = a >= 0 ? a : null;
+                                }
+                                const checkPointCount = assessment.checkPoints?.length || 20;
+
                                 return (
-                                  <TableRow key={assessment._id}
+                                  <TableRow
+                                    key={assessment._id || Math.random()}
                                     sx={{
-                                      "&:hover": {
-                                        backgroundColor: colors.tableRowHover
+                                      transition: '0.2s',
+                                      '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.04)'
                                       }
                                     }}
                                   >
-                                    <TableCell sx={darkThemeStyles.tableCell}>{formatDate(assessment.assessmentDate)}</TableCell>
-                                    <TableCell sx={darkThemeStyles.tableCell}>{assessment.conductedBy}</TableCell>
-                                    <TableCell sx={darkThemeStyles.tableCell}>
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                        {safeFormatDate(assessment.assessmentDate || assessment.createdAt)}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                        On-The-Job Field Assessment
+                                      </Typography>
+                                    </TableCell>
+
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#e2e8f0' }}>
+                                        {assessment.conductedBy || 'Quality Field Supervisor'}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                        Nokia Field Quality Assessor
+                                      </Typography>
+                                    </TableCell>
+
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                                          {expStr && (
+                                            <Chip
+                                              label={`Exp: ${expStr}`}
+                                              size="small"
+                                              sx={{
+                                                bgcolor: 'rgba(59, 130, 246, 0.12)',
+                                                color: '#60a5fa',
+                                                fontWeight: 600,
+                                                fontSize: '0.75rem',
+                                                width: 'fit-content'
+                                              }}
+                                            />
+                                          )}
+                                          {ageNum !== null && (
+                                            <Chip
+                                              label={`Age: ${ageNum} Yrs`}
+                                              size="small"
+                                              sx={{
+                                                bgcolor: 'rgba(233, 30, 99, 0.12)',
+                                                color: '#f472b6',
+                                                fontWeight: 700,
+                                                fontSize: '0.72rem',
+                                                height: 20
+                                              }}
+                                            />
+                                          )}
+                                        </Box>
+                                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                                          <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                            {assessment.fieldTeamId?.teamCompany || selectedTeam?.teamCompany || 'Subcontractor'}
+                                          </Typography>
+                                          {dobVal && (
+                                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+                                              • DoB: {safeFormatDate(dobVal)}
+                                            </Typography>
+                                          )}
+                                        </Box>
+                                      </Box>
+                                    </TableCell>
+
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 240 }}>
+                                        <Chip
+                                          label={`${checkPointCount} Checkpoints`}
+                                          size="small"
+                                          sx={{
+                                            bgcolor: 'rgba(16, 185, 129, 0.15)',
+                                            color: '#34d399',
+                                            fontWeight: 700,
+                                            fontSize: '0.72rem',
+                                            height: 20
+                                          }}
+                                        />
+                                        <Chip
+                                          label="5 Categories Verified"
+                                          size="small"
+                                          sx={{
+                                            bgcolor: 'rgba(139, 92, 246, 0.15)',
+                                            color: '#c4b5fd',
+                                            fontWeight: 700,
+                                            fontSize: '0.72rem',
+                                            height: 20
+                                          }}
+                                        />
+                                      </Box>
+                                    </TableCell>
+
+                                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Box sx={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 800, color: tier.color }}>
+                                          {scoreVal}%
+                                        </Typography>
+                                        <LinearProgress
+                                          variant="determinate"
+                                          value={Math.min(100, Math.max(0, scoreVal))}
+                                          sx={{
+                                            width: 60,
+                                            height: 4,
+                                            borderRadius: 2,
+                                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                            '& .MuiLinearProgress-bar': {
+                                              bgcolor: tier.color
+                                            }
+                                          }}
+                                        />
+                                      </Box>
+                                    </TableCell>
+
+                                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       <Chip
-                                        label={`${scoreVal}%`}
+                                        label={`${tier.label} (${tier.status})`}
                                         sx={{
-                                          bgcolor: `${getAssessmentStatus(scoreVal, 'practical').color}22`,
-                                          color: getAssessmentStatus(scoreVal, 'practical').color,
-                                          borderColor: getAssessmentStatus(scoreVal, 'practical').color,
-                                          border: '1px solid',
-                                          fontWeight: 'bold'
+                                          bgcolor: tier.bg,
+                                          color: tier.color,
+                                          borderColor: tier.borderColor,
+                                          borderWidth: 1,
+                                          borderStyle: 'solid',
+                                          fontWeight: 700,
+                                          fontSize: '0.8rem'
                                         }}
-                                        variant="outlined"
                                       />
                                     </TableCell>
-                                    <TableCell sx={darkThemeStyles.tableCell}>
-                                      <Chip
-                                        label={getAssessmentStatus(assessment.overallScore, 'practical').label}
-                                        size="small"
-                                        sx={{
-                                          borderColor: getAssessmentStatus(assessment.overallScore, 'practical').color,
-                                          color: getAssessmentStatus(assessment.overallScore, 'practical').color,
-                                          border: '1px solid'
-                                        }}
-                                        variant="outlined"
-                                      />
+
+                                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Stack direction="row" spacing={1} justifyContent="center">
+                                        <MuiTooltip title="View Comprehensive OTJ Details" arrow>
+                                          <Button
+                                            size="small"
+                                            variant="contained"
+                                            onClick={() => {
+                                              setSelectedJobDetail(assessment);
+                                              setJobDetailOpen(true);
+                                            }}
+                                            sx={{
+                                              bgcolor: 'rgba(139, 92, 246, 0.2)',
+                                              color: '#c4b5fd',
+                                              border: '1px solid rgba(139, 92, 246, 0.4)',
+                                              textTransform: 'none',
+                                              fontSize: '0.75rem',
+                                              fontWeight: 600,
+                                              borderRadius: '6px',
+                                              minWidth: 32,
+                                              px: 1.5,
+                                              '&:hover': {
+                                                bgcolor: 'rgba(139, 92, 246, 0.4)'
+                                              }
+                                            }}
+                                            startIcon={<VisibilityIcon sx={{ fontSize: '1rem !important' }} />}
+                                          >
+                                            View
+                                          </Button>
+                                        </MuiTooltip>
+                                        <MuiTooltip title="Edit OTJ Assessment" arrow>
+                                          <IconButton
+                                            size="small"
+                                            onClick={() => navigate(`/on-the-job-assessment?editId=${assessment._id}`)}
+                                            sx={{
+                                              bgcolor: 'rgba(59, 130, 246, 0.15)',
+                                              color: '#60a5fa',
+                                              border: '1px solid rgba(59, 130, 246, 0.3)',
+                                              borderRadius: '6px',
+                                              '&:hover': {
+                                                bgcolor: 'rgba(59, 130, 246, 0.3)'
+                                              }
+                                            }}
+                                          >
+                                            <EditIcon sx={{ fontSize: '1rem' }} />
+                                          </IconButton>
+                                        </MuiTooltip>
+                                        <MuiTooltip title="Permanently Delete OTJ Assessment" arrow>
+                                          <IconButton
+                                            size="small"
+                                            onClick={() => {
+                                              setJobAssessmentToDelete(assessment);
+                                              setDeleteJobDialogOpen(true);
+                                            }}
+                                            sx={{
+                                              bgcolor: 'rgba(239, 68, 68, 0.15)',
+                                              color: '#ef4444',
+                                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                                              borderRadius: '6px',
+                                              '&:hover': {
+                                                bgcolor: 'rgba(239, 68, 68, 0.3)'
+                                              }
+                                            }}
+                                          >
+                                            <DeleteIcon sx={{ fontSize: '1rem' }} />
+                                          </IconButton>
+                                        </MuiTooltip>
+                                      </Stack>
                                     </TableCell>
                                   </TableRow>
                                 );
@@ -10353,31 +11585,58 @@ ${data.map((a, i) => `
                       />
                     </>
                   ) : (
-                    <Paper sx={{ p: 3, textAlign: 'center', ...darkThemeStyles.paper }}>
-                      <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                        No practical assessments found for this team
+                    <Paper sx={{
+                      p: 5,
+                      textAlign: 'center',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      bgcolor: 'rgba(25, 25, 30, 0.5)',
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                      <CheckCircleIcon sx={{ fontSize: 48, color: alpha(colors.primary, 0.4), mb: 1.5 }} />
+                      <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 0.5 }}>
+                        No Practical OTJ Assessments Recorded for {selectedTeam?.teamName || 'this team'}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: colors.textSecondary, maxWidth: 500, mx: 'auto' }}>
+                        To evaluate this team in the field during live customer installations, head over to the On-The-Job Assessment module.
                       </Typography>
                     </Paper>
                   )}
                 </Box>
               )}
 
-              {/* 6. LAB ASSESSMENTS (Updated Styling) */}
+              {/* 6. LAB ASSESSMENTS (Modernized E2E FTTH Practical Assessment View) */}
               {activeTab === 5 && (
                 <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
                     <Box>
-                      <Typography variant="h5" sx={{ color: colors.primary }}>Lab Assessments</Typography>
-                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                      <Typography variant="h5" sx={{ color: colors.primary, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Assessment sx={{ color: colors.primary }} /> E2E FTTH Practical Lab Assessments
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: colors.textSecondary, mt: 0.5 }}>
+                        Comprehensive hands-on evaluation for ONT configuration, fiber splicing, tools readiness & safety compliance
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
                         <Button
-                          variant="outlined"
+                          variant="contained"
                           size="small"
                           startIcon={<TableChartIcon />}
                           onClick={exportLabToExcel}
                           disabled={labAssessments.length === 0}
-                          sx={{ color: colors.success, borderColor: colors.success, '&:hover': { borderColor: colors.success, bgcolor: `${colors.success}11` } }}
+                          sx={{
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: '#fff',
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            borderRadius: '8px',
+                            px: 2,
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                            }
+                          }}
                         >
-                          Pro Excel
+                          Export Lab Report (.xlsx)
                         </Button>
                         <Button
                           variant="outlined"
@@ -10385,86 +11644,329 @@ ${data.map((a, i) => `
                           startIcon={<PictureAsPdfIcon />}
                           onClick={() => exportTestToPDF('lab', labAssessments)}
                           disabled={labAssessments.length === 0}
-                          sx={{ color: colors.error, borderColor: colors.error, '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` } }}
+                          sx={{
+                            color: colors.error,
+                            borderColor: alpha(colors.error, 0.5),
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            borderRadius: '8px',
+                            px: 2,
+                            '&:hover': { borderColor: colors.error, bgcolor: `${colors.error}11` }
+                          }}
                         >
-                          Pro PDF Report
+                          PDF Summary
                         </Button>
                       </Box>
                     </Box>
-                    <Chip
-                      label={`Avg: ${Math.round(calculateAverageScore(labAssessments))}%`}
-                      variant="outlined"
-                      sx={{ borderColor: getPerformanceColor(calculateAverageScore(labAssessments)), color: getPerformanceColor(calculateAverageScore(labAssessments)) }}
-                    />
+
+                    {(() => {
+                      const avgScore = calculateAverageScore(labAssessments);
+                      const avgTier = getLabTierStatus(avgScore);
+                      return (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Chip
+                            label={`Overall Average: ${Math.round(avgScore)}%`}
+                            sx={{
+                              bgcolor: alpha(avgTier.color, 0.15),
+                              color: avgTier.color,
+                              borderColor: avgTier.color,
+                              borderWidth: 1,
+                              borderStyle: 'solid',
+                              fontWeight: 800,
+                              fontSize: '0.95rem',
+                              py: 2.2,
+                              px: 1
+                            }}
+                          />
+                          <Chip
+                            label={`${avgTier.label} (${avgTier.status})`}
+                            sx={{
+                              bgcolor: alpha(avgTier.color, 0.25),
+                              color: '#fff',
+                              fontWeight: 700,
+                              py: 2.2,
+                              px: 1
+                            }}
+                          />
+                        </Box>
+                      );
+                    })()}
                   </Box>
 
                   {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 6 }}>
                       <CircularProgress sx={{ color: colors.primary }} />
                     </Box>
                   ) : labAssessments.length > 0 ? (
                     <>
                       <TableContainer component={Paper} sx={{
                         mb: 2,
-                        ...darkThemeStyles.paper,
-                        "& .MuiTable-root": darkThemeStyles.table
+                        borderRadius: '16px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        bgcolor: 'rgba(20, 20, 25, 0.6)',
+                        backdropFilter: 'blur(12px)',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                        overflow: 'hidden'
                       }}>
                         <Table>
-                          <TableHead sx={darkThemeStyles.tableHead}>
+                          <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.04)' }}>
                             <TableRow>
-                              <TableCell sx={darkThemeStyles.tableCell}>Date</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Type</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>ONT Type</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Splicing Status</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Score</TableCell>
-                              <TableCell sx={darkThemeStyles.tableCell}>Comments</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Assessment Date</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Evaluator / Assessor</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Experience & Role</TableCell>
+                              <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Clearances & Certs</TableCell>
+                              <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Score %</TableCell>
+                              <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Qualification Status</TableCell>
+                              <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Actions</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
                             {labAssessments
                               .slice(labPage * labRowsPerPage, labPage * labRowsPerPage + labRowsPerPage)
-                              .map((assessment) => (
-                                <TableRow key={assessment._id}
-                                  sx={{
-                                    "&:hover": {
-                                      backgroundColor: colors.tableRowHover
-                                    }
-                                  }}
-                                >
-                                  <TableCell sx={darkThemeStyles.tableCell}>{formatDate(assessment.createdAt)}</TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>
-                                    <Chip label={assessment.assessmentType || 'Technical'} size="small" variant="outlined" sx={{ color: colors.primary, borderColor: colors.primary }} />
-                                  </TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>{assessment.ontType?.name || 'N/A'}</TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>
-                                    {assessment.assessmentType === 'Infrastructure' ? (
+                              .map((assessment) => {
+                                const scoreVal = assessment.totalScore !== undefined ? assessment.totalScore : (assessment.overallScore || 0);
+                                const tier = getLabTierStatus(scoreVal);
+                                const expStr = formatExperienceDuration(assessment.experienceYears, assessment.experienceMonths, assessment.experienceDays, assessment.yearsOfExperience);
+                                const certsObj = assessment.certificates || {};
+                                const certKeys = Object.keys(certsObj).filter(k => certsObj[k]);
+
+                                return (
+                                  <TableRow
+                                    key={assessment._id || Math.random()}
+                                    sx={{
+                                      transition: '0.2s',
+                                      '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.04)'
+                                      }
+                                    }}
+                                  >
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                        {safeFormatDate(assessment.assessmentDate || assessment.createdAt)}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                        {assessment.assessmentType || 'E2E FTTH Practical Assessment'}
+                                      </Typography>
+                                    </TableCell>
+
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#e2e8f0' }}>
+                                        {assessment.conductedBy || assessment.assessorId?.name || 'Quality Assessor'}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                        {assessment.ontModel ? `ONT: ${assessment.ontModel.split(',')[0]}` : 'Multi-ONT Evaluation'}
+                                      </Typography>
+                                    </TableCell>
+
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      {(() => {
+                                        const dobVal = assessment.dateOfBirth || assessment.fieldTeamId?.dateOfBirth;
+                                        let ageNum = assessment.age !== undefined && assessment.age !== null ? assessment.age : (assessment.fieldTeamId?.age !== undefined && assessment.fieldTeamId?.age !== null ? assessment.fieldTeamId.age : null);
+                                        if (ageNum === null && dobVal) {
+                                          const birth = new Date(dobVal);
+                                          const ref = assessment.assessmentDate ? new Date(assessment.assessmentDate) : new Date();
+                                          let a = ref.getFullYear() - birth.getFullYear();
+                                          const m = ref.getMonth() - birth.getMonth();
+                                          if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) a--;
+                                          ageNum = a >= 0 ? a : null;
+                                        }
+
+                                        return (
+                                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                                              <Chip
+                                                label={`Exp: ${expStr}`}
+                                                size="small"
+                                                sx={{
+                                                  bgcolor: 'rgba(59, 130, 246, 0.12)',
+                                                  color: '#60a5fa',
+                                                  fontWeight: 600,
+                                                  fontSize: '0.75rem',
+                                                  width: 'fit-content'
+                                                }}
+                                              />
+                                              {ageNum !== null && (
+                                                <Chip
+                                                  label={`Age: ${ageNum} Yrs`}
+                                                  size="small"
+                                                  sx={{
+                                                    bgcolor: 'rgba(233, 30, 99, 0.12)',
+                                                    color: '#f472b6',
+                                                    fontWeight: 700,
+                                                    fontSize: '0.72rem',
+                                                    height: 20
+                                                  }}
+                                                />
+                                              )}
+                                            </Box>
+                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                                              <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                                {assessment.employmentType || 'Subcontractor'}
+                                              </Typography>
+                                              {dobVal && (
+                                                <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+                                                  • DoB: {safeFormatDate(dobVal)}
+                                                </Typography>
+                                              )}
+                                            </Box>
+                                          </Box>
+                                        );
+                                      })()}
+                                    </TableCell>
+
+                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      {certKeys.length > 0 ? (
+                                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 220 }}>
+                                          {certKeys.map(k => (
+                                            <MuiTooltip key={k} title={CERTIFICATE_DEFINITIONS?.[k] || k} arrow>
+                                              <Chip
+                                                label={k}
+                                                size="small"
+                                                sx={{
+                                                  bgcolor: 'rgba(139, 92, 246, 0.2)',
+                                                  color: '#c4b5fd',
+                                                  borderColor: 'rgba(139, 92, 246, 0.4)',
+                                                  borderWidth: 1,
+                                                  borderStyle: 'solid',
+                                                  fontWeight: 700,
+                                                  fontSize: '0.7rem',
+                                                  height: 20
+                                                }}
+                                              />
+                                            </MuiTooltip>
+                                          ))}
+                                        </Box>
+                                      ) : (
+                                        <Typography variant="caption" sx={{ color: colors.textSecondary }}>
+                                          None Recorded
+                                        </Typography>
+                                      )}
+                                    </TableCell>
+
+                                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Box sx={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 800, color: tier.color }}>
+                                          {scoreVal}%
+                                        </Typography>
+                                        <LinearProgress
+                                          variant="determinate"
+                                          value={Math.min(100, Math.max(0, scoreVal))}
+                                          sx={{
+                                            width: 60,
+                                            height: 4,
+                                            borderRadius: 2,
+                                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                            '& .MuiLinearProgress-bar': {
+                                              bgcolor: tier.color
+                                            }
+                                          }}
+                                        />
+                                      </Box>
+                                    </TableCell>
+
+                                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       <Chip
-                                        label={assessment.splicingMachineStatus || 'Good'}
-                                        size="small"
+                                        label={`${tier.label} (${tier.status})`}
                                         sx={{
-                                          bgcolor: assessment.splicingMachineStatus === 'Poor' ? `${colors.error}22` : assessment.splicingMachineStatus === 'Fair' ? `${colors.warning}22` : `${colors.success}22`,
-                                          color: assessment.splicingMachineStatus === 'Poor' ? colors.error : assessment.splicingMachineStatus === 'Fair' ? colors.warning : colors.success,
-                                          borderColor: assessment.splicingMachineStatus === 'Poor' ? colors.error : assessment.splicingMachineStatus === 'Fair' ? colors.warning : colors.success,
+                                          bgcolor: tier.bg,
+                                          color: tier.color,
+                                          borderColor: tier.borderColor,
+                                          borderWidth: 1,
+                                          borderStyle: 'solid',
+                                          fontWeight: 700,
+                                          fontSize: '0.8rem'
                                         }}
-                                        variant="outlined"
                                       />
-                                    ) : 'N/A'}
-                                  </TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>
-                                    <Chip
-                                      label={`${assessment.totalScore}%`}
-                                      sx={{
-                                        bgcolor: `${getPerformanceColor(assessment.totalScore)}22`,
-                                        color: getPerformanceColor(assessment.totalScore),
-                                        borderColor: getPerformanceColor(assessment.totalScore),
-                                        fontWeight: 'bold'
-                                      }}
-                                      variant="outlined"
-                                    />
-                                  </TableCell>
-                                  <TableCell sx={darkThemeStyles.tableCell}>{assessment.comments || '-'}</TableCell>
-                                </TableRow>
-                              ))}
+                                    </TableCell>
+
+                                    <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Stack direction="row" spacing={1} justifyContent="center">
+                                        <MuiTooltip title="View Comprehensive Assessment Details" arrow>
+                                          <Button
+                                            size="small"
+                                            variant="contained"
+                                            onClick={() => {
+                                              setSelectedLabDetail(assessment);
+                                              setLabDetailOpen(true);
+                                            }}
+                                            sx={{
+                                              bgcolor: 'rgba(139, 92, 246, 0.2)',
+                                              color: '#c4b5fd',
+                                              border: '1px solid rgba(139, 92, 246, 0.4)',
+                                              textTransform: 'none',
+                                              fontSize: '0.75rem',
+                                              fontWeight: 600,
+                                              borderRadius: '6px',
+                                              minWidth: 32,
+                                              px: 1.5,
+                                              '&:hover': {
+                                                bgcolor: 'rgba(139, 92, 246, 0.4)'
+                                              }
+                                            }}
+                                            startIcon={<VisibilityIcon sx={{ fontSize: '1rem !important' }} />}
+                                          >
+                                            View
+                                          </Button>
+                                        </MuiTooltip>
+                                        <MuiTooltip title="Edit Lab Assessment" arrow>
+                                          <IconButton
+                                            size="small"
+                                            onClick={() => navigate(`/lab-assessment?editId=${assessment._id}`)}
+                                            sx={{
+                                              bgcolor: 'rgba(59, 130, 246, 0.15)',
+                                              color: '#60a5fa',
+                                              border: '1px solid rgba(59, 130, 246, 0.3)',
+                                              borderRadius: '6px',
+                                              '&:hover': {
+                                                bgcolor: 'rgba(59, 130, 246, 0.3)'
+                                              }
+                                            }}
+                                          >
+                                            <EditIcon sx={{ fontSize: '1rem' }} />
+                                          </IconButton>
+                                        </MuiTooltip>
+                                        <MuiTooltip title="Export Detailed Individual Excel Sheet" arrow>
+                                          <IconButton
+                                            size="small"
+                                            onClick={() => exportIndividualLabAssessmentReport(assessment)}
+                                            sx={{
+                                              bgcolor: 'rgba(16, 185, 129, 0.15)',
+                                              color: '#10b981',
+                                              border: '1px solid rgba(16, 185, 129, 0.3)',
+                                              borderRadius: '6px',
+                                              '&:hover': {
+                                                bgcolor: 'rgba(16, 185, 129, 0.3)'
+                                              }
+                                            }}
+                                          >
+                                            <TableChartIcon sx={{ fontSize: '1rem' }} />
+                                          </IconButton>
+                                        </MuiTooltip>
+                                        <MuiTooltip title="Permanently Delete Assessment" arrow>
+                                          <IconButton
+                                            size="small"
+                                            onClick={() => {
+                                              setLabAssessmentToDelete(assessment);
+                                              setDeleteLabDialogOpen(true);
+                                            }}
+                                            sx={{
+                                              bgcolor: 'rgba(239, 68, 68, 0.15)',
+                                              color: '#ef4444',
+                                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                                              borderRadius: '6px',
+                                              '&:hover': {
+                                                bgcolor: 'rgba(239, 68, 68, 0.3)'
+                                              }
+                                            }}
+                                          >
+                                            <DeleteIcon sx={{ fontSize: '1rem' }} />
+                                          </IconButton>
+                                        </MuiTooltip>
+                                      </Stack>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
                           </TableBody>
                         </Table>
                       </TableContainer>
@@ -10495,16 +11997,734 @@ ${data.map((a, i) => `
                       />
                     </>
                   ) : (
-                    <Paper sx={{ p: 3, textAlign: 'center', ...darkThemeStyles.paper }}>
-                      <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                        No lab assessments found for this team
+                    <Paper sx={{
+                      p: 5,
+                      textAlign: 'center',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      bgcolor: 'rgba(25, 25, 30, 0.5)',
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                      <Assessment sx={{ fontSize: 48, color: alpha(colors.primary, 0.4), mb: 1.5 }} />
+                      <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 0.5 }}>
+                        No Lab Assessments Recorded for {selectedTeam?.teamName || 'this team'}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: colors.textSecondary, maxWidth: 500, mx: 'auto' }}>
+                        To evaluate and certify this field team in practical fiber splicing and ONT configuration, head over to the Lab Assessment page.
                       </Typography>
                     </Paper>
                   )}
                 </Box>
               )}
 
+              {/* Permanent Delete Confirmation Dialog */}
+              <Dialog
+                open={deleteLabDialogOpen}
+                onClose={() => !deletingLab && setDeleteLabDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                  sx: {
+                    bgcolor: '#18181b',
+                    color: '#fff',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)',
+                    p: 1
+                  }
+                }}
+              >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1, color: '#ef4444', fontWeight: 800 }}>
+                  <WarningIcon sx={{ color: '#ef4444', fontSize: '1.8rem' }} /> Permanent Delete Confirmation
+                </DialogTitle>
+                <DialogContent sx={{ mt: 1 }}>
+                  <Alert severity="error" variant="filled" sx={{ mb: 2.5, borderRadius: '12px', fontWeight: 600 }}>
+                    Permanent Delete Warning: This action cannot be undone!
+                  </Alert>
+                  <Typography variant="body1" sx={{ color: '#e2e8f0', mb: 2, lineHeight: 1.6 }}>
+                    You are about to permanently delete the <strong>E2E FTTH Practical Assessment</strong> for team{" "}
+                    <span style={{ color: '#60a5fa', fontWeight: 700 }}>
+                      {labAssessmentToDelete?.fieldTeamName || labAssessmentToDelete?.fieldTeamId?.teamName || selectedTeam?.teamName || 'this team'}
+                    </span>.
+                  </Typography>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(255, 255, 255, 0.04)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', mb: 2 }}>
+                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                      Assessment Date: <strong>{safeFormatDate(labAssessmentToDelete?.assessmentDate || labAssessmentToDelete?.createdAt)}</strong>
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                      Assessor / Evaluator: <strong>{labAssessmentToDelete?.conductedBy || labAssessmentToDelete?.assessorId?.name || 'Assessor'}</strong>
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>
+                      Score: <strong>{labAssessmentToDelete?.totalScore !== undefined ? labAssessmentToDelete.totalScore : (labAssessmentToDelete?.overallScore || 0)}%</strong>
+                    </Typography>
+                  </Paper>
+                  <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                    All evaluation checkpoints, inspection matrices, scores, supervisor comments, and audit records will be permanently removed from the database and exported reports.
+                  </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, gap: 1.5, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setDeleteLabDialogOpen(false)}
+                    disabled={deletingLab}
+                    sx={{
+                      borderColor: 'rgba(255,255,255,0.2)',
+                      color: '#e2e8f0',
+                      borderRadius: '10px',
+                      textTransform: 'none',
+                      fontWeight: 600
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={confirmDeleteLabAssessment}
+                    disabled={deletingLab}
+                    startIcon={deletingLab ? <CircularProgress size={18} color="inherit" /> : <DeleteIcon />}
+                    sx={{
+                      bgcolor: '#dc2626',
+                      '&:hover': { bgcolor: '#b91c1c' },
+                      borderRadius: '10px',
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      px: 2.5
+                    }}
+                  >
+                    {deletingLab ? "Permanently Deleting..." : "Permanently Delete Assessment"}
+                  </Button>
+                </DialogActions>
+              </Dialog>
 
+              {/* Permanent Delete Confirmation Dialog - OTJ Assessment */}
+              <Dialog
+                open={deleteJobDialogOpen}
+                onClose={() => !deletingJob && setDeleteJobDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                  sx: {
+                    bgcolor: '#18181b',
+                    color: '#fff',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)',
+                    p: 1
+                  }
+                }}
+              >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1, color: '#ef4444', fontWeight: 800 }}>
+                  <WarningIcon sx={{ color: '#ef4444', fontSize: '1.8rem' }} /> Permanent Delete Confirmation
+                </DialogTitle>
+                <DialogContent sx={{ mt: 1 }}>
+                  <Alert severity="error" variant="filled" sx={{ mb: 2.5, borderRadius: '12px', fontWeight: 600 }}>
+                    Permanent Delete Warning: This action cannot be undone!
+                  </Alert>
+                  <Typography variant="body1" sx={{ color: '#e2e8f0', mb: 2, lineHeight: 1.6 }}>
+                    You are about to permanently delete the <strong>On-The-Job (OTJ) Practical Field Assessment</strong> for team{" "}
+                    <span style={{ color: '#60a5fa', fontWeight: 700 }}>
+                      {jobAssessmentToDelete?.fieldTeamName || jobAssessmentToDelete?.fieldTeamId?.teamName || selectedTeam?.teamName || 'this team'}
+                    </span>.
+                  </Typography>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(255, 255, 255, 0.04)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', mb: 2 }}>
+                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                      Assessment Date: <strong>{safeFormatDate(jobAssessmentToDelete?.assessmentDate || jobAssessmentToDelete?.createdAt)}</strong>
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                      Supervisor / Evaluator: <strong>{jobAssessmentToDelete?.conductedBy || 'Supervisor'}</strong>
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>
+                      Proficiency Score: <strong>{jobAssessmentToDelete?.overallScore || jobAssessmentToDelete?.percentage || 0}%</strong>
+                    </Typography>
+                  </Paper>
+                  <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                    All checkpoint scores, category audits, supervisor notes, and historical evaluations will be permanently removed.
+                  </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, gap: 1.5, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setDeleteJobDialogOpen(false)}
+                    disabled={deletingJob}
+                    sx={{
+                      borderColor: 'rgba(255,255,255,0.2)',
+                      color: '#e2e8f0',
+                      borderRadius: '10px',
+                      textTransform: 'none',
+                      fontWeight: 600
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={confirmDeleteJobAssessment}
+                    disabled={deletingJob}
+                    startIcon={deletingJob ? <CircularProgress size={18} color="inherit" /> : <DeleteIcon />}
+                    sx={{
+                      bgcolor: '#dc2626',
+                      '&:hover': { bgcolor: '#b91c1c' },
+                      borderRadius: '10px',
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      px: 2.5
+                    }}
+                  >
+                    {deletingJob ? "Permanently Deleting..." : "Permanently Delete Assessment"}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              {/* Permanent Delete Confirmation Dialog - Online Exam */}
+              <Dialog
+                open={deleteQuizDialogOpen}
+                onClose={() => !deletingQuiz && setDeleteQuizDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                  sx: {
+                    bgcolor: '#18181b',
+                    color: '#fff',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)',
+                    p: 1
+                  }
+                }}
+              >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1, color: '#ef4444', fontWeight: 800 }}>
+                  <WarningIcon sx={{ color: '#ef4444', fontSize: '1.8rem' }} /> Permanent Delete Confirmation
+                </DialogTitle>
+                <DialogContent sx={{ mt: 1 }}>
+                  <Alert severity="error" variant="filled" sx={{ mb: 2.5, borderRadius: '12px', fontWeight: 600 }}>
+                    Permanent Delete Warning: This action cannot be undone!
+                  </Alert>
+                  <Typography variant="body1" sx={{ color: '#e2e8f0', mb: 2, lineHeight: 1.6 }}>
+                    You are about to permanently delete the <strong>Online Theoretical Exam Result</strong> for{" "}
+                    <span style={{ color: '#60a5fa', fontWeight: 700 }}>
+                      {quizToDelete?.candidateName || quizToDelete?.fieldTeamName || selectedTeam?.teamName || 'this candidate'}
+                    </span>.
+                  </Typography>
+                  <Paper sx={{ p: 2, bgcolor: 'rgba(255, 255, 255, 0.04)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', mb: 2 }}>
+                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                      Exam Date: <strong>{safeFormatDate(quizToDelete?.submittedAt || quizToDelete?.createdAt)}</strong>
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                      Quiz Code: <strong>{quizToDelete?.quizCode || 'Standard'}</strong>
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>
+                      Score: <strong>{quizToDelete?.percentage !== undefined ? quizToDelete.percentage : quizToDelete?.score}% ({quizToDelete?.correctAnswers || 0}/{quizToDelete?.totalQuestions || 50} Correct)</strong>
+                    </Typography>
+                  </Paper>
+                  <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                    This exam record, correctness metrics, and historical score will be permanently erased.
+                  </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, gap: 1.5, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setDeleteQuizDialogOpen(false)}
+                    disabled={deletingQuiz}
+                    sx={{
+                      borderColor: 'rgba(255,255,255,0.2)',
+                      color: '#e2e8f0',
+                      borderRadius: '10px',
+                      textTransform: 'none',
+                      fontWeight: 600
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={confirmDeleteQuiz}
+                    disabled={deletingQuiz}
+                    startIcon={deletingQuiz ? <CircularProgress size={18} color="inherit" /> : <DeleteIcon />}
+                    sx={{
+                      bgcolor: '#dc2626',
+                      '&:hover': { bgcolor: '#b91c1c' },
+                      borderRadius: '10px',
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      px: 2.5
+                    }}
+                  >
+                    {deletingQuiz ? "Permanently Deleting..." : "Permanently Delete Exam"}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              {/* Edit Online Exam Dialog */}
+              <Dialog
+                open={editQuizDialogOpen}
+                onClose={() => !savingQuizEdit && setEditQuizDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                  sx: {
+                    bgcolor: '#18181b',
+                    color: '#fff',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(59, 130, 246, 0.4)',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                    p: 1
+                  }
+                }}
+              >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1, color: '#60a5fa', fontWeight: 800 }}>
+                  <EditIcon sx={{ color: '#60a5fa', fontSize: '1.6rem' }} /> Edit Online Exam Assessment
+                </DialogTitle>
+                <DialogContent sx={{ mt: 1 }}>
+                  <Typography variant="body2" sx={{ color: '#94a3b8', mb: 2.5 }}>
+                    Modify theoretical examination scores, question correctness breakdown, and assessor remarks for{" "}
+                    <strong style={{ color: '#fff' }}>{quizToEdit?.candidateName || quizToEdit?.fieldTeamName || selectedTeam?.teamName}</strong>.
+                  </Typography>
+
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        fullWidth
+                        label="Score Percentage (%)"
+                        type="number"
+                        value={editingQuizScore}
+                        onChange={(e) => setEditingQuizScore(e.target.value)}
+                        InputProps={{ inputProps: { min: 0, max: 100 } }}
+                        sx={{ ...darkThemeStyles.textField }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        fullWidth
+                        label="Correct Answers"
+                        type="number"
+                        value={editingQuizCorrect}
+                        onChange={(e) => setEditingQuizCorrect(e.target.value)}
+                        InputProps={{ inputProps: { min: 0 } }}
+                        sx={{ ...darkThemeStyles.textField }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        fullWidth
+                        label="Total Questions"
+                        type="number"
+                        value={editingQuizTotal}
+                        onChange={(e) => setEditingQuizTotal(e.target.value)}
+                        InputProps={{ inputProps: { min: 1 } }}
+                        sx={{ ...darkThemeStyles.textField }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Assessor Remarks & Evaluation Notes"
+                        multiline
+                        rows={3}
+                        value={editingQuizRemarks}
+                        onChange={(e) => setEditingQuizRemarks(e.target.value)}
+                        sx={{ ...darkThemeStyles.textField }}
+                      />
+                    </Grid>
+                  </Grid>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, gap: 1.5, borderTop: '1px solid rgba(255,255,255,0.08)', flexWrap: 'wrap' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      setEditQuizDialogOpen(false);
+                      navigate(`/assessment-dashboard?teamId=${selectedTeam?._id || quizToEdit?.teamId}&resultId=${quizToEdit?._id}&edit=true`, {
+                        state: {
+                          teamId: selectedTeam?._id || quizToEdit?.teamId,
+                          teamName: selectedTeam?.teamName || quizToEdit?.teamName,
+                          resultId: quizToEdit?._id,
+                          selectedResult: quizToEdit,
+                          mode: 'edit',
+                          fromPortal: true
+                        }
+                      });
+                    }}
+                    startIcon={<AssessmentIcon />}
+                    sx={{
+                      borderColor: 'rgba(139, 92, 246, 0.4)',
+                      color: '#c4b5fd',
+                      borderRadius: '10px',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&:hover': { borderColor: '#a78bfa', bgcolor: 'rgba(139, 92, 246, 0.1)' }
+                    }}
+                  >
+                    Open in Assessment Dashboard
+                  </Button>
+                  <Box sx={{ flex: '1 1 auto' }} />
+                  <Button
+                    variant="outlined"
+                    onClick={() => setEditQuizDialogOpen(false)}
+                    disabled={savingQuizEdit}
+                    sx={{
+                      borderColor: 'rgba(255,255,255,0.2)',
+                      color: '#e2e8f0',
+                      borderRadius: '10px',
+                      textTransform: 'none',
+                      fontWeight: 600
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleSaveQuizEdit}
+                    disabled={savingQuizEdit}
+                    startIcon={savingQuizEdit ? <CircularProgress size={18} color="inherit" /> : <EditIcon />}
+                    sx={{
+                      bgcolor: '#3b82f6',
+                      '&:hover': { bgcolor: '#2563eb' },
+                      borderRadius: '10px',
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      px: 2.5
+                    }}
+                  >
+                    {savingQuizEdit ? "Saving Changes..." : "Save Exam Changes"}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              {/* View Online Exam Details Dialog */}
+              <Dialog
+                open={quizDetailOpen}
+                onClose={() => setQuizDetailOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                  sx: {
+                    bgcolor: '#18181b',
+                    color: '#fff',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                    p: 1
+                  }
+                }}
+              >
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <PsychologyIcon sx={{ color: '#60a5fa', fontSize: '1.8rem' }} />
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff' }}>
+                        Theoretical Online Exam Assessment
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                        Quiz Code: <strong>{selectedQuizDetail?.quizCode || 'Standard'}</strong> • {safeFormatDate(selectedQuizDetail?.submittedAt || selectedQuizDetail?.createdAt)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <IconButton onClick={() => setQuizDetailOpen(false)} sx={{ color: '#94a3b8' }}>
+                    <CloseIcon />
+                  </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                  {selectedQuizDetail && (
+                    <Grid container spacing={2.5}>
+                      <Grid item xs={12} sm={4}>
+                        <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                          <Typography variant="caption" sx={{ color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
+                            Final Score
+                          </Typography>
+                          <Typography variant="h3" sx={{ fontWeight: 900, color: (Number(String(selectedQuizDetail.percentage || selectedQuizDetail.score || '0').replace('%','')) >= 80) ? '#10b981' : '#ef4444', my: 1 }}>
+                            {selectedQuizDetail.percentage !== undefined ? `${selectedQuizDetail.percentage}%` : selectedQuizDetail.score}
+                          </Typography>
+                          <Chip
+                            label={(Number(String(selectedQuizDetail.percentage || selectedQuizDetail.score || '0').replace('%','')) >= 80) ? 'Passed' : 'Needs Improvement'}
+                            size="small"
+                            sx={{
+                              bgcolor: (Number(String(selectedQuizDetail.percentage || selectedQuizDetail.score || '0').replace('%','')) >= 80) ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                              color: (Number(String(selectedQuizDetail.percentage || selectedQuizDetail.score || '0').replace('%','')) >= 80) ? '#10b981' : '#ef4444',
+                              fontWeight: 700
+                            }}
+                          />
+                        </Paper>
+                      </Grid>
+
+                      <Grid item xs={12} sm={8}>
+                        <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <Typography variant="subtitle2" sx={{ color: '#60a5fa', fontWeight: 700, mb: 1.5 }}>
+                            Candidate & Evaluation Breakdown
+                          </Typography>
+                          <Grid container spacing={1.5}>
+                            <Grid item xs={6}>
+                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>Candidate / Team</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                {selectedQuizDetail.candidateName || selectedQuizDetail.fieldTeamName || selectedTeam?.teamName || 'Technician'}
+                              </Typography>
+                            </Grid>
+                            <Grid item xs={6}>
+                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>Correct Answers</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                {selectedQuizDetail.correctAnswers || 0} / {selectedQuizDetail.totalQuestions || 50} Questions
+                              </Typography>
+                            </Grid>
+                            <Grid item xs={6}>
+                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>Accuracy Rate</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                {selectedQuizDetail.totalQuestions ? Math.round(((selectedQuizDetail.correctAnswers || 0) / selectedQuizDetail.totalQuestions) * 100) : selectedQuizDetail.percentage || 0}%
+                              </Typography>
+                            </Grid>
+                            <Grid item xs={6}>
+                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>Submission Timestamp</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                {selectedQuizDetail.submittedAt ? new Date(selectedQuizDetail.submittedAt).toLocaleString() : '-'}
+                              </Typography>
+                            </Grid>
+                          </Grid>
+                        </Paper>
+                      </Grid>
+
+                      {selectedQuizDetail.remarks && (
+                        <Grid item xs={12}>
+                          <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            <Typography variant="subtitle2" sx={{ color: '#f59e0b', fontWeight: 700, mb: 1 }}>
+                              Assessor Feedback & Remarks
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#cbd5e1', lineHeight: 1.6 }}>
+                              {selectedQuizDetail.remarks}
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                      )}
+                    </Grid>
+                  )}
+                </DialogContent>
+                <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.08)', gap: 1.5, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      setQuizDetailOpen(false);
+                      navigate(`/assessment-dashboard?teamId=${selectedTeam?._id || selectedQuizDetail?.teamId}&resultId=${selectedQuizDetail?._id}`, {
+                        state: {
+                          teamId: selectedTeam?._id || selectedQuizDetail?.teamId,
+                          teamName: selectedTeam?.teamName || selectedQuizDetail?.teamName,
+                          resultId: selectedQuizDetail?._id,
+                          selectedResult: selectedQuizDetail,
+                          fromPortal: true
+                        }
+                      });
+                    }}
+                    startIcon={<AssessmentIcon />}
+                    sx={{ color: '#c4b5fd', borderColor: 'rgba(139, 92, 246, 0.4)', textTransform: 'none', borderRadius: '8px' }}
+                  >
+                    View in Assessment Dashboard
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      setQuizDetailOpen(false);
+                      navigate(`/assessment-dashboard?teamId=${selectedTeam?._id || selectedQuizDetail?.teamId}&resultId=${selectedQuizDetail?._id}&edit=true`, {
+                        state: {
+                          teamId: selectedTeam?._id || selectedQuizDetail?.teamId,
+                          teamName: selectedTeam?.teamName || selectedQuizDetail?.teamName,
+                          resultId: selectedQuizDetail?._id,
+                          selectedResult: selectedQuizDetail,
+                          mode: 'edit',
+                          fromPortal: true
+                        }
+                      });
+                    }}
+                    startIcon={<EditIcon />}
+                    sx={{ color: '#60a5fa', borderColor: 'rgba(59, 130, 246, 0.4)', textTransform: 'none', borderRadius: '8px' }}
+                  >
+                    Edit in Assessment Dashboard
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={() => setQuizDetailOpen(false)}
+                    sx={{ bgcolor: '#3b82f6', textTransform: 'none', borderRadius: '8px', px: 3 }}
+                  >
+                    Close
+                  </Button>
+                </DialogActions>
+              </Dialog>
+
+              {/* View OTJ Assessment Details Dialog */}
+              <Dialog
+                open={jobDetailOpen}
+                onClose={() => setJobDetailOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                  sx: {
+                    bgcolor: '#18181b',
+                    color: '#fff',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                    p: 1
+                  }
+                }}
+              >
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <CheckCircleIcon sx={{ color: '#10b981', fontSize: '1.8rem' }} />
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff' }}>
+                        On-The-Job (OTJ) Assessment Details
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                        Evaluator: <strong>{selectedJobDetail?.conductedBy || 'Supervisor'}</strong> • {safeFormatDate(selectedJobDetail?.assessmentDate || selectedJobDetail?.createdAt)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <IconButton onClick={() => setJobDetailOpen(false)} sx={{ color: '#94a3b8' }}>
+                    <CloseIcon />
+                  </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                  {selectedJobDetail && (() => {
+                    const rawScore = Number(selectedJobDetail.overallScore || selectedJobDetail.percentage || 0);
+                    const scoreVal = rawScore <= 5 ? Math.round((rawScore / 5) * 100) : Math.round(rawScore);
+                    const tier = getLabTierStatus(scoreVal);
+                    return (
+                      <Grid container spacing={2.5}>
+                        <Grid item xs={12} sm={4}>
+                          <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
+                              Proficiency Score
+                            </Typography>
+                            <Typography variant="h3" sx={{ fontWeight: 900, color: tier.color, my: 1 }}>
+                              {scoreVal}%
+                            </Typography>
+                            <Chip
+                              label={`${tier.label} (${tier.status})`}
+                              size="small"
+                              sx={{
+                                bgcolor: tier.bg,
+                                color: tier.color,
+                                borderColor: tier.borderColor,
+                                borderWidth: 1,
+                                borderStyle: 'solid',
+                                fontWeight: 700
+                              }}
+                            />
+                          </Paper>
+                        </Grid>
+
+                        <Grid item xs={12} sm={8}>
+                          <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            <Typography variant="subtitle2" sx={{ color: '#10b981', fontWeight: 700, mb: 1.5 }}>
+                              Assessment Metadata & Inspector Details
+                            </Typography>
+                            <Grid container spacing={1.5}>
+                              <Grid item xs={6}>
+                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>Field Team</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                  {selectedJobDetail.fieldTeamName || selectedJobDetail.fieldTeamId?.teamName || selectedTeam?.teamName || 'Field Team'}
+                                </Typography>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>Assessor / Supervisor</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                  {selectedJobDetail.conductedBy || 'Field Supervisor'}
+                                </Typography>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>Assessment Date</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                  {safeFormatDate(selectedJobDetail.assessmentDate || selectedJobDetail.createdAt)}
+                                </Typography>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>Checkpoints Audited</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                  {selectedJobDetail.checkPoints?.length || 20} Checkpoints (5 Categories)
+                                </Typography>
+                              </Grid>
+                            </Grid>
+                          </Paper>
+                        </Grid>
+
+                        {selectedJobDetail.checkPoints && selectedJobDetail.checkPoints.length > 0 && (
+                          <Grid item xs={12}>
+                            <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                              <Typography variant="subtitle2" sx={{ color: '#c4b5fd', fontWeight: 700, mb: 1.5 }}>
+                                Category Checkpoints & Scores
+                              </Typography>
+                              <Box sx={{ maxHeight: 250, overflowY: 'auto' }}>
+                                <Table size="small">
+                                  <TableHead>
+                                    <TableRow>
+                                      <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Checkpoint</TableCell>
+                                      <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Category</TableCell>
+                                      <TableCell align="center" sx={{ color: '#94a3b8', fontWeight: 700 }}>Score</TableCell>
+                                      <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Notes</TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    {selectedJobDetail.checkPoints.map((cp, idx) => (
+                                      <TableRow key={idx}>
+                                        <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{cp.name}</TableCell>
+                                        <TableCell sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>{cp.category}</TableCell>
+                                        <TableCell align="center">
+                                          <Chip
+                                            label={`${cp.score || 0}/5`}
+                                            size="small"
+                                            sx={{
+                                              bgcolor: (cp.score >= 4) ? 'rgba(16, 185, 129, 0.2)' : (cp.score >= 3) ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                              color: (cp.score >= 4) ? '#34d399' : (cp.score >= 3) ? '#fbbf24' : '#f87171',
+                                              fontWeight: 700,
+                                              fontSize: '0.7rem',
+                                              height: 18
+                                            }}
+                                          />
+                                        </TableCell>
+                                        <TableCell sx={{ color: '#cbd5e1', fontSize: '0.75rem' }}>{cp.notes || '-'}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </Box>
+                            </Paper>
+                          </Grid>
+                        )}
+
+                        {selectedJobDetail.feedback && (
+                          <Grid item xs={12}>
+                            <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                              <Typography variant="subtitle2" sx={{ color: '#f59e0b', fontWeight: 700, mb: 1 }}>
+                                Supervisor Observations & Field Recommendations
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: '#cbd5e1', lineHeight: 1.6 }}>
+                                {selectedJobDetail.feedback}
+                              </Typography>
+                            </Paper>
+                          </Grid>
+                        )}
+                      </Grid>
+                    );
+                  })()}
+                </DialogContent>
+                <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      setJobDetailOpen(false);
+                      navigate(`/on-the-job-assessment?editId=${selectedJobDetail._id}`);
+                    }}
+                    startIcon={<EditIcon />}
+                    sx={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)', textTransform: 'none', borderRadius: '8px' }}
+                  >
+                    Edit OTJ Assessment
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={() => setJobDetailOpen(false)}
+                    sx={{ bgcolor: '#3b82f6', textTransform: 'none', borderRadius: '8px', px: 3 }}
+                  >
+                    Close
+                  </Button>
+                </DialogActions>
+              </Dialog>
             </Box>
           </>
         )}
@@ -10702,6 +12922,16 @@ ${data.map((a, i) => `
             onTaskUpdated={fetchGlobalData}
           />
         )}
+
+        {/* Lab Assessment Detail Modal */}
+        <LabAssessmentDetailModal
+          open={labDetailOpen}
+          onClose={() => setLabDetailOpen(false)}
+          assessment={selectedLabDetail}
+          onUpdate={() => {
+            fetchGlobalData();
+          }}
+        />
       </Box>
     </>
   );

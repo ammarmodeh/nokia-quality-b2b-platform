@@ -180,10 +180,17 @@ export const addFieldTeam = async (req, res) => {
     const {
       teamName, firstName, secondName, thirdName, surname, teamCompany, contactNumber,
       fsmSerialNumber, laptopSerialNumber, teamCode,
+      experienceYears, experienceMonths, experienceDays,
+      yearsOfExperience, employmentType, certificates,
       isNewToInstallation, isNewToActivation, installationStartDate, activationStartDate,
       replaceExisting = false,
       forceReplace = false
     } = req.body;
+
+    const expY = experienceYears !== undefined ? Number(experienceYears) : (yearsOfExperience !== undefined ? Math.floor(Number(yearsOfExperience)) : 0);
+    const expM = experienceMonths !== undefined ? Number(experienceMonths) : (yearsOfExperience !== undefined ? Math.round((Number(yearsOfExperience) % 1) * 12) : 0);
+    const expD = experienceDays !== undefined ? Number(experienceDays) : 0;
+    const computedTotalYears = Number((expY + (expM / 12) + (expD / 365)).toFixed(2));
 
     if (!teamCode) return res.status(400).json({ error: "Team ID/Code is required" });
     if (!teamName) return res.status(400).json({ error: "Team Name is required" });
@@ -215,6 +222,12 @@ export const addFieldTeam = async (req, res) => {
           contactNumber: String(contactNumber).trim(),
           fsmSerialNumber: fsmSerialNumber || 'N/A',
           laptopSerialNumber: laptopSerialNumber || 'N/A',
+          experienceYears: expY,
+          experienceMonths: expM,
+          experienceDays: expD,
+          yearsOfExperience: computedTotalYears,
+          employmentType: employmentType || 'Subcontractor',
+          certificates: certificates || {},
           isNewToInstallation: Boolean(isNewToInstallation),
           isNewToActivation: Boolean(isNewToActivation),
           installationStartDate: installationStartDate || null,
@@ -278,6 +291,12 @@ export const addFieldTeam = async (req, res) => {
       contactNumber: contactNumber.trim(),
       fsmSerialNumber: fsmSerialNumber || 'N/A',
       laptopSerialNumber: laptopSerialNumber || 'N/A',
+      experienceYears: expY,
+      experienceMonths: expM,
+      experienceDays: expD,
+      yearsOfExperience: computedTotalYears,
+      employmentType: employmentType || 'Subcontractor',
+      certificates: certificates || {},
       quizCode,
       teamCode: tCode,
       password: hashedPassword,
@@ -510,6 +529,21 @@ export const updateFieldTeam = async (req, res) => {
     }
 
     const updates = { ...req.body };
+    if (updates.experienceYears !== undefined || updates.experienceMonths !== undefined || updates.experienceDays !== undefined) {
+      const expY = updates.experienceYears !== undefined ? Number(updates.experienceYears) : (team.experienceYears || 0);
+      const expM = updates.experienceMonths !== undefined ? Number(updates.experienceMonths) : (team.experienceMonths || 0);
+      const expD = updates.experienceDays !== undefined ? Number(updates.experienceDays) : (team.experienceDays || 0);
+      updates.experienceYears = expY;
+      updates.experienceMonths = expM;
+      updates.experienceDays = expD;
+      updates.yearsOfExperience = Number((expY + (expM / 12) + (expD / 365)).toFixed(2));
+    } else if (updates.yearsOfExperience !== undefined) {
+      const num = Number(updates.yearsOfExperience);
+      updates.experienceYears = Math.floor(num);
+      updates.experienceMonths = Math.round((num % 1) * 12);
+      updates.experienceDays = 0;
+    }
+
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const generateRandomLetters = () => Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join("");
 

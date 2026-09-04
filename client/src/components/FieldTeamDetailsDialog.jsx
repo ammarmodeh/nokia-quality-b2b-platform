@@ -317,7 +317,99 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                   <Grid item xs={6}>
                     <DetailItem icon={<Business />} label="Company" value={team.teamCompany} />
                   </Grid>
+                  <Grid item xs={6}>
+                    <DetailItem
+                      icon={<Person />}
+                      label="Employment Classification"
+                      value={team.employmentType === 'Employee' ? 'Direct Employee' : 'Subcontractor (Partner)'}
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <DetailItem
+                      icon={<School />}
+                      label="Field Experience"
+                      value={(() => {
+                        const y = team.experienceYears !== undefined ? team.experienceYears : (team.yearsOfExperience ? Math.floor(Number(team.yearsOfExperience)) : 0);
+                        const m = team.experienceMonths !== undefined ? team.experienceMonths : (team.yearsOfExperience ? Math.round((Number(team.yearsOfExperience) % 1) * 12) : 0);
+                        const d = team.experienceDays !== undefined ? team.experienceDays : 0;
+                        const parts = [];
+                        if (y > 0) parts.push(`${y} ${y === 1 ? 'Year' : 'Years'}`);
+                        if (m > 0) parts.push(`${m} ${m === 1 ? 'Month' : 'Months'}`);
+                        if (d > 0) parts.push(`${d} ${d === 1 ? 'Day' : 'Days'}`);
+                        return parts.length > 0 ? parts.join(', ') : '0 Days';
+                      })()}
+                    />
+                  </Grid>
                 </Grid>
+              </SectionCard>
+
+              {/* Safety & Compliance Certifications Matrix */}
+              <SectionCard title="Safety & Compliance Certifications" icon={<VerifiedUser sx={{ color: '#00d2ff' }} />}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Typography variant="caption" sx={{ color: '#888', mb: 0.5 }}>
+                    Mandatory field technician safety clearances & verified site credentials:
+                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 1.5 }}>
+                    {[
+                      { key: 'dd', code: 'DD', title: 'Defensive Driving', desc: 'Safe vehicle operation, hazard perception & driving compliance' },
+                      { key: 'es', code: 'ES', title: 'Electrical Safety', desc: 'Safe handling of electrical sources, grounding & arc flash prevention' },
+                      { key: 'fa', code: 'FA', title: 'First Aid', desc: 'Emergency first response, CPR & basic trauma management' },
+                      { key: 'ff', code: 'FF', title: 'Fire Fighting', desc: 'Fire extinguisher operation, fire risk prevention & evacuation' },
+                      { key: 'ra', code: 'RA', title: 'Risk Assessment', desc: 'Job site hazard identification, risk evaluation & control measures' },
+                      { key: 'wah', code: 'WAH', title: 'Work at Height', desc: 'Ladder safety, harness usage, pole climbing & fall arrest systems' },
+                    ].map((c) => {
+                      const isCertified = Boolean(team.certificates?.[c.key]);
+                      return (
+                        <Box
+                          key={c.key}
+                          sx={{
+                            p: 1.5,
+                            borderRadius: 2,
+                            bgcolor: isCertified ? 'rgba(76, 175, 80, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                            border: isCertified ? '1px solid rgba(76, 175, 80, 0.3)' : '1px solid #222',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.5,
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Chip
+                                label={c.code}
+                                size="small"
+                                sx={{
+                                  height: 20,
+                                  fontWeight: 800,
+                                  fontSize: '0.65rem',
+                                  bgcolor: isCertified ? '#4caf50' : '#333',
+                                  color: '#fff',
+                                }}
+                              />
+                              <Typography variant="body2" sx={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>
+                                {c.title}
+                              </Typography>
+                            </Box>
+                            <Chip
+                              label={isCertified ? 'Certified' : 'Not Certified'}
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '0.65rem',
+                                fontWeight: 700,
+                                bgcolor: isCertified ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.1)',
+                                color: isCertified ? '#4caf50' : '#f44336',
+                                border: isCertified ? '1px solid #4caf5040' : '1px solid #f4433630',
+                              }}
+                            />
+                          </Box>
+                          <Typography variant="caption" sx={{ color: '#888', fontSize: '0.72rem', pl: 0.5 }}>
+                            {c.desc}
+                          </Typography>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Box>
               </SectionCard>
 
               <SectionCard title="Role Expertise" icon={<VerifiedUser />}>

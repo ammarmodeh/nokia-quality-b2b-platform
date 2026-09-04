@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -33,6 +33,8 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Legend, ChartDat
 
 const OnTheJobAssessment = () => {
   const user = useSelector((state) => state?.auth?.user);
+  const [searchParams] = useSearchParams();
+  const urlEditId = searchParams.get("editId") || searchParams.get("id");
   const [fieldTeams, setFieldTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [assessments, setAssessments] = useState([]);
@@ -144,6 +146,30 @@ const OnTheJobAssessment = () => {
   useEffect(() => {
     setSupervisorStats(calculateSupervisorStats(allAssessments));
   }, [allAssessments, calculateSupervisorStats]);
+
+  // Handle URL editId deep-link
+  useEffect(() => {
+    if (urlEditId) {
+      const loadForEdit = async () => {
+        try {
+          const res = await api.get(`/on-the-job-assessments/${urlEditId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+          });
+          if (res.data) {
+            setSelectedAssessment(res.data);
+            if (res.data.fieldTeamId) {
+              setSelectedTeam(typeof res.data.fieldTeamId === 'object' ? res.data.fieldTeamId : { _id: res.data.fieldTeamId, teamName: res.data.fieldTeamName });
+            }
+            setEditMode(true);
+            setOpenEditDialog(true);
+          }
+        } catch (err) {
+          console.error("Failed to load OTJ assessment for editing:", err);
+        }
+      };
+      loadForEdit();
+    }
+  }, [urlEditId]);
 
   const initialAssessmentData = useMemo(() => ({
     conductedBy: "",
