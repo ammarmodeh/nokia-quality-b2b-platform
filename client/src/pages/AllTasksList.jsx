@@ -1753,10 +1753,10 @@ const AllTasksList = () => {
       }
       if (values.length === 0) values = ['Unknown'];
       
-      // Total occurrences / issues count
+      // Total occurrences / issues identified count across all tasks
       values.forEach(v => { ownerCounts[v] = (ownerCounts[v] || 0) + 1; });
 
-      // Unique non-promoter customers per owner
+      // Unique customers per owner
       const uniqueOwnersInTask = new Set(values);
       uniqueOwnersInTask.forEach(v => {
         ownerCustomerCounts[v] = (ownerCustomerCounts[v] || 0) + 1;
@@ -1817,12 +1817,16 @@ const AllTasksList = () => {
 
     const totalOwnerOccurrences = Object.values(ownerCounts).reduce((sum, count) => sum + count, 0);
 
+    const sumTotalIssues = totalOwnerOccurrences;
+    const sumTotalAccYes = Object.values(ownerAccBreakdown).reduce((sum, a) => sum + (a.yes || 0), 0);
+    const sumTotalAccNo = Object.values(ownerAccBreakdown).reduce((sum, a) => sum + (a.no || 0), 0);
+    const sumTotalDetractors = Object.values(ownerAccBreakdown).reduce((sum, a) => sum + (a.detractors || 0), 0);
+    const sumTotalNeutrals = Object.values(ownerAccBreakdown).reduce((sum, a) => sum + (a.neutrals || 0), 0);
+
     const ownerDistributionData = Object.entries(ownerCounts)
       .sort((a, b) => b[1] - a[1])
       .map(([owner, count]) => {
         const acc = ownerAccBreakdown[owner] || { yes: 0, no: 0, total: count, detractors: 0, neutrals: 0 };
-        const custCount = ownerCustomerCounts[owner] || 0;
-        const custPercentage = totalNonPromoterCustomers > 0 ? `${((custCount / totalNonPromoterCustomers) * 100).toFixed(1)}%` : '0%';
         const yesCount = acc.yes;
         const noCount = acc.no;
         const detCount = acc.detractors;
@@ -1830,8 +1834,6 @@ const AllTasksList = () => {
         const base = acc.total || count;
         return {
           Owner: owner,
-          'Non-Promoter Cust Count': custCount,
-          'Non-Promoter Cust %': custPercentage,
           Count: count,
           Percentage: totalOwnerOccurrences > 0 ? `${((count / totalOwnerOccurrences) * 100).toFixed(1)}%` : '0%',
           'Team Acc. Yes': yesCount,
@@ -1845,11 +1847,27 @@ const AllTasksList = () => {
         };
       });
 
+    // Append Total Summary Row
+    if (ownerDistributionData.length > 0) {
+      ownerDistributionData.push({
+        Owner: 'TOTAL',
+        Count: sumTotalIssues,
+        Percentage: '100.0%',
+        'Team Acc. Yes': sumTotalAccYes,
+        'Yes %': sumTotalIssues > 0 ? `${((sumTotalAccYes / sumTotalIssues) * 100).toFixed(1)}%` : '0%',
+        'Team Acc. No': sumTotalAccNo,
+        'No %': sumTotalIssues > 0 ? `${((sumTotalAccNo / sumTotalIssues) * 100).toFixed(1)}%` : '0%',
+        'Detractors': sumTotalDetractors,
+        'Detractors %': sumTotalIssues > 0 ? `${((sumTotalDetractors / sumTotalIssues) * 100).toFixed(1)}%` : '0%',
+        'Neutrals': sumTotalNeutrals,
+        'Neutrals %': sumTotalIssues > 0 ? `${((sumTotalNeutrals / sumTotalIssues) * 100).toFixed(1)}%` : '0%'
+      });
+    }
+
     // Add 2-level grouped headers for OWNER DISTRIBUTION SUMMARY
     const ownerDistLvl1 = [
       "Owner / Entity",
-      "NON-PROMOTERS CUSTOMERS", "",
-      "TOTAL ISSUES IDENTIFIED", "",
+      "TOTAL ISSUES IDENTIFIED (100% DISTRIBUTION)", "",
       "ACCOUNTABLE (YES)", "",
       "NON-ACCOUNTABLE (NO)", "",
       "DETRACTORS", "",
@@ -1858,8 +1876,6 @@ const AllTasksList = () => {
 
     const ownerDistLvl2Keys = [
       'Owner',
-      'Non-Promoter Cust Count',
-      'Non-Promoter Cust %',
       'Count',
       'Percentage',
       'Team Acc. Yes',
@@ -1876,8 +1892,6 @@ const AllTasksList = () => {
       'Owner',
       'Count',
       'Percentage',
-      'Count',
-      'Percentage',
       'Team Acc. Yes',
       'Yes %',
       'Team Acc. No',
@@ -1889,7 +1903,7 @@ const AllTasksList = () => {
     ];
 
     wsSpecial['A2'] = { v: 'OWNER DISTRIBUTION SUMMARY', t: 's', s: { font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F2937' } }, alignment: { horizontal: 'left', vertical: 'center', indent: 1 } } };
-    wsSpecial['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 12 } });
+    wsSpecial['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 10 } });
 
     XLSX.utils.sheet_add_aoa(wsSpecial, [ownerDistLvl1, ownerDistLvl2Labels], { origin: 'A3' });
 
@@ -1902,12 +1916,11 @@ const AllTasksList = () => {
 
     // Level 1 Merges & Styles
     const ownerDistGroups = [
-      { start: 1, end: 2, label: "NON-PROMOTERS CUSTOMERS", color: "065F46" },
-      { start: 3, end: 4, label: "TOTAL ISSUES IDENTIFIED", color: "1E40AF" },
-      { start: 5, end: 6, label: "ACCOUNTABLE (YES)", color: "3730A3" },
-      { start: 7, end: 8, label: "NON-ACCOUNTABLE (NO)", color: "9F1239" },
-      { start: 9, end: 10, label: "DETRACTORS", color: "B91C1C" },
-      { start: 11, end: 12, label: "NEUTRALS", color: "D97706" }
+      { start: 1, end: 2, label: "TOTAL ISSUES IDENTIFIED (100% DISTRIBUTION)", color: "1E40AF" },
+      { start: 3, end: 4, label: "ACCOUNTABLE (YES)", color: "3730A3" },
+      { start: 5, end: 6, label: "NON-ACCOUNTABLE (NO)", color: "9F1239" },
+      { start: 7, end: 8, label: "DETRACTORS", color: "B91C1C" },
+      { start: 9, end: 10, label: "NEUTRALS", color: "D97706" }
     ];
 
     ownerDistGroups.forEach(g => {
@@ -1925,14 +1938,13 @@ const AllTasksList = () => {
     // Level 2 Sub-Headers
     const ownerLvl2Colors = [
       "1E293B",
-      "047857", "065F46",
       "2563EB", "1D4ED8",
       "4F46E5", "4338CA",
       "E11D48", "BE123C",
       "DC2626", "B91C1C",
       "F59E0B", "D97706"
     ];
-    for (let c = 1; c <= 12; c++) {
+    for (let c = 1; c <= 10; c++) {
       const cell = XLSX.utils.encode_cell({ r: 3, c });
       if (wsSpecial[cell]) {
         wsSpecial[cell].s = {
@@ -1947,36 +1959,41 @@ const AllTasksList = () => {
     // Style Data Rows
     for (let r = 0; r < ownerDataAoa.length; r++) {
       const rowIdx = 4 + r;
-      for (let c = 0; c <= 12; c++) {
+      const isTotalRow = r === ownerDataAoa.length - 1 && ownerDataAoa[r][0] === 'TOTAL';
+      for (let c = 0; c <= 10; c++) {
         const cell = XLSX.utils.encode_cell({ r: rowIdx, c });
         if (!wsSpecial[cell]) continue;
 
         let fontColor = "1E293B";
-        let bgColor = "FFFFFF";
+        let bgColor = isTotalRow ? "F1F5F9" : "FFFFFF";
 
-        if (c === 1 || c === 2) {
-          fontColor = "065F46";
-          bgColor = "F0FDF4";
-        } else if (c === 3 || c === 4) {
+        if (isTotalRow) {
+          fontColor = "0F172A";
+        } else if (c === 1 || c === 2) {
           fontColor = "1E40AF";
           bgColor = "F8FAFC";
-        } else if (c === 5 || c === 6) {
+        } else if (c === 3 || c === 4) {
           fontColor = "3730A3";
-        } else if (c === 7 || c === 8) {
+        } else if (c === 5 || c === 6) {
           fontColor = "9F1239";
-        } else if (c === 9 || c === 10) {
+        } else if (c === 7 || c === 8) {
           fontColor = "B91C1C";
-          if (c === 9 && ownerDataAoa[r][c] > 0) bgColor = "FEF2F2";
-        } else if (c === 11 || c === 12) {
+          if (c === 7 && ownerDataAoa[r][c] > 0) bgColor = "FEF2F2";
+        } else if (c === 9 || c === 10) {
           fontColor = "D97706";
-          if (c === 11 && ownerDataAoa[r][c] > 0) bgColor = "FFFBEB";
+          if (c === 9 && ownerDataAoa[r][c] > 0) bgColor = "FFFBEB";
         }
 
         wsSpecial[cell].s = {
-          font: { bold: c === 0 || c === 1 || c === 3 || c === 5 || c === 9 || c === 11, color: { rgb: fontColor } },
+          font: { bold: isTotalRow || c === 0 || c === 1 || c === 3 || c === 5 || c === 7 || c === 9, color: { rgb: fontColor } },
           fill: { fgColor: { rgb: bgColor } },
           alignment: { horizontal: c === 0 ? "left" : "center", vertical: "center" },
-          border: { top: { style: 'thin', color: { rgb: 'E2E8F0' } }, bottom: { style: 'thin', color: { rgb: 'E2E8F0' } }, left: { style: 'thin', color: { rgb: 'E2E8F0' } }, right: { style: 'thin', color: { rgb: 'CBD5E1' } } }
+          border: {
+            top: { style: isTotalRow ? 'medium' : 'thin', color: { rgb: isTotalRow ? '0F172A' : 'E2E8F0' } },
+            bottom: { style: isTotalRow ? 'medium' : 'thin', color: { rgb: isTotalRow ? '0F172A' : 'E2E8F0' } },
+            left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+          }
         };
       }
     }
@@ -6774,7 +6791,7 @@ const AllTasksList = () => {
     const beforePromoterPctNum = totalSampleCount > 0 ? (currentCounts.promoters / totalSampleCount) * 100 : 0;
     const beforeDetractorPctNum = totalSampleCount > 0 ? (currentCounts.detractors / totalSampleCount) * 100 : 0;
     const beforeNeutralPctNum = totalSampleCount > 0 ? (currentCounts.neutrals / totalSampleCount) * 100 : 0;
-    const baseNPS = Math.round(beforePromoterPctNum) - Math.round(beforeDetractorPctNum);
+    const baseNPS = Math.round(beforePromoterPctNum - beforeDetractorPctNum);
     const formatPercent = (val) => totalSampleCount > 0 ? `${((val / totalSampleCount) * 100).toFixed(1)}%` : '0.0%';
 
     const simulateScenario = (detractorsToConvert, neutralsToConvert) => {
@@ -6790,7 +6807,7 @@ const AllTasksList = () => {
       const afterPromoterPctNum = (afterPromoters / total) * 100;
       const afterDetractorPctNum = (afterDetractors / total) * 100;
       const afterNeutralPctNum = (afterNeutrals / total) * 100;
-      const afterNPS = Math.round(afterPromoterPctNum) - Math.round(afterDetractorPctNum);
+      const afterNPS = Math.round(afterPromoterPctNum - afterDetractorPctNum);
 
       const npsGain = afterNPS - baseNPS;
 
@@ -6855,11 +6872,10 @@ const AllTasksList = () => {
       .filter(rc => rc.total > 0)
       .sort((a, b) => b.total - a.total);
 
-    // Top 5 Owners by Total
+    // All Owners by Total with identified issues
     const impactTopOwners = getFieldCountsByScore(filteredTasks, 'responsible')
       .filter(o => o.total > 0)
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 5);
+      .sort((a, b) => b.total - a.total);
 
     const periodBreakdownRows = computeBreakdownRows(teamStatsMap, getTeamTokenForPeriod);
     const underperformingTeamsInPeriod = periodBreakdownRows.filter(t => {
@@ -7209,12 +7225,12 @@ const AllTasksList = () => {
     };
 
     // ─────────────────────────────────────────────────────────────────────────
-    // TABLE 5: RESPONSIBLE OWNERSHIP & DEPARTMENTAL IMPACT (SHARED-OWNER WEIGHTED)
+    // TABLE 5: RESPONSIBLE OWNERSHIP & DEPARTMENTAL IMPACT (TOTAL ISSUES IDENTIFIED DISTRIBUTION)
     // ─────────────────────────────────────────────────────────────────────────
     const ownerHeaders = [
       'Responsible Owner / Dept',
       'Resolution Scope',
-      '# of Issues (Weighted)',
+      '# of Issues Identified',
       'Before Detractor %',
       'After Detractor %',
       'Detractor Reduction (-%)',
@@ -7227,7 +7243,7 @@ const AllTasksList = () => {
       'Ownership Accountability Directive'
     ];
 
-    // Calculate Owner Impact metrics using shared-owner weighted allocation
+    // Calculate Owner Impact metrics using total identified issues and shared-owner weighted allocation
     const ownerImpactMap = {};
     let reachYesImpact = { rawDet: 0, weightedDet: 0, rawNeu: 0, weightedNeu: 0, totalWeighted: 0 };
     let reachNoImpact = { rawDet: 0, weightedDet: 0, rawNeu: 0, weightedNeu: 0, totalWeighted: 0 };
@@ -7300,9 +7316,8 @@ const AllTasksList = () => {
     });
 
     const impactTopOwnersList = Object.values(ownerImpactMap)
-      .filter(o => o.totalWeighted > 0)
-      .sort((a, b) => b.totalWeighted - a.totalWeighted)
-      .slice(0, 5);
+      .filter(o => (o.rawDet + o.rawNeu) > 0)
+      .sort((a, b) => (b.rawDet + b.rawNeu) - (a.rawDet + a.rawNeu));
 
     const ownerRows = [];
     const beforeDetPctStr = `${beforeDetractorPctNum.toFixed(1)}%`;
@@ -7310,14 +7325,13 @@ const AllTasksList = () => {
 
     impactTopOwnersList.forEach((owner, idx) => {
       const simTot = simulateScenario(owner.weightedDet, owner.weightedNeu);
-      const sharedDiff = (owner.rawDet + owner.rawNeu) - owner.totalWeighted;
-      const sharedNote = sharedDiff > 0.01 ? ` (${sharedDiff.toFixed(1)} shared pts allocated)` : '';
+      const totalRawIssues = owner.rawDet + owner.rawNeu;
 
       // Full Combined (Both Detractor and Neutral Conversion to Promoters)
       ownerRows.push([
         `#${idx + 1} Owner: ${owner.name}`,
         'Full Combined Resolution (Det + Neu)',
-        fmtNum(owner.totalWeighted),
+        totalRawIssues,
         beforeDetPctStr,
         owner.weightedDet > 0 ? simTot.afterDetractorsPct : '-',
         owner.weightedDet > 0 ? simTot.detractorRed : '-',
@@ -7327,20 +7341,21 @@ const AllTasksList = () => {
         baseNPS,
         simTot.afterNPS,
         simTot.npsImpact,
-        `Full departmental resolution of ${fmtNum(owner.totalWeighted)} weighted issues${sharedNote} (${fmtNum(owner.weightedDet)} det + ${fmtNum(owner.weightedNeu)} neu) under ${owner.name} → NPS surges to ${simTot.afterNPS} (${simTot.npsImpact} pts)`
+        `Full departmental resolution of ${totalRawIssues} identified issues (${owner.rawDet} det + ${owner.rawNeu} neu) under ${owner.name} → NPS surges to ${simTot.afterNPS} (${simTot.npsImpact} pts)`
       ]);
 
       // ── SPECIAL BREAKDOWN FOR OWNER: REACH ONLY ───────────────────────────
       const isReachOwner = (owner.name || '').toString().trim().toUpperCase() === 'REACH';
       if (isReachOwner) {
         // 1. Reach Field Teams (Accountable / Took Responsibility)
-        if (reachYesImpact.totalWeighted > 0) {
+        const reachYesRaw = reachYesImpact.rawDet + reachYesImpact.rawNeu;
+        if (reachYesRaw > 0) {
           const simYesTot = simulateScenario(reachYesImpact.weightedDet, reachYesImpact.weightedNeu);
 
           ownerRows.push([
             `  ↳ Reach: Field Teams (Accountable / Took Responsibility)`,
             'Full Combined Resolution (Det + Neu)',
-            fmtNum(reachYesImpact.totalWeighted),
+            reachYesRaw,
             beforeDetPctStr,
             reachYesImpact.weightedDet > 0 ? simYesTot.afterDetractorsPct : '-',
             reachYesImpact.weightedDet > 0 ? simYesTot.detractorRed : '-',
@@ -7350,18 +7365,19 @@ const AllTasksList = () => {
             baseNPS,
             simYesTot.afterNPS,
             simYesTot.npsImpact,
-            `Full field-accountable resolution of ${fmtNum(reachYesImpact.totalWeighted)} weighted issues (${fmtNum(reachYesImpact.weightedDet)} det + ${fmtNum(reachYesImpact.weightedNeu)} neu) under Reach Field Teams → NPS surges to ${simYesTot.afterNPS} (${simYesTot.npsImpact} pts)`
+            `Full field-accountable resolution of ${reachYesRaw} identified issues (${reachYesImpact.rawDet} det + ${reachYesImpact.rawNeu} neu) under Reach Field Teams → NPS surges to ${simYesTot.afterNPS} (${simYesTot.npsImpact} pts)`
           ]);
         }
 
         // 2. Reach Non-Accountable (Dispatching, Civil & Support Teams)
-        if (reachNoImpact.totalWeighted > 0) {
+        const reachNoRaw = reachNoImpact.rawDet + reachNoImpact.rawNeu;
+        if (reachNoRaw > 0) {
           const simNoTot = simulateScenario(reachNoImpact.weightedDet, reachNoImpact.weightedNeu);
 
           ownerRows.push([
             `  ↳ Reach: Non-Accountable (Dispatching, Civil & Support Teams)`,
             'Full Combined Resolution (Det + Neu)',
-            fmtNum(reachNoImpact.totalWeighted),
+            reachNoRaw,
             beforeDetPctStr,
             reachNoImpact.weightedDet > 0 ? simNoTot.afterDetractorsPct : '-',
             reachNoImpact.weightedDet > 0 ? simNoTot.detractorRed : '-',
@@ -7371,25 +7387,24 @@ const AllTasksList = () => {
             baseNPS,
             simNoTot.afterNPS,
             simNoTot.npsImpact,
-            `Full non-accountable resolution of ${fmtNum(reachNoImpact.totalWeighted)} weighted issues (${fmtNum(reachNoImpact.weightedDet)} det + ${fmtNum(reachNoImpact.weightedNeu)} neu) under Reach (dispatching/civil) → NPS surges to ${simNoTot.afterNPS} (${simNoTot.npsImpact} pts)`
+            `Full non-accountable resolution of ${reachNoRaw} identified issues (${reachNoImpact.rawDet} det + ${reachNoImpact.rawNeu} neu) under Reach (dispatching/civil) → NPS surges to ${simNoTot.afterNPS} (${simNoTot.npsImpact} pts)`
           ]);
         }
       }
     });
 
-    // Combined Top 2..5 Owners Full Resolution Bundles
+    // Combined Top 2..N Owners Full Resolution Bundles
     for (let i = 2; i <= impactTopOwnersList.length; i++) {
       const selectedOwners = impactTopOwnersList.slice(0, i);
       const comboWeightedDet = selectedOwners.reduce((sum, o) => sum + o.weightedDet, 0);
       const comboWeightedNeu = selectedOwners.reduce((sum, o) => sum + o.weightedNeu, 0);
-      const comboTotWeighted = comboWeightedDet + comboWeightedNeu;
-      const names = selectedOwners.map(o => o.name).join(' + ');
+      const comboTotRaw = selectedOwners.reduce((sum, o) => sum + (o.rawDet + o.rawNeu), 0);
       const sim = simulateScenario(comboWeightedDet, comboWeightedNeu);
 
       ownerRows.push([
         `Top ${i} Owners Combined`,
         'Full Cross-Departmental Resolution',
-        fmtNum(comboTotWeighted),
+        comboTotRaw,
         beforeDetPctStr,
         comboWeightedDet > 0 ? sim.afterDetractorsPct : '-',
         comboWeightedDet > 0 ? sim.detractorRed : '-',
@@ -7399,12 +7414,12 @@ const AllTasksList = () => {
         baseNPS,
         sim.afterNPS,
         sim.npsImpact,
-        `Combined cross-departmental resolution across Top ${i} Owners (${fmtNum(comboTotWeighted)} weighted issues) pushes overall NPS from ${baseNPS} to ${sim.afterNPS} (${sim.npsImpact} pts)`
+        `Combined cross-departmental resolution across Top ${i} Owners (${comboTotRaw} identified issues) pushes overall NPS from ${baseNPS} to ${sim.afterNPS} (${sim.npsImpact} pts)`
       ]);
     }
 
     addIndicatorTable(
-      '5. RESPONSIBLE OWNERSHIP & DEPARTMENTAL IMPACT (SHARED-OWNER WEIGHTED ALLOCATION)',
+      '5. RESPONSIBLE OWNERSHIP & DEPARTMENTAL IMPACT (TOTAL ISSUES IDENTIFIED DISTRIBUTION)',
       '6B21A8',
       ownerHeaders,
       ownerRows,
@@ -8520,17 +8535,29 @@ const AllTasksList = () => {
 
       const maxInterleaved = interleavedFields.reduce((max, { field }) => Math.max(max, fieldMaxCounts[field]), 0);
       for (let i = 0; i < maxInterleaved; i++) {
+        const reasonVals = normalizeArrayField(task.reason);
+        const ownerVals = normalizeArrayField(task.responsible);
+        const subReasonVals = normalizeArrayField(task.subReason);
+        const rootCauseVals = normalizeArrayField(task.rootCause);
+        const itnVals = normalizeArrayField(task.itnRelated);
+        const subRelVals = normalizeArrayField(task.relatedToSubscription);
+        const teamAccVals = normalizeArrayField(task.teamAccountability);
+
+        const hasIssueAtIndex = (reasonVals[i] !== undefined) || 
+                                (ownerVals[i] !== undefined) || 
+                                (subReasonVals[i] !== undefined) || 
+                                (rootCauseVals[i] !== undefined) ||
+                                (itnVals[i] !== undefined) ||
+                                (subRelVals[i] !== undefined) ||
+                                (teamAccVals[i] !== undefined);
+
         interleavedFields.forEach(({ field, label }) => {
-          const val = task[field];
-          let values = [];
-          if (Array.isArray(val)) {
-            values = val.map(v => String(v).trim()).filter(Boolean);
-          } else if (typeof val === 'string' && val.trim()) {
-            values = val.split(',').map(s => s.trim()).filter(Boolean);
-          } else if (val) {
-            values = [String(val).trim()];
+          const values = normalizeArrayField(task[field]);
+          if (hasIssueAtIndex) {
+            baseData[`${label} ${i + 1}`] = values[i] !== undefined ? values[i] : (values.length === 1 ? values[0] : (values[0] || 'N/A'));
+          } else {
+            baseData[`${label} ${i + 1}`] = values[i] || '';
           }
-          baseData[`${label} ${i + 1}`] = values[i] || '';
         });
       }
 
@@ -9707,7 +9734,38 @@ const AllTasksList = () => {
     XLSX.utils.book_append_sheet(workbook, wsYTD, 'YTD Analysis');
     XLSX.utils.book_append_sheet(workbook, wsCharts, 'Monthly Performance Summary');
 
-    // 9. Save Workbook
+    // 9. Hide ONLY "Note 1" and "Note 2" columns across ALL subsheets.
+    //    Note 3, Note 4, etc. remain visible.
+    workbook.SheetNames.forEach(sheetName => {
+      const ws = workbook.Sheets[sheetName];
+      if (!ws || !ws['!ref']) return;
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      if (!ws['!cols']) ws['!cols'] = [];
+
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        let isHiddenNoteCol = false;
+        // Search header rows (rows 0 through 15) for Note 1 or Note 2 exactly
+        for (let r = range.s.r; r <= Math.min(range.e.r, 15); r++) {
+          const cell = ws[XLSX.utils.encode_cell({ r, c })];
+          if (cell && typeof cell.v === 'string') {
+            const val = cell.v.trim();
+            // Only hide "Note 1" and "Note 2" — not Note 3, Note 4, etc.
+            if (/^Note\s*[12]$/i.test(val)) {
+              isHiddenNoteCol = true;
+              break;
+            }
+          }
+        }
+        if (isHiddenNoteCol) {
+          while (ws['!cols'].length <= c) {
+            ws['!cols'].push({ wch: 15 });
+          }
+          ws['!cols'][c] = { ...(ws['!cols'][c] || {}), hidden: true, wch: 0 };
+        }
+      }
+    });
+
+    // 10. Save Workbook
     XLSX.writeFile(workbook, getExportFileName());
   };
 

@@ -429,28 +429,30 @@ export const aggregateSamples = (samplesData, type, value, settings = {}) => {
 
     const startDate = new Date(start);
     const endDate = new Date(end);
-    
-    // NEW: If the range exactly matches a calendar month, try Priority 1 month lookup first
-    // This handles the discrepancy in AllTasksList when filtering by specific month dates
-    if (startDate.getDate() === 1 && endDate.getDate() >= 28) {
-       const startMonth = startDate.getMonth() + 1;
-       const endMonth = endDate.getMonth() + 1;
-       const startYear = startDate.getFullYear();
-       const endYear = endDate.getFullYear();
-       
-       if (startMonth === endMonth && startYear === endYear) {
-          const MONTH_WEEK_OFFSET = 100;
-          const monthlyRecord = samplesData.find(
-            s => Number(s.weekNumber) === MONTH_WEEK_OFFSET + startMonth &&
-                 Number(s.year) === startYear
-          );
-          if (monthlyRecord && Number(monthlyRecord.sampleSize) > 0) {
-            return Number(monthlyRecord.sampleSize);
-          }
-       }
+
+    const startMonth = startDate.getMonth() + 1;
+    const startYear = startDate.getFullYear();
+    const endMonth = endDate.getMonth() + 1;
+    const endYear = endDate.getFullYear();
+
+    // If the range falls entirely within a single calendar month, try the monthly token first.
+    // This covers both full-month (Sep 1–30) AND partial-month (Sep 1–3) ranges.
+    if (startMonth === endMonth && startYear === endYear) {
+      const MONTH_WEEK_OFFSET = 100;
+      const monthlyRecord = samplesData.find(
+        s => Number(s.weekNumber) === MONTH_WEEK_OFFSET + startMonth &&
+             Number(s.year) === startYear
+      );
+      if (monthlyRecord && Number(monthlyRecord.sampleSize) > 0) {
+        return Number(monthlyRecord.sampleSize);
+      }
     }
 
+    // Fall back to summing weekly sample records that overlap the date range
     return samplesData.filter(s => {
+      // Skip monthly-marker records (weekNumber 101–112)
+      if (Number(s.weekNumber) > 100) return false;
+
       // Preferred: use sample startDate
       if (s.startDate) {
         const sDate = new Date(s.startDate);
