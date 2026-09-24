@@ -35,8 +35,10 @@ import {
   AssignmentTurnedIn as AssignmentTurnedInIcon,
   SettingsInputComponent as SettingsIcon,
   PhotoCamera as PhotoCameraIcon,
+  PictureAsPdf as PictureAsPdfIcon,
 } from "@mui/icons-material";
 import { exportIndividualLabAssessmentReport } from "../utils/labAssessmentExcelExport";
+import { exportArabicLabAssessmentReport } from "../utils/labAssessmentArabicExcelExport";
 import { getInitialSections } from "../pages/LabAssessment";
 
 // Normalize raw DB sections against official checkpoint definitions to prevent duplicate names
@@ -51,15 +53,15 @@ const normalizeForDisplay = (rawSections) => {
 
     if (!matchedSec) return defSec;
 
-    const isSec8 = defSec.sectionId === "sec-8" || defSec.sectionTitle?.includes("Photo") || defSec.sectionTitle?.includes("Self-Assessment");
+    const is10PtSec = defSec.sectionId === "sec-8" || defSec.sectionId === "sec-9" || defSec.sectionTitle?.includes("Photo") || defSec.sectionTitle?.includes("Self-Assessment") || defSec.sectionTitle?.includes("Communication");
 
     const mergedCheckpoints = defSec.checkpoints.map((defCp, cpIdx) => {
       const matchedCp = matchedSec.checkpoints?.find(
         (ecp) => (ecp.id && ecp.id === defCp.id) || (ecp.name && ecp.name.trim() === defCp.name.trim())
       ) || matchedSec.checkpoints?.[cpIdx];
 
-      const cpMax = isSec8 ? 10 : 5;
-      const passThreshold = isSec8 ? 7 : 4;
+      const cpMax = is10PtSec ? 10 : 5;
+      const passThreshold = is10PtSec ? 7 : 4;
 
       if (!matchedCp) {
         return { ...defCp, maxScore: cpMax, score: cpMax, status: "Pass", notes: "" };
@@ -166,6 +168,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
     "6. Customer Education": <SchoolIcon sx={{ color: "#4caf50" }} />,
     "7. Quality Ticket Awareness": <AssignmentTurnedInIcon sx={{ color: "#9c27b0" }} />,
     "8. Self-Assessment & Photo Documentation": <PhotoCameraIcon sx={{ color: "#00bcd4" }} />,
+    "9. Communication & Professional Behaviour": <SchoolIcon sx={{ color: "#ff9800" }} />,
   };
 
   // Tools & Equipment stats for detail modal
@@ -191,15 +194,18 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
         </TableHead>
         <TableBody>
           {checkpointsList.map((cp, cpIdx) => {
-            const isSec8 =
+            const is10Pt =
               section?.sectionId === "sec-8" ||
+              section?.sectionId === "sec-9" ||
               section?.sectionTitle?.includes("Photo") ||
               section?.sectionTitle?.includes("Self-Assessment") ||
+              section?.sectionTitle?.includes("Communication") ||
               cp.id === "cp-8-photos-self-assess" ||
+              cp.id === "cp-9-comm-behaviour" ||
               cp.name?.includes("Photo") ||
-              cp.name?.includes("Self-Assessment");
-            const cpMax = isSec8 ? 10 : (cp.maxScore || 5);
-            const passThreshold = isSec8 ? 7 : 4;
+              cp.name?.includes("Communication");
+            const cpMax = is10Pt ? 10 : (cp.maxScore || 5);
+            const passThreshold = is10Pt ? 7 : 4;
             const scoreVal = cp.score !== undefined ? cp.score : (cp.status === "Pass" ? cpMax : 0);
             const isPass = cp.status === "Pass" || scoreVal >= passThreshold;
 
@@ -291,6 +297,24 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
     { key: "wah", code: "WAH", title: "Work at Height", description: "Ladder safety, harness usage, pole climbing & fall arrest systems" },
   ];
 
+  const handleExportArabicExcel = () => {
+  const normalizedSections = normalizeForDisplay(assessment.sections);
+  const fullData = {
+    ...assessment,
+    sections: normalizedSections,
+    fieldTeam: assessment.fieldTeam || assessment.fieldTeamId || {
+      teamName: assessment.teamName || teamName,
+      company: assessment.company || teamCompany,
+      employmentType: teamEmploymentType,
+      age: teamAge,
+      dateOfBirth: teamDateOfBirth,
+      certificates: teamCertificates,
+    },
+  };
+  exportArabicLabAssessmentReport(fullData);
+};
+
+
   return (
     <Dialog
       open={open}
@@ -343,7 +367,23 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
           </Box>
         </Box>
 
-        <Stack direction="row" spacing={1.5} alignItems="center">
+        <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<FileDownloadIcon />}
+            onClick={handleExportArabicExcel}
+            sx={{
+              bgcolor: "#2e7d32",
+              "&:hover": { bgcolor: "#1b5e20" },
+              color: "#fff",
+              fontWeight: 700,
+              borderRadius: "10px",
+              boxShadow: "0 4px 12px rgba(46, 125, 50, 0.3)",
+            }}
+          >
+            Arabic Excel (تقرير Excel)
+          </Button>
           <Button
             variant="contained"
             size="small"
@@ -358,7 +398,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
               boxShadow: "0 4px 12px rgba(46, 125, 50, 0.3)",
             }}
           >
-            Export Detailed Report (.xlsx)
+            Excel Report (.xlsx)
           </Button>
           <Button
             variant="outlined"
@@ -372,7 +412,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
               "&:hover": { borderColor: "#7b68ee", bgcolor: "rgba(123, 104, 238, 0.1)" },
             }}
           >
-            Print / PDF
+            Print
           </Button>
           <IconButton onClick={onClose} sx={{ color: colors?.textSecondary || "#b3b3b3" }}>
             <CloseIcon />
@@ -551,7 +591,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             <Box>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5, flexWrap: "wrap", gap: 1 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#2196f3", display: "flex", alignItems: "center", gap: 1 }}>
-                  <BuildIcon fontSize="small" /> Tools & Equipment Readiness Inspection Matrix
+                  <BuildIcon fontSize="small" /> Tools & Equipment
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Chip
@@ -608,232 +648,238 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             // Normalize to prevent duplicate checkpoints from old saved records
             const normalizedSections = normalizeForDisplay(assessment.sections);
             return normalizedSections && normalizedSections.length > 0 ? (
-            normalizedSections.map((sec, sIdx) => {
-              const isSec7 = sec.sectionId === "sec-7";
-              const isSec8 = sec.sectionId === "sec-8" || sec.sectionTitle?.includes("Photo") || sec.sectionTitle?.includes("Self-Assessment");
-              let secTotal = 0;
-              let secMax = 0;
-              let isPointsOnly = false;
-              sec.checkpoints?.forEach((cp) => {
-                if (cp.status !== "N/A") {
-                  const isPoints =
-                    cp.type === "points" ||
-                    cp.maxScore === 10 ||
-                    isSec8 ||
-                    cp.id === "cp-8-photos-self-assess" ||
-                    cp.name?.includes("Photo") ||
-                    cp.name?.includes("Self-Assessment");
-                  const cpMax = isPoints ? 10 : (cp.maxScore || 5);
-                  secMax += cpMax;
-                  if (isPoints) {
-                    isPointsOnly = true;
-                    secTotal += Number(cp.score !== undefined ? cp.score : (cp.status === "Pass" ? cpMax : 0));
-                  } else {
-                    if (cp.status === "Pass") secTotal += Number(cp.score !== undefined ? cp.score : cpMax);
-                    else if (cp.status === "Fail") secTotal += Number(cp.score > 0 && cp.score < cpMax ? cp.score : 0);
+              normalizedSections.map((sec, sIdx) => {
+                const isSec7 = sec.sectionId === "sec-7";
+                const is10PtSec =
+                  sec.sectionId === "sec-8" ||
+                  sec.sectionId === "sec-9" ||
+                  sec.sectionTitle?.includes("Photo") ||
+                  sec.sectionTitle?.includes("Self-Assessment") ||
+                  sec.sectionTitle?.includes("Communication");
+                let secTotal = 0;
+                let secMax = 0;
+                let isPointsOnly = false;
+                sec.checkpoints?.forEach((cp) => {
+                  if (cp.status !== "N/A") {
+                    const isPoints =
+                      cp.type === "points" ||
+                      cp.maxScore === 10 ||
+                      is10PtSec ||
+                      cp.id === "cp-8-photos-self-assess" ||
+                      cp.id === "cp-9-comm-behaviour" ||
+                      cp.name?.includes("Photo") ||
+                      cp.name?.includes("Communication");
+                    const cpMax = isPoints ? 10 : (cp.maxScore || 5);
+                    secMax += cpMax;
+                    if (isPoints) {
+                      isPointsOnly = true;
+                      secTotal += Number(cp.score !== undefined ? cp.score : (cp.status === "Pass" ? cpMax : 0));
+                    } else {
+                      if (cp.status === "Pass") secTotal += Number(cp.score !== undefined ? cp.score : cpMax);
+                      else if (cp.status === "Fail") secTotal += Number(cp.score > 0 && cp.score < cpMax ? cp.score : 0);
+                    }
                   }
-                }
-              });
-              const secScorePct = secMax > 0 ? Math.min(100, Math.round((secTotal / secMax) * 100)) : 100;
-              const isSecPass = secScorePct >= 70;
+                });
+                const secScorePct = secMax > 0 ? Math.min(100, Math.round((secTotal / secMax) * 100)) : 100;
+                const isSecPass = secScorePct >= 70;
 
-              const isOntSection = sec.sectionId === "sec-4";
-              const isBepSection = sec.sectionId === "sec-2";
+                const isOntSection = sec.sectionId === "sec-4";
+                const isBepSection = sec.sectionId === "sec-2";
 
-              const ontGroups = [
-                {
-                  key: "zte",
-                  title: "1. ZTE F6600P – Wi-Fi 6 Configuration & Verification",
-                  icon: "📡",
-                  filter: (cp) => cp.id?.includes("zte") || cp.subSection?.includes("ZTE"),
-                },
-                {
-                  key: "nokia6",
-                  title: "2. Nokia G-2426G-P – Wi-Fi 6 Configuration & Firmware v62",
-                  icon: "⚡",
-                  filter: (cp) => cp.id?.includes("nokia6") || cp.subSection?.includes("Nokia G-2426G-P"),
-                },
-                {
-                  key: "nokia5",
-                  title: "3. Nokia G-140W-H – Wi-Fi 5 Configuration & Verification",
-                  icon: "📶",
-                  filter: (cp) => cp.id?.includes("nokia5") || cp.subSection?.includes("Nokia G-140W-H"),
-                },
-                {
-                  key: "labels",
-                  title: "4. ONT Identification & Warning Labels (Shared Standard)",
-                  icon: "🏷️",
-                  filter: (cp) => cp.id?.includes("label") || cp.subSection?.includes("Labeling"),
-                },
-              ];
+                const ontGroups = [
+                  {
+                    key: "zte",
+                    title: "1. ZTE F6600P – Wi-Fi 6 Configuration & Verification",
+                    icon: "📡",
+                    filter: (cp) => cp.id?.includes("zte") || cp.subSection?.includes("ZTE"),
+                  },
+                  {
+                    key: "nokia6",
+                    title: "2. Nokia G-2426G-P – Wi-Fi 6 Configuration & Firmware v62",
+                    icon: "⚡",
+                    filter: (cp) => cp.id?.includes("nokia6") || cp.subSection?.includes("Nokia G-2426G-P"),
+                  },
+                  {
+                    key: "nokia5",
+                    title: "3. Nokia G-140W-H – Wi-Fi 5 Configuration & Verification",
+                    icon: "📶",
+                    filter: (cp) => cp.id?.includes("nokia5") || cp.subSection?.includes("Nokia G-140W-H"),
+                  },
+                  {
+                    key: "labels",
+                    title: "4. ONT Identification & Warning Labels (Shared Standard)",
+                    icon: "🏷️",
+                    filter: (cp) => cp.id?.includes("label") || cp.subSection?.includes("Labeling"),
+                  },
+                ];
 
-              const bepGroups = [
-                {
-                  key: "bep-splice",
-                  title: "A. BEP – Outdoor/Indoor Drop Fiber Fusion Splicing & Routing",
-                  filter: (cp) => !cp.id?.includes("label") && !cp.subSection?.includes("Labeling"),
-                },
-                {
-                  key: "bep-labels",
-                  title: "B. BEP Identification & Warning Labels",
-                  filter: (cp) => cp.id?.includes("label") || cp.subSection?.includes("Labeling"),
-                },
-              ];
+                const bepGroups = [
+                  {
+                    key: "bep-splice",
+                    title: "A. BEP – Outdoor/Indoor Drop Fiber Fusion Splicing & Routing",
+                    filter: (cp) => !cp.id?.includes("label") && !cp.subSection?.includes("Labeling"),
+                  },
+                  {
+                    key: "bep-labels",
+                    title: "B. BEP Identification & Warning Labels",
+                    filter: (cp) => cp.id?.includes("label") || cp.subSection?.includes("Labeling"),
+                  },
+                ];
 
-              return (
-                <Box key={sIdx}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5, flexWrap: "wrap", gap: 1 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: colors?.textPrimary || "#fff", display: "flex", alignItems: "center", gap: 1 }}>
-                      {sectionIcons[sec.sectionTitle] || <CheckCircleIcon fontSize="small" sx={{ color: "#7b68ee" }} />}
-                      {sec.sectionTitle}
-                    </Typography>
+                return (
+                  <Box key={sIdx}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5, flexWrap: "wrap", gap: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: colors?.textPrimary || "#fff", display: "flex", alignItems: "center", gap: 1 }}>
+                        {sectionIcons[sec.sectionTitle] || <CheckCircleIcon fontSize="small" sx={{ color: "#7b68ee" }} />}
+                        {sec.sectionTitle}
+                      </Typography>
 
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      {isSec7 ? (
-                        <Chip
-                          label="Quality Supervisor Awareness (No Pass/Fail)"
-                          size="small"
-                          sx={{
-                            bgcolor: "rgba(156, 39, 176, 0.18)",
-                            color: "#ce93d8",
-                            fontWeight: 700,
-                            border: "1px solid rgba(156, 39, 176, 0.4)",
-                          }}
-                        />
-                      ) : isPointsOnly ? (
-                        <>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        {isSec7 ? (
                           <Chip
-                            label={`${secTotal} / ${secMax} Pts (${secScorePct}%)`}
+                            label="Quality Supervisor Awareness (No Pass/Fail)"
                             size="small"
                             sx={{
-                              bgcolor: isSecPass ? "rgba(76,175,80,0.18)" : "rgba(244,67,54,0.18)",
-                              color: isSecPass ? "#4caf50" : "#f44336",
-                              fontWeight: "bold",
-                              border: `1px solid ${isSecPass ? "#4caf5040" : "#f4433640"}`,
+                              bgcolor: "rgba(156, 39, 176, 0.18)",
+                              color: "#ce93d8",
+                              fontWeight: 700,
+                              border: "1px solid rgba(156, 39, 176, 0.4)",
                             }}
                           />
-                          <Chip
-                            label={isSecPass ? "Pass" : "Fail"}
-                            size="small"
-                            sx={{
-                              bgcolor: isSecPass ? "#4caf50" : "#f44336",
-                              color: "#ffffff",
-                              fontWeight: 800,
-                              fontSize: "0.75rem",
-                              px: 0.5,
-                            }}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <Chip
-                            label={`${secScorePct}%`}
-                            size="small"
-                            sx={{
-                              bgcolor: isSecPass ? "rgba(76,175,80,0.18)" : "rgba(244,67,54,0.18)",
-                              color: isSecPass ? "#4caf50" : "#f44336",
-                              fontWeight: "bold",
-                              border: `1px solid ${isSecPass ? "#4caf5040" : "#f4433640"}`,
-                            }}
-                          />
-                          <Chip
-                            label={isSecPass ? "Pass" : "Fail"}
-                            size="small"
-                            sx={{
-                              bgcolor: isSecPass ? "#4caf50" : "#f44336",
-                              color: "#ffffff",
-                              fontWeight: 800,
-                              fontSize: "0.75rem",
-                              px: 0.5,
-                            }}
-                          />
-                        </>
-                      )}
-                    </Stack>
+                        ) : isPointsOnly ? (
+                          <>
+                            <Chip
+                              label={`${secTotal} / ${secMax} Pts (${secScorePct}%)`}
+                              size="small"
+                              sx={{
+                                bgcolor: isSecPass ? "rgba(76,175,80,0.18)" : "rgba(244,67,54,0.18)",
+                                color: isSecPass ? "#4caf50" : "#f44336",
+                                fontWeight: "bold",
+                                border: `1px solid ${isSecPass ? "#4caf5040" : "#f4433640"}`,
+                              }}
+                            />
+                            <Chip
+                              label={isSecPass ? "Pass" : "Fail"}
+                              size="small"
+                              sx={{
+                                bgcolor: isSecPass ? "#4caf50" : "#f44336",
+                                color: "#ffffff",
+                                fontWeight: 800,
+                                fontSize: "0.75rem",
+                                px: 0.5,
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <Chip
+                              label={`${secScorePct}%`}
+                              size="small"
+                              sx={{
+                                bgcolor: isSecPass ? "rgba(76,175,80,0.18)" : "rgba(244,67,54,0.18)",
+                                color: isSecPass ? "#4caf50" : "#f44336",
+                                fontWeight: "bold",
+                                border: `1px solid ${isSecPass ? "#4caf5040" : "#f4433640"}`,
+                              }}
+                            />
+                            <Chip
+                              label={isSecPass ? "Pass" : "Fail"}
+                              size="small"
+                              sx={{
+                                bgcolor: isSecPass ? "#4caf50" : "#f44336",
+                                color: "#ffffff",
+                                fontWeight: 800,
+                                fontSize: "0.75rem",
+                                px: 0.5,
+                              }}
+                            />
+                          </>
+                        )}
+                      </Stack>
+                    </Box>
+
+                    {isOntSection ? (
+                      <Stack spacing={2}>
+                        {ontGroups.map((group) => {
+                          const groupCps = sec.checkpoints.filter(group.filter);
+                          if (groupCps.length === 0) return null;
+                          return (
+                            <Paper
+                              key={group.key}
+                              sx={{
+                                p: 2,
+                                bgcolor: "rgba(255,255,255,0.015)",
+                                border: `1px solid rgba(255,255,255,0.08)`,
+                                borderRadius: "12px",
+                              }}
+                            >
+                              <Typography variant="body2" sx={{ fontWeight: 700, color: colors?.textPrimary || "#fff", mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                                <span>{group.icon}</span> {group.title}
+                              </Typography>
+                              {renderDetailTable(groupCps, sec)}
+                            </Paper>
+                          );
+                        })}
+                      </Stack>
+                    ) : isBepSection ? (
+                      <Stack spacing={2}>
+                        {bepGroups.map((group) => {
+                          const groupCps = sec.checkpoints.filter(group.filter);
+                          if (groupCps.length === 0) return null;
+                          return (
+                            <Paper
+                              key={group.key}
+                              sx={{
+                                p: 2,
+                                bgcolor: "rgba(255,255,255,0.015)",
+                                border: `1px solid rgba(255,255,255,0.08)`,
+                                borderRadius: "12px",
+                              }}
+                            >
+                              <Typography variant="body2" sx={{ fontWeight: 700, color: colors?.textPrimary || "#fff", mb: 1 }}>
+                                {group.title}
+                              </Typography>
+                              {renderDetailTable(groupCps, sec)}
+                            </Paper>
+                          );
+                        })}
+                      </Stack>
+                    ) : (
+                      renderDetailTable(sec.checkpoints, sec)
+                    )}
                   </Box>
-
-                  {isOntSection ? (
-                    <Stack spacing={2}>
-                      {ontGroups.map((group) => {
-                        const groupCps = sec.checkpoints.filter(group.filter);
-                        if (groupCps.length === 0) return null;
-                        return (
-                          <Paper
-                            key={group.key}
-                            sx={{
-                              p: 2,
-                              bgcolor: "rgba(255,255,255,0.015)",
-                              border: `1px solid rgba(255,255,255,0.08)`,
-                              borderRadius: "12px",
-                            }}
-                          >
-                            <Typography variant="body2" sx={{ fontWeight: 700, color: colors?.textPrimary || "#fff", mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
-                              <span>{group.icon}</span> {group.title}
-                            </Typography>
-                            {renderDetailTable(groupCps, sec)}
-                          </Paper>
-                        );
-                      })}
-                    </Stack>
-                  ) : isBepSection ? (
-                    <Stack spacing={2}>
-                      {bepGroups.map((group) => {
-                        const groupCps = sec.checkpoints.filter(group.filter);
-                        if (groupCps.length === 0) return null;
-                        return (
-                          <Paper
-                            key={group.key}
-                            sx={{
-                              p: 2,
-                              bgcolor: "rgba(255,255,255,0.015)",
-                              border: `1px solid rgba(255,255,255,0.08)`,
-                              borderRadius: "12px",
-                            }}
-                          >
-                            <Typography variant="body2" sx={{ fontWeight: 700, color: colors?.textPrimary || "#fff", mb: 1 }}>
-                              {group.title}
-                            </Typography>
-                            {renderDetailTable(groupCps, sec)}
-                          </Paper>
-                        );
-                      })}
-                    </Stack>
-                  ) : (
-                    renderDetailTable(sec.checkpoints, sec)
-                  )}
-                </Box>
-              );
-            })
-          ) : (
-            // Fallback for legacy format
-            assessment.checkpoints && assessment.checkpoints.length > 0 && (
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5, color: colors?.textPrimary || "#fff" }}>
-                  Assessment Checkpoints
-                </Typography>
-                <TableContainer component={Paper} sx={{ bgcolor: "rgba(255,255,255,0.02)", border: `1px solid ${colors?.border || "#3d3d3d"}`, borderRadius: "14px" }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Checkpoint</TableCell>
-                        <TableCell align="center" sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Score (0-5)</TableCell>
-                        <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Notes</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {assessment.checkpoints.map((cp, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell sx={{ color: colors?.textPrimary || "#fff" }}>{cp.name}</TableCell>
-                          <TableCell align="center" sx={{ color: "#7b68ee", fontWeight: 700 }}>{cp.score} / 5</TableCell>
-                          <TableCell sx={{ color: cp.notes ? (colors?.textPrimary || "#fff") : "rgba(255,255,255,0.3)" }}>{cp.notes || "None"}</TableCell>
+                );
+              })
+            ) : (
+              // Fallback for legacy format
+              assessment.checkpoints && assessment.checkpoints.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5, color: colors?.textPrimary || "#fff" }}>
+                    Assessment Checkpoints
+                  </Typography>
+                  <TableContainer component={Paper} sx={{ bgcolor: "rgba(255,255,255,0.02)", border: `1px solid ${colors?.border || "#3d3d3d"}`, borderRadius: "14px" }}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Checkpoint</TableCell>
+                          <TableCell align="center" sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Score (0-5)</TableCell>
+                          <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Notes</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            )
-          );
+                      </TableHead>
+                      <TableBody>
+                        {assessment.checkpoints.map((cp, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell sx={{ color: colors?.textPrimary || "#fff" }}>{cp.name}</TableCell>
+                            <TableCell align="center" sx={{ color: "#7b68ee", fontWeight: 700 }}>{cp.score} / 5</TableCell>
+                            <TableCell sx={{ color: cp.notes ? (colors?.textPrimary || "#fff") : "rgba(255,255,255,0.3)" }}>{cp.notes || "None"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              )
+            );
           })()}
 
           {/* Feedback & Recommendations Card */}

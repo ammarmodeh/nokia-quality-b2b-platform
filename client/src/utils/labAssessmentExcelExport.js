@@ -108,6 +108,18 @@ export const STANDARDIZED_LAB_SECTIONS = [
       },
     ],
   },
+  {
+    sectionId: "sec-9",
+    sectionTitle: "9. Communication & Professional Behaviour",
+    checkpoints: [
+      {
+        id: "cp-9-comm-behaviour",
+        subSection: "Overall Communication & Behaviour Assessment",
+        name: "Overall Communication & Behaviour Rating — Evaluate the technician's professional conduct: greeting & personal appearance, clarity of communication with the customer, respectful & courteous behaviour, ability to explain work steps, and handling of questions or complaints professionally",
+        maxScore: 10,
+      },
+    ],
+  },
 ];
 
 // Helper to normalize any assessment sections against the official standard to avoid duplications
@@ -131,9 +143,9 @@ export const normalizeExportSections = (sections) => {
       };
     }
 
-    const isSec8 = defSec.sectionId === "sec-8" || defSec.sectionTitle?.includes("Photo") || defSec.sectionTitle?.includes("Self-Assessment");
-    const cpMax = isSec8 ? 10 : 5;
-    const passThreshold = isSec8 ? 7 : 4;
+    const is10PtSec = defSec.sectionId === "sec-8" || defSec.sectionId === "sec-9" || defSec.sectionTitle?.includes("Photo") || defSec.sectionTitle?.includes("Self-Assessment") || defSec.sectionTitle?.includes("Communication");
+    const cpMax = is10PtSec ? 10 : 5;
+    const passThreshold = is10PtSec ? 7 : 4;
 
     const mergedCheckpoints = defSec.checkpoints.map((defCp, cpIdx) => {
       // Match strictly by id, exact criteria name, or exact index
@@ -599,8 +611,8 @@ export const exportMasterLabAssessmentReport = ({ trackingData = [], assessments
             vertical: "center",
           },
           fill: c === 16 ? { fgColor: { rgb: tierInfo.bg } } :
-                c === 17 ? { fgColor: { rgb: tierInfo.status === "Pass" ? PALETTE.successBg : tierInfo.status === "Fail" ? PALETTE.errorBg : "F3F4F6" } } :
-                (c >= 8 && c <= 13) && val === "Certified" ? { fgColor: { rgb: PALETTE.successBg } } : undefined,
+            c === 17 ? { fgColor: { rgb: tierInfo.status === "Pass" ? PALETTE.successBg : tierInfo.status === "Fail" ? PALETTE.errorBg : "F3F4F6" } } :
+              (c >= 8 && c <= 13) && val === "Certified" ? { fgColor: { rgb: PALETTE.successBg } } : undefined,
         },
       };
     });
@@ -671,9 +683,9 @@ export const exportMasterLabAssessmentReport = ({ trackingData = [], assessments
     const normSections = normalizeExportSections(assess.sections);
 
     normSections.forEach((sec) => {
-      const isSec8 = sec.sectionId === "sec-8" || sec.sectionTitle?.includes("Photo") || sec.sectionTitle?.includes("Self-Assessment");
-      const cpMax = isSec8 ? 10 : 5;
-      const passThreshold = isSec8 ? 7 : 4;
+      const is10PtSec = sec.sectionId === "sec-8" || sec.sectionId === "sec-9" || sec.sectionTitle?.includes("Photo") || sec.sectionTitle?.includes("Self-Assessment") || sec.sectionTitle?.includes("Communication");
+      const cpMax = is10PtSec ? 10 : 5;
+      const passThreshold = is10PtSec ? 7 : 4;
       sec.checkpoints.forEach((cp) => {
         const cpScore = cp.score !== undefined ? cp.score : (cp.status === "Pass" ? cpMax : 0);
         const isPass = cp.status === "Pass" || cpScore >= passThreshold;
@@ -780,7 +792,7 @@ export const exportMasterLabAssessmentReport = ({ trackingData = [], assessments
           font: { sz: 9, bold: c === 1 || c === 10 },
           alignment: { horizontal: c === 0 || (c >= 3 && c <= 10) ? "center" : "left", vertical: "center" },
           fill: (c >= 4 && c <= 9) ? { fgColor: { rgb: val === "Certified" ? PALETTE.successBg : PALETTE.errorBg } } :
-                c === 10 && count === 6 ? { fgColor: { rgb: PALETTE.successBg } } : undefined,
+            c === 10 && count === 6 ? { fgColor: { rgb: PALETTE.successBg } } : undefined,
         },
       };
     });
@@ -891,7 +903,7 @@ export const exportIndividualLabAssessmentReport = (assessment, team) => {
           font: { sz: 10, bold: c === 0 || c === 1 },
           alignment: { horizontal: c === 2 || c === 3 ? "center" : "left", vertical: "center" },
           fill: c === 3 && (val === "Pass" || val === "Verified" || val === "Optimal") ? { fgColor: { rgb: PALETTE.successBg } } :
-                c === 3 && val === "Fail" ? { fgColor: { rgb: PALETTE.errorBg } } : undefined,
+            c === 3 && val === "Fail" ? { fgColor: { rgb: PALETTE.errorBg } } : undefined,
         },
       };
     });
@@ -917,13 +929,13 @@ export const exportIndividualLabAssessmentReport = (assessment, team) => {
 
   if (normSections && normSections.length > 0) {
     normSections.forEach((sec, idx) => {
-      const isSec8 = sec.sectionId === "sec-8" || sec.sectionTitle?.includes("Photo") || sec.sectionTitle?.includes("Self-Assessment");
+      const is10PtSec = sec.sectionId === "sec-8" || sec.sectionId === "sec-9" || sec.sectionTitle?.includes("Photo") || sec.sectionTitle?.includes("Self-Assessment") || sec.sectionTitle?.includes("Communication");
       const cpCount = sec.checkpoints?.length || 0;
       let totalSc = 0;
       let maxSc = 0;
       sec.checkpoints.forEach((cp) => {
         if (cp.status !== "N/A") {
-          const cpMax = isSec8 ? 10 : 5;
+          const cpMax = is10PtSec ? 10 : 5;
           maxSc += cpMax;
           const cpScore = cp.score !== undefined ? cp.score : (cp.status === "Pass" ? cpMax : 0);
           totalSc += Math.min(cpMax, Math.max(0, Number(cpScore)));
@@ -950,7 +962,7 @@ export const exportIndividualLabAssessmentReport = (assessment, team) => {
             font: { sz: 10, bold: c === 0 || c === 3 },
             alignment: { horizontal: c === 0 || c === 2 || c === 3 || c === 4 ? "center" : "left", vertical: "center" },
             fill: c === 4 && val === "Pass" ? { fgColor: { rgb: PALETTE.successBg } } :
-                  c === 4 && val === "Fail" ? { fgColor: { rgb: PALETTE.errorBg } } : undefined,
+              c === 4 && val === "Fail" ? { fgColor: { rgb: PALETTE.errorBg } } : undefined,
           },
         };
       });
@@ -992,9 +1004,9 @@ export const exportIndividualLabAssessmentReport = (assessment, team) => {
 
   if (normSections && normSections.length > 0) {
     normSections.forEach((sec) => {
-      const isSec8 = sec.sectionId === "sec-8" || sec.sectionTitle?.includes("Photo") || sec.sectionTitle?.includes("Self-Assessment");
-      const cpMax = isSec8 ? 10 : 5;
-      const passThreshold = isSec8 ? 7 : 4;
+      const is10PtSec = sec.sectionId === "sec-8" || sec.sectionId === "sec-9" || sec.sectionTitle?.includes("Photo") || sec.sectionTitle?.includes("Self-Assessment") || sec.sectionTitle?.includes("Communication");
+      const cpMax = is10PtSec ? 10 : 5;
+      const passThreshold = is10PtSec ? 7 : 4;
       sec.checkpoints.forEach((cp) => {
         const cpScore = cp.score !== undefined ? cp.score : (cp.status === "Pass" ? cpMax : 0);
         const isPass = cp.status === "Pass" || cpScore >= passThreshold;
@@ -1018,7 +1030,7 @@ export const exportIndividualLabAssessmentReport = (assessment, team) => {
               font: { sz: 9 },
               alignment: { horizontal: c === 3 || c === 4 || c === 5 ? "center" : "left", vertical: "center" },
               fill: c === 3 && isPass ? { fgColor: { rgb: PALETTE.successBg } } :
-                    c === 3 && !isPass && cp.status !== "N/A" ? { fgColor: { rgb: PALETTE.errorBg } } : undefined,
+                c === 3 && !isPass && cp.status !== "N/A" ? { fgColor: { rgb: PALETTE.errorBg } } : undefined,
             },
           };
         });
@@ -1048,7 +1060,7 @@ export const exportIndividualLabAssessmentReport = (assessment, team) => {
   const ws3 = {};
   createTitleRow(
     ws3,
-    `TOOLS & EQUIPMENT READINESS INSPECTION MATRIX - ${teamName.toUpperCase()}`,
+    `Tools & Equipment - ${teamName.toUpperCase()}`,
     "Splicing Machine, Cleaver, Stripper, Optical Power Meter, Laser Source, IPA 99%, Sleeves & Wipes",
     4
   );
@@ -1079,7 +1091,7 @@ export const exportIndividualLabAssessmentReport = (assessment, team) => {
           font: { sz: 9 },
           alignment: { horizontal: c === 0 || c === 2 || c === 3 ? "center" : "left", vertical: "center" },
           fill: c === 3 && isGood ? { fgColor: { rgb: PALETTE.successBg } } :
-                c === 3 && !isGood ? { fgColor: { rgb: PALETTE.errorBg } } : undefined,
+            c === 3 && !isGood ? { fgColor: { rgb: PALETTE.errorBg } } : undefined,
         },
       };
     });
@@ -1138,7 +1150,7 @@ export const exportIndividualLabAssessmentReport = (assessment, team) => {
           font: { sz: 9, bold: c === 0 || c === 3 },
           alignment: { horizontal: c === 0 || c === 3 || c === 4 ? "center" : "left", vertical: "center" },
           fill: c === 3 && isCert ? { fgColor: { rgb: PALETTE.successBg } } :
-                c === 3 && !isCert ? { fgColor: { rgb: PALETTE.errorBg } } : undefined,
+            c === 3 && !isCert ? { fgColor: { rgb: PALETTE.errorBg } } : undefined,
         },
       };
     });

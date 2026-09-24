@@ -68,6 +68,7 @@ import {
   FilterList as FilterListIcon,
   EmojiEvents as EmojiEventsIcon,
   Engineering as EngineeringIcon,
+  PictureAsPdf as PictureAsPdfIcon,
 } from "@mui/icons-material";
 import api from "../api/api";
 import { toast } from "sonner";
@@ -81,6 +82,7 @@ import {
   exportMasterLabAssessmentReport,
   exportIndividualLabAssessmentReport,
 } from "../utils/labAssessmentExcelExport";
+import { exportArabicLabAssessmentPDF } from "../utils/labAssessmentArabicPdf";
 
 // Initial default sections & checkpoints for E2E FTTH Practical Assessment
 export const getInitialSections = () => [
@@ -557,6 +559,22 @@ export const getInitialSections = () => [
       },
     ],
   },
+  {
+    sectionId: "sec-9",
+    sectionTitle: "9. Communication & Professional Behaviour",
+    checkpoints: [
+      {
+        id: "cp-9-comm-behaviour",
+        subSection: "Overall Communication & Behaviour Assessment",
+        name: "Overall Communication & Behaviour Rating — Evaluate the technician's professional conduct: greeting & personal appearance, clarity of communication with the customer, respectful & courteous behaviour, ability to explain work steps, and handling of questions or complaints professionally",
+        type: "points",
+        status: "Pass",
+        maxScore: 10,
+        score: 10,
+        notes: "",
+      },
+    ],
+  },
 ];
 
 export const CERTIFICATE_DEFINITIONS = [
@@ -719,8 +737,8 @@ const LabAssessment = () => {
       if (sec.sectionId === "sec-7") return; // Quality Ticket Awareness is informational, no pass/fail calculation
       sec.checkpoints.forEach((cp) => {
         if (cp.status !== "N/A") {
-          const isSec8 = sec.sectionId === "sec-8" || sec.sectionTitle?.includes("Photo") || sec.sectionTitle?.includes("Self-Assessment") || cp.id === "cp-8-photos-self-assess";
-          const cpMax = isSec8 ? 10 : (cp.maxScore || 5);
+          const isPointsSec = sec.sectionId === "sec-8" || sec.sectionId === "sec-9" || sec.sectionTitle?.includes("Photo") || sec.sectionTitle?.includes("Self-Assessment") || sec.sectionTitle?.includes("Communication") || cp.id === "cp-8-photos-self-assess" || cp.id === "cp-9-comm-behaviour";
+          const cpMax = isPointsSec ? (cp.maxScore || 10) : (cp.maxScore || 5);
           maxScore += cpMax;
           const cpScore = cp.score !== undefined ? cp.score : (cp.status === "Pass" ? cpMax : 0);
           totalScore += Math.min(cpMax, Math.max(0, Number(cpScore)));
@@ -739,7 +757,7 @@ const LabAssessment = () => {
     }
     let totalScore = 0;
     let maxScore = 0;
-    const isSec8 = sec.sectionId === "sec-8" || sec.sectionTitle?.includes("Photo") || sec.sectionTitle?.includes("Self-Assessment");
+    const isSec8 = sec.sectionId === "sec-8" || sec.sectionId === "sec-9" || sec.sectionTitle?.includes("Photo") || sec.sectionTitle?.includes("Self-Assessment") || sec.sectionTitle?.includes("Communication");
     sec.checkpoints.forEach((cp) => {
       if (cp.status !== "N/A") {
         const cpMax = isSec8 ? 10 : (cp.maxScore || 5);
@@ -1153,10 +1171,29 @@ const LabAssessment = () => {
     return data;
   }, [fieldTeams, assessments, trackingFilter, searchQuery]);
 
+  // All teams (unfiltered) — used for correct tab counts regardless of active filter
+  const allTrackingData = useMemo(() => {
+    return fieldTeams.map((team) => {
+      const teamAssessments = assessments.filter(
+        (a) => (a.fieldTeamId?._id === team._id) || (a.fieldTeamId === team._id) || (a.fieldTeamName === team.teamName)
+      );
+      teamAssessments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const latest = teamAssessments[0];
+      return {
+        ...team,
+        isTested: !!latest,
+        lastAssessment: latest,
+        assessmentCount: teamAssessments.length,
+        allAssessments: teamAssessments,
+      };
+    });
+  }, [fieldTeams, assessments]);
+
   // Analytics & Statistics Deep-Dive
   const stats = useMemo(() => {
     const totalTeams = fieldTeams.length;
-    const testedTeams = trackingData.filter((t) => t.isTested).length;
+    // Always count from the full unfiltered list so tab labels stay correct
+    const testedTeams = allTrackingData.filter((t) => t.isTested).length;
     const pendingTeams = totalTeams - testedTeams;
     const completionRate = totalTeams ? Math.round((testedTeams / totalTeams) * 100) : 0;
 
@@ -1331,7 +1368,7 @@ const LabAssessment = () => {
       bottomTeams,
       teamAverages,
     };
-  }, [trackingData, fieldTeams, assessments]);
+  }, [allTrackingData, fieldTeams, assessments]);
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: colors.background, p: { xs: 2, md: 4 } }}>
@@ -1341,7 +1378,7 @@ const LabAssessment = () => {
           <SensorsIcon fontSize="large" /> E2E FTTH Practical Assessment
         </Typography>
         <Typography variant="body2" sx={{ color: colors.textSecondary, mt: 0.5 }}>
-          Full-cycle practical laboratory evaluation: <strong>FDB → BEP → OTO → ONT → Service Verification → Customer Education → Tools Readiness → Quality Ticket Awareness</strong>
+          Full-cycle practical laboratory evaluation: <strong>FDB → BEP → OTO → ONT → Service Verification → Customer Education → Tools Readiness → Quality Ticket Awareness → Communication & Behaviour</strong>
         </Typography>
       </Box>
 
@@ -1720,7 +1757,7 @@ const LabAssessment = () => {
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1.5 }}>
                     <Box>
                       <Typography variant="h6" sx={{ color: colors.info, fontWeight: 700, display: "flex", alignItems: "center", gap: 1 }}>
-                        <BuildIcon /> Tools & Equipment Readiness Inspection Matrix
+                        <BuildIcon /> Tools & Equipment
                       </Typography>
                       <Typography variant="caption" sx={{ color: colors.textSecondary }}>
                         Verify equipment condition, operational status, cleanliness & suitability
@@ -2298,7 +2335,7 @@ const LabAssessment = () => {
             </Stack>
           </Paper>
 
-          <Paper sx={{ width: "100%", height: 620, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
+          <Paper sx={{ width: "100%", height: 620, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "16px", overflow: "auto" }}>
             <DataGrid
               rows={trackingData}
               getRowId={(row) => row._id}
@@ -2433,7 +2470,7 @@ const LabAssessment = () => {
                 {
                   field: "actions",
                   headerName: "Actions",
-                  width: 180,
+                  width: 220,
                   sortable: false,
                   renderCell: (params) => (
                     <Stack direction="row" spacing={0.5}>
@@ -2444,6 +2481,14 @@ const LabAssessment = () => {
                       </Tooltip>
                       {params.row.isTested && (
                         <>
+                          <Tooltip title="Export Arabic PDF (تقرير الفني بالعربي)">
+                            <IconButton
+                              onClick={() => exportArabicLabAssessmentPDF(params.row.lastAssessment)}
+                              sx={{ color: "#ef4444" }}
+                            >
+                              <PictureAsPdfIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                           <Tooltip title="Export Detailed Report (.xlsx)">
                             <IconButton
                               onClick={() => exportIndividualLabAssessmentReport(params.row.lastAssessment)}
@@ -2867,16 +2912,29 @@ const LabAssessment = () => {
                           {team.teamCompany} • {team.employmentType}
                         </Typography>
                       </Box>
-                      <Stack direction="row" spacing={1} alignItems="center">
+                      <Stack direction="row" spacing={0.5} alignItems="center">
                         <Chip label={`${team.avg}%`} size="small" sx={{ bgcolor: "#4caf5022", color: "#4caf50", fontWeight: 800, border: "1px solid #4caf50" }} />
                         {team.latestAssess && (
-                          <IconButton
-                            size="small"
-                            onClick={() => exportIndividualLabAssessmentReport(team.latestAssess)}
-                            sx={{ color: "#4caf50" }}
-                          >
-                            <FileDownloadIcon fontSize="small" />
-                          </IconButton>
+                          <>
+                            <Tooltip title="Export Arabic PDF (تقرير الفني)">
+                              <IconButton
+                                size="small"
+                                onClick={() => exportArabicLabAssessmentPDF(team.latestAssess)}
+                                sx={{ color: "#ef4444" }}
+                              >
+                                <PictureAsPdfIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Export Excel Report">
+                              <IconButton
+                                size="small"
+                                onClick={() => exportIndividualLabAssessmentReport(team.latestAssess)}
+                                sx={{ color: "#4caf50" }}
+                              >
+                                <FileDownloadIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </>
                         )}
                       </Stack>
                     </Box>
@@ -2913,16 +2971,29 @@ const LabAssessment = () => {
                           {team.teamCompany} • {team.employmentType}
                         </Typography>
                       </Box>
-                      <Stack direction="row" spacing={1} alignItems="center">
+                      <Stack direction="row" spacing={0.5} alignItems="center">
                         <Chip label={`${team.avg}%`} size="small" sx={{ bgcolor: "#f4433622", color: "#f44336", fontWeight: 800, border: "1px solid #f44336" }} />
                         {team.latestAssess && (
-                          <IconButton
-                            size="small"
-                            onClick={() => exportIndividualLabAssessmentReport(team.latestAssess)}
-                            sx={{ color: "#f44336" }}
-                          >
-                            <FileDownloadIcon fontSize="small" />
-                          </IconButton>
+                          <>
+                            <Tooltip title="Export Arabic PDF (تقرير الفني)">
+                              <IconButton
+                                size="small"
+                                onClick={() => exportArabicLabAssessmentPDF(team.latestAssess)}
+                                sx={{ color: "#ef4444" }}
+                              >
+                                <PictureAsPdfIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Export Excel Report">
+                              <IconButton
+                                size="small"
+                                onClick={() => exportIndividualLabAssessmentReport(team.latestAssess)}
+                                sx={{ color: "#f44336" }}
+                              >
+                                <FileDownloadIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </>
                         )}
                       </Stack>
                     </Box>

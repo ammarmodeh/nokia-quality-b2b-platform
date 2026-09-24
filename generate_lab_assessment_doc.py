@@ -177,10 +177,10 @@ def create_lab_assessment_docx(output_path):
     doc.add_paragraph().paragraph_format.space_after = Pt(6)
 
     # -------------------------------------------------------------
-    # SECTION 3: TOOLS & EQUIPMENT READINESS INSPECTION MATRIX
+    # SECTION 3: Tools & Equipment
     # -------------------------------------------------------------
     h3 = doc.add_paragraph()
-    h3_run = h3.add_run("3. TOOLS & EQUIPMENT READINESS INSPECTION MATRIX")
+    h3_run = h3.add_run("3. Tools & Equipment")
     h3_run.font.name = "Calibri"
     h3_run.font.size = Pt(11)
     h3_run.font.bold = True

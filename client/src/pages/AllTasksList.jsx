@@ -2664,7 +2664,10 @@ const AllTasksList = () => {
     const globalDetTree = getHierarchicalRCA(detTasks);
     const globalDetRCARows = addHierarchicalRCA(wsDetSpecial, globalDetTree, "A3", "GLOBAL ROOT CAUSE BREAKDOWN (DETRACTORS)", "1E3A8A");
 
-    const ownerDistStartR = globalDetRCARows + 2;
+    const globalDetRootCauses = getCountsWithPercent('rootCause', detTasks);
+    addTableToSheet(wsDetSpecial, globalDetRootCauses, "H3", "GLOBAL ROOT CAUSE SUMMARY (DETRACTORS)", "1E3A8A");
+
+    const ownerDistStartR = Math.max(globalDetRCARows, 4 + globalDetRootCauses.length) + 2;
     XLSX.utils.sheet_add_aoa(wsDetSpecial, [["OVERALL DETRACTOR OWNER DISTRIBUTION"]], { origin: XLSX.utils.encode_cell({ r: ownerDistStartR, c: 0 }) });
     wsDetSpecial[XLSX.utils.encode_cell({ r: ownerDistStartR, c: 0 })] = { v: "OVERALL DETRACTOR OWNER DISTRIBUTION", t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "450a0a" } }, alignment: { horizontal: "center" } } };
     wsDetSpecial['!merges'].push({ s: { r: ownerDistStartR, c: 0 }, e: { r: ownerDistStartR, c: 2 } });
@@ -3036,7 +3039,10 @@ const AllTasksList = () => {
     const globalNeuTree = getHierarchicalRCA(neuTasks);
     const globalNeuRCARows = addHierarchicalRCA(wsNeuSpecial, globalNeuTree, "A3", "GLOBAL ROOT CAUSE BREAKDOWN (NEUTRALS)", "1E3A8A");
 
-    const neuOwnerDistStartR = globalNeuRCARows + 2;
+    const globalNeuRootCauses = getCountsWithPercent('rootCause', neuTasks);
+    addTableToSheet(wsNeuSpecial, globalNeuRootCauses, "H3", "GLOBAL ROOT CAUSE SUMMARY (NEUTRALS)", "1E3A8A");
+
+    const neuOwnerDistStartR = Math.max(globalNeuRCARows, 4 + globalNeuRootCauses.length) + 2;
     XLSX.utils.sheet_add_aoa(wsNeuSpecial, [["OVERALL NEUTRAL OWNER DISTRIBUTION"]], { origin: XLSX.utils.encode_cell({ r: neuOwnerDistStartR, c: 0 }) });
     wsNeuSpecial[XLSX.utils.encode_cell({ r: neuOwnerDistStartR, c: 0 })] = { v: "OVERALL NEUTRAL OWNER DISTRIBUTION", t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "92400E" } }, alignment: { horizontal: "center" } } };
     wsNeuSpecial['!merges'].push({ s: { r: neuOwnerDistStartR, c: 0 }, e: { r: neuOwnerDistStartR, c: 2 } });
@@ -8491,6 +8497,112 @@ const AllTasksList = () => {
       }, 0);
     });
 
+    const getDeepRawHeaderStyle = (columnName) => {
+      // 1. Blue: SLID to District
+      const blueCols = [
+        'SLID', 'Request Number', 'Status', 'Severity', 'Operation', 'Tariff Name',
+        'Validation Status', 'Customer Name', 'Customer Type', 'Contact Number',
+        'Governorate', 'District'
+      ];
+      if (blueCols.includes(columnName)) {
+        return { bg: '2F5597', color: 'FFFFFF' };
+      }
+
+      // 2. Orange: Q1-Score -> Q1-Verbatim -> Satisfaction Category
+      const orangeCols = ['Q1-Score', 'Q1-Verbatim', 'Satisfaction Category'];
+      if (orangeCols.includes(columnName)) {
+        return { bg: 'ED7D31', color: 'FFFFFF' };
+      }
+
+      // 3. Tan, Background 2, Darker 75%: ONT Type to Extender Count
+      const tanCols = ['ONT Type', 'Free Extender', 'Extender Type', 'Extender Count'];
+      if (tanCols.includes(columnName)) {
+        return { bg: '4A452A', color: 'FFFFFF' };
+      }
+
+      // 4. GAIA Check and GAIA Content: Orange, Accent 6, Lighter 65%, with black text color
+      if (columnName === 'GAIA Check' || columnName === 'GAIA Content') {
+        return { bg: 'FCE4D6', color: '000000' };
+      }
+
+      // 5. Purple, Accent 4, Darker 25%: Reason to Owner
+      if (
+        columnName === 'Reason' || columnName.startsWith('Reason ') ||
+        columnName === 'Sub-Reason' || columnName.startsWith('Sub-Reason ') ||
+        columnName === 'Root Cause' || columnName.startsWith('Root Cause ') ||
+        columnName === 'Owner' || columnName.startsWith('Owner ')
+      ) {
+        return { bg: '5F497A', color: 'FFFFFF' };
+      }
+
+      // 6. Purple, Accent 4, Lighter 40%: ITN Related to Team Accountability
+      if (
+        columnName === 'ITN Related' || columnName.startsWith('ITN Related ') ||
+        columnName === 'Related to Subscription' || columnName.startsWith('Related to Subscription ') ||
+        columnName === 'Team Accountability' || columnName.startsWith('Team Accountability ')
+      ) {
+        return { bg: 'B1A0C7', color: '000000' };
+      }
+
+      // 7. Field Team Name: Orange, Accent 6, Darker 25%
+      if (columnName === 'Field Team Name') {
+        return { bg: 'C65911', color: 'FFFFFF' };
+      }
+
+      // 8. Note columns: Black
+      if (columnName.startsWith('Note')) {
+        return { bg: '000000', color: 'FFFFFF' };
+      }
+
+      // 9. Aqua, Accent 5, Darker 25%: Request Date, In Date (Dispatched to Cont.), PIS Date, Request to Dispatched, Dispatched to Close (Days), Request to Close (Days)
+      const aquaCols = [
+        'Request Date',
+        'In Date (Dispatched to Cont.)',
+        'PIS Date',
+        'Request to Dispatched - Dispatched to Contractor (Days)',
+        'Request to Dispatched - Dispatched to Contreactor (Days)',
+        'Dispatched to Close (Days)',
+        'Request to Close (Days)'
+      ];
+      if (aquaCols.includes(columnName) || columnName.startsWith('Request to Dispatched')) {
+        return { bg: '31859C', color: 'FFFFFF' };
+      }
+
+      // 10. Orange Accent 6, Darker 50%: Interview Date, PIS to Interview (Days), Close to PIS (Days), Interview Week
+      const darkOrangeCols = [
+        'Interview Date',
+        'PIS to Interview (Days)',
+        'Close to PIS (Days)',
+        'Interview Week'
+      ];
+      if (darkOrangeCols.includes(columnName)) {
+        return { bg: '833C0C', color: 'FFFFFF' };
+      }
+
+      return { bg: '1F2937', color: 'FFFFFF' };
+    };
+
+    const applyDeepRawHeaderRowStyle = (ws, rowIdx, colKeys) => {
+      colKeys.forEach((key, colIdx) => {
+        const cellAddress = XLSX.utils.encode_cell({ r: rowIdx, c: colIdx });
+        if (!ws[cellAddress]) {
+          ws[cellAddress] = { t: 's', v: key };
+        }
+        const style = getDeepRawHeaderStyle(key);
+        ws[cellAddress].s = {
+          font: { bold: true, color: { rgb: style.color } },
+          fill: { fgColor: { rgb: style.bg } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } }
+          }
+        };
+      });
+    };
+
     const rawData = filteredTasks.map(task => {
       const baseData = {
         'SLID': task.slid || 'N/A',
@@ -8506,6 +8618,7 @@ const AllTasksList = () => {
         'Governorate': task.governorate || 'N/A',
         'District': task.district || 'N/A',
         'Q1-Score': task.evaluationScore !== null ? task.evaluationScore : 'N/A',
+        'Q1-Verbatim': task.customerFeedback || 'N/A',
         'Satisfaction Category': (() => {
           if (task.evaluationScore === null || task.evaluationScore === 'N/A') return 'N/A';
           const score = Number(task.evaluationScore);
@@ -8514,7 +8627,6 @@ const AllTasksList = () => {
           if (score >= 9) return 'Promoter';
           return 'N/A';
         })(),
-        'Q1-Verbatim': task.customerFeedback || 'N/A',
         'ONT Type': task.ontType || 'N/A',
         'Free Extender': task.freeExtender || 'N/A',
         'Extender Type': task.extenderType || 'N/A',
@@ -8566,29 +8678,32 @@ const AllTasksList = () => {
       });
 
       const sortedTickets = [...(task.tickets || [])].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      for (let i = 0; i < maxTickets; i++) {
+      for (let i = 2; i < maxTickets; i++) {
         baseData[`Note ${i + 1}`] = sortedTickets[i]?.note || '';
       }
 
       const ivDate = task.interviewDate ? new Date(task.interviewDate) : null;
       const pisDate = task.pisDate ? new Date(task.pisDate) : null;
+      const inDate = task.inDate ? new Date(task.inDate) : null;
       const closeDate = task.closeDate ? new Date(task.closeDate) : null;
       const requestDate = task.contractDate ? new Date(task.contractDate) : null;
 
       const interviewToPis = ivDate && pisDate ? Math.max(0, Math.round((ivDate - pisDate) / (1000 * 60 * 60 * 24))) : 'N/A';
       const pisToClose = pisDate && closeDate ? Math.max(0, Math.round((pisDate - closeDate) / (1000 * 60 * 60 * 24))) : 'N/A';
       const requestToClose = requestDate && closeDate ? Math.max(0, Math.round((closeDate - requestDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+      const requestToDispatched = requestDate && inDate ? Math.max(0, Math.round((inDate - requestDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+      const dispatchedToClose = inDate && closeDate ? Math.max(0, Math.round((closeDate - inDate) / (1000 * 60 * 60 * 24))) : 'N/A';
 
       const timelineData = {
         'Request Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
-        'FE Date': task.feDate ? format(new Date(task.feDate), 'yyyy-MM-dd') : (task.appDate ? format(new Date(task.appDate), 'yyyy-MM-dd') : 'N/A'),
         'In Date (Dispatched to Cont.)': task.inDate ? format(new Date(task.inDate), 'yyyy-MM-dd') : 'N/A',
-        'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
         'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
+        'Request to Dispatched - Dispatched to Contractor (Days)': requestToDispatched,
+        'Dispatched to Close (Days)': dispatchedToClose,
+        'Request to Close (Days)': requestToClose,
         'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
         'PIS to Interview (Days)': interviewToPis,
         'Close to PIS (Days)': pisToClose,
-        'Request to Close (Days)': requestToClose,
         'Interview Week': getWeekDisplay(task.interviewDate)
       };
 
@@ -8599,7 +8714,7 @@ const AllTasksList = () => {
     const rawKeys = Object.keys(rawData[0] || {});
     const maxColIdx = Math.max(0, rawKeys.length - 1);
     addTitle(wsRaw, `DEEP RAW AUDIT DATA - ${periodStr}`, maxColIdx);
-    applyHeaderStyle(wsRaw, { s: { r: 1, c: 0 }, e: { r: 1, c: maxColIdx } });
+    applyDeepRawHeaderRowStyle(wsRaw, 1, rawKeys);
 
     if (!wsRaw['!rows']) wsRaw['!rows'] = [];
     wsRaw['!rows'][0] = { hpt: 24 }; // Title
@@ -8674,6 +8789,7 @@ const AllTasksList = () => {
           'Governorate': task.governorate || 'N/A',
           'District': task.district || 'N/A',
           'Q1-Score': task.evaluationScore !== null ? task.evaluationScore : 'N/A',
+          'Q1-Verbatim': task.customerFeedback || 'N/A',
           'Satisfaction Category': (() => {
             if (task.evaluationScore === null || task.evaluationScore === 'N/A') return 'N/A';
             const score = Number(task.evaluationScore);
@@ -8682,7 +8798,6 @@ const AllTasksList = () => {
             if (score >= 9) return 'Promoter';
             return 'N/A';
           })(),
-          'Q1-Verbatim': task.customerFeedback || 'N/A',
           'ONT Type': task.ontType || 'N/A',
           'Free Extender': task.freeExtender || 'N/A',
           'Extender Type': task.extenderType || 'N/A',
@@ -8700,29 +8815,32 @@ const AllTasksList = () => {
         };
 
         const sortedTickets = [...(task.tickets || [])].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        for (let i = 0; i < maxTickets; i++) {
+        for (let i = 2; i < maxTickets; i++) {
           baseData[`Note ${i + 1}`] = sortedTickets[i]?.note || '';
         }
 
         const ivDate = task.interviewDate ? new Date(task.interviewDate) : null;
         const pisDate = task.pisDate ? new Date(task.pisDate) : null;
+        const inDate = task.inDate ? new Date(task.inDate) : null;
         const closeDate = task.closeDate ? new Date(task.closeDate) : null;
         const requestDate = task.contractDate ? new Date(task.contractDate) : null;
 
         const interviewToPis = ivDate && pisDate ? Math.max(0, Math.round((ivDate - pisDate) / (1000 * 60 * 60 * 24))) : 'N/A';
         const pisToClose = pisDate && closeDate ? Math.max(0, Math.round((pisDate - closeDate) / (1000 * 60 * 60 * 24))) : 'N/A';
         const requestToClose = requestDate && closeDate ? Math.max(0, Math.round((closeDate - requestDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+        const requestToDispatched = requestDate && inDate ? Math.max(0, Math.round((inDate - requestDate) / (1000 * 60 * 60 * 24))) : 'N/A';
+        const dispatchedToClose = inDate && closeDate ? Math.max(0, Math.round((closeDate - inDate) / (1000 * 60 * 60 * 24))) : 'N/A';
 
         const timelineData = {
           'Request Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
-          'FE Date': task.feDate ? format(new Date(task.feDate), 'yyyy-MM-dd') : (task.appDate ? format(new Date(task.appDate), 'yyyy-MM-dd') : 'N/A'),
           'In Date (Dispatched to Cont.)': task.inDate ? format(new Date(task.inDate), 'yyyy-MM-dd') : 'N/A',
-          'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A',
           'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
+          'Request to Dispatched - Dispatched to Contractor (Days)': requestToDispatched,
+          'Dispatched to Close (Days)': dispatchedToClose,
+          'Request to Close (Days)': requestToClose,
           'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
           'PIS to Interview (Days)': interviewToPis,
           'Close to PIS (Days)': pisToClose,
-          'Request to Close (Days)': requestToClose,
           'Interview Week': getWeekDisplay(task.interviewDate)
         };
 
@@ -8749,7 +8867,7 @@ const AllTasksList = () => {
 
       // 2. Add Header & Data Rows (Lightweight, No Individual Cell Border Overhead)
       XLSX.utils.sheet_add_json(wsRaw, ownerRows, { origin: XLSX.utils.encode_cell({ r: currentRawR + 1, c: 0 }), skipHeader: false });
-      applyHeaderStyle(wsRaw, { s: { r: currentRawR + 1, c: 0 }, e: { r: currentRawR + 1, c: ownerMaxColIdx } }, colorPair.header);
+      applyDeepRawHeaderRowStyle(wsRaw, currentRawR + 1, ownerKeys);
 
       // Set Banner and Header Row Heights
       wsRaw['!rows'][currentRawR] = { hpt: 22 };
@@ -8775,14 +8893,49 @@ const AllTasksList = () => {
       currentRawR = currentRawR + 1 + ownerRows.length + 3;
     });
 
-    wsRaw['!cols'] = Array(Math.max(rawKeys.length, 50)).fill({ wch: 15 });
-    const getColIndex = (name) => rawKeys.indexOf(name);
-    if (getColIndex('SLID') !== -1) wsRaw['!cols'][getColIndex('SLID')] = { wch: 15 };
-    if (getColIndex('Customer Name') !== -1) wsRaw['!cols'][getColIndex('Customer Name')] = { wch: 25 };
-    if (getColIndex('Q1-Verbatim') !== -1) wsRaw['!cols'][getColIndex('Q1-Verbatim')] = { wch: 60 };
-    if (getColIndex('Customer Type') !== -1) wsRaw['!cols'][getColIndex('Customer Type')] = { wch: 10 };
-    if (getColIndex('ONT Type') !== -1) wsRaw['!cols'][getColIndex('ONT Type')] = { wch: 10 };
-    if (getColIndex('Field Team Name') !== -1) wsRaw['!cols'][getColIndex('Field Team Name')] = { wch: 22 };
+    wsRaw['!cols'] = rawKeys.map(key => {
+      if (key === 'SLID') return { wch: 15 };
+      if (key === 'Request Number') return { wch: 18 };
+      if (key === 'Status') return { wch: 14 };
+      if (key === 'Severity') return { wch: 12 };
+      if (key === 'Operation') return { wch: 16 };
+      if (key === 'Tariff Name') return { wch: 22 };
+      if (key === 'Validation Status') return { wch: 18 };
+      if (key === 'Customer Name') return { wch: 25 };
+      if (key === 'Customer Type') return { wch: 14 };
+      if (key === 'Contact Number') return { wch: 16 };
+      if (key === 'Governorate') return { wch: 16 };
+      if (key === 'District') return { wch: 18 };
+      if (key === 'Q1-Score') return { wch: 12 };
+      if (key === 'Q1-Verbatim') return { wch: 60 };
+      if (key === 'Satisfaction Category') return { wch: 20 };
+      if (key === 'ONT Type') return { wch: 14 };
+      if (key === 'Free Extender') return { wch: 14 };
+      if (key === 'Extender Type') return { wch: 16 };
+      if (key === 'Extender Count') return { wch: 14 };
+      if (key === 'GAIA Check') return { wch: 14 };
+      if (key === 'GAIA Content') return { wch: 16 };
+      if (key.startsWith('Reason')) return { wch: 20 };
+      if (key.startsWith('Sub-Reason')) return { wch: 20 };
+      if (key.startsWith('Root Cause')) return { wch: 22 };
+      if (key.startsWith('Owner')) return { wch: 16 };
+      if (key.startsWith('ITN Related')) return { wch: 14 };
+      if (key.startsWith('Related to Subscription')) return { wch: 22 };
+      if (key.startsWith('Team Accountability')) return { wch: 20 };
+      if (key === 'Field Team Name') return { wch: 24 };
+      if (key.startsWith('Note')) return { wch: 35 };
+      if (key === 'Request Date') return { wch: 15 };
+      if (key === 'In Date (Dispatched to Cont.)') return { wch: 26 };
+      if (key === 'PIS Date') return { wch: 15 };
+      if (key.startsWith('Request to Dispatched')) return { wch: 34 };
+      if (key === 'Dispatched to Close (Days)') return { wch: 24 };
+      if (key === 'Request to Close (Days)') return { wch: 22 };
+      if (key === 'Interview Date') return { wch: 15 };
+      if (key === 'PIS to Interview (Days)') return { wch: 22 };
+      if (key === 'Close to PIS (Days)') return { wch: 18 };
+      if (key === 'Interview Week') return { wch: 16 };
+      return { wch: 15 };
+    });
     fixSheetRange(wsRaw);
 
     // 7. YTD Analysis Sheet

@@ -63,20 +63,23 @@ async function retryApiCall(apiCall, maxRetries = 3) {
 
 export const generateReportFile = async (req, res) => {
   try {
-    const { reportContent, format = 'pdf', title = 'QoS Executive Report' } = req.body;
+    const { reportContent, customHtml, format = 'pdf', title = 'QoS Executive Report' } = req.body;
 
-    if (!reportContent) {
-      return res.status(400).json({ error: "Report content is required." });
+    if (!reportContent && !customHtml) {
+      return res.status(400).json({ error: "Report content or custom HTML is required." });
     }
 
-    // 1. Convert Markdown to HTML
-    let htmlContent = md.render(reportContent);
+    let finalHtml = customHtml;
+    if (!finalHtml) {
+      // 1. Convert Markdown to HTML
+      let htmlContent = md.render(reportContent || "");
 
-    // Optional: Add professional CSS styling for the PDF
-    const styledHtml = `
+      // Optional: Add professional CSS styling for the PDF
+      finalHtml = `
             <!DOCTYPE html>
             <html>
             <head>
+                <meta charset="utf-8">
                 <title>${title}</title>
                 <style>
                     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -85,7 +88,7 @@ export const generateReportFile = async (req, res) => {
                         font-family: 'Roboto', 'Arial', sans-serif; 
                         line-height: 1.6; 
                         color: #333; 
-                        margin: 0;
+                        margin: 0; 
                         padding: 0;
                     }
                     
@@ -199,11 +202,12 @@ export const generateReportFile = async (req, res) => {
             </body>
             </html>
         `;
+    }
 
     if (format === 'pdf') {
       try {
         console.log(`[PDF Gen] Starting PDF generation for: ${title}`);
-        const file = { content: styledHtml };
+        const file = { content: finalHtml };
 
         // Detailed PDF Options with Margins
         const options = {
