@@ -1352,8 +1352,6 @@ const AllTasksList = () => {
     wsSummary['!cols'] = [{ wch: 42 }, { wch: 18 }, { wch: 18 }, { wch: 38 }];
     fixSheetRange(wsSummary);
 
-    XLSX.utils.book_append_sheet(workbook, wsSummary, 'Executive Summary');
-
     // 3. Reason Overview Sheet (with Percentages)
     const getCountsWithPercent = (field, customTasks = filteredTasks) => {
       const counts = {};
@@ -1415,8 +1413,6 @@ const AllTasksList = () => {
     wsReasons['!cols'][23] = { wch: 22 }; // ITN Related
     wsReasons['!cols'][27] = { wch: 22 }; // Subscription Related
     fixSheetRange(wsReasons);
-
-    XLSX.utils.book_append_sheet(workbook, wsReasons, 'R.C.A - All');
 
     // 3.1 Category Matrix Analysis Subsheet
     const getMatrixData = (tasks, rowField) => {
@@ -1734,7 +1730,6 @@ const AllTasksList = () => {
     wsMatrix['!cols'] = Array(maxCols).fill({ wch: 12 });
     wsMatrix['!cols'][0] = { wch: 30 };
     fixSheetRange(wsMatrix);
-    XLSX.utils.book_append_sheet(workbook, wsMatrix, 'Category Matrix Analysis');
 
     // 3.5 Special Analytics Window
     const ownerCounts = {};
@@ -2180,8 +2175,6 @@ const AllTasksList = () => {
     wsSpecial['!cols'][28] = { wch: 8 };  // Total
     wsSpecial['!cols'][29] = { wch: 10 }; // %
     fixSheetRange(wsSpecial);
-
-    XLSX.utils.book_append_sheet(workbook, wsSpecial, 'Ownership Distribution');
 
     // Helper functions for raw data subsets
     const getSeverityStats = (tasks) => {
@@ -5342,6 +5335,555 @@ const AllTasksList = () => {
       { wch: 45 }  // Disciplinary & Policy Notes
     ];
     fixSheetRange(wsMonthlyTeamPerf);
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 5.5.5 REACH OWNERSHIP ANALYSIS - TEAMS CONTRIBUTION & RCA BREAKDOWN
+    // Period: Cumulative Benchmark (${cumulativeRangeLabel})
+    // ═════════════════════════════════════════════════════════════════════════
+    const wsReachOwnershipAnalysis = XLSX.utils.aoa_to_sheet([[]]);
+    wsReachOwnershipAnalysis['A1'] = {
+      v: `REACH OWNERSHIP — FIELD TEAMS ACCOUNTABLE CONTRIBUTION & ROOT CAUSE ANALYSIS`,
+      t: 's',
+      s: {
+        font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '1E1B4B' } }, // Deep Indigo
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      }
+    };
+    if (!wsReachOwnershipAnalysis['!merges']) wsReachOwnershipAnalysis['!merges'] = [];
+    wsReachOwnershipAnalysis['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 14 } });
+
+    wsReachOwnershipAnalysis['A2'] = {
+      v: `Cumulative Benchmark Period: ${cumulativeRangeLabel} | Generated on: ${format(new Date(), 'dd/MM/yyyy HH:mm')} | Evaluated Tasks: ${cumulativeTasks.length}`,
+      t: 's',
+      s: {
+        font: { bold: true, sz: 10, color: { rgb: '3730A3' } },
+        fill: { fgColor: { rgb: 'EEF2FF' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      }
+    };
+    wsReachOwnershipAnalysis['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 14 } });
+
+    // Helper to normalize multi-value fields
+    const getReachNormVals = (val) => {
+      if (!val) return [];
+      if (Array.isArray(val)) {
+        return val.flatMap(v => (typeof v === 'string' ? v.split(',').map(s => s.trim()) : [String(v).trim()])).filter(Boolean);
+      }
+      if (typeof val === 'string') {
+        return val.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      return [String(val).trim()].filter(Boolean);
+    };
+
+    // 1. Data Extraction across cumulativeTasks
+    let totalCumPeriodIssues = 0;
+    let totalCumReachIssues = 0;
+    let totalCumReachDet = 0;
+    let totalCumReachNeu = 0;
+    let totalCumReachPro = 0;
+    let totalCumReachAccYes = 0;
+    let totalCumReachAccNo = 0;
+    let totalCumReachAccDet = 0;
+    let totalCumReachAccNeu = 0;
+    let totalCumReachAccPro = 0;
+
+    const reachTeamsDataMap = {};
+
+    cumulativeTasks.forEach(task => {
+      const reasons = getReachNormVals(task.reason);
+      const subReasons = getReachNormVals(task.subReason);
+      const rootCauses = getReachNormVals(task.rootCause);
+      const resps = getReachNormVals(task.responsible);
+      const accs = getReachNormVals(task.teamAccountability);
+      const itns = getReachNormVals(task.itnRelated);
+      const subs = getReachNormVals(task.relatedToSubscription);
+
+      const maxIssues = Math.max(reasons.length, subReasons.length, rootCauses.length, resps.length, accs.length, itns.length, subs.length);
+      const numIssues = maxIssues > 0 ? maxIssues : (task.evaluationScore !== null && task.evaluationScore !== undefined && task.evaluationScore !== '' ? 1 : 0);
+
+      for (let i = 0; i < numIssues; i++) {
+        totalCumPeriodIssues++;
+
+        let resp = resps[i] || (resps.length > 0 ? resps[0] : 'Unknown');
+        resp = String(resp).trim();
+        const isReach = resp.toUpperCase() === 'REACH';
+
+        if (!isReach) continue;
+
+        totalCumReachIssues++;
+
+        let acc = accs[i] || (accs.length > 0 ? accs[0] : 'Unknown');
+        const isAccYes = String(acc).trim().toLowerCase().startsWith('yes') || String(acc).trim().toLowerCase() === 'y';
+        if (isAccYes) totalCumReachAccYes++;
+        else totalCumReachAccNo++;
+
+        const scoreVal = task.evaluationScore !== null && task.evaluationScore !== undefined && task.evaluationScore !== '' ? Number(task.evaluationScore) : null;
+        const normScore = scoreVal !== null && !isNaN(scoreVal) ? (scoreVal <= 10 ? scoreVal * 10 : scoreVal) : null;
+
+        let sentiment = 'Neutral';
+        if (normScore !== null) {
+          if (normScore <= 60) {
+            sentiment = 'Detractor';
+            totalCumReachDet++;
+            if (isAccYes) totalCumReachAccDet++;
+          } else if (normScore <= 80) {
+            sentiment = 'Neutral';
+            totalCumReachNeu++;
+            if (isAccYes) totalCumReachAccNeu++;
+          } else {
+            sentiment = 'Promoter';
+            totalCumReachPro++;
+            if (isAccYes) totalCumReachAccPro++;
+          }
+        } else {
+          totalCumReachNeu++;
+          if (isAccYes) totalCumReachAccNeu++;
+        }
+
+        const teamName = (task.teamName || '').trim() || 'Unknown Team';
+        if (!reachTeamsDataMap[teamName]) {
+          reachTeamsDataMap[teamName] = {
+            teamName,
+            totalReachIssues: 0,
+            allDetractors: 0,
+            allNeutrals: 0,
+            allPromoters: 0,
+            accIssuesCount: 0,
+            accDetractors: 0,
+            accNeutrals: 0,
+            accPromoters: 0,
+            nonAccIssuesCount: 0,
+            nonAccDetractors: 0,
+            nonAccNeutrals: 0,
+            accIssues: [],
+            allIssues: [],
+            accTasks: [],
+            allTasks: []
+          };
+        }
+
+        const teamObj = reachTeamsDataMap[teamName];
+        teamObj.totalReachIssues++;
+        if (sentiment === 'Detractor') teamObj.allDetractors++;
+        else if (sentiment === 'Neutral') teamObj.allNeutrals++;
+        else if (sentiment === 'Promoter') teamObj.allPromoters++;
+
+        const issueItem = {
+          issueIndex: i + 1,
+          reason: reasons[i] || (reasons.length > 0 ? reasons[0] : 'Unknown'),
+          subReason: subReasons[i] || (subReasons.length > 0 ? subReasons[0] : 'Unknown'),
+          rootCause: rootCauses[i] || (rootCauses.length > 0 ? rootCauses[0] : 'Unknown'),
+          accountability: isAccYes ? 'Yes' : 'No',
+          itnRelated: itns[i] || (itns.length > 0 ? itns[0] : 'N/A'),
+          relatedToSubscription: subs[i] || (subs.length > 0 ? subs[0] : 'N/A'),
+          sentiment,
+          task
+        };
+
+        teamObj.allIssues.push(issueItem);
+        if (!teamObj.allTasks.includes(task)) {
+          teamObj.allTasks.push(task);
+        }
+
+        if (isAccYes) {
+          teamObj.accIssuesCount++;
+          if (sentiment === 'Detractor') teamObj.accDetractors++;
+          else if (sentiment === 'Neutral') teamObj.accNeutrals++;
+          else if (sentiment === 'Promoter') teamObj.accPromoters++;
+
+          teamObj.accIssues.push(issueItem);
+          if (!teamObj.accTasks.includes(task)) {
+            teamObj.accTasks.push(task);
+          }
+        } else {
+          teamObj.nonAccIssuesCount++;
+          if (sentiment === 'Detractor') teamObj.nonAccDetractors++;
+          else if (sentiment === 'Neutral') teamObj.nonAccNeutrals++;
+        }
+      }
+    });
+
+    // Only teams with at least 1 Accountable Reach issue, ranked by Accountable Reach Issues descending
+    const sortedAccReachTeams = Object.values(reachTeamsDataMap)
+      .filter(t => t.accIssuesCount > 0)
+      .sort((a, b) => {
+        if (b.accIssuesCount !== a.accIssuesCount) return b.accIssuesCount - a.accIssuesCount;
+        if (b.accDetractors !== a.accDetractors) return b.accDetractors - a.accDetractors;
+        return a.teamName.localeCompare(b.teamName);
+      });
+
+    // 2. Executive KPI Block (Overall Reference: Total + Accountable)
+    const reachSharePctStr = totalCumPeriodIssues > 0 ? `${((totalCumReachIssues / totalCumPeriodIssues) * 100).toFixed(1)}%` : '0.0%';
+    const reachAccShareOfReachStr = totalCumReachIssues > 0 ? `${((totalCumReachAccYes / totalCumReachIssues) * 100).toFixed(1)}%` : '0.0%';
+    const reachAccShareOfPeriodStr = totalCumPeriodIssues > 0 ? `${((totalCumReachAccYes / totalCumPeriodIssues) * 100).toFixed(1)}%` : '0.0%';
+    const reachAccDetShareStr = totalCumReachAccYes > 0 ? `${((totalCumReachAccDet / totalCumReachAccYes) * 100).toFixed(1)}%` : '0.0%';
+    const reachAccNeuShareStr = totalCumReachAccYes > 0 ? `${((totalCumReachAccNeu / totalCumReachAccYes) * 100).toFixed(1)}%` : '0.0%';
+    const reachNonAccShareStr = totalCumReachIssues > 0 ? `${((totalCumReachAccNo / totalCumReachIssues) * 100).toFixed(1)}%` : '0.0%';
+
+    const reachKpiHeaders = [
+      ['EXECUTIVE KPI SUMMARY: REACH OWNERSHIP METRICS (ALL ISSUES & ACCOUNTABLE BENCHMARK)', '', '', ''],
+      ['Key Performance Indicator', 'Value / Count', 'Share / Breakdown Ratio', 'Benchmark Description & Operational Directive'],
+      ['Total Period Issues Identified (All Owners)', totalCumPeriodIssues, '100.0%', 'Full cumulative benchmark issues logged across all responsible owners'],
+      ['Total REACH Ownership Issues (All: Acc + Non-Acc)', totalCumReachIssues, `${reachSharePctStr} of all issues (${totalCumReachIssues} of ${totalCumPeriodIssues})`, `Overall Reach ownership volume across both accountable and non-accountable cases`],
+      ['REACH Accountable Issues (Team Accountability: Yes)', totalCumReachAccYes, `${reachAccShareOfReachStr} of Reach | ${reachAccShareOfPeriodStr} of Period`, `Direct field team workmanship, Wi-Fi placement, configuration & customer education defects`],
+      ['Accountable Detractor Issues (Score: 0 - 6)', totalCumReachAccDet, `${reachAccDetShareStr} of Acc. Reach (${totalCumReachAccDet} of ${totalCumReachAccYes})`, 'Critical field quality detractor items requiring direct team corrective intervention'],
+      ['Accountable Neutral Issues (Score: 7 - 8)', totalCumReachAccNeu, `${reachAccNeuShareStr} of Acc. Reach (${totalCumReachAccNeu} of ${totalCumReachAccYes})`, 'Passive customer issues with immediate conversion potential to Promoters'],
+      ['REACH Non-Accountable Issues (Team Accountability: No)', totalCumReachAccNo, `${reachNonAccShareStr} of Reach (${totalCumReachAccNo} of ${totalCumReachIssues})`, 'Civil, dispatching, infrastructure or subscriber-related non-controllable issues (Excluded from team scoring)'],
+      ['Field Teams Contributing to Accountable REACH', `${sortedAccReachTeams.length} Active Teams`, '-', `Number of field units having 1 or more Accountable Reach defect items`]
+    ];
+
+    let reachCurrentR = 4;
+    XLSX.utils.sheet_add_aoa(wsReachOwnershipAnalysis, reachKpiHeaders, { origin: `A${reachCurrentR}` });
+    wsReachOwnershipAnalysis[`A${reachCurrentR}`].s = {
+      font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '312E81' } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    };
+    wsReachOwnershipAnalysis['!merges'].push({ s: { r: reachCurrentR - 1, c: 0 }, e: { r: reachCurrentR - 1, c: 3 } });
+
+    applyHeaderStyle(wsReachOwnershipAnalysis, { s: { r: reachCurrentR, c: 0 }, e: { r: reachCurrentR, c: 3 } }, '1E293B');
+    applyDataRowStyle(wsReachOwnershipAnalysis, { s: { r: reachCurrentR + 1, c: 0 }, e: { r: reachCurrentR + reachKpiHeaders.length - 1, c: 3 } });
+
+    // 3. Contributing Field Teams Summary Table (ACCOUNTABLE REACH ISSUES ONLY)
+    reachCurrentR += reachKpiHeaders.length + 2;
+
+    const reachTeamTableHeaders = [
+      'Rank',
+      'Field Team Name',
+      'Accountable Reach Issues',
+      'Share of Acc. Reach (%)',
+      'Share of Total Issues (%)',
+      'Acc. Detractors (≤6)',
+      'Detractor %',
+      'Acc. Neutrals (7-8)',
+      'Neutral %',
+      'Total Reach Issues (All)',
+      'Non-Acc. (Excluded)',
+      'Top Acc. Reason',
+      'Top Acc. Sub-Reason',
+      'Top Acc. Root Cause (Ratio)',
+      'Operational Corrective Directive'
+    ];
+
+    const teamContributionRows = sortedAccReachTeams.map((team, idx) => {
+      const accIssuesCount = team.accIssuesCount;
+      const shareOfAccReach = totalCumReachAccYes > 0 ? `${((accIssuesCount / totalCumReachAccYes) * 100).toFixed(1)}%` : '0.0%';
+      const shareOfTotalPeriod = totalCumPeriodIssues > 0 ? `${((accIssuesCount / totalCumPeriodIssues) * 100).toFixed(1)}%` : '0.0%';
+      const detPct = accIssuesCount > 0 ? `${((team.accDetractors / accIssuesCount) * 100).toFixed(1)}%` : '0.0%';
+      const neuPct = accIssuesCount > 0 ? `${((team.accNeutrals / accIssuesCount) * 100).toFixed(1)}%` : '0.0%';
+
+      // Find top reason, subreason, root cause strictly among accountable issues
+      const rMap = {};
+      const srMap = {};
+      const rcMap = {};
+      team.accIssues.forEach(iss => {
+        rMap[iss.reason] = (rMap[iss.reason] || 0) + 1;
+        srMap[iss.subReason] = (srMap[iss.subReason] || 0) + 1;
+        rcMap[iss.rootCause] = (rcMap[iss.rootCause] || 0) + 1;
+      });
+
+      const topR = Object.entries(rMap).sort((a, b) => b[1] - a[1])[0];
+      const topSR = Object.entries(srMap).sort((a, b) => b[1] - a[1])[0];
+      const topRC = Object.entries(rcMap).sort((a, b) => b[1] - a[1])[0];
+
+      const topRStr = topR ? `${topR[0]} (${topR[1]}/${accIssuesCount})` : '-';
+      const topSRStr = topSR ? `${topSR[0]} (${topSR[1]}/${accIssuesCount})` : '-';
+      const topRCStr = topRC ? `${topRC[0]} (${topRC[1]}/${accIssuesCount})` : '-';
+
+      const directive = team.accDetractors > 0
+        ? `Remediate ${team.accDetractors} accountable detractors & ${team.accNeutrals} neutrals. Primary focus: ${topRC ? topRC[0] : 'Quality workmanship'}`
+        : `Convert ${team.accNeutrals} accountable neutrals to Promoters. Primary driver: ${topRC ? topRC[0] : 'Customer education'}`;
+
+      return [
+        `#${idx + 1}`,
+        team.teamName,
+        accIssuesCount,
+        shareOfAccReach,
+        shareOfTotalPeriod,
+        team.accDetractors,
+        detPct,
+        team.accNeutrals,
+        neuPct,
+        team.totalReachIssues,
+        team.nonAccIssuesCount,
+        topRStr,
+        topSRStr,
+        topRCStr,
+        directive
+      ];
+    });
+
+    const reachTeamTableTitleR = reachCurrentR;
+    XLSX.utils.sheet_add_aoa(wsReachOwnershipAnalysis, [[`FIELD TEAMS CONTRIBUTING TO REACH OWNERSHIP (ACCOUNTABLE ISSUES: ${sortedAccReachTeams.length} TEAMS | ${totalCumReachAccYes} ACC. REACH ISSUES)`]], { origin: `A${reachTeamTableTitleR}` });
+    wsReachOwnershipAnalysis[`A${reachTeamTableTitleR}`].s = {
+      font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '312E81' } }, // Indigo
+      alignment: { horizontal: 'center', vertical: 'center' }
+    };
+    wsReachOwnershipAnalysis['!merges'].push({ s: { r: reachTeamTableTitleR - 1, c: 0 }, e: { r: reachTeamTableTitleR - 1, c: 14 } });
+
+    XLSX.utils.sheet_add_aoa(wsReachOwnershipAnalysis, [reachTeamTableHeaders], { origin: `A${reachTeamTableTitleR + 1}` });
+    applyHeaderStyle(wsReachOwnershipAnalysis, { s: { r: reachTeamTableTitleR, c: 0 }, e: { r: reachTeamTableTitleR, c: 14 } }, '1E293B');
+
+    XLSX.utils.sheet_add_aoa(wsReachOwnershipAnalysis, teamContributionRows, { origin: `A${reachTeamTableTitleR + 2}` });
+    applyDataRowStyle(wsReachOwnershipAnalysis, { s: { r: reachTeamTableTitleR + 1, c: 0 }, e: { r: reachTeamTableTitleR + 1 + teamContributionRows.length, c: 14 } });
+
+    // Total Row for Team Contribution Table
+    const teamTotalRow = [
+      'TOTAL ACCOUNTABLE REACH',
+      `All ${sortedAccReachTeams.length} Accountable Field Teams`,
+      totalCumReachAccYes,
+      '100.0%',
+      reachAccShareOfPeriodStr,
+      totalCumReachAccDet,
+      reachAccDetShareStr,
+      totalCumReachAccNeu,
+      reachAccNeuShareStr,
+      totalCumReachIssues,
+      totalCumReachAccNo,
+      'Full Accountable Reasons Portfolio',
+      'Full Accountable Sub-Reasons Portfolio',
+      'Full Accountable Root Causes Portfolio',
+      `Cumulative Accountable Reach: ${totalCumReachAccYes} accountable issues (${totalCumReachAccDet} det, ${totalCumReachAccNeu} neu) across ${sortedAccReachTeams.length} field teams`
+    ];
+
+    const teamTotalRowR = reachTeamTableTitleR + 2 + teamContributionRows.length;
+    XLSX.utils.sheet_add_aoa(wsReachOwnershipAnalysis, [teamTotalRow], { origin: `A${teamTotalRowR}` });
+    for (let c = 0; c < 15; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r: teamTotalRowR - 1, c });
+      if (wsReachOwnershipAnalysis[cellRef]) {
+        wsReachOwnershipAnalysis[cellRef].s = {
+          font: { bold: true, color: { rgb: '1E1B4B' } },
+          fill: { fgColor: { rgb: 'E0E7FF' } }, // Soft Indigo
+          border: {
+            top: { style: 'thin', color: { rgb: '4338CA' } },
+            bottom: { style: 'double', color: { rgb: '4338CA' } }
+          },
+          alignment: { horizontal: c === 0 || c === 1 || c === 11 || c === 12 || c === 13 || c === 14 ? 'left' : 'center' }
+        };
+      }
+    }
+
+    reachCurrentR = teamTotalRowR + 3;
+
+    // 4. Global Reach Root Cause & Categorization Breakdown (ACCOUNTABLE ONLY)
+    const allAccReachIssues = sortedAccReachTeams.flatMap(t => t.accIssues);
+
+    const getReachIssuesStats = (issues, field) => {
+      const counts = {};
+      const tot = issues.length;
+      issues.forEach(iss => {
+        const val = iss[field] || 'Unknown';
+        counts[val] = (counts[val] || 0) + 1;
+      });
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({
+          'Name': name,
+          'Count': count,
+          'Ratio': `${count} of ${tot}`,
+          'Percentage': tot > 0 ? `${((count / tot) * 100).toFixed(1)}%` : '0.0%'
+        }));
+    };
+
+    const globalReachTree = getHierarchicalRCA(cumulativeTasks, 'REACH', 'yes');
+    const globalReachReasons = getReachIssuesStats(allAccReachIssues, 'reason');
+    const globalReachSubReasons = getReachIssuesStats(allAccReachIssues, 'subReason');
+    const globalReachRootCauses = getReachIssuesStats(allAccReachIssues, 'rootCause');
+    const globalReachAcc = getReachIssuesStats(allAccReachIssues, 'accountability');
+
+    const globalSectionTitleR = reachCurrentR;
+    XLSX.utils.sheet_add_aoa(wsReachOwnershipAnalysis, [[`GLOBAL ACCOUNTABLE REACH ROOT CAUSE BREAKDOWN & SUMMARIES (ALL ${sortedAccReachTeams.length} TEAMS COMBINED — ${totalCumReachAccYes} ACCOUNTABLE REACH ISSUES)`]], { origin: `A${globalSectionTitleR}` });
+    wsReachOwnershipAnalysis[`A${globalSectionTitleR}`].s = {
+      font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '1E1B4B' } },
+      alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+    };
+    wsReachOwnershipAnalysis['!merges'].push({ s: { r: globalSectionTitleR - 1, c: 0 }, e: { r: globalSectionTitleR - 1, c: 24 } });
+
+    const globalTableStartR = globalSectionTitleR + 2;
+    const globalRcaNextR = addHierarchicalRCA(wsReachOwnershipAnalysis, globalReachTree, XLSX.utils.encode_cell({ r: globalTableStartR - 1, c: 0 }), "GLOBAL ROOT CAUSE BREAKDOWN (ACCOUNTABLE)", "1E3A8A");
+
+    // Helper for styled 4-column summary tables
+    const addReachSummaryTable = (ws, data, originCell, title, colorHex) => {
+      const origC = XLSX.utils.decode_cell(originCell).c;
+      const origR = XLSX.utils.decode_cell(originCell).r;
+
+      XLSX.utils.sheet_add_aoa(ws, [[title]], { origin: originCell });
+      ws[originCell].s = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: colorHex } }, alignment: { horizontal: "center" } };
+      if (!ws['!merges']) ws['!merges'] = [];
+      ws['!merges'].push({ s: { r: origR, c: origC }, e: { r: origR, c: origC + 3 } });
+
+      XLSX.utils.sheet_add_json(ws, data, { origin: XLSX.utils.encode_cell({ r: origR + 1, c: origC }), skipHeader: false });
+      applyHeaderStyle(ws, { s: { r: origR + 1, c: origC }, e: { r: origR + 1, c: origC + 3 } }, "374151");
+      applyDataRowStyle(ws, { s: { r: origR + 1, c: origC }, e: { r: origR + 1 + data.length, c: origC + 3 } });
+    };
+
+    addReachSummaryTable(wsReachOwnershipAnalysis, globalReachReasons, XLSX.utils.encode_cell({ r: globalTableStartR - 1, c: 7 }), "REASON SUMMARY (ACCOUNTABLE)", "1E3A8A");
+    addReachSummaryTable(wsReachOwnershipAnalysis, globalReachSubReasons, XLSX.utils.encode_cell({ r: globalTableStartR - 1, c: 12 }), "SUB-REASON SUMMARY (ACCOUNTABLE)", "B45309");
+    addReachSummaryTable(wsReachOwnershipAnalysis, globalReachRootCauses, XLSX.utils.encode_cell({ r: globalTableStartR - 1, c: 17 }), "ROOT CAUSE SUMMARY (ACCOUNTABLE)", "4C1D95");
+    addReachSummaryTable(wsReachOwnershipAnalysis, globalReachAcc, XLSX.utils.encode_cell({ r: globalTableStartR - 1, c: 22 }), "TEAM ACCOUNTABILITY", "7F1D1D");
+
+    const globalMaxLen = Math.max(globalReachReasons.length, globalReachSubReasons.length, globalReachRootCauses.length, globalReachAcc.length, 1);
+    reachCurrentR = Math.max(globalRcaNextR, globalTableStartR + globalMaxLen + 2) + 2;
+
+    // 5. Team-by-Team Deep Dive Sections (ACCOUNTABLE ONLY)
+    sortedAccReachTeams.forEach((teamEntry, tIdx) => {
+      const teamName = teamEntry.teamName;
+      const accTot = teamEntry.accIssuesCount;
+      const teamShare = totalCumReachAccYes > 0 ? `${((accTot / totalCumReachAccYes) * 100).toFixed(1)}%` : '0.0%';
+
+      // Section separator header
+      const teamSecTitleR = reachCurrentR;
+      const teamSecCell = XLSX.utils.encode_cell({ r: teamSecTitleR - 1, c: 0 });
+      wsReachOwnershipAnalysis[teamSecCell] = {
+        v: `TEAM #${tIdx + 1}: ${teamName.toUpperCase()} — ACCOUNTABLE REACH RCA BREAKDOWN (${accTot} Accountable Issues [${teamShare} of Acc Reach] | ${teamEntry.accDetractors} Detractors, ${teamEntry.accNeutrals} Neutrals)`,
+        t: 's',
+        s: {
+          font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: '4338CA' } }, // Indigo
+          alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+        }
+      };
+      wsReachOwnershipAnalysis['!merges'].push({ s: { r: teamSecTitleR - 1, c: 0 }, e: { r: teamSecTitleR - 1, c: 24 } });
+
+      // Team KPI Summary Box
+      const teamSummaryRows = [
+        { 'Metric': 'Accountable REACH Issues', 'Value': accTot, 'Breakdown Ratio': `${accTot} of ${totalCumReachAccYes} Acc Reach Issues`, 'Share %': teamShare },
+        { 'Metric': 'Accountable Detractor Issues (≤6)', 'Value': teamEntry.accDetractors, 'Breakdown Ratio': `${teamEntry.accDetractors} of ${accTot} issues`, 'Share %': accTot > 0 ? `${((teamEntry.accDetractors / accTot) * 100).toFixed(1)}%` : '0.0%' },
+        { 'Metric': 'Accountable Neutral Issues (7-8)', 'Value': teamEntry.accNeutrals, 'Breakdown Ratio': `${teamEntry.accNeutrals} of ${accTot} issues`, 'Share %': accTot > 0 ? `${((teamEntry.accNeutrals / accTot) * 100).toFixed(1)}%` : '0.0%' },
+        { 'Metric': 'Total REACH Issues (All)', 'Value': teamEntry.totalReachIssues, 'Breakdown Ratio': `${teamEntry.totalReachIssues} of ${totalCumReachIssues} Reach Issues`, 'Share %': totalCumReachIssues > 0 ? `${((teamEntry.totalReachIssues / totalCumReachIssues) * 100).toFixed(1)}%` : '0.0%' },
+        { 'Metric': 'Non-Accountable (Excluded)', 'Value': teamEntry.nonAccIssuesCount, 'Breakdown Ratio': `${teamEntry.nonAccIssuesCount} of ${teamEntry.totalReachIssues} team Reach issues`, 'Share %': teamEntry.totalReachIssues > 0 ? `${((teamEntry.nonAccIssuesCount / teamEntry.totalReachIssues) * 100).toFixed(1)}%` : '0.0%' }
+      ];
+
+      const teamKpiStartR = teamSecTitleR + 2;
+      XLSX.utils.sheet_add_aoa(wsReachOwnershipAnalysis, [[`${teamName.toUpperCase()} - ACCOUNTABLE REACH KPI SUMMARY`]], { origin: XLSX.utils.encode_cell({ r: teamKpiStartR - 1, c: 0 }) });
+      wsReachOwnershipAnalysis[XLSX.utils.encode_cell({ r: teamKpiStartR - 1, c: 0 })] = {
+        v: `${teamName.toUpperCase()} - ACCOUNTABLE REACH KPI SUMMARY`,
+        t: 's',
+        s: { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1E293B' } }, alignment: { horizontal: 'center' } }
+      };
+      wsReachOwnershipAnalysis['!merges'].push({ s: { r: teamKpiStartR - 1, c: 0 }, e: { r: teamKpiStartR - 1, c: 3 } });
+      XLSX.utils.sheet_add_json(wsReachOwnershipAnalysis, teamSummaryRows, { origin: XLSX.utils.encode_cell({ r: teamKpiStartR, c: 0 }), skipHeader: false });
+      applyHeaderStyle(wsReachOwnershipAnalysis, { s: { r: teamKpiStartR, c: 0 }, e: { r: teamKpiStartR, c: 3 } }, '374151');
+      applyDataRowStyle(wsReachOwnershipAnalysis, { s: { r: teamKpiStartR, c: 0 }, e: { r: teamKpiStartR + teamSummaryRows.length, c: 3 } });
+
+      // Team Tree (Accountable only)
+      const teamTree = {};
+      teamEntry.accIssues.forEach(iss => {
+        const r = iss.reason || 'Unknown';
+        const sr = iss.subReason || 'Unknown';
+        const rc = iss.rootCause || 'Unknown';
+        if (!teamTree[r]) teamTree[r] = { total: 0, subs: {} };
+        teamTree[r].total++;
+        if (!teamTree[r].subs[sr]) teamTree[r].subs[sr] = { total: 0, rcs: {} };
+        teamTree[r].subs[sr].total++;
+        teamTree[r].subs[sr].rcs[rc] = (teamTree[r].subs[sr].rcs[rc] || 0) + 1;
+      });
+
+      const teamReasons = getReachIssuesStats(teamEntry.accIssues, 'reason');
+      const teamSubReasons = getReachIssuesStats(teamEntry.accIssues, 'subReason');
+      const teamRootCauses = getReachIssuesStats(teamEntry.accIssues, 'rootCause');
+      const teamAcc = getReachIssuesStats(teamEntry.accIssues, 'accountability');
+      const teamItns = getReachIssuesStats(teamEntry.accIssues, 'itnRelated');
+      const teamSubs = getReachIssuesStats(teamEntry.accIssues, 'relatedToSubscription');
+
+      const teamTablesStartR = teamKpiStartR + teamSummaryRows.length + 3;
+      const teamRcaNextR = addHierarchicalRCA(wsReachOwnershipAnalysis, teamTree, XLSX.utils.encode_cell({ r: teamTablesStartR - 1, c: 0 }), "ROOT CAUSE BREAKDOWN (ACCOUNTABLE)", "1E3A8A");
+
+      addReachSummaryTable(wsReachOwnershipAnalysis, teamReasons, XLSX.utils.encode_cell({ r: teamTablesStartR - 1, c: 7 }), "REASON SUMMARY (ACCOUNTABLE)", "1E3A8A");
+      addReachSummaryTable(wsReachOwnershipAnalysis, teamSubReasons, XLSX.utils.encode_cell({ r: teamTablesStartR - 1, c: 12 }), "SUB-REASON SUMMARY (ACCOUNTABLE)", "B45309");
+      addReachSummaryTable(wsReachOwnershipAnalysis, teamRootCauses, XLSX.utils.encode_cell({ r: teamTablesStartR - 1, c: 17 }), "ROOT CAUSE SUMMARY (ACCOUNTABLE)", "4C1D95");
+      addReachSummaryTable(wsReachOwnershipAnalysis, teamAcc, XLSX.utils.encode_cell({ r: teamTablesStartR - 1, c: 22 }), "TEAM ACCOUNTABILITY", "7F1D1D");
+
+      const maxTeamSummaryLen = Math.max(teamReasons.length, teamSubReasons.length, teamRootCauses.length, teamAcc.length, 1);
+      let teamRawStartR = Math.max(teamRcaNextR, teamTablesStartR + maxTeamSummaryLen + 2) + 2;
+
+      // Raw Data Table for Team's Accountable Reach Tasks & Issues
+      const buildTeamReachRawRows = (issuesList) => issuesList.map((iss, iIdx) => {
+        const task = iss.task;
+        return {
+          '#': iIdx + 1,
+          'SLID': task.slid || 'N/A',
+          'Request Number': task.requestNumber || 'N/A',
+          'Status': task.status || 'N/A',
+          'Severity': task.priority || 'Normal',
+          'Q1-Score': task.evaluationScore !== null && task.evaluationScore !== undefined ? task.evaluationScore : 'N/A',
+          'Satisfaction Category': iss.sentiment,
+          'Q1 - Scale Comment': task.customerFeedback || 'N/A',
+          'Reason': iss.reason,
+          'Sub-Reason': iss.subReason,
+          'Root Cause': iss.rootCause,
+          'Team Accountability': iss.accountability,
+          'ITN Related': iss.itnRelated,
+          'Subscription Related': iss.relatedToSubscription,
+          'Customer Name': task.customerName || 'N/A',
+          'Contact Number': task.contactNumber || 'N/A',
+          'Governorate': task.governorate || 'N/A',
+          'District': task.district || 'N/A',
+          'Operation': task.operation || 'N/A',
+          'Tariff Name': task.tarrifName || 'N/A',
+          'Validation Status': task.validationStatus || 'Not validated',
+          'Request Date': task.contractDate ? format(new Date(task.contractDate), 'yyyy-MM-dd') : 'N/A',
+          'PIS Date': task.pisDate ? format(new Date(task.pisDate), 'yyyy-MM-dd') : 'N/A',
+          'Interview Date': task.interviewDate ? format(new Date(task.interviewDate), 'yyyy-MM-dd') : 'N/A',
+          'Close Date': task.closeDate ? format(new Date(task.closeDate), 'yyyy-MM-dd') : 'N/A'
+        };
+      });
+
+      const teamRawData = buildTeamReachRawRows(teamEntry.accIssues);
+      const rawTitleCell = XLSX.utils.encode_cell({ r: teamRawStartR - 1, c: 0 });
+      wsReachOwnershipAnalysis[rawTitleCell] = {
+        v: `${teamName.toUpperCase()} — ACCOUNTABLE REACH RAW DATA LOG (${teamRawData.length} Acc Issue${teamRawData.length !== 1 ? 's' : ''} across ${teamEntry.accTasks.length} tasks)`,
+        t: 's',
+        s: {
+          font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: teamEntry.accDetractors > 0 ? 'DC2626' : 'D97706' } },
+          alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+        }
+      };
+      wsReachOwnershipAnalysis['!merges'].push({ s: { r: teamRawStartR - 1, c: 0 }, e: { r: teamRawStartR - 1, c: 24 } });
+
+      XLSX.utils.sheet_add_json(wsReachOwnershipAnalysis, teamRawData, { origin: XLSX.utils.encode_cell({ r: teamRawStartR, c: 0 }), skipHeader: false });
+      const rawKeys = Object.keys(teamRawData[0] || {});
+      if (rawKeys.length > 0) {
+        applyHeaderStyle(wsReachOwnershipAnalysis, { s: { r: teamRawStartR, c: 0 }, e: { r: teamRawStartR, c: rawKeys.length - 1 } }, teamEntry.accDetractors > 0 ? '991B1B' : 'B45309');
+        applyDataRowStyle(wsReachOwnershipAnalysis, { s: { r: teamRawStartR, c: 0 }, e: { r: teamRawStartR + teamRawData.length, c: rawKeys.length - 1 } });
+        formatCommentColumnInTable(wsReachOwnershipAnalysis, teamRawStartR + 1, teamRawStartR + teamRawData.length, rawKeys.indexOf('Q1 - Scale Comment'));
+      }
+
+      reachCurrentR = teamRawStartR + teamRawData.length + 4;
+    });
+
+    wsReachOwnershipAnalysis['!cols'] = [
+      { wch: 8 },  // Col 0: Rank / # / Reason
+      { wch: 28 }, // Col 1: Field Team Name / Total / SLID
+      { wch: 24 }, // Col 2: Acc Reach Issues / Sub Reason / Request Number
+      { wch: 22 }, // Col 3: Share of Acc Reach (%) / Cases / Status
+      { wch: 24 }, // Col 4: Share of Total Issues (%) / RC / Severity
+      { wch: 20 }, // Col 5: Detractor Issues (≤6) / Cases / Q1-Score
+      { wch: 18 }, // Col 6: Detractor % / Satisfaction Category
+      { wch: 32 }, // Col 7: Neutral Issues (7-8) / Reason Name / Q1 - Scale Comment
+      { wch: 16 }, // Col 8: Neutral % / Count
+      { wch: 22 }, // Col 9: Total Reach (All) / Ratio
+      { wch: 20 }, // Col 10: Non-Acc. (Excluded) / %
+      { wch: 30 }, // Col 11: Top Reason / Sub-Reason Name
+      { wch: 30 }, // Col 12: Top Sub-Reason / Count
+      { wch: 32 }, // Col 13: Top Root Cause / Ratio
+      { wch: 65 }, // Col 14: Directive / %
+      { wch: 32 }, // Col 15: Root Cause Name
+      { wch: 16 }, // Col 16: Count
+      { wch: 18 }, // Col 17: Ratio
+      { wch: 16 }, // Col 18: %
+      { wch: 22 }, // Col 19: Accountability Name
+      { wch: 14 }, // Col 20: Count
+      { wch: 18 }, // Col 21: Ratio
+      { wch: 16 }, // Col 22: %
+      { wch: 25 }, // Col 23: Extra
+      { wch: 25 }  // Col 24: Extra
+    ];
+    fixSheetRange(wsReachOwnershipAnalysis);
 
     // ═════════════════════════════════════════════════════════════════════════
     // 5.6 NEW Subsheet: Worst Performing Teams by Month (Ranked Accountable Impact)
@@ -9874,6 +10416,11 @@ const AllTasksList = () => {
     fixSheetRange(wsCharts);
 
     // 8. Append All Subsheets in Strict Natural Sequence
+    XLSX.utils.book_append_sheet(workbook, wsSummary, 'Executive Summary');
+    XLSX.utils.book_append_sheet(workbook, wsReasons, 'R.C.A - All');
+    XLSX.utils.book_append_sheet(workbook, wsMatrix, 'Category Matrix Analysis');
+    XLSX.utils.book_append_sheet(workbook, wsSpecial, 'Ownership Distribution');
+    XLSX.utils.book_append_sheet(workbook, wsReachOwnershipAnalysis, 'Reach Ownership Analysis');
     XLSX.utils.book_append_sheet(workbook, wsDetSpecial, 'Detractor Special Analytics');
     XLSX.utils.book_append_sheet(workbook, wsNeuSpecial, 'Neutral Special Analytics');
     XLSX.utils.book_append_sheet(workbook, wsTextAnalysis, 'R.C & Team Impact Analysis');
