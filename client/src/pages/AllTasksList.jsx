@@ -5624,7 +5624,44 @@ const AllTasksList = () => {
     wsReachOwnershipAnalysis['!merges'].push({ s: { r: reachTeamTableTitleR - 1, c: 0 }, e: { r: reachTeamTableTitleR - 1, c: 14 } });
 
     XLSX.utils.sheet_add_aoa(wsReachOwnershipAnalysis, [reachTeamTableHeaders], { origin: `A${reachTeamTableTitleR + 1}` });
-    applyHeaderStyle(wsReachOwnershipAnalysis, { s: { r: reachTeamTableTitleR, c: 0 }, e: { r: reachTeamTableTitleR, c: 14 } }, '1E293B');
+
+    // ── Colour-coded column header styling (matches reference design) ──────────
+    // Col 0 (Rank)                  → Deep Navy
+    // Col 1 (Field Team Name)        → Deep Navy
+    // Col 2-4 (Acc. Issues & Share)  → Indigo
+    // Col 5-6 (Detractors)           → Crimson Red
+    // Col 7-8 (Neutrals)             → Teal
+    // Col 9-10 (Total / Non-Acc.)    → Dark Slate
+    // Col 11-13 (Top RCA columns)    → Dark Purple
+    // Col 14 (Directive)             → Dark Green
+    const reachHdrRowR = reachTeamTableTitleR; // 0-indexed row of the header row
+    const reachHdrColColors = [
+      { cols: [0, 1],        bg: '0F172A', fg: 'FFFFFF' }, // Deep Navy  — Identity
+      { cols: [2, 3, 4],    bg: '3730A3', fg: 'FFFFFF' }, // Indigo     — Acc. Reach & Share
+      { cols: [5, 6],       bg: 'B91C1C', fg: 'FFFFFF' }, // Crimson    — Detractor block
+      { cols: [7, 8],       bg: '0F766E', fg: 'FFFFFF' }, // Teal       — Neutral block
+      { cols: [9, 10],      bg: '334155', fg: 'FFFFFF' }, // Slate      — Total / Non-Acc.
+      { cols: [11, 12, 13], bg: '6D28D9', fg: 'FFFFFF' }, // Purple     — Top RCA Analysis
+      { cols: [14],         bg: '065F46', fg: 'FFFFFF' }  // Green      — Directive
+    ];
+    reachHdrColColors.forEach(({ cols, bg, fg }) => {
+      cols.forEach(c => {
+        const cellRef = XLSX.utils.encode_cell({ r: reachHdrRowR, c });
+        if (!wsReachOwnershipAnalysis[cellRef]) return;
+        wsReachOwnershipAnalysis[cellRef].s = {
+          font: { bold: true, sz: 10, color: { rgb: fg } },
+          fill: { fgColor: { rgb: bg } },
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+          border: {
+            top:    { style: 'medium', color: { rgb: '000000' } },
+            bottom: { style: 'medium', color: { rgb: '000000' } },
+            left:   { style: 'thin',   color: { rgb: '1E293B' } },
+            right:  { style: 'thin',   color: { rgb: '1E293B' } }
+          }
+        };
+      });
+    });
+    // ────────────────────────────────────────────────────────────────────────────
 
     XLSX.utils.sheet_add_aoa(wsReachOwnershipAnalysis, teamContributionRows, { origin: `A${reachTeamTableTitleR + 2}` });
     applyDataRowStyle(wsReachOwnershipAnalysis, { s: { r: reachTeamTableTitleR + 1, c: 0 }, e: { r: reachTeamTableTitleR + 1 + teamContributionRows.length, c: 14 } });
@@ -10420,7 +10457,7 @@ const AllTasksList = () => {
     XLSX.utils.book_append_sheet(workbook, wsReasons, 'R.C.A - All');
     XLSX.utils.book_append_sheet(workbook, wsMatrix, 'Category Matrix Analysis');
     XLSX.utils.book_append_sheet(workbook, wsSpecial, 'Ownership Distribution');
-    XLSX.utils.book_append_sheet(workbook, wsReachOwnershipAnalysis, 'Reach Ownership Analysis');
+    XLSX.utils.book_append_sheet(workbook, wsReachOwnershipAnalysis, 'Team Ownership Vs Reach issues');
     XLSX.utils.book_append_sheet(workbook, wsDetSpecial, 'Detractor Special Analytics');
     XLSX.utils.book_append_sheet(workbook, wsNeuSpecial, 'Neutral Special Analytics');
     XLSX.utils.book_append_sheet(workbook, wsTextAnalysis, 'R.C & Team Impact Analysis');
