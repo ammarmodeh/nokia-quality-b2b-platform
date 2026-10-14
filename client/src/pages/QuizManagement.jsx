@@ -1350,7 +1350,7 @@ const QuizManagement = () => {
                     </Box>
                     {/* Swap arrow hint */}
                     <Box sx={{ flexShrink: 0, color: 'rgba(123,104,238,0.4)', display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                     </Box>
                   </Box>
                 ))}
@@ -1358,10 +1358,10 @@ const QuizManagement = () => {
                 idx !== swapSourceIndex &&
                 (q.question || '').toLowerCase().includes(swapSearchQuery.toLowerCase())
               ).length === 0 && (
-                <Box sx={{ py: 6, textAlign: 'center' }}>
-                  <Typography variant="body2" sx={{ color: colors.textSecondary }}>No questions found matching your search.</Typography>
-                </Box>
-              )}
+                  <Box sx={{ py: 6, textAlign: 'center' }}>
+                    <Typography variant="body2" sx={{ color: colors.textSecondary }}>No questions found matching your search.</Typography>
+                  </Box>
+                )}
             </Box>
           </DialogContent>
 
