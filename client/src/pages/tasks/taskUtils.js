@@ -52,7 +52,7 @@ const idOf = (u) => (u && typeof u === "object" ? u._id : u);
 
 export const filterTasks = (tasks, f, me) => {
   const q = (f.q || "").trim().toLowerCase();
-  const range = rangeFor(f.range);
+  const range = f.from && f.to ? { start: startOfDay(new Date(f.from)), end: endOfDay(new Date(f.to)) } : rangeFor(f.range);
   return tasks.filter((t) => {
     if (q) {
       const hay = [t.slid, t.customerName, t.requestNumber, t.teamName, t.contactNumber, t.governorate]

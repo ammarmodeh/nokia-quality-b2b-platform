@@ -15,7 +15,7 @@ const SHOW_OUT_OF_SCOPE_PAGES = false;
 
 // Lazy load pages
 const Layout = lazy(() => import("./components/shell/AppLayout.jsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Dashboard = lazy(() => import("./pages/dashboard/DashboardPage"));
 const AssignedToMe = lazy(() => import("./pages/AssignedToMe"));
 const Users = lazy(() => import("./pages/Users"));
 const Trash = lazy(() => import("./pages/Trash"));

@@ -45,6 +45,8 @@ const useUrlState = () => {
       range: params.get("range") || "all",
       mine: params.get("mine") === "1",
       group: params.get("group") || "none",
+      from: params.get("from") || "",
+      to: params.get("to") || "",
     };
     for (const k of LIST_KEYS) s[k] = params.get(k) ? params.get(k).split(",").filter(Boolean) : [];
     return s;
@@ -194,10 +196,10 @@ const TasksPage = () => {
 
   const userOptions = useMemo(() => users.map((u) => ({ value: u._id, label: u.name || u.email, icon: <UserAvatar user={u} size={20} /> })), [users]);
 
-  const activeFilters = LIST_KEYS.some((k) => f[k].length) || f.range !== "all" || f.mine || f.q;
+  const activeFilters = LIST_KEYS.some((k) => f[k].length) || f.range !== "all" || f.mine || f.q || f.from || f.to;
   const clearFilters = () => {
     setSearchDraft("");
-    setF({ q: "", range: "all", mine: false, ...Object.fromEntries(LIST_KEYS.map((k) => [k, []])) });
+    setF({ q: "", range: "all", mine: false, from: "", to: "", ...Object.fromEntries(LIST_KEYS.map((k) => [k, []])) });
   };
 
   const selectedTasks = useMemo(() => tasks.filter((t) => selection.includes(t._id)), [tasks, selection]);
@@ -279,7 +281,11 @@ const TasksPage = () => {
         <FilterChip label="Priority" options={PRIORITIES.map((p) => ({ value: p.value, label: p.value }))} value={f.priority} onChange={(v) => setF({ priority: v })} />
         <FilterChip label="Assignee" options={userOptions} value={f.assignee} onChange={(v) => setF({ assignee: v })} searchable />
         <FilterChip label="Field team" options={teamOptions} value={f.team} onChange={(v) => setF({ team: v })} searchable />
-        <FilterChip label="Date" single options={DATE_RANGES.filter((r) => r.value !== "all")} value={f.range === "all" ? [] : [f.range]} onChange={(v) => setF({ range: v[0] || "all" })} />
+        {f.from && f.to ? (
+          <FilterChip label="Date" single options={[{ value: "custom", label: `${f.from} → ${f.to}` }]} value={["custom"]} onChange={() => setF({ from: "", to: "" })} />
+        ) : (
+          <FilterChip label="Date" single options={DATE_RANGES.filter((r) => r.value !== "all")} value={f.range === "all" ? [] : [f.range]} onChange={(v) => setF({ range: v[0] || "all" })} />
+        )}
         {activeFilters && (
           <Button variant="text" size="small" startIcon={<FilterAltOffOutlined sx={{ fontSize: 16 }} />} onClick={clearFilters} sx={{ color: "var(--text-secondary)", height: 28 }}>
             Clear

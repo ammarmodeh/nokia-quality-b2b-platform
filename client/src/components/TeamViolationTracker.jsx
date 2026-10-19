@@ -1,19 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Box, Paper, Stack, Typography, Collapse, Button } from "@mui/material";
+import { Box } from "@mui/material";
 import { startOfWeek } from "date-fns";
 import { getCustomWeekNumber } from "../utils/helpers";
-import { useSelector } from "react-redux";
-import { useSnackbar } from "notistack";
-import ViolationDataGrid from "./ViolationDataGrid";
+import { toast } from "sonner";
 import SessionDialogs from "./ViolationSessionDialogs";
 import api from "../api/api";
 import * as XLSX from 'xlsx';
-import SearchAndExport from "./ViolationSearchAndExport";
-import { MdAdd } from "react-icons/md";
+import ViolationTable from "./violations/ViolationTable";
 
-const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) => {
-  const { enqueueSnackbar } = useSnackbar();
-  const user = useSelector((state) => state?.auth?.user);
+const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, teamFilter = [] }) => {
+  // The app shows toasts with sonner (no notistack provider is mounted).
+  const enqueueSnackbar = (message, { variant } = {}) =>
+    (variant === "error" ? toast.error : variant === "warning" ? toast.warning : variant === "info" ? toast.info : toast.success)(message);
   const [fieldTeams, setFieldTeams] = useState(initialFieldTeams);
 
   useEffect(() => {
@@ -22,14 +20,10 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedTeamIdForSession, setSelectedTeamIdForSession] = useState(null);
   const [searchText, setSearchText] = useState('');
-  const [paginationModel, setPaginationModel] = useState({
-    pageSize: 10,
-    page: 0,
-  });
   const [evaluationData, setEvaluationData] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all'); // New: 'all', 'detractorFail', 'neutralFail'
-  const [showLimitsInfo, setShowLimitsInfo] = useState(false); // New: collapsed by default
   const [selectionModel, setSelectionModel] = useState([]);
+  const [teamStatus, setTeamStatus] = useState([]);
 
   // Dialog states
   const [addSessionDialogOpen, setAddSessionDialogOpen] = useState(false);
@@ -981,7 +975,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
   }, [selectedTeam, tasks]);
 
   const filteredRows = useMemo(() => {
-    let baseRows = rows;
+    let baseRows = teamFilter.length ? rows.filter(row => teamFilter.includes(row.teamName)) : rows;
 
     // Apply status filter
     if (statusFilter === 'detractorFail') {
@@ -1013,100 +1007,39 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
         return false;
       });
     });
-  }, [rows, searchText, statusFilter]);
+  }, [rows, searchText, statusFilter, teamFilter]);
 
   const handleViolationDialogOpen = () => setViolationDialogOpen(true);
   const handleViolationDialogClose = () => setViolationDialogOpen(false);
 
   return (
     <Box>
-      <Stack direction="column" sx={{ mt: "40px" }} spacing={2}>
-        <SearchAndExport
-          searchText={searchText}
-          setSearchText={setSearchText}
-          exportToExcel={exportToExcel}
-          tasks={tasks}
-          fieldTeams={fieldTeams}
-          teamDetractorLimit={teamDetractorLimit}
-          teamNeutralLimit={teamNeutralLimit}
-          totalGlobalSamples={totalGlobalSamples}
-          calculationBreakdown={calculationBreakdown}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          showLimitsInfo={showLimitsInfo}
-          setShowLimitsInfo={setShowLimitsInfo}
-        />
-
-        {/* Info Card - Now Collapsible */}
-        <Collapse in={showLimitsInfo}>
-          <Paper sx={{ p: 2, backgroundColor: 'var(--surface)', border: '1px solid var(--border)', mb: 1 }}>
-            <Typography variant="h6" sx={{ color: 'var(--text)', mb: 2, fontSize: '1rem', fontWeight: 600 }}>
-              📊 {calculationBreakdown?.modelName || "Year-to-Date Dynamic Limits"}
-            </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-              <Box>
-                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
-                  <strong style={{ color: '#4caf50' }}>✓ Model Math:</strong> {calculationBreakdown?.note}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
-                  <strong style={{ color: 'var(--accent-text)' }}>⚖️ Justice Baseline:</strong> Every team is guaranteed a grace limit of {calculationBreakdown?.baselineDetractors} Detractor(s) & {calculationBreakdown?.baselineNeutrals} Neutral(s) to protect against low-volume random sample variance.
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
-                  <strong style={{ color: '#f44336' }}>⚠️ Violation:</strong> Team's YTD violations exceed their fair-share allowed limit.
-                </Typography>
-              </Box>
-              <Box sx={{ borderLeft: '1px solid var(--border)', pl: 2 }}>
-                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 0.5 }}>
-                  Global Total Samples: <strong style={{ color: 'var(--text)' }}>{calculationBreakdown?.ytdTotal}</strong> | Active Teams: <strong style={{ color: 'var(--text)' }}>{calculationBreakdown?.activeTeams}</strong>
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 0.5 }}>
-                  Fair Share Allocation: <strong style={{ color: 'var(--text)' }}>{calculationBreakdown?.activeTeams ? (calculationBreakdown.ytdTotal / calculationBreakdown.activeTeams).toFixed(1) : 0} samples / team</strong>
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 0.5 }}>
-                  Global Targets: <strong style={{ color: '#f44336' }}>≤{(calculationBreakdown?.targetDetractor * 100).toFixed(0)}% Detractors</strong> | <strong style={{ color: '#ff9800' }}>≤{(calculationBreakdown?.targetNeutral * 100).toFixed(0)}% Neutrals</strong>
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
-                  Per-Team Enforced Limit: <strong style={{ color: '#f44336' }}>{teamDetractorLimit} Detractors</strong> | <strong style={{ color: '#ff9800' }}>{teamNeutralLimit} Neutrals</strong>
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Collapse>
-
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<MdAdd />}
-            disabled={selectionModel.length === 0}
-            onClick={handleBulkAddSessionClick}
-            sx={{
-              backgroundColor: selectionModel.length === 0 ? 'rgba(76, 175, 80, 0.3)' : '#4caf50',
-              fontWeight: 'bold',
-              '&:hover': { backgroundColor: '#45a049' }
-            }}
-          >
-            Bulk Add Session {selectionModel.length > 0 ? `for ${selectionModel.length} Selected Teams` : ''}
-          </Button>
-        </Box>
-
-        <ViolationDataGrid
-          rows={filteredRows}
-          user={user}
-          paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
-          onTeamNameClick={handleTeamNameClick}
-          onAddSessionClick={handleAddSessionClick}
-          onViewSessionsClick={handleViewSessionsClick}
-          onReportAbsenceClick={(teamName, teamId) => {
-            setSelectedTeamForAbsence(teamName);
-            setSelectedTeamIdForSession(teamId);
-            setReportAbsenceDialogOpen(true);
-          }}
-          selectionModel={selectionModel}
-          onSelectionModelChange={setSelectionModel}
-        />
-      </Stack>
+      <ViolationTable
+        rows={filteredRows}
+        tasks={teamFilter.length ? tasks.filter(t => teamFilter.includes(t.teamName)) : tasks}
+        weekStartDay={weekStartDay}
+        detractorLimit={teamDetractorLimit}
+        neutralLimit={teamNeutralLimit}
+        breakdown={calculationBreakdown}
+        search={searchText}
+        onSearch={setSearchText}
+        statusFilter={statusFilter}
+        onStatusFilter={setStatusFilter}
+        teamStatus={teamStatus}
+        onTeamStatus={setTeamStatus}
+        selection={selectionModel}
+        onSelection={setSelectionModel}
+        onBulkAddSession={handleBulkAddSessionClick}
+        onExport={exportToExcel}
+        onTeamDetails={handleTeamNameClick}
+        onAddSession={handleAddSessionClick}
+        onViewSessions={handleViewSessionsClick}
+        onReportAbsence={(teamName, teamId) => {
+          setSelectedTeamForAbsence(teamName);
+          setSelectedTeamIdForSession(teamId);
+          setReportAbsenceDialogOpen(true);
+        }}
+      />
 
       <SessionDialogs
         open={!!selectedTeam}
