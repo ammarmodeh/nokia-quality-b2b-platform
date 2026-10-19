@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import { useState } from 'react';
 import {
   Dialog,
@@ -47,14 +48,15 @@ import { useSelector } from 'react-redux';
 import CustomerIssueDialog from './CustomerIssueDialog';
 
 // Premium Colors
+// Getters so values follow the current theme when read.
 const colors = {
-  background: 'var(--bg)',
-  surface: 'rgba(30, 30, 30, 0.7)',
-  primary: '#8b5cf6', // Violet
+  get background() { return tok('--bg'); },
+  get surface() { return tok('--surface'); },
+  get primary() { return tok('--accent'); },
   secondary: '#10b981', // Emerald
-  textPrimary: '#ffffff',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  border: 'var(--border)',
+  get textPrimary() { return tok('--text'); },
+  get textSecondary() { return tok('--text-secondary'); },
+  get border() { return tok('--border'); },
   timeline: {
     reported: '#3b82f6', // Blue
     dispatched: '#f59e0b', // Amber

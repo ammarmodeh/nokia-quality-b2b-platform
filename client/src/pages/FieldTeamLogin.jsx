@@ -1,17 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/api';
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Paper,
-  Snackbar,
-  CircularProgress,
-  Alert,
-  Divider
-} from '@mui/material';
+import { Box, Button, TextField, Snackbar, CircularProgress, Alert } from '@mui/material';
+import AuthShell, { FieldLabel } from '../components/shell/AuthShell';
 
 const FieldTeamLogin = () => {
   const [formData, setFormData] = useState({
@@ -95,99 +86,49 @@ const FieldTeamLogin = () => {
     }
   };
 
-  const textFieldStyles = {
-    '& .MuiOutlinedInput-root': {
-      '& fieldset': { borderColor: 'var(--border)' },
-      '&:hover fieldset': { borderColor: 'var(--border)' },
-      '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
-      color: 'var(--text)',
-    },
-    '& .MuiInputLabel-root': {
-      color: 'var(--text-secondary)',
-      '&.Mui-focused': { color: 'var(--accent-text)' }
-    }
-  };
-
   return (
-    <Box sx={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100vh',
-      backgroundColor: 'var(--surface)',
-      p: 2
-    }}>
-      <Paper elevation={3} sx={{
-        p: 4,
-        width: '100%',
-        maxWidth: 500,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 3,
-        backgroundColor: 'var(--surface)',
-        border: '1px solid #f3f4f6'
-      }}>
-        <Typography variant="h4" component="div" align="center" gutterBottom sx={{ color: 'var(--text)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0 }}>
-          <img src="/images/reach_logo_new.svg" width={100} height={100} alt="ReachLogo" />
-          <img src="/images/Orange-Logo.png" width={40} height={40} alt="Orange Logo" />
-        </Typography>
-        <Typography variant="p" component="div" align="center" gutterBottom sx={{ color: 'var(--text)', fontSize: '12px' }}>
-          <span style={{ fontWeight: 'bold', color: '#ff9800' }}>{settings?.clientName || "OrangeJo"}</span> {settings?.projectName || "FTTH Project"}
-        </Typography>
-
-        <Divider sx={{ borderColor: '#f3f4f6' }} />
-
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-          <Typography variant="h4" component="h1" align="center" gutterBottom sx={{ color: 'var(--text)' }}>
-            Field Team Login
-          </Typography>
-
-          <Typography variant="body1" align="center" sx={{ color: 'var(--text-secondary)' }}>
-            Enter your Team ID and Quiz Code
-          </Typography>
+    <AuthShell
+      title="Field team assessment"
+      description="Enter your Team ID and the quiz code you were given to start the technical assessment."
+      footer={
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
+          <img src="/images/reach_logo_new.svg" width={56} height={20} alt="Reach" style={{ objectFit: 'contain' }} />
+          <span style={{ width: 1, height: 14, background: 'var(--border-strong)' }} />
+          <img src="/images/Orange-Logo.png" width={18} height={18} alt="Orange" />
+          <span>{settings?.clientName || 'OrangeJo'} · {settings?.projectName || 'FTTH Project'}</span>
         </Box>
-
-        <Box component="form" onSubmit={handleSubmit}>
+      }
+    >
+      <Box component="form" noValidate onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <FieldLabel htmlFor="teamCode" label="Team ID">
           <TextField
+            id="teamCode"
             fullWidth
             name="teamCode"
-            label="Team ID"
-            variant="outlined"
-            margin="normal"
+            autoFocus
+            autoComplete="off"
+            placeholder="e.g. 5077"
             value={formData.teamCode}
             onChange={handleChange}
             disabled={loading}
-            sx={textFieldStyles}
           />
-
+        </FieldLabel>
+        <FieldLabel htmlFor="quizCode" label="Quiz code">
           <TextField
+            id="quizCode"
             fullWidth
             name="quizCode"
-            label="Quiz Code"
-            variant="outlined"
-            margin="normal"
+            autoComplete="off"
+            placeholder="Code from your supervisor"
             value={formData.quizCode}
             onChange={handleChange}
             disabled={loading}
-            sx={textFieldStyles}
           />
-
-          <Button
-            fullWidth
-            variant="contained"
-            type="submit"
-            disabled={loading || !formData.teamCode || !formData.quizCode}
-            sx={{
-              mt: 2,
-              height: 48,
-              backgroundColor: 'var(--accent)',
-              '&:hover': { backgroundColor: '#1d4ed8' }
-            }}
-          >
-            {loading ? <CircularProgress size={24} color="inherit" /> : 'Start Quiz'}
-          </Button>
-        </Box>
-      </Paper>
+        </FieldLabel>
+        <Button fullWidth size="large" variant="contained" type="submit" disabled={loading || !formData.teamCode || !formData.quizCode} sx={{ mt: 0.5 }}>
+          {loading ? <CircularProgress size={18} sx={{ color: 'var(--on-accent)' }} /> : 'Start assessment'}
+        </Button>
+      </Box>
 
       <Snackbar
         open={snackbar.open}
@@ -204,7 +145,7 @@ const FieldTeamLogin = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </AuthShell>
   );
 };
 

@@ -6,18 +6,19 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
+// Getters so values follow the current theme when read.
 const colors = {
-  background: tok('--surface'),
-  surface: '#ffffff',
-  surfaceElevated: '#252525',
-  border: tok('--border'),
-  primary: '#7b68ee',
-  primaryHover: 'rgba(62, 166, 255, 0.08)',
-  textPrimary: '#ffffff',
-  textSecondary: '#6b7280',
-  success: '#4caf50',
-  warning: '#ff9800',
-  error: '#f44336',
+  get background() { return tok('--surface'); },
+  get surface() { return tok('--surface'); },
+  get surfaceElevated() { return tok('--surface-subtle'); },
+  get border() { return tok('--border'); },
+  get primary() { return tok('--accent'); },
+  get primaryHover() { return tok('--surface-hover'); },
+  get textPrimary() { return tok('--text'); },
+  get textSecondary() { return tok('--text-secondary'); },
+  get success() { return tok('--success'); },
+  get warning() { return tok('--warning'); },
+  get error() { return tok('--danger'); },
 };
 
 const getBarColor = (score) => {

@@ -1,3 +1,5 @@
+import PageHeader from "../components/ui/PageHeader";
+import { tok } from "../theme/tokens";
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -50,7 +52,6 @@ import {
   Build as BuildIcon,
   Speed as SpeedIcon,
   Router as RouterIcon,
-  Sensors as SensorsIcon,
   School as SchoolIcon,
   AssignmentTurnedIn as AssignmentTurnedInIcon,
   SettingsInputComponent as SettingsIcon,
@@ -680,16 +681,16 @@ const LabAssessment = () => {
   const [settings, setSettings] = useState(null);
 
   const colors = {
-    background: "var(--bg)",
-    surface: "#252525",
-    border: "var(--border)",
-    primary: "#7b68ee",
-    textPrimary: "#ffffff",
-    textSecondary: "#b3b3b3",
-    success: "#4caf50",
-    error: "#f44336",
-    warning: "#ff9800",
-    info: "#00bcd4",
+    background: tok('--bg'),
+    surface: tok('--surface'),
+    border: tok('--border'),
+    primary: tok('--accent'),
+    textPrimary: tok('--text'),
+    textSecondary: tok('--text-secondary'),
+    success: tok('--success'),
+    error: tok('--danger'),
+    warning: tok('--warning'),
+    info: tok('--info'),
   };
 
   useEffect(() => {
@@ -1371,29 +1372,15 @@ const LabAssessment = () => {
   }, [allTrackingData, fieldTeams, assessments]);
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: colors.background, p: { xs: 2, md: 4 } }}>
-      {/* Top Banner */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ color: colors.primary, fontWeight: 800, display: "flex", alignItems: "center", gap: 1.5 }}>
-          <SensorsIcon fontSize="large" /> E2E FTTH Practical Assessment
-        </Typography>
-        <Typography variant="body2" sx={{ color: colors.textSecondary, mt: 0.5 }}>
-          Full-cycle practical laboratory evaluation: <strong>FDB → BEP → OTO → ONT → Service Verification → Customer Education → Tools Readiness → Quality Ticket Awareness → Communication & Behaviour</strong>
-        </Typography>
-      </Box>
+    <Box>
+      <PageHeader
+        title="Lab Assessment"
+        description="E2E FTTH practical lab evaluation: FDB → BEP → OTO → ONT → service verification, customer education, tools, quality awareness and behaviour."
+      />
 
       {/* Navigation Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: colors.border, mb: 4 }}>
-        <Tabs
-          value={activeTab}
-          onChange={(e, v) => setActiveTab(v)}
-          textColor="primary"
-          indicatorColor="primary"
-          sx={{
-            "& .MuiTab-root": { color: colors.textSecondary, fontSize: "1rem", textTransform: "none", fontWeight: 600 },
-            "& .Mui-selected": { color: colors.primary },
-          }}
-        >
+      <Box sx={{ mb: 3 }}>
+        <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} variant="scrollable" allowScrollButtonsMobile>
           <Tab icon={<AssessmentIcon />} iconPosition="start" label={isEditing ? "Edit Assessment Form" : "New Assessment Form"} />
           <Tab icon={<ListAltIcon />} iconPosition="start" label={`Evaluation Tracking (${fieldTeams.length})`} />
           <Tab icon={<BarChartIcon />} iconPosition="start" label="Quality & Performance Intelligence" />

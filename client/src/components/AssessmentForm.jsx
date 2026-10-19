@@ -54,11 +54,11 @@ const AssessmentForm = ({
 
   const glassStyle = {
     background: colors.surface,
-    backdropFilter: 'blur(16px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+    
+    
     border: `1px solid ${colors.border}`,
-    borderRadius: '24px',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+    borderRadius: '10px',
+    boxShadow: 'var(--shadow-xs)'
   };
 
   const checkpointStyle = {
@@ -66,7 +66,7 @@ const AssessmentForm = ({
     mb: isMobile ? 1.5 : 2.5,
     backgroundColor: 'var(--overlay-subtle)',
     border: `1px solid ${colors.border}`,
-    borderRadius: '16px',
+    borderRadius: '8px',
     transition: 'all 0.2s ease',
     '&:hover': {
       backgroundColor: 'var(--overlay-subtle)',
@@ -254,7 +254,7 @@ const AssessmentForm = ({
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
           placeholder="Summarize the overall quality and key recommendations..."
-          sx={{ mb: 4, direction: 'rtl', '& .MuiOutlinedInput-root': { borderRadius: '16px' } }}
+          sx={{ mb: 4, direction: 'rtl', '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
           error={!feedback?.trim()}
           helperText={!feedback?.trim() ? "Feedback/Synthesis is mandatory for data quality" : ""}
         />

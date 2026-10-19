@@ -1,3 +1,5 @@
+import SegmentedControl from "../components/ui/SegmentedControl";
+import { tok } from "../theme/tokens";
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   Box,
@@ -279,14 +281,14 @@ const QuizManagement = () => {
 
   const colors = {
     background: 'transparent',
-    surface: '#1e1e1e',
-    border: 'var(--border)',
-    primary: '#7b68ee',
-    secondary: '#3ea6ff',
-    textPrimary: '#ffffff',
-    textSecondary: '#a0a0a0',
-    error: '#ff4d4d',
-    success: '#4caf50',
+    surface: tok('--surface'),
+    border: tok('--border'),
+    primary: tok('--accent'),
+    secondary: tok('--info'),
+    textPrimary: tok('--text'),
+    textSecondary: tok('--text-secondary'),
+    error: tok('--danger'),
+    success: tok('--success'),
     chartColors: ['#7b68ee', '#3ea6ff', '#ff4d4d', '#4caf50', '#ffa726', '#ba68c8']
   };
 
@@ -533,48 +535,28 @@ const QuizManagement = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <Box sx={{ minHeight: '100vh', bgcolor: colors.background }}>
+      <Box>
         <Stack
           direction={isMobile ? "column" : "row"}
           justifyContent="space-between"
           alignItems={isMobile ? "flex-start" : "center"}
           spacing={isMobile ? 2 : 0}
-          mb={4}
+          mb={3}
         >
           <Box>
-            <Typography variant={isMobile ? "h5" : "h4"} sx={{ color: colors.textPrimary, fontWeight: '900', letterSpacing: '-1px' }}>
-              QUIZ <span style={{ color: colors.primary }}>MANAGEMENT</span>
+            <Typography component="h1" sx={{ fontSize: { xs: 20, md: 24 }, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text)', lineHeight: 1.25 }}>
+              Manage Quiz
             </Typography>
-            <Typography variant="body2" sx={{ color: colors.textSecondary, mt: 0.5 }}>
-              Configure, analyze, and reorder questions for field team assessments.
+            <Typography sx={{ mt: 0.5, fontSize: 13.5, color: 'var(--text-secondary)' }}>
+              Question bank for the field-team technical assessment: edit, reorder and review analytics.
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1} sx={{ bgcolor: 'var(--overlay-subtle)', p: 0.5, borderRadius: '12px' }}>
-            <Button
-              size="small"
-              onClick={() => setSelectedQuizType('Performance')}
-              sx={{
-                bgcolor: selectedQuizType === 'Performance' ? colors.primary : 'transparent',
-                color: selectedQuizType === 'Performance' ? 'white' : colors.textSecondary,
-                fontWeight: 'bold',
-                '&:hover': { bgcolor: selectedQuizType === 'Performance' ? colors.primary : 'rgba(255,255,255,0.1)' }
-              }}
-            >
-              Performance
-            </Button>
-            <Button
-              size="small"
-              onClick={() => setSelectedQuizType('IQ')}
-              sx={{
-                bgcolor: selectedQuizType === 'IQ' ? colors.primary : 'transparent',
-                color: selectedQuizType === 'IQ' ? 'white' : colors.textSecondary,
-                fontWeight: 'bold',
-                '&:hover': { bgcolor: selectedQuizType === 'IQ' ? colors.primary : 'rgba(255,255,255,0.1)' }
-              }}
-            >
-              IQ Test
-            </Button>
-          </Stack>
+          <SegmentedControl
+            ariaLabel="Quiz type"
+            value={selectedQuizType}
+            onChange={setSelectedQuizType}
+            options={[{ value: 'Performance', label: 'Performance' }, { value: 'IQ', label: 'IQ test' }]}
+          />
           <Stack direction={isMobile ? "column" : "row"} spacing={2} width={isMobile ? "100%" : "auto"}>
             <Button
               variant="outlined"
@@ -582,13 +564,7 @@ const QuizManagement = () => {
               onClick={saveOrder}
               fullWidth={isMobile}
               size={isMobile ? "small" : "medium"}
-              sx={{
-                borderColor: colors.border,
-                color: colors.textSecondary,
-                fontWeight: 'bold',
-                textTransform: 'none',
-                '&:hover': { borderColor: colors.primary, color: colors.primary }
-              }}
+
             >
               Save Order
             </Button>
@@ -598,16 +574,7 @@ const QuizManagement = () => {
               onClick={() => handleOpenDialog()}
               fullWidth={isMobile}
               size={isMobile ? "small" : "medium"}
-              sx={{
-                bgcolor: colors.primary,
-                fontWeight: 'bold',
-                px: 3,
-                py: 1,
-                borderRadius: '8px',
-                textTransform: 'none',
-                boxShadow: `0 4px 14px 0 ${colors.primary}40`,
-                '&:hover': { bgcolor: 'var(--accent-hover)', boxShadow: `0 6px 20px 0 ${colors.primary}60` }
-              }}
+
             >
               Add Question
             </Button>

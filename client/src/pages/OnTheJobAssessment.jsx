@@ -1,6 +1,6 @@
 import { tok } from "../theme/tokens";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -14,7 +14,7 @@ import {
   DialogActions,
   TextField,
 } from "@mui/material";
-import { ArrowBack, Circle, Download } from '@mui/icons-material';
+import { Circle, Download } from '@mui/icons-material';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Legend } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import * as XLSX from 'xlsx';
@@ -47,7 +47,6 @@ const OnTheJobAssessment = () => {
   const [openAssessmentDialog, setOpenAssessmentDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDetailDialog, setOpenDetailDialog] = useState(false);
-  const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:503px)');
   const [teamsPage, setTeamsPage] = useState(0);
   const [teamsRowsPerPage, setTeamsRowsPerPage] = useState(10);
@@ -320,38 +319,31 @@ const OnTheJobAssessment = () => {
   }), []);
 
   const colors = useMemo(() => ({
-    background: 'transparent', // Deeper, more modern dark
-    surface: 'rgba(23, 23, 28, 0.7)', // Glass surface
-    surfaceElevated: 'rgba(30, 30, 40, 0.8)',
+    background: 'transparent',
+    surface: tok('--surface'),
+    surfaceElevated: tok('--surface-subtle'),
     border: tok('--border'),
-    primary: '#6366f1', // Indigo (Modern Premium)
-    primaryHover: 'rgba(99, 102, 241, 0.15)',
-    secondary: '#a855f7', // Purple accent
-    textPrimary: '#f8fafc',
-    textSecondary: '#94a3b8',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-    chartCorrect: '#10b981',
-    chartIncorrect: '#ef4444',
-    glass: 'backdrop-filter: blur(16px) saturate(180%);',
-    shadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37);'
+    primary: tok('--accent'),
+    primaryHover: tok('--surface-hover'),
+    secondary: tok('--accent'),
+    textPrimary: tok('--text'),
+    textSecondary: tok('--text-secondary'),
+    success: tok('--success'),
+    warning: tok('--warning'),
+    error: tok('--danger'),
+    chartCorrect: tok('--success'),
+    chartIncorrect: tok('--danger'),
+    shadow: 'var(--shadow-xs)'
   }), []);
 
+  // Clerk-style surfaces (kept under the old names used throughout the page)
   const glassStyle = {
-    background: colors.surface,
-    backdropFilter: 'blur(16px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '16px',
-    boxShadow: colors.shadow,
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    boxShadow: 'var(--shadow-xs)',
   };
 
-  const headerGradient = {
-    background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -1408,48 +1400,26 @@ const OnTheJobAssessment = () => {
 
   return (
     <Box sx={{
-      backgroundColor: colors.background,
-      minHeight: '100vh',
       color: colors.textPrimary,
       // p: { xs: 2, md: 4 },
       transition: 'background-color 0.3s ease'
     }}>
-      <Box sx={{ maxWidth: '1400px', mx: 'auto' }}>
+      <Box>
         {/* Modern Header Section */}
         <Box sx={{
           display: 'flex',
           flexDirection: { xs: 'column', md: 'row' },
           justifyContent: 'space-between',
           alignItems: { xs: 'flex-start', md: 'center' },
-          mb: 5,
+          mb: 3,
           gap: 2
         }}>
           <Box>
-            <Button
-              startIcon={<ArrowBack />}
-              onClick={() => navigate('/')}
-              sx={{
-                mb: 1,
-                color: colors.textSecondary,
-                textTransform: 'none',
-                '&:hover': {
-                  color: colors.primary,
-                  backgroundColor: colors.primaryHover
-                }
-              }}
-            >
-              Back to Dashboard
-            </Button>
-            <Typography variant="h3" sx={{
-              fontWeight: 800,
-              letterSpacing: '-0.025em',
-              ...headerGradient,
-              mb: 1
-            }}>
-              Field Performance
+            <Typography component="h1" sx={{ fontSize: { xs: 20, md: 24 }, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text)', lineHeight: 1.25 }}>
+              On-the-Job Assessment
             </Typography>
-            <Typography variant="body1" sx={{ color: colors.textSecondary, fontWeight: 500 }}>
-              On-The-Job Assessments & Team Analytics
+            <Typography sx={{ mt: 0.5, fontSize: 13.5, color: 'var(--text-secondary)' }}>
+              Field observations of technicians on live jobs, with scores and team analytics.
             </Typography>
           </Box>
 
@@ -1483,7 +1453,7 @@ const OnTheJobAssessment = () => {
           ...glassStyle,
           p: 3,
           mb: 5,
-          background: 'linear-gradient(110deg, rgba(30, 30, 45, 0.4) 0%, rgba(20, 20, 30, 0.4) 100%)'
+          background: 'var(--surface)'
         }}>
           <Typography variant="subtitle1" sx={{ color: colors.primary, fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Circle sx={{ fontSize: 10 }} /> Select Operational Team

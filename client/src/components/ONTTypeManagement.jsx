@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -37,13 +38,13 @@ const ONTTypeManagement = ({ onTypeChange }) => {
   const [newType, setNewType] = useState({ name: "", description: "" });
 
   const colors = {
-    background: "var(--surface)",
-    surface: "#252525",
-    border: "var(--border)",
-    primary: "#7b68ee",
-    textPrimary: "#ffffff",
-    textSecondary: "#b3b3b3",
-    error: "#f44336",
+    background: tok('--bg'),
+    surface: tok('--surface'),
+    border: tok('--border'),
+    primary: tok('--accent'),
+    textPrimary: tok('--text'),
+    textSecondary: tok('--text-secondary'),
+    error: tok('--danger'),
   };
 
   const fetchONTTypes = async () => {

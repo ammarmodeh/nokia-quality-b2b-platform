@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import { useMemo } from "react";
 import {
   Box,
@@ -101,12 +102,12 @@ const ReasonTrend = ({ tasks, selectedWeek, settings = {} }) => {
   );
 
   const colors = {
-    primary: "#7b68ee",
-    error: "#f44336",
-    success: "#4caf50",
-    textSecondary: "#b3b3b3",
-    border: "var(--border)",
-    surface: "#252525"
+    primary: tok('--accent'),
+    error: tok('--danger'),
+    success: tok('--success'),
+    textSecondary: tok('--text-secondary'),
+    border: tok('--border'),
+    surface: tok('--surface')
   };
 
   return (

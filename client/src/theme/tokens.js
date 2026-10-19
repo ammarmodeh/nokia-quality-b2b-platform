@@ -1,10 +1,19 @@
 // Resolve a design token (CSS custom property from index.css) to its current
 // value. Use this where a real colour string is required (canvas charts,
 // alpha()); everywhere else prefer `var(--token)` directly.
+// Values are cached per theme because getComputedStyle is costly and tok()
+// is called on every render in several pages.
+let cacheTheme = null;
+const cache = new Map();
 export const tok = (name, fallback = '') => {
   if (typeof window === 'undefined') return fallback;
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return v || fallback;
+  const theme = document.documentElement.getAttribute('data-theme');
+  if (theme !== cacheTheme) {
+    cache.clear();
+    cacheTheme = theme;
+  }
+  if (!cache.has(name)) cache.set(name, getComputedStyle(document.documentElement).getPropertyValue(name).trim());
+  return cache.get(name) || fallback;
 };
 
 // Badge palette for status-like values: soft tinted bg + coloured text.

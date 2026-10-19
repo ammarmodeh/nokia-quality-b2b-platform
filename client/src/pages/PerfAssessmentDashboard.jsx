@@ -1,3 +1,4 @@
+import PageHeader from "../components/ui/PageHeader";
 import { tok } from "../theme/tokens";
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -257,18 +258,18 @@ const PerfAssessmentDashboard = () => {
 
   const colors = {
     background: tok('--surface'),
-    surface: 'transparent',
-    surfaceElevated: '#252525',
+    surface: tok('--surface'),
+    surfaceElevated: tok('--surface-subtle'),
     border: tok('--border'),
-    primary: '#7b68ee',
-    primaryHover: 'rgba(62, 166, 255, 0.08)',
-    textPrimary: '#ffffff',
-    textSecondary: '#6b7280',
-    success: '#4caf50',
-    warning: '#ff9800',
-    error: '#f44336',
-    chartCorrect: '#4caf50',
-    chartIncorrect: '#f44336',
+    primary: tok('--accent'),
+    primaryHover: tok('--surface-hover'),
+    textPrimary: tok('--text'),
+    textSecondary: tok('--text-secondary'),
+    success: tok('--success'),
+    warning: tok('--warning'),
+    error: tok('--danger'),
+    chartCorrect: tok('--success'),
+    chartIncorrect: tok('--danger'),
   };
 
   const fetchResults = async (targetTeamId = teamId) => {
@@ -787,36 +788,11 @@ const PerfAssessmentDashboard = () => {
   };
 
   return (
-    <Box sx={{
-      // backgroundColor: colors.background,
-      minHeight: '100vh',
-      color: colors.textPrimary,
-      maxWidth: '1100px',
-      mx: 'auto',
-      // p: 2,
-      px: isMobile ? 0 : undefined
-    }}>
-      <Button
-        startIcon={<ArrowBack />}
-        onClick={() => navigate('/')}
-        sx={{
-          mb: 2,
-          color: colors.primary,
-          '&:hover': {
-            backgroundColor: colors.primaryHover
-          }
-        }}
-      >
-        Back to Dashboard
-      </Button>
-
-      <Typography variant="h4" gutterBottom sx={{
-        color: colors.primary,
-        fontWeight: 'bold',
-        mb: 4
-      }}>
-        Perf Assessment Dashboard
-      </Typography>
+    <Box sx={{ color: colors.textPrimary }}>
+      <PageHeader
+        title="Assessment Dashboard"
+        description="Technical quiz results per field team: scores, answers and essay scoring."
+      />
 
       <Paper sx={{
         p: 3,

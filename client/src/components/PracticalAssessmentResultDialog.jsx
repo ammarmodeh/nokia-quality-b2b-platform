@@ -36,18 +36,18 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
   // Dark mode colors
   const colors = {
     background: tok('--surface'),
-    surface: '#ffffff',
-    surfaceElevated: '#252525',
+    surface: tok('--surface'),
+    surfaceElevated: tok('--surface-subtle'),
     border: tok('--border'),
-    primary: '#7b68ee',
-    primaryHover: 'rgba(62, 166, 255, 0.08)',
-    textPrimary: '#ffffff',
-    textSecondary: '#6b7280',
-    success: '#4caf50',
-    warning: '#ff9800',
-    error: '#f44336',
-    chartCorrect: '#1976d2', // Changed from green to blue
-    chartIncorrect: '#f44336',
+    primary: tok('--accent'),
+    primaryHover: tok('--surface-hover'),
+    textPrimary: tok('--text'),
+    textSecondary: tok('--text-secondary'),
+    success: tok('--success'),
+    warning: tok('--warning'),
+    error: tok('--danger'),
+    chartCorrect: tok('--success'),
+    chartIncorrect: tok('--danger'),
   };
 
   useEffect(() => {

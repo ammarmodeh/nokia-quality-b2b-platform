@@ -1,3 +1,4 @@
+import { tok } from "../../theme/tokens";
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -20,17 +21,17 @@ import { predefinedSubtasks } from "../../constants/subtaskData";
 
 const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
   const colors = {
-    primary: "#1976d2",
+    primary: tok('--accent'),
     primaryDark: "#1565c0",
     secondary: "#7b68ee",
-    success: "#4caf50", // Matching dashboard chip success
-    warning: "#ff9800",
-    error: "#f44336",
-    bg: "var(--surface)", // Dark background
-    card: "#2d2d2d", // Matching dashboard sections
-    border: "var(--border)", // Matching dashboard borders
-    textPrimary: "#ffffff",
-    textSecondary: "#b3b3b3",
+    success: tok('--success'),
+    warning: tok('--warning'),
+    error: tok('--danger'),
+    bg: tok('--bg'),
+    card: tok('--surface'),
+    border: tok('--border'),
+    textPrimary: tok('--text'),
+    textSecondary: tok('--text-secondary'),
   };
 
   // Helper for deep copying to prevent mutation of the imported constant

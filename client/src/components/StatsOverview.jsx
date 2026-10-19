@@ -23,14 +23,14 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
 
   const glassStyle = {
     background: colors.surface,
-    backdropFilter: 'blur(16px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+    
+    
     border: `1px solid ${colors.border}`,
-    borderRadius: '24px',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+    borderRadius: '10px',
+    boxShadow: 'var(--shadow-xs)',
     transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease',
     '&:hover': {
-      transform: 'translateY(-8px)',
+      transform: 'none',
       boxShadow: `0 12px 40px 0 ${colors.primary}30`,
       borderColor: `${colors.primary}40`,
     }
@@ -153,7 +153,7 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
 
               <Box sx={{
                 p: 2.5,
-                borderRadius: '16px',
+                borderRadius: '8px',
                 bgcolor: 'rgba(16, 185, 129, 0.08)',
                 border: '1px solid rgba(16, 185, 129, 0.1)',
                 mb: 3
@@ -169,7 +169,7 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
 
               <Box sx={{
                 p: 2.5,
-                borderRadius: '16px',
+                borderRadius: '8px',
                 bgcolor: 'rgba(239, 68, 68, 0.08)',
                 border: '1px solid rgba(239, 68, 68, 0.1)'
               }}>
