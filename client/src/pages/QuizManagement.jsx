@@ -1,3 +1,4 @@
+import DataMenu from "../components/dataio/DataMenu";
 import Sheet from "../components/ui/Sheet";
 import SegmentedControl from "../components/ui/SegmentedControl";
 import { tok } from "../theme/tokens";
@@ -559,6 +560,7 @@ const QuizManagement = () => {
             options={[{ value: 'Performance', label: 'Performance' }, { value: 'IQ', label: 'IQ test' }]}
           />
           <Stack direction={isMobile ? "column" : "row"} spacing={2} width={isMobile ? "100%" : "auto"}>
+            <DataMenu entity="quiz" viewRows={questions} filename="quiz-questions" onImported={fetchQuestions} />
             <Button
               variant="outlined"
               startIcon={<UpdateIcon />}

@@ -1,3 +1,4 @@
+import DataMenu from '../components/dataio/DataMenu';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Box, TextField, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Divider, Tooltip, Typography, IconButton, useMediaQuery, Chip, Menu, MenuItem, ListItemIcon, Checkbox, FormControlLabel, Tabs, Tab, Paper } from '@mui/material';
 import { Delete as DeleteIcon, PauseCircleOutline as PauseCircleOutlineIcon, Block as BlockIcon, PlayCircleOutline as PlayCircleOutlineIcon, BeachAccess as BeachAccessIcon, History as HistoryIcon, Refresh as RefreshIcon, Visibility, Gavel as GavelIcon, AddCircleOutline as AddCircleOutlineIcon } from '@mui/icons-material';
@@ -1016,7 +1017,8 @@ const FieldTeamForm = () => {
                   <RefreshIcon sx={{ fontSize: 18 }} />
                 </IconButton>
               </Tooltip>
-              <Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 17 }} />} onClick={handleExportToExcel}>Export</Button>
+              <Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 17 }} />} onClick={handleExportToExcel}>Team report</Button>
+              <DataMenu entity="fieldTeams" viewRows={visibleTeams} selectedRows={teams.filter((t) => selection.includes(t._id))} filename="field-teams" onImported={() => setUpdateState((p) => !p)} />
               {user.role === 'Admin' && (
                 <Button variant="contained" startIcon={<AddIcon sx={{ fontSize: 18 }} />} onClick={() => setAddOpen(true)}>Add team</Button>
               )}

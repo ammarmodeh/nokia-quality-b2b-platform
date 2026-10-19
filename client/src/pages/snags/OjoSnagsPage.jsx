@@ -1,3 +1,4 @@
+import DataMenu from "../../components/dataio/DataMenu";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -205,9 +206,7 @@ const OjoSnagsPage = () => {
         description="Joint-quality snags raised by OJO on field installations and maintenance."
         actions={
           <>
-            <Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 17 }} />} disabled={!rows.length} onClick={() => exportRows(rows, EXPORT_COLUMNS, { filename: `ojo-snags-${f.tab.toLowerCase()}`, sheet: "OJO Snags" })}>
-              Export
-            </Button>
+            <DataMenu entity="snags" viewRows={rows} filename={`ojo-snags-${f.tab.toLowerCase()}`} onImported={() => setRefresh((r) => r + 1)} />
             <IconButton aria-label="More" onClick={(e) => setMore(e.currentTarget)} sx={{ width: 32, height: 32, border: "1px solid var(--border)", boxShadow: "var(--shadow-xs)", backgroundColor: "var(--surface)" }}>
               <MoreHoriz fontSize="small" />
             </IconButton>

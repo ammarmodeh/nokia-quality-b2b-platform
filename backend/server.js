@@ -29,6 +29,7 @@ import docRoutes from "./routes/docRoutes.js";
 import userNoteRoutes from "./routes/userNoteRoutes.js";
 import fieldAuditRoutes from "./routes/fieldAuditRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
+import importRoutes from "./routes/importRoutes.js";
 import path from "path";
 import { errorHandler, routeNotFound } from "./middlewares/errorMiddleware.js";
 
@@ -132,6 +133,7 @@ app.use("/api/docs", docRoutes);
 app.use("/api/user-notes", userNoteRoutes);
 app.use("/api/audit", fieldAuditRoutes);
 app.use("/api/health", healthRoutes);
+app.use("/api/import", importRoutes);
 app.use("/api/training-sessions", trainingSessionRoutes);
 
 // Static Uploads Folder

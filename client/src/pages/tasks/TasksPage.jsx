@@ -1,3 +1,4 @@
+import DataMenu from "../../components/dataio/DataMenu";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, Link as RouterLink } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -217,9 +218,7 @@ const TasksPage = () => {
         description="DVOC · Installation — NPS detractor and neutral follow-ups."
         actions={
           <>
-            <Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 17 }} />} onClick={() => exportTasks(filtered, { filename: "dvoc-installation-tasks" })} disabled={!filtered.length}>
-              Export
-            </Button>
+            <DataMenu entity="tasks" viewRows={filtered} selectedRows={selectedTasks} filename="dvoc-installation-tasks" onImported={() => setRefresh((r) => r + 1)} context={{ teams }} />
             <IconButton aria-label="More" onClick={(e) => setMoreMenu(e.currentTarget)} sx={{ width: 32, height: 32, border: "1px solid var(--border)", boxShadow: "var(--shadow-xs)", backgroundColor: "var(--surface)" }}>
               <MoreHoriz fontSize="small" />
             </IconButton>

@@ -1,3 +1,4 @@
+import DataMenu from '../components/dataio/DataMenu';
 import { tok } from "../theme/tokens";
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Box, Typography, Button, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Stack, Tooltip } from '@mui/material';
@@ -343,7 +344,11 @@ const DropdownManagement = () => {
   return (
     <DndProvider backend={HTML5Backend}>
       <Box>
-        <PageHeader title="Dropdown Management" description="Lists that power the selects across tasks, snags, assessments and reports. Changes apply app-wide." />
+        <PageHeader
+          title="Dropdown Management"
+          description="Lists that power the selects across tasks, snags, assessments and reports. Changes apply app-wide."
+          actions={<DataMenu entity="dropdownOptions" viewRows={currentOptions} filename={`dropdown-${activeTab.toLowerCase()}`} onImported={fetchOptions} />}
+        />
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '260px minmax(0, 1fr)' }, gap: { xs: 2, md: 3 }, alignItems: 'start' }}>
           {/* Category list */}
