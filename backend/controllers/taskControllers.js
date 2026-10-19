@@ -1,4 +1,5 @@
 import { TaskSchema } from "../models/taskModel.js";
+import { applyTaxonomy } from "../utils/taxonomy.js";
 import { CustomerIssueSchema } from "../models/customerIssueModel.js";
 import { FavouriteSchema } from "../models/favouriteModel.js";
 import { TrashSchema } from "../models/trashModel.js";
@@ -44,6 +45,14 @@ export const addTask = async (req, res) => {
       req.body.operation = "WO"; // Auto-convert to WO
       initialTransactionState = "PENDING_CONTACT";
     }
+
+    const tax = applyTaxonomy(req.body, "task");
+    if (tax.error) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: tax.error });
+    }
+    req.body = tax.body;
 
     const task = new TaskSchema({
       ...req.body,
@@ -133,6 +142,10 @@ export const updateTask = async (req, res) => {
       updatedData[key] = null;
     }
   });
+
+  const tax = applyTaxonomy(updatedData, "task", { derive: false });
+  if (tax.error) return res.status(400).json({ message: tax.error });
+  Object.assign(updatedData, tax.body);
 
   try {
     const updatedTask = await TaskSchema.findByIdAndUpdate(id, updatedData, { new: true })

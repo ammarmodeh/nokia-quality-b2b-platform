@@ -18,6 +18,7 @@ import SegmentedControl from "../../components/ui/SegmentedControl";
 import ErrorState from "../../components/ui/ErrorState";
 import PageLoader from "../../components/ui/PageLoader";
 import { exportRows } from "../../utils/exportRows";
+import { taxonomyOfIssue } from "../../constants/taxonomy";
 import SnagTable from "./SnagTable";
 import SnagSheet from "./SnagSheet";
 import { DATE_RANGES, NON_OJO_SOURCES, categoriesOf, filterSnags, reportedDate, snagTypeOf, sourceOf, statusOf } from "./snagUtils";
@@ -36,7 +37,7 @@ const TABS = [
 const EXPORT_COLUMNS = [
   ["SLID", (s) => s.slid],
   ["Ticket", (s) => s.ticketId],
-  ["Tracker", (s) => `OJO Snags · ${snagTypeOf(s)}`],
+  ["Tracker", (s) => taxonomyOfIssue(s).label],
   ["Source", (s) => [s.fromMain, sourceOf(s)].filter(Boolean).join(" · ")],
   ["Status", (s) => statusOf(s).label],
   ["Customer", (s) => s.customerName],

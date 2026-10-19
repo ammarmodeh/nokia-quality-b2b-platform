@@ -1,4 +1,5 @@
 import { CustomerIssueSchema } from "../models/customerIssueModel.js";
+import { applyTaxonomy } from "../utils/taxonomy.js";
 import { CustomerIssueLog } from "../models/customerIssueLogModel.js";
 
 const calculateDiff = (oldData, newData) => {
@@ -50,7 +51,9 @@ export const createIssue = async (req, res) => {
       resolveDate: (req.body.solved === 'yes' && req.body.resolveDate) ? new Date(req.body.resolveDate) : null
     };
 
-    const newIssue = new CustomerIssueSchema(issueData);
+    const tax = applyTaxonomy(issueData, "issue");
+    if (tax.error) return res.status(400).json({ success: false, message: tax.error });
+    const newIssue = new CustomerIssueSchema(tax.body);
     const savedIssue = await newIssue.save();
 
     res.status(201).json({
@@ -219,6 +222,17 @@ export const updateIssue = async (req, res) => {
       ...req.body,
       updatedAt: new Date()
     };
+
+    // Taxonomy: validate explicit values; re-derive when the source / snag type changes.
+    const sourceChanged = ['fromMain', 'fromSub', 'snagType'].some((k) => Object.prototype.hasOwnProperty.call(req.body, k));
+    if (req.body.issueCategory || sourceChanged || !oldData.issueCategory) {
+      const merged = { ...oldData, ...updateData };
+      if (!req.body.issueCategory) { merged.issueCategory = null; merged.issueSubCategory = null; }
+      const tax = applyTaxonomy(merged, 'issue');
+      if (tax.error) return res.status(400).json({ success: false, message: tax.error });
+      updateData.issueCategory = tax.body.issueCategory ?? null;
+      updateData.issueSubCategory = tax.body.issueSubCategory ?? null;
+    }
 
     if (req.body.hasOwnProperty('pisDate')) {
       updateData.pisDate = req.body.pisDate ? new Date(req.body.pisDate) : null;

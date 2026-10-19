@@ -329,6 +329,11 @@ const taskSchema = new mongoose.Schema(
     },
     // Manual position of the card inside its Kanban column (lower = higher up).
     // Optional: tasks without it fall back to newest-first.
+    // Unified issue taxonomy (see utils/taxonomy.js). Optional; legacy
+    // classification fields are kept as they are.
+    issueCategory: { type: String, default: null },
+    issueSubCategory: { type: String, default: null },
+    taxonomyBatch: { type: String, default: null },
     boardOrder: {
       type: Number,
       default: null,

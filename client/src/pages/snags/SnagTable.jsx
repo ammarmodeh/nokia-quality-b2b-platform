@@ -4,10 +4,10 @@ import { DataGrid, GridToolbarColumnsButton, GridToolbarContainer, GridToolbarDe
 import Badge from "../../components/ui/Badge";
 import EmptyState from "../../components/ui/EmptyState";
 import { gridSx } from "../tasks/gridSx";
-import { taxonomyByLabel } from "../../constants/taxonomy";
+import { taxonomyOfIssue } from "../../constants/taxonomy";
+import TaxonomyBadge from "../../components/ui/TaxonomyBadge";
 import { categoriesOf, fmt, reportedDate, snagTypeOf, sourceOf, statusOf } from "./snagUtils";
 
-const ojo = taxonomyByLabel["OJO Snags"];
 
 const Toolbar = () => (
   <GridToolbarContainer>
@@ -39,7 +39,7 @@ const SnagTable = ({ rows, loading, onOpen }) => {
       },
       {
         field: "snagType", headerName: "Type", width: 160, valueGetter: (_v, row) => snagTypeOf(row),
-        renderCell: ({ value }) => <Badge color={ojo?.color}>OJO · {value}</Badge>,
+        renderCell: ({ row }) => <TaxonomyBadge tax={taxonomyOfIssue(row)} short />,
       },
       {
         field: "categories", headerName: "Issues", flex: 1, minWidth: 200, sortable: false,

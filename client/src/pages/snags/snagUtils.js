@@ -1,11 +1,12 @@
+import { taxonomyOfIssue } from "../../constants/taxonomy";
 import { endOfDay, isWithinInterval, startOfDay, startOfMonth, startOfWeek, subDays } from "date-fns";
 
-// Records saved before the snag-type field existed come from the HC
-// installation audit, so they read as Installation.
-export const snagTypeOf = (s) => s.snagType || "Installation";
+// Sub-category within OJO Snags (Installation / Maintenance), from the taxonomy.
+export const snagTypeOf = (s) => taxonomyOfIssue(s).subCategory || "Installation";
+export const isOjoSnag = (s) => taxonomyOfIssue(s).category === "OJO Snags";
 
-// TCRM / TRC complaints belong to their own trackers; everything else is OJO.
-export const NON_OJO_SOURCES = ["TCRM", "TRC"];
+// TCRM / TRC / FAT records belong to their own trackers; the Source filter can still show them.
+export const NON_OJO_SOURCES = ["TCRM", "TRC", "FAT Audit"];
 export const sourceOf = (s) => s.fromSub || s.from || "Not specified";
 
 export const statusOf = (s) => (s.solved === "yes" ? { label: "Resolved", tone: "success" } : s.dispatched === "yes" ? { label: "Dispatched", tone: "info" } : { label: "Open", tone: "warning" });
@@ -39,7 +40,7 @@ export const filterSnags = (list, f) => {
         .filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
-    if (f.source.length ? !f.source.includes(sourceOf(s)) : NON_OJO_SOURCES.includes(sourceOf(s))) return false;
+    if (f.source.length ? !f.source.includes(sourceOf(s)) : !isOjoSnag(s)) return false;
     if (f.status.length && !f.status.includes(statusOf(s).label)) return false;
     if (f.category.length && !categoriesOf(s).some((c) => f.category.includes(c))) return false;
     if (f.team.length && !f.team.includes(s.teamName || "")) return false;

@@ -1,5 +1,5 @@
 import XLSX from "xlsx-js-style";
-import { TASK_TAXONOMY, taxonomyLabel } from "../../constants/taxonomy";
+import { taxonomyOfTask } from "../../constants/taxonomy";
 import { npsType, taskDate } from "./taskUtils";
 
 const list = (v) => (Array.isArray(v) ? v.filter(Boolean).join(", ") : v || "");
@@ -8,7 +8,7 @@ const day = (d) => (d ? new Date(d) : "");
 const COLUMNS = [
   ["SLID", (t) => t.slid],
   ["Request number", (t) => t.requestNumber],
-  ["Tracker", () => taxonomyLabel(TASK_TAXONOMY.category, TASK_TAXONOMY.subCategory)],
+  ["Tracker", (t) => taxonomyOfTask(t).label],
   ["Customer", (t) => t.customerName],
   ["Contact", (t) => t.contactNumber],
   ["Status", (t) => t.status],

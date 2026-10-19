@@ -18,7 +18,7 @@ import FilterChip from "../ui/FilterChip";
 import SectionCard from "../ui/SectionCard";
 import EmptyState from "../ui/EmptyState";
 import { gridSx } from "../../pages/tasks/gridSx";
-import { TASK_TAXONOMY, taxonomyByLabel } from "../../constants/taxonomy";
+import { TASK_TAXONOMY, taxonomyByLabel, taxonomyLabel } from "../../constants/taxonomy";
 
 const WEEKS = 8;
 const STATUS_TONE = { Active: "success", Suspended: "warning", "On Leave": "info", Resigned: "neutral", Terminated: "danger" };
@@ -137,7 +137,7 @@ const ViolationTable = ({
       },
       {
         field: "byTracker", headerName: "By tracker", width: 150, sortable: false,
-        renderCell: ({ row }) => (row.totalViolations ? <Badge color={tax?.color}>DVOC · Inst. {row.totalViolations}</Badge> : <Typography sx={{ fontSize: 12, color: "var(--text-muted)" }}>—</Typography>),
+        renderCell: ({ row }) => (row.totalViolations ? <Badge color={tax?.color} title={taxonomyLabel(TASK_TAXONOMY.category, TASK_TAXONOMY.subCategory)}>DVOC · Inst. {row.totalViolations}</Badge> : <Typography sx={{ fontSize: 12, color: "var(--text-muted)" }}>—</Typography>),
       },
       { field: "trend", headerName: `Last ${WEEKS} wks`, width: 104, sortable: false, renderCell: ({ row }) => <Sparkline values={trend.get(row.teamName) || Array(WEEKS).fill(0)} /> },
       {

@@ -21,9 +21,18 @@ const ItemTypes = {
 };
 
 const READ_ONLY_CATEGORIES = ['FIELD_TEAMS', 'SUPERVISORS'];
+// Values here are stored on tasks and snags, so they can be renamed but not deleted.
+const PROTECTED_CATEGORIES = ['ISSUE_TAXONOMY', 'ISSUE_TAXONOMY_SUB'];
 
 // Organized Groups
 const FORM_GROUPS = [
+  {
+    title: "0. Issue taxonomy",
+    categories: {
+      ISSUE_TAXONOMY: "Issue categories",
+      ISSUE_TAXONOMY_SUB: "Issue sub-categories",
+    }
+  },
   {
     title: "1. Core Task Flow",
     categories: {
@@ -156,7 +165,7 @@ const DraggableRow = ({ option, index, moveRow, handleOpenDialog, handleDelete, 
       {activeTab === 'REASON' && (
         <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.parentValue}</TableCell>
       )}
-      {activeTab === 'ISSUE_SUB_CATEGORY' && (
+      {(activeTab === 'ISSUE_SUB_CATEGORY' || activeTab === 'ISSUE_TAXONOMY_SUB') && (
         <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.parentValue}</TableCell>
       )}
       <TableCell align="right" sx={{ borderBottom: `1px solid ${colors.border}` }}>
@@ -167,11 +176,11 @@ const DraggableRow = ({ option, index, moveRow, handleOpenDialog, handleDelete, 
                 <EditIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Delete">
+            {!PROTECTED_CATEGORIES.includes(activeTab) && <Tooltip title="Delete">
               <IconButton size="small" aria-label="Delete option" onClick={() => handleDelete(option._id)} sx={{ color: 'var(--danger)' }}>
                 <DeleteIcon fontSize="small" />
               </IconButton>
-            </Tooltip>
+            </Tooltip>}
           </>
         ) : (
           <Typography variant="caption" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>
@@ -239,7 +248,7 @@ const DropdownManagement = () => {
       setFormData({
         value: '',
         label: '',
-        parentCategory: activeTab === 'REASON_SUB' ? 'REASON' : activeTab === 'ROOT_CAUSE' ? 'REASON_SUB' : activeTab === 'REASON' ? 'RESPONSIBILITY' : activeTab === 'ISSUE_SUB_CATEGORY' ? 'ISSUE_CATEGORY' : null,
+        parentCategory: activeTab === 'REASON_SUB' ? 'REASON' : activeTab === 'ROOT_CAUSE' ? 'REASON_SUB' : activeTab === 'REASON' ? 'RESPONSIBILITY' : activeTab === 'ISSUE_SUB_CATEGORY' ? 'ISSUE_CATEGORY' : activeTab === 'ISSUE_TAXONOMY_SUB' ? 'ISSUE_TAXONOMY' : null,
         parentValue: null
       });
     }
@@ -314,6 +323,7 @@ const DropdownManagement = () => {
     ROOT_CAUSE: { category: 'REASON_SUB', label: 'Parent sub-reason' },
     REASON: { category: 'RESPONSIBILITY', label: 'Parent responsibility' },
     ISSUE_SUB_CATEGORY: { category: 'ISSUE_CATEGORY', label: 'Parent category' },
+    ISSUE_TAXONOMY_SUB: { category: 'ISSUE_TAXONOMY', label: 'Parent category' },
   };
   const parent = PARENTS[activeTab];
   const readOnly = READ_ONLY_CATEGORIES.includes(activeTab);
@@ -372,7 +382,7 @@ const DropdownManagement = () => {
           {/* Selected list */}
           <SectionCard
             title={CATEGORY_MAP[activeTab] || activeTab}
-            description={`${currentOptions.length} option${currentOptions.length === 1 ? '' : 's'}${parent ? ` · each linked to a ${parent.label.replace('Parent ', '')}` : ''}${readOnly ? ' · managed automatically' : ' · drag rows to reorder'}`}
+            description={`${currentOptions.length} option${currentOptions.length === 1 ? '' : 's'}${parent ? ` · each linked to a ${parent.label.replace('Parent ', '')}` : ''}${readOnly ? ' · managed automatically' : ' · drag rows to reorder'}${PROTECTED_CATEGORIES.includes(activeTab) ? ' · used on records, so values can be renamed but not deleted' : ''}`}
             actions={!readOnly && (
               <>
                 <Button variant="outlined" startIcon={<UpdateIcon sx={{ fontSize: 16 }} />} onClick={saveOrder}>Save order</Button>

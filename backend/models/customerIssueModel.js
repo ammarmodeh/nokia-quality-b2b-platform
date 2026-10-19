@@ -13,6 +13,10 @@ const customerIssueSchema = new mongoose.Schema({
   fromSub: { type: String },
   // OJO Snags sub-category (taxonomy). Optional: records without it are
   // treated as Installation when read (they come from the HC installation audit).
+  // Unified issue taxonomy (see utils/taxonomy.js)
+  issueCategory: { type: String, default: null },
+  issueSubCategory: { type: String, default: null },
+  taxonomyBatch: { type: String, default: null },
   snagType: { type: String, enum: ['Installation', 'Maintenance', null], default: null },
   reporter: { type: String, required: false },
   reporterNote: { type: String },

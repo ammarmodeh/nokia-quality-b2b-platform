@@ -10,10 +10,10 @@ import Sheet from "../../components/ui/Sheet";
 import Badge from "../../components/ui/Badge";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { UserAvatar } from "../../components/ui/AvatarGroup";
-import { TASK_TAXONOMY, taxonomyByLabel, taxonomyLabel } from "../../constants/taxonomy";
+import { taxonomyOfTask } from "../../constants/taxonomy";
+import TaxonomyBadge from "../../components/ui/TaxonomyBadge";
 import { PRIORITIES, STATUSES, npsType, fmtDate, taskTitle } from "./taskUtils";
 
-const tax = taxonomyByLabel[TASK_TAXONOMY.category];
 const arr = (v) => (Array.isArray(v) ? v.filter(Boolean) : v ? [v] : []);
 
 const Field = ({ label, children }) => (
@@ -157,7 +157,7 @@ const TaskSheet = ({ task, open, onClose, users, onPatch, onEdit, onRecordTicket
           />
 
           <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)" }}>Tracker</Typography>
-          <Box><Badge color={tax?.color}>{taxonomyLabel(TASK_TAXONOMY.category, TASK_TAXONOMY.subCategory)}</Badge></Box>
+          <Box><TaxonomyBadge tax={taxonomyOfTask(task)} /></Box>
         </Box>
 
         <Divider sx={{ mb: 2 }} />

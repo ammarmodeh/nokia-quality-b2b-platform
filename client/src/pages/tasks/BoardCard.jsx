@@ -5,10 +5,10 @@ import ConfirmationNumberOutlined from "@mui/icons-material/ConfirmationNumberOu
 import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
 import Badge from "../../components/ui/Badge";
 import AvatarGroup from "../../components/ui/AvatarGroup";
-import { TASK_TAXONOMY, taxonomyByLabel, taxonomyLabel } from "../../constants/taxonomy";
+import { taxonomyOfTask } from "../../constants/taxonomy";
+import TaxonomyBadge from "../../components/ui/TaxonomyBadge";
 import { npsType, priorityMeta, taskDate, taskTitle, fmtDate } from "./taskUtils";
 
-const tax = taxonomyByLabel[TASK_TAXONOMY.category];
 
 const BoardCard = memo(function BoardCard({ task, onOpen, dragging = false, overlay = false }) {
   const nps = npsType(task.evaluationScore);
@@ -51,7 +51,7 @@ const BoardCard = memo(function BoardCard({ task, onOpen, dragging = false, over
         {taskTitle(task)}
       </Typography>
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1.25 }}>
-        <Badge color={tax?.color} sx={{ height: 20, fontSize: 11 }}>{taxonomyLabel(TASK_TAXONOMY.category, TASK_TAXONOMY.subCategory)}</Badge>
+        <TaxonomyBadge tax={taxonomyOfTask(task)} sx={{ height: 20, fontSize: 11 }} />
         {task.priority && task.priority !== "Not specified" && (
           <Badge tone={pr.tone} sx={{ height: 20, fontSize: 11 }}>{task.priority}</Badge>
         )}
