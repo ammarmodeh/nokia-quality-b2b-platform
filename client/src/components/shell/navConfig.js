@@ -83,6 +83,7 @@ const EXTRA_TITLES = {
   "/profile": ["Account", "Profile"],
   "/change-password": ["Account", "Change password"],
   "/team": ["Settings", "Users & roles"],
+  "/tasks-list/reports": ["Tasks", "Audit reports"],
 };
 
 export const resolveCrumbs = (pathname, user) => {

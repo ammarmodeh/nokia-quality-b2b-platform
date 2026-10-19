@@ -327,6 +327,12 @@ const taskSchema = new mongoose.Schema(
       default: null,
       required: false,
     },
+    // Manual position of the card inside its Kanban column (lower = higher up).
+    // Optional: tasks without it fall back to newest-first.
+    boardOrder: {
+      type: Number,
+      default: null,
+    },
   },
   {
     timestamps: true,

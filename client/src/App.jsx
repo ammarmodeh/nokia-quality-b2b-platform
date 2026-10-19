@@ -35,6 +35,7 @@ const AdminSuggestionsDashboard = lazy(() => import("./components/AdminSuggestio
 const MemberSuggestionsDashboard = lazy(() => import("./components/MemberSuggestionsDashboard"));
 const PoliciesList = lazy(() => import("./components/PoliciesList"));
 const AllTasksList = lazy(() => import("./pages/AllTasksList"));
+const TasksPage = lazy(() => import("./pages/tasks/TasksPage"));
 const FieldTeamLogin = lazy(() => import("./pages/FieldTeamLogin"));
 const QuizResults = lazy(() => import("./pages/QuizResults"));
 const FieldTeamForm = lazy(() => import("./pages/FieldTeams"));
@@ -175,7 +176,8 @@ const App = () => {
           <Route path="/customer-issues" element={<Navigate to="/ojo-snags" replace />} />
           <Route path="/change-password" element={<ChangePassword />} />
           <Route path="/assigned-to-me" element={<Hidden><AssignedToMe /></Hidden>} />
-          <Route path="/tasks-list" element={<AllTasksList />} />
+          <Route path="/tasks-list" element={<TasksPage />} />
+          <Route path="/tasks-list/reports" element={<AllTasksList />} />
           <Route path="/assigned-to-me/detractor" element={<Hidden><AssignedDetractor /></Hidden>} />
           <Route path="/assigned-to-me/neutrals" element={<Hidden><AssignedNeutral /></Hidden>} />
           <Route path="/benchmark-tables" element={<Hidden><BenchmarkTables /></Hidden>} />
