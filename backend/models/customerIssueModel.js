@@ -11,6 +11,9 @@ const customerIssueSchema = new mongoose.Schema({
   from: { type: String, required: false }, // Keep for backward compatibility
   fromMain: { type: String, required: false },
   fromSub: { type: String },
+  // OJO Snags sub-category (taxonomy). Optional: records without it are
+  // treated as Installation when read (they come from the HC installation audit).
+  snagType: { type: String, enum: ['Installation', 'Maintenance', null], default: null },
   reporter: { type: String, required: false },
   reporterNote: { type: String },
   contactMethod: {

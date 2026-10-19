@@ -68,19 +68,19 @@ const FORM_GROUPS = [
     }
   },
   {
-    title: "3. CIN - Engagement Hub",
+    title: "3. OJO Snags - Engagement Hub",
     categories: {
       CUSTOMER_TYPE: "Client Classifications",
       CONTACT_METHOD: "Customer Contact Channels",
       REPORTERS: "Incident Reporters",
-      CIN_SUPERVISORS: "CIN Resolution Supervising",
+      CIN_SUPERVISORS: "OJO Snags resolution supervisors",
       ISSUE_FROM_MAIN: "Incident Source (Main)",
       ISSUE_FROM_SUB: "Incident Source (Sub)",
       CALLERS: "Customer Caller Names",
     }
   },
   {
-    title: "4. CIN - Technical Analysis",
+    title: "4. OJO Snags - Technical Analysis",
     categories: {
       ISSUE_CATEGORY: "Issue Category (L1)",
       ISSUE_SUB_CATEGORY: "Issue Sub-Category (L2)",

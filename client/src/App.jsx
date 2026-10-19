@@ -39,7 +39,7 @@ const TasksPage = lazy(() => import("./pages/tasks/TasksPage"));
 const FieldTeamLogin = lazy(() => import("./pages/FieldTeamLogin"));
 const QuizResults = lazy(() => import("./pages/QuizResults"));
 const FieldTeamForm = lazy(() => import("./pages/FieldTeams"));
-const CustomerIssuesList = lazy(() => import("./components/CustomerIssuesList"));
+const CustomerIssuesList = lazy(() => import("./pages/snags/OjoSnagsPage"));
 const PerfAssessmentDashboard = lazy(() => import("./pages/PerfAssessmentDashboard"));
 const OnTheJobAssessment = lazy(() => import("./pages/OnTheJobAssessment"));
 const FieldTeamPortal = lazy(() => import("./pages/FieldTeamPortal"));

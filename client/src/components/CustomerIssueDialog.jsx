@@ -59,6 +59,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     slid: "",
     fromMain: "Snags",
     fromSub: "Joint Quality",
+    snagType: "Installation",
     reporter: "",
     reporterNote: "",
     contactMethod: "Whatsapp",
@@ -162,6 +163,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           // Explicit fallbacks for legacy or renamed fields
           fromMain: issue.fromMain || issue.from || '',
           fromSub: issue.fromSub || '',
+          snagType: issue.snagType || 'Installation',
           teamCompany: issue.teamCompany || '',
           assignedTo: issue.assignedTo || '',
           closedBy: issue.closedBy || '',
@@ -548,7 +550,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
         padding: '16px 24px',
       }}>
         <Typography variant="h6" component="div">
-          {issue ? 'Edit Customer Issue' : 'Customer Issue Notification'}
+          {issue ? 'Edit OJO snag' : 'Report OJO snag'}
         </Typography>
       </DialogTitle>
 
@@ -800,6 +802,22 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   disabled={!isAdmin}
                   sx={textFieldStyles}
                 />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  select
+                  label="Snag type"
+                  size="medium"
+                  fullWidth
+                  name="snagType"
+                  value={formData.snagType || 'Installation'}
+                  onChange={handleChange}
+                  disabled={!isAdmin}
+                  sx={textFieldStyles}
+                >
+                  <MenuItem value="Installation">Installation</MenuItem>
+                  <MenuItem value="Maintenance">Maintenance</MenuItem>
+                </TextField>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <ManagedAutocomplete

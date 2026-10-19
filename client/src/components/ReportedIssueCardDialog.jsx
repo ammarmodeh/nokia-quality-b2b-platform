@@ -220,7 +220,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
               </IconButton>
               <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <FaInfoCircle color="var(--accent-text)" size={isMobile ? 16 : 20} />
-                <Box component="span">Customer Issue Details</Box>
+                <Box component="span">OJO Snag details</Box>
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

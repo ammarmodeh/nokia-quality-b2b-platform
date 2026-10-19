@@ -1164,7 +1164,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       {/* Top Controls: Period Filter & Email Report */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-          <Typography variant="h5" fontWeight="bold">Customer Issues Dashboard</Typography>
+          <Typography variant="h5" fontWeight="bold">OJO Snags analytics</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: tok('--surface'), px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>From:</Typography>
