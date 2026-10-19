@@ -27,7 +27,7 @@ import {
 } from "@mui/icons-material";
 import { HashLoader } from "react-spinners";
 
-const ChangePassword = () => {
+const ChangePassword = ({ embedded = false } = {}) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -112,7 +112,7 @@ const ChangePassword = () => {
         borderColor: '#666',
       },
       '&.Mui-focused fieldset': {
-        borderColor: '#1976d2',
+        borderColor: 'var(--accent)',
       },
     },
     '& .MuiFormHelperText-root': {
@@ -121,11 +121,11 @@ const ChangePassword = () => {
   };
 
   const buttonStyles = {
-    backgroundColor: '#1976d2',
+    backgroundColor: 'var(--accent)',
     color: 'var(--text)',
     fontWeight: 'bold',
     '&:hover': {
-      backgroundColor: '#1565c0',
+      backgroundColor: 'var(--accent-hover)',
     },
     '&:disabled': {
       backgroundColor: '#555',
@@ -144,7 +144,7 @@ const ChangePassword = () => {
 
   return (
     <Box
-      sx={{
+      sx={embedded ? { display: 'block' } : {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -168,7 +168,7 @@ const ChangePassword = () => {
             zIndex: 1300
           }}
         >
-          <HashLoader color="#1976d2" size={80} />
+          <HashLoader color="var(--accent)" size={80} />
         </Box>
       )}
 
@@ -188,19 +188,19 @@ const ChangePassword = () => {
       >
         <Box sx={{ p: isMobile ? '16px' : '24px', flex: 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <MuiButton
+            {!embedded && (<MuiButton
               startIcon={<ArrowBackIcon />}
               onClick={handleBackClick}
               sx={{ color: 'var(--text)' }}
             >
               {isMobile ? '' : 'Back'}
-            </MuiButton>
+            </MuiButton>)}
           </Box>
 
           <Box sx={{ textAlign: 'center', mb: 3 }}>
             <LockIcon sx={{
               fontSize: isMobile ? 40 : 50,
-              color: '#1976d2',
+              color: 'var(--accent)',
               mb: 1
             }} />
             <Typography
@@ -367,7 +367,7 @@ const ChangePassword = () => {
           variant="filled"
           sx={{
             width: '100%',
-            backgroundColor: snackbarSeverity === 'success' ? '#1976d2' : '#d32f2f',
+            backgroundColor: snackbarSeverity === 'success' ? 'var(--accent)' : '#d32f2f',
             color: 'var(--text)',
             '& .MuiAlert-icon': {
               color: 'var(--text)'

@@ -60,14 +60,14 @@ const UserMenu = () => {
           </Box>
         </Box>
         <Divider sx={{ my: 0.5 }} />
-        <MenuItem onClick={() => go("/profile")}>
+        <MenuItem onClick={() => go("/settings?tab=profile")}>
           <ListItemIcon><PersonOutline fontSize="small" /></ListItemIcon>Profile
         </MenuItem>
-        <MenuItem onClick={() => go("/change-password")}>
+        <MenuItem onClick={() => go("/settings?tab=security")}>
           <ListItemIcon><LockOutlined fontSize="small" /></ListItemIcon>Change password
         </MenuItem>
         {user?.role === "Admin" && (
-          <MenuItem onClick={() => go("/team")}>
+          <MenuItem onClick={() => go("/settings?tab=users")}>
             <ListItemIcon><ManageAccountsOutlined fontSize="small" /></ListItemIcon>Users &amp; roles
           </MenuItem>
         )}

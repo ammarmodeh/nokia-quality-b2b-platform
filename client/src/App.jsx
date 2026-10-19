@@ -17,7 +17,6 @@ const SHOW_OUT_OF_SCOPE_PAGES = false;
 const Layout = lazy(() => import("./components/shell/AppLayout.jsx"));
 const Dashboard = lazy(() => import("./pages/dashboard/DashboardPage"));
 const AssignedToMe = lazy(() => import("./pages/AssignedToMe"));
-const Users = lazy(() => import("./pages/Users"));
 const Trash = lazy(() => import("./pages/Trash"));
 const TaskViewPage = lazy(() => import("./pages/TaskViewPage"));
 const Calender = lazy(() => import("./pages/Calender"));
@@ -27,8 +26,6 @@ const BenchmarkTables = lazy(() => import("./pages/BenchmarkTables"));
 const Quiz = lazy(() => import("./pages/Quiz"));
 const IQQuiz = lazy(() => import("./pages/IQQuiz"));
 const Auth = lazy(() => import("./pages/Auth"));
-const Profile = lazy(() => import("./pages/Profile"));
-const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const Archived = lazy(() => import("./pages/Archived"));
 const Favourites = lazy(() => import("./pages/Favourites"));
 const AdminSuggestionsDashboard = lazy(() => import("./components/AdminSuggestionsDashboard"));
@@ -171,10 +168,10 @@ const App = () => {
           <Route path="/main-stats" element={<Hidden><MainStats /></Hidden>} />
           <Route path="/my-suggestions" element={<Hidden><MemberSuggestionsDashboard /></Hidden>} />
           <Route path="/policies" element={<Hidden><PoliciesList /></Hidden>} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile" element={<Navigate to="/settings?tab=profile" replace />} />
           <Route path="/ojo-snags" element={<CustomerIssuesList />} />
           <Route path="/customer-issues" element={<Navigate to="/ojo-snags" replace />} />
-          <Route path="/change-password" element={<ChangePassword />} />
+          <Route path="/change-password" element={<Navigate to="/settings?tab=security" replace />} />
           <Route path="/assigned-to-me" element={<Hidden><AssignedToMe /></Hidden>} />
           <Route path="/tasks-list" element={<TasksPage />} />
           <Route path="/tasks-list/reports" element={<AllTasksList />} />
@@ -185,7 +182,7 @@ const App = () => {
           <Route path="/calendar" element={<Calender />} />
           <Route path="/calender" element={<Navigate to="/calendar" replace />} />
           <Route path="/tasks/view-task/:id" element={<TaskViewPage />} />
-          <Route path="/team" element={<Users />} />
+          <Route path="/team" element={<Navigate to="/settings?tab=users" replace />} />
           <Route path="/fieldTeams" element={<FieldTeamForm />} />
           <Route path="/fieldTeams-portal" element={<Hidden><FieldTeamPortal /></Hidden>} />
           <Route path="/fieldTeams-portal/:teamId" element={<Hidden><FieldTeamPortal /></Hidden>} />

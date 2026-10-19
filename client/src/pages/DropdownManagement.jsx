@@ -1,40 +1,16 @@
 import { tok } from "../theme/tokens";
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Tabs,
-  Tab,
-  Button,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  CircularProgress,
-  Stack,
-  Tooltip,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  DragIndicator as DragIcon,
-  Update as UpdateIcon,
-  ExpandMore as ExpandMoreIcon
-} from '@mui/icons-material';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { Box, Typography, Button, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Stack, Tooltip } from '@mui/material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, DragIndicator as DragIcon, Update as UpdateIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
+import InputBase from '@mui/material/InputBase';
+import SearchIcon from '@mui/icons-material/Search';
+import PageHeader from '../components/ui/PageHeader';
+import SectionCard from '../components/ui/SectionCard';
+import Sheet from '../components/ui/Sheet';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import EmptyState from '../components/ui/EmptyState';
+import PageLoader from '../components/ui/PageLoader';
 import api from '../api/api';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -161,14 +137,13 @@ const DraggableRow = ({ option, index, moveRow, handleOpenDialog, handleDelete, 
       ref={ref}
       data-handler-id={handlerId}
       sx={{
-        bgcolor: isDragging ? 'rgba(255,255,255,0.05)' : 'inherit',
-        '&:hover': { bgcolor: 'var(--surface)' },
-        opacity: isDragging ? 0.5 : 1,
-        cursor: 'move'
+        bgcolor: isDragging ? 'var(--accent-subtle)' : 'inherit',
+        '&:hover': { bgcolor: 'var(--surface-hover)' },
+        opacity: isDragging ? 0.6 : 1,
       }}
     >
       <TableCell sx={{ color: colors.textSecondary }}>
-        <DragIcon sx={{ cursor: 'move', color: colors.textSecondary }} />
+        <DragIcon sx={{ cursor: 'grab', fontSize: 18, color: 'var(--text-muted)' }} />
       </TableCell>
       <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.value}</TableCell>
       <TableCell sx={{ color: colors.textPrimary, borderBottom: `1px solid ${colors.border}` }}>{option.label}</TableCell>
@@ -188,12 +163,12 @@ const DraggableRow = ({ option, index, moveRow, handleOpenDialog, handleDelete, 
         {!READ_ONLY_CATEGORIES.includes(activeTab) ? (
           <>
             <Tooltip title="Edit">
-              <IconButton onClick={() => handleOpenDialog(option)} sx={{ color: colors.primary }}>
+              <IconButton size="small" aria-label="Edit option" onClick={() => handleOpenDialog(option)} sx={{ color: 'var(--text-secondary)' }}>
                 <EditIcon fontSize="small" />
               </IconButton>
             </Tooltip>
             <Tooltip title="Delete">
-              <IconButton onClick={() => handleDelete(option._id)} sx={{ color: colors.error }}>
+              <IconButton size="small" aria-label="Delete option" onClick={() => handleDelete(option._id)} sx={{ color: 'var(--danger)' }}>
                 <DeleteIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -216,7 +191,9 @@ const DropdownManagement = () => {
   const [loading, setLoading] = useState(true);
   const [options, setOptions] = useState({});
   const [activeTab, setActiveTab] = useState('PRIORITY');
-  const [expandedAccordions, setExpandedAccordions] = useState(['panel0']); // Open first by default
+  const [catSearch, setCatSearch] = useState('');
+  const [rowSearch, setRowSearch] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingOption, setEditingOption] = useState(null);
   const [formData, setFormData] = useState({ value: '', label: '', order: 0, parentCategory: null, parentValue: null });
@@ -249,15 +226,6 @@ const DropdownManagement = () => {
     fetchOptions();
   }, []);
 
-  const handleAccordionChange = (panel) => (event, isExpanded) => {
-    // Single Expansion logic or Multiple? User didn't specify, but single focus is often cleaner. 
-    // Let's allow multiple for overview.
-    // If we want to auto-switch tabs, we can do it here.
-    const newExpanded = isExpanded
-      ? [...expandedAccordions, panel]
-      : expandedAccordions.filter(p => p !== panel);
-    setExpandedAccordions(newExpanded);
-  };
 
   // When clicking a tab in an accordion, make sure that accordion is open (it is by definition)
   // and set the active tab.
@@ -301,7 +269,6 @@ const DropdownManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this option?')) return;
     try {
       await api.delete(`/dropdown-options/delete/${id}`);
       toast.success('Option deleted successfully');
@@ -342,331 +309,179 @@ const DropdownManagement = () => {
     }
   };
 
+  const PARENTS = {
+    REASON_SUB: { category: 'REASON', label: 'Parent reason' },
+    ROOT_CAUSE: { category: 'REASON_SUB', label: 'Parent sub-reason' },
+    REASON: { category: 'RESPONSIBILITY', label: 'Parent responsibility' },
+    ISSUE_SUB_CATEGORY: { category: 'ISSUE_CATEGORY', label: 'Parent category' },
+  };
+  const parent = PARENTS[activeTab];
+  const readOnly = READ_ONLY_CATEGORIES.includes(activeTab);
+  const filteredOptions = currentOptions.filter((o) => {
+    const q = rowSearch.trim().toLowerCase();
+    return !q || [o.value, o.label, o.parentValue].filter(Boolean).join(' ').toLowerCase().includes(q);
+  });
+  const groupMatches = (group) => {
+    const q = catSearch.trim().toLowerCase();
+    return Object.entries(group.categories).filter(([k, l]) => !q || l.toLowerCase().includes(q) || k.toLowerCase().includes(q));
+  };
+
   if (loading && Object.keys(options).length === 0) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: colors.background }}>
-        <CircularProgress sx={{ color: colors.primary }} />
-      </Box>
-    );
+    return <PageLoader />;
   }
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <Box sx={{ minHeight: '100vh', bgcolor: colors.background, p: 0 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
-          <Typography variant="h4" sx={{ color: colors.primary, fontWeight: 'bold' }}>
-            Dropdown Management
-          </Typography>
-        </Stack>
+      <Box>
+        <PageHeader title="Dropdown Management" description="Lists that power the selects across tasks, snags, assessments and reports. Changes apply app-wide." />
 
-        {/* Accordions Container */}
-        <Box sx={{ mb: 4 }}>
-          {FORM_GROUPS.map((group, index) => {
-            const panelId = `panel${index}`;
-            const isExpanded = expandedAccordions.includes(panelId);
-            const hasActiveTab = Object.keys(group.categories).includes(activeTab);
-
-            return (
-              <Accordion
-                key={index}
-                expanded={isExpanded}
-                onChange={handleAccordionChange(panelId)}
-                sx={{
-                  backgroundColor: 'var(--surface)',
-                  color: 'var(--text)',
-                  border: `1px solid ${hasActiveTab ? colors.primary : colors.border}`,
-                  mb: 2,
-                  borderRadius: '8px !important',
-                  '&:before': { display: 'none' }
-                }}
-              >
-                <AccordionSummary
-                  expandIcon={<ExpandMoreIcon sx={{ color: colors.textSecondary }} />}
-                  sx={{ borderBottom: isExpanded ? `1px solid ${colors.border}` : 'none' }}
-                >
-                  <Typography sx={{
-                    fontWeight: hasActiveTab ? 'bold' : 'normal',
-                    color: hasActiveTab ? colors.primary : 'inherit'
-                  }}>
-                    {group.title}
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails sx={{ p: 0 }}>
-                  <Tabs
-                    value={hasActiveTab ? activeTab : false}
-                    onChange={(e, newVal) => setActiveTab(newVal)}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    sx={{
-                      borderBottom: `1px solid ${colors.border}`,
-                      bgcolor: 'var(--surface)',
-                      '& .MuiTabs-indicator': { bgcolor: colors.primary },
-                      '& .MuiTab-root': { color: colors.textSecondary, py: 2 },
-                      '& .Mui-selected': { color: colors.primary },
-                    }}
-                  >
-                    {Object.keys(group.categories).map((cat) => (
-                      <Tab key={cat} label={group.categories[cat]} value={cat} />
-                    ))}
-                  </Tabs>
-                  {/* Render active content only if this group contains the active tab */}
-                  {hasActiveTab && (
-                    <Box sx={{ p: 2 }}>
-                      {READ_ONLY_CATEGORIES.includes(activeTab) ? (
-                        <Box sx={{ p: 2, mb: 2, bgcolor: 'rgba(123, 104, 238, 0.05)', borderRadius: 1, border: `1px dashed ${colors.primary}` }}>
-                          <Typography variant="body2" sx={{ color: colors.primary }}>
-                            NOTICE: This category is dynamically populated from the {activeTab === 'FIELD_TEAMS' ? 'Operational Units' : 'User Management'} section. Changes must be made there.
-                          </Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '260px minmax(0, 1fr)' }, gap: { xs: 2, md: 3 }, alignItems: 'start' }}>
+          {/* Category list */}
+          <Box sx={{ position: { md: 'sticky' }, top: { md: 72 }, border: '1px solid var(--border)', borderRadius: '10px', backgroundColor: 'var(--surface)', boxShadow: 'var(--shadow-xs)', overflow: 'hidden' }}>
+            <Box sx={{ p: 1, borderBottom: '1px solid var(--border)' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, height: 30, px: 1, borderRadius: '6px', border: '1px solid var(--border)' }}>
+                <SearchIcon sx={{ fontSize: 16, color: 'var(--text-muted)' }} />
+                <InputBase value={catSearch} onChange={(e) => setCatSearch(e.target.value)} placeholder="Find a list…" inputProps={{ 'aria-label': 'Find a list' }} sx={{ fontSize: 13, flex: 1 }} />
+              </Box>
+            </Box>
+            <Box component="nav" aria-label="Dropdown lists" sx={{ maxHeight: { md: 'calc(100vh - 200px)' }, overflowY: 'auto', p: 0.75 }}>
+              {FORM_GROUPS.map((group) => {
+                const items = groupMatches(group);
+                if (!items.length) return null;
+                return (
+                  <Box key={group.title} sx={{ mb: 1 }}>
+                    <Typography sx={{ px: 1, pt: 0.75, pb: 0.25, fontSize: 11, fontWeight: 500, color: 'var(--text-muted)' }}>{group.title.replace(/^\d+\.\s*/, '')}</Typography>
+                    {items.map(([key, label]) => {
+                      const active = key === activeTab;
+                      return (
+                        <Box key={key} component="button" type="button" onClick={() => { setActiveTab(key); setRowSearch(''); }} aria-current={active ? 'page' : undefined}
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', height: 30, px: 1, border: 0, borderRadius: '5px', cursor: 'pointer', font: 'inherit', fontSize: 13, textAlign: 'left',
+                            color: active ? 'var(--text)' : 'var(--text-secondary)', fontWeight: active ? 600 : 400,
+                            backgroundColor: active ? 'var(--surface-active)' : 'transparent', '&:hover': { backgroundColor: active ? 'var(--surface-active)' : 'var(--surface-hover)' } }}>
+                          <Box component="span" sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</Box>
+                          <Box component="span" sx={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{(options[key] || []).length}</Box>
                         </Box>
-                      ) : (
-                        <Stack direction="row" justifyContent="flex-end" spacing={2} mb={2}>
-                          <Button
-                            variant="outlined"
-                            startIcon={<UpdateIcon />}
-                            onClick={saveOrder}
-                            sx={{
-                              borderColor: colors.border,
-                              color: colors.textSecondary,
-                              '&:hover': { borderColor: colors.primary, color: colors.primary }
-                            }}
-                          >
-                            Save Order
-                          </Button>
-                          <Button
-                            variant="contained"
-                            startIcon={<AddIcon />}
-                            onClick={() => handleOpenDialog()}
-                            sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: 'var(--accent-hover)' } }}
-                          >
-                            Add New Option
-                          </Button>
-                        </Stack>
-                      )}
+                      );
+                    })}
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
 
-                      <TableContainer sx={{ maxHeight: '50vh' }}>
-                        <Table stickyHeader size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell width="50" sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}></TableCell>
-                              <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Value</TableCell>
-                              <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Label</TableCell>
-                              {activeTab === 'REASON_SUB' && (
-                                <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Reason)</TableCell>
-                              )}
-                              {activeTab === 'ROOT_CAUSE' && (
-                                <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Sub Reason)</TableCell>
-                              )}
-                              {activeTab === 'REASON' && (
-                                <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Responsibility)</TableCell>
-                              )}
-                              {activeTab === 'ISSUE_SUB_CATEGORY' && (
-                                <TableCell sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Parent (Category)</TableCell>
-                              )}
-                              <TableCell align="right" sx={{ bgcolor: colors.surface, color: colors.textSecondary, borderBottom: `2px solid ${colors.border}` }}>Actions</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {currentOptions.map((option, index) => (
-                              <DraggableRow
-                                key={option._id}
-                                index={index}
-                                option={option}
-                                moveRow={moveRow}
-                                handleOpenDialog={handleOpenDialog}
-                                handleDelete={handleDelete}
-                                colors={colors}
-                                activeTab={activeTab}
-                              />
-                            ))}
-                            {currentOptions.length === 0 && (
-                              <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 4, color: colors.textSecondary }}>
-                                  No options found. Click "Add New Option" to create one.
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Box>
+          {/* Selected list */}
+          <SectionCard
+            title={CATEGORY_MAP[activeTab] || activeTab}
+            description={`${currentOptions.length} option${currentOptions.length === 1 ? '' : 's'}${parent ? ` · each linked to a ${parent.label.replace('Parent ', '')}` : ''}${readOnly ? ' · managed automatically' : ' · drag rows to reorder'}`}
+            actions={!readOnly && (
+              <>
+                <Button variant="outlined" startIcon={<UpdateIcon sx={{ fontSize: 16 }} />} onClick={saveOrder}>Save order</Button>
+                <Button variant="contained" startIcon={<AddIcon sx={{ fontSize: 17 }} />} onClick={() => handleOpenDialog()}>Add option</Button>
+              </>
+            )}
+            padding={0}
+            bodySx={{ p: 0 }}
+          >
+            {readOnly && (
+              <Box sx={{ m: 2, p: 1.5, borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--surface-subtle)', fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                This list is filled automatically from {activeTab === 'FIELD_TEAMS' ? 'Field Teams' : 'Users & roles'}. Change it there.
+              </Box>
+            )}
+            <Box sx={{ px: 2, py: 1.25, borderBottom: '1px solid var(--border)' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, height: 30, px: 1, width: { xs: '100%', sm: 280 }, borderRadius: '6px', border: '1px solid var(--border)' }}>
+                <SearchIcon sx={{ fontSize: 16, color: 'var(--text-muted)' }} />
+                <InputBase value={rowSearch} onChange={(e) => setRowSearch(e.target.value)} placeholder="Search options…" inputProps={{ 'aria-label': 'Search options' }} sx={{ fontSize: 13, flex: 1 }} />
+              </Box>
+            </Box>
+            <TableContainer sx={{ maxHeight: '62vh', border: 0, borderRadius: 0 }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell width="44" />
+                    <TableCell>Value</TableCell>
+                    <TableCell>Label</TableCell>
+                    {parent && <TableCell>{parent.label}</TableCell>}
+                    <TableCell align="right" width="110">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredOptions.map((option) => (
+                    <DraggableRow
+                      key={option._id}
+                      index={currentOptions.indexOf(option)}
+                      option={option}
+                      moveRow={rowSearch ? () => {} : moveRow}
+                      handleOpenDialog={handleOpenDialog}
+                      handleDelete={(id) => setConfirmDelete(currentOptions.find((o) => o._id === id) || { _id: id })}
+                      colors={colors}
+                      activeTab={activeTab}
+                    />
+                  ))}
+                  {filteredOptions.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} sx={{ border: 0 }}>
+                        <EmptyState title={rowSearch ? 'No matching options' : 'This list is empty'} description={rowSearch ? 'Try a different search.' : readOnly ? '' : 'Add the first option for this list.'} minHeight={160} />
+                      </TableCell>
+                    </TableRow>
                   )}
-                </AccordionDetails>
-              </Accordion>
-            );
-          })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </SectionCard>
         </Box>
 
-        {/* Existing Dialog Logic */}
-        <Dialog
+        {/* Option editor */}
+        <Sheet
           open={openDialog}
           onClose={handleCloseDialog}
-          PaperProps={{
-            sx: { bgcolor: colors.surface, color: colors.textPrimary, border: `1px solid ${colors.border}`, width: '400px' }
-          }}
+          width={440}
+          title={editingOption ? 'Edit option' : 'Add option'}
+          description={CATEGORY_MAP[activeTab] || activeTab}
+          footer={
+            <>
+              <Button variant="outlined" onClick={handleCloseDialog}>Cancel</Button>
+              <Button onClick={handleSubmit} variant="contained" disabled={!formData.value || !formData.label}>
+                {editingOption ? 'Save changes' : 'Add option'}
+              </Button>
+            </>
+          }
         >
-          <DialogTitle sx={{ borderBottom: `1px solid ${colors.border}` }}>
-            {editingOption ? 'Edit Option' : 'Add New Option'}
-          </DialogTitle>
-          <DialogContent sx={{ pt: 3 }}>
-            <Stack spacing={3} mt={1}>
-              {activeTab === 'REASON_SUB' && (
-                <TextField
-                  select
-                  fullWidth
-                  label="Parent Reason"
-                  value={formData.parentValue || ''}
-                  onChange={(e) => setFormData({ ...formData, parentValue: e.target.value })}
-                  SelectProps={{ native: true }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: colors.border },
-                      '&:hover fieldset': { borderColor: colors.primary },
-                      '&.Mui-focused fieldset': { borderColor: colors.primary },
-                    },
-                    '& .MuiInputLabel-root': { color: colors.textSecondary },
-                    select: { color: colors.textPrimary, bgcolor: colors.surface },
-                  }}
-                >
-                  <option value="" disabled style={{ backgroundColor: colors.surface }}>Select Parent Reason</option>
-                  {(options['REASON'] || []).map(opt => (
-                    <option key={opt._id} value={opt.value} style={{ backgroundColor: colors.surface }}>{opt.label}</option>
-                  ))}
-                </TextField>
-              )}
-              {activeTab === 'ROOT_CAUSE' && (
-                <TextField
-                  select
-                  fullWidth
-                  label="Parent Sub Reason"
-                  value={formData.parentValue || ''}
-                  onChange={(e) => setFormData({ ...formData, parentValue: e.target.value })}
-                  SelectProps={{ native: true }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: colors.border },
-                      '&:hover fieldset': { borderColor: colors.primary },
-                      '&.Mui-focused fieldset': { borderColor: colors.primary },
-                    },
-                    '& .MuiInputLabel-root': { color: colors.textSecondary },
-                    select: { color: colors.textPrimary, bgcolor: colors.surface },
-                  }}
-                >
-                  <option value="" disabled style={{ backgroundColor: colors.surface }}>Select Parent Sub Reason</option>
-                  {(options['REASON_SUB'] || []).map(opt => (
-                    <option key={opt._id} value={opt.value} style={{ backgroundColor: colors.surface }}>{opt.label}</option>
-                  ))}
-                </TextField>
-              )}
-              {activeTab === 'REASON' && (
-                <TextField
-                  select
-                  fullWidth
-                  label="Parent Responsibility"
-                  value={formData.parentValue || ''}
-                  onChange={(e) => setFormData({ ...formData, parentValue: e.target.value })}
-                  SelectProps={{ native: true }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: colors.border },
-                      '&:hover fieldset': { borderColor: colors.primary },
-                      '&.Mui-focused fieldset': { borderColor: colors.primary },
-                    },
-                    '& .MuiInputLabel-root': { color: colors.textSecondary },
-                    select: { color: colors.textPrimary, bgcolor: colors.surface },
-                  }}
-                >
-                  <option value="" disabled style={{ backgroundColor: colors.surface }}>Select Parent Responsibility</option>
-                  {(options['RESPONSIBILITY'] || []).map(opt => (
-                    <option key={opt._id} value={opt.value} style={{ backgroundColor: colors.surface }}>{opt.label}</option>
-                  ))}
-                </TextField>
-              )}
-              {activeTab === 'ISSUE_SUB_CATEGORY' && (
-                <TextField
-                  select
-                  fullWidth
-                  label="Parent Category"
-                  value={formData.parentValue || ''}
-                  onChange={(e) => setFormData({ ...formData, parentValue: e.target.value })}
-                  SelectProps={{ native: true }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: colors.border },
-                      '&:hover fieldset': { borderColor: colors.primary },
-                      '&.Mui-focused fieldset': { borderColor: colors.primary },
-                    },
-                    '& .MuiInputLabel-root': { color: colors.textSecondary },
-                    select: { color: colors.textPrimary, bgcolor: colors.surface },
-                  }}
-                >
-                  <option value="" disabled style={{ backgroundColor: colors.surface }}>Select Parent Category</option>
-                  {(options['ISSUE_CATEGORY'] || []).map(opt => (
-                    <option key={opt._id} value={opt.value} style={{ backgroundColor: colors.surface }}>{opt.label}</option>
-                  ))}
-                </TextField>
-              )}
+          <Stack spacing={2}>
+            {parent && (
               <TextField
+                select
                 fullWidth
-                label="Value"
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: colors.border },
-                    '&:hover fieldset': { borderColor: colors.primary },
-                    '&.Mui-focused fieldset': { borderColor: colors.primary },
-                  },
-                  '& .MuiInputLabel-root': { color: colors.textSecondary },
-                  input: { color: colors.textPrimary },
-                }}
-              />
-              <TextField
-                fullWidth
-                label="Label"
-                value={formData.label}
-                onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: colors.border },
-                    '&:hover fieldset': { borderColor: colors.primary },
-                    '&.Mui-focused fieldset': { borderColor: colors.primary },
-                  },
-                  '& .MuiInputLabel-root': { color: colors.textSecondary },
-                  input: { color: colors.textPrimary },
-                }}
-              />
-              <TextField
-                fullWidth
-                label="Display Order"
-                type="number"
-                value={formData.order}
-                onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: colors.border },
-                    '&:hover fieldset': { borderColor: colors.primary },
-                    '&.Mui-focused fieldset': { borderColor: colors.primary },
-                  },
-                  '& .MuiInputLabel-root': { color: colors.textSecondary },
-                  input: { color: colors.textPrimary },
-                }}
-              />
-            </Stack>
-          </DialogContent>
-          <DialogActions sx={{ p: 3, borderTop: `1px solid ${colors.border}` }}>
-            <Button onClick={handleCloseDialog} sx={{ color: colors.textSecondary }}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              variant="contained"
-              disabled={!formData.value || !formData.label}
-              sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: 'var(--accent-hover)' } }}
-            >
-              {editingOption ? 'Update' : 'Add'}
-            </Button>
-          </DialogActions>
-        </Dialog>
+                label={parent.label}
+                value={formData.parentValue || ''}
+                onChange={(e) => setFormData({ ...formData, parentValue: e.target.value })}
+                SelectProps={{ native: true }}
+                InputLabelProps={{ shrink: true }}
+              >
+                <option value="" disabled>Select…</option>
+                {(options[parent.category] || []).map((opt) => (
+                  <option key={opt._id} value={opt.value}>{opt.label}</option>
+                ))}
+              </TextField>
+            )}
+            <TextField fullWidth label="Value" helperText="Stored on records. Avoid changing it once in use." value={formData.value} onChange={(e) => setFormData({ ...formData, value: e.target.value })} />
+            <TextField fullWidth label="Label" helperText="What people see in the select." value={formData.label} onChange={(e) => setFormData({ ...formData, label: e.target.value })} />
+            <TextField fullWidth label="Display order" type="number" value={formData.order} onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })} />
+          </Stack>
+        </Sheet>
+
+        <ConfirmDialog
+          open={Boolean(confirmDelete)}
+          danger
+          title="Delete this option?"
+          description={`"${confirmDelete?.label || confirmDelete?.value || ''}" will be removed from ${CATEGORY_MAP[activeTab] || 'this list'}. Records that already use it keep their stored value.`}
+          confirmLabel="Delete"
+          onClose={() => setConfirmDelete(null)}
+          onConfirm={() => {
+            const id = confirmDelete._id;
+            setConfirmDelete(null);
+            handleDelete(id);
+          }}
+        />
       </Box>
     </DndProvider>
   );

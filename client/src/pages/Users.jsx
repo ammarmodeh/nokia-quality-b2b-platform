@@ -76,7 +76,7 @@ const StatCard = ({ title, count, total, color, icon }) => (
   </Card>
 );
 
-const Users = () => {
+const Users = ({ embedded = false } = {}) => {
   const isMobile = useMediaQuery('(max-width:600px)');
   const [team, setTeam] = useState([]);
   const [search, setSearch] = useState("");
@@ -221,18 +221,13 @@ const Users = () => {
   }
 
   return (
-    <Box sx={{ p: isMobile ? 0 : 3, minHeight: '100vh' }}>
-      {/* Header */}
-      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'start', md: 'center' }} mb={4} spacing={2}>
-        <Box>
-          <Typography variant="h4" fontWeight="800" color="#1e293b">
-            Quality Members
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            Manage your team, roles, and visibility settings.
-          </Typography>
+    <Box sx={{ p: embedded ? 0 : isMobile ? 0 : 3 }}>
+      {!embedded && (
+        <Box sx={{ mb: 3 }}>
+          <Typography component="h1" sx={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text)' }}>Users & roles</Typography>
+          <Typography sx={{ mt: 0.5, fontSize: 13.5, color: 'var(--text-secondary)' }}>Manage quality team members, roles and visibility.</Typography>
         </Box>
-      </Stack>
+      )}
 
       {/* Stats Cards */}
       <Grid container spacing={3} mb={4}>

@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import { useColorScheme } from "@mui/material/styles";
+import PageHeader from "../components/ui/PageHeader";
+import SectionCard from "../components/ui/SectionCard";
+import PageLoader from "../components/ui/PageLoader";
+import Profile from "./Profile";
+import ChangePassword from "./ChangePassword";
+import Users from "./Users";
+import CalendarMonthOutlined from "@mui/icons-material/CalendarMonthOutlined";
+import KeyOutlined from "@mui/icons-material/KeyOutlined";
+import PersonOutline from "@mui/icons-material/PersonOutline";
+import LockOutlined from "@mui/icons-material/LockOutlined";
+import ManageAccountsOutlined from "@mui/icons-material/ManageAccountsOutlined";
+import ContrastOutlined from "@mui/icons-material/ContrastOutlined";
 import api from "../api/api";
 import {
   Box,
@@ -10,15 +23,9 @@ import {
   Button as MuiButton,
   Snackbar,
   Alert,
-  Divider,
   IconButton,
   InputAdornment,
-  useMediaQuery,
-  useTheme,
-  Switch,
-  FormControlLabel,
   Paper,
-
   Grid,
   Table,
   TableBody,
@@ -26,45 +33,33 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Select as MuiSelect,
-  MenuItem as MuiMenuItem,
   TableSortLabel
 } from "@mui/material";
 import {
   Save as SaveIcon,
-  ArrowBack as ArrowBackIcon,
   Timer as TimerIcon,
   Settings as SettingsIcon,
-  Notifications as NotificationsIcon,
   Score as ScoreIcon,
-  Edit as EditIcon,
   Close as CloseIcon,
   Add,
   Search as SearchIcon,
   ArrowUpward,
-  ArrowDownward,
-  FilterList as FilterListIcon
+  ArrowDownward
 } from "@mui/icons-material";
-import { HashLoader } from "react-spinners";
 
 const SettingsPage = () => {
   const { user } = useSelector((state) => state.auth);
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [loading, setLoading] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
-  const [editMode, setEditMode] = useState(false);
+  const [, setEditMode] = useState(false);
 
   const {
     register,
     handleSubmit,
     reset,
-    setValue,
-    watch,
     control,
     formState: { errors, isDirty },
   } = useForm({
@@ -142,6 +137,7 @@ const SettingsPage = () => {
       setSnackbarSeverity("success");
       setOpenSnackbar(true);
       setEditMode(false);
+      reset(data);
     } catch (error) {
       console.error("Error updating settings:", error);
       setSnackbarMessage(error.response?.data?.message || "Failed to update settings");
@@ -157,387 +153,205 @@ const SettingsPage = () => {
     setOpenSnackbar(false);
   };
 
-  const SectionHeader = ({ title, icon: Icon }) => (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, mt: 3 }}>
-      <Icon sx={{ color: '#1976d2' }} />
-      <Typography variant="h6" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>
-        {title}
-      </Typography>
-    </Box>
+  const isAdmin = user?.role === "Admin";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "general";
+  const setTab = (t) => setSearchParams((p) => { const n = new URLSearchParams(p); if (t === "general") n.delete("tab"); else n.set("tab", t); return n; }, { replace: true });
+  const { mode, setMode } = useColorScheme();
+  const workspaceTabs = ["general", "assessment", "targets", "calendar", "scoring"];
+  const isWorkspaceTab = workspaceTabs.includes(tab);
+
+  const NAV = [
+    { group: "Workspace", items: [
+      { key: "general", label: "General", icon: SettingsIcon },
+      { key: "assessment", label: "Assessment & timers", icon: TimerIcon },
+      { key: "targets", label: "Targets & thresholds", icon: ScoreIcon },
+      { key: "calendar", label: "Calendar", icon: CalendarMonthOutlined },
+      { key: "scoring", label: "Scoring keys", icon: KeyOutlined },
+    ] },
+    { group: "Account", items: [
+      { key: "profile", label: "Profile", icon: PersonOutline },
+      { key: "security", label: "Security", icon: LockOutlined },
+      ...(isAdmin ? [{ key: "users", label: "Users & roles", icon: ManageAccountsOutlined }] : []),
+      { key: "appearance", label: "Appearance", icon: ContrastOutlined },
+    ] },
+  ];
+
+  const field = (name, label, props = {}) => (
+    <TextField fullWidth label={label} disabled={!isAdmin} {...register(name, props.rules)} InputLabelProps={{ shrink: true }} {...props.extra} />
+  );
+  const num = (name, label, min, max, extra = {}) => (
+    <TextField
+      fullWidth
+      type="number"
+      label={label}
+      disabled={!isAdmin}
+      {...register(name, { min, max })}
+      error={!!name.split(".").reduce((o, k) => o?.[k], errors)}
+      helperText={name.split(".").reduce((o, k) => o?.[k], errors) ? `Value must be between ${min} and ${max}` : extra.helperText}
+      InputLabelProps={{ shrink: true }}
+    />
+  );
+  const Note = ({ children }) => (
+    <Box sx={{ mt: 2, p: 1.5, borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "var(--surface-subtle)", fontSize: 12.5, color: "var(--text-secondary)", lineHeight: 1.55 }}>{children}</Box>
   );
 
-  const textFieldStyles = {
-    '& .MuiInputBase-root': { color: 'var(--text)' },
-    '& .MuiInputLabel-root': {
-      color: 'var(--text-secondary)',
-      '&.Mui-disabled': {
-        color: 'var(--text-secondary)'
-      }
-    },
-    '& .MuiOutlinedInput-root': {
-      '& fieldset': { borderColor: editMode ? '#e5e7eb' : 'transparent' },
-      '&:hover fieldset': { borderColor: editMode ? '#666' : 'transparent' },
-      '&.Mui-focused fieldset': { borderColor: '#1976d2' },
-      backgroundColor: editMode ? '#252525' : 'transparent',
-      borderRadius: '4px',
-    },
-    '& .Mui-disabled': {
-      WebkitTextFillColor: 'var(--text) !important',
-      '& .MuiInputBase-input': {
-        WebkitTextFillColor: 'var(--text) !important'
-      }
-    }
-  };
-
   return (
-    <Box sx={{ p: isMobile ? 0 : 4, maxWidth: '1000px', margin: '0 auto' }}>
-      {loading && (
-        <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1300 }}>
-          <HashLoader color="#1976d2" size={80} />
-        </Box>
-      )}
+    <Box>
+      <PageHeader title="Settings" description="Workspace configuration, your account and appearance." />
 
-      <Paper sx={{ p: isMobile ? 2 : 4, backgroundColor: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => navigate(-1)} sx={{ color: 'var(--text)' }}>
-              <ArrowBackIcon />
-            </IconButton>
-            <Typography variant="h4" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>
-              Project Settings
-            </Typography>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "220px minmax(0, 1fr)" }, gap: { xs: 2, md: 4 }, alignItems: "start" }}>
+        {/* Vertical tabs */}
+        <Box component="nav" aria-label="Settings sections" sx={{ position: { md: "sticky" }, top: { md: 72 }, display: "flex", flexDirection: { xs: "row", md: "column" }, gap: { xs: 0.5, md: 2 }, overflowX: { xs: "auto", md: "visible" }, pb: { xs: 1, md: 0 } }}>
+          {NAV.map((g) => (
+            <Box key={g.group} sx={{ display: "flex", flexDirection: { xs: "row", md: "column" }, gap: "2px" }}>
+              <Typography sx={{ display: { xs: "none", md: "block" }, px: 1.25, mb: 0.5, fontSize: 11, fontWeight: 500, color: "var(--text-muted)" }}>{g.group}</Typography>
+              {g.items.map((it) => {
+                const Icon = it.icon;
+                const active = tab === it.key;
+                return (
+                  <Box
+                    key={it.key}
+                    component="button"
+                    type="button"
+                    aria-current={active ? "page" : undefined}
+                    onClick={() => setTab(it.key)}
+                    sx={{
+                      display: "flex", alignItems: "center", gap: 1.25, height: 32, px: 1.25, borderRadius: "6px", border: 0, cursor: "pointer",
+                      font: "inherit", fontSize: 13, fontWeight: 500, textAlign: "left", whiteSpace: "nowrap", flexShrink: 0,
+                      color: active ? "var(--text)" : "var(--text-secondary)",
+                      backgroundColor: active ? "var(--surface-active)" : "transparent",
+                      "&:hover": { backgroundColor: active ? "var(--surface-active)" : "var(--surface-hover)", color: "var(--text)" },
+                      "& svg": { fontSize: 17, color: active ? "var(--accent-text)" : "var(--text-muted)" },
+                      "&:focus-visible": { outline: "2px solid var(--focus-ring)" },
+                    }}
+                  >
+                    <Icon />
+                    {it.label}
+                  </Box>
+                );
+              })}
+            </Box>
+          ))}
+        </Box>
+
+        {/* Content */}
+        <Box sx={{ minWidth: 0 }}>
+          {isWorkspaceTab && !isAdmin && (
+            <Note>Only admins can change workspace settings. You can view the current values below.</Note>
+          )}
+          {isWorkspaceTab && loading && <PageLoader minHeight={240} />}
+
+          <Box component="form" onSubmit={handleSubmit(submitHandler)} sx={{ display: isWorkspaceTab && !loading ? "flex" : "none", flexDirection: "column", gap: 2, mt: isAdmin ? 0 : 2 }}>
+            {tab === "general" && (
+              <SectionCard title="General" description="Project identity shown across the app and on the field-team login.">
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>{field("projectName", "Project name")}</Grid>
+                  <Grid item xs={12} sm={6}>{field("projectID", "Project ID / code")}</Grid>
+                  <Grid item xs={12} sm={6}>{field("clientName", "Client name")}</Grid>
+                  <Grid item xs={12} sm={6}>{field("projectManager", "Project manager")}</Grid>
+                  <Grid item xs={12}>{field("projectBrief", "Project brief", { extra: { multiline: true, rows: 3 } })}</Grid>
+                </Grid>
+              </SectionCard>
+            )}
+
+            {tab === "assessment" && (
+              <SectionCard title="Assessment & timers" description="Quiz timing and session length for the field-team technical assessment.">
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>{num("globalTimer", "Global quiz timer (min)", 1, 180)}</Grid>
+                  <Grid item xs={12} sm={6}>{num("sessionTimeout", "Session timeout (min)", 1, 1440)}</Grid>
+                  <Grid item xs={12} sm={6}>{num("thresholds.quizPassScore", "Quiz pass score (%)", 0, 100)}</Grid>
+                  <Grid item xs={12} sm={6}>{num("thresholds.labPassScore", "Lab pass score (%)", 0, 100)}</Grid>
+                </Grid>
+              </SectionCard>
+            )}
+
+            {tab === "targets" && (
+              <>
+                <SectionCard title="NPS targets" description="Used by the dashboard KPI goals and trend target lines.">
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>{num("npsTargets.promoters", "Promoters target (≥ %)", 0, 100)}</Grid>
+                    <Grid item xs={12} sm={6}>{num("npsTargets.detractors", "Detractors target (≤ %)", 0, 100)}</Grid>
+                  </Grid>
+                </SectionCard>
+                <SectionCard title="Status thresholds" description="Global score bands (%).">
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>{num("thresholds.pass", "Pass", 0, 100)}</Grid>
+                    <Grid item xs={12} sm={4}>{num("thresholds.average", "Average", 0, 100)}</Grid>
+                    <Grid item xs={12} sm={4}>{num("thresholds.fail", "Fail", 0, 100)}</Grid>
+                  </Grid>
+                </SectionCard>
+              </>
+            )}
+
+            {tab === "calendar" && (
+              <>
+                <SectionCard title="Weeks" description="How reporting weeks are numbered across dashboards and exports.">
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField select fullWidth label="Week start day" disabled={!isAdmin} {...register("weekStartDay")} InputLabelProps={{ shrink: true }} SelectProps={{ native: true }}>
+                        {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((d, i) => <option key={d} value={i}>{d}</option>)}
+                      </TextField>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>{num("startWeekNumber", "Calibration week number", 1, 100, { helperText: "Week number assigned to the calibration range" })}</Grid>
+                    <Grid item xs={12} sm={6}>{field("week1StartDate", "Calibration start date", { extra: { type: "date" } })}</Grid>
+                    <Grid item xs={12} sm={6}>{field("week1EndDate", "Calibration end date", { extra: { type: "date" } })}</Grid>
+                  </Grid>
+                  <Note>Define a date range (e.g. Jan 1 – Jan 5) and give it a week number (e.g. Week 1). Later dates advance one week every 7 days from the chosen week start day.</Note>
+                </SectionCard>
+                <SectionCard title="Months" description="First reporting month for month-based views.">
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>{field("month1StartDate", "Month 1 start date", { extra: { type: "date" } })}</Grid>
+                    <Grid item xs={12} sm={6}>{field("month1EndDate", "Month 1 end date", { extra: { type: "date" } })}</Grid>
+                  </Grid>
+                  <Note>Following months are strict 4-week (28-day) periods, which gives a 13-month year.</Note>
+                </SectionCard>
+              </>
+            )}
+
+            {tab === "scoring" && (
+              <SectionCard title="Scoring keys" description="Keys that can be applied to tasks and OJO snags; they appear as options in those forms.">
+                <ScoringKeysEditor control={control} register={register} errors={errors} editMode={isAdmin} />
+              </SectionCard>
+            )}
+
+            {isAdmin && isDirty && (
+              <Box sx={{ position: "sticky", bottom: 16, zIndex: 5, display: "flex", alignItems: "center", gap: 1, p: 1.25, pl: 2, borderRadius: "10px", border: "1px solid var(--border)", backgroundColor: "var(--surface)", boxShadow: "var(--shadow-md)" }}>
+                <Typography sx={{ fontSize: 13, color: "var(--text-secondary)", flex: 1 }}>You have unsaved changes.</Typography>
+                <MuiButton variant="outlined" onClick={() => fetchSettings()}>Discard</MuiButton>
+                <MuiButton variant="contained" type="submit" startIcon={<SaveIcon sx={{ fontSize: 17 }} />}>Save changes</MuiButton>
+              </Box>
+            )}
           </Box>
 
-          {user?.role === "Admin" && (
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {editMode ? (
-                <>
-                  <MuiButton startIcon={<CloseIcon />} onClick={() => { setEditMode(false); fetchSettings(); }} sx={{ color: '#ffffff', backgroundColor: '#555' }}>
-                    Cancel
-                  </MuiButton>
-                  <MuiButton startIcon={<SaveIcon />} onClick={handleSubmit(submitHandler)} sx={{ color: '#ffffff', backgroundColor: '#1976d2', '&:hover': { backgroundColor: '#1565c0' } }}>
-                    Save
-                  </MuiButton>
-                </>
-              ) : (
-                <MuiButton startIcon={<EditIcon />} onClick={() => setEditMode(true)} sx={{ color: '#ffffff', backgroundColor: '#1976d2', '&:hover': { backgroundColor: '#1565c0' } }}>
-                  Edit Settings
-                </MuiButton>
-              )}
-            </Box>
+          {tab === "profile" && <Profile embedded />}
+          {tab === "security" && <ChangePassword embedded />}
+          {tab === "users" && isAdmin && <Users embedded />}
+          {tab === "appearance" && (
+            <SectionCard title="Appearance" description="Choose how QOps Tracker looks on this device.">
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 1.5 }}>
+                {[
+                  { value: "light", label: "Light", bg: "#FAFAFA", fg: "#FFFFFF", line: "#E5E7EB" },
+                  { value: "dark", label: "Dark", bg: "#0B0B0F", fg: "#131318", line: "#26262E" },
+                  { value: "system", label: "System", bg: "linear-gradient(90deg, #FAFAFA 50%, #0B0B0F 50%)", fg: "transparent", line: "#9394A1" },
+                ].map((o) => {
+                  const active = (mode || "system") === o.value;
+                  return (
+                    <Box key={o.value} component="button" type="button" onClick={() => setMode(o.value)} aria-pressed={active}
+                      sx={{ p: 1, borderRadius: "10px", cursor: "pointer", font: "inherit", textAlign: "left", backgroundColor: "var(--surface)", border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`, boxShadow: active ? "0 0 0 3px var(--accent-ring)" : "none" }}>
+                      <Box sx={{ height: 84, borderRadius: "6px", background: o.bg, border: "1px solid var(--border)", p: 1, display: "flex", gap: 0.75 }}>
+                        <Box sx={{ width: "28%", borderRadius: "4px", backgroundColor: o.fg, border: `1px solid ${o.line}` }} />
+                        <Box sx={{ flex: 1, borderRadius: "4px", backgroundColor: o.fg, border: `1px solid ${o.line}` }} />
+                      </Box>
+                      <Typography sx={{ mt: 1, px: 0.5, fontSize: 13, fontWeight: 500, color: "var(--text)" }}>{o.label}</Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </SectionCard>
           )}
         </Box>
-
-        <form onSubmit={handleSubmit(submitHandler)}>
-          <SectionHeader title="General Information" icon={SettingsIcon} />
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Project Name"
-                disabled={!editMode}
-                {...register("projectName")}
-                InputLabelProps={{ shrink: true }}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Project ID / Code"
-                disabled={!editMode}
-                {...register("projectID")}
-                InputLabelProps={{ shrink: true }}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Client Name"
-                disabled={!editMode}
-                {...register("clientName")}
-                InputLabelProps={{ shrink: true }}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Project Manager"
-                disabled={!editMode}
-                {...register("projectManager")}
-                InputLabelProps={{ shrink: true }}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Project Brief"
-                multiline
-                rows={3}
-                disabled={!editMode}
-                {...register("projectBrief")}
-                InputLabelProps={{ shrink: true }}
-                sx={textFieldStyles}
-              />
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
-
-          <SectionHeader title="Timer Configuration" icon={TimerIcon} />
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Global Quiz Timer (Min)"
-                disabled={!editMode}
-                {...register("globalTimer", { min: 1, max: 180 })}
-                error={!!errors.globalTimer}
-                helperText={errors.globalTimer ? "Value must be between 1 and 180" : ""}
-                sx={textFieldStyles}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start"><TimerIcon sx={{ color: 'var(--text-muted)' }} /></InputAdornment>
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Session Timeout (Min)"
-                disabled={!editMode}
-                {...register("sessionTimeout", { min: 1, max: 1440 })}
-                error={!!errors.sessionTimeout}
-                helperText={errors.sessionTimeout ? "Value must be between 1 and 1440" : ""}
-                sx={textFieldStyles}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start"><TimerIcon sx={{ color: 'var(--text-muted)' }} /></InputAdornment>
-                }}
-              />
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
-
-          <SectionHeader title="Status Thresholds (%)" icon={ScoreIcon} />
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Global Pass Threshold"
-                disabled={!editMode}
-                {...register("thresholds.pass", { min: 0, max: 100 })}
-                error={!!errors.thresholds?.pass}
-                helperText={errors.thresholds?.pass ? "Value must be between 0 and 100" : ""}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Global Average Threshold"
-                disabled={!editMode}
-                {...register("thresholds.average", { min: 0, max: 100 })}
-                error={!!errors.thresholds?.average}
-                helperText={errors.thresholds?.average ? "Value must be between 0 and 100" : ""}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Global Fail Threshold"
-                disabled={!editMode}
-                {...register("thresholds.fail", { min: 0, max: 100 })}
-                error={!!errors.thresholds?.fail}
-                helperText={errors.thresholds?.fail ? "Value must be between 0 and 100" : ""}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Quiz Pass Score"
-                disabled={!editMode}
-                {...register("thresholds.quizPassScore", { min: 0, max: 100 })}
-                error={!!errors.thresholds?.quizPassScore}
-                helperText={errors.thresholds?.quizPassScore ? "Value must be between 0 and 100" : ""}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Lab Pass Score"
-                disabled={!editMode}
-                {...register("thresholds.labPassScore", { min: 0, max: 100 })}
-                error={!!errors.thresholds?.labPassScore}
-                helperText={errors.thresholds?.labPassScore ? "Value must be between 0 and 100" : ""}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="NPS Promoters Target (≥)"
-                disabled={!editMode}
-                {...register("npsTargets.promoters", { min: 0, max: 100 })}
-                error={!!errors.npsTargets?.promoters}
-                helperText={errors.npsTargets?.promoters ? "Value must be between 0 and 100" : ""}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                type="number"
-                label="NPS Detractors Target (≤)"
-                disabled={!editMode}
-                {...register("npsTargets.detractors", { min: 0, max: 100 })}
-                error={!!errors.npsTargets?.detractors}
-                helperText={errors.npsTargets?.detractors ? "Value must be between 0 and 100" : ""}
-                sx={textFieldStyles}
-              />
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
-          <SectionHeader title="Calendar Configuration" icon={SettingsIcon} />
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                select
-                fullWidth
-                label="Week Start Day"
-                disabled={!editMode}
-                {...register("weekStartDay")}
-                InputLabelProps={{ shrink: true }}
-                sx={textFieldStyles}
-                SelectProps={{
-                  native: true,
-                }}
-              >
-                <option value={0}>Sunday</option>
-                <option value={1}>Monday</option>
-                <option value={2}>Tuesday</option>
-                <option value={3}>Wednesday</option>
-                <option value={4}>Thursday</option>
-                <option value={5}>Friday</option>
-                <option value={6}>Saturday</option>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="date"
-                label="Week 1 Start Date"
-                disabled={!editMode}
-                {...register("week1StartDate")}
-                InputLabelProps={{ shrink: true }}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="date"
-                label="Week 1 End Date"
-                disabled={!editMode}
-                {...register("week1EndDate")}
-                InputLabelProps={{ shrink: true }}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Start Week (Calibration #)"
-                disabled={!editMode}
-                {...register("startWeekNumber", { min: 1, max: 100 })}
-                InputLabelProps={{ shrink: true }}
-                sx={textFieldStyles}
-                helperText="Which week number should the calibration range be assigned?"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(25, 118, 210, 0.05)', borderRadius: 1, border: '1px dashed #1976d2' }}>
-                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
-                  ℹ️ <strong>How to Calibrate:</strong> Define a date range (e.g., Jan 1 - Jan 5) and assign it a week number (e.g., Week 1). All dates after this range will automatically increment every 7 days based on your chosen <strong>Week Start Day</strong>.
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
-
-          <SectionHeader title="Month Configuration" icon={SettingsIcon} />
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="date"
-                label="Month 1 Start Date"
-                disabled={!editMode}
-                {...register("month1StartDate")}
-                InputLabelProps={{ shrink: true }}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="date"
-                label="Month 1 End Date"
-                disabled={!editMode}
-                {...register("month1EndDate")}
-                InputLabelProps={{ shrink: true }}
-                sx={textFieldStyles}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(25, 118, 210, 0.05)', borderRadius: 1, border: '1px dashed #1976d2' }}>
-                <Typography variant="caption" sx={{ color: '#b3b3b8' }}>
-                  ℹ️ <strong>Month Configuration:</strong> Define the first month's start and end dates. <br />
-                  All subsequent months will be calculated as strict <strong>4-week periods (28 days)</strong>. <br />
-                  <em>Note: Since 52 weeks ÷ 4 weeks = 13, this creates a <strong>13-Month Year</strong> to cover the full calendar.</em>
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-
-          {/* <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <FormControlLabel
-              control={<Switch checked={watch("notifications.emailAlerts")} disabled={!editMode} onChange={(e) => setValue("notifications.emailAlerts", e.target.checked, { shouldDirty: true })} />}
-              label={<Typography sx={{ color: 'var(--text)' }}>Enable Email Alerts</Typography>}
-            />
-            <FormControlLabel
-              control={<Switch checked={watch("notifications.pushNotifications")} disabled={!editMode} onChange={(e) => setValue("notifications.pushNotifications", e.target.checked, { shouldDirty: true })} />}
-              label={<Typography sx={{ color: 'var(--text)' }}>Enable Push Notifications</Typography>}
-            />
-          </Box> */}
-
-          <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
-          <SectionHeader title="Dynamic Scoring Keys" icon={ScoreIcon} />
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 2 }}>
-              Define scoring keys that can be applied to Tasks and Customer Issues. These keys will appear as selectable options in the respective forms.
-            </Typography>
-            <ScoringKeysEditor control={control} register={register} errors={errors} editMode={editMode} />
-          </Box>
-        </form>
-      </Paper>
+      </Box>
 
       <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
@@ -604,10 +418,10 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
     '& .MuiInputBase-root': { color: 'var(--text)', fontSize: '0.85rem' },
     '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
     '& .MuiOutlinedInput-root': {
-      '& fieldset': { borderColor: editMode ? '#444' : 'transparent' },
-      '&:hover fieldset': { borderColor: editMode ? '#666' : 'transparent' },
+      '& fieldset': { borderColor: editMode ? 'var(--border)' : 'transparent' },
+      '&:hover fieldset': { borderColor: editMode ? 'var(--border-strong)' : 'transparent' },
       '&.Mui-focused fieldset': { borderColor: '#1976d2' },
-      backgroundColor: editMode ? '#1e1e1e' : 'transparent',
+      backgroundColor: editMode ? 'var(--surface)' : 'transparent',
     },
     '& .Mui-disabled': {
       WebkitTextFillColor: 'var(--text) !important',

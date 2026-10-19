@@ -34,7 +34,7 @@ import {
 import { HashLoader } from "react-spinners";
 import { getInitials } from "../utils/helpers";
 
-const Profile = () => {
+const Profile = ({ embedded = false } = {}) => {
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -190,7 +190,7 @@ const Profile = () => {
         borderColor: editMode ? '#666' : 'transparent',
       },
       '&.Mui-focused fieldset': {
-        borderColor: '#1976d2',
+        borderColor: 'var(--accent)',
       },
       backgroundColor: editMode ? '#252525' : 'transparent',
       borderRadius: '4px',
@@ -204,11 +204,11 @@ const Profile = () => {
   };
 
   const buttonStyles = {
-    backgroundColor: '#1976d2',
+    backgroundColor: 'var(--accent)',
     color: 'var(--text)',
     fontWeight: 'bold',
     '&:hover': {
-      backgroundColor: '#1565c0',
+      backgroundColor: 'var(--accent-hover)',
     },
     '&:disabled': {
       backgroundColor: '#555',
@@ -230,7 +230,7 @@ const Profile = () => {
 
   return (
     <Box
-      sx={{
+      sx={embedded ? { display: 'block' } : {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -254,7 +254,7 @@ const Profile = () => {
             zIndex: 1300
           }}
         >
-          <HashLoader color="#1976d2" size={80} />
+          <HashLoader color="var(--accent)" size={80} />
         </Box>
       )}
 
@@ -279,13 +279,13 @@ const Profile = () => {
           flexDirection: 'column'
         }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <MuiButton
+            {!embedded && (<MuiButton
               startIcon={<ArrowBackIcon />}
               onClick={handleBackClick}
               sx={{ color: 'var(--text)' }}
             >
               {isMobile ? '' : 'Back'}
-            </MuiButton>
+            </MuiButton>)}
 
             <Box sx={{ display: 'flex', gap: 1 }}>
               {editMode ? (
@@ -327,7 +327,7 @@ const Profile = () => {
                 width: isMobile ? 80 : 100,
                 height: isMobile ? 80 : 100,
                 fontSize: isMobile ? 32 : 40,
-                backgroundColor: '#1976d2',
+                backgroundColor: 'var(--accent)',
                 mb: 2
               }}
             >
@@ -493,7 +493,7 @@ const Profile = () => {
           variant="filled"
           sx={{
             width: '100%',
-            backgroundColor: snackbarSeverity === 'error' ? '#d32f2f' : '#1976d2',
+            backgroundColor: snackbarSeverity === 'error' ? '#d32f2f' : 'var(--accent)',
             color: 'var(--text)',
             '& .MuiAlert-icon': {
               color: 'var(--text)'
