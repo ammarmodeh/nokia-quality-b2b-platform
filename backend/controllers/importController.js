@@ -36,6 +36,8 @@ const ENTITIES = {
     create: createIssue,
     update: updateIssue,
     taxonomy: "issue",
+    // createIssue stamps today on a missing PIS date unless told it is unknown
+    prepare: (row) => (row.pisDate ? row : { ...row, pisDateKnown: false }),
   },
   fieldTeams: {
     model: FieldTeamsSchema,
@@ -97,9 +99,10 @@ export const importRows = async (req, res) => {
 
   const results = [];
   for (let i = 0; i < rows.length; i++) {
-    const row = { ...rows[i] };
+    let row = { ...rows[i] };
     const rowNo = row.__row ?? i + 1;
     delete row.__row;
+    if (cfg.prepare) row = cfg.prepare(row);
     const r = { row: rowNo, action: null, status: "ok", message: "" };
     try {
       const missing = cfg.required.filter((f) => row[f] === undefined || row[f] === null || row[f] === "" || (Array.isArray(row[f]) && !row[f].length));
