@@ -1,3 +1,6 @@
+import { StepRail, StepFooter } from "../components/ui/Stepper";
+import SectionCard from "../components/ui/SectionCard";
+import Badge from "../components/ui/Badge";
 import PageHeader from "../components/ui/PageHeader";
 import { tok } from "../theme/tokens";
 import React, { useState, useEffect, useMemo } from "react";
@@ -626,6 +629,7 @@ const initialEquipmentList = [
 const LabAssessment = () => {
   const user = useSelector((state) => state?.auth?.user);
   const [activeTab, setActiveTab] = useState(0);
+  const [labStep, setLabStep] = useState(0);
   const [fieldTeams, setFieldTeams] = useState([]);
   const [assessments, setAssessments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -886,6 +890,7 @@ const LabAssessment = () => {
   };
 
   const resetForm = () => {
+    setLabStep(0);
     setSelectedTeam(null);
     setAssessmentDate(new Date().toISOString().split("T")[0]);
     setDateOfBirth("");
@@ -1103,6 +1108,7 @@ const LabAssessment = () => {
     setIsEditing(true);
     setEditingId(assess._id);
     setActiveTab(0);
+    setLabStep(0);
   };
 
   const handleDeleteAssessment = (assess) => {
@@ -1457,6 +1463,27 @@ const LabAssessment = () => {
                   </Box>
                 </Paper>
 
+                {/* Step rail */}
+                <StepRail
+                  active={labStep}
+                  onChange={(i) => { setLabStep(i); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  steps={[
+                    { label: "Team & profile", done: !!selectedTeam && labStep > 0 },
+                    { label: "Tools & equipment", hint: `${equipmentStats.percentage}%`, done: labStep > 1, tone: equipmentStats.percentage >= 80 ? "success" : "warning" },
+                    ...sections.map((sec, idx) => {
+                      const st = getSectionStats(sec);
+                      return {
+                        label: sec.sectionTitle.replace(/^\d+\.\s*/, "").split(/\s[–-]\s/)[0],
+                        hint: st.isInformational ? "info" : `${st.percentage}%`,
+                        tone: st.isInformational ? "neutral" : st.isPass ? "success" : "danger",
+                        done: labStep > idx + 2,
+                      };
+                    }),
+                    { label: "Review & submit", done: false },
+                  ]}
+                />
+
+                {labStep === 0 && (<>
                 {/* Basic Assessment Meta Inputs */}
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={7}>
@@ -1739,6 +1766,9 @@ const LabAssessment = () => {
                   </Grid>
                 </Paper>
 
+                </>)}
+
+                {labStep === 1 && (<>
                 {/* SECTION: Tools & Equipment Readiness Check */}
                 <Paper sx={{ p: 3, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1.5 }}>
@@ -1863,8 +1893,11 @@ const LabAssessment = () => {
                   </TableContainer>
                 </Paper>
 
-                {/* Render All Assessment Sections (1 to 8) */}
+                </>)}
+
+                {/* One assessment section per step */}
                 {sections.map((sec, sIdx) => {
+                  if (labStep !== sIdx + 2) return null;
                   const secStats = getSectionStats(sec);
 
                   // Helper renderer for a set of checkpoints
@@ -2192,6 +2225,23 @@ const LabAssessment = () => {
                   );
                 })}
 
+                {labStep === sections.length + 2 && (<>
+                <SectionCard title="Section summary" description="Scores per section. Click a row to revisit that step.">
+                  {sections.map((sec, i) => {
+                    const st = getSectionStats(sec);
+                    return (
+                      <Box key={sec.sectionId || i} component="button" type="button" onClick={() => setLabStep(i + 2)}
+                        sx={{ display: "flex", alignItems: "center", gap: 1.5, width: "100%", py: 1, px: 0, border: 0, borderBottom: "1px solid var(--border)", background: "none", font: "inherit", textAlign: "left", cursor: "pointer", color: "var(--text)", "&:last-of-type": { borderBottom: 0 }, "&:hover": { color: "var(--accent-text)" } }}>
+                        <Typography sx={{ fontSize: 13, flex: 1 }}>{sec.sectionTitle}</Typography>
+                        {st.isInformational ? <Badge>Info only</Badge> : <Badge tone={st.isPass ? "success" : "danger"}>{st.percentage}% · {st.totalScore}/{st.maxScore}</Badge>}
+                      </Box>
+                    );
+                  })}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, pt: 1.5 }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600, flex: 1 }}>Tools & equipment readiness</Typography>
+                    <Badge tone={equipmentStats.percentage >= 80 ? "success" : "warning"}>{equipmentStats.percentage}%</Badge>
+                  </Box>
+                </SectionCard>
                 {/* Feedback & Recommendations */}
                 <Paper sx={{ p: 3, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
                   <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 700, mb: 1 }}>
@@ -2215,29 +2265,22 @@ const LabAssessment = () => {
                   />
                 </Paper>
 
-                {/* Submit / Action Buttons */}
-                <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-                  <Button variant="outlined" onClick={resetForm} sx={{ color: colors.textSecondary, borderColor: colors.border, borderRadius: "12px", px: 3 }}>
-                    Reset Form
-                  </Button>
-                  <Button
-                    variant="contained"
-                    onClick={handleSubmit}
-                    disabled={!selectedTeam}
-                    sx={{
-                      bgcolor: colors.primary,
-                      "&:hover": { bgcolor: "var(--accent-hover)" },
-                      borderRadius: "12px",
-                      px: 6,
-                      py: 1.5,
-                      fontWeight: 700,
-                      fontSize: "1.05rem",
-                      boxShadow: `0 8px 16px ${colors.primary}40`,
-                    }}
-                  >
-                    {isEditing ? "Update Practical Assessment" : "Submit E2E Assessment"}
-                  </Button>
-                </Box>
+                </>)}
+
+                <StepFooter
+                  active={labStep}
+                  count={sections.length + 3}
+                  onBack={() => { setLabStep((x) => Math.max(0, x - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  onNext={() => { setLabStep((x) => Math.min(sections.length + 2, x + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  nextDisabled={labStep === 0 && !selectedTeam}
+                  nextLabel={labStep === 0 && !selectedTeam ? "Select a team to continue" : "Next"}
+                  extra={<Button variant="text" onClick={resetForm} sx={{ color: "var(--text-secondary)" }}>Reset form</Button>}
+                  finish={
+                    <Button variant="contained" size="large" onClick={handleSubmit} disabled={!selectedTeam}>
+                      {isEditing ? "Update practical assessment" : "Submit assessment"}
+                    </Button>
+                  }
+                />
               </Stack>
             </Paper>
           </Grid>

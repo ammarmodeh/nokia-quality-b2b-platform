@@ -34,6 +34,7 @@ import {
   EmojiEvents
 } from '@mui/icons-material';
 import { useSelector } from "react-redux";
+import { StepRail, StepFooter } from "./ui/Stepper";
 
 const AssessmentForm = ({
   initialAssessment,
@@ -50,6 +51,7 @@ const AssessmentForm = ({
   const [feedback, setFeedback] = useState(initialAssessment.feedback);
   const [checkPoints, setCheckPoints] = useState(initialAssessment.checkPoints);
   const [expandedNotes, setExpandedNotes] = useState({});
+  const [step, setStep] = useState(0);
   const user = useSelector((state) => state?.auth?.user);
 
   const glassStyle = {
@@ -134,6 +136,17 @@ const AssessmentForm = ({
 
   const overallPercentage = calculateOverallScore(checkPoints);
 
+  const CATEGORIES = ["Splicing & Testing Equipment", "Fiber Optic Splicing Skills", "ONT Placement, Configuration and testing", "Customer Education", "Customer Service Skills"];
+  const categoryStats = (category) => {
+    const pts = checkPoints.filter((p) => p.category === category);
+    const scored = pts.filter((p) => p.score > 0).length;
+    return { total: pts.length, scored, pct: pts.length ? calculateOverallScore(pts) : 0 };
+  };
+  const goTo = (i) => {
+    setStep(i);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <Paper component="form" onSubmit={handleSubmit} sx={{ ...glassStyle, p: { xs: 3, md: 5 }, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 5 }}>
@@ -163,8 +176,20 @@ const AssessmentForm = ({
         </Box>
       </Box>
 
-      {/* Checkpoints Groups */}
-      {["Splicing & Testing Equipment", "Fiber Optic Splicing Skills", "ONT Placement, Configuration and testing", "Customer Education", "Customer Service Skills"].map(category => (
+      <StepRail
+        active={step}
+        onChange={goTo}
+        steps={[
+          ...CATEGORIES.map((c) => {
+            const st = categoryStats(c);
+            return { label: c, hint: `${st.scored}/${st.total}`, done: st.total > 0 && st.scored === st.total, tone: "success" };
+          }),
+          { label: "Review & submit", done: false },
+        ]}
+      />
+
+      {/* Checkpoints: one category per step */}
+      {CATEGORIES.filter((_, i) => i === step).map(category => (
         <Box key={category} sx={{ mb: 6 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3, borderBottom: `1px solid ${colors.border}`, pb: 1.5 }}>
             <Box sx={{ color: colors.primary }}>{categoryIcons[category] || <Assignment />}</Box>
@@ -243,8 +268,21 @@ const AssessmentForm = ({
         </Box>
       ))}
 
-      {/* Footer / Feedback Section */}
-      <Box sx={{ mt: 4, pt: 4, borderTop: `1px solid ${colors.border}` }}>
+      {step === CATEGORIES.length && (
+      <Box>
+        <Box sx={{ mb: 3, border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden" }}>
+          {CATEGORIES.map((c, i) => {
+            const st = categoryStats(c);
+            return (
+              <Box key={c} component="button" type="button" onClick={() => goTo(i)}
+                sx={{ display: "flex", alignItems: "center", gap: 1.5, width: "100%", px: 2, py: 1.25, border: 0, borderBottom: "1px solid var(--border)", background: "none", font: "inherit", textAlign: "left", cursor: "pointer", color: "var(--text)", "&:last-of-type": { borderBottom: 0 }, "&:hover": { backgroundColor: "var(--surface-hover)" } }}>
+                <Typography sx={{ fontSize: 13, flex: 1 }}>{c}</Typography>
+                <Typography sx={{ fontSize: 12, color: "var(--text-muted)" }}>{st.scored}/{st.total} scored</Typography>
+                <Chip size="small" label={`${st.pct}%`} />
+              </Box>
+            );
+          })}
+        </Box>
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>Final Observations</Typography>
         <TextField
           label="Comprehensive Auditor Feedback"
@@ -260,8 +298,9 @@ const AssessmentForm = ({
         />
 
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          <Button type="button" variant="outlined" onClick={() => goTo(CATEGORIES.length - 1)}>Back</Button>
           {editMode && (
-            <Button onClick={onCancel} sx={{ px: 4, borderRadius: '12px', color: colors.textSecondary }}>
+            <Button type="button" onClick={onCancel} sx={{ px: 4, borderRadius: '12px', color: colors.textSecondary }}>
               Discard Changes
             </Button>
           )}
@@ -269,19 +308,24 @@ const AssessmentForm = ({
             type="submit"
             variant="contained"
             disabled={loading || !validateForm()}
-            sx={{
-              px: 6,
-              py: 1.5,
-              borderRadius: '12px',
-              bgcolor: colors.primary,
-              boxShadow: `0 8px 16px ${colors.primary}40`,
-              '&:hover': { bgcolor: colors.primary, boxShadow: `0 12px 24px ${colors.primary}60` }
-            }}
+            size="large"
           >
             {loading ? <CircularProgress size={24} color="inherit" /> : editMode ? "Commit Updates" : "Finalize Assessment"}
           </Button>
         </Box>
       </Box>
+      )}
+
+      {step < CATEGORIES.length && (
+        <StepFooter
+          active={step}
+          count={CATEGORIES.length + 1}
+          onBack={() => goTo(Math.max(0, step - 1))}
+          onNext={() => goTo(Math.min(CATEGORIES.length, step + 1))}
+          nextLabel={step === CATEGORIES.length - 1 ? "Review" : "Next"}
+          extra={editMode ? <Button type="button" variant="text" onClick={onCancel} sx={{ color: "var(--text-secondary)" }}>Discard changes</Button> : null}
+        />
+      )}
     </Paper>
   );
 };

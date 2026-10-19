@@ -1,3 +1,4 @@
+import Sheet from "../components/ui/Sheet";
 import SegmentedControl from "../components/ui/SegmentedControl";
 import { tok } from "../theme/tokens";
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -841,29 +842,29 @@ const QuizManagement = () => {
           )}
         </TableContainer>
 
-        <Dialog
+        <Sheet
           open={openDialog}
           onClose={handleCloseDialog}
-          fullScreen
-          // maxWidth="md"
-          PaperProps={{
-            sx: {
-              bgcolor: 'var(--bg)',
-              color: colors.textPrimary,
-              backgroundImage: 'none',
-              // borderRadius: '20px',
-              border: `1px solid ${colors.border}`,
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-            }
-          }}
+          width={680}
+          title={isViewMode ? 'Question preview' : editingQuestion ? 'Edit question' : 'New question'}
+          description={`${formData.quizType === 'IQ' ? 'IQ test' : 'Performance quiz'} · ${formData.type === 'essay' ? 'Essay' : 'Multiple choice'}${formData.category ? ` · ${formData.category}` : ''}`}
+          footer={
+            <>
+              <Button variant="outlined" onClick={handleCloseDialog}>{isViewMode ? 'Close' : 'Cancel'}</Button>
+              {!isViewMode && (
+                <Button
+                  onClick={handleSubmit}
+                  variant="contained"
+                  startIcon={<SaveIcon sx={{ fontSize: 17 }} />}
+                  disabled={!formData.question || (formData.type === 'options' && (!formData.correctAnswer || formData.options.some(o => !o)))}
+                >
+                  {editingQuestion ? 'Update question' : 'Save question'}
+                </Button>
+              )}
+            </>
+          }
         >
-          <DialogTitle sx={{ borderBottom: `1px solid ${colors.border}`, px: 4, py: 3 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'red' }}>
-              !!! VERSION 5 - REFRESH IF YOU DONT SEE THIS !!!
-            </Typography>
-          </DialogTitle>
-          <DialogContent sx={{ p: 4 }}>
-            <Stack spacing={3} mt={1}>
+            <Stack spacing={3}>
               <Box>
                 <Typography variant="subtitle2" sx={{ color: colors.textSecondary, mb: 1, fontWeight: 'bold' }}>
                   Question Text (Arabic Supported)
@@ -1149,29 +1150,7 @@ const QuizManagement = () => {
                 </Stack>
               </Box>
             </Stack>
-          </DialogContent>
-          <DialogActions sx={{ p: 4, borderTop: `1px solid ${colors.border}`, gap: 2 }}>
-            <Button onClick={handleCloseDialog} sx={{ color: colors.textSecondary, fontWeight: 'bold' }}>
-              {isViewMode ? 'Close' : 'Cancel'}
-            </Button>
-            {!isViewMode && (
-              <Button
-                onClick={handleSubmit}
-                variant="contained"
-                startIcon={<SaveIcon />}
-                disabled={!formData.question || (formData.type === 'options' && (!formData.correctAnswer || formData.options.some(o => !o)))}
-                sx={{
-                  bgcolor: colors.primary,
-                  fontWeight: 'bold',
-                  px: 4,
-                  '&:hover': { bgcolor: 'var(--accent-hover)' }
-                }}
-              >
-                {editingQuestion ? 'Update Question' : 'Save Question'}
-              </Button>
-            )}
-          </DialogActions>
-        </Dialog>
+        </Sheet>
 
         {/* ─── Swap Position Dialog ─── */}
         <Dialog

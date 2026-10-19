@@ -154,7 +154,7 @@ const TeamSelector = ({
                 startIcon={<Add sx={{ fontSize: '1.2rem !important' }} />}
                 sx={{
                   backgroundColor: colors.primary,
-                  color: 'var(--text)',
+                  color: 'var(--on-accent)',
                   fontWeight: 600,
                   fontSize: '0.85rem',
                   whiteSpace: 'nowrap',
